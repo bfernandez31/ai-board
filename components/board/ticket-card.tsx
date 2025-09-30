@@ -18,7 +18,7 @@ import type { TicketCardProps } from '@/lib/types';
 export function TicketCard({ ticket }: TicketCardProps) {
   return (
     <Card
-      className="bg-zinc-900 border-zinc-700 p-4 cursor-pointer transition-all hover:border-zinc-600 hover:bg-zinc-800"
+      className="bg-zinc-900 border-zinc-700 p-4 cursor-pointer transition-all hover:border-zinc-600 hover:bg-zinc-800 overflow-hidden"
       role="article"
       aria-label={`Ticket ${ticket.id}: ${ticket.title}`}
     >
@@ -31,7 +31,7 @@ export function TicketCard({ ticket }: TicketCardProps) {
       </div>
 
       {/* Title - truncated at 2 lines */}
-      <h3 className="font-semibold text-sm mb-3 line-clamp-2 text-zinc-100" title={ticket.title}>
+      <h3 className="font-semibold text-sm mb-3 line-clamp-2 text-zinc-100 break-all overflow-hidden" title={ticket.title}>
         {ticket.title}
       </h3>
 
