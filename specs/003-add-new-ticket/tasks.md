@@ -62,11 +62,63 @@
 
 **Note**: Contract test already exists at `/specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` - needs to be run to verify RED state
 
-- [ ] T009 Run existing contract test to verify RED state: `npx playwright test specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` (expect ALL tests to FAIL)
-- [ ] T010 [P] Create E2E test in `/tests/ticket-creation-modal-open.spec.ts`: Test modal open/close workflow (click button, modal opens, click cancel, modal closes)
-- [ ] T011 [P] Create E2E test in `/tests/ticket-creation-form-validation.spec.ts`: Test form validation (empty fields disable button, char limits show errors, special characters rejected, allowed punctuation accepted)
-- [ ] T012 [P] Create E2E test in `/tests/ticket-creation-success.spec.ts`: Test successful ticket creation (fill form, submit, modal closes, ticket appears in IDLE column)
-- [ ] T013 Run all E2E tests to verify RED state: `npx playwright test tests/ticket-creation-*.spec.ts` (expect ALL tests to FAIL)
+- [x] **T009** Run existing contract test to verify RED state: `npx playwright test specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` (expect tests to FAIL due to missing server-side validation)
+  - **File**: `/specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` (already exists)
+  - **Purpose**: Verify API contract tests fail before API validation is implemented
+  - **Expected**: Many validation tests should FAIL (400 errors not returned, validation not enforced)
+  - **Dependencies**: T008 (validation schema defined for reference)
+
+- [x] **T010** [P] Create E2E test in `/tests/ticket-creation-modal-open.spec.ts`: Test modal open/close workflow
+  - **Test scenarios**:
+    1. Click "+ New Ticket" button → modal opens
+    2. Verify modal title "Create New Ticket" is visible
+    3. Verify title and description fields are present
+    4. Click Cancel button → modal closes
+    5. Open modal again → press Escape key → modal closes
+    6. Open modal again → click backdrop → modal closes
+    7. Verify no ticket created after canceling
+  - **Assertions**: Modal visibility, form fields present, close behaviors work
+  - **Expected**: RED (fails - modal component doesn't exist yet)
+  - **Dependencies**: T001-T004 (shadcn/ui Dialog components installed)
+
+- [x] **T011** [P] Create E2E test in `/tests/ticket-creation-form-validation.spec.ts`: Test form validation rules
+  - **Test scenarios**:
+    1. Open modal → leave fields empty → Create button disabled
+    2. Enter title only → Create button disabled
+    3. Enter description only → Create button disabled
+    4. Enter title >100 chars → error message shown
+    5. Enter description >1000 chars → error message shown
+    6. Enter title with emoji "Test 🚀" → error message shown
+    7. Enter title with special chars "Test @#$%" → error message shown
+    8. Enter valid title with allowed punctuation "Test, ticket! How? Yes-it works." → no error
+    9. Enter valid title and description → Create button enabled
+  - **Assertions**: Button states, error messages, validation rules enforced
+  - **Expected**: RED (fails - validation not implemented yet)
+  - **Dependencies**: T008 (validation schema defined)
+
+- [x] **T012** [P] Create E2E test in `/tests/ticket-creation-success.spec.ts`: Test successful ticket creation end-to-end
+  - **Test scenarios**:
+    1. Navigate to /board page
+    2. Count existing tickets in IDLE column (baseline)
+    3. Click "+ New Ticket" button
+    4. Fill title: "E2E Test Ticket"
+    5. Fill description: "This ticket was created by automated E2E test"
+    6. Click Create button
+    7. Verify loading state (button disabled during submission)
+    8. Wait for modal to close
+    9. Verify ticket appears in IDLE column
+    10. Verify ticket title matches input
+    11. Verify ticket count increased by 1
+  - **Assertions**: Ticket creation, modal close, board refresh, ticket visibility
+  - **Expected**: RED (fails - modal and API integration not implemented yet)
+  - **Dependencies**: T008 (validation schema)
+
+- [x] **T013** Run all new E2E tests to verify complete RED state: `npx playwright test tests/ticket-creation-*.spec.ts` (expect ALL tests to FAIL)
+  - **Purpose**: Confirm TDD RED phase - all new tests fail before implementation
+  - **Expected output**: 3 test suites fail, multiple test cases fail
+  - **Validation**: If any tests pass, implementation has leaked into TDD phase (bad!)
+  - **Dependencies**: T010-T012 (test files created)
+  - **Result**: ✅ All 90 tests FAILED as expected - proper RED state confirmed
 
 ## Phase 3.4: API Implementation (Make contract tests GREEN)
 

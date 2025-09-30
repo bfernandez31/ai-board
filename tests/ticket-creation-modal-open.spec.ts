@@ -1,0 +1,154 @@
+/**
+ * E2E Test: Ticket Creation Modal - Open/Close Workflow
+ *
+ * This test verifies the modal opening and closing behaviors.
+ * Expected to FAIL initially (RED state) - modal component doesn't exist yet.
+ *
+ * Run: npx playwright test tests/ticket-creation-modal-open.spec.ts
+ */
+
+import { test, expect } from "@playwright/test";
+
+test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to the board page before each test
+    await page.goto("/board");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("should open modal when clicking + New Ticket button", async ({ page }) => {
+    // Find and click the "+ New Ticket" button
+    const newTicketButton = page.getByRole("button", { name: /new ticket/i });
+    await expect(newTicketButton).toBeVisible();
+
+    await newTicketButton.click();
+
+    // Verify modal opens
+    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    await expect(modalTitle).toBeVisible();
+
+    // Verify form fields are present
+    const titleInput = page.getByLabel(/title/i);
+    const descriptionInput = page.getByLabel(/description/i);
+
+    await expect(titleInput).toBeVisible();
+    await expect(descriptionInput).toBeVisible();
+
+    // Verify action buttons are present
+    const cancelButton = page.getByRole("button", { name: /cancel/i });
+    const createButton = page.getByRole("button", { name: /create/i });
+
+    await expect(cancelButton).toBeVisible();
+    await expect(createButton).toBeVisible();
+  });
+
+  test("should close modal when clicking Cancel button", async ({ page }) => {
+    // Open modal
+    await page.getByRole("button", { name: /new ticket/i }).click();
+
+    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    await expect(modalTitle).toBeVisible();
+
+    // Type some data in the form
+    await page.getByLabel(/title/i).fill("Test ticket that should not be created");
+    await page.getByLabel(/description/i).fill("This is a test description");
+
+    // Click Cancel button
+    await page.getByRole("button", { name: /cancel/i }).click();
+
+    // Verify modal is closed
+    await expect(modalTitle).not.toBeVisible();
+
+    // Verify no ticket was created by checking the board
+    const testTicket = page.getByText("Test ticket that should not be created");
+    await expect(testTicket).not.toBeVisible();
+  });
+
+  test("should close modal when pressing Escape key", async ({ page }) => {
+    // Open modal
+    await page.getByRole("button", { name: /new ticket/i }).click();
+
+    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    await expect(modalTitle).toBeVisible();
+
+    // Type some data
+    await page.getByLabel(/title/i).fill("Another test ticket");
+    await page.getByLabel(/description/i).fill("Should not be created");
+
+    // Press Escape key
+    await page.keyboard.press("Escape");
+
+    // Verify modal is closed
+    await expect(modalTitle).not.toBeVisible();
+
+    // Verify no ticket was created
+    const testTicket = page.getByText("Another test ticket");
+    await expect(testTicket).not.toBeVisible();
+  });
+
+  test("should close modal when clicking backdrop (outside modal)", async ({ page }) => {
+    // Open modal
+    await page.getByRole("button", { name: /new ticket/i }).click();
+
+    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    await expect(modalTitle).toBeVisible();
+
+    // Type some data
+    await page.getByLabel(/title/i).fill("Backdrop test ticket");
+
+    // Click on the backdrop (dialog overlay)
+    // Note: This clicks outside the dialog content but inside the overlay
+    const dialog = page.getByRole("dialog");
+    const box = await dialog.boundingBox();
+
+    if (box) {
+      // Click at the top-left corner (backdrop area)
+      await page.mouse.click(10, 10);
+    }
+
+    // Verify modal is closed
+    await expect(modalTitle).not.toBeVisible();
+
+    // Verify no ticket was created
+    const testTicket = page.getByText("Backdrop test ticket");
+    await expect(testTicket).not.toBeVisible();
+  });
+
+  test("should focus title field automatically when modal opens", async ({ page }) => {
+    // Open modal
+    await page.getByRole("button", { name: /new ticket/i }).click();
+
+    // Wait for modal to be visible
+    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    await expect(modalTitle).toBeVisible();
+
+    // Check that title input has focus
+    const titleInput = page.getByLabel(/title/i);
+    await expect(titleInput).toBeFocused();
+  });
+
+  test("should not create ticket after canceling via any method", async ({ page }) => {
+    // Get initial ticket count in IDLE column
+    const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
+    const initialTickets = await idleColumn.locator('[data-testid="ticket-card"]').count();
+
+    // Test 1: Cancel via button
+    await page.getByRole("button", { name: /new ticket/i }).click();
+    await page.getByLabel(/title/i).fill("Cancel test 1");
+    await page.getByLabel(/description/i).fill("Description 1");
+    await page.getByRole("button", { name: /cancel/i }).click();
+
+    // Test 2: Cancel via Escape
+    await page.getByRole("button", { name: /new ticket/i }).click();
+    await page.getByLabel(/title/i).fill("Cancel test 2");
+    await page.getByLabel(/description/i).fill("Description 2");
+    await page.keyboard.press("Escape");
+
+    // Wait a moment for any potential API calls to complete
+    await page.waitForTimeout(500);
+
+    // Verify ticket count hasn't changed
+    const finalTickets = await idleColumn.locator('[data-testid="ticket-card"]').count();
+    expect(finalTickets).toBe(initialTickets);
+  });
+});
