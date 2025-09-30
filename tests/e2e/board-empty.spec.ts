@@ -106,8 +106,11 @@ test.describe('Empty Board Display', () => {
       // Dark backgrounds typically have RGB values < 50
       const rgbMatch = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
       if (rgbMatch) {
-        const [, r, g, b] = rgbMatch.map(Number);
-        const isDarkBg = r < 50 && g < 50 && b < 50;
+        const [, rStr, gStr, bStr] = rgbMatch;
+        const r = Number(rStr ?? NaN);
+        const g = Number(gStr ?? NaN);
+        const b = Number(bStr ?? NaN);
+        const isDarkBg = [r, g, b].every((value) => Number.isFinite(value) && value < 50);
         expect(isDarkBg).toBe(true);
       }
     }

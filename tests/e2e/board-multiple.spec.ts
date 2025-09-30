@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, APIResponse } from '@playwright/test';
 
 /**
  * E2E Test: Multiple Tickets with Sorting
@@ -11,9 +11,17 @@ import { test, expect } from '@playwright/test';
 test.describe('Multiple Tickets Display and Sorting', () => {
   const BASE_URL = 'http://localhost:3000';
 
+  const parseTicket = async (response: APIResponse) => {
+    const json = (await response.json()) as { id: number; title: string };
+    if (typeof json?.id !== 'number' || typeof json?.title !== 'string') {
+      throw new Error('Invalid ticket response payload');
+    }
+    return json;
+  };
+
   test('should display multiple tickets in IDLE column', async ({ page, request }) => {
     // Create 5 tickets
-    const tickets = [];
+    const tickets: Array<{ id: number; title: string }> = [];
     for (let i = 1; i <= 5; i++) {
       const response = await request.post(`${BASE_URL}/api/tickets`, {
         data: {
@@ -21,7 +29,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
           description: `Description for ticket ${i}`
         }
       });
-      tickets.push(await response.json());
+      tickets.push(await parseTicket(response));
     }
 
     await page.goto(`${BASE_URL}/board`);
@@ -37,48 +45,57 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
   test('should sort tickets by most recently updated first', async ({ page, request }) => {
     // Create tickets with delays to ensure different timestamps
-    const ticket1 = await request.post(`${BASE_URL}/api/tickets`, {
-      data: { title: 'First Ticket', description: 'Created first' }
-    });
-    const t1 = await ticket1.json();
+    await parseTicket(
+      await request.post(`${BASE_URL}/api/tickets`, {
+        data: { title: 'First Ticket', description: 'Created first' }
+      })
+    );
 
     await page.waitForTimeout(100); // Small delay
 
-    const ticket2 = await request.post(`${BASE_URL}/api/tickets`, {
-      data: { title: 'Second Ticket', description: 'Created second' }
-    });
-    const t2 = await ticket2.json();
+    await parseTicket(
+      await request.post(`${BASE_URL}/api/tickets`, {
+        data: { title: 'Second Ticket', description: 'Created second' }
+      })
+    );
 
     await page.waitForTimeout(100); // Small delay
 
-    const ticket3 = await request.post(`${BASE_URL}/api/tickets`, {
-      data: { title: 'Third Ticket', description: 'Created third' }
-    });
-    const t3 = await ticket3.json();
+    await parseTicket(
+      await request.post(`${BASE_URL}/api/tickets`, {
+        data: { title: 'Third Ticket', description: 'Created third' }
+      })
+    );
 
     await page.goto(`${BASE_URL}/board`);
 
     // Get all ticket cards in IDLE column
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const ticketCards = await idleColumn.locator('[data-testid^="ticket-"]').or(
-      idleColumn.locator('.ticket-card, [class*="ticket"]')
-    ).all();
+    const ticketCards = await idleColumn
+      .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
+      .all();
 
     if (ticketCards.length >= 3) {
       // Get positions of our test tickets
-      const positions: { [key: string]: number } = {};
+      const positions: Record<'first' | 'second' | 'third', number | undefined> = {
+        first: undefined,
+        second: undefined,
+        third: undefined,
+      };
 
-      for (let i = 0; i < ticketCards.length; i++) {
-        const cardText = await ticketCards[i].textContent() || '';
-        if (cardText.includes('First Ticket')) positions['first'] = i;
-        if (cardText.includes('Second Ticket')) positions['second'] = i;
-        if (cardText.includes('Third Ticket')) positions['third'] = i;
-      }
+      await Promise.all(
+        ticketCards.map(async (card, index) => {
+          const cardText = (await card.textContent()) ?? '';
+          if (cardText.includes('First Ticket')) positions.first = index;
+          if (cardText.includes('Second Ticket')) positions.second = index;
+          if (cardText.includes('Third Ticket')) positions.third = index;
+        })
+      );
 
-      // Most recent (Third) should come before Second, which should come before First
-      if (positions['third'] !== undefined && positions['second'] !== undefined && positions['first'] !== undefined) {
-        expect(positions['third']).toBeLessThan(positions['second']);
-        expect(positions['second']).toBeLessThan(positions['first']);
+      const { first, second, third } = positions;
+      if (first !== undefined && second !== undefined && third !== undefined) {
+        expect(third).toBeLessThan(second);
+        expect(second).toBeLessThan(first);
       }
     }
   });
@@ -95,14 +112,14 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     await page.goto(`${BASE_URL}/board`);
 
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const headerText = await idleColumn.textContent() || '';
+    const headerText = (await idleColumn.textContent()) ?? '';
 
     // Look for count in header (format: "N tickets" or "N ticket")
     const countMatch = headerText.match(/(\d+)\s*tickets?/i);
     expect(countMatch).not.toBeNull();
 
-    if (countMatch) {
-      const displayedCount = parseInt(countMatch[1]);
+    if (countMatch?.[1]) {
+      const displayedCount = Number.parseInt(countMatch[1], 10);
       expect(displayedCount).toBeGreaterThanOrEqual(ticketCount);
     }
   });
@@ -143,13 +160,13 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    const ticketCards = await page.locator('[data-testid^="ticket-"]').or(
-      page.locator('.ticket-card, [class*="ticket"]')
-    ).all();
+    const ticketCards = await page
+      .locator('[data-testid^="ticket-"]').or(page.locator('.ticket-card, [class*="ticket"]'))
+      .all();
 
     if (ticketCards.length >= 2) {
       const heights = await Promise.all(
-        ticketCards.map(card => card.evaluate(el => el.getBoundingClientRect().height))
+        ticketCards.map((card) => card.evaluate((el) => el.getBoundingClientRect().height))
       );
 
       // All cards should have similar heights due to truncation
@@ -162,7 +179,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     }
   });
 
-  test('should display tickets across all 6 stages correctly', async ({ page, request }) => {
+  test('should display tickets across all 6 stages correctly', async ({ page }) => {
     // Note: In MVP, we can only create tickets in IDLE
     // This test documents the expected behavior for future drag-drop feature
 
@@ -206,21 +223,20 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     // Verify some tickets are visible
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const ticketCards = await idleColumn.locator('[data-testid^="ticket-"]').or(
-      idleColumn.locator('.ticket-card, [class*="ticket"]')
-    ).all();
+    const ticketCards = await idleColumn
+      .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
+      .all();
 
     expect(ticketCards.length).toBeGreaterThan(0);
   });
 
   test('should maintain ticket order during multiple refreshes', async ({ page, request }) => {
     // Create tickets
-    const tickets = [];
     for (let i = 1; i <= 5; i++) {
       const response = await request.post(`${BASE_URL}/api/tickets`, {
         data: { title: `Order Test Ticket ${i}` }
       });
-      tickets.push(await response.json());
+      await parseTicket(response);
       await page.waitForTimeout(50);
     }
 
@@ -229,15 +245,15 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     // Get initial order
     const getTicketOrder = async () => {
       const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-      const cards = await idleColumn.locator('[data-testid^="ticket-"]').or(
-        idleColumn.locator('.ticket-card, [class*="ticket"]')
-      ).all();
+      const cards = await idleColumn
+        .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
+        .all();
 
-      const order = [];
+      const order: number[] = [];
       for (const card of cards) {
-        const text = await card.textContent() || '';
+        const text = (await card.textContent()) ?? '';
         const match = text.match(/Order Test Ticket (\d+)/);
-        if (match) order.push(parseInt(match[1]));
+        if (match?.[1]) order.push(Number.parseInt(match[1], 10));
       }
       return order;
     };
@@ -266,9 +282,9 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     // IDLE should have tickets
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const idleCards = await idleColumn.locator('[data-testid^="ticket-"]').or(
-      idleColumn.locator('.ticket-card, [class*="ticket"]')
-    ).all();
+    const idleCards = await idleColumn
+      .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
+      .all();
     expect(idleCards.length).toBeGreaterThan(0);
 
     // Other columns should be empty
