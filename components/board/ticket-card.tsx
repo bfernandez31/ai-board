@@ -18,6 +18,7 @@ import type { TicketCardProps } from '@/lib/types';
 export function TicketCard({ ticket }: TicketCardProps) {
   return (
     <Card
+      data-testid="ticket-card"
       className="bg-zinc-900 border-zinc-700 p-4 cursor-pointer transition-all hover:border-zinc-600 hover:bg-zinc-800 overflow-hidden"
       role="article"
       aria-label={`Ticket ${ticket.id}: ${ticket.title}`}

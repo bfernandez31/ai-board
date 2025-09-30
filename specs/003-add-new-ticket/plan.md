@@ -1,10 +1,10 @@
-
 # Implementation Plan: Ticket Creation Modal
 
 **Branch**: `003-add-new-ticket` | **Date**: 2025-09-30 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/003-add-new-ticket/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    → If not found: ERROR "No feature spec at {path}"
@@ -27,13 +27,16 @@
 ```
 
 **IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
+
 Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in title and description fields with validation, then submit to create a new ticket that appears in IDLE. The feature includes client-side validation, loading states, error handling, and API integration with the existing POST /api/tickets endpoint.
 
 ## Technical Context
+
 **Language/Version**: TypeScript 5.6 (strict mode), Node.js 20.x
 **Primary Dependencies**: Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma 6.x, Zod 4.x, shadcn/ui
 **Storage**: PostgreSQL 14+ via Prisma ORM
@@ -45,15 +48,18 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 **Scale/Scope**: Small feature, 1 modal component + form validation + API integration, ~5-8 components/utilities
 
 ## Constitution Check
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. TypeScript-First Development
+
 - ✅ All code will use TypeScript strict mode (tsconfig.json already configured)
 - ✅ No `any` types (all modal props, form state, API responses explicitly typed)
 - ✅ All function parameters and return types explicitly typed
 - ✅ API responses have TypeScript interfaces matching Zod schemas
 
 ### II. Component-Driven Architecture
+
 - ✅ Will use shadcn/ui Dialog component for modal (existing primitive)
 - ✅ Will use shadcn/ui Form components for inputs (Button, Input, Textarea)
 - ✅ Server Components by default, Client Component only for modal interactivity
@@ -62,6 +68,7 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 - ✅ Utilities in `/lib/validations/ticket.ts` for Zod schemas
 
 ### III. Test-Driven Development
+
 - ✅ Will write Playwright E2E test BEFORE implementation
 - ✅ Test will verify: open modal, fill form, submit, see new ticket in IDLE
 - ✅ Test will verify validation: empty fields, char limits, invalid characters
@@ -69,6 +76,7 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 - ✅ Red-Green-Refactor cycle mandatory
 
 ### IV. Security-First Design
+
 - ✅ Zod schema validation for all inputs (title, description)
 - ✅ Prisma parameterized queries (already used in existing /api/tickets)
 - ✅ No sensitive data exposure (only public ticket data)
@@ -76,6 +84,7 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 - ✅ No authentication needed yet (public board)
 
 ### V. Database Integrity
+
 - ✅ Schema changes via Prisma migration (title max 100, description required & max 1000)
 - ✅ No multi-table operations (single INSERT into Ticket)
 - ✅ Existing soft delete pattern not needed (tickets don't delete in this feature)
@@ -86,6 +95,7 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/[###-feature]/
 ├── plan.md              # This file (/plan command output)
@@ -97,6 +107,7 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+
 ```
 app/
 ├── api/
@@ -137,6 +148,7 @@ tests/
 ```
 
 **Structure Decision**: Next.js App Router monolith structure (web application pattern). Frontend and backend are unified in a single Next.js application:
+
 - **App Router pages** in `/app` for routing
 - **API routes** in `/app/api` for backend endpoints
 - **React components** in `/components` (feature-based organization)
@@ -145,12 +157,14 @@ tests/
 - **E2E tests** in `/tests` with Playwright
 
 ## Phase 0: Outline & Research
+
 1. **Extract unknowns from Technical Context** above:
    - For each NEEDS CLARIFICATION → research task
    - For each dependency → best practices task
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
+
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
@@ -166,7 +180,8 @@ tests/
 **Output**: research.md with all NEEDS CLARIFICATION resolved
 
 ## Phase 1: Design & Contracts
-*Prerequisites: research.md complete*
+
+_Prerequisites: research.md complete_
 
 1. **Extract entities from feature spec** → `data-model.md`:
    - Entity name, fields, relationships
@@ -196,117 +211,68 @@ tests/
    - Keep under 150 lines for token efficiency
    - Output to repository root
 
-**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/\*, failing tests, quickstart.md, agent-specific file
 
 ## Phase 2: Task Planning Approach
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
+
+_This section describes what the /tasks command will do - DO NOT execute during /plan_
 
 **Task Generation Strategy**:
 
-1. **Load template**: Use `.specify/templates/tasks-template.md` as base structure
+- Load `.specify/templates/tasks-template.md` as base
+- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
+- Each contract → contract test task [P]
+- Each entity → model creation task [P]
+- Each user story → integration test task
+- Implementation tasks to make tests pass
 
-2. **Extract from Phase 1 artifacts**:
-   - **From data-model.md**: Prisma schema change (title/description constraints)
-   - **From contracts/**: API contract tests (already written - api-tickets-post.test.ts)
-   - **From quickstart.md**: E2E test scenarios for ticket creation modal workflow
-   - **From research.md**: shadcn/ui component installations, validation library setup
+**Ordering Strategy**:
 
-3. **Generate task categories**:
-   - **Setup tasks**: Install shadcn/ui components (dialog, input, textarea, label)
-   - **Database tasks**: Update Prisma schema, create migration, apply migration
-   - **Validation tasks**: Create Zod validation schema in /lib/validations/ticket.ts
-   - **API tasks**: Update POST /api/tickets with Zod validation and error handling
-   - **Component tasks**:
-     - Create new-ticket-modal.tsx (Client Component with form logic)
-     - Update new-ticket-button.tsx (integrate modal trigger)
-   - **Test tasks** (TDD - written BEFORE implementation):
-     - Contract test: POST /api/tickets validation (already exists)
-     - E2E test: Modal open/close/cancel workflow
-     - E2E test: Form validation (empty, length, special chars)
-     - E2E test: Successful ticket creation
-   - **Integration tasks**: Connect modal to board refresh logic
+- TDD order: Tests before implementation
+- Dependency order: Models before services before UI
+- Mark [P] for parallel execution (independent files)
 
-4. **Task ordering strategy**:
-   - **Phase 1**: Setup (shadcn/ui, database schema) [P - can run in parallel]
-   - **Phase 2**: Validation schema creation [P]
-   - **Phase 3**: API update + contract tests (TDD: test first, then implementation)
-   - **Phase 4**: E2E tests written (TDD: failing tests)
-   - **Phase 5**: Component implementation (make tests pass)
-   - **Phase 6**: Integration and manual quickstart validation
-
-5. **Parallelization markers**:
-   - [P] for independent file operations (e.g., install components, create validation file)
-   - Sequential for dependent operations (e.g., schema before migration, tests before implementation)
-
-6. **TDD compliance**:
-   - All test tasks come BEFORE corresponding implementation tasks
-   - Contract tests must fail initially (Red)
-   - E2E tests must fail initially (Red)
-   - Implementation tasks reference which tests they should make pass (Green)
-
-**Estimated Output**: 20-25 numbered, ordered tasks organized by phase
-
-**Task Categories Breakdown**:
-- Setup & Configuration: 3-4 tasks
-- Database & Validation: 3-4 tasks
-- Testing (written first): 4-6 tasks
-- Implementation: 8-10 tasks
-- Integration & Validation: 2-3 tasks
+**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
-*These phases are beyond the scope of the /plan command*
+
+_These phases are beyond the scope of the /plan command_
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
-*Fill ONLY if Constitution Check has violations that must be justified*
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+_Fill ONLY if Constitution Check has violations that must be justified_
 
+| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
+| -------------------------- | ------------------ | ------------------------------------ |
+| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
 
 ## Progress Tracking
-*This checklist is updated during execution flow*
+
+_This checklist is updated during execution flow_
 
 **Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS (re-evaluated below)
-- [x] All NEEDS CLARIFICATION resolved
-- [x] Complexity deviations documented (none required)
 
-**Artifacts Generated**:
-- [x] research.md - All technology decisions documented with rationale
-- [x] data-model.md - Entity definitions, validation rules, type definitions
-- [x] contracts/api-tickets-post.yaml - OpenAPI specification
-- [x] contracts/api-tickets-post.test.ts - Contract test (will fail initially - TDD)
-- [x] quickstart.md - Manual validation scenarios
-- [x] CLAUDE.md - Agent context file updated
-
-**Post-Design Constitution Re-Check**:
-
-All five constitutional principles remain satisfied after design phase:
-
-1. **TypeScript-First**: ✅ All types explicitly defined in data-model.md (CreateTicketInput, CreateTicketResponse, etc.)
-2. **Component-Driven Architecture**: ✅ Using shadcn/ui Dialog, proper Client/Server Component separation
-3. **Test-Driven Development**: ✅ Contract tests and E2E tests designed (will be written in Phase 3 before implementation)
-4. **Security-First Design**: ✅ Multi-layer validation (Zod client/server + DB constraints), no SQL injection risk
-5. **Database Integrity**: ✅ Prisma migration planned, schema constraints defined, no complex transactions needed
-
-**No new violations or deviations identified.** Ready for Phase 3 (/tasks command).
+- [ ] Initial Constitution Check: PASS
+- [ ] Post-Design Constitution Check: PASS
+- [ ] All NEEDS CLARIFICATION resolved
+- [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.0.0 - See `/memory/constitution.md`*
+
+_Based on Constitution v1.0.0 - See `/memory/constitution.md`_

@@ -57,22 +57,15 @@ export function NewTicketModal({
 
   // Validate a single field
   const validateField = (field: keyof CreateTicketInput, value: string) => {
-    try {
-      CreateTicketSchema.shape[field].parse(value);
+    const result = CreateTicketSchema.shape[field].safeParse(value);
+    if (result.success) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
-    } catch (error) {
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const zodError = error as { errors: Array<{ message: string }> };
-        setErrors((prev) => ({
-          ...prev,
-          [field]: zodError.errors[0]?.message || 'Invalid input',
-        }));
-      } else {
-        setErrors((prev) => ({
-          ...prev,
-          [field]: 'Invalid input',
-        }));
-      }
+    } else {
+      const errorMessage = result.error.issues[0]?.message || 'Invalid input';
+      setErrors((prev) => ({
+        ...prev,
+        [field]: errorMessage,
+      }));
     }
   };
 

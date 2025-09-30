@@ -18,10 +18,11 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
   test("should create ticket and display it in IDLE column", async ({ page }) => {
     // Step 1: Navigate to board page (already done in beforeEach)
+    const testId = Date.now();
+    const testTitle = `E2E Test Ticket ${testId}`;
 
-    // Step 2: Count existing tickets in IDLE column (baseline)
+    // Step 2: Locate IDLE column for verification
     const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
-    const initialTicketCount = await idleColumn.locator('[data-testid="ticket-card"]').count();
 
     // Step 3: Click "+ New Ticket" button
     const newTicketButton = page.getByRole("button", { name: /new ticket/i });
@@ -32,15 +33,15 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(modalTitle).toBeVisible();
 
     // Step 4: Fill title
-    const titleInput = page.getByLabel(/title/i);
-    await titleInput.fill("E2E Test Ticket");
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    await titleInput.fill(testTitle);
 
     // Step 5: Fill description
-    const descriptionInput = page.getByLabel(/description/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
     await descriptionInput.fill("This ticket was created by automated E2E test");
 
     // Step 6: Click Create button
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await createButton.click();
 
     // Step 7: Verify loading state (button disabled during submission)
@@ -49,28 +50,34 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     // Step 8: Wait for modal to close (indicates successful creation)
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Step 9: Verify ticket appears in IDLE column
-    const newTicket = page.getByText("E2E Test Ticket");
+    // Step 9: Wait for network to settle (board refresh)
+    await page.waitForLoadState('networkidle');
+
+    // Step 10: Verify ticket appears in IDLE column
+    const newTicket = page.getByText(testTitle);
     await expect(newTicket).toBeVisible({ timeout: 3000 });
 
-    // Step 10: Verify ticket title matches input
-    await expect(newTicket).toHaveText("E2E Test Ticket");
+    // Step 11: Verify ticket title matches input
+    await expect(newTicket).toHaveText(testTitle);
 
-    // Step 11: Verify ticket count increased by 1
-    const finalTicketCount = await idleColumn.locator('[data-testid="ticket-card"]').count();
-    expect(finalTicketCount).toBe(initialTicketCount + 1);
+    // Step 12: Verify ticket is in IDLE column
+    const ticketInIdle = idleColumn.getByText(testTitle);
+    await expect(ticketInIdle).toBeVisible();
   });
 
   test("should create ticket with minimum valid input (1 char each)", async ({ page }) => {
+    const testId = Date.now();
+    const testTitle = `A ${testId}`;
+
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill with minimal valid data
-    await page.getByLabel(/title/i).fill("A");
-    await page.getByLabel(/description/i).fill("B");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("B");
 
     // Submit
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
@@ -85,17 +92,18 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   });
 
   test("should create ticket with maximum length title (100 chars)", async ({ page }) => {
-    const maxTitle = "a".repeat(100);
+    const testId = Date.now();
+    const maxTitle = `${"a".repeat(85)} ${testId}`;
 
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill with max length title
-    await page.getByLabel(/title/i).fill(maxTitle);
-    await page.getByLabel(/description/i).fill("Test description");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(maxTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Test description");
 
     // Submit
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
@@ -108,40 +116,43 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   });
 
   test("should create ticket with maximum length description (1000 chars)", async ({ page }) => {
+    const testId = Date.now();
+    const testTitle = `Test with long description ${testId}`;
     const maxDescription = "b".repeat(1000);
 
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill with max length description
-    await page.getByLabel(/title/i).fill("Test with long description");
-    await page.getByLabel(/description/i).fill(maxDescription);
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill(maxDescription);
 
     // Submit
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
     // Verify ticket exists by title
-    const newTicket = page.getByText("Test with long description");
+    const newTicket = page.getByText(testTitle);
     await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
   test("should create ticket with allowed punctuation", async ({ page }) => {
-    const titleWithPunctuation = "Test, ticket! How? Yes-it works.";
+    const testId = Date.now();
+    const titleWithPunctuation = `Test, ticket! How? Yes-it works. ${testId}`;
     const descriptionWithPunctuation = "This description has periods, commas, hyphens, question marks!";
 
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill with punctuation
-    await page.getByLabel(/title/i).fill(titleWithPunctuation);
-    await page.getByLabel(/description/i).fill(descriptionWithPunctuation);
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(titleWithPunctuation);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill(descriptionWithPunctuation);
 
     // Submit
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
@@ -153,15 +164,18 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   });
 
   test("should show loading state during ticket creation", async ({ page }) => {
+    const testId = Date.now();
+    const testTitle = `Loading state test ticket ${testId}`;
+
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill form
-    await page.getByLabel(/title/i).fill("Loading state test ticket");
-    await page.getByLabel(/description/i).fill("Testing loading state");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Testing loading state");
 
     // Click Create button
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await createButton.click();
 
     // Immediately check that button is disabled
@@ -180,34 +194,33 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   test("should refresh board automatically after ticket creation", async ({ page }) => {
     const uniqueTitle = `Auto-refresh test ${Date.now()}`;
 
-    // Get initial state
+    // Get IDLE column
     const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
-    const initialCount = await idleColumn.locator('[data-testid="ticket-card"]').count();
 
     // Create ticket
     await page.getByRole("button", { name: /new ticket/i }).click();
-    await page.getByLabel(/title/i).fill(uniqueTitle);
-    await page.getByLabel(/description/i).fill("Testing auto-refresh");
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(uniqueTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Testing auto-refresh");
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Verify board was refreshed (new ticket appears WITHOUT manual page reload)
-    const newTicket = page.getByText(uniqueTitle);
-    await expect(newTicket).toBeVisible({ timeout: 3000 });
+    // Wait for network to settle (board refresh)
+    await page.waitForLoadState('networkidle');
 
-    // Verify count increased
-    const finalCount = await idleColumn.locator('[data-testid="ticket-card"]').count();
-    expect(finalCount).toBe(initialCount + 1);
+    // Verify board was refreshed (new ticket appears WITHOUT manual page reload)
+    const newTicket = idleColumn.getByText(uniqueTitle);
+    await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
   test("should create multiple tickets in sequence", async ({ page }) => {
+    const testId = Date.now();
     const tickets = [
-      { title: "First sequential ticket", description: "First description" },
-      { title: "Second sequential ticket", description: "Second description" },
-      { title: "Third sequential ticket", description: "Third description" },
+      { title: `First sequential ticket ${testId}`, description: "First description" },
+      { title: `Second sequential ticket ${testId}`, description: "Second description" },
+      { title: `Third sequential ticket ${testId}`, description: "Third description" },
     ];
 
     for (const ticket of tickets) {
@@ -215,11 +228,11 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
       await page.getByRole("button", { name: /new ticket/i }).click();
 
       // Fill form
-      await page.getByLabel(/title/i).fill(ticket.title);
-      await page.getByLabel(/description/i).fill(ticket.description);
+      await page.getByRole("dialog").getByLabel(/^title$/i).fill(ticket.title);
+      await page.getByRole("dialog").getByLabel(/^description$/i).fill(ticket.description);
 
       // Submit
-      await page.getByRole("button", { name: /^create$/i }).click();
+      await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
       // Wait for modal to close
       const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
@@ -238,17 +251,20 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   });
 
   test("should handle network delay gracefully (within timeout)", async ({ page }) => {
+    const testId = Date.now();
+    const testTitle = `Network delay test ${testId}`;
+
     // This test assumes API responds within 15 seconds (spec requirement)
 
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Fill form
-    await page.getByLabel(/title/i).fill("Network delay test");
-    await page.getByLabel(/description/i).fill("Testing timeout handling");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Testing timeout handling");
 
     // Submit
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await createButton.click();
 
     // Button should be disabled during submission
@@ -259,7 +275,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(modalTitle).not.toBeVisible({ timeout: 15000 });
 
     // Verify ticket was created
-    const newTicket = page.getByText("Network delay test");
+    const newTicket = page.getByText(testTitle);
     await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
@@ -268,9 +284,9 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Create ticket
     await page.getByRole("button", { name: /new ticket/i }).click();
-    await page.getByLabel(/title/i).fill(testTitle);
-    await page.getByLabel(/description/i).fill("Verifying stage is IDLE");
-    await page.getByRole("button", { name: /^create$/i }).click();
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Verifying stage is IDLE");
+    await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });

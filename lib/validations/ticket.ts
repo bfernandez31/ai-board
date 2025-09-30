@@ -21,22 +21,22 @@ const ALPHANUMERIC_PUNCTUATION = /^[a-zA-Z0-9\s.,?!\-]+$/;
 export const CreateTicketSchema = z.object({
   title: z
     .string()
+    .trim()
     .min(1, 'Title is required')
     .max(100, 'Title must be 100 characters or less')
     .regex(
       ALPHANUMERIC_PUNCTUATION,
-      'Title can only contain letters, numbers, and basic punctuation (. , ? ! -)'
-    )
-    .trim(),
+      'can only contain letters, numbers, and basic punctuation'
+    ),
   description: z
     .string()
+    .trim()
     .min(1, 'Description is required')
     .max(1000, 'Description must be 1000 characters or less')
     .regex(
       ALPHANUMERIC_PUNCTUATION,
-      'Description can only contain letters, numbers, and basic punctuation (. , ? ! -)'
-    )
-    .trim(),
+      'can only contain letters, numbers, and basic punctuation'
+    ),
 });
 
 /**

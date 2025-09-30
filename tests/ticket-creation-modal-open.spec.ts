@@ -24,19 +24,22 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await newTicketButton.click();
 
     // Verify modal opens
-    const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
+    const modal = page.getByRole("dialog");
+    await expect(modal).toBeVisible();
+
+    const modalTitle = modal.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).toBeVisible();
 
-    // Verify form fields are present
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    // Verify form fields are present within the modal
+    const titleInput = modal.getByLabel(/^title$/i);
+    const descriptionInput = modal.getByLabel(/^description$/i);
 
     await expect(titleInput).toBeVisible();
     await expect(descriptionInput).toBeVisible();
 
     // Verify action buttons are present
-    const cancelButton = page.getByRole("button", { name: /cancel/i });
-    const createButton = page.getByRole("button", { name: /create/i });
+    const cancelButton = modal.getByRole("button", { name: /cancel/i });
+    const createButton = modal.getByRole("button", { name: /create/i });
 
     await expect(cancelButton).toBeVisible();
     await expect(createButton).toBeVisible();
@@ -50,8 +53,8 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(modalTitle).toBeVisible();
 
     // Type some data in the form
-    await page.getByLabel(/title/i).fill("Test ticket that should not be created");
-    await page.getByLabel(/description/i).fill("This is a test description");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill("Test ticket that should not be created");
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("This is a test description");
 
     // Click Cancel button
     await page.getByRole("button", { name: /cancel/i }).click();
@@ -72,8 +75,8 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(modalTitle).toBeVisible();
 
     // Type some data
-    await page.getByLabel(/title/i).fill("Another test ticket");
-    await page.getByLabel(/description/i).fill("Should not be created");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill("Another test ticket");
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Should not be created");
 
     // Press Escape key
     await page.keyboard.press("Escape");
@@ -94,7 +97,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(modalTitle).toBeVisible();
 
     // Type some data
-    await page.getByLabel(/title/i).fill("Backdrop test ticket");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill("Backdrop test ticket");
 
     // Click on the backdrop (dialog overlay)
     // Note: This clicks outside the dialog content but inside the overlay
@@ -123,7 +126,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(modalTitle).toBeVisible();
 
     // Check that title input has focus
-    const titleInput = page.getByLabel(/title/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
     await expect(titleInput).toBeFocused();
   });
 
@@ -134,14 +137,14 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
 
     // Test 1: Cancel via button
     await page.getByRole("button", { name: /new ticket/i }).click();
-    await page.getByLabel(/title/i).fill("Cancel test 1");
-    await page.getByLabel(/description/i).fill("Description 1");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill("Cancel test 1");
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Description 1");
     await page.getByRole("button", { name: /cancel/i }).click();
 
     // Test 2: Cancel via Escape
     await page.getByRole("button", { name: /new ticket/i }).click();
-    await page.getByLabel(/title/i).fill("Cancel test 2");
-    await page.getByLabel(/description/i).fill("Description 2");
+    await page.getByRole("dialog").getByLabel(/^title$/i).fill("Cancel test 2");
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Description 2");
     await page.keyboard.press("Escape");
 
     // Wait a moment for any potential API calls to complete

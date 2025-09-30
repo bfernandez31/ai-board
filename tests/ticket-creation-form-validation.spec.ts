@@ -22,15 +22,15 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should disable Create button when both fields are empty", async ({ page }) => {
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
 
     // Initially, both fields are empty
     await expect(createButton).toBeDisabled();
   });
 
   test("should disable Create button when only title is filled", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
 
     // Fill only title
     await titleInput.fill("Test ticket title");
@@ -40,8 +40,8 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should disable Create button when only description is filled", async ({ page }) => {
-    const descriptionInput = page.getByLabel(/description/i);
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
 
     // Fill only description
     await descriptionInput.fill("Test ticket description");
@@ -51,7 +51,7 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should show error when title exceeds 100 characters", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
     const tooLongTitle = "a".repeat(101);
 
     // Fill title with 101 characters
@@ -65,13 +65,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeDisabled();
   });
 
   test("should show error when description exceeds 1000 characters", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
     const tooLongDescription = "a".repeat(1001);
 
     // Fill title with valid data
@@ -88,13 +88,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeDisabled();
   });
 
   test("should show error when title contains emoji", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill with emoji
     await titleInput.fill("Test ticket 🚀");
@@ -108,13 +108,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeDisabled();
   });
 
   test("should show error when title contains special characters", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill with special characters
     await titleInput.fill("Test @#$% ticket");
@@ -128,13 +128,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeDisabled();
   });
 
   test("should show error when description contains special characters", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill title with valid data
     await titleInput.fill("Valid title");
@@ -150,13 +150,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeDisabled();
   });
 
   test("should accept title with allowed punctuation", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill with allowed punctuation: . , ? ! -
     await titleInput.fill("Test, ticket! How? Yes-it works.");
@@ -174,13 +174,13 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).not.toBeVisible();
 
     // Create button should be enabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeEnabled();
   });
 
   test("should accept description with allowed punctuation", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill with allowed punctuation
     await titleInput.fill("Valid title");
@@ -198,14 +198,14 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(errorMessage).not.toBeVisible();
 
     // Create button should be enabled
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeEnabled();
   });
 
   test("should enable Create button when both fields are valid", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
 
     // Fill both fields with valid data
     await titleInput.fill("Valid ticket title");
@@ -223,7 +223,7 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should show real-time validation errors as user types", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
 
     // Start typing a title that will exceed 100 chars
     const longTitle = "a".repeat(101);
@@ -247,8 +247,7 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should validate on blur (when field loses focus)", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
 
     // Fill title with invalid characters
     await titleInput.fill("Invalid @#$");
@@ -263,8 +262,8 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
   });
 
   test("should trim whitespace from title and description", async ({ page }) => {
-    const titleInput = page.getByLabel(/title/i);
-    const descriptionInput = page.getByLabel(/description/i);
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
 
     // Fill with leading/trailing whitespace
     await titleInput.fill("   Valid title   ");
@@ -277,13 +276,9 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     // Wait a moment
     await page.waitForTimeout(500);
 
-    // Values should be trimmed (check by clicking and verifying cursor position)
-    const titleValue = await titleInput.inputValue();
-    const descriptionValue = await descriptionInput.inputValue();
-
-    // Trimming might happen on submit, so at least verify no errors
+    // Trimming happens on submit, so verify no errors
     // Create button should be enabled for valid trimmed input
-    const createButton = page.getByRole("button", { name: /^create$/i });
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeEnabled();
   });
 });
