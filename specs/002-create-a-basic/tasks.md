@@ -52,23 +52,23 @@
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
 ### Database & Validation
-- [ ] T015 Create Ticket model in prisma/schema.prisma with Stage enum and indexes
-- [ ] T016 [P] Create Zod validation schemas in lib/validations/ticket.ts
-- [ ] T017 [P] Create TypeScript type definitions in lib/types.ts
-- [ ] T018 [P] Create database access functions in lib/db/tickets.ts (getTicketsByStage, createTicket)
-- [ ] T019 [P] Create Prisma client singleton in lib/db/client.ts
+- [x] T015 Create Ticket model in prisma/schema.prisma with Stage enum and indexes
+- [x] T016 [P] Create Zod validation schemas in lib/validations/ticket.ts
+- [x] T017 [P] Create TypeScript type definitions in lib/types.ts
+- [x] T018 [P] Create database access functions in lib/db/tickets.ts (getTicketsByStage, createTicket)
+- [x] T019 [P] Create Prisma client singleton in lib/db/client.ts
 
 ### API Routes
-- [ ] T020 Implement GET /api/tickets route handler in app/api/tickets/route.ts
-- [ ] T021 Implement POST /api/tickets route handler in app/api/tickets/route.ts (add to same file)
+- [x] T020 Implement GET /api/tickets route handler in app/api/tickets/route.ts
+- [x] T021 Implement POST /api/tickets route handler in app/api/tickets/route.ts (add to same file)
 
 ### UI Components
-- [ ] T022 [P] Create stage config and utilities in lib/utils/stage.ts
-- [ ] T023 [P] Create timestamp formatting utility in lib/utils/time.ts
-- [ ] T024 [P] Create TicketCard client component in components/board/ticket-card.tsx
-- [ ] T025 [P] Create Column server component in components/board/column.tsx
-- [ ] T026 Create Board server component in components/board/board.tsx
-- [ ] T027 Create board page in app/board/page.tsx
+- [x] T022 [P] Create stage config and utilities in lib/utils/stage.ts
+- [x] T023 [P] Create timestamp formatting utility in lib/utils/time.ts
+- [x] T024 [P] Create TicketCard client component in components/board/ticket-card.tsx
+- [x] T025 [P] Create Column server component in components/board/column.tsx
+- [x] T026 Create Board server component in components/board/board.tsx
+- [x] T027 Create board page in app/board/page.tsx
 
 ## Phase 3.4: Integration
 
