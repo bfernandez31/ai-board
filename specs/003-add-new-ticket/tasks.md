@@ -122,13 +122,13 @@
 
 ## Phase 3.4: API Implementation (Make contract tests GREEN)
 
-- [ ] T014 Update POST /api/tickets in `/app/api/tickets/route.ts`: Add Zod validation with createTicketSchema, return 400 with structured errors on validation failure, return 201 with created ticket on success, add 15-second timeout handling
-- [ ] T015 Run contract tests to verify GREEN state: `npx playwright test specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` (expect ALL tests to PASS)
+- [x] T014 Update POST /api/tickets in `/app/api/tickets/route.ts`: Add Zod validation with createTicketSchema, return 400 with structured errors on validation failure, return 201 with created ticket on success, add 15-second timeout handling
+- [x] T015 Run contract tests to verify GREEN state: `npx playwright test specs/003-add-new-ticket/contracts/api-tickets-post.test.ts` (expect ALL tests to PASS)
 
 ## Phase 3.5: Component Implementation (Make E2E tests GREEN)
 
-- [ ] T016 [P] Create NewTicketModal component in `/components/board/new-ticket-modal.tsx`: Client Component with Dialog, form state (title, description, errors, isSubmitting), real-time validation, submit handler with API call, error handling, loading states
-- [ ] T017 Update NewTicketButton component in `/components/board/new-ticket-button.tsx`: Add state to control modal open/close, integrate NewTicketModal component, pass onTicketCreated callback
+- [x] T016 [P] Create NewTicketModal component in `/components/board/new-ticket-modal.tsx`: Client Component with Dialog, form state (title, description, errors, isSubmitting), real-time validation, submit handler with API call, error handling, loading states
+- [x] T017 Update NewTicketButton component in `/components/board/new-ticket-button.tsx`: Add state to control modal open/close, integrate NewTicketModal component, pass onTicketCreated callback
 - [ ] T018 Run E2E modal open/close test: `npx playwright test tests/ticket-creation-modal-open.spec.ts` (expect PASS)
 - [ ] T019 Run E2E form validation test: `npx playwright test tests/ticket-creation-form-validation.spec.ts` (expect PASS)
 - [ ] T020 Run E2E success test: `npx playwright test tests/ticket-creation-success.spec.ts` (expect PASS)
