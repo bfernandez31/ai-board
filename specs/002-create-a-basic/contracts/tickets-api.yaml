@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: AI Board Tickets API
+  description: API for managing kanban board tickets
+  version: 1.0.0
+  contact:
+    name: AI Board Team
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /api/tickets:
+    get:
+      operationId: getTickets
+      summary: Get all tickets grouped by stage
+      description: Returns all tickets organized by their workflow stage
+      tags:
+        - Tickets
+      responses:
+        '200':
+          description: Tickets grouped by stage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketsByStage'
+              examples:
+                withTickets:
+                  summary: Board with tickets
+                  value:
+                    IDLE:
+                      - id: 1
+                        title: 'Fix login bug'
+                        description: 'Users cannot log in with email'
+                        stage: 'IDLE'
+                        createdAt: '2025-09-30T12:00:00Z'
+                        updatedAt: '2025-09-30T12:00:00Z'
+                    PLAN:
+                      - id: 2
+                        title: 'Add user dashboard'
+                        description: null
+                        stage: 'PLAN'
+                        createdAt: '2025-09-30T11:00:00Z'
+                        updatedAt: '2025-09-30T13:00:00Z'
+                    BUILD: []
+                    REVIEW: []
+                    SHIPPED: []
+                    ERRORED: []
+                emptyBoard:
+                  summary: Empty board
+                  value:
+                    IDLE: []
+                    PLAN: []
+                    BUILD: []
+                    REVIEW: []
+                    SHIPPED: []
+                    ERRORED: []
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Failed to fetch tickets'
+                code: 'DATABASE_ERROR'
+
+    post:
+      operationId: createTicket
+      summary: Create a new ticket
+      description: Creates a new ticket in the IDLE stage
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+            examples:
+              withDescription:
+                summary: Ticket with description
+                value:
+                  title: 'Fix authentication bug'
+                  description: 'Users cannot log in after password reset'
+              withoutDescription:
+                summary: Ticket without description
+                value:
+                  title: 'Add dark mode toggle'
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+              example:
+                id: 3
+                title: 'Fix authentication bug'
+                description: 'Users cannot log in after password reset'
+                stage: 'IDLE'
+                createdAt: '2025-09-30T14:30:00Z'
+                updatedAt: '2025-09-30T14:30:00Z'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTitle:
+                  summary: Missing title
+                  value:
+                    error: 'Title is required'
+                    code: 'VALIDATION_ERROR'
+                titleTooLong:
+                  summary: Title exceeds max length
+                  value:
+                    error: 'Title too long'
+                    code: 'VALIDATION_ERROR'
+                descriptionTooLong:
+                  summary: Description exceeds max length
+                  value:
+                    error: 'Description too long'
+                    code: 'VALIDATION_ERROR'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Failed to create ticket'
+                code: 'DATABASE_ERROR'
+
+components:
+  schemas:
+    Stage:
+      type: string
+      enum:
+        - IDLE
+        - PLAN
+        - BUILD
+        - REVIEW
+        - SHIPPED
+        - ERRORED
+      description: Workflow stage for a ticket
+      example: 'IDLE'
+
+    Ticket:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - stage
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Unique ticket identifier
+          example: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Ticket title
+          example: 'Fix login bug'
+        description:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Detailed ticket description (optional)
+          example: 'Users cannot log in with email after recent update'
+        stage:
+          $ref: '#/components/schemas/Stage'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was created
+          example: '2025-09-30T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was last updated
+          example: '2025-09-30T12:00:00Z'
+
+    CreateTicketRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Ticket title
+          example: 'Add user dashboard'
+        description:
+          type: string
+          maxLength: 5000
+          description: Detailed ticket description (optional)
+          example: 'Create a dashboard showing user statistics and recent activity'
+
+    TicketsByStage:
+      type: object
+      required:
+        - IDLE
+        - PLAN
+        - BUILD
+        - REVIEW
+        - SHIPPED
+        - ERRORED
+      properties:
+        IDLE:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        PLAN:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        BUILD:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        REVIEW:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        SHIPPED:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        ERRORED:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: 'Failed to create ticket'
+        code:
+          type: string
+          description: Machine-readable error code (optional)
+          example: 'VALIDATION_ERROR'
+          enum:
+            - VALIDATION_ERROR
+            - DATABASE_ERROR
+            - INTERNAL_ERROR
+
+tags:
+  - name: Tickets
+    description: Ticket management endpoints
