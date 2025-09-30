@@ -12,6 +12,9 @@ export const StageSchema = z.enum([
   'ERRORED',
 ]);
 
+// Pattern for alphanumeric + basic punctuation (periods, commas, hyphens, spaces, question marks, exclamation points)
+const ALPHANUMERIC_PUNCTUATION = /^[a-zA-Z0-9\s.,?!\-]+$/;
+
 /**
  * Validation schema for creating a new ticket
  */
@@ -19,11 +22,21 @@ export const CreateTicketSchema = z.object({
   title: z
     .string()
     .min(1, 'Title is required')
-    .max(500, 'Title too long'),
+    .max(100, 'Title must be 100 characters or less')
+    .regex(
+      ALPHANUMERIC_PUNCTUATION,
+      'Title can only contain letters, numbers, and basic punctuation (. , ? ! -)'
+    )
+    .trim(),
   description: z
     .string()
-    .max(5000, 'Description too long')
-    .optional(),
+    .min(1, 'Description is required')
+    .max(1000, 'Description must be 1000 characters or less')
+    .regex(
+      ALPHANUMERIC_PUNCTUATION,
+      'Description can only contain letters, numbers, and basic punctuation (. , ? ! -)'
+    )
+    .trim(),
 });
 
 /**
@@ -34,11 +47,11 @@ export const TicketSchema = z.object({
   title: z
     .string()
     .min(1, 'Title is required')
-    .max(500, 'Title too long'),
+    .max(100, 'Title must be 100 characters or less'),
   description: z
     .string()
-    .max(5000, 'Description too long')
-    .nullable(),
+    .min(1, 'Description is required')
+    .max(1000, 'Description must be 1000 characters or less'),
   stage: StageSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
