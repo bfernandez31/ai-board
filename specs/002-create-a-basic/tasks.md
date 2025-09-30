@@ -37,17 +37,17 @@
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Contract Tests (API Endpoints)
-- [ ] T006 [P] Contract test GET /api/tickets in tests/api/tickets-get.spec.ts
-- [ ] T007 [P] Contract test POST /api/tickets in tests/api/tickets-post.spec.ts
+- [x] T006 [P] Contract test GET /api/tickets in tests/api/tickets-get.spec.ts
+- [x] T007 [P] Contract test POST /api/tickets in tests/api/tickets-post.spec.ts
 
 ### E2E Tests (User Scenarios from quickstart.md)
-- [ ] T008 [P] E2E test: Empty board displays 6 columns with colors in tests/e2e/board-empty.spec.ts
-- [ ] T009 [P] E2E test: Create ticket via API appears in IDLE column in tests/e2e/ticket-create.spec.ts
-- [ ] T010 [P] E2E test: Ticket card displays title, ID, badge, timestamp in tests/e2e/ticket-card.spec.ts
-- [ ] T011 [P] E2E test: Multiple tickets display with correct sorting in tests/e2e/board-multiple.spec.ts
-- [ ] T012 [P] E2E test: Error handling for invalid ticket creation in tests/e2e/ticket-errors.spec.ts
-- [ ] T013 [P] E2E test: Responsive design with horizontal scroll <375px in tests/e2e/board-responsive.spec.ts
-- [ ] T014 [P] E2E test: Long title truncation at 2 lines in tests/e2e/ticket-truncation.spec.ts
+- [x] T008 [P] E2E test: Empty board displays 6 columns with colors in tests/e2e/board-empty.spec.ts
+- [x] T009 [P] E2E test: Create ticket via API appears in IDLE column in tests/e2e/ticket-create.spec.ts
+- [x] T010 [P] E2E test: Ticket card displays title, ID, badge, timestamp in tests/e2e/ticket-card.spec.ts
+- [x] T011 [P] E2E test: Multiple tickets display with correct sorting in tests/e2e/board-multiple.spec.ts
+- [x] T012 [P] E2E test: Error handling for invalid ticket creation in tests/e2e/ticket-errors.spec.ts
+- [x] T013 [P] E2E test: Responsive design with horizontal scroll <375px in tests/e2e/board-responsive.spec.ts
+- [x] T014 [P] E2E test: Long title truncation at 2 lines in tests/e2e/ticket-truncation.spec.ts
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
