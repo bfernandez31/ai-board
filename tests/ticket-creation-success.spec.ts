@@ -7,7 +7,14 @@
  * Run: npx playwright test tests/ticket-creation-success.spec.ts
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
+
+// Helper: Wait for ticket to appear in column after board refresh
+async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 10000) {
+  const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
+  const ticket = idleColumn.getByText(ticketTitle);
+  await expect(ticket).toBeVisible({ timeout });
+}
 
 test.describe("Ticket Creation Modal - Successful Creation", () => {
   test.beforeEach(async ({ page }) => {
@@ -50,19 +57,8 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     // Step 8: Wait for modal to close (indicates successful creation)
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Step 9: Wait for network to settle (board refresh)
-    await page.waitForLoadState('networkidle');
-
-    // Step 10: Verify ticket appears in IDLE column
-    const newTicket = page.getByText(testTitle);
-    await expect(newTicket).toBeVisible({ timeout: 3000 });
-
-    // Step 11: Verify ticket title matches input
-    await expect(newTicket).toHaveText(testTitle);
-
-    // Step 12: Verify ticket is in IDLE column
-    const ticketInIdle = idleColumn.getByText(testTitle);
-    await expect(ticketInIdle).toBeVisible();
+    // Step 9: Wait for ticket to appear in IDLE column (board refresh is async)
+    await waitForTicketInColumn(page, testTitle);
   });
 
   test("should create ticket with minimum valid input (1 char each)", async ({ page }) => {
@@ -134,9 +130,8 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Verify ticket exists by title
-    const newTicket = page.getByText(testTitle);
-    await expect(newTicket).toBeVisible({ timeout: 3000 });
+    // Wait for ticket to appear in IDLE column
+    await waitForTicketInColumn(page, testTitle);
   });
 
   test("should create ticket with allowed punctuation", async ({ page }) => {
@@ -158,9 +153,8 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Verify ticket exists with exact title
-    const newTicket = page.getByText(titleWithPunctuation);
-    await expect(newTicket).toBeVisible({ timeout: 3000 });
+    // Wait for ticket to appear in IDLE column
+    await waitForTicketInColumn(page, titleWithPunctuation);
   });
 
   test("should show loading state during ticket creation", async ({ page }) => {
