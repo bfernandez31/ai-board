@@ -60,13 +60,12 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
   });
 
-  test('should update IDLE column ticket count after creation', async ({ page, request }) => {
+  test('should update IDLE column ticket count badge after creation', async ({ page, request }) => {
     await page.goto(`${BASE_URL}/board`);
 
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const initialCountText = (await idleColumn.textContent()) ?? '';
-    const initialCountMatch = initialCountText.match(/(\d+)\s*tickets?/i);
-    const initialCount = initialCountMatch?.[1] ? Number.parseInt(initialCountMatch[1], 10) : 0;
+    const badge = idleColumn.locator('span[class*="rounded-full"]').first();
+    const initialCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
     await createTicket(request, {
       title: 'New ticket for count test',
@@ -75,10 +74,7 @@ test.describe('Ticket Creation and Display', () => {
 
     await page.reload();
 
-    const updatedCountText = (await idleColumn.textContent()) ?? '';
-    const updatedCountMatch = updatedCountText.match(/(\d+)\s*tickets?/i);
-    const updatedCount = updatedCountMatch?.[1] ? Number.parseInt(updatedCountMatch[1], 10) : 0;
-
+    const updatedCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
     expect(updatedCount).toBe(initialCount + 1);
   });
 
@@ -129,19 +125,17 @@ test.describe('Ticket Creation and Display', () => {
     await page.goto(`${BASE_URL}/board`);
 
     const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
-    const otherColumns = [
-      page.locator('[data-testid="column-PLAN"]'),
-      page.locator('[data-testid="column-BUILD"]'),
-      page.locator('[data-testid="column-REVIEW"]'),
-      page.locator('[data-testid="column-SHIPPED"]'),
-      page.locator('[data-testid="column-ERRORED"]'),
-    ];
 
     const ticketInIdle = idleColumn.locator(`text="${ticketData.title}"`);
     await expect(ticketInIdle).toBeVisible();
 
-    for (const column of otherColumns) {
-      await expect(column.locator(`text="${ticketData.title}"`)).not.toBeVisible();
+    // Verify ticket is NOT in other columns
+    const otherStages = ['PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    for (const stage of otherStages) {
+      const column = page.locator(`[data-testid="column-${stage}"]`).first();
+      const ticketInOtherColumn = column.locator(`text="${ticketData.title}"`);
+      const count = await ticketInOtherColumn.count();
+      expect(count).toBe(0);
     }
   });
 

@@ -19,7 +19,7 @@ export function Column({ stage, tickets }: ColumnProps) {
   return (
     <div
       data-testid={`column-${stage}`}
-      className={`flex flex-col h-full min-w-[280px] rounded-3xl border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor}`}
+      className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor}`}
     >
       {/* Column Header */}
       <div
@@ -37,8 +37,6 @@ export function Column({ stage, tickets }: ColumnProps) {
             {ticketCount}
           </span>
         </div>
-
-        <div className={`mt-2.5 h-px w-full rounded-full ${stageConfig.accentBarColor}`} aria-hidden />
       </div>
 
       {/* Tickets Scroll Area */}

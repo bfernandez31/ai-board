@@ -20,7 +20,7 @@ export function NewTicketButton({ stage }: NewTicketButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className="w-full rounded-2xl border border-dashed border-white/15 bg-white/5 px-5 py-4 text-sm text-zinc-100/90 transition-all hover:border-white/30 hover:bg-white/10 hover:text-white flex items-center justify-center gap-2 font-medium"
+      className="w-full rounded-lg border border-dashed border-white/15 bg-white/5 px-5 py-4 text-sm text-zinc-100/90 transition-all hover:border-white/30 hover:bg-white/10 hover:text-white flex items-center justify-center gap-2 font-medium"
     >
       <Plus className="w-4 h-4" />
       <span className="text-sm">New Ticket</span>
