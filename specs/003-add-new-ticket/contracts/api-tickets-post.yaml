@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Ticket Creation API
+  description: API contract for creating new tickets in the AI Board application
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://ai-board.vercel.app
+    description: Production server
+
+paths:
+  /api/tickets:
+    post:
+      summary: Create a new ticket
+      description: |
+        Creates a new ticket with the provided title and description.
+        The ticket is automatically assigned to the IDLE stage.
+        All fields are validated according to the ticket creation rules.
+      operationId: createTicket
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+            examples:
+              validTicket:
+                summary: Valid ticket creation
+                value:
+                  title: "Implement user authentication"
+                  description: "Add JWT-based authentication with login and registration endpoints."
+              minimalTicket:
+                summary: Minimal valid ticket
+                value:
+                  title: "A"
+                  description: "B"
+              maxLengthTitle:
+                summary: Maximum length title (100 chars)
+                value:
+                  title: "This is a very long ticket title that reaches exactly one hundred characters for testing purposes"
+                  description: "Test description for max title length"
+              maxLengthDescription:
+                summary: Maximum length description (partial - 1000 chars)
+                value:
+                  title: "Test ticket"
+                  description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua..."
+
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+              examples:
+                createdTicket:
+                  summary: Successfully created ticket
+                  value:
+                    id: 42
+                    title: "Implement user authentication"
+                    description: "Add JWT-based authentication with login and registration endpoints."
+                    stage: "IDLE"
+                    createdAt: "2025-09-30T10:30:00.000Z"
+                    updatedAt: "2025-09-30T10:30:00.000Z"
+
+        '400':
+          description: Validation error - invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                emptyTitle:
+                  summary: Missing title
+                  value:
+                    error: "Invalid input"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      fieldErrors:
+                        title:
+                          - "Title is required"
+                emptyDescription:
+                  summary: Missing description
+                  value:
+                    error: "Invalid input"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      fieldErrors:
+                        description:
+                          - "Description is required"
+                titleTooLong:
+                  summary: Title exceeds 100 characters
+                  value:
+                    error: "Invalid input"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      fieldErrors:
+                        title:
+                          - "Title must be 100 characters or less"
+                descriptionTooLong:
+                  summary: Description exceeds 1000 characters
+                  value:
+                    error: "Invalid input"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      fieldErrors:
+                        description:
+                          - "Description must be 1000 characters or less"
+                invalidCharacters:
+                  summary: Special characters not allowed
+                  value:
+                    error: "Invalid input"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      fieldErrors:
+                        title:
+                          - "Title can only contain letters, numbers, and basic punctuation (. , ? ! -)"
+
+        '408':
+          description: Request timeout - operation took longer than 15 seconds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                timeout:
+                  summary: Request timeout
+                  value:
+                    error: "Request timeout"
+                    code: "TIMEOUT"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Generic server error
+                  value:
+                    error: "An unexpected error occurred"
+                    code: "INTERNAL_ERROR"
+                databaseError:
+                  summary: Database connection error
+                  value:
+                    error: "Database connection failed"
+                    code: "DATABASE_ERROR"
+
+components:
+  schemas:
+    CreateTicketRequest:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9\s.,?!\-]+$'
+          description: |
+            Ticket title. Must be 1-100 characters.
+            Only alphanumeric characters and basic punctuation (. , ? ! -) allowed.
+          example: "Implement user authentication"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          pattern: '^[a-zA-Z0-9\s.,?!\-]+$'
+          description: |
+            Ticket description. Must be 1-1000 characters.
+            Only alphanumeric characters and basic punctuation (. , ? ! -) allowed.
+          example: "Add JWT-based authentication with login and registration endpoints."
+
+    TicketResponse:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - stage
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Unique ticket identifier (auto-generated)
+          example: 42
+        title:
+          type: string
+          maxLength: 100
+          description: Ticket title
+          example: "Implement user authentication"
+        description:
+          type: string
+          maxLength: 1000
+          description: Ticket description
+          example: "Add JWT-based authentication with login and registration endpoints."
+        stage:
+          type: string
+          enum:
+            - IDLE
+            - PLAN
+            - BUILD
+            - REVIEW
+            - SHIPPED
+            - ERRORED
+          description: Current stage of the ticket (always IDLE for newly created tickets)
+          example: "IDLE"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was created (ISO 8601)
+          example: "2025-09-30T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was last updated (ISO 8601)
+          example: "2025-09-30T10:30:00.000Z"
+
+    ValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: High-level error message
+          example: "Invalid input"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+        details:
+          type: object
+          description: Detailed validation errors by field
+          properties:
+            fieldErrors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              example:
+                title:
+                  - "Title is required"
+                description:
+                  - "Description must be 1000 characters or less"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "An unexpected error occurred"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "INTERNAL_ERROR"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getTicketsByStage, createTicket } from '@/lib/db/tickets';
 import { CreateTicketSchema } from '@/lib/validations/ticket';
 import { ZodError } from 'zod';
@@ -26,6 +27,8 @@ export async function GET() {
 /**
  * POST /api/tickets
  * Creates a new ticket in the IDLE stage
+ *
+ * Timeout: 15 seconds (default Next.js API route timeout)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +39,9 @@ export async function POST(request: NextRequest) {
 
     // Create ticket
     const ticket = await createTicket(validatedInput);
+
+    // Revalidate the board page to show new ticket
+    revalidatePath('/board');
 
     // Return created ticket with 201 status
     return NextResponse.json(
@@ -52,11 +58,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Handle Zod validation errors
     if (error instanceof ZodError) {
-      const firstError = error.issues[0];
+      const flattened = error.flatten();
       return NextResponse.json(
         {
-          error: firstError?.message ?? 'Validation failed',
+          error: 'Invalid input',
           code: 'VALIDATION_ERROR',
+          details: {
+            fieldErrors: flattened.fieldErrors,
+            formErrors: flattened.formErrors,
+          },
         },
         { status: 400 }
       );

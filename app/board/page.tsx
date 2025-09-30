@@ -1,6 +1,10 @@
 import { Board } from '@/components/board/board';
 import { getTicketsByStage } from '@/lib/db/tickets';
 
+// Force dynamic rendering to ensure fresh data on router.refresh()
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * Board Page (Server Component)
  * Main kanban board view - full screen immersive experience

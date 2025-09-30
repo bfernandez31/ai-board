@@ -19,6 +19,8 @@ export function Column({ stage, tickets }: ColumnProps) {
   return (
     <div
       data-testid={`column-${stage}`}
+      data-column={stage}
+      data-stage={stage}
       className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor}`}
     >
       {/* Column Header */}
