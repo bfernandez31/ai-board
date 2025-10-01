@@ -39,6 +39,11 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
 
+  // Sync local state with server data when props change (after router.refresh())
+  React.useEffect(() => {
+    setTicketsByStage(initialTicketsByStage);
+  }, [initialTicketsByStage]);
+
   // Configure sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
