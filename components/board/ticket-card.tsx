@@ -9,12 +9,13 @@ import { TicketWithVersion } from '@/lib/types';
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   isDraggable?: boolean;
+  onTicketClick?: (ticket: TicketWithVersion) => void;
 }
 
 /**
  * TicketCard Component - Original Design with Drag-and-Drop
  */
-export const TicketCard = React.memo(({ ticket, isDraggable = true }: DraggableTicketCardProps) => {
+export const TicketCard = React.memo(({ ticket, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `ticket-${ticket.id}`,
     data: {
@@ -30,6 +31,14 @@ export const TicketCard = React.memo(({ ticket, isDraggable = true }: DraggableT
       }
     : undefined;
 
+  // Click handler that respects drag state
+  const handleClick = () => {
+    // Prevent click during drag
+    if (!isDragging && onTicketClick) {
+      onTicketClick(ticket);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -37,6 +46,7 @@ export const TicketCard = React.memo(({ ticket, isDraggable = true }: DraggableT
       data-ticket-id={ticket.id}
       data-testid="ticket-card"
       data-draggable={isDraggable ? 'true' : 'false'}
+      onClick={handleClick}
       className={`
         transition-opacity
         ${isDragging ? 'opacity-30' : 'opacity-100'}

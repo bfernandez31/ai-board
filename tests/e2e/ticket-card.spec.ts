@@ -161,7 +161,7 @@ test.describe('Ticket Card Display', () => {
     expect(isDraggable).toBe('true');
   });
 
-  test('should NOT navigate or open modal on click', async ({ page, request }) => {
+  test('should open modal on click without navigation', async ({ page, request }) => {
     await createTicket(request, {
       title: 'No Navigation Test',
       description: 'Click should not navigate',
@@ -176,10 +176,15 @@ test.describe('Ticket Card Display', () => {
     await ticketCard.click();
     await page.waitForTimeout(200);
 
+    // URL should not change (no navigation)
     expect(page.url()).toBe(initialUrl);
 
-    const modal = page.locator('[role="dialog"]').or(page.locator('.modal'));
-    await expect(modal.first()).not.toBeVisible();
+    // Modal should now be visible (new feature: ticket detail modal)
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible();
+
+    // Modal should display the ticket title
+    await expect(modal).toContainText('No Navigation Test');
   });
 
   test('should display all required card elements together', async ({ page, request }) => {
