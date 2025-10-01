@@ -89,36 +89,25 @@ test.describe('Empty Board Display', () => {
   });
 
   test('should apply dark theme', async ({ page }) => {
-    // Check for dark theme indicators
-    const html = page.locator('html');
-    const body = page.locator('body');
+    // Check for dark theme on main element (where bg-black is applied)
+    const main = page.locator('main');
 
-    // Check for dark theme class or dark background
-    const htmlClasses = await html.getAttribute('class') || '';
-    const bodyClasses = await body.getAttribute('class') || '';
-    const bodyStyle = await body.getAttribute('style') || '';
+    // Check background color is dark (should be black)
+    const bgColor = await main.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
 
-    const hasDarkTheme = htmlClasses.includes('dark') ||
-                        bodyClasses.includes('dark') ||
-                        bodyStyle.includes('dark') ||
-                        htmlClasses.includes('theme-dark');
-
-    // Alternative: Check background color is dark
-    if (!hasDarkTheme) {
-      const bgColor = await body.evaluate((el) => {
-        return window.getComputedStyle(el).backgroundColor;
-      });
-
-      // Dark backgrounds typically have RGB values < 50
-      const rgbMatch = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-      if (rgbMatch) {
-        const [, rStr, gStr, bStr] = rgbMatch;
-        const r = Number(rStr ?? NaN);
-        const g = Number(gStr ?? NaN);
-        const b = Number(bStr ?? NaN);
-        const isDarkBg = [r, g, b].every((value) => Number.isFinite(value) && value < 50);
-        expect(isDarkBg).toBe(true);
-      }
+    // Dark backgrounds typically have RGB values < 50 (black is 0,0,0)
+    const rgbMatch = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+      const [, rStr, gStr, bStr] = rgbMatch;
+      const r = Number(rStr ?? NaN);
+      const g = Number(gStr ?? NaN);
+      const b = Number(bStr ?? NaN);
+      const isDarkBg = [r, g, b].every((value) => Number.isFinite(value) && value < 50);
+      expect(isDarkBg).toBe(true);
+    } else {
+      throw new Error(`Could not parse background color: ${bgColor}`);
     }
   });
 
