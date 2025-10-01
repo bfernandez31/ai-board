@@ -42,7 +42,7 @@ test.describe('Ticket Creation and Display', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').or(page.getByRole('region', { name: /idle/i }));
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').or(page.getByRole('region', { name: /inbox/i }));
     await expect(idleColumn.first()).toBeVisible();
 
     const ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
@@ -63,7 +63,7 @@ test.describe('Ticket Creation and Display', () => {
   test('should update IDLE column ticket count badge after creation', async ({ page, request }) => {
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const badge = idleColumn.locator('span[class*="rounded-full"]').first();
     const initialCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
@@ -124,7 +124,7 @@ test.describe('Ticket Creation and Display', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
 
     const ticketInIdle = idleColumn.locator(`text="${ticketData.title}"`);
     await expect(ticketInIdle).toBeVisible();

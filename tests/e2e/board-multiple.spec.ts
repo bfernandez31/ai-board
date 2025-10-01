@@ -70,7 +70,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     await page.goto(`${BASE_URL}/board`);
 
     // Get all ticket cards in IDLE column
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const ticketCards = await idleColumn
       .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
       .all();
@@ -104,7 +104,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     await page.goto(`${BASE_URL}/board`);
 
     // Get initial count from badge
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const badge = idleColumn.locator('span[class*="rounded-full"]').first();
     const initialCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
@@ -134,7 +134,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
 
     // Find the ScrollArea component inside the column
     const scrollArea = idleColumn.locator('[data-radix-scroll-area-viewport]');
@@ -224,7 +224,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     expect(loadTime).toBeLessThan(5000);
 
     // Verify badge shows correct count
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const badge = idleColumn.locator('span[class*="rounded-full"]').first();
     const count = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
@@ -245,7 +245,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     // Get initial order
     const getTicketOrder = async () => {
-      const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+      const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
       const cards = await idleColumn
         .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
         .all();
@@ -282,7 +282,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     await page.goto(`${BASE_URL}/board`);
 
     // IDLE should have tickets
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const idleCards = await idleColumn
       .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
       .all();

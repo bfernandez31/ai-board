@@ -35,8 +35,8 @@ test.describe('Responsive Board Design', () => {
     }
 
     // All columns should be visible without scrolling horizontally
-    const firstColumn = page.locator(`[data-testid="column-IDLE"]`).first();
-    const lastColumn = page.locator(`[data-testid="column-ERRORED"]`).first();
+    const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
+    const lastColumn = page.locator(`[data-testid="column-SHIP"]`).first();
 
     const firstBox = await firstColumn.boundingBox();
     const lastBox = await lastColumn.boundingBox();
@@ -65,7 +65,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto(`${BASE_URL}/board`);
 
-    const column = page.locator(`[data-testid="column-IDLE"]`).first();
+    const column = page.locator(`[data-testid="column-INBOX"]`).first();
     const box = await column.boundingBox();
 
     if (box) {
@@ -79,7 +79,7 @@ test.describe('Responsive Board Design', () => {
     await page.goto(`${BASE_URL}/board`);
 
     // Get initial visibility of IDLE column header
-    const idleHeader = page.getByRole('heading', { name: /idle/i }).first();
+    const idleHeader = page.getByRole('heading', { name: /inbox/i }).first();
     await expect(idleHeader).toBeVisible();
 
     // Scroll horizontally to the right
@@ -166,7 +166,7 @@ test.describe('Responsive Board Design', () => {
     }
 
     // Check if columns are laid out horizontally
-    const firstColumn = page.locator(`[data-testid="column-IDLE"]`).first();
+    const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
     const secondColumn = page.locator(`[data-testid="column-PLAN"]`).first();
 
     const firstBox = await firstColumn.boundingBox();
@@ -190,7 +190,7 @@ test.describe('Responsive Board Design', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto(`${BASE_URL}/board`);
 
-      const firstColumn = page.locator(`[data-testid="column-IDLE"]`).first();
+      const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
       const secondColumn = page.locator(`[data-testid="column-PLAN"]`).first();
 
       const firstBox = await firstColumn.boundingBox();
@@ -210,7 +210,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(`${BASE_URL}/board`);
 
-    const header = page.getByRole('heading', { name: /idle/i }).first();
+    const header = page.getByRole('heading', { name: /inbox/i }).first();
     const desktopFontSize = await header.evaluate(el => {
       return window.getComputedStyle(el).fontSize;
     });
@@ -295,7 +295,7 @@ test.describe('Responsive Board Design', () => {
     await expect(board.first()).toBeVisible();
 
     // Verify basic functionality works on mobile
-    const idleColumn = page.locator(`[data-testid="column-IDLE"]`).first();
+    const idleColumn = page.locator(`[data-testid="column-INBOX"]`).first();
     await expect(idleColumn).toBeVisible();
   });
 });
