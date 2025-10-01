@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 type TicketResponse = {
   id: number;
@@ -31,6 +32,11 @@ async function findTicketCard(page: Page, ticketId: number, fallbackTitle: strin
 }
 
 test.describe('Ticket Creation and Display', () => {
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
+
   test('should create ticket via API and appear in IDLE column', async ({ page, request }) => {
     const ticketData = {
       title: 'Fix login bug',

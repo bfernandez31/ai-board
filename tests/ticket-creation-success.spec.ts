@@ -8,6 +8,7 @@
  */
 
 import { test, expect, Page } from "@playwright/test";
+import { cleanupDatabase } from './helpers/db-cleanup';
 
 // Helper: Wait for ticket to appear in column after board refresh
 async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 10000) {
@@ -17,6 +18,9 @@ async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 
 
 test.describe("Ticket Creation Modal - Successful Creation", () => {
   test.beforeEach(async ({ page }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Navigate to board page
     await page.goto("/board");
     await page.waitForLoadState("networkidle");

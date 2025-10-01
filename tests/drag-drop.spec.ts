@@ -18,6 +18,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     prisma = new PrismaClient();
   });
 
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await prisma.ticket.deleteMany({});
+  });
+
   test.afterAll(async () => {
     await prisma.$disconnect();
   });

@@ -8,9 +8,13 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { cleanupDatabase } from './helpers/db-cleanup';
 
 test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
   test.beforeEach(async ({ page }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Navigate to the board page before each test
     await page.goto("/board");
     await page.waitForLoadState("networkidle");

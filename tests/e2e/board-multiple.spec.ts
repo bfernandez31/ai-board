@@ -1,4 +1,5 @@
 import { test, expect, APIResponse } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
  * E2E Test: Multiple Tickets with Sorting
@@ -10,6 +11,11 @@ import { test, expect, APIResponse } from '@playwright/test';
 
 test.describe('Multiple Tickets Display and Sorting', () => {
   const BASE_URL = 'http://localhost:3000';
+
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
 
   const parseTicket = async (response: APIResponse) => {
     const json = (await response.json()) as { id: number; title: string };

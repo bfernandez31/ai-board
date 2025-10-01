@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 type TicketResponse = {
   id: number;
@@ -34,6 +35,9 @@ async function getStyleValue(locator: Locator, property: string): Promise<string
 
 test.describe('Ticket Card Display', () => {
   test.beforeEach(async ({ request }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     await createTicket(request, {
       title: 'Test Ticket for Card Display',
       description: 'This ticket is used for card display testing',

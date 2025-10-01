@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
  * Contract Test: POST /api/tickets
@@ -9,6 +10,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('POST /api/tickets - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
+
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
 
   test('should create ticket and return 201 with complete Ticket schema', async ({ request }) => {
     const requestBody = {

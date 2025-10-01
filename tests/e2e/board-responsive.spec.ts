@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
  * E2E Test: Responsive Design
@@ -12,6 +13,9 @@ test.describe('Responsive Board Design', () => {
   const BASE_URL = 'http://localhost:3000';
 
   test.beforeEach(async ({ request }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Create a few test tickets for responsive testing
     for (let i = 1; i <= 3; i++) {
       await request.post(`${BASE_URL}/api/tickets`, {

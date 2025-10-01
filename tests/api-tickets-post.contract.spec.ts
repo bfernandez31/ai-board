@@ -8,11 +8,16 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { cleanupDatabase } from './helpers/db-cleanup';
 
 const API_BASE_URL = "http://localhost:3000";
 const ENDPOINT = "/api/tickets";
 
 test.describe("POST /api/tickets - Contract Tests", () => {
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
   test.describe("Success Cases (201 Created)", () => {
     test("should create ticket with valid title and description", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {

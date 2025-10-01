@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -22,6 +23,11 @@ async function getStyle(locator: Locator, property: string): Promise<string> {
 }
 
 test.describe('Ticket Title Truncation', () => {
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
+
   test('should truncate very long title at 2 lines', async ({ page, request }) => {
     const longTitle =
       'This is a very long ticket title that should definitely exceed two lines when displayed on the card and needs to be truncated with an ellipsis to maintain consistent card heights';

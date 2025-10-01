@@ -2,11 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 const config = defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false, // Disabled to prevent race conditions with database
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  ...(process.env.CI && { workers: 1 }),
+  workers: 1, // Single worker to ensure database consistency
   reporter: 'html',
+  globalSetup: './tests/global-setup.ts',
+  globalTeardown: './tests/global-teardown.ts',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',

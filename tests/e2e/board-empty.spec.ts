@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
  * E2E Test: Empty Board Display
@@ -10,6 +11,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Empty Board Display', () => {
   test.beforeEach(async ({ page }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Navigate to board page
     await page.goto('http://localhost:3000/board');
   });
