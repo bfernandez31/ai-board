@@ -40,9 +40,16 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       const flattened = result.error.flatten();
 
+      // Create a descriptive error message from field errors
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .join('; ');
+
+      const errorMessage = fieldErrorMessages || 'Invalid input';
+
       return NextResponse.json(
         {
-          error: 'Invalid input',
+          error: errorMessage,
           code: 'VALIDATION_ERROR',
           details: {
             fieldErrors: flattened.fieldErrors,
@@ -78,9 +85,16 @@ export async function POST(request: NextRequest) {
     if (error instanceof ZodError) {
       const flattened = error.flatten();
 
+      // Create a descriptive error message from field errors
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .join('; ');
+
+      const errorMessage = fieldErrorMessages || 'Invalid input';
+
       return NextResponse.json(
         {
-          error: 'Invalid input',
+          error: errorMessage,
           code: 'VALIDATION_ERROR',
           details: {
             fieldErrors: flattened.fieldErrors,
