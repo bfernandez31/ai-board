@@ -312,14 +312,15 @@ test.describe('Ticket Detail Modal', () => {
 
     // Test the tickets we created (INBOX and PLAN)
     const stages = [
-      { name: 'inbox', index: 0 }, // First ticket in INBOX
-      { name: 'plan', index: 1 },  // Second ticket in PLAN
+      { name: 'INBOX', column: 'INBOX' },
+      { name: 'PLAN', column: 'PLAN' },
     ];
 
     for (const stage of stages) {
-      // Click the ticket at the specified index
-      const tickets = page.locator('[data-testid="ticket-card"]');
-      await tickets.nth(stage.index).click();
+      // Find the stage column and click the first ticket in it
+      const stageColumn = page.locator(`[data-stage="${stage.column}"]`);
+      const ticketInStage = stageColumn.locator('[data-testid="ticket-card"]').first();
+      await ticketInStage.click();
 
       const dialog = page.locator('[role="dialog"]');
       await expect(dialog).toBeVisible();
@@ -329,7 +330,7 @@ test.describe('Ticket Detail Modal', () => {
       await expect(badge).toBeVisible();
 
       // Verify badge has correct color class for this stage
-      const expectedColor = stageColors[stage.name.toUpperCase() as keyof typeof stageColors];
+      const expectedColor = stageColors[stage.name as keyof typeof stageColors];
       if (expectedColor) {
         const badgeClasses = await badge.getAttribute('class');
         expect(badgeClasses).toContain(expectedColor);
