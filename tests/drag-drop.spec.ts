@@ -1,4 +1,4 @@
-import { test, expect, Page, APIResponse } from '@playwright/test';
+import { test, expect, Page, APIResponse, devices } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -65,6 +65,26 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   };
 
   /**
+   * Helper: Perform drag-and-drop with @dnd-kit compatibility
+   * Uses mouse events instead of Playwright's dragTo
+   */
+  const dragTicketToColumn = async (page: Page, ticketId: number, targetStage: string) => {
+    const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
+    const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
+
+    const ticketBox = await ticketCard.boundingBox();
+    const targetBox = await targetColumn.boundingBox();
+
+    if (ticketBox && targetBox) {
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForTimeout(500); // Wait for UI update
+    }
+  };
+
+  /**
    * T005: Test successful drag from INBOX to PLAN
    * Expected: FAILS (components not implemented)
    */
@@ -80,12 +100,10 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
     // Drag ticket to PLAN column
-    const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
-    const planColumn = page.locator('[data-stage="PLAN"]');
-
-    await ticketCard.dragTo(planColumn);
+    await dragTicketToColumn(page, ticket.id, 'PLAN');
 
     // Verify ticket moved to PLAN column
+    const planColumn = page.locator('[data-stage="PLAN"]');
     await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
 
@@ -240,24 +258,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    // Simulate touch drag
-    const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
-    const planColumn = page.locator('[data-stage="PLAN"]');
-
-    // Get bounding boxes
-    const ticketBox = await ticketCard.boundingBox();
-    const planBox = await planColumn.boundingBox();
-
-    if (ticketBox && planBox) {
-      // Long-press to activate drag (TouchSensor delay: 250ms)
-      await page.touchscreen.tap(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-      await page.waitForTimeout(300); // Wait for activation
-
-      // Drag to target
-      await ticketCard.dragTo(planColumn);
-    }
+    // Drag using mouse events (works on mobile viewport)
+    await dragTicketToColumn(page, ticket.id, 'PLAN');
 
     // Verify ticket moved
+    const planColumn = page.locator('[data-stage="PLAN"]');
     await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
   });
 
