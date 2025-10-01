@@ -35,10 +35,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate input with Zod
-    const validatedInput = CreateTicketSchema.parse(body);
+    const result = CreateTicketSchema.safeParse(body);
+
+    if (!result.success) {
+      const flattened = result.error.flatten();
+
+      // Create a descriptive error message from field errors
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .join('; ');
+
+      const errorMessage = fieldErrorMessages || 'Invalid input';
+
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          code: 'VALIDATION_ERROR',
+          details: {
+            fieldErrors: flattened.fieldErrors,
+            formErrors: flattened.formErrors,
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     // Create ticket
-    const ticket = await createTicket(validatedInput);
+    const ticket = await createTicket(result.data);
 
     // Revalidate the board page to show new ticket
     revalidatePath('/board');
@@ -56,12 +79,22 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    console.error('Error in POST /api/tickets:', error);
+
     // Handle Zod validation errors
     if (error instanceof ZodError) {
       const flattened = error.flatten();
+
+      // Create a descriptive error message from field errors
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .join('; ');
+
+      const errorMessage = fieldErrorMessages || 'Invalid input';
+
       return NextResponse.json(
         {
-          error: 'Invalid input',
+          error: errorMessage,
           code: 'VALIDATION_ERROR',
           details: {
             fieldErrors: flattened.fieldErrors,
@@ -73,7 +106,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle database errors
-    console.error('Error creating ticket:', error);
     return NextResponse.json(
       {
         error: 'Failed to create ticket',

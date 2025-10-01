@@ -8,28 +8,28 @@
  */
 
 import { test, expect, Page } from "@playwright/test";
+import { cleanupDatabase } from './helpers/db-cleanup';
 
 // Helper: Wait for ticket to appear in column after board refresh
 async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 10000) {
-  const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
-  const ticket = idleColumn.getByText(ticketTitle);
+  const ticket = page.locator('[data-stage="INBOX"]').getByText(ticketTitle);
   await expect(ticket).toBeVisible({ timeout });
 }
 
 test.describe("Ticket Creation Modal - Successful Creation", () => {
   test.beforeEach(async ({ page }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Navigate to board page
     await page.goto("/board");
     await page.waitForLoadState("networkidle");
   });
 
-  test("should create ticket and display it in IDLE column", async ({ page }) => {
+  test("should create ticket and display it in INBOX column", async ({ page }) => {
     // Step 1: Navigate to board page (already done in beforeEach)
     const testId = Date.now();
     const testTitle = `E2E Test Ticket ${testId}`;
-
-    // Step 2: Locate IDLE column for verification
-    const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
 
     // Step 3: Click "+ New Ticket" button
     const newTicketButton = page.getByRole("button", { name: /new ticket/i });
@@ -57,7 +57,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     // Step 8: Wait for modal to close (indicates successful creation)
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Step 9: Wait for ticket to appear in IDLE column (board refresh is async)
+    // Step 9: Wait for ticket to appear in INBOX column (board refresh is async)
     await waitForTicketInColumn(page, testTitle);
   });
 
@@ -80,7 +80,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
     // Verify ticket exists (might be hard to find by single char, check count increased)
-    const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
+    const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();
     const ticketCards = idleColumn.locator('[data-testid="ticket-card"]');
 
     // At least one ticket should exist now
@@ -130,7 +130,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Wait for ticket to appear in IDLE column
+    // Wait for ticket to appear in INBOX column
     await waitForTicketInColumn(page, testTitle);
   });
 
@@ -153,7 +153,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Wait for ticket to appear in IDLE column
+    // Wait for ticket to appear in INBOX column
     await waitForTicketInColumn(page, titleWithPunctuation);
   });
 
@@ -188,8 +188,8 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
   test("should refresh board automatically after ticket creation", async ({ page }) => {
     const uniqueTitle = `Auto-refresh test ${Date.now()}`;
 
-    // Get IDLE column
-    const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
+    // Get INBOX column
+    const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();
 
     // Create ticket
     await page.getByRole("button", { name: /new ticket/i }).click();
@@ -273,21 +273,21 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
-  test("should display new ticket with correct stage (IDLE)", async ({ page }) => {
+  test("should display new ticket with correct stage (INBOX)", async ({ page }) => {
     const testTitle = `Stage verification ${Date.now()}`;
 
     // Create ticket
     await page.getByRole("button", { name: /new ticket/i }).click();
     await page.getByRole("dialog").getByLabel(/^title$/i).fill(testTitle);
-    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Verifying stage is IDLE");
+    await page.getByRole("dialog").getByLabel(/^description$/i).fill("Verifying stage is INBOX");
     await page.getByRole("button", { name: /create ticket|creating/i }).click();
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Verify ticket appears in IDLE column (not in other columns)
-    const idleColumn = page.locator('[data-column="IDLE"], [data-stage="IDLE"]').first();
+    // Verify ticket appears in INBOX column (not in other columns)
+    const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();
     const ticketInIdle = idleColumn.getByText(testTitle);
     await expect(ticketInIdle).toBeVisible({ timeout: 3000 });
 

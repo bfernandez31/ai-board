@@ -47,8 +47,8 @@ test.describe('Ticket Creation Error Handling', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should return 400 for title exceeding 500 characters', async ({ request }) => {
-    const longTitle = 'A'.repeat(501);
+  test('should return 400 for title exceeding 100 characters', async ({ request }) => {
+    const longTitle = 'A'.repeat(101);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {
@@ -62,12 +62,12 @@ test.describe('Ticket Creation Error Handling', () => {
     const body = await response.json();
 
     expect(body.error).toBeDefined();
-    expect(body.error.toLowerCase()).toMatch(/title.*(long|max|length|500)/);
+    expect(body.error.toLowerCase()).toContain('100 characters or less');
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should return 400 for description exceeding 5000 characters', async ({ request }) => {
-    const longDescription = 'B'.repeat(5001);
+  test('should return 400 for description exceeding 1000 characters', async ({ request }) => {
+    const longDescription = 'B'.repeat(1001);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {
@@ -81,7 +81,7 @@ test.describe('Ticket Creation Error Handling', () => {
     const body = await response.json();
 
     expect(body.error).toBeDefined();
-    expect(body.error.toLowerCase()).toMatch(/description.*(long|max|length|5000)/);
+    expect(body.error.toLowerCase()).toContain('1000 characters or less');
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
@@ -129,7 +129,7 @@ test.describe('Ticket Creation Error Handling', () => {
     const errorCases = [
       { data: {}, expectedField: 'title' },
       { data: { title: '' }, expectedField: 'title' },
-      { data: { title: 'A'.repeat(501) }, expectedField: 'title' }
+      { data: { title: 'A'.repeat(101) }, expectedField: 'title' }
     ];
 
     for (const errorCase of errorCases) {
@@ -211,8 +211,8 @@ test.describe('Ticket Creation Error Handling', () => {
     // This is documented for completeness - hard to trigger without mocking
   });
 
-  test('should accept valid request at boundary (500 char title)', async ({ request }) => {
-    const maxTitle = 'A'.repeat(500);
+  test('should accept valid request at boundary (100 char title)', async ({ request }) => {
+    const maxTitle = 'A'.repeat(100);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {
@@ -228,8 +228,8 @@ test.describe('Ticket Creation Error Handling', () => {
     expect(body.title).toBe(maxTitle);
   });
 
-  test('should accept valid request at boundary (5000 char description)', async ({ request }) => {
-    const maxDescription = 'B'.repeat(5000);
+  test('should accept valid request at boundary (1000 char description)', async ({ request }) => {
+    const maxDescription = 'B'.repeat(1000);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {
@@ -245,8 +245,8 @@ test.describe('Ticket Creation Error Handling', () => {
     expect(body.description).toBe(maxDescription);
   });
 
-  test('should reject just over boundary (501 char title)', async ({ request }) => {
-    const tooLongTitle = 'A'.repeat(501);
+  test('should reject just over boundary (101 char title)', async ({ request }) => {
+    const tooLongTitle = 'A'.repeat(101);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {
@@ -262,8 +262,8 @@ test.describe('Ticket Creation Error Handling', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should reject just over boundary (5001 char description)', async ({ request }) => {
-    const tooLongDescription = 'B'.repeat(5001);
+  test('should reject just over boundary (1001 char description)', async ({ request }) => {
+    const tooLongDescription = 'B'.repeat(1001);
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
       data: {

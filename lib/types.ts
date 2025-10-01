@@ -1,7 +1,8 @@
-import { Stage, Ticket as PrismaTicket } from '@prisma/client';
+import { Ticket as PrismaTicket } from '@prisma/client';
+import { Stage } from './stage-validation';
 
 /**
- * Re-export Prisma types
+ * Re-export types
  */
 export type { Stage };
 export type Ticket = PrismaTicket;
@@ -14,12 +15,11 @@ export type Ticket = PrismaTicket;
  * Response type for GET /api/tickets - tickets grouped by stage
  */
 export interface TicketsByStage {
-  IDLE: Ticket[];
+  INBOX: Ticket[];
   PLAN: Ticket[];
   BUILD: Ticket[];
-  REVIEW: Ticket[];
-  SHIPPED: Ticket[];
-  ERRORED: Ticket[];
+  VERIFY: Ticket[];
+  SHIP: Ticket[];
 }
 
 /**
@@ -66,4 +66,48 @@ export interface ColumnProps {
  */
 export interface BoardProps {
   ticketsByStage: TicketsByStage;
+}
+
+/**
+ * Drag-and-Drop Types
+ */
+
+/**
+ * Ticket with version field for optimistic concurrency control
+ */
+export interface TicketWithVersion {
+  id: number;
+  title: string;
+  description: string | null;
+  stage: Stage;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Request body for updating ticket stage
+ */
+export interface UpdateStageRequest {
+  stage: Stage;
+  version: number;
+}
+
+/**
+ * Response body for successful stage update
+ */
+export interface UpdateStageResponse {
+  id: number;
+  stage: Stage;
+  version: number;
+  updatedAt: string;
+}
+
+/**
+ * Error response when ticket was modified by another user (409 Conflict)
+ */
+export interface StageConflictError {
+  error: string;
+  currentStage: Stage;
+  currentVersion: number;
 }

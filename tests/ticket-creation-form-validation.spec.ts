@@ -8,9 +8,13 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { cleanupDatabase } from './helpers/db-cleanup';
 
 test.describe("Ticket Creation Modal - Form Validation", () => {
   test.beforeEach(async ({ page }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
     // Navigate to board and open modal
     await page.goto("/board");
     await page.waitForLoadState("networkidle");

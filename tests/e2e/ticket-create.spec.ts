@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { cleanupDatabase } from '../helpers/db-cleanup';
 
 type TicketResponse = {
   id: number;
@@ -31,6 +32,11 @@ async function findTicketCard(page: Page, ticketId: number, fallbackTitle: strin
 }
 
 test.describe('Ticket Creation and Display', () => {
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+  });
+
   test('should create ticket via API and appear in IDLE column', async ({ page, request }) => {
     const ticketData = {
       title: 'Fix login bug',
@@ -38,21 +44,24 @@ test.describe('Ticket Creation and Display', () => {
     };
 
     const createdTicket = await createTicket(request, ticketData);
-    expect(createdTicket.stage).toBe('IDLE');
+    expect(createdTicket.stage).toBe('INBOX');
 
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').or(page.getByRole('region', { name: /idle/i }));
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').or(page.getByRole('region', { name: /inbox/i }));
     await expect(idleColumn.first()).toBeVisible();
 
     const ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
     await expect(ticketCard).toBeVisible();
   });
 
-  test('should create ticket without description and display correctly', async ({ page, request }) => {
-    const ticketData = { title: 'Add dark mode toggle' };
+  test('should create ticket with minimal description and display correctly', async ({ page, request }) => {
+    const ticketData = {
+      title: 'Add dark mode toggle',
+      description: 'Minimal description'
+    };
     const createdTicket = await createTicket(request, ticketData);
-    expect(createdTicket.description).toBeNull();
+    expect(createdTicket.description).toBe('Minimal description');
 
     await page.goto(`${BASE_URL}/board`);
 
@@ -63,7 +72,7 @@ test.describe('Ticket Creation and Display', () => {
   test('should update IDLE column ticket count badge after creation', async ({ page, request }) => {
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const badge = idleColumn.locator('span[class*="rounded-full"]').first();
     const initialCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
@@ -124,13 +133,13 @@ test.describe('Ticket Creation and Display', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    const idleColumn = page.locator('[data-testid="column-IDLE"]').first();
+    const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
 
     const ticketInIdle = idleColumn.locator(`text="${ticketData.title}"`);
     await expect(ticketInIdle).toBeVisible();
 
     // Verify ticket is NOT in other columns
-    const otherStages = ['PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const otherStages = ['PLAN', 'BUILD', 'VERIFY', 'SHIP'];
     for (const stage of otherStages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
       const ticketInOtherColumn = column.locator(`text="${ticketData.title}"`);
@@ -158,10 +167,10 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
   });
 
-  test('should handle special characters in ticket title', async ({ page, request }) => {
+  test('should handle allowed punctuation in ticket title', async ({ page, request }) => {
     const ticketData = {
-      title: 'Fix "bug" with <special> & characters: 日本語 🚀',
-      description: 'Testing special character handling',
+      title: 'Fix bug with special chars - test, test? test! test.',
+      description: 'Testing allowed punctuation handling',
     };
 
     const createdTicket = await createTicket(request, ticketData);
@@ -172,7 +181,7 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
 
     const cardText = (await ticketCard.textContent()) ?? '';
-    expect(cardText).toContain('Fix');
-    expect(cardText).toContain('bug');
+    expect(cardText).toContain('Fix bug');
+    expect(cardText).toContain('special chars');
   });
 });
