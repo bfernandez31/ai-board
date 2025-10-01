@@ -130,7 +130,7 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketInIdle).toBeVisible();
 
     // Verify ticket is NOT in other columns
-    const otherStages = ['PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const otherStages = ['PLAN', 'BUILD', 'VERIFY', 'SHIP'];
     for (const stage of otherStages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
       const ticketInOtherColumn = column.locator(`text="${ticketData.title}"`);

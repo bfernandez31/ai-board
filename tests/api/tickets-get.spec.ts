@@ -18,21 +18,19 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     const body = await response.json();
 
-    // Validate TicketsByStage structure - all 6 stages must be present
-    expect(body).toHaveProperty('IDLE');
+    // Validate TicketsByStage structure - all 5 stages must be present
+    expect(body).toHaveProperty('INBOX');
     expect(body).toHaveProperty('PLAN');
     expect(body).toHaveProperty('BUILD');
-    expect(body).toHaveProperty('REVIEW');
-    expect(body).toHaveProperty('SHIPPED');
-    expect(body).toHaveProperty('ERRORED');
+    expect(body).toHaveProperty('VERIFY');
+    expect(body).toHaveProperty('SHIP');
 
     // Each stage should be an array
-    expect(Array.isArray(body.IDLE)).toBe(true);
+    expect(Array.isArray(body.INBOX)).toBe(true);
     expect(Array.isArray(body.PLAN)).toBe(true);
     expect(Array.isArray(body.BUILD)).toBe(true);
-    expect(Array.isArray(body.REVIEW)).toBe(true);
-    expect(Array.isArray(body.SHIPPED)).toBe(true);
-    expect(Array.isArray(body.ERRORED)).toBe(true);
+    expect(Array.isArray(body.VERIFY)).toBe(true);
+    expect(Array.isArray(body.SHIP)).toBe(true);
   });
 
   test('should return tickets with correct schema when tickets exist', async ({ request }) => {
@@ -54,7 +52,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     // Find tickets in any stage
     let foundTicket = null;
-    for (const stage of ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED']) {
+    for (const stage of ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']) {
       if (body[stage].length > 0) {
         foundTicket = body[stage][0];
         break;
@@ -71,17 +69,17 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(foundTicket).toHaveProperty('title');
     expect(typeof foundTicket.title).toBe('string');
     expect(foundTicket.title.length).toBeGreaterThan(0);
-    expect(foundTicket.title.length).toBeLessThanOrEqual(500);
+    expect(foundTicket.title.length).toBeLessThanOrEqual(100);
 
     expect(foundTicket).toHaveProperty('description');
     // description can be string or null
     if (foundTicket.description !== null) {
       expect(typeof foundTicket.description).toBe('string');
-      expect(foundTicket.description.length).toBeLessThanOrEqual(5000);
+      expect(foundTicket.description.length).toBeLessThanOrEqual(1000);
     }
 
     expect(foundTicket).toHaveProperty('stage');
-    expect(['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED']).toContain(foundTicket.stage);
+    expect(['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']).toContain(foundTicket.stage);
 
     expect(foundTicket).toHaveProperty('createdAt');
     expect(typeof foundTicket.createdAt).toBe('string');
@@ -102,12 +100,11 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     const body = await response.json();
 
     // All stages should exist as arrays (may be empty or have tickets)
-    expect(Array.isArray(body.IDLE)).toBe(true);
+    expect(Array.isArray(body.INBOX)).toBe(true);
     expect(Array.isArray(body.PLAN)).toBe(true);
     expect(Array.isArray(body.BUILD)).toBe(true);
-    expect(Array.isArray(body.REVIEW)).toBe(true);
-    expect(Array.isArray(body.SHIPPED)).toBe(true);
-    expect(Array.isArray(body.ERRORED)).toBe(true);
+    expect(Array.isArray(body.VERIFY)).toBe(true);
+    expect(Array.isArray(body.SHIP)).toBe(true);
   });
 
   test('should return 500 with ErrorResponse schema on database error', async ({ request }) => {
@@ -151,12 +148,11 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     // All responses should have the same structure
     const bodies = await Promise.all(responses.map(r => r.json()));
     bodies.forEach(body => {
-      expect(body).toHaveProperty('IDLE');
+      expect(body).toHaveProperty('INBOX');
       expect(body).toHaveProperty('PLAN');
       expect(body).toHaveProperty('BUILD');
-      expect(body).toHaveProperty('REVIEW');
-      expect(body).toHaveProperty('SHIPPED');
-      expect(body).toHaveProperty('ERRORED');
+      expect(body).toHaveProperty('VERIFY');
+      expect(body).toHaveProperty('SHIP');
     });
   });
 });

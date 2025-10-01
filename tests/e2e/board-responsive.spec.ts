@@ -27,7 +27,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(`${BASE_URL}/board`);
 
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
@@ -157,7 +157,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto(`${BASE_URL}/board`);
 
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     // All columns should be visible
     for (const stage of stages) {

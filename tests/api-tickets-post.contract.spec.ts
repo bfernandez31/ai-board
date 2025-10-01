@@ -29,7 +29,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
         id: expect.any(Number),
         title: "Implement user authentication",
         description: "Add JWT-based authentication with login and registration endpoints.",
-        stage: "IDLE",
+        stage: "INBOX",
         createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
         updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
       });
@@ -48,7 +48,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       const body = await response.json();
       expect(body.title).toBe("A");
       expect(body.description).toBe("B");
-      expect(body.stage).toBe("IDLE");
+      expect(body.stage).toBe("INBOX");
     });
 
     test("should create ticket with maximum length title (100 chars)", async ({ request }) => {
@@ -343,10 +343,10 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       expect(typeof body.updatedAt).toBe("string");
 
       // Enum validation
-      expect(["IDLE", "PLAN", "BUILD", "REVIEW", "SHIPPED", "ERRORED"]).toContain(body.stage);
+      expect(["INBOX", "PLAN", "BUILD", "VERIFY", "SHIP"]).toContain(body.stage);
 
-      // New tickets always start in IDLE
-      expect(body.stage).toBe("IDLE");
+      // New tickets always start in INBOX
+      expect(body.stage).toBe("INBOX");
     });
 
     test("should return proper error structure for validation errors", async ({ request }) => {

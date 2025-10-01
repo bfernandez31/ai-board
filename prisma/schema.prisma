@@ -11,19 +11,19 @@ datasource db {
 }
 
 enum Stage {
-  IDLE
+  INBOX
   PLAN
   BUILD
-  REVIEW
-  SHIPPED
-  ERRORED
+  VERIFY
+  SHIP
 }
 
 model Ticket {
   id          Int      @id @default(autoincrement())
   title       String   @db.VarChar(100)
   description String   @db.VarChar(1000)
-  stage       Stage    @default(IDLE)
+  stage       Stage    @default(INBOX)
+  version     Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

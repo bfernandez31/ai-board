@@ -16,7 +16,7 @@ test.describe('Empty Board Display', () => {
 
   test('should display 6 columns with correct labels', async ({ page }) => {
     // Check for all 6 stage columns
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
@@ -29,7 +29,7 @@ test.describe('Empty Board Display', () => {
   });
 
   test('should display badge with 0 in each empty column', async ({ page }) => {
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
@@ -47,12 +47,11 @@ test.describe('Empty Board Display', () => {
   test('should have color-coded columns', async ({ page }) => {
     // Color mappings from data-model.md
     const stageColors = {
-      IDLE: 'gray',
+      INBOX: 'gray',
       PLAN: 'blue',
       BUILD: 'green',
-      REVIEW: 'orange',
-      SHIPPED: 'purple',
-      ERRORED: 'red'
+      VERIFY: 'orange',
+      SHIP: 'purple'
     };
 
     for (const [stage, color] of Object.entries(stageColors)) {
@@ -123,7 +122,7 @@ test.describe('Empty Board Display', () => {
     // Set desktop viewport
     await page.setViewportSize({ width: 1920, height: 1080 });
 
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     // Get positions of first and last columns
     const firstColumn = page.locator(`[data-testid="column-${stages[0]}"]`).first();
@@ -150,12 +149,12 @@ test.describe('Empty Board Display', () => {
     await expect(board.first()).toBeVisible();
 
     // Verify first column is visible
-    const firstColumn = page.locator(`[data-testid="column-IDLE"]`).first();
+    const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
     await expect(firstColumn).toBeVisible();
   });
 
   test('should have accessible column headers', async ({ page }) => {
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       // Look for heading elements (h1-h6) with stage name

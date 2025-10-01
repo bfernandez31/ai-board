@@ -188,7 +188,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     // For now, just verify all columns are visible
     await page.goto(`${BASE_URL}/board`);
 
-    const stages = ['IDLE', 'PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
@@ -289,7 +289,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     expect(idleCards.length).toBeGreaterThan(0);
 
     // Other columns should be empty with "No tickets" message or badge showing 0
-    const otherStages = ['PLAN', 'BUILD', 'REVIEW', 'SHIPPED', 'ERRORED'];
+    const otherStages = ['PLAN', 'BUILD', 'VERIFY', 'SHIP'];
     for (const stage of otherStages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
       await expect(column).toBeVisible();

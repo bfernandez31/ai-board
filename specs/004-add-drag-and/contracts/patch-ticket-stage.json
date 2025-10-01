@@ -1,0 +1,236 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Ticket Stage Update API",
+    "version": "1.0.0",
+    "description": "API contract for updating ticket stage via drag-and-drop"
+  },
+  "paths": {
+    "/api/tickets/{id}": {
+      "patch": {
+        "summary": "Update ticket stage",
+        "description": "Updates a ticket's stage with optimistic concurrency control. Only sequential stage transitions are allowed (INBOX→PLAN→BUILD→VERIFY→SHIP).",
+        "operationId": "updateTicketStage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket ID",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStageRequest"
+              },
+              "examples": {
+                "validTransition": {
+                  "summary": "Valid transition from INBOX to PLAN",
+                  "value": {
+                    "stage": "PLAN",
+                    "version": 1
+                  }
+                },
+                "invalidSkip": {
+                  "summary": "Invalid transition (skipping stages)",
+                  "value": {
+                    "stage": "BUILD",
+                    "version": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stage updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStageResponse"
+                },
+                "example": {
+                  "id": 123,
+                  "stage": "PLAN",
+                  "version": 2,
+                  "updatedAt": "2025-10-01T12:34:56.789Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid stage transition or malformed request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "examples": {
+                  "invalidTransition": {
+                    "summary": "Invalid stage transition (skipping or backwards)",
+                    "value": {
+                      "error": "Invalid stage transition",
+                      "message": "Cannot transition from INBOX to BUILD. Must progress sequentially."
+                    }
+                  },
+                  "malformedRequest": {
+                    "summary": "Malformed request body",
+                    "value": {
+                      "error": "Validation error",
+                      "message": "Invalid stage value"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                },
+                "example": {
+                  "error": "Ticket not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - ticket was modified by another user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                },
+                "example": {
+                  "error": "Ticket modified by another user",
+                  "currentStage": "BUILD",
+                  "currentVersion": 3
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerError"
+                },
+                "example": {
+                  "error": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Stage": {
+        "type": "string",
+        "enum": ["INBOX", "PLAN", "BUILD", "VERIFY", "SHIP"],
+        "description": "Ticket workflow stage. Transitions must be sequential: INBOX→PLAN→BUILD→VERIFY→SHIP"
+      },
+      "UpdateStageRequest": {
+        "type": "object",
+        "required": ["stage", "version"],
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Current version of the ticket for optimistic concurrency control"
+          }
+        }
+      },
+      "UpdateStageResponse": {
+        "type": "object",
+        "required": ["id", "stage", "version", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Ticket ID"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "version": {
+            "type": "integer",
+            "description": "New version number after update"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the update"
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type"
+          },
+          "message": {
+            "type": "string",
+            "description": "Detailed error message"
+          }
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "ConflictError": {
+        "type": "object",
+        "required": ["error", "currentStage", "currentVersion"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message indicating conflict"
+          },
+          "currentStage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "currentVersion": {
+            "type": "integer",
+            "description": "Current version of the ticket in the database"
+          }
+        }
+      },
+      "ServerError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      }
+    }
+  }
+}
