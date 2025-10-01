@@ -217,10 +217,10 @@ test.describe('POST /api/tickets - Contract Validation', () => {
     expect(body).toHaveProperty('error');
   });
 
-  test('should handle special characters in title and description', async ({ request }) => {
+  test('should handle allowed punctuation in title and description', async ({ request }) => {
     const requestBody = {
-      title: 'Fix "bug" with <special> & characters: 日本語',
-      description: 'Description with emoji 🚀 and symbols: @#$%^&*()'
+      title: 'Fix bug - test, test? test! test.',
+      description: 'Description with allowed punctuation - comma, period. question? exclamation!'
     };
 
     const response = await request.post(`${BASE_URL}/api/tickets`, {
@@ -238,7 +238,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
   test('should handle concurrent ticket creation', async ({ request }) => {
     const requests = Array.from({ length: 5 }, (_, i) => ({
       title: `Concurrent ticket ${i + 1}`,
-      description: `Created concurrently #${i + 1}`
+      description: `Created concurrently number ${i + 1}`
     }));
 
     const responses = await Promise.all(

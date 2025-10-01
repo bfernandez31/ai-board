@@ -55,10 +55,13 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
   });
 
-  test('should create ticket without description and display correctly', async ({ page, request }) => {
-    const ticketData = { title: 'Add dark mode toggle' };
+  test('should create ticket with minimal description and display correctly', async ({ page, request }) => {
+    const ticketData = {
+      title: 'Add dark mode toggle',
+      description: 'Minimal description'
+    };
     const createdTicket = await createTicket(request, ticketData);
-    expect(createdTicket.description).toBeNull();
+    expect(createdTicket.description).toBe('Minimal description');
 
     await page.goto(`${BASE_URL}/board`);
 
@@ -164,10 +167,10 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
   });
 
-  test('should handle special characters in ticket title', async ({ page, request }) => {
+  test('should handle allowed punctuation in ticket title', async ({ page, request }) => {
     const ticketData = {
-      title: 'Fix "bug" with <special> & characters: 日本語 🚀',
-      description: 'Testing special character handling',
+      title: 'Fix bug with special chars - test, test? test! test.',
+      description: 'Testing allowed punctuation handling',
     };
 
     const createdTicket = await createTicket(request, ticketData);
@@ -178,7 +181,7 @@ test.describe('Ticket Creation and Display', () => {
     await expect(ticketCard).toBeVisible();
 
     const cardText = (await ticketCard.textContent()) ?? '';
-    expect(cardText).toContain('Fix');
-    expect(cardText).toContain('bug');
+    expect(cardText).toContain('Fix bug');
+    expect(cardText).toContain('special chars');
   });
 });
