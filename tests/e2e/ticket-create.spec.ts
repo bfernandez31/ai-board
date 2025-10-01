@@ -38,7 +38,7 @@ test.describe('Ticket Creation and Display', () => {
     };
 
     const createdTicket = await createTicket(request, ticketData);
-    expect(createdTicket.stage).toBe('IDLE');
+    expect(createdTicket.stage).toBe('INBOX');
 
     await page.goto(`${BASE_URL}/board`);
 
