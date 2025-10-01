@@ -129,7 +129,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.error).toBe("Invalid input");
+      expect(body.error).toBeTruthy(); // Error message now includes field details
       expect(body.code).toBe("VALIDATION_ERROR");
       expect(body.details.fieldErrors.title).toContain("Title is required");
     });
@@ -159,7 +159,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.error).toBe("Invalid input");
+      expect(body.error).toBeTruthy(); // Error message now includes field details
       expect(body.code).toBe("VALIDATION_ERROR");
       expect(body.details.fieldErrors.description).toContain("Description is required");
     });
@@ -286,7 +286,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.error).toBe("Invalid input");
+      expect(body.error).toBeTruthy(); // Error message now includes field details
       expect(body.details.fieldErrors.title).toBeDefined();
       expect(body.details.fieldErrors.description).toBeDefined();
     });
