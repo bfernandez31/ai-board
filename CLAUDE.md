@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma 6.x, Zod 4.x, shadcn/ui (003-add-new-ticket)
 - PostgreSQL 14+ via Prisma ORM (003-add-new-ticket)
 - TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, @dnd-kit/core, @dnd-kit/sortable, Prisma 6.x, Zod 4.x, shadcn/ui (004-add-drag-and)
+- TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, shadcn/ui (Dialog component), Radix UI (005-add-ticket-detail)
+- PostgreSQL 14+ via Prisma ORM (existing Ticket model) (005-add-ticket-detail)
 
 ## Project Structure
 ```
@@ -24,9 +26,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 18.17+ or 20.x+: Follow standard conventions
 
 ## Recent Changes
+- 005-add-ticket-detail: Added TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, shadcn/ui (Dialog component), Radix UI
 - 004-add-drag-and: Added TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, @dnd-kit/core, @dnd-kit/sortable, Prisma 6.x, Zod 4.x, shadcn/ui
 - 003-add-new-ticket: Added TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma 6.x, Zod 4.x, shadcn/ui
-- 002-create-a-basic: Added TypeScript 5.6 (strict mode), Node.js 20.x + Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma (to be added), shadcn/ui (to be added)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

@@ -14,6 +14,7 @@ import {
 import { StageColumn } from './stage-column';
 import { DragOverlay } from './drag-overlay';
 import { OfflineIndicator } from './offline-indicator';
+import { TicketDetailModal } from './ticket-detail-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-validation';
 import { TicketWithVersion } from '@/lib/types';
@@ -36,6 +37,8 @@ interface BoardProps {
 export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketWithVersion | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
 
@@ -186,6 +189,20 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
     return grouped;
   };
 
+  // Handle ticket click to open modal
+  const handleTicketClick = useCallback((ticket: TicketWithVersion) => {
+    setSelectedTicket(ticket);
+    setIsModalOpen(true);
+  }, []);
+
+  // Handle modal close
+  const handleModalClose = useCallback((open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      setSelectedTicket(null);
+    }
+  }, []);
+
   const stages = getAllStages();
 
   return (
@@ -214,6 +231,7 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
                 stage={stage}
                 tickets={ticketsByStage[stage] || []}
                 isDraggable={isOnline}
+                onTicketClick={handleTicketClick}
               />
             ))}
           </div>
@@ -221,6 +239,13 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
 
         <DragOverlay activeTicket={activeTicket} />
       </DndContext>
+
+      {/* Ticket Detail Modal */}
+      <TicketDetailModal
+        ticket={selectedTicket}
+        open={isModalOpen}
+        onOpenChange={handleModalClose}
+      />
     </>
   );
 }

@@ -12,6 +12,7 @@ interface StageColumnProps {
   stage: Stage;
   tickets: TicketWithVersion[];
   isDraggable?: boolean;
+  onTicketClick?: (ticket: TicketWithVersion) => void;
 }
 
 // Stage configuration matching original design
@@ -93,7 +94,7 @@ const STAGE_CONFIG: Record<Stage, {
  * StageColumn Component - Original Design with Drag-and-Drop
  */
 export const StageColumn = React.memo(
-  ({ stage, tickets, isDraggable = true }: StageColumnProps) => {
+  ({ stage, tickets, isDraggable = true, onTicketClick }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
       data: {
@@ -143,7 +144,12 @@ export const StageColumn = React.memo(
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
               tickets.map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} isDraggable={isDraggable} />
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  isDraggable={isDraggable}
+                  {...(onTicketClick && { onTicketClick })}
+                />
               ))
             ) : (
               <div className="text-center text-sm text-zinc-400/90 py-12 font-medium">
