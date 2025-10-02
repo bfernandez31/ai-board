@@ -19,6 +19,19 @@ enum Stage {
   SHIP
 }
 
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String   @db.VarChar(1000)
+  githubOwner String   @db.VarChar(100)
+  githubRepo  String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([githubOwner, githubRepo])
+  @@index([githubOwner, githubRepo])
+}
+
 model Ticket {
   id          Int      @id @default(autoincrement())
   title       String   @db.VarChar(100)
