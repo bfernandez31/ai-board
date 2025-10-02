@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,8 @@ interface DraggableTicketCardProps {
  * TicketCard Component - Original Design with Drag-and-Drop
  */
 export const TicketCard = React.memo(({ ticket, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
+  const [isMounted, setIsMounted] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `ticket-${ticket.id}`,
     data: {
@@ -24,6 +26,11 @@ export const TicketCard = React.memo(({ ticket, isDraggable = true, onTicketClic
     },
     disabled: !isDraggable,
   });
+
+  // Only apply drag attributes after client-side hydration to prevent SSR mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const style = transform
     ? {
@@ -52,8 +59,8 @@ export const TicketCard = React.memo(({ ticket, isDraggable = true, onTicketClic
         ${isDragging ? 'opacity-30' : 'opacity-100'}
         ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
       `}
-      {...attributes}
-      {...listeners}
+      {...(isMounted ? attributes : {})}
+      {...(isMounted ? listeners : {})}
     >
       <Card
         className="bg-zinc-900 border-zinc-700 p-4 transition-all hover:border-zinc-600 hover:bg-zinc-800 overflow-hidden"

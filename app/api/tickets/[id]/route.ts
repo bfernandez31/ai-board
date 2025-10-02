@@ -35,7 +35,7 @@ const UpdateStageSchema = z.object({
  * - 500: Internal server error
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
