@@ -77,9 +77,14 @@ on:
           - plan
           - task
           - implement
+          - clarify
       branch:
         description: 'Feature branch name'
         required: true
+        type: string
+      answers_json:
+        description: 'Clarification answers payload (JSON)'
+        required: false
         type: string
 
 jobs:
@@ -138,6 +143,16 @@ jobs:
             implement)
               echo "Running /implement for ticket #${{ inputs.ticket_id }}"
               claude /implement
+              ;;
+            clarify)
+              echo "Running /clarify for ticket #${{ inputs.ticket_id }}"
+              if [ -z "${{ inputs.answers_json }}" ]; then
+                echo "Missing answers_json input" && exit 1
+              fi
+              cat <<'EOF' > clarifications.json
+${{ inputs.answers_json }}
+EOF
+              claude /clarify --answers clarifications.json
               ;;
             *)
               echo "Unknown command: ${{ inputs.command }}"
@@ -271,6 +286,104 @@ export async function POST(
 }
 ```
 
+### Clarification Workflow (SPECIFY)
+
+1. **Detect pending clarifications**: After `/specify` completes, check the generated spec for a `## Clarifications` section with unchecked items or parse the `clarifications.json` output that Spec Kit emits when more context is needed. Persist each open question alongside the ticket.
+2. **Surface in the UI**: Display a "Needs Clarification" badge on the ticket card and render the outstanding questions inside the ticket modal with multiline inputs.
+3. **Allow in-app responses**: Create an endpoint such as `POST /api/tickets/[id]/clarify` that accepts `{ answers: [{ clarificationId, response }] }`. Save responses to the database and write them to a temp file (e.g., `clarifications.json`) in the runner workspace.
+4. **Run `/clarify` via GitHub Actions**:
+
+```yaml
+      - name: Upload clarification answers
+        run: |
+          cat <<'EOF' > clarifications.json
+          ${{ inputs.answers_json }}
+          EOF
+
+      - name: Execute clarify
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude /clarify --answers clarifications.json
+```
+
+   Pass `answers_json` as an additional workflow input serialized from the UI submission.
+5. **Resume the pipeline**: When the workflow webhook reports success, mark questions resolved, clear the badge, and if the ticket is in Auto Mode trigger the transition to PLAN automatically. Manual Mode keeps the ticket in SPECIFY until a user drags it forward.
+6. **Audit trail**: Commit the clarified spec updates (Spec Kit appends answers under the Clarifications section) and optionally log transcripts in `specs/<ticket-id>/clarifications.md`.
+
+Create `app/api/tickets/[id]/clarify/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { Octokit } from '@octokit/rest';
+import { prisma } from '@/lib/db/client';
+
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+});
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const ticketId = parseInt(params.id);
+  const { answers } = await request.json();
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { project: true },
+  });
+
+  if (!ticket?.branch) {
+    return NextResponse.json(
+      { error: 'Ticket branch missing; run /specify first' },
+      { status: 400 }
+    );
+  }
+
+  const job = await prisma.job.create({
+    data: {
+      ticketId,
+      command: 'clarify',
+      status: 'pending',
+      branch: ticket.branch,
+    },
+  });
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { clarificationStatus: 'pending' },
+  });
+
+  await Promise.all(
+    answers.map((entry: { clarificationId: number; response: string }) =>
+      prisma.ticketClarification.update({
+        where: { id: entry.clarificationId },
+        data: {
+          answer: entry.response,
+          status: 'pending',
+        },
+      })
+    )
+  );
+
+  await octokit.actions.createWorkflowDispatch({
+    owner: ticket.project.githubOwner,
+    repo: ticket.project.githubRepo,
+    workflow_id: 'speckit.yml',
+    ref: 'main',
+    inputs: {
+      ticket_id: ticketId.toString(),
+      command: 'clarify',
+      branch: ticket.branch,
+      answers_json: JSON.stringify({ answers }),
+    },
+  });
+
+  return NextResponse.json({ success: true, jobId: job.id });
+}
+```
+
 ### Webhook Handler (Optional)
 
 For real-time job status updates, configure GitHub webhook:
@@ -290,6 +403,7 @@ export async function POST(request: NextRequest) {
 
     // Extract ticket_id from workflow inputs
     const ticketId = parseInt(workflow_run.inputs?.ticket_id);
+    const command = workflow_run.inputs?.command;
 
     if (ticketId) {
       await prisma.job.updateMany({
@@ -302,6 +416,28 @@ export async function POST(request: NextRequest) {
           completedAt: new Date(),
         },
       });
+
+      if (command === 'clarify') {
+        if (workflow_run.conclusion === 'success') {
+          await prisma.ticket.update({
+            where: { id: ticketId },
+            data: { clarificationStatus: 'resolved' },
+          });
+
+          await prisma.ticketClarification.updateMany({
+            where: { ticketId, status: 'pending' },
+            data: {
+              status: 'resolved',
+              answeredAt: new Date(),
+            },
+          });
+        } else {
+          await prisma.ticket.update({
+            where: { id: ticketId },
+            data: { clarificationStatus: 'pending' },
+          });
+        }
+      }
     }
   }
 
@@ -344,6 +480,12 @@ enum JobStatus {
   failed
 }
 
+enum ClarificationStatus {
+  none
+  pending
+  resolved
+}
+
 model Project {
   id            Int      @id @default(autoincrement())
   name          String   @db.VarChar(100)
@@ -368,16 +510,33 @@ model Ticket {
   autoMode    Boolean  @default(false)
   branch      String?  @db.VarChar(200)
   prUrl       String?  @db.VarChar(500)
+  clarificationStatus ClarificationStatus @default(none)
   projectId   Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clarifications TicketClarification[]
   jobs        Job[]
 
   @@index([stage])
   @@index([projectId])
   @@index([updatedAt])
+}
+
+model TicketClarification {
+  id          Int                 @id @default(autoincrement())
+  ticketId    Int
+  question    String              @db.VarChar(1000)
+  answer      String?             @db.VarChar(2000)
+  status      ClarificationStatus @default(pending)
+  createdAt   DateTime            @default(now())
+  answeredAt  DateTime?
+
+  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([status])
 }
 
 model Job {

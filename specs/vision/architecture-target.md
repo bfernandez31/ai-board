@@ -151,6 +151,62 @@ export async function POST(
 }
 ```
 
+### Clarification Workflow (SPECIFY)
+
+- After `/specify` jobs finish, workers parse the generated spec for a Clarifications section (or read the `clarifications.json` artifact) and persist unanswered items to PostgreSQL while flagging the ticket as `clarificationStatus = pending`.
+- The WebSocket channel notifies clients so the SPECIFY column displays a "Needs Clarification" badge and tinted card until all prompts are answered.
+- When users submit responses from the ticket modal, enqueue a `clarify` job with `{ ticketId, answers }`; the worker writes answers to `clarifications.json` and runs `claude /clarify --answers clarifications.json` inside the execution container.
+- On success, update the clarifications records, append transcripts to `specs/<ticket-id>/spec.md`, clear the badge, and (in Auto Mode) automatically dispatch the PLAN job. Manual Mode waits for a user-driven transition.
+- If the job fails, surface errors via the WebSocket feed and keep the badge active so users can retry.
+
+```typescript
+// app/api/tickets/[id]/clarify/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { specKitQueue } from '@/lib/queue/config';
+import { prisma } from '@/lib/db/client';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const ticketId = parseInt(params.id);
+  const { answers } = await request.json();
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { project: true },
+  });
+
+  if (!ticket?.branch) {
+    throw new Error('Ticket branch missing; run /specify first');
+  }
+
+  const job = await prisma.job.create({
+    data: {
+      ticketId,
+      command: 'clarify',
+      status: 'pending',
+      branch: ticket.branch,
+    },
+  });
+
+  await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { clarificationStatus: 'pending' },
+  });
+
+  await specKitQueue.add('clarify', {
+    jobId: job.id,
+    ticketId,
+    branch: ticket.branch,
+    repoUrl: ticket.project.githubRepoUrl,
+    answers,
+  });
+
+  return NextResponse.json({ success: true });
+}
+```
+
 ### VERIFY Stage PR Workflow
 
 - On transition to VERIFY:
@@ -226,7 +282,8 @@ const execAsync = promisify(exec);
 const worker = new Worker(
   'speckit-jobs',
   async (job) => {
-    const { jobId, ticketId, command, branch, repoUrl } = job.data;
+    const { jobId, ticketId, command, branch, repoUrl, answers } = job.data;
+    const jobType = command ?? job.name;
 
     try {
       // Update job status to running
@@ -238,7 +295,17 @@ const worker = new Worker(
       // Spawn Docker container
       const containerName = `speckit-${jobId}-${Date.now()}`;
 
-      const dockerCmd = `
+      const dockerCmd = jobType === 'clarify'
+        ? `
+        docker run --rm --name ${containerName} \
+          -e ANTHROPIC_API_KEY="${process.env.ANTHROPIC_API_KEY}" \
+          -e GITHUB_TOKEN="${process.env.GITHUB_TOKEN}" \
+          -e REPO_URL="${repoUrl}" \
+          -e BRANCH="${branch}" \
+          -e CLARIFY_ANSWERS='${JSON.stringify(answers)}' \
+          speckit-runner:latest clarify
+      `
+        : `
         docker run --rm --name ${containerName} \
           -e ANTHROPIC_API_KEY="${process.env.ANTHROPIC_API_KEY}" \
           -e GITHUB_TOKEN="${process.env.GITHUB_TOKEN}" \
@@ -260,6 +327,18 @@ const worker = new Worker(
         },
       });
 
+      if (jobType === 'clarify') {
+        await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { clarificationStatus: 'resolved' },
+        });
+
+        await prisma.ticketClarification.updateMany({
+          where: { ticketId, status: 'pending' },
+          data: { status: 'resolved', answeredAt: new Date() },
+        });
+      }
+
       return { success: true, logs: stdout };
     } catch (error) {
       // Update job status to failed
@@ -271,6 +350,13 @@ const worker = new Worker(
           completedAt: new Date(),
         },
       });
+
+      if (jobType === 'clarify') {
+        await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { clarificationStatus: 'pending' },
+        });
+      }
 
       throw error;
     }
@@ -350,6 +436,13 @@ case "$COMMAND" in
   implement)
     claude /implement
     ;;
+  clarify)
+    if [ -z "$CLARIFY_ANSWERS" ]; then
+      echo "❌ CLARIFY_ANSWERS env var missing" && exit 1
+    fi
+    echo "$CLARIFY_ANSWERS" > clarifications.json
+    claude /clarify --answers clarifications.json
+    ;;
   *)
     echo "❌ Unknown command: $COMMAND"
     exit 1
@@ -371,6 +464,14 @@ git push origin $BRANCH
 
 echo "✅ Spec-kit execution completed successfully"
 ```
+
+### Clarification Data Model
+
+- Extend the Prisma schema with a `ClarificationStatus` enum (`none`, `pending`, `resolved`).
+- Add a `ticket_clarifications` table to capture each question/answer pair (`question`, `answer`, `status`, `answeredAt`).
+- Reference clarifications from `Ticket` and persist the aggregate `clarificationStatus` for quick filtering in boards and workers.
+- Index `ticketId` and `status` to power dashboard queries and background processing.
+- Keep schema changes in sync with the MVP Quickstart implementation to avoid drift between deployment options.
 
 ### 5. WebSocket Server (Real-time Updates)
 

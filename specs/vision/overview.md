@@ -30,6 +30,7 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - Triggers spec-kit `/specify` command execution
 - Generates formal specification in `specs/<ticket-id>/spec.md`
 - Creates feature branch: `feature/ticket-<id>`
+- If spec-kit requests clarifications, ticket remains in SPECIFY with a visual "Needs Clarification" tag until answers are provided
 - **Auto Mode**: Automatically transitions to PLAN after spec generation
 - **Manual Mode**: Waits for user validation (drag-drop to PLAN)
 - Commits spec to GitHub branch
@@ -72,6 +73,7 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - **Use Case**: Rapid prototyping, trusted workflows, low-risk changes
 - **Commits**: Automatic commit/push after each command execution
 - **PR Handling**: Claude Code opens PR in VERIFY stage, reviews, and merges once checks pass
+- **Clarifications**: Auto pipeline pauses in SPECIFY when `/specify` flags clarifications; UI collects answers and runs `/clarify` before advancing
 
 #### Manual Mode
 - **Trigger**: User selects "Manual" when creating ticket (default)
@@ -80,6 +82,7 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - **Use Case**: Critical features, learning spec-kit, quality validation needed
 - **Commits**: Same automatic commits, but user controls when to proceed
 - **PR Handling**: Team opens PR during VERIFY stage and completes review/merge in GitHub
+- **Clarifications**: Ticket stays in SPECIFY with a warning tag until reviewer answers questions via `/clarify`
 - **Benefit**: Review and edit generated artifacts (spec.md, plan.md, tasks.md) before continuing
 
 ### Git Integration
@@ -99,6 +102,14 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
   - `feat(ticket-42): specify - add user authentication spec`
   - `feat(ticket-42): plan - design authentication architecture`
   - `feat(ticket-42): implement - add JWT auth middleware`
+
+### Clarification Loop
+- `/specify` may emit a "Clarification Needed" checklist following Spec Kit guidelines.
+- ai-board surfaces outstanding questions inside the ticket detail drawer while the card remains in SPECIFY.
+- Tickets show a red/orange "Needs Clarification" badge (and optional background tint) until every question is answered.
+- Responding in-app sends answers to the backend, which executes `/clarify` on the feature branch and commits updates.
+- Auto Mode resumes the pipeline once `/clarify` finishes successfully; Manual Mode prompts the user to drag the ticket forward.
+- Clarification transcripts append to `specs/<ticket-id>/spec.md` under the Clarifications section for auditability.
 
 **File Structure**
 ```
