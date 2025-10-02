@@ -70,18 +70,18 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.waitForSelector('[role="dialog"]');
 
     // Locate title element
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
 
     // Hover to verify pencil icon appears
     await titleElement.hover();
-    const pencilIcon = page.locator('[data-testid="edit-icon-title"]').or(titleElement.locator('svg').first());
+    const pencilIcon = page.getByTestId('edit-icon-title');
     await expect(pencilIcon).toBeVisible();
 
     // Click title to enter edit mode
     await titleElement.click();
 
     // Assert: title becomes input field
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await expect(titleInput).toBeVisible();
     await expect(titleInput).toBeFocused();
 
@@ -106,11 +106,11 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
 
     // Type new title
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await titleInput.fill('Updated Title');
     await titleInput.press('Enter');
 
@@ -121,7 +121,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await expect(titleElement).toContainText('Updated Title');
 
     // Wait for success toast
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('text=Ticket updated'));
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
     await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database
@@ -147,9 +147,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and change it
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await titleInput.fill('Changed Title');
 
     // Press ESC
@@ -176,21 +176,21 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Hover over description to verify pencil icon
-    const descriptionElement = page.locator('[data-testid="ticket-description"]').or(page.locator('p').first());
+    const descriptionElement = page.getByTestId('ticket-description');
     await descriptionElement.hover();
-    const pencilIcon = page.locator('[data-testid="edit-icon-description"]').or(descriptionElement.locator('svg').first());
+    const pencilIcon = page.getByTestId('edit-icon-description');
     await expect(pencilIcon).toBeVisible();
 
     // Click description
     await descriptionElement.click();
 
     // Assert: description becomes textarea
-    const textarea = page.locator('textarea[name="description"]').or(page.locator('textarea').first());
+    const textarea = page.getByTestId('description-textarea');
     await expect(textarea).toBeVisible();
     await expect(textarea).toBeFocused();
 
     // Assert: character counter visible
-    const counter = page.locator('[data-testid="character-counter"]').or(page.locator('text=characters remaining'));
+    const counter = page.getByTestId('character-counter');
     await expect(counter).toBeVisible();
 
     // Verify counter shows correct count
@@ -211,11 +211,11 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
-    const descriptionElement = page.locator('[data-testid="ticket-description"]').or(page.locator('p').first());
+    const descriptionElement = page.getByTestId('ticket-description');
     await descriptionElement.click();
 
     // Type new description
-    const textarea = page.locator('textarea[name="description"]').or(page.locator('textarea').first());
+    const textarea = page.getByTestId('description-textarea');
     await textarea.fill('Updated description with new content');
 
     // Click Save button
@@ -228,11 +228,11 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await expect(textarea).not.toBeVisible({ timeout: 5000 });
 
     // Assert: counter disappears
-    const counter = page.locator('[data-testid="character-counter"]').or(page.locator('text=characters remaining'));
+    const counter = page.getByTestId('character-counter');
     await expect(counter).not.toBeVisible();
 
     // Wait for success toast
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('text=Ticket updated'));
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
     await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Verify database
@@ -252,16 +252,16 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and delete all text
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await titleInput.fill('   '); // Only whitespace
 
     // Try to save (press Enter or blur)
     await titleInput.press('Enter');
 
     // Assert: inline error message
-    const errorMessage = page.locator('[data-testid="title-error"]').or(page.locator('text=Title cannot be empty'));
+    const errorMessage = page.getByTestId('title-error');
     await expect(errorMessage).toBeVisible();
 
     // Assert: input remains in edit mode
@@ -284,9 +284,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
 
     // Type 101 characters
     const longText = 'A'.repeat(101);
@@ -299,7 +299,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // If maxLength not set, try to save and expect error
     if (inputValue.length > 100) {
       await titleInput.press('Enter');
-      const errorMessage = page.locator('[data-testid="title-error"]').or(page.locator('text=100 characters or less'));
+      const errorMessage = page.getByTestId('title-error');
       await expect(errorMessage).toBeVisible();
     }
   });
@@ -316,16 +316,16 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description
-    const descriptionElement = page.locator('[data-testid="ticket-description"]').or(page.locator('p').first());
+    const descriptionElement = page.getByTestId('ticket-description');
     await descriptionElement.click();
-    const textarea = page.locator('textarea[name="description"]').or(page.locator('textarea').first());
+    const textarea = page.getByTestId('description-textarea');
 
     // Type exactly 910 characters (>90% of 1000)
     const text910 = 'A'.repeat(910);
     await textarea.fill(text910);
 
     // Assert: counter shows "90 characters remaining"
-    const counter = page.locator('[data-testid="character-counter"]').or(page.locator('text=characters remaining'));
+    const counter = page.getByTestId('character-counter');
     await expect(counter).toContainText('90 characters remaining');
 
     // Assert: warning indicator visible (yellow/orange)
@@ -349,7 +349,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Click Save and verify success
     await saveButton.click();
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('text=Ticket updated'));
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
     await expect(toast).toBeVisible({ timeout: 5000 });
   });
 
@@ -365,9 +365,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description and delete all text
-    const descriptionElement = page.locator('[data-testid="ticket-description"]').or(page.locator('p').first());
+    const descriptionElement = page.getByTestId('ticket-description');
     await descriptionElement.click();
-    const textarea = page.locator('textarea[name="description"]').or(page.locator('textarea').first());
+    const textarea = page.getByTestId('description-textarea');
     await textarea.fill(''); // Empty
 
     // Click Save button
@@ -375,7 +375,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await saveButton.click();
 
     // Assert: inline error message
-    const errorMessage = page.locator('[data-testid="description-error"]').or(page.locator('text=Description cannot be empty'));
+    const errorMessage = page.getByTestId('description-error');
     await expect(errorMessage).toBeVisible();
 
     // Assert: textarea remains in edit mode
@@ -401,14 +401,14 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
 
     // Enable offline mode
     await context.setOffline(true);
 
     // Type new title and press Enter
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await titleInput.fill('Updated Title');
     await titleInput.press('Enter');
 
@@ -416,7 +416,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await expect(titleElement).toContainText('Updated Title', { timeout: 1000 });
 
     // Wait for error toast after timeout
-    const errorToast = page.locator('[data-testid="toast"]').or(page.locator('text=Failed to save'));
+    const errorToast = page.getByTestId('toast').filter({ hasText: 'Failed to save changes while offline' }).first();
     await expect(errorToast).toBeVisible({ timeout: 10000 });
     await expect(errorToast).toContainText('Changes reverted');
 
@@ -439,9 +439,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit (but don't save yet)
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
 
     // Simulate concurrent update: update ticket directly in database
     await prisma.ticket.update({
@@ -455,7 +455,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Assert: API returns 409 (may see optimistic update first)
     // Wait for error toast
-    const errorToast = page.locator('[data-testid="toast"]').or(page.locator('text=Conflict'));
+    const errorToast = page.getByTestId('toast').filter({ hasText: 'Conflict' }).first();
     await expect(errorToast).toBeVisible({ timeout: 5000 });
     await expect(errorToast).toContainText('modified by another user');
 
@@ -484,14 +484,14 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await boardCard.click();
 
     // Edit title
-    const titleElement = page.locator('[data-testid="ticket-title"]').or(page.locator('h2').first());
+    const titleElement = page.getByTestId('ticket-title');
     await titleElement.click();
-    const titleInput = page.locator('input[name="title"]').or(page.locator('input[type="text"]').first());
+    const titleInput = page.getByTestId('title-input');
     await titleInput.fill('Updated Title');
     await titleInput.press('Enter');
 
     // Wait for success toast
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('text=Ticket updated'));
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
     await expect(toast).toBeVisible({ timeout: 5000 });
 
     // Close modal
@@ -518,7 +518,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
-    const descriptionElement = page.locator('[data-testid="ticket-description"]').or(page.locator('p').first());
+    const descriptionElement = page.getByTestId('ticket-description');
     await descriptionElement.click();
 
     // Do NOT change content
@@ -528,7 +528,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await expect(saveButton).toBeDisabled();
 
     // Type one character (make a change)
-    const textarea = page.locator('textarea[name="description"]').or(page.locator('textarea').first());
+    const textarea = page.getByTestId('description-textarea');
     await textarea.fill('Test description!');
 
     // Assert: Save button becomes enabled

@@ -25,6 +25,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
 
   return (
     <div
+      data-testid="character-counter"
       id="description-counter"
       aria-live="polite"
       aria-atomic="true"

@@ -44,7 +44,7 @@ interface TicketDetailModalProps {
   onOpenChange: (open: boolean) => void;
 
   /** Callback fired when ticket is updated successfully to refresh parent state. */
-  onUpdate?: () => void;
+  onUpdate?: (ticket: TicketData) => void;
 }
 
 /**
@@ -151,23 +151,27 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Failed to save. Changes reverted.',
+            description: error.error || 'Failed to save changes while offline.',
           });
         }
 
-        // Rollback
-        setLocalTicket(originalTicket);
+        // Rollback after short delay to allow optimistic state to show
+        setTimeout(() => {
+          setLocalTicket(originalTicket);
+        }, 500);
         throw new Error('Failed to save title');
       }
 
       const updatedTicket = await response.json();
 
-      // Update local ticket with all fields including new version
-      setLocalTicket({
+      const normalizedTicket: TicketData = {
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-      });
+      };
+
+      // Update local ticket with all fields including new version
+      setLocalTicket(normalizedTicket);
 
       toast({
         title: 'Success',
@@ -176,7 +180,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
 
       // Notify parent to refresh board
       if (onUpdate) {
-        onUpdate();
+        onUpdate(normalizedTicket);
       }
     } catch (error) {
       // Rollback on error
@@ -225,23 +229,27 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Failed to save. Changes reverted.',
+            description: error.error || 'Failed to save changes while offline.',
           });
         }
 
-        // Rollback
-        setLocalTicket(originalTicket);
+        // Rollback after short delay to allow optimistic state to show
+        setTimeout(() => {
+          setLocalTicket(originalTicket);
+        }, 500);
         throw new Error('Failed to save description');
       }
 
       const updatedTicket = await response.json();
 
-      // Update local ticket with all fields including new version
-      setLocalTicket({
+      const normalizedTicket: TicketData = {
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-      });
+      };
+
+      // Update local ticket with all fields including new version
+      setLocalTicket(normalizedTicket);
 
       toast({
         title: 'Success',
@@ -250,7 +258,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
 
       // Notify parent to refresh board
       if (onUpdate) {
-        onUpdate();
+        onUpdate(normalizedTicket);
       }
     } catch (error) {
       // Rollback on error
@@ -286,6 +294,18 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        onEscapeKeyDown={(event) => {
+          if (titleEdit.isEditing) {
+            event.preventDefault();
+            titleEdit.cancelEdit();
+            return;
+          }
+
+          if (descriptionEdit.isEditing) {
+            event.preventDefault();
+            descriptionEdit.cancelEdit();
+          }
+        }}
         className="
           h-screen w-screen p-6
           sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
@@ -302,6 +322,12 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   value={titleEdit.value}
                   onChange={titleEdit.handleChange}
                   onKeyDown={titleEdit.handleKeyDown}
+                  onKeyUp={(event) => {
+                    if (event.key === 'Escape' || (event.key === 'Enter' && !event.shiftKey)) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }
+                  }}
                   maxLength={100}
                   className="text-2xl font-bold bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
                   disabled={titleEdit.isSaving}
@@ -369,6 +395,12 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   value={descriptionEdit.value}
                   onChange={descriptionEdit.handleChange}
                   onKeyDown={descriptionEdit.handleKeyDown}
+                  onKeyUp={(event) => {
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }
+                  }}
                   maxLength={1000}
                   rows={8}
                   className="bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 resize-none px-4 py-3 focus:ring-2 focus:ring-blue-500/50 leading-relaxed"
@@ -392,11 +424,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   <Button
                     type="button"
                     onClick={async () => {
-                      try {
-                        await handleSaveDescription(descriptionEdit.value);
-                      } catch (error) {
-                        // Error already handled in handleSaveDescription
-                      }
+                      await descriptionEdit.save();
                     }}
                     disabled={descriptionEdit.isSaving || !!descriptionEdit.error || descriptionEdit.value.trim() === (localTicket?.description || '')}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 shadow-sm"

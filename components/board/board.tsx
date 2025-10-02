@@ -62,6 +62,21 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
     })
   );
 
+  const groupTicketsByStage = useCallback((tickets: TicketWithVersion[]): Record<Stage, TicketWithVersion[]> => {
+    const grouped = getAllStages().reduce((acc, stage) => {
+      acc[stage] = [];
+      return acc;
+    }, {} as Record<Stage, TicketWithVersion[]>);
+
+    tickets.forEach((ticket) => {
+      if (ticket.stage in grouped) {
+        grouped[ticket.stage as Stage].push(ticket);
+      }
+    });
+
+    return grouped;
+  }, []);
+
   // Get all tickets as a flat array for updates
   const allTickets = useMemo(() => {
     return Object.values(ticketsByStage).flat();
@@ -170,24 +185,8 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
         });
       }
     },
-    [allTickets, isOnline, toast]
+    [allTickets, groupTicketsByStage, isOnline, toast]
   );
-
-  // Group tickets by stage
-  const groupTicketsByStage = (tickets: TicketWithVersion[]): Record<Stage, TicketWithVersion[]> => {
-    const grouped = getAllStages().reduce((acc, stage) => {
-      acc[stage] = [];
-      return acc;
-    }, {} as Record<Stage, TicketWithVersion[]>);
-
-    tickets.forEach((ticket) => {
-      if (ticket.stage in grouped) {
-        grouped[ticket.stage as Stage].push(ticket);
-      }
-    });
-
-    return grouped;
-  };
 
   // Handle ticket click to open modal
   const handleTicketClick = useCallback((ticket: TicketWithVersion) => {
@@ -204,31 +203,48 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
   }, []);
 
   // Handle ticket update from modal
-  const handleTicketUpdate = useCallback(async () => {
-    // Refetch the specific ticket that was updated
-    if (selectedTicket) {
-      try {
-        const response = await fetch(`/api/tickets/${selectedTicket.id}`);
-        if (response.ok) {
-          const updatedTicket = await response.json();
+  type UpdatedModalTicket = {
+    id: number;
+    title: string;
+    description: string | null;
+    stage: Stage | string;
+    version: number;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+  };
 
-          // Update the ticket in local state
-          const updatedTickets = allTickets.map((ticket) =>
-            ticket.id === updatedTicket.id
-              ? { ...updatedTicket, createdAt: new Date(updatedTicket.createdAt), updatedAt: new Date(updatedTicket.updatedAt) }
-              : ticket
-          );
-
-          setTicketsByStage(groupTicketsByStage(updatedTickets));
-
-          // Update selected ticket to reflect changes in modal
-          setSelectedTicket({ ...updatedTicket, createdAt: new Date(updatedTicket.createdAt), updatedAt: new Date(updatedTicket.updatedAt) });
-        }
-      } catch (error) {
-        console.error('Error refreshing ticket:', error);
+  const handleTicketUpdate = useCallback(
+    (updatedTicket?: UpdatedModalTicket) => {
+      if (!updatedTicket) {
+        return;
       }
-    }
-  }, [selectedTicket, allTickets]);
+
+      const normalizedTicket: TicketWithVersion = {
+        id: updatedTicket.id,
+        title: updatedTicket.title,
+        description: updatedTicket.description,
+        stage: updatedTicket.stage as Stage,
+        version: updatedTicket.version,
+        createdAt:
+          updatedTicket.createdAt instanceof Date
+            ? updatedTicket.createdAt.toISOString()
+            : updatedTicket.createdAt,
+        updatedAt:
+          updatedTicket.updatedAt instanceof Date
+            ? updatedTicket.updatedAt.toISOString()
+            : updatedTicket.updatedAt,
+      };
+
+      const ticketExists = allTickets.some((ticket) => ticket.id === normalizedTicket.id);
+      const updatedTickets = ticketExists
+        ? allTickets.map((ticket) => (ticket.id === normalizedTicket.id ? normalizedTicket : ticket))
+        : [...allTickets, normalizedTicket];
+
+      setTicketsByStage(groupTicketsByStage(updatedTickets));
+      setSelectedTicket(normalizedTicket);
+    },
+    [allTickets, groupTicketsByStage]
+  );
 
   const stages = getAllStages();
 

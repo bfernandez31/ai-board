@@ -13,6 +13,7 @@ interface UseTicketEditReturn {
   error: string | null;
   startEdit: () => void;
   cancelEdit: () => void;
+  save: () => Promise<void>;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleKeyDown: (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
@@ -80,15 +81,16 @@ export function useTicketEdit({
 
     setIsSaving(true);
     setError(null);
+    setIsEditing(false);
 
     try {
       await onSave(trimmedValue);
       originalValueRef.current = trimmedValue;
-      setIsEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
       // Rollback to original value on error
       setValue(originalValueRef.current);
+      // Keep edit mode closed; rollback handled via toast/UI feedback
     } finally {
       setIsSaving(false);
     }
@@ -107,15 +109,35 @@ export function useTicketEdit({
   const handleKeyDown = (
     e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      // For textareas, only save on Ctrl+Enter or Cmd+Enter
-      if (e.currentTarget.tagName === 'TEXTAREA' && !(e.ctrlKey || e.metaKey)) {
+    const nativeEvent = e.nativeEvent as { stopImmediatePropagation?: () => void };
+    const isTextarea = e.currentTarget.tagName === 'TEXTAREA';
+    const hasMeta = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'Enter') {
+      if (isTextarea && !hasMeta && !e.shiftKey) {
+        // Plain Enter inside textarea -> allow newline
         return;
       }
+
+      if (isTextarea && e.shiftKey && !hasMeta) {
+        // Shift+Enter for textarea -> newline but keep event local
+        e.stopPropagation();
+        return;
+      }
+
+      if (!e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        nativeEvent.stopImmediatePropagation?.();
+        handleSave();
+        return;
+      }
+    }
+
+    if (e.key === 'Escape') {
       e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
+      e.stopPropagation();
+      nativeEvent.stopImmediatePropagation?.();
       cancelEdit();
     }
   };
@@ -127,6 +149,7 @@ export function useTicketEdit({
     error,
     startEdit,
     cancelEdit,
+    save: handleSave,
     handleChange,
     handleKeyDown,
     inputRef: inputRef as React.RefObject<HTMLInputElement | HTMLTextAreaElement>,
