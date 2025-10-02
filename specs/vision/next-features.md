@@ -7,257 +7,211 @@ Based on: vision/overview.md analysis
 
 ## Priority 1: Foundation Features
 
-### 006-add-ticket-editing
+### 006-add-specify-stage
 
 ```
 /specify
 
-Add inline ticket editing with Trello-style UX.
+Add SPECIFY stage to the kanban workflow between INBOX and PLAN.
 
 WHAT:
-Allow users to edit ticket title and description directly from the detail modal using inline editing patterns.
+Introduce SPECIFY column, transitions, and UI badges so tickets flow INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP.
 
 WHY:
-Users need to update ticket information as requirements evolve. Inline editing provides a fast, familiar experience similar to Trello.
+SPECIFY is required for the spec-kit pipeline; tickets must pause there before planning.
 
 REQUIREMENTS:
 
-TITLE EDITING (Inline):
-- Click title → becomes editable input
-- Auto-focus on input field
-- Enter key → save changes
-- Click outside → save changes
-- ESC key → cancel changes
-- Min 1 char, max 100 chars
-- Inline validation errors
-- Saving indicator
-- Success feedback
+DATA & MIGRATIONS:
+- Update Prisma Stage enum to include SPECIFY and generate migration.
+- Default new tickets to INBOX; adjust seeds/tests for the new enum value.
 
-DESCRIPTION EDITING (Editor Panel):
-- "Edit Description" button
-- Opens markdown editor
-- Live preview panel (side-by-side desktop, toggle mobile)
-- Save/Cancel buttons
-- Max 1000 chars
-- Character counter
-- ESC key → cancel
-- Warning on unsaved changes
+API & VALIDATION:
+- PATCH /api/tickets/[id] validates sequential transitions (INBOX→SPECIFY→PLAN … SHIP).
+- Stage validation utilities updated with the new stage order.
 
-ERROR HANDLING:
-- Show friendly error messages
-- Retain changes on failure
-- Allow retry
-- Rollback on failure
-
-UPDATES:
-- Update timestamp on save
-- Refresh board view
-- Optimistic UI updates
+UI:
+- Board renders SPECIFY column with empty state messaging.
+- Stage badges include SPECIFY styling (distinct color).
+- Drag-and-drop allows INBOX→SPECIFY only; invalid jumps show toast error.
 
 ACCEPTANCE CRITERIA:
-- Click title → editable immediately
-- Enter/blur → saves title
-- ESC → cancels changes
-- Validation prevents invalid saves
-- Edit Description → editor opens
-- Markdown preview works
-- Save → persists to database
-- Board updates after save
-- Errors handled gracefully
+- Column visible on board with correct ordering.
+- Drag from INBOX to SPECIFY persists in database.
+- Invalid transitions (e.g., INBOX→PLAN) blocked with descriptive toast.
+- Existing tickets migrate without data loss.
+- Tests/migrations committed.
 
 NON-GOALS:
-- No stage editing (use drag-drop)
-- No delete functionality
-- No version history
-- No collaborative editing
-- No rich text WYSIWYG
+- No auto-advance from SPECIFY.
+- No clarify badges yet.
 ```
 
 ---
 
-### 007-add-ticket-deletion
+### 007-enable-ticket-editing
 
 ```
 /specify
 
-Add ticket deletion with confirmation dialog.
+Enable inline editing of ticket title and description inside the ticket detail modal.
 
 WHAT:
-Allow users to permanently delete tickets from the detail modal with a confirmation step.
+Add edit mode within the modal so users can change title/description with validation and optimistic updates.
 
 WHY:
-Users need to remove outdated, duplicate, or cancelled tickets to keep the board clean.
+Teams need to correct ticket information without leaving the board.
 
 REQUIREMENTS:
 
-DELETION:
-- "Delete" button in ticket detail modal
-- Red/destructive styling
-- Opens confirmation dialog
-- Shows ticket title in confirmation
-- Clear warning message
-- "Cannot be undone" notice
-- Confirm/Cancel buttons
+UI:
+- “Edit” button toggles inputs (title inline input, description textarea with counters).
+- Save/Cancel buttons with loading state; ESC/Cancel restores original values.
 
-CONFIRMATION DIALOG:
-- Modal overlay
-- Ticket title displayed
-- Warning text
-- Confirm button (red/destructive)
-- Cancel button (default)
-- ESC key → cancel
-- Click outside → cancel
+API:
+- PATCH /api/tickets/[id] accepts { title?, description?, version }.
+- Uses optimistic concurrency (version field) and returns updated ticket payload.
 
-DELETION FLOW:
-- Confirm → delete from database
-- Close detail modal
-- Remove from board view
-- Show success toast
-- Update stage counts
+STATE & UX:
+- Disable Save when invalid or unchanged; show inline validation errors.
+- Optimistic update on success; rollback on error with toast.
+- Refresh board state after confirmation.
 
 ACCEPTANCE CRITERIA:
-- Delete button visible in modal
-- Click Delete → confirmation appears
-- Cancel → keeps ticket
-- Confirm → deletes permanently
-- Deleted ticket removed from board
-- Stage counts update
-- Success feedback shown
-- Modal closes automatically
+- Edit button enters form mode; Save persists to DB and refreshes board.
+- Validation messages appear for invalid input.
+- Concurrent edit conflict triggers descriptive toast and refresh prompt.
+- Unit tests for API and component interactions.
 
 NON-GOALS:
-- No soft delete/archive
-- No bulk deletion
-- No undo functionality
-- No trash/recycle bin
-- No audit trail
+- No stage editing.
+- No markdown formatting or auto-save.
 ```
 
 ---
 
-### 008-add-stage-indicators
+### 008-add-ticket-deletion
 
 ```
 /specify
 
-Add ticket count badges and health indicators to stage columns.
+Add ticket deletion from the ticket detail modal with confirmation dialog.
 
 WHAT:
-Display ticket counts per stage and visual warning indicators when stages have too many tickets.
+Allow users to permanently delete a ticket after explicit confirmation.
 
 WHY:
-Users need quick overview of work distribution and to spot potential bottlenecks across stages.
+Users need to remove obsolete tickets to keep the board clean.
 
 REQUIREMENTS:
 
-STAGE HEADERS:
-- Show total ticket count badge
-- Display next to stage name
-- Update counts in real-time
+UI:
+- “Delete ticket” destructive button in modal footer.
+- Confirmation dialog with ticket title, irreversible warning, Confirm/Cancel controls.
+- Success toast + modal close + board refresh.
 
-COUNT UPDATES:
-- On ticket drag-drop
-- On ticket creation
-- On ticket deletion
-- Smooth animations
+API:
+- DELETE /api/tickets/[id] removes ticket in transaction; handles 404/500 gracefully.
+- Returns JSON status for optimistic update handling.
 
-VISUAL INDICATORS:
-- Normal state (default color)
-- Warning state (amber/yellow)
-- Empty state (muted/gray)
-
-WARNING THRESHOLDS:
-- INBOX: >10 tickets → warning
-- PLAN: >8 tickets → warning
-- BUILD: >6 tickets → warning
-- VERIFY: >8 tickets → warning
-- SHIP: informational only
-
-DISPLAY:
-- Badge with count number
-- Color based on threshold
-- Tooltip explaining threshold
-- Responsive on all devices
+STATE:
+- Disable confirm while deleting; show spinner.
+- Remove ticket from local state without full reload; handle errors with toast.
 
 ACCEPTANCE CRITERIA:
-- Counts display correctly
-- Counts update on drag-drop
-- Counts update on create/delete
-- Warning colors show at thresholds
-- Tooltips explain warnings
-- Animations smooth
-- Mobile responsive
+- Delete button opens confirmation dialog.
+- Confirm deletes ticket and removes card from board.
+- Cancel keeps ticket intact.
+- Errors surface toast and leave ticket untouched.
+- Tests cover API and UI flows.
 
 NON-GOALS:
-- No customizable thresholds
-- No advanced analytics
-- No historical trends
-- No charts/graphs
-- No per-user limits
+- No soft delete/undo.
+- No bulk delete or audit log.
+```
+
+---
+
+### 009-add-stage-indicators
+
+```
+/specify
+
+Display ticket count badges and capacity warnings on each board column.
+
+WHAT:
+Show the number of tickets per stage with visual warnings when thresholds are exceeded (INBOX>10, PLAN>8, BUILD>6, VERIFY>8).
+
+WHY:
+PMs need immediate visibility into workload and bottlenecks.
+
+REQUIREMENTS:
+
+UI:
+- Stage header shows badge with count.
+- Warning state: amber badge + subtle background tint when threshold exceeded.
+- Empty state styling for zero tickets.
+
+DATA UPDATES:
+- Counts update live on ticket create/delete/drag-drop.
+- Works with server refresh and optimistic updates.
+
+ACCESSIBILITY:
+- Tooltip/aria-label explaining warning state.
+- Badge readable in dark theme.
+
+ACCEPTANCE CRITERIA:
+- Counts accurate after board actions.
+- Warning triggers at defined thresholds and clears after reductions.
+- Behaviour consistent on mobile/desktop.
+
+NON-GOALS:
+- No configurable thresholds.
+- No historical analytics.
+```
+
+---
+
+### 010-add-spec-tab
+
+```
+/specify
+
+Add markdown specification storage and viewing tab in the ticket detail modal.
+
+WHAT:
+Introduce a nullable spec field, last updated timestamp, and a new modal tab to view the spec content.
+
+WHY:
+We need space to store manual/AI-generated specifications before automation kicks in.
+
+REQUIREMENTS:
+
+DATA:
+- Prisma migration: Ticket.spec (text, nullable) + specUpdatedAt (DateTime?).
+- Update API responses to include spec metadata.
+
+UI:
+- Modal tabs: “Details” (default) and “Spec”.
+- Spec tab renders markdown with dark theme styling and scrollable container.
+- Empty state message + icon when no spec recorded.
+
+ACCEPTANCE CRITERIA:
+- Spec tab appears once migration applied.
+- Tickets with spec display formatted markdown.
+- Empty spec shows placeholder.
+- Modal remembers last tab during open session.
+
+NON-GOALS:
+- No editing yet (view only).
+- No AI integration or version history.
 ```
 
 ---
 
 ## Priority 2: Spec Management
 
-### 009-add-spec-field
-
-```
-/specify
-
-Add specification field to tickets for storing markdown documentation.
-
-WHAT:
-Add a spec field to the ticket data model that can store markdown specification text.
-
-WHY:
-Tickets need to store detailed specifications as foundation for future spec-kit/Claude integration.
-
-REQUIREMENTS:
-
-DATA MODEL:
-- Add spec field (text, nullable)
-- Add specUpdatedAt timestamp
-- Existing tickets default to null
-
-UI DISPLAY:
-- New "Spec" tab in ticket detail modal
-- Tab navigation (Details / Spec)
-- Display formatted markdown
-- "No spec yet" empty state
-- Proper markdown rendering
-- Code syntax highlighting
-- Dark theme compatible
-
-MARKDOWN SUPPORT:
-- Headings
-- Lists (ordered/unordered)
-- Code blocks
-- Links
-- Bold/italic
-- Blockquotes
-
-ACCEPTANCE CRITERIA:
-- Field added to database
-- Migration successful
-- Existing tickets unaffected
-- Spec tab visible in modal
-- Markdown renders correctly
-- Empty state shows properly
-- Dark theme works
-- Tab switching smooth
-
-NON-GOALS:
-- No spec editing yet
-- No AI generation
-- No version control
-- No GitHub integration
-- No collaborative editing
-```
-
----
-
-### 010-add-spec-editor
+### 011-add-spec-editor
 
 ```
 /specify
@@ -268,152 +222,95 @@ WHAT:
 Allow users to manually write and edit ticket specifications in markdown format with live preview.
 
 WHY:
-Users need to document requirements and specifications manually before AI integration is available.
+Users need to document requirements before AI integration is available.
 
 REQUIREMENTS:
 
 EDITOR:
-- Markdown text area
-- Syntax highlighting
-- Line numbers
-- Auto-indentation
-- Tab key support
+- Markdown text area with syntax highlighting, line numbers, auto-indentation.
+- Tab key support and keyboard shortcuts (Ctrl/Cmd+S saves).
 
 PREVIEW:
-- Live markdown preview
-- Side-by-side on desktop (≥768px)
-- Tabbed toggle on mobile (<768px)
-- Same markdown rendering as view mode
+- Live markdown preview.
+- Side-by-side on desktop (≥768px), tabbed toggle on mobile.
+- Same markdown renderer as view mode.
 
 EDITING FLOW:
-- "Edit Spec" button in Spec tab
-- Switches to edit mode
-- Save/Cancel buttons appear
-- Auto-save draft to localStorage
-- Restore draft on return
-- Clear draft on successful save
+- “Edit Spec” button in Spec tab toggles edit mode.
+- Save/Cancel buttons; auto-save draft to localStorage.
+- Restore draft when returning; clear draft on successful save.
 
 VALIDATION:
-- Max 10,000 characters
-- Character counter
-- Warning at 90% limit
-- Prevent save when over limit
-- Markdown syntax validation
+- Max 10,000 characters with counter and warning at 90%.
+- Prevent save when over limit or empty.
 
 UNSAVED CHANGES:
-- Warning if closing modal
-- Warning if switching tabs
-- Confirmation dialog
-- Option to save or discard
+- Warn when closing modal or switching tabs with unsaved edits.
 
 UPDATES:
-- Update specUpdatedAt timestamp
-- Show last updated date
-- Success feedback on save
+- Update specUpdatedAt timestamp; show last updated label.
+- Success toast on save.
 
 ACCEPTANCE CRITERIA:
-- Edit button enters edit mode
-- Syntax highlighting works
-- Preview updates live
-- Desktop: side-by-side layout
-- Mobile: tabbed layout
-- Save persists to database
-- Draft saved locally
-- Draft restored on return
-- Warnings for unsaved changes
-- Character limit enforced
-- Responsive on all devices
+- Editor opens and saves spec to DB.
+- Preview updates live; responsive layouts work.
+- Draft survives refresh until saved.
+- Unsaved warning triggers appropriately.
 
 NON-GOALS:
-- No rich text WYSIWYG
-- No collaborative editing
-- No version history
-- No AI assistance
-- No templates
-- No import/export
+- No collaborative editing.
+- No AI assistance.
 ```
 
 ---
 
 ## Priority 3: Enhanced Board Experience
 
-### 011-add-ticket-filtering
+### 012-add-ticket-filtering
 
 ```
 /specify
 
-Add search and filter controls to quickly find tickets on the board.
+Add search and stage filter controls to quickly find tickets on the board.
 
 WHAT:
 Allow users to filter tickets by text search and stage selection.
 
 WHY:
-As the board grows, users need to quickly find specific tickets without scrolling through all stages.
+As the board grows, users need to quickly find tickets without scrolling all stages.
 
 REQUIREMENTS:
 
 SEARCH:
-- Search input in board header
-- Filter by title/description text
-- Case-insensitive matching
-- Partial word matching
-- Real-time filtering
-- Clear button
-- Search icon
+- Input in board header; filters title/description (case-insensitive, partial match).
+- Real-time filtering with clear button and search icon.
 
 STAGE FILTER:
-- Multi-select dropdown
-- "All stages" default
-- Checkbox for each stage
-- Apply multiple stages
-- Show selected count
-- Clear selection option
+- Multi-select dropdown (checkbox list).
+- “All stages” default; show selected count; clear option.
 
 COMBINED FILTERS:
-- Search AND stage filters work together
-- Both must match for ticket to show
+- Search AND stage filters work together.
+- Filter state reflected in URL query params (shareable, back/forward support).
 
 DISPLAY:
-- Show filtered ticket count
-- "No results" empty state
-- Highlight matched text (optional)
-- Preserve drag-drop with filters active
-- Clear all filters button
-
-URL STATE:
-- Persist filters in URL query params
-- Shareable filtered view
-- Browser back/forward support
-- Refresh preserves filters
-
-PERFORMANCE:
-- Instant filtering (no debounce needed)
-- Smooth animations
-- No layout shift
+- Show filtered ticket count.
+- “No results” empty state.
+- Preserve drag/drop while filters active.
+- Clear-all button resets filters.
 
 ACCEPTANCE CRITERIA:
-- Search filters instantly
-- Stage filter works correctly
-- Combined filters work together
-- Clear buttons reset filters
-- URL updates with state
-- Refresh preserves filters
-- Count displays correctly
-- Empty state shows when no results
-- Drag-drop still works
-- Mobile responsive
+- Filters apply instantly and persist via URL.
+- Drag/drop still works under filters.
+- Responsive layout.
 
 NON-GOALS:
-- No advanced query syntax
-- No saved filter presets
-- No filter by date/user
-- No full-text search engine
-- No filter by tags/labels
+- No advanced query syntax or saved presets.
 ```
 
 ---
 
-### 012-add-ticket-sorting
+### 013-add-ticket-sorting
 
 ```
 /specify
@@ -424,71 +321,39 @@ WHAT:
 Allow users to sort tickets by date, title, or manual drag-drop order.
 
 WHY:
-Users need to prioritize and organize tickets within stages according to different criteria.
+Users need to prioritize and organize tickets according to different criteria.
 
 REQUIREMENTS:
 
 SORT OPTIONS:
-- Created date (newest first)
-- Created date (oldest first)
-- Updated date (newest first)
-- Updated date (oldest first)
-- Title (A-Z)
-- Title (Z-A)
-- Manual (custom order)
+- Created date (newest/oldest), Updated date (newest/oldest), Title (A→Z / Z→A), Manual order.
 
 UI:
-- Sort dropdown in board header
-- Shows current sort option
-- Icon indicator
-- Applies to all stages
-- Remember preference in localStorage
+- Sort dropdown in board header with current selection indicator.
+- Persist preference in localStorage.
 
 MANUAL SORTING:
-- Add sortOrder field to tickets
-- Save order on drag-drop
-- Maintain order within stage
-- Preserve across sessions
+- Add sortOrder field to tickets.
+- Save order on drag-drop; maintain within stage.
 
-AUTOMATIC SORTING:
-- Disable drag-drop when auto-sort active
-- Show "Drag disabled" message
-- Switch to Manual to enable drag
-
-SORT PERSISTENCE:
-- Save preference locally
-- Apply on page load
-- Respect preference across sessions
-
-INTERACTIONS:
-- Sort applies immediately
-- Smooth animations
-- No layout shift
-- Works with filters
+AUTO SORTING:
+- Disable drag when auto-sort active; show “Drag disabled” message.
+- Switching back to Manual re-enables drag using stored order.
 
 ACCEPTANCE CRITERIA:
-- All sort options work correctly
-- Dropdown shows current sort
-- Manual sort saves order
-- Auto-sort disables drag
-- Preference persists
-- Works with active filters
-- Animations smooth
-- Mobile responsive
+- All sort modes behave correctly and persist between sessions.
+- Manual order stored and restored.
+- Works alongside filters.
 
 NON-GOALS:
-- No per-stage sorting
-- No multi-column sort
-- No custom sort formulas
-- No sort by priority
-- No sort groups/sections
+- No per-user or per-stage custom sorting rules.
 ```
 
 ---
 
 ## Priority 4: GitHub Preparation
 
-### 013-add-project-model
+### 014-add-project-model
 
 ```
 /specify
@@ -499,121 +364,25 @@ WHAT:
 Create a Project data model and associate all tickets with a default project.
 
 WHY:
-The vision requires workspace/project organization and GitHub repo connections. This is the foundation.
+Vision requires workspace/project organization and GitHub repo connections.
 
 REQUIREMENTS:
 
 DATA MODEL:
-- Create Project model
-- Fields: id, name, description, createdAt, updatedAt
-- Add projectId to Ticket (foreign key, required)
-- Create default project for existing tickets
+- Create Project model (id, name, description, createdAt, updatedAt).
+- Add projectId to Ticket (required, FK with cascade on delete).
+- Migration creates default project “ai-board” and assigns existing tickets.
 
-DEFAULT PROJECT:
-- Name: "ai-board"
-- Description: "Default project"
-- Auto-created on migration
-- All existing tickets assigned to it
-
-PROJECT DISPLAY:
-- Show project name in board header
-- Display as non-interactive text
-- Include project description (tooltip/subtitle)
-
-TICKET ASSOCIATION:
-- All new tickets use current project
-- Cannot change project (not implemented yet)
-- Cascade delete (delete project → delete tickets)
+UI:
+- Board header displays current project name.
+- Future-proof structure for project switcher.
 
 ACCEPTANCE CRITERIA:
-- Project model created
-- Migration creates default project
-- All existing tickets have projectId
-- New tickets auto-assigned
-- Project name shows in header
-- No breaking changes
-- Foreign key constraints work
+- Database updated with project records.
+- Tickets reference default project.
+- Board shows project name without regressions.
 
 NON-GOALS:
-- No project switching UI
-- No project creation UI
-- No multi-project views
-- No project settings
-- No GitHub integration yet
-- No project permissions
+- No multi-project UI switching yet.
+- No project settings page.
 ```
-
----
-
-### 014-add-github-url-field
-
-```
-/specify
-
-Add GitHub repository and PR URL fields to projects and tickets.
-
-WHAT:
-Store optional GitHub repository URLs on projects and PR/branch URLs on tickets.
-
-WHY:
-Prepare data model for future GitHub integration by storing repo and PR references.
-
-REQUIREMENTS:
-
-PROJECT LEVEL:
-- Add githubRepoUrl field (text, nullable)
-- Display in future project settings
-- Format: https://github.com/owner/repo
-
-TICKET LEVEL:
-- Add githubPrUrl field (text, nullable)
-- Add githubBranch field (text, nullable)
-- Display in ticket detail modal
-- Clickable links when present
-
-URL VALIDATION:
-- Must start with https://
-- Must contain github.com
-- Valid URL format
-- Optional (can be empty)
-
-DISPLAY:
-- Show GitHub icon with links
-- "Open in GitHub" links
-- Open in new tab
-- Show branch name if present
-- Hide section if no URLs
-
-MANUAL EDITING:
-- Not in this feature
-- Fields exist but not editable yet
-- Prepare for future GitHub integration
-
-ACCEPTANCE CRITERIA:
-- Fields added to models
-- Migration successful
-- Links display when present
-- Links open in new tab
-- Validation works
-- Empty state handled
-- GitHub icon shown
-- Mobile responsive
-
-NON-GOALS:
-- No GitHub API integration
-- No automatic PR creation
-- No live status sync
-- No authentication
-- No URL editing UI yet
-- No webhooks
-```
-
----
-
-## Notes
-
-**Feature Sizing**: All features 1-6 hours each
-**Dependencies**: Listed in order of recommended implementation
-**Format**: Ready to paste into `/specify` command
-**Vision Alignment**: Features 009-014 prepare for spec-kit/GitHub integration
-
