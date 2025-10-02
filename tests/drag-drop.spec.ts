@@ -1,4 +1,4 @@
-import { test, expect, Page, APIResponse, devices } from '@playwright/test';
+import { test, expect, Page, APIResponse } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 
 /**

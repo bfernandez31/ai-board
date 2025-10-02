@@ -1,0 +1,240 @@
+openapi: 3.0.3
+info:
+  title: Inline Ticket Editing API
+  description: API contract for PATCH /api/tickets/[id] endpoint to update ticket title and description
+  version: 1.0.0
+
+paths:
+  /api/tickets/{id}:
+    patch:
+      summary: Update ticket title and/or description
+      description: |
+        Updates a ticket's title and/or description with optimistic concurrency control.
+        Uses version field to detect concurrent modifications and prevent lost updates.
+      operationId: patchTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique ticket identifier
+          schema:
+            type: integer
+            minimum: 1
+          example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - version
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: New ticket title (trimmed, non-empty)
+                  example: "Updated ticket title"
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  description: New ticket description (trimmed, non-empty)
+                  example: "Updated ticket description with more details"
+                version:
+                  type: integer
+                  minimum: 1
+                  description: Current version number for optimistic locking
+                  example: 1
+              oneOf:
+                - required: [title]
+                - required: [description]
+                - required: [title, description]
+            examples:
+              updateTitle:
+                summary: Update title only
+                value:
+                  title: "New ticket title"
+                  version: 1
+              updateDescription:
+                summary: Update description only
+                value:
+                  description: "New ticket description"
+                  version: 1
+              updateBoth:
+                summary: Update both fields
+                value:
+                  title: "New ticket title"
+                  description: "New ticket description"
+                  version: 1
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+              example:
+                id: 123
+                title: "Updated ticket title"
+                description: "Updated ticket description"
+                stage: "INBOX"
+                version: 2
+                createdAt: "2025-10-02T10:00:00.000Z"
+                updatedAt: "2025-10-02T10:05:00.000Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                titleTooLong:
+                  summary: Title exceeds max length
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - path: ["title"]
+                        message: "Title must be 100 characters or less"
+                emptyDescription:
+                  summary: Description is empty
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - path: ["description"]
+                        message: "Description cannot be empty"
+                noFields:
+                  summary: Neither title nor description provided
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - message: "At least one field (title or description) must be provided"
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+        '409':
+          description: Concurrent modification detected (version mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+              example:
+                error: "Conflict: Ticket was modified by another user"
+                currentVersion: 3
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to update ticket"
+
+components:
+  schemas:
+    Ticket:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - stage
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          description: Unique ticket identifier
+          example: 123
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ticket title
+          example: "Implement user authentication"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Ticket description
+          example: "Add JWT-based authentication with email/password login"
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+          description: Current workflow stage
+          example: "INBOX"
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic lock version number
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+          description: Ticket creation timestamp
+          example: "2025-10-02T10:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+          example: "2025-10-02T10:05:00.000Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Ticket not found"
+
+    ConflictError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Conflict error message
+          example: "Conflict: Ticket was modified by another user"
+        currentVersion:
+          type: integer
+          minimum: 1
+          description: Current version in database
+          example: 3
+
+    ValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Validation error message
+          example: "Validation failed"
+        issues:
+          type: array
+          description: List of validation issues
+          items:
+            type: object
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+                description: Field path where validation failed
+                example: ["title"]
+              message:
+                type: string
+                description: Validation error message
+                example: "Title must be 100 characters or less"

@@ -94,8 +94,51 @@ export const TicketSchema = z.object({
 });
 
 /**
+ * Validation schemas for inline ticket editing (PATCH operations)
+ */
+export const titleSchema = z
+  .string()
+  .trim()
+  .min(1, { message: 'Title cannot be empty' })
+  .max(100, { message: 'Title must be 100 characters or less' });
+
+export const descriptionSchema = z
+  .string()
+  .trim()
+  .min(1, { message: 'Description cannot be empty' })
+  .max(1000, { message: 'Description must be 1000 characters or less' });
+
+export const versionSchema = z
+  .number()
+  .int({ message: 'Version must be an integer' })
+  .positive({ message: 'Version must be positive' });
+
+export const patchTicketSchema = z
+  .object({
+    title: titleSchema.optional(),
+    description: descriptionSchema.optional(),
+    version: versionSchema,
+  })
+  .refine(
+    (data) => data.title !== undefined || data.description !== undefined,
+    { message: 'At least one field (title or description) must be provided' }
+  );
+
+export const ticketResponseSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string(),
+  description: z.string(),
+  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+  version: z.number().int().positive(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+/**
  * TypeScript types inferred from Zod schemas
  */
 export type Stage = z.infer<typeof StageSchema>;
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
 export type TicketValidation = z.infer<typeof TicketSchema>;
+export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
+export type TicketResponse = z.infer<typeof ticketResponseSchema>;

@@ -1,6 +1,8 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +10,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
+import { CharacterCounter } from '@/components/ui/character-counter';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -17,6 +25,7 @@ interface TicketData {
   title: string;
   description: string | null;
   stage: string;
+  version: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -33,6 +42,9 @@ interface TicketDetailModalProps {
 
   /** Callback fired when the modal requests to be closed (via close button, ESC, or overlay click). */
   onOpenChange: (open: boolean) => void;
+
+  /** Callback fired when ticket is updated successfully to refresh parent state. */
+  onUpdate?: () => void;
 }
 
 /**
@@ -63,12 +75,16 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
 /**
  * TicketDetailModal Component
  *
- * Displays full ticket details in a modal dialog. The modal is responsive:
+ * Displays full ticket details in a modal dialog with inline editing capabilities.
+ * The modal is responsive:
  * - Mobile (<768px): Full-screen layout
  * - Desktop (≥768px): Centered modal with max-width
  *
  * Features:
  * - Display ticket title, description, stage, and dates
+ * - Inline editing for title and description
+ * - Optimistic updates with rollback on error
+ * - Version-based concurrency control
  * - Close via button, ESC key, or clicking outside
  * - Keyboard accessible with focus trap
  * - Dark theme styling consistent with app
@@ -76,9 +92,187 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
  * @param ticket - The ticket object to display, or null to hide content
  * @param open - Boolean controlling modal visibility
  * @param onOpenChange - Callback for state changes (e.g., when user closes modal)
+ * @param onUpdate - Callback to refresh parent board state after successful update
  */
-export function TicketDetailModal({ ticket, open, onOpenChange }: TicketDetailModalProps) {
-  // Don't render content if no ticket is selected
+export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: TicketDetailModalProps) {
+  const { toast } = useToast();
+  const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
+
+  // Update local ticket when a different ticket is selected or version changes
+  useEffect(() => {
+    if (ticket) {
+      setLocalTicket((current) => {
+        // Only update if different ticket or newer version
+        if (!current || current.id !== ticket.id || current.version !== ticket.version) {
+          return ticket;
+        }
+        return current;
+      });
+    }
+  }, [ticket]);
+
+  // Save handler for title
+  const handleSaveTitle = async (newTitle: string): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    // Optimistic update
+    setLocalTicket({ ...localTicket, title: newTitle });
+
+    try {
+      const response = await fetch(`/api/tickets/${localTicket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle,
+          version: localTicket.version,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          // Conflict: ticket modified by another user
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description: error.error || 'Ticket was modified by another user. Please refresh.',
+          });
+        } else if (response.status === 400) {
+          // Validation error
+          toast({
+            variant: 'destructive',
+            title: 'Validation Error',
+            description: error.issues?.[0]?.message || 'Invalid title',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to save. Changes reverted.',
+          });
+        }
+
+        // Rollback
+        setLocalTicket(originalTicket);
+        throw new Error('Failed to save title');
+      }
+
+      const updatedTicket = await response.json();
+
+      // Update local ticket with all fields including new version
+      setLocalTicket({
+        ...updatedTicket,
+        createdAt: new Date(updatedTicket.createdAt),
+        updatedAt: new Date(updatedTicket.updatedAt),
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Ticket updated',
+      });
+
+      // Notify parent to refresh board
+      if (onUpdate) {
+        onUpdate();
+      }
+    } catch (error) {
+      // Rollback on error
+      setLocalTicket(originalTicket);
+      throw error;
+    }
+  };
+
+  // Save handler for description
+  const handleSaveDescription = async (newDescription: string): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    // Optimistic update
+    setLocalTicket({ ...localTicket, description: newDescription });
+
+    try {
+      const response = await fetch(`/api/tickets/${localTicket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: newDescription,
+          version: localTicket.version,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          // Conflict: ticket modified by another user
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description: error.error || 'Ticket was modified by another user. Please refresh.',
+          });
+        } else if (response.status === 400) {
+          // Validation error
+          toast({
+            variant: 'destructive',
+            title: 'Validation Error',
+            description: error.issues?.[0]?.message || 'Invalid description',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to save. Changes reverted.',
+          });
+        }
+
+        // Rollback
+        setLocalTicket(originalTicket);
+        throw new Error('Failed to save description');
+      }
+
+      const updatedTicket = await response.json();
+
+      // Update local ticket with all fields including new version
+      setLocalTicket({
+        ...updatedTicket,
+        createdAt: new Date(updatedTicket.createdAt),
+        updatedAt: new Date(updatedTicket.updatedAt),
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Ticket updated',
+      });
+
+      // Notify parent to refresh board
+      if (onUpdate) {
+        onUpdate();
+      }
+    } catch (error) {
+      // Rollback on error
+      setLocalTicket(originalTicket);
+      throw error;
+    }
+  };
+
+  // Initialize inline edit hooks
+  const titleEdit = useTicketEdit({
+    initialValue: localTicket?.title || '',
+    onSave: handleSaveTitle,
+    maxLength: 100,
+  });
+
+  const descriptionEdit = useTicketEdit({
+    initialValue: localTicket?.description || '',
+    onSave: handleSaveDescription,
+    maxLength: 1000,
+  });
+
+  // Don't render content if no ticket is selected (after all hooks)
   if (!ticket) {
     return null;
   }
@@ -98,14 +292,57 @@ export function TicketDetailModal({ ticket, open, onOpenChange }: TicketDetailMo
           bg-zinc-900 border-zinc-700 text-zinc-100
         "
       >
-        {/* Header with title */}
+        {/* Header with editable title */}
         <DialogHeader className="pb-4">
-          <DialogTitle
-            className="text-2xl font-bold text-zinc-100"
-            data-testid="modal-title"
-          >
-            {ticket.title}
-          </DialogTitle>
+          <div className="group">
+            {titleEdit.isEditing ? (
+              <div className="space-y-2">
+                <Input
+                  ref={titleEdit.inputRef as React.RefObject<HTMLInputElement>}
+                  value={titleEdit.value}
+                  onChange={titleEdit.handleChange}
+                  onKeyDown={titleEdit.handleKeyDown}
+                  maxLength={100}
+                  className="text-2xl font-bold bg-zinc-800 border-zinc-600 text-zinc-100"
+                  disabled={titleEdit.isSaving}
+                  data-testid="title-input"
+                  name="title"
+                  aria-label="Edit ticket title"
+                  aria-invalid={!!titleEdit.error}
+                  aria-describedby={titleEdit.error ? "title-error" : undefined}
+                />
+                {titleEdit.error && (
+                  <p id="title-error" className="text-sm text-red-500" data-testid="title-error" role="alert">
+                    {titleEdit.error}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 cursor-pointer hover:bg-zinc-800 p-2 -ml-2 rounded transition-colors"
+                onClick={titleEdit.startEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    titleEdit.startEdit();
+                  }
+                }}
+                data-testid="ticket-title"
+                role="button"
+                tabIndex={0}
+                aria-label="Edit ticket title"
+              >
+                <DialogTitle className="text-2xl font-bold text-zinc-100 flex-1">
+                  {localTicket?.title || ticket.title}
+                </DialogTitle>
+                <Pencil
+                  className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  data-testid="edit-icon-title"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         {/* Modal body content */}
@@ -120,22 +357,98 @@ export function TicketDetailModal({ ticket, open, onOpenChange }: TicketDetailMo
             </Badge>
           </div>
 
-          {/* Description section */}
-          <div>
+          {/* Description section with inline editing */}
+          <div className="group">
             <h3 className="text-sm text-zinc-400 uppercase tracking-wider mb-2 font-semibold">
               Description
             </h3>
-            <div
-              className="
-                text-base text-zinc-200 leading-relaxed
-                max-h-96 overflow-y-auto
-                pr-2
-                scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900
-              "
-              data-testid="ticket-description"
-            >
-              {ticket.description || 'No description provided'}
-            </div>
+            {descriptionEdit.isEditing ? (
+              <div className="space-y-3">
+                <Textarea
+                  ref={descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>}
+                  value={descriptionEdit.value}
+                  onChange={descriptionEdit.handleChange}
+                  onKeyDown={descriptionEdit.handleKeyDown}
+                  maxLength={1000}
+                  rows={8}
+                  className="bg-zinc-800 border-zinc-600 text-zinc-100 resize-none"
+                  disabled={descriptionEdit.isSaving}
+                  data-testid="description-textarea"
+                  name="description"
+                  aria-label="Edit ticket description"
+                  aria-invalid={!!descriptionEdit.error}
+                  aria-describedby={descriptionEdit.error ? "description-error" : "description-counter"}
+                />
+                <CharacterCounter
+                  current={descriptionEdit.value.length}
+                  max={1000}
+                />
+                {descriptionEdit.error && (
+                  <p id="description-error" className="text-sm text-red-500" data-testid="description-error" role="alert">
+                    {descriptionEdit.error}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await handleSaveDescription(descriptionEdit.value);
+                      } catch (error) {
+                        // Error already handled in handleSaveDescription
+                      }
+                    }}
+                    disabled={descriptionEdit.isSaving || !!descriptionEdit.error || descriptionEdit.value.trim() === (localTicket?.description || '')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    aria-label="Save description changes"
+                  >
+                    {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={descriptionEdit.cancelEdit}
+                    variant="outline"
+                    disabled={descriptionEdit.isSaving}
+                    className="border-zinc-600 hover:bg-zinc-800"
+                    aria-label="Cancel editing"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="
+                  cursor-pointer hover:bg-zinc-800 p-3 -ml-3 rounded transition-colors
+                  relative
+                "
+                onClick={descriptionEdit.startEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    descriptionEdit.startEdit();
+                  }
+                }}
+                data-testid="ticket-description"
+                role="button"
+                tabIndex={0}
+                aria-label="Edit ticket description"
+              >
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil className="w-4 h-4 text-zinc-500" data-testid="edit-icon-description" aria-hidden="true" />
+                </div>
+                <div
+                  className="
+                    text-base text-zinc-200 leading-relaxed
+                    max-h-96 overflow-y-auto
+                    pr-2
+                    scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900
+                  "
+                >
+                  {localTicket?.description || ticket.description || 'No description provided'}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dates section */}
@@ -149,7 +462,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange }: TicketDetailMo
             <div className="flex justify-between items-center">
               <span className="text-sm text-zinc-400">Last Updated:</span>
               <span className="text-sm text-zinc-200">
-                {formatTicketDate(ticket.updatedAt)}
+                {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
               </span>
             </div>
           </div>

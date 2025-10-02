@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
       // Create a descriptive error message from field errors
       const fieldErrorMessages = Object.entries(flattened.fieldErrors)
-        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .map(([field, errors]) => `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`)
         .join('; ');
 
       const errorMessage = fieldErrorMessages || 'Invalid input';
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       // Create a descriptive error message from field errors
       const fieldErrorMessages = Object.entries(flattened.fieldErrors)
-        .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+        .map(([field, errors]) => `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`)
         .join('; ');
 
       const errorMessage = fieldErrorMessages || 'Invalid input';

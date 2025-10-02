@@ -203,6 +203,33 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
     }
   }, []);
 
+  // Handle ticket update from modal
+  const handleTicketUpdate = useCallback(async () => {
+    // Refetch the specific ticket that was updated
+    if (selectedTicket) {
+      try {
+        const response = await fetch(`/api/tickets/${selectedTicket.id}`);
+        if (response.ok) {
+          const updatedTicket = await response.json();
+
+          // Update the ticket in local state
+          const updatedTickets = allTickets.map((ticket) =>
+            ticket.id === updatedTicket.id
+              ? { ...updatedTicket, createdAt: new Date(updatedTicket.createdAt), updatedAt: new Date(updatedTicket.updatedAt) }
+              : ticket
+          );
+
+          setTicketsByStage(groupTicketsByStage(updatedTickets));
+
+          // Update selected ticket to reflect changes in modal
+          setSelectedTicket({ ...updatedTicket, createdAt: new Date(updatedTicket.createdAt), updatedAt: new Date(updatedTicket.updatedAt) });
+        }
+      } catch (error) {
+        console.error('Error refreshing ticket:', error);
+      }
+    }
+  }, [selectedTicket, allTickets]);
+
   const stages = getAllStages();
 
   return (
@@ -245,6 +272,7 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
         ticket={selectedTicket}
         open={isModalOpen}
         onOpenChange={handleModalClose}
+        onUpdate={handleTicketUpdate}
       />
     </>
   );
