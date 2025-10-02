@@ -309,6 +309,20 @@ export async function POST(request: NextRequest) {
 }
 ```
 
+### VERIFY Stage PR Handling
+
+- When a ticket enters VERIFY:
+  - **Auto Mode**: invoke Claude Code (via API route or worker) to open a PR from `feature/ticket-<id>` → `main`, post results back, and merge once automated checks succeed.
+  - **Manual Mode**: create the PR but leave it in draft, notifying the assigned reviewers to complete review/merge in GitHub.
+- Store the resulting PR URL on the ticket record (`prUrl`) so the UI can deep-link to the review.
+- Keep the ticket in VERIFY until the merge webhook fires.
+
+### SHIP Stage Automation
+
+- Listen for `pull_request` webhook events (`closed` + `merged: true`) targeting the repo.
+- When a ticket’s tracked PR merges into `main`, update the ticket stage to SHIP and record deployment metadata if available.
+- CI/CD (Vercel) deploys automatically on merge; surface deployment status in the activity feed when possible.
+
 ## Database Schema
 
 Update `prisma/schema.prisma`:

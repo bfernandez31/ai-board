@@ -151,6 +151,20 @@ export async function POST(
 }
 ```
 
+### VERIFY Stage PR Workflow
+
+- On transition to VERIFY:
+  - **Auto Mode**: Claude Code service (running inside worker) opens a PR from the feature branch to `main`, leaves structured review comments, and self-approves/merges once validations and tests succeed.
+  - **Manual Mode**: Worker opens the PR but assigns human reviewers; merge occurs only after manual approval in GitHub.
+- Persist PR metadata (`prUrl`, `branch`) so the dashboard can show real-time status.
+- Ticket remains in VERIFY until merge callbacks fire.
+
+### SHIP Stage Trigger
+
+- Subscribe to GitHub webhooks via the GitHub App for `pull_request` and `check_suite` events.
+- When a tracked PR merges into `main`, update the ticket to SHIP, capture deployment status, and enqueue optional post-merge tasks (e.g., cleanup branch).
+- CI/CD hooks (Vercel, Fly.io deployment) execute automatically on merge.
+
 ### 2. Job Queue (Redis + BullMQ)
 
 **Responsibilities:**

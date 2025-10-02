@@ -53,12 +53,13 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - Manual validation stage (no automated spec-kit command)
 - User reviews complete implementation
 - Runs E2E tests, checks quality
-- Creates Pull Request to main branch
+- **Auto Mode**: Claude Code opens/reviews PR and merges to `main` once checks pass
+- **Manual Mode**: Team opens PR, performs review, and merges via GitHub
 - Drag to SHIP when ready to merge
 
 **SHIP** 🚀
-- PR merged to main branch
-- Triggers deployment (via existing CI/CD)
+- Stage flips automatically when PR merge lands on `main`
+- CI pipeline deploys on merge to main branch
 - Ticket marked as completed
 - Final stage (no further transitions)
 
@@ -67,16 +68,18 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 #### Auto Mode
 - **Trigger**: User selects "Auto" when creating ticket
 - **Behavior**: Each spec-kit command automatically triggers next stage transition
-- **Flow**: SPECIFY → auto → PLAN → auto → BUILD → auto → VERIFY → manual → SHIP
+- **Flow**: SPECIFY → auto → PLAN → auto → BUILD → auto → VERIFY (Claude opens/reviews PR) → auto → SHIP (after merge)
 - **Use Case**: Rapid prototyping, trusted workflows, low-risk changes
 - **Commits**: Automatic commit/push after each command execution
+- **PR Handling**: Claude Code opens PR in VERIFY stage, reviews, and merges once checks pass
 
 #### Manual Mode
 - **Trigger**: User selects "Manual" when creating ticket (default)
 - **Behavior**: User must drag-drop ticket to advance after each command
-- **Flow**: SPECIFY → wait → PLAN → wait → BUILD → wait → VERIFY → wait → SHIP
+- **Flow**: SPECIFY → wait → PLAN → wait → BUILD → wait → VERIFY (human opens/reviews PR) → wait → SHIP (after merge)
 - **Use Case**: Critical features, learning spec-kit, quality validation needed
 - **Commits**: Same automatic commits, but user controls when to proceed
+- **PR Handling**: Team opens PR during VERIFY stage and completes review/merge in GitHub
 - **Benefit**: Review and edit generated artifacts (spec.md, plan.md, tasks.md) before continuing
 
 ### Git Integration
@@ -85,7 +88,9 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - Each ticket gets dedicated feature branch: `feature/ticket-<id>`
 - Branch created during SPECIFY stage
 - All spec-kit outputs committed to this branch
-- PR created from feature branch to main during VERIFY stage
+- PR created during VERIFY stage
+- Auto Mode: Claude Code opens, reviews, and merges PR upon approval
+- Manual Mode: Human reviewers open PR, review, and merge via GitHub UI
 
 **Commit Strategy**
 - Automatic commits after each spec-kit command execution
@@ -193,7 +198,7 @@ Two approaches documented in detail:
 - **Switching Claude Providers**: Only requires updating API client configuration (supports Bedrock, Vertex, etc.)
 
 ## Auto-Deployment Strategy
-- **Phase 1 (MVP)**: Rely on existing CI/CD—agent opens PRs, merges trigger deployment pipelines
+- **Phase 1 (MVP)**: Rely on existing CI/CD—Claude opens/merges PRs in Auto Mode; human reviewers merge in Manual Mode; both trigger deployment pipelines
 - **Phase 2**: Opt-in connectors for Vercel, GitHub Actions deployment hooks
 - **Phase 3**: Custom webhooks/API callbacks for Netlify, Render, Kubernetes
 - **Phase 4**: Deeper integrations for selected platforms when demand justifies
