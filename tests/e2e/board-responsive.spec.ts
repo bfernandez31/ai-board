@@ -31,7 +31,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(`${BASE_URL}/board`);
 
-    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
+    const stages = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
@@ -157,7 +157,7 @@ test.describe('Responsive Board Design', () => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto(`${BASE_URL}/board`);
 
-    const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
+    const stages = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     // All columns should be visible
     for (const stage of stages) {
@@ -165,9 +165,9 @@ test.describe('Responsive Board Design', () => {
       await expect(column).toBeVisible();
     }
 
-    // Check if columns are laid out horizontally
+    // Check if columns are laid out horizontally (adjacent columns)
     const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
-    const secondColumn = page.locator(`[data-testid="column-PLAN"]`).first();
+    const secondColumn = page.locator(`[data-testid="column-SPECIFY"]`).first();
 
     const firstBox = await firstColumn.boundingBox();
     const secondBox = await secondColumn.boundingBox();
@@ -190,8 +190,9 @@ test.describe('Responsive Board Design', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto(`${BASE_URL}/board`);
 
+      // Measure gap between INBOX and SPECIFY (adjacent columns)
       const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
-      const secondColumn = page.locator(`[data-testid="column-PLAN"]`).first();
+      const secondColumn = page.locator(`[data-testid="column-SPECIFY"]`).first();
 
       const firstBox = await firstColumn.boundingBox();
       const secondBox = await secondColumn.boundingBox();
@@ -244,7 +245,8 @@ test.describe('Responsive Board Design', () => {
     // Board should still be visible and functional
     await expect(board.first()).toBeVisible();
 
-    const stages = ['INBOX', 'PLAN', 'BUILD'];
+    // Check visibility of first few columns (horizontal scroll allows access to all)
+    const stages = ['INBOX', 'SPECIFY', 'PLAN'];
     for (const stage of stages) {
       const column = page.locator(`[data-testid="column-${stage}"]`).first();
       await expect(column).toBeVisible();
