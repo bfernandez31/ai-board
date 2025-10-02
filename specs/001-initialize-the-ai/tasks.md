@@ -347,7 +347,7 @@ build
 1. **Project Title**: AI Board
 2. **Description**: Visual kanban board for AI-driven development using Spec-kit + Claude Code
 3. **Tech Stack**: Next.js 15, TypeScript, TailwindCSS, Playwright, Prisma
-4. **Prerequisites**: Node.js 18.17+, npm
+4. **Prerequisites**: Node.js 22.20.0 LTS, npm
 5. **Setup Instructions**:
    - Clone repository
    - Install dependencies: `npm install`

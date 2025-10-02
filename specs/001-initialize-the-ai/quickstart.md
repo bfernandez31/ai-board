@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- Node.js 18.17+ or 20.x+ installed
+- Node.js 22.20.0 LTS installed
 - npm package manager
 - Git repository initialized
 - Internet connection for dependency installation

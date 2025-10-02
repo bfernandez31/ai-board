@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-- Node.js 20.x+ installed
+- Node.js 22.20.0 LTS installed
 - PostgreSQL 14+ installed and running
 - Repository cloned and dependencies installed
 - Database configured (`.env` file with `DATABASE_URL`)

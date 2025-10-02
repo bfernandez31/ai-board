@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- Development environment set up (Node.js 20.x, dependencies installed)
+- Development environment set up (Node.js 22.20.0 LTS, dependencies installed)
 - PostgreSQL database running (see DATABASE_SETUP.md)
 - Prisma migrations applied: `npx prisma migrate dev`
 - Development server running: `npm run dev` on http://localhost:3000

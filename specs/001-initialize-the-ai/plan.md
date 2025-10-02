@@ -41,7 +41,7 @@
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x (strict mode), Node.js 18.17+ or 20.x+
+**Language/Version**: TypeScript 5.x (strict mode), Node.js 22.20.0 LTS
 **Primary Dependencies**: Next.js 15, React 18, TailwindCSS 3.x, Playwright
 **Storage**: PostgreSQL 14+ via Prisma ORM (setup for future, not in foundation)
 **Testing**: Playwright with MCP support for E2E tests

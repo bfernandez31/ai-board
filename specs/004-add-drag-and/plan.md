@@ -29,7 +29,7 @@
 Enable users to drag ticket cards between sequential workflow stages (INBOX→PLAN→BUILD→VERIFY→SHIP) with <100ms latency, optimistic UI updates, first-write-wins conflict resolution, and full touch device support using @dnd-kit/core library.
 
 ## Technical Context
-**Language/Version**: TypeScript 5.6 (strict mode), Node.js 20.x
+**Language/Version**: TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 **Primary Dependencies**: Next.js 15 (App Router), React 18, @dnd-kit/core, @dnd-kit/sortable, Prisma 6.x, Zod 4.x, shadcn/ui
 **Storage**: PostgreSQL 14+ via Prisma ORM
 **Testing**: Playwright with E2E focus

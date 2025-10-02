@@ -37,7 +37,7 @@ Add a "+ New Ticket" button and creation modal in the IDLE column. Users fill in
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.6 (strict mode), Node.js 20.x
+**Language/Version**: TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 **Primary Dependencies**: Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma 6.x, Zod 4.x, shadcn/ui
 **Storage**: PostgreSQL 14+ via Prisma ORM
 **Testing**: Playwright E2E tests with MCP support

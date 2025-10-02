@@ -34,7 +34,7 @@
 Add a modal dialog that displays complete ticket details when a user clicks on any ticket card in the kanban board. The modal will show the ticket's title, full description, current stage, creation date, and last updated date. Users can close the modal using a close button, ESC key, or clicking outside. The modal must be responsive (full-screen on mobile, centered on desktop) and follow the application's dark theme design.
 
 ## Technical Context
-**Language/Version**: TypeScript 5.6 (strict mode), Node.js 20.x
+**Language/Version**: TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 **Primary Dependencies**: Next.js 15 (App Router), React 18, shadcn/ui (Dialog component), Radix UI
 **Storage**: PostgreSQL 14+ via Prisma ORM (existing Ticket model)
 **Testing**: Playwright with E2E tests

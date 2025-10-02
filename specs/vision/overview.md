@@ -53,8 +53,8 @@
 - Optional alternative: instead of an internal runner, trigger a GitHub Action workflow that already has the repo checkout; ai-board just orchestrates dispatch + status tracking.
 
 ## Deployment Notes
-- Local development: Next.js + Prisma with Dockerized Postgres, specs stored in GitHub branches (starting with the ai-board repo), Anthropic API key in `.env`.
-- Production MVP: deploy frontend/backend on Vercel, use managed Postgres (Neon/Supabase), connect GitHub App, and supply Claude credentials via environment variables.
+- Local development: Node.js 22.20.0 LTS, Next.js + Prisma with Dockerized Postgres, specs stored in GitHub branches (starting with the ai-board repo), Anthropic API key in `.env`.
+- Production MVP: deploy frontend/backend on Vercel (Node.js 22.20.0 LTS), use managed Postgres (Neon/Supabase), connect GitHub App, and supply Claude credentials via environment variables.
 - Switching to another Claude-compatible provider (Bedrock, Vertex, etc.) only requires updating the AI client configuration.
 
 ## Auto-Deployment Strategy

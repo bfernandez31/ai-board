@@ -34,7 +34,7 @@
 Build a visual kanban board with 6 workflow columns (IDLE, PLAN, BUILD, REVIEW, SHIPPED, ERRORED) displaying ticket cards with basic information. Users can view tickets organized by stage and create new tickets that appear in the IDLE column. This is a display-focused MVP without drag-drop, modals, or AI integration—establishing the visual foundation for future enhancements.
 
 ## Technical Context
-**Language/Version**: TypeScript 5.6 (strict mode), Node.js 20.x
+**Language/Version**: TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 **Primary Dependencies**: Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma (to be added), shadcn/ui (to be added)
 **Storage**: PostgreSQL via Prisma ORM (database setup required)
 **Testing**: Playwright 1.48 for E2E tests
