@@ -288,22 +288,22 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
       <DialogContent
         className="
           h-screen w-screen p-6
-          sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-8
-          bg-zinc-900 border-zinc-700 text-zinc-100
+          sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
+          bg-zinc-900 border-zinc-600 text-zinc-100
         "
       >
         {/* Header with editable title */}
         <DialogHeader className="pb-4">
           <div className="group">
             {titleEdit.isEditing ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Input
                   ref={titleEdit.inputRef as React.RefObject<HTMLInputElement>}
                   value={titleEdit.value}
                   onChange={titleEdit.handleChange}
                   onKeyDown={titleEdit.handleKeyDown}
                   maxLength={100}
-                  className="text-2xl font-bold bg-zinc-800 border-zinc-600 text-zinc-100"
+                  className="text-2xl font-bold bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
                   disabled={titleEdit.isSaving}
                   data-testid="title-input"
                   name="title"
@@ -312,14 +312,14 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   aria-describedby={titleEdit.error ? "title-error" : undefined}
                 />
                 {titleEdit.error && (
-                  <p id="title-error" className="text-sm text-red-500" data-testid="title-error" role="alert">
+                  <p id="title-error" className="text-sm text-red-400 font-medium" data-testid="title-error" role="alert">
                     {titleEdit.error}
                   </p>
                 )}
               </div>
             ) : (
               <div
-                className="flex items-center gap-2 cursor-pointer hover:bg-zinc-800 p-2 -ml-2 rounded transition-colors"
+                className="flex items-center gap-3 cursor-pointer hover:bg-zinc-800/50 p-3 -ml-3 rounded-lg transition-all duration-200"
                 onClick={titleEdit.startEdit}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -332,11 +332,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                 tabIndex={0}
                 aria-label="Edit ticket title"
               >
-                <DialogTitle className="text-2xl font-bold text-zinc-100 flex-1">
+                <DialogTitle className="text-2xl font-bold text-zinc-50 flex-1">
                   {localTicket?.title || ticket.title}
                 </DialogTitle>
                 <Pencil
-                  className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="w-5 h-5 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   data-testid="edit-icon-title"
                   aria-hidden="true"
                 />
@@ -346,11 +346,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
         </DialogHeader>
 
         {/* Modal body content */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Stage badge */}
           <div>
             <Badge
-              className={`${stageBadge.className} text-xs px-3 py-1 font-semibold`}
+              className={`${stageBadge.className} text-sm px-4 py-1.5 font-semibold shadow-sm`}
               data-testid="stage-badge"
             >
               {stageBadge.label}
@@ -359,11 +359,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
 
           {/* Description section with inline editing */}
           <div className="group">
-            <h3 className="text-sm text-zinc-400 uppercase tracking-wider mb-2 font-semibold">
+            <h3 className="text-sm text-zinc-300 uppercase tracking-wider mb-4 font-bold">
               Description
             </h3>
             {descriptionEdit.isEditing ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Textarea
                   ref={descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>}
                   value={descriptionEdit.value}
@@ -371,7 +371,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   onKeyDown={descriptionEdit.handleKeyDown}
                   maxLength={1000}
                   rows={8}
-                  className="bg-zinc-800 border-zinc-600 text-zinc-100 resize-none"
+                  className="bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 resize-none px-4 py-3 focus:ring-2 focus:ring-blue-500/50 leading-relaxed"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
                   name="description"
@@ -384,11 +384,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                   max={1000}
                 />
                 {descriptionEdit.error && (
-                  <p id="description-error" className="text-sm text-red-500" data-testid="description-error" role="alert">
+                  <p id="description-error" className="text-sm text-red-400 font-medium" data-testid="description-error" role="alert">
                     {descriptionEdit.error}
                   </p>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
                     onClick={async () => {
@@ -399,7 +399,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                       }
                     }}
                     disabled={descriptionEdit.isSaving || !!descriptionEdit.error || descriptionEdit.value.trim() === (localTicket?.description || '')}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 shadow-sm"
                     aria-label="Save description changes"
                   >
                     {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
@@ -409,7 +409,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                     onClick={descriptionEdit.cancelEdit}
                     variant="outline"
                     disabled={descriptionEdit.isSaving}
-                    className="border-zinc-600 hover:bg-zinc-800"
+                    className="border-2 border-zinc-500 bg-transparent hover:bg-zinc-800/80 text-zinc-100 font-medium px-6"
                     aria-label="Cancel editing"
                   >
                     Cancel
@@ -419,7 +419,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
             ) : (
               <div
                 className="
-                  cursor-pointer hover:bg-zinc-800 p-3 -ml-3 rounded transition-colors
+                  cursor-pointer hover:bg-zinc-800/50 p-4 -ml-4 rounded-lg transition-all duration-200
                   relative
                 "
                 onClick={descriptionEdit.startEdit}
@@ -434,15 +434,15 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
                 tabIndex={0}
                 aria-label="Edit ticket description"
               >
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="w-4 h-4 text-zinc-500" data-testid="edit-icon-description" aria-hidden="true" />
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <Pencil className="w-5 h-5 text-zinc-400" data-testid="edit-icon-description" aria-hidden="true" />
                 </div>
                 <div
                   className="
-                    text-base text-zinc-200 leading-relaxed
+                    text-base text-zinc-100 leading-relaxed
                     max-h-96 overflow-y-auto
                     pr-2
-                    scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900
+                    scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-900
                   "
                 >
                   {localTicket?.description || ticket.description || 'No description provided'}
@@ -452,16 +452,16 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
           </div>
 
           {/* Dates section */}
-          <div className="border-t border-zinc-700 pt-4 space-y-2">
+          <div className="border-t-2 border-zinc-700/50 pt-6 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-400">Created:</span>
-              <span className="text-sm text-zinc-200">
+              <span className="text-sm text-zinc-300 font-medium">Created:</span>
+              <span className="text-sm text-zinc-100 font-mono">
                 {formatTicketDate(ticket.createdAt)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-400">Last Updated:</span>
-              <span className="text-sm text-zinc-200">
+              <span className="text-sm text-zinc-300 font-medium">Last Updated:</span>
+              <span className="text-sm text-zinc-100 font-mono">
                 {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
               </span>
             </div>

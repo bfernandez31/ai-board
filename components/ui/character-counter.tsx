@@ -29,12 +29,12 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
       aria-live="polite"
       aria-atomic="true"
       role="status"
-      className={`text-sm ${
+      className={`text-sm font-medium ${
         state.isError
-          ? 'text-red-600'
+          ? 'text-red-400'
           : state.isWarning
-            ? 'text-yellow-600'
-            : 'text-gray-600'
+            ? 'text-yellow-400'
+            : 'text-zinc-400'
       }`}
     >
       <span className="sr-only">
