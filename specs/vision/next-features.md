@@ -65,8 +65,9 @@ Teams need to correct ticket information without leaving the board.
 REQUIREMENTS:
 
 UI:
-- “Edit” button toggles inputs (title inline input, description textarea with counters).
-- Save/Cancel buttons with loading state; ESC/Cancel restores original values.
+- Title behaves Trello-style: click the header → inline input with focus, pencil icon on hover, Enter/blur saves, ESC restores original text.
+- Description is always present (mandatory). Clicking anywhere in the description region (or the hover pencil) swaps to textarea with counter; ESC/Cancel restores original text.
+- Save/Cancel controls appear only while editing; show loading state during persistence.
 
 API:
 - PATCH /api/tickets/[id] accepts { title?, description?, version }.
@@ -74,14 +75,16 @@ API:
 
 STATE & UX:
 - Disable Save when invalid or unchanged; show inline validation errors.
+- Enforce title ≤100 chars; description must stay ≥1 and ≤1000 chars with live counter/warning at 90%.
 - Optimistic update on success; rollback on error with toast.
 - Refresh board state after confirmation.
 
 ACCEPTANCE CRITERIA:
-- Edit button enters form mode; Save persists to DB and refreshes board.
-- Validation messages appear for invalid input.
+- Clicking the title opens inline edit without extra button; Enter/blur saves, ESC cancels.
+- Clicking the description body opens textarea editor; empty save blocked with inline error.
+- Saved changes immediately update board; toasts indicate success/error.
 - Concurrent edit conflict triggers descriptive toast and refresh prompt.
-- Unit tests for API and component interactions.
+- Unit tests cover title/description edit flows and API interactions.
 
 NON-GOALS:
 - No stage editing.
