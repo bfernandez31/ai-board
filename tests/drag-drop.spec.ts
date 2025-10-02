@@ -90,10 +90,10 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   };
 
   /**
-   * T005: Test successful drag from INBOX to PLAN
-   * Expected: FAILS (components not implemented)
+   * T005: Test sequential drag through workflow (INBOX → SPECIFY → PLAN)
+   * Updated for SPECIFY stage addition
    */
-  test('user can drag ticket from INBOX to PLAN', async ({ page, request }) => {
+  test('user can drag ticket sequentially through workflow', async ({ page, request }) => {
     // Setup: Create ticket in INBOX
     const ticket = await createTicket(request, 'INBOX');
 
@@ -104,18 +104,31 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const inboxColumn = page.locator('[data-stage="INBOX"]');
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
-    // Drag ticket to PLAN column
+    // Step 1: Drag ticket from INBOX to SPECIFY
+    await dragTicketToColumn(page, ticket.id, 'SPECIFY');
+
+    // Verify ticket moved to SPECIFY column
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+    await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
+
+    // Verify database updated to SPECIFY
+    let updatedTicket = await getTicket(ticket.id);
+    expect(updatedTicket?.stage).toBe('SPECIFY');
+    expect(updatedTicket?.version).toBe(2); // Version incremented
+
+    // Step 2: Drag ticket from SPECIFY to PLAN
     await dragTicketToColumn(page, ticket.id, 'PLAN');
 
     // Verify ticket moved to PLAN column
     const planColumn = page.locator('[data-stage="PLAN"]');
     await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
-    await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
 
-    // Verify database updated
-    const updatedTicket = await getTicket(ticket.id);
+    // Verify database updated to PLAN
+    updatedTicket = await getTicket(ticket.id);
     expect(updatedTicket?.stage).toBe('PLAN');
-    expect(updatedTicket?.version).toBe(2); // Version incremented
+    expect(updatedTicket?.version).toBe(3); // Version incremented again
   });
 
   /**
@@ -178,7 +191,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * T008: Test handling concurrent updates with first-write-wins
-   * Expected: FAILS (conflict handling not implemented)
+   * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
   test('handles concurrent updates with first-write-wins', async ({ page, context, request }) => {
     // Setup: Create ticket in INBOX
@@ -191,28 +204,31 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await page1.goto(`${BASE_URL}/board`);
     await page2.goto(`${BASE_URL}/board`);
 
-    // Execute both drag operations "simultaneously" using mouse events for @dnd-kit
-    const planColumn1 = page1.locator('[data-stage="PLAN"]');
-    const planColumn2 = page2.locator('[data-stage="PLAN"]');
+    // Wait for both pages to load
+    await page1.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
+    await page2.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
 
-    await Promise.all([
-      dragTicketToColumn(page1, ticket.id, 'PLAN'),
-      dragTicketToColumn(page2, ticket.id, 'PLAN')
-    ]);
-
-    // Wait for drag operations to complete
+    // User 1 drags first (should succeed)
+    await dragTicketToColumn(page1, ticket.id, 'SPECIFY');
     await page1.waitForTimeout(500);
+
+    // User 2 attempts to drag the same ticket (should get version conflict since ticket is now version 2)
+    await dragTicketToColumn(page2, ticket.id, 'PLAN'); // Try to move to PLAN (will fail due to stale version)
     await page2.waitForTimeout(500);
 
-    // User 1 should succeed
-    await expect(planColumn1.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+    // Verify user 1 succeeded - ticket should be in SPECIFY
+    const specifyColumn1 = page1.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn1.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
-    // Note: Toast validation skipped - @dnd-kit mouse events may not trigger toast in test environment
-    // The important validation is that one succeeds and DB is correct
+    // Verify database shows SPECIFY (first write wins)
+    const dbTicket = await getTicket(ticket.id);
+    expect(dbTicket?.stage).toBe('SPECIFY');
+    expect(dbTicket?.version).toBe(2); // Version incremented once
 
-    // Both users should eventually see ticket in PLAN (after page2 refreshes)
+    // User 2 should see ticket in SPECIFY after refresh (not PLAN)
     await page2.reload();
-    await expect(planColumn2.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+    const specifyColumn2 = page2.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn2.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
     // Cleanup
     await page2.close();
@@ -256,7 +272,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * T010: Test touch drag on mobile viewport
-   * Expected: FAILS (touch sensors not configured)
+   * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
   test('supports touch drag on mobile viewport', async ({ page, request }) => {
     // Set mobile viewport
@@ -267,17 +283,17 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
     await page.goto(`${BASE_URL}/board`);
 
-    // Drag using mouse events (works on mobile viewport)
-    await dragTicketToColumn(page, ticket.id, 'PLAN');
+    // Drag using mouse events (works on mobile viewport) - INBOX to SPECIFY
+    await dragTicketToColumn(page, ticket.id, 'SPECIFY');
 
     // Verify ticket moved
-    const planColumn = page.locator('[data-stage="PLAN"]');
-    await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
   });
 
   /**
    * T011: Test sub-100ms latency validation
-   * Expected: FAILS (optimistic updates not implemented)
+   * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
   test('meets sub-100ms latency requirement', async ({ page, request }) => {
     // Setup: Create ticket
@@ -288,12 +304,12 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Measure time from drag start to visual update
     const startTime = Date.now();
 
-    // Use mouse events for @dnd-kit compatibility
-    await dragTicketToColumn(page, ticket.id, 'PLAN');
+    // Use mouse events for @dnd-kit compatibility - INBOX to SPECIFY
+    await dragTicketToColumn(page, ticket.id, 'SPECIFY');
 
     // Wait for ticket to appear in new column
-    const planColumn = page.locator('[data-stage="PLAN"]');
-    await planColumn.locator(`[data-ticket-id="${ticket.id}"]`).waitFor({ state: 'visible', timeout: 5000 });
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+    await specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`).waitFor({ state: 'visible', timeout: 5000 });
 
     const endTime = Date.now();
     const latency = endTime - startTime;

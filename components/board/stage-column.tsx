@@ -40,6 +40,18 @@ const STAGE_CONFIG: Record<Stage, {
     badgeTextColor: 'text-zinc-50',
     order: 0,
   },
+  [Stage.SPECIFY]: {
+    label: 'SPECIFY',
+    color: 'yellow',
+    bgColor: 'bg-yellow-950/40',
+    headerBgColor: 'bg-yellow-950/60',
+    headerBorderColor: 'border-yellow-900/40',
+    textColor: 'text-yellow-100',
+    borderColor: 'border-yellow-950/40',
+    badgeBgColor: 'bg-yellow-800/70',
+    badgeTextColor: 'text-yellow-50',
+    order: 1,
+  },
   [Stage.PLAN]: {
     label: 'PLAN',
     color: 'blue',
@@ -50,7 +62,7 @@ const STAGE_CONFIG: Record<Stage, {
     borderColor: 'border-blue-950/40',
     badgeBgColor: 'bg-blue-800/70',
     badgeTextColor: 'text-blue-100',
-    order: 1,
+    order: 2,
   },
   [Stage.BUILD]: {
     label: 'BUILD',
@@ -62,7 +74,7 @@ const STAGE_CONFIG: Record<Stage, {
     borderColor: 'border-emerald-950/40',
     badgeBgColor: 'bg-emerald-800/70',
     badgeTextColor: 'text-emerald-50',
-    order: 2,
+    order: 3,
   },
   [Stage.VERIFY]: {
     label: 'VERIFY',
@@ -74,7 +86,7 @@ const STAGE_CONFIG: Record<Stage, {
     borderColor: 'border-orange-950/40',
     badgeBgColor: 'bg-orange-800/70',
     badgeTextColor: 'text-orange-50',
-    order: 3,
+    order: 4,
   },
   [Stage.SHIP]: {
     label: 'SHIP',
@@ -86,7 +98,7 @@ const STAGE_CONFIG: Record<Stage, {
     borderColor: 'border-purple-950/40',
     badgeBgColor: 'bg-purple-800/70',
     badgeTextColor: 'text-purple-50',
-    order: 4,
+    order: 5,
   },
 };
 

@@ -12,6 +12,7 @@ datasource db {
 
 enum Stage {
   INBOX
+  SPECIFY
   PLAN
   BUILD
   VERIFY
