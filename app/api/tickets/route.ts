@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         title: ticket.title,
         description: ticket.description,
         stage: ticket.stage,
+        version: ticket.version,
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
       },

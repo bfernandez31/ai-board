@@ -15,6 +15,79 @@ const UpdateStageSchema = z.object({
 });
 
 /**
+ * GET /api/tickets/[id]
+ * Get a single ticket by ID
+ *
+ * Success Response (200):
+ * {
+ *   "id": 123,
+ *   "title": "...",
+ *   "description": "...",
+ *   "stage": "PLAN",
+ *   "version": 2,
+ *   "createdAt": "2025-10-01T12:34:56.789Z",
+ *   "updatedAt": "2025-10-01T12:34:56.789Z"
+ * }
+ *
+ * Error Responses:
+ * - 400: Invalid ticket ID
+ * - 404: Ticket not found
+ * - 500: Internal server error
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  try {
+    // Await params in Next.js 15
+    const params = await context.params;
+
+    // Parse and validate ticket ID
+    const ticketId = parseInt(params.id, 10);
+    if (isNaN(ticketId)) {
+      return NextResponse.json(
+        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch ticket from database
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { error: 'Ticket not found' },
+        { status: 404 }
+      );
+    }
+
+    // Return ticket
+    return NextResponse.json(
+      {
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        stage: ticket.stage,
+        version: ticket.version,
+        createdAt: ticket.createdAt.toISOString(),
+        updatedAt: ticket.updatedAt.toISOString(),
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
  * PATCH /api/tickets/[id]
  * Update ticket stage OR title/description with optimistic concurrency control
  *

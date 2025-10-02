@@ -453,17 +453,20 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await titleInput.fill('My Update');
     await titleInput.press('Enter');
 
-    // Assert: API returns 409 (may see optimistic update first)
-    // Wait for error toast
+    // Give time for the request to complete and toast to render
+    await page.waitForTimeout(1000);
+
+    // Assert: API returns 409
+    // Wait for conflict toast
     const errorToast = page.getByTestId('toast').filter({ hasText: 'Conflict' }).first();
     await expect(errorToast).toBeVisible({ timeout: 5000 });
     await expect(errorToast).toContainText('modified by another user');
 
-    // Assert: optimistic update rolls back
-    await expect(titleElement).toContainText('Original Title', { timeout: 2000 });
-
     // Toast should suggest refreshing
     await expect(errorToast).toContainText('refresh');
+
+    // Assert: ticket refreshes with server data after delay (not rollback to original)
+    await expect(titleElement).toContainText('Concurrent Update', { timeout: 3000 });
   });
 
   /**

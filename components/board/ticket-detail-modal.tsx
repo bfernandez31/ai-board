@@ -111,6 +111,32 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
     }
   }, [ticket]);
 
+  /**
+   * Refresh ticket data from server
+   * Used after conflict detection to get latest version
+   */
+  const refreshTicketFromServer = async () => {
+    if (!localTicket) return;
+
+    try {
+      const response = await fetch(`/api/tickets/${localTicket.id}`);
+      if (response.ok) {
+        const serverTicket = await response.json();
+        const normalizedTicket: TicketData = {
+          ...serverTicket,
+          createdAt: new Date(serverTicket.createdAt),
+          updatedAt: new Date(serverTicket.updatedAt),
+        };
+        setLocalTicket(normalizedTicket);
+        if (onUpdate) {
+          onUpdate(normalizedTicket);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh ticket:', error);
+    }
+  };
+
   // Save handler for title
   const handleSaveTitle = async (newTitle: string): Promise<void> => {
     if (!localTicket) return;
@@ -138,8 +164,14 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
           toast({
             variant: 'destructive',
             title: 'Conflict',
-            description: error.error || 'Ticket was modified by another user. Please refresh.',
+            description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
+
+          // Refresh ticket from server after delay to allow toast to display
+          setTimeout(() => {
+            refreshTicketFromServer();
+          }, 1500);
+          return; // Don't throw, just return
         } else if (response.status === 400) {
           // Validation error
           toast({
@@ -147,19 +179,26 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
             title: 'Validation Error',
             description: error.issues?.[0]?.message || 'Invalid title',
           });
+
+          // Rollback after short delay to allow optimistic state to show
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          return; // Don't throw, just return
         } else {
+          // Network or other error
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: error.error || 'Failed to save changes while offline.',
+            description: 'Failed to save changes while offline. Changes reverted.',
           });
-        }
 
-        // Rollback after short delay to allow optimistic state to show
-        setTimeout(() => {
-          setLocalTicket(originalTicket);
-        }, 500);
-        throw new Error('Failed to save title');
+          // Rollback after short delay to allow optimistic state to show
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          return; // Don't throw, just return
+        }
       }
 
       const updatedTicket = await response.json();
@@ -183,9 +222,15 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
         onUpdate(normalizedTicket);
       }
     } catch (error) {
+      // Network error (e.g., offline, fetch failed completely)
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save changes while offline. Changes reverted.',
+      });
+
       // Rollback on error
       setLocalTicket(originalTicket);
-      throw error;
     }
   };
 
@@ -216,8 +261,14 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
           toast({
             variant: 'destructive',
             title: 'Conflict',
-            description: error.error || 'Ticket was modified by another user. Please refresh.',
+            description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
+
+          // Refresh ticket from server after delay to allow toast to display
+          setTimeout(() => {
+            refreshTicketFromServer();
+          }, 1500);
+          return; // Don't throw, just return
         } else if (response.status === 400) {
           // Validation error
           toast({
@@ -225,19 +276,26 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
             title: 'Validation Error',
             description: error.issues?.[0]?.message || 'Invalid description',
           });
+
+          // Rollback after short delay to allow optimistic state to show
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          return; // Don't throw, just return
         } else {
+          // Network or other error
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: error.error || 'Failed to save changes while offline.',
+            description: 'Failed to save changes while offline. Changes reverted.',
           });
-        }
 
-        // Rollback after short delay to allow optimistic state to show
-        setTimeout(() => {
-          setLocalTicket(originalTicket);
-        }, 500);
-        throw new Error('Failed to save description');
+          // Rollback after short delay to allow optimistic state to show
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          return; // Don't throw, just return
+        }
       }
 
       const updatedTicket = await response.json();
@@ -261,9 +319,15 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
         onUpdate(normalizedTicket);
       }
     } catch (error) {
+      // Network error (e.g., offline, fetch failed completely)
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save changes while offline. Changes reverted.',
+      });
+
       // Rollback on error
       setLocalTicket(originalTicket);
-      throw error;
     }
   };
 
