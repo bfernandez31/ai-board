@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Update Ticket Stage API Contract",
+  "description": "API contract for updating ticket stage with sequential validation and optimistic concurrency control",
+  "version": "1.0.0",
+  "endpoint": {
+    "method": "PATCH",
+    "path": "/api/tickets/{id}",
+    "pathParameters": {
+      "id": {
+        "type": "integer",
+        "description": "Ticket ID",
+        "minimum": 1
+      }
+    }
+  },
+  "request": {
+    "contentType": "application/json",
+    "body": {
+      "type": "object",
+      "required": ["stage", "version"],
+      "properties": {
+        "stage": {
+          "$ref": "#/definitions/stage",
+          "description": "Target stage (must be next sequential stage)"
+        },
+        "version": {
+          "type": "integer",
+          "description": "Current version for optimistic concurrency control",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "stage": "SPECIFY",
+          "version": 1
+        },
+        {
+          "stage": "PLAN",
+          "version": 2
+        }
+      ]
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Ticket stage updated successfully",
+      "contentType": "application/json",
+      "body": {
+        "type": "object",
+        "required": ["id", "stage", "version", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Ticket ID"
+          },
+          "stage": {
+            "$ref": "#/definitions/stage",
+            "description": "Updated stage"
+          },
+          "version": {
+            "type": "integer",
+            "description": "New version number (incremented)"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of update"
+          }
+        }
+      },
+      "example": {
+        "id": 123,
+        "stage": "SPECIFY",
+        "version": 2,
+        "updatedAt": "2025-10-02T12:34:56.789Z"
+      }
+    },
+    "400": {
+      "description": "Bad request - invalid transition or malformed input",
+      "contentType": "application/json",
+      "body": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": ["Invalid stage transition", "Validation error", "Invalid ticket ID"]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "details": {
+            "type": "object",
+            "description": "Validation error details (for Zod errors)"
+          }
+        }
+      },
+      "examples": [
+        {
+          "error": "Invalid stage transition",
+          "message": "Cannot transition from INBOX to PLAN. Tickets must progress sequentially through stages."
+        },
+        {
+          "error": "Invalid stage transition",
+          "message": "Cannot transition from SPECIFY to INBOX. Tickets must progress sequentially through stages."
+        }
+      ]
+    },
+    "404": {
+      "description": "Ticket not found",
+      "contentType": "application/json",
+      "body": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "Ticket not found"
+          }
+        }
+      },
+      "example": {
+        "error": "Ticket not found"
+      }
+    },
+    "409": {
+      "description": "Version conflict - ticket modified by another user",
+      "contentType": "application/json",
+      "body": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "Ticket modified by another user"
+          },
+          "currentStage": {
+            "$ref": "#/definitions/stage",
+            "description": "Current stage in database"
+          },
+          "currentVersion": {
+            "type": "integer",
+            "description": "Current version in database"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable conflict message"
+          }
+        }
+      },
+      "example": {
+        "error": "Ticket modified by another user",
+        "currentStage": "PLAN",
+        "currentVersion": 3,
+        "message": "The ticket was updated by someone else. Please refresh and try again."
+      }
+    },
+    "500": {
+      "description": "Internal server error",
+      "contentType": "application/json",
+      "body": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "Internal server error"
+          }
+        }
+      },
+      "example": {
+        "error": "Internal server error"
+      }
+    }
+  },
+  "definitions": {
+    "stage": {
+      "type": "string",
+      "enum": ["INBOX", "SPECIFY", "PLAN", "BUILD", "VERIFY", "SHIP"],
+      "description": "Workflow stage - must transition sequentially"
+    }
+  },
+  "validationRules": {
+    "sequentialTransitions": {
+      "description": "Tickets must move to the immediately next stage only",
+      "validTransitions": {
+        "INBOX": ["SPECIFY"],
+        "SPECIFY": ["PLAN"],
+        "PLAN": ["BUILD"],
+        "BUILD": ["VERIFY"],
+        "VERIFY": ["SHIP"],
+        "SHIP": []
+      },
+      "invalidExamples": [
+        {
+          "from": "INBOX",
+          "to": "PLAN",
+          "reason": "Skips SPECIFY stage"
+        },
+        {
+          "from": "SPECIFY",
+          "to": "INBOX",
+          "reason": "Backwards transition not allowed"
+        },
+        {
+          "from": "PLAN",
+          "to": "SPECIFY",
+          "reason": "Backwards transition not allowed"
+        }
+      ]
+    },
+    "optimisticConcurrency": {
+      "description": "Version-based optimistic locking prevents lost updates",
+      "mechanism": "Client sends current version; server checks version before update; version incremented on success"
+    }
+  }
+}
