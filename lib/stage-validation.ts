@@ -7,6 +7,7 @@
 
 export enum Stage {
   INBOX = 'INBOX',
+  SPECIFY = 'SPECIFY',
   PLAN = 'PLAN',
   BUILD = 'BUILD',
   VERIFY = 'VERIFY',
@@ -15,10 +16,11 @@ export enum Stage {
 
 /**
  * Ordered array of stages representing the sequential workflow.
- * INBOX → PLAN → BUILD → VERIFY → SHIP
+ * INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
  */
 const STAGE_ORDER: Stage[] = [
   Stage.INBOX,
+  Stage.SPECIFY,
   Stage.PLAN,
   Stage.BUILD,
   Stage.VERIFY,
@@ -32,7 +34,8 @@ const STAGE_ORDER: Stage[] = [
  * @returns The next stage in sequence, or null if already at final stage or invalid stage
  *
  * @example
- * getNextStage(Stage.INBOX) // Returns Stage.PLAN
+ * getNextStage(Stage.INBOX) // Returns Stage.SPECIFY
+ * getNextStage(Stage.SPECIFY) // Returns Stage.PLAN
  * getNextStage(Stage.SHIP)  // Returns null (terminal stage)
  */
 export function getNextStage(currentStage: Stage): Stage | null {
@@ -56,10 +59,11 @@ export function getNextStage(currentStage: Stage): Stage | null {
  * @returns true if transition is valid (sequential), false otherwise
  *
  * @example
- * isValidTransition(Stage.INBOX, Stage.PLAN)  // true (valid: next stage)
- * isValidTransition(Stage.INBOX, Stage.BUILD) // false (invalid: skipping PLAN)
- * isValidTransition(Stage.BUILD, Stage.PLAN)  // false (invalid: backwards)
- * isValidTransition(Stage.SHIP, Stage.INBOX)  // false (invalid: backwards from terminal)
+ * isValidTransition(Stage.INBOX, Stage.SPECIFY)  // true (valid: next stage)
+ * isValidTransition(Stage.INBOX, Stage.PLAN)    // false (invalid: skipping SPECIFY)
+ * isValidTransition(Stage.SPECIFY, Stage.PLAN)  // true (valid: next stage)
+ * isValidTransition(Stage.BUILD, Stage.PLAN)    // false (invalid: backwards)
+ * isValidTransition(Stage.SHIP, Stage.INBOX)    // false (invalid: backwards from terminal)
  */
 export function isValidTransition(fromStage: Stage, toStage: Stage): boolean {
   const nextStage = getNextStage(fromStage);
