@@ -1,0 +1,411 @@
+# GitHub Actions Integration - Implementation Tasks
+
+Generated: 2025-10-02
+Based on: mvp-quickstart.md, overview.md
+Purpose: Break down GitHub Actions spec-kit automation into incremental spec-kit tasks
+
+---
+
+## Overview
+
+This document contains 6 incremental tasks to implement the MVP GitHub Actions integration for ai-board. Each task includes a complete `/specify` prompt ready for spec-kit execution.
+
+The implementation enables automatic spec-kit command execution (specify, plan, task, implement) when users drag tickets between stages on the kanban board.
+
+## Execution Order
+
+1. **Add Project Model** - Foundation for GitHub repo tracking
+2. **Add Job Model** - Track spec-kit command execution status
+3. **Link Tickets to Projects** - Connect tickets to GitHub repos
+4. **Create GitHub Actions Workflow** - Define workflow execution environment
+5. **Add GitHub Transition API** - Bridge UI to GitHub Actions
+6. **Document Environment Setup** - Developer setup instructions
+
+Tasks 1 and 2 can run in parallel. Tasks 3-6 must follow sequentially.
+
+---
+
+## Task 1: Add Project Model
+
+**Dependencies:** None
+**Estimated Time:** 15-20 minutes
+
+```
+/specify
+
+Add Project model to organize tickets and prepare for GitHub integration.
+
+WHAT:
+Create a Project data model with GitHub repository connection details and associate all tickets with a default project.
+
+WHY:
+Projects are required to track which GitHub repository each ticket belongs to for spec-kit workflow execution and branch operations.
+
+REQUIREMENTS:
+
+DATA MODEL:
+- Create Project model with fields: id, name, description, githubOwner, githubRepo, createdAt, updatedAt.
+- Add unique constraint on (githubOwner, githubRepo) combination.
+- Add index on [githubOwner, githubRepo] for query performance.
+- Do not add githubToken field yet (security concerns, future ticket).
+
+MIGRATION:
+- Generate Prisma migration for Project model.
+- Seed database with default project: name="ai-board", githubOwner from env, githubRepo from env.
+- Ensure seed is idempotent (check if project exists before creating).
+
+ACCEPTANCE CRITERIA:
+- Prisma schema includes Project model with all fields.
+- Migration creates project table successfully.
+- Seed script creates default project on fresh database.
+- Running seed multiple times doesn't create duplicates.
+- Project queries work via Prisma client.
+
+NON-GOALS:
+- No Ticket relationship yet (separate ticket).
+- No API endpoints for project CRUD.
+- No GitHub token encryption.
+- No multi-project UI.
+```
+
+---
+
+## Task 2: Add Job Model
+
+**Dependencies:** None
+**Estimated Time:** 15-20 minutes
+
+```
+/specify
+
+Add Job model to track spec-kit command execution status and logs.
+
+WHAT:
+Create a Job data model to record spec-kit workflow executions, their status, logs, and completion timestamps.
+
+WHY:
+Jobs provide execution tracking, debugging logs, and status visibility for spec-kit commands triggered by ticket transitions.
+
+REQUIREMENTS:
+
+DATA MODEL:
+- Create Job model with fields: id, ticketId, command (string), status (enum), branch, commitSha, logs (text), startedAt, completedAt.
+- Create JobStatus enum: pending, running, completed, failed.
+- Add foreign key ticketId → Ticket.id with cascade on delete.
+- Add indexes on [ticketId], [status], [startedAt] for query performance.
+
+VALIDATION:
+- Command field: max 50 characters (specify, plan, task, implement, clarify).
+- Branch field: max 200 characters.
+- CommitSha field: max 40 characters (Git SHA-1 hash).
+- Logs field: text type (unlimited length for error traces).
+
+MIGRATION:
+- Generate Prisma migration for Job model and JobStatus enum.
+- No seed data required (jobs created dynamically).
+
+ACCEPTANCE CRITERIA:
+- Prisma schema includes Job model with all fields and enum.
+- Migration creates job table and enum type successfully.
+- Foreign key cascade deletes jobs when ticket deleted.
+- Indexes created on ticketId, status, startedAt.
+- Job queries work via Prisma client.
+
+NON-GOALS:
+- No job creation logic (API route in separate ticket).
+- No job status update mechanism.
+- No job cleanup/retention policy.
+```
+
+---
+
+## Task 3: Link Tickets to Projects
+
+**Dependencies:** Task 1 (Project model must exist)
+**Estimated Time:** 15-20 minutes
+
+```
+/specify
+
+Add project relationship and GitHub branch tracking to Ticket model.
+
+WHAT:
+Extend Ticket model with projectId foreign key, branch field, and autoMode flag to support GitHub workflow integration.
+
+WHY:
+Tickets need to reference which project (GitHub repo) they belong to and track their feature branch for spec-kit operations.
+
+REQUIREMENTS:
+
+SCHEMA CHANGES:
+- Add projectId field to Ticket: integer, required, foreign key to Project.id with cascade on delete.
+- Add branch field: nullable string, max 200 characters (stores feature/ticket-<id> branch name).
+- Add autoMode field: boolean, default false (controls automatic stage progression).
+- Add index on [projectId] for query performance.
+
+MIGRATION:
+- Generate Prisma migration that adds new fields.
+- Set default projectId to the seeded "ai-board" project for all existing tickets.
+- Backfill branch as null (branches created later during SPECIFY transition).
+- AutoMode defaults to false for existing tickets.
+
+DATA INTEGRITY:
+- Ensure all tickets have valid projectId after migration.
+- Foreign key constraint prevents orphaned tickets.
+- Migration is reversible (down migration drops columns cleanly).
+
+ACCEPTANCE CRITERIA:
+- Prisma schema includes projectId, branch, autoMode fields on Ticket.
+- Migration adds columns successfully to existing ticket table.
+- All existing tickets linked to default ai-board project.
+- Ticket queries include project relation via Prisma client.
+- Foreign key cascade works (deleting project deletes tickets).
+
+NON-GOALS:
+- No API changes to create/update tickets with projectId.
+- No multi-project selection UI.
+- No branch creation logic (separate ticket).
+- No autoMode workflow logic.
+```
+
+---
+
+## Task 4: Create GitHub Actions Workflow
+
+**Dependencies:** None (can run in parallel with Tasks 1-3)
+**Estimated Time:** 25-30 minutes
+
+```
+/specify
+
+Create GitHub Actions workflow to execute spec-kit commands in ephemeral runner environments.
+
+WHAT:
+Add `.github/workflows/speckit.yml` workflow file that accepts workflow_dispatch inputs and runs spec-kit commands (specify, plan, task, implement, clarify) with proper Git commit/push handling.
+
+WHY:
+GitHub Actions provides zero-infrastructure execution environment for spec-kit with built-in logging, monitoring, and free tier usage.
+
+REQUIREMENTS:
+
+WORKFLOW FILE:
+- Create `.github/workflows/speckit.yml` with workflow_dispatch trigger.
+- Inputs: ticket_id (string, required), command (choice: specify|plan|task|implement|clarify, required), branch (string, required), answers_json (string, optional for clarify).
+- Job: run-speckit on ubuntu-latest with 120-minute timeout.
+
+SETUP STEPS:
+- Checkout repository on specified branch with fetch-depth 0.
+- Setup Node.js 22.20.0 (use actions/setup-node@v4).
+- Setup Python 3.11 (use actions/setup-python@v5).
+- Install Claude Code CLI: npm install -g @anthropic-ai/claude-code.
+- Install spec-kit: pip install uv && uv pip install spec-kit.
+- Configure Git user: ai-board[bot] <bot@ai-board.app>.
+
+COMMAND EXECUTION:
+- Case statement matching command input: specify → claude /specify, plan → claude /plan, task → claude /task, implement → claude /implement.
+- Clarify command: write answers_json to clarifications.json file, then run claude /clarify --answers clarifications.json.
+- Handle unknown commands with error exit.
+
+COMMIT & PUSH:
+- Stage all changes: git add .
+- Skip commit if no changes detected (git diff --staged --quiet).
+- Commit with message: "feat(ticket-<id>): <command> - automated spec-kit execution".
+- Push to origin branch.
+
+STATUS REPORTING:
+- Success step: echo ✅ completion message with ticket ID and branch.
+- Failure step: echo ❌ error message and exit 1.
+
+SECRETS:
+- Use ${{ secrets.ANTHROPIC_API_KEY }} for Claude API access.
+- Use default ${{ secrets.GITHUB_TOKEN }} for Git operations.
+
+ACCEPTANCE CRITERIA:
+- Workflow file committed at `.github/workflows/speckit.yml`.
+- Manual workflow dispatch works from GitHub Actions UI with all inputs.
+- Specify command generates spec.md in specs/<ticket-id>/ directory.
+- Plan command generates plan.md and tasks.md files.
+- Commits created with ai-board[bot] author.
+- Changes pushed to feature branch successfully.
+- Workflow logs visible in GitHub Actions tab.
+- Failure cases reported with clear error messages.
+
+NON-GOALS:
+- No automatic workflow triggering (manual dispatch only).
+- No webhook callbacks to API after completion.
+- No job status updates in database (separate ticket).
+- No retry logic or failure notifications.
+```
+
+---
+
+## Task 5: Add GitHub Transition API
+
+**Dependencies:** Tasks 1, 2, 3, 4 (requires Project, Job, Ticket updates, and workflow file)
+**Estimated Time:** 30-40 minutes
+
+```
+/specify
+
+Create API route to dispatch GitHub Actions workflows when tickets transition between stages.
+
+WHAT:
+Add POST /api/tickets/[id]/transition endpoint that validates stage transitions, creates job records, and dispatches GitHub Actions workflows via Octokit for SPECIFY, PLAN, and BUILD stages.
+
+WHY:
+This API bridges the frontend drag-and-drop UI with GitHub Actions execution, automating spec-kit command invocation without manual CLI usage.
+
+REQUIREMENTS:
+
+DEPENDENCIES:
+- Install @octokit/rest package: npm install @octokit/rest.
+- Use existing stage validation from lib/stage-validation.ts.
+
+API ROUTE:
+- Create app/api/tickets/[id]/transition/route.ts.
+- Method: POST only.
+- Request body: { targetStage: Stage }.
+- Response: { success: boolean, jobId?: number, message?: string }.
+
+WORKFLOW LOGIC:
+- Parse ticketId from route params (validate is number).
+- Fetch ticket with project relation (include: { project: true }).
+- Return 404 if ticket not found.
+- Map targetStage to spec-kit command: SPECIFY→specify, PLAN→plan, BUILD→implement.
+- If no command mapping (VERIFY, SHIP), update stage only and return success.
+
+JOB CREATION:
+- Create Job record: ticketId, command, status: pending, branch: feature/ticket-<id>, startedAt: now.
+- Create feature branch name if not exists on ticket: feature/ticket-<id>.
+- Update ticket.branch field with branch name.
+
+GITHUB DISPATCH:
+- Initialize Octokit with process.env.GITHUB_TOKEN.
+- Call octokit.actions.createWorkflowDispatch with owner, repo, workflow_id: 'speckit.yml', ref: 'main'.
+- Inputs: ticket_id (string), command, branch.
+- Handle Octokit errors: rate limits (403), auth failures (401), workflow not found (404).
+
+STAGE UPDATE:
+- Update ticket.stage to targetStage after successful dispatch.
+- Increment ticket.version for optimistic concurrency.
+
+ERROR HANDLING:
+- 400: Invalid ticket ID or request body.
+- 404: Ticket not found.
+- 500: Octokit errors, database errors with detailed logging.
+- Log all dispatch attempts with ticket ID, command, branch.
+
+ENVIRONMENT:
+- Require GITHUB_TOKEN env var (repo + workflow scopes).
+- Use ticket.project.githubOwner and githubRepo for dispatch target.
+
+ACCEPTANCE CRITERIA:
+- POST /api/tickets/[id]/transition creates job record successfully.
+- GitHub Actions workflow dispatched with correct inputs.
+- Ticket stage updated after dispatch.
+- Ticket branch field populated with feature/ticket-<id>.
+- Job ID returned in response for tracking.
+- Invalid stage transitions return 400 with error message.
+- Missing tickets return 404.
+- Octokit authentication errors handled gracefully with logs.
+- Non-spec-kit stages (VERIFY, SHIP) update stage without dispatch.
+
+NON-GOALS:
+- No webhook listener for workflow completion.
+- No job status polling or updates.
+- No clarify endpoint (POST /api/tickets/[id]/clarify) in this ticket.
+- No autoMode automatic progression logic.
+- No real-time updates (WebSocket).
+```
+
+---
+
+## Task 6: Document Environment Setup
+
+**Dependencies:** Tasks 4, 5 (requires workflow and API to exist for accurate docs)
+**Estimated Time:** 20-25 minutes
+
+```
+/specify
+
+Document required environment variables and GitHub token setup for spec-kit automation.
+
+WHAT:
+Update .env.example and create setup documentation for GITHUB_TOKEN, ANTHROPIC_API_KEY, and repository configuration required for GitHub Actions integration.
+
+WHY:
+Developers need clear instructions to configure authentication and repository settings for local development and production deployment.
+
+REQUIREMENTS:
+
+ENV.EXAMPLE:
+- Add GITHUB_TOKEN with description: "Personal Access Token with repo and workflow scopes".
+- Add GITHUB_OWNER with description: "GitHub username or organization name".
+- Add GITHUB_REPO with description: "Repository name (without owner)".
+- Keep existing ANTHROPIC_API_KEY and DATABASE_URL entries.
+- Add comments explaining each variable's purpose and required scopes.
+
+README SECTION:
+- Add "GitHub Integration Setup" section to README.md.
+- Instructions for creating GitHub Personal Access Token at https://github.com/settings/tokens.
+- Required scopes: repo (full control), workflow (update workflows).
+- Steps to configure secrets in GitHub repository (Settings > Secrets > Actions).
+- Add ANTHROPIC_API_KEY to GitHub Secrets for workflow execution.
+
+SETUP CHECKLIST:
+- [ ] Create GitHub Personal Access Token with repo + workflow scopes.
+- [ ] Add token to .env.local as GITHUB_TOKEN.
+- [ ] Add GITHUB_OWNER and GITHUB_REPO to .env.local.
+- [ ] Add ANTHROPIC_API_KEY to GitHub repository secrets.
+- [ ] Verify workflow dispatch permissions enabled in repository settings.
+- [ ] Test workflow dispatch manually before API integration.
+
+SECURITY NOTES:
+- Never commit .env.local or expose tokens in code.
+- Use environment variables for all sensitive credentials.
+- GitHub Actions uses separate ANTHROPIC_API_KEY from repository secrets.
+- Local development and CI use different token scopes.
+
+ACCEPTANCE CRITERIA:
+- .env.example includes all required variables with clear descriptions.
+- README.md has GitHub integration setup section with step-by-step instructions.
+- Setup checklist covers all authentication requirements.
+- Security warnings documented prominently.
+- Links to GitHub token creation page included.
+
+NON-GOALS:
+- No Vercel/production deployment instructions (separate ticket).
+- No webhook secret configuration.
+- No GitHub App setup (using PAT for MVP).
+```
+
+---
+
+## Testing Strategy
+
+After completing all tasks, validate the integration with this workflow:
+
+1. **Manual Workflow Test:**
+   - Go to GitHub Actions tab
+   - Dispatch speckit.yml workflow manually
+   - Verify spec.md generated in feature branch
+
+2. **API Integration Test:**
+   - Create new ticket in INBOX
+   - Call POST /api/tickets/[id]/transition with targetStage: SPECIFY
+   - Verify job record created in database
+   - Check GitHub Actions for running workflow
+   - Confirm spec.md committed to feature/ticket-<id> branch
+
+3. **UI Integration Test:**
+   - Drag ticket from INBOX to SPECIFY on board
+   - Monitor job status in database
+   - Verify workflow execution in GitHub Actions
+   - Confirm spec files appear in repository
+
+## Related Documentation
+
+- **MVP Architecture:** `mvp-quickstart.md` - Complete implementation reference
+- **Workflow Overview:** `overview.md` - Stage definitions and automation modes
+- **Target Architecture:** `architecture-target.md` - Future Docker-based approach
+- **Next Features:** `next-features.md` - Additional features post-MVP
