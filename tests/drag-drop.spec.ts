@@ -204,8 +204,10 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const page1 = page;
     const page2: Page = await context.newPage();
 
-    await page1.goto(`${BASE_URL}/board`);
-    await page2.goto(`${BASE_URL}/board`);
+    await page1.goto(`${BASE_URL}/projects/1/board`);
+    await page1.waitForLoadState('networkidle');
+    await page2.goto(`${BASE_URL}/projects/1/board`);
+    await page2.waitForLoadState('networkidle');
 
     // Wait for both pages to load
     await page1.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
