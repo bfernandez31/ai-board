@@ -21,6 +21,40 @@ export async function cleanupDatabase(): Promise<void> {
     // Delete all tickets to reset the database
     await client.ticket.deleteMany({});
 
+    // Ensure project 1 exists for tests
+    const project1 = await client.project.findUnique({
+      where: { id: 1 }
+    });
+
+    if (!project1) {
+      await client.project.create({
+        data: {
+          id: 1,
+          name: 'Test Project',
+          description: 'Project for automated tests',
+          githubOwner: 'test',
+          githubRepo: 'test',
+        },
+      });
+    }
+
+    // Ensure project 2 exists for cross-project tests
+    const project2 = await client.project.findUnique({
+      where: { id: 2 }
+    });
+
+    if (!project2) {
+      await client.project.create({
+        data: {
+          id: 2,
+          name: 'Test Project 2',
+          description: 'Second project for cross-project tests',
+          githubOwner: 'test',
+          githubRepo: 'test2',
+        },
+      });
+    }
+
     console.log('✓ Database cleaned successfully');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

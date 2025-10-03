@@ -33,7 +33,7 @@ test.describe('Update Ticket with Project Context', () => {
 
     // Set up request listener
     const requestPromise = page.waitForRequest(
-      request => request.url().includes('/api/projects/1/tickets/') && request.method() === 'PATCH'
+      req => req.url().includes('/api/projects/1/tickets/') && req.method() === 'PATCH'
     );
 
     // Drag ticket from INBOX to SPECIFY
@@ -43,9 +43,9 @@ test.describe('Update Ticket with Project Context', () => {
     await ticketCard.dragTo(specifyColumn);
 
     // Verify PATCH request was made to project-scoped endpoint
-    const patchRequest = await requestPromise;
-    expect(patchRequest.url()).toContain('/api/projects/1/tickets/');
-    expect(patchRequest.method()).toBe('PATCH');
+    const capturedRequest = await requestPromise;
+    expect(capturedRequest.url()).toContain('/api/projects/1/tickets/');
+    expect(capturedRequest.method()).toBe('PATCH');
   });
 
   test('should update ticket stage via project-scoped API', async ({ page, request }) => {
@@ -112,9 +112,9 @@ test.describe('Update Ticket with Project Context', () => {
     await expect(specifyColumn.getByText('Persistent ticket')).toBeVisible();
   });
 
-  test('should use project-scoped API for inline edits', async ({ page, request }) => {
+  test('should use project-scoped API for inline edits', async ({ page, request: apiRequest }) => {
     // Create ticket
-    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const createResponse = await apiRequest.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Editable ticket',
         description: 'Original description'
@@ -128,7 +128,7 @@ test.describe('Update Ticket with Project Context', () => {
 
     // Set up request listener for PATCH
     const requestPromise = page.waitForRequest(
-      request => request.url().includes('/api/projects/1/tickets/') && request.method() === 'PATCH'
+      req => req.url().includes('/api/projects/1/tickets/') && req.method() === 'PATCH'
     );
 
     // Open ticket for editing (double-click or click edit button)

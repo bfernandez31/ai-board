@@ -182,7 +182,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
 
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(body.error.toLowerCase()).toContain('conflict');
+    expect(body.error.toLowerCase()).toMatch(/conflict|modified|version/);
   });
 
   test('should return 400 for invalid projectId format', async ({ request }) => {

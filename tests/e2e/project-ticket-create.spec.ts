@@ -17,10 +17,10 @@ test.describe('Create Ticket with Project Context', () => {
     await cleanupDatabase();
   });
 
-  test('should POST to /api/projects/1/tickets when creating ticket', async ({ page, request }) => {
+  test('should POST to /api/projects/1/tickets when creating ticket', async ({ page }) => {
     // Set up request listener
     const requestPromise = page.waitForRequest(
-      request => request.url().includes('/api/projects/1/tickets') && request.method() === 'POST'
+      req => req.url().includes('/api/projects/1/tickets') && req.method() === 'POST'
     );
 
     // Navigate to project 1 board
@@ -43,9 +43,9 @@ test.describe('Create Ticket with Project Context', () => {
     await submitButton.click();
 
     // Verify POST request was made to project-scoped endpoint
-    const request = await requestPromise;
-    expect(request.url()).toContain('/api/projects/1/tickets');
-    expect(request.method()).toBe('POST');
+    const capturedRequest = await requestPromise;
+    expect(capturedRequest.url()).toContain('/api/projects/1/tickets');
+    expect(capturedRequest.method()).toBe('POST');
   });
 
   test('should create ticket with projectId=1 from URL context', async ({ page, request }) => {
