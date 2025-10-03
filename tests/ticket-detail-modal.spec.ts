@@ -22,14 +22,14 @@ test.describe('Ticket Detail Modal', () => {
     await prisma.ticket.deleteMany({});
 
     // Create test tickets for each stage
-    await request.post(`${BASE_URL}/api/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Test Ticket in INBOX',
         description: 'This is a test ticket in the INBOX stage for modal testing.',
       },
     });
 
-    await request.post(`${BASE_URL}/api/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Test Ticket in PLAN',
         description: 'This is a test ticket in the PLAN stage.',
@@ -37,7 +37,7 @@ test.describe('Ticket Detail Modal', () => {
     });
 
     // Create a ticket with a long description for scrolling tests
-    await request.post(`${BASE_URL}/api/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Ticket with Long Description',
         description: 'Lorem ipsum dolor sit amet, consectetur adipiscing'.repeat(20), // ~1000 chars
@@ -64,7 +64,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should open modal when ticket card is clicked and close with button', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Click first ticket card
@@ -94,7 +94,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should close modal when ESC key is pressed', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Click ticket card to open modal
@@ -117,7 +117,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should close modal when clicking outside (overlay)', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Open modal by clicking ticket
@@ -150,7 +150,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should display different ticket data for different tickets', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     const tickets = page.locator('[data-testid="ticket-card"]');
@@ -194,7 +194,7 @@ test.describe('Ticket Detail Modal', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Click ticket card
@@ -231,7 +231,7 @@ test.describe('Ticket Detail Modal', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
 
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Click ticket card
@@ -264,7 +264,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should handle long description with scrolling', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Click the third ticket (which has a long description)
@@ -298,7 +298,7 @@ test.describe('Ticket Detail Modal', () => {
    */
   test('should display correct badge colors for different stages', async ({ page }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/board');
+    await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
     // Stage color mapping (from contract)

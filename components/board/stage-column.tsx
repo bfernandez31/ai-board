@@ -13,6 +13,7 @@ interface StageColumnProps {
   tickets: TicketWithVersion[];
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
+  projectId: number;
 }
 
 // Stage configuration matching original design
@@ -106,7 +107,7 @@ const STAGE_CONFIG: Record<Stage, {
  * StageColumn Component - Original Design with Drag-and-Drop
  */
 export const StageColumn = React.memo(
-  ({ stage, tickets, isDraggable = true, onTicketClick }: StageColumnProps) => {
+  ({ stage, tickets, isDraggable = true, onTicketClick, projectId }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
       data: {
@@ -151,7 +152,7 @@ export const StageColumn = React.memo(
         <ScrollArea className="flex-1">
           <div className="space-y-3 px-4 pb-5 pt-3">
             {/* New Ticket Button - Only in INBOX */}
-            {showNewTicketButton && <NewTicketButton stage={stage} />}
+            {showNewTicketButton && <NewTicketButton stage={stage} projectId={projectId} />}
 
             {/* Ticket Cards */}
             {tickets.length > 0 ? (

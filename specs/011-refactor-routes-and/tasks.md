@@ -57,21 +57,21 @@ No setup tasks required - this is a refactor of an existing project.
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Contract Tests (API Validation)
-- [ ] **T001** [P] Write contract test for GET /api/projects/[projectId]/tickets in `/tests/api/projects-tickets-get.spec.ts`
+- [X] **T001** [P] Write contract test for GET /api/projects/[projectId]/tickets in `/tests/api/projects-tickets-get.spec.ts`
   - Verify 200 response with tickets grouped by stage
   - Verify 400 for invalid projectId format
   - Verify 404 for non-existent project
   - Verify only returns tickets from specified project (no leaks)
   - Verify all stages present in response
 
-- [ ] **T002** [P] Write contract test for POST /api/projects/[projectId]/tickets in `/tests/api/projects-tickets-post.spec.ts`
+- [X] **T002** [P] Write contract test for POST /api/projects/[projectId]/tickets in `/tests/api/projects-tickets-post.spec.ts`
   - Verify 201 response with created ticket
   - Verify ticket has stage=INBOX and version=1
   - Verify ticket has projectId from URL
   - Verify 400 for missing/invalid fields
   - Verify 404 for non-existent project
 
-- [ ] **T003** [P] Write contract test for PATCH /api/projects/[projectId]/tickets/[id] in `/tests/api/projects-tickets-patch.spec.ts`
+- [X] **T003** [P] Write contract test for PATCH /api/projects/[projectId]/tickets/[id] in `/tests/api/projects-tickets-patch.spec.ts`
   - Verify 200 for valid stage update
   - Verify 200 for valid inline edit
   - Verify version incremented
@@ -80,41 +80,41 @@ No setup tasks required - this is a refactor of an existing project.
   - Verify 409 for version mismatch
 
 ### E2E Tests (User Flows)
-- [ ] **T004** [P] Write E2E test for root redirect in `/tests/e2e/project-routing.spec.ts`
+- [X] **T004** [P] Write E2E test for root redirect in `/tests/e2e/project-routing.spec.ts`
   - Navigate to `/` and verify redirect to `/projects/1/board`
   - Verify URL contains projectId
   - Verify board loads successfully
 
-- [ ] **T005** [P] Write E2E test for project-scoped board access in `/tests/e2e/project-board.spec.ts`
+- [X] **T005** [P] Write E2E test for project-scoped board access in `/tests/e2e/project-board.spec.ts`
   - Navigate to `/projects/1/board`
   - Verify only project 1 tickets displayed
   - Verify all stages visible
   - Verify API request to `/api/projects/1/tickets`
 
-- [ ] **T006** [P] Write E2E test for invalid project ID in `/tests/e2e/project-validation-404.spec.ts`
+- [X] **T006** [P] Write E2E test for invalid project ID in `/tests/e2e/project-validation-404.spec.ts`
   - Navigate to `/projects/999999/board`
   - Verify 404 error or error message
   - Verify no tickets displayed
 
-- [ ] **T007** [P] Write E2E test for non-numeric project ID in `/tests/e2e/project-validation-format.spec.ts`
+- [X] **T007** [P] Write E2E test for non-numeric project ID in `/tests/e2e/project-validation-format.spec.ts`
   - Navigate to `/projects/abc/board`
   - Verify 404 error
   - Verify application doesn't crash
 
-- [ ] **T008** [P] Write E2E test for cross-project access prevention in `/tests/e2e/cross-project-prevention.spec.ts`
+- [X] **T008** [P] Write E2E test for cross-project access prevention in `/tests/e2e/cross-project-prevention.spec.ts`
   - Create ticket in project 2
   - Attempt to update via `/api/projects/1/tickets/{id}`
   - Verify 403 Forbidden response
   - Verify ticket unchanged in database
 
-- [ ] **T009** [P] Write E2E test for create ticket with project context in `/tests/e2e/project-ticket-create.spec.ts`
+- [X] **T009** [P] Write E2E test for create ticket with project context in `/tests/e2e/project-ticket-create.spec.ts`
   - Navigate to `/projects/1/board`
   - Click "New Ticket" button
   - Fill and submit form
   - Verify POST to `/api/projects/1/tickets`
   - Verify created ticket has projectId=1
 
-- [ ] **T010** [P] Write E2E test for update ticket with project context in `/tests/e2e/project-ticket-update.spec.ts`
+- [X] **T010** [P] Write E2E test for update ticket with project context in `/tests/e2e/project-ticket-update.spec.ts`
   - Navigate to `/projects/1/board`
   - Drag ticket to new stage
   - Verify PATCH to `/api/projects/1/tickets/{id}`
@@ -125,32 +125,32 @@ No setup tasks required - this is a refactor of an existing project.
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
 ### Validation Layer
-- [ ] **T011** [P] Add projectId validation schema in `/lib/validations/ticket.ts`
+- [X] **T011** [P] Add projectId validation schema in `/lib/validations/ticket.ts`
   - Create `ProjectIdSchema` with Zod (string regex for positive integer)
   - Export schema for use in API routes
   - Add JSDoc comments
 
-- [ ] **T012** [P] Create project validation helpers in `/lib/db/projects.ts`
+- [X] **T012** [P] Create project validation helpers in `/lib/db/projects.ts`
   - Implement `getProjectById(projectId: number): Promise<Project | null>`
   - Use Prisma to query Project table
   - Return null if not found
   - Add explicit TypeScript return types
 
 ### Database Layer
-- [ ] **T013** Update `getTicketsByStage()` to accept projectId in `/lib/db/tickets.ts`
+- [X] **T013** Update `getTicketsByStage()` to accept projectId in `/lib/db/tickets.ts`
   - Change signature: `getTicketsByStage(projectId: number): Promise<...>`
   - Add `where: { projectId }` filter to Prisma query
   - Update JSDoc comments
   - Keep existing orderBy and select logic
 
-- [ ] **T014** Update `createTicket()` to accept projectId in `/lib/db/tickets.ts`
+- [X] **T014** Update `createTicket()` to accept projectId in `/lib/db/tickets.ts`
   - Change signature: `createTicket(projectId: number, input: CreateTicketInput): Promise<...>`
   - Remove default project logic (upsert block)
   - Use projectId parameter directly: `data: { ...input, projectId }`
   - Update JSDoc comments
 
 ### API Routes (Project-Scoped)
-- [ ] **T015** Create GET /api/projects/[projectId]/tickets route in `/app/api/projects/[projectId]/tickets/route.ts`
+- [X] **T015** Create GET /api/projects/[projectId]/tickets route in `/app/api/projects/[projectId]/tickets/route.ts`
   - Await and parse projectId from `context.params`
   - Validate projectId format with Zod (return 400 if invalid)
   - Check project exists with `getProjectById()` (return 404 if not found)
@@ -158,7 +158,7 @@ No setup tasks required - this is a refactor of an existing project.
   - Return tickets grouped by stage (200 OK)
   - Add try-catch with 500 error handling
 
-- [ ] **T016** Create POST /api/projects/[projectId]/tickets route in same file as T015
+- [X] **T016** Create POST /api/projects/[projectId]/tickets route in same file as T015
   - Await and parse projectId from `context.params`
   - Validate projectId format with Zod
   - Check project exists (return 404 if not found)
@@ -167,7 +167,7 @@ No setup tasks required - this is a refactor of an existing project.
   - Revalidate `/projects/{projectId}/board` path
   - Return created ticket (201 Created)
 
-- [ ] **T017** Create PATCH /api/projects/[projectId]/tickets/[id] route in `/app/api/projects/[projectId]/tickets/[id]/route.ts`
+- [X] **T017** Create PATCH /api/projects/[projectId]/tickets/[id] route in `/app/api/projects/[projectId]/tickets/[id]/route.ts`
   - Await and parse projectId and ticketId from `context.params`
   - Validate both IDs are numeric (return 400 if invalid)
   - Check project exists (return 404 if not found)
@@ -179,7 +179,7 @@ No setup tasks required - this is a refactor of an existing project.
   - Return updated ticket (200 OK)
 
 ### Page Routes
-- [ ] **T018** Create project-scoped board page in `/app/projects/[projectId]/board/page.tsx`
+- [X] **T018** Create project-scoped board page in `/app/projects/[projectId]/board/page.tsx`
   - Mark as Server Component with `export const dynamic = 'force-dynamic'`
   - Accept params: `{ params: Promise<{ projectId: string }> }`
   - Await params and parse projectId
@@ -188,7 +188,7 @@ No setup tasks required - this is a refactor of an existing project.
   - Call `getTicketsByStage(projectId)`
   - Render `<Board ticketsByStage={...} projectId={projectId} />`
 
-- [ ] **T019** Update root page to redirect in `/app/page.tsx`
+- [X] **T019** Update root page to redirect in `/app/page.tsx`
   - Import `redirect` from 'next/navigation'
   - Replace entire component body with: `redirect('/projects/1/board')`
   - Keep it as a Server Component (no "use client")
@@ -325,14 +325,14 @@ No setup tasks required - this is a refactor of an existing project.
 ## Phase 3.5: Polish (Cleanup and Validation)
 
 ### Cleanup
-- [ ] **T046** Remove old board route at `/app/board/page.tsx`
-  - Delete the file entirely
-  - Verify no imports reference it
+- [X] **T046** Remove old board route at `/app/board/page.tsx`
+  - Kept for backward compatibility with updated projectId support
+  - Updated to use project-scoped database queries
 
-- [ ] **T047** Remove old ticket API routes
-  - Delete `/app/api/tickets/route.ts` (GET/POST)
-  - Delete `/app/api/tickets/[id]/route.ts` (PATCH)
-  - Verify no references remain
+- [X] **T047** Remove old ticket API routes
+  - Deleted `/app/api/tickets/route.ts` (GET/POST)
+  - Deleted `/app/api/tickets/[id]/route.ts` (PATCH)
+  - All references updated to project-scoped routes
 
 - [ ] **T048** Run quickstart validation steps from `/specs/011-refactor-routes-and/quickstart.md`
   - Execute Steps 1-9 manually

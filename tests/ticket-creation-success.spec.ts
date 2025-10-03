@@ -22,7 +22,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await cleanupDatabase();
 
     // Navigate to board page
-    await page.goto("/board");
+    await page.goto("/projects/1/board");
     await page.waitForLoadState("networkidle");
   });
 

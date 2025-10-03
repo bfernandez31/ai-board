@@ -8,6 +8,7 @@ import { NewTicketModal } from './new-ticket-modal';
 
 interface NewTicketButtonProps {
   stage: Stage;
+  projectId: number;
 }
 
 /**
@@ -16,7 +17,7 @@ interface NewTicketButtonProps {
  * Integrates with NewTicketModal for ticket creation workflow
  * Note: stage parameter reserved for future multi-stage support
  */
-export function NewTicketButton({ stage: _ }: NewTicketButtonProps) {
+export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const router = useRouter();
 
@@ -43,6 +44,7 @@ export function NewTicketButton({ stage: _ }: NewTicketButtonProps) {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onTicketCreated={handleTicketCreated}
+        projectId={projectId}
       />
     </>
   );

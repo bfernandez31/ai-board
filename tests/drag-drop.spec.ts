@@ -34,7 +34,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     request: any,
     stage: string = 'INBOX'
   ): Promise<{ id: number; version: number; title: string }> => {
-    const response: APIResponse = await request.post(`${BASE_URL}/api/tickets`, {
+    const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: `Test Ticket - ${stage}`,
         description: `Test description for ${stage}`,
@@ -98,7 +98,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'INBOX');
 
     // Navigate to board
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Verify ticket is in INBOX column
     const inboxColumn = page.locator('[data-stage="INBOX"]');
@@ -139,7 +139,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Setup: Create ticket in PLAN
     const ticket = await createTicket(request, 'PLAN');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Attempt to drag from PLAN to SHIP (invalid - skipping BUILD and VERIFY)
     // Use mouse events for @dnd-kit compatibility
@@ -171,7 +171,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Setup: Create ticket in BUILD
     const ticket = await createTicket(request, 'BUILD');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Attempt to drag from BUILD to PLAN (invalid - backwards)
     const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
@@ -242,7 +242,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Go offline
     await context.setOffline(true);
@@ -281,7 +281,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Drag using mouse events (works on mobile viewport) - INBOX to SPECIFY
     await dragTicketToColumn(page, ticket.id, 'SPECIFY');
@@ -299,7 +299,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Measure time from drag start to visual update
     const startTime = Date.now();

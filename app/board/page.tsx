@@ -12,11 +12,14 @@ export const revalidate = 0;
  * - Renders Board component with grouped tickets
  */
 export default async function BoardPage() {
-  const ticketsByStage = await getTicketsByStage();
+  // This route is deprecated - redirect handled by root page
+  // Keeping for backwards compatibility during migration
+  const projectId = 1; // Default project
+  const ticketsByStage = await getTicketsByStage(projectId);
 
   return (
     <main className="h-screen bg-black overflow-hidden">
-      <Board ticketsByStage={ticketsByStage} />
+      <Board ticketsByStage={ticketsByStage} projectId={projectId} />
     </main>
   );
 }

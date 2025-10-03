@@ -16,7 +16,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await cleanupDatabase();
 
     // Navigate to the board page before each test
-    await page.goto("/board");
+    await page.goto("/projects/1/board");
     await page.waitForLoadState("networkidle");
   });
 

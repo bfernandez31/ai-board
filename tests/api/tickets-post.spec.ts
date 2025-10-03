@@ -2,13 +2,13 @@ import { test, expect } from '@playwright/test';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
- * Contract Test: POST /api/tickets
+ * Contract Test: POST /api/projects/1/tickets
  * Validates API contract from contracts/tickets-api.yaml
  *
  * This test MUST FAIL until the API endpoint is implemented
  */
 
-test.describe('POST /api/tickets - Contract Validation', () => {
+test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
 
   test.beforeEach(async () => {
@@ -22,7 +22,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'Users cannot log in after password reset'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -64,7 +64,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       title: 'Add dark mode toggle'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -83,7 +83,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'This request has no title'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -107,7 +107,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'Empty title should be rejected'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -129,7 +129,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'Title is too long'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -150,7 +150,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'Title is at maximum allowed length'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -170,7 +170,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: longDescription
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -191,7 +191,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: maxDescription
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -204,7 +204,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
   });
 
   test('should return 400 for invalid JSON payload', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: 'invalid json string',
       headers: {
         'Content-Type': 'application/json'
@@ -223,7 +223,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
       description: 'Description with allowed punctuation - comma, period. question? exclamation!'
     };
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: requestBody
     });
 
@@ -243,7 +243,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
 
     const responses = await Promise.all(
       requests.map(data =>
-        request.post(`${BASE_URL}/api/tickets`, { data })
+        request.post(`${BASE_URL}/api/projects/1/tickets`, { data })
       )
     );
 
@@ -271,7 +271,7 @@ test.describe('POST /api/tickets - Contract Validation', () => {
     // Implementation may require database connection mocking
 
     // For now, we validate that normal requests work
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Normal ticket for error handling test',
         description: 'This should succeed'

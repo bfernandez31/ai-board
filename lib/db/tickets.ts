@@ -4,12 +4,14 @@ import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 
 /**
- * Fetch all tickets grouped by stage
+ * Fetch all tickets for a specific project, grouped by stage
  * Sorted by most recently updated first
  * Returns tickets with version field for optimistic concurrency control
+ * @param projectId - The project ID to filter tickets by
  */
-export async function getTicketsByStage(): Promise<Record<Stage, TicketWithVersion[]>> {
+export async function getTicketsByStage(projectId: number): Promise<Record<Stage, TicketWithVersion[]>> {
   const tickets = await prisma.ticket.findMany({
+    where: { projectId },
     select: {
       id: true,
       title: true,
@@ -46,38 +48,17 @@ export async function getTicketsByStage(): Promise<Record<Stage, TicketWithVersi
 }
 
 /**
- * Create a new ticket in the INBOX stage
- * Uses default project for MVP - creates it if it doesn't exist
+ * Create a new ticket in the INBOX stage for a specific project
+ * @param projectId - The project ID to create the ticket in
+ * @param input - The ticket data (title, description)
  */
-export async function createTicket(input: CreateTicketInput) {
-  // For MVP, use the default project
-  // In the future, projectId will be passed as part of the input
-  const githubOwner = process.env.GITHUB_OWNER || 'default-owner';
-  const githubRepo = process.env.GITHUB_REPO || 'default-repo';
-
-  // Ensure default project exists (for test environments where DB is cleaned)
-  const project = await prisma.project.upsert({
-    where: {
-      githubOwner_githubRepo: {
-        githubOwner,
-        githubRepo,
-      },
-    },
-    update: {},
-    create: {
-      name: 'ai-board',
-      description: 'AI-powered project management board',
-      githubOwner,
-      githubRepo,
-    },
-  });
-
+export async function createTicket(projectId: number, input: CreateTicketInput) {
   return await prisma.ticket.create({
     data: {
       title: input.title,
       description: input.description,
       stage: 'INBOX',
-      projectId: project.id,
+      projectId: projectId,
     },
   });
 }

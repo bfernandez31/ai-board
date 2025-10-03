@@ -12,7 +12,7 @@ test.describe('Ticket Creation Error Handling', () => {
   const BASE_URL = 'http://localhost:3000';
 
   test('should return 400 for missing title', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         description: 'This request has no title'
       }
@@ -31,7 +31,7 @@ test.describe('Ticket Creation Error Handling', () => {
   });
 
   test('should return 400 for empty title', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: '',
         description: 'Empty title should fail'
@@ -50,7 +50,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should return 400 for title exceeding 100 characters', async ({ request }) => {
     const longTitle = 'A'.repeat(101);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: longTitle,
         description: 'Title is too long'
@@ -69,7 +69,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should return 400 for description exceeding 1000 characters', async ({ request }) => {
     const longDescription = 'B'.repeat(1001);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Valid title',
         description: longDescription
@@ -86,7 +86,7 @@ test.describe('Ticket Creation Error Handling', () => {
   });
 
   test('should return descriptive error message for validation failures', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {}
     });
 
@@ -107,7 +107,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
   test('should handle invalid JSON payload gracefully', async ({ request }) => {
     try {
-      const response = await request.post(`${BASE_URL}/api/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
         data: 'not valid json',
         headers: {
           'Content-Type': 'application/json'
@@ -133,7 +133,7 @@ test.describe('Ticket Creation Error Handling', () => {
     ];
 
     for (const errorCase of errorCases) {
-      const response = await request.post(`${BASE_URL}/api/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
         data: errorCase.data
       });
 
@@ -152,7 +152,7 @@ test.describe('Ticket Creation Error Handling', () => {
   });
 
   test('should not leak sensitive information in error messages', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: { title: '' }
     });
 
@@ -174,7 +174,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
   test('should handle concurrent error requests correctly', async ({ request }) => {
     const errorRequests = Array.from({ length: 5 }, () =>
-      request.post(`${BASE_URL}/api/tickets`, {
+      request.post(`${BASE_URL}/api/projects/1/tickets`, {
         data: { title: '' }
       })
     );
@@ -198,7 +198,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
   test('should differentiate between validation and server errors', async ({ request }) => {
     // Validation error
-    const validationResponse = await request.post(`${BASE_URL}/api/tickets`, {
+    const validationResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: { title: '' }
     });
 
@@ -214,7 +214,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should accept valid request at boundary (100 char title)', async ({ request }) => {
     const maxTitle = 'A'.repeat(100);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: maxTitle,
         description: 'Testing boundary'
@@ -231,7 +231,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should accept valid request at boundary (1000 char description)', async ({ request }) => {
     const maxDescription = 'B'.repeat(1000);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Valid title',
         description: maxDescription
@@ -248,7 +248,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should reject just over boundary (101 char title)', async ({ request }) => {
     const tooLongTitle = 'A'.repeat(101);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: tooLongTitle,
         description: 'Should fail'
@@ -265,7 +265,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should reject just over boundary (1001 char description)', async ({ request }) => {
     const tooLongDescription = 'B'.repeat(1001);
 
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Valid title',
         description: tooLongDescription

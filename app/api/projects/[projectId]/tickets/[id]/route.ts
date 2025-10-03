@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { Stage, isValidTransition } from '@/lib/stage-validation';
-import { patchTicketSchema } from '@/lib/validations/ticket';
+import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
+import { getProjectById } from '@/lib/db/projects';
 
 const prisma = new PrismaClient();
 
@@ -15,81 +16,8 @@ const UpdateStageSchema = z.object({
 });
 
 /**
- * GET /api/tickets/[id]
- * Get a single ticket by ID
- *
- * Success Response (200):
- * {
- *   "id": 123,
- *   "title": "...",
- *   "description": "...",
- *   "stage": "PLAN",
- *   "version": 2,
- *   "createdAt": "2025-10-01T12:34:56.789Z",
- *   "updatedAt": "2025-10-01T12:34:56.789Z"
- * }
- *
- * Error Responses:
- * - 400: Invalid ticket ID
- * - 404: Ticket not found
- * - 500: Internal server error
- */
-export async function GET(
-  _request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  try {
-    // Await params in Next.js 15
-    const params = await context.params;
-
-    // Parse and validate ticket ID
-    const ticketId = parseInt(params.id, 10);
-    if (isNaN(ticketId)) {
-      return NextResponse.json(
-        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch ticket from database
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-    });
-
-    if (!ticket) {
-      return NextResponse.json(
-        { error: 'Ticket not found' },
-        { status: 404 }
-      );
-    }
-
-    // Return ticket
-    return NextResponse.json(
-      {
-        id: ticket.id,
-        title: ticket.title,
-        description: ticket.description,
-        stage: ticket.stage,
-        version: ticket.version,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error fetching ticket:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-/**
- * PATCH /api/tickets/[id]
- * Update ticket stage OR title/description with optimistic concurrency control
+ * PATCH /api/projects/[projectId]/tickets/[id]
+ * Update ticket stage OR title/description with project validation and optimistic concurrency control
  *
  * Request Body (Stage Update):
  * {
@@ -117,24 +45,52 @@ export async function GET(
  *
  * Error Responses:
  * - 400: Invalid request or validation error
- * - 404: Ticket not found
+ * - 403: Ticket belongs to different project (Forbidden)
+ * - 404: Project or ticket not found
  * - 409: Version conflict (ticket modified by another user)
  * - 500: Internal server error
  */
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
     // Await params in Next.js 15
     const params = await context.params;
+    const { projectId: projectIdString, id: ticketIdString } = params;
 
-    // Parse and validate ticket ID
-    const ticketId = parseInt(params.id, 10);
+    // Validate projectId format
+    const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
+    if (!projectIdResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid project ID',
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
+    }
+
+    const projectId = parseInt(projectIdString, 10);
+
+    // Validate ticket ID
+    const ticketId = parseInt(ticketIdString, 10);
     if (isNaN(ticketId)) {
       return NextResponse.json(
         { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
         { status: 400 }
+      );
+    }
+
+    // Check if project exists
+    const project = await getProjectById(projectId);
+    if (!project) {
+      return NextResponse.json(
+        {
+          error: 'Project not found',
+          code: 'PROJECT_NOT_FOUND',
+        },
+        { status: 404 }
       );
     }
 
@@ -171,16 +127,33 @@ export async function PATCH(
 
       const { title, description, version: requestVersion } = parseResult.data;
 
-      // Check if ticket exists and get current version
-      const currentTicket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
+      // Check if ticket exists with project validation
+      const currentTicket = await prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+          projectId: projectId,
+        },
       });
 
       if (!currentTicket) {
-        return NextResponse.json(
-          { error: 'Ticket not found' },
-          { status: 404 }
-        );
+        // Distinguish between 404 (ticket doesn't exist) and 403 (wrong project)
+        const ticketExists = await prisma.ticket.findUnique({
+          where: { id: ticketId },
+          select: { id: true, projectId: true },
+        });
+
+        if (!ticketExists) {
+          return NextResponse.json(
+            { error: 'Ticket not found' },
+            { status: 404 }
+          );
+        } else {
+          // Ticket exists but belongs to different project
+          return NextResponse.json(
+            { error: 'Forbidden' },
+            { status: 403 }
+          );
+        }
       }
 
       // Check for version conflict
@@ -242,7 +215,7 @@ export async function PATCH(
       }
     }
 
-    // Handle stage update (existing logic)
+    // Handle stage update
     if (isStageUpdate) {
       const parseResult = UpdateStageSchema.safeParse(body);
 
@@ -259,16 +232,32 @@ export async function PATCH(
 
       const { stage: newStage, version: requestVersion } = parseResult.data;
 
-      // Fetch current ticket from database
-      const currentTicket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
+      // Fetch current ticket with project validation
+      const currentTicket = await prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+          projectId: projectId,
+        },
       });
 
       if (!currentTicket) {
-        return NextResponse.json(
-          { error: 'Ticket not found' },
-          { status: 404 }
-        );
+        // Distinguish between 404 and 403
+        const ticketExists = await prisma.ticket.findUnique({
+          where: { id: ticketId },
+          select: { id: true, projectId: true },
+        });
+
+        if (!ticketExists) {
+          return NextResponse.json(
+            { error: 'Ticket not found' },
+            { status: 404 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: 'Forbidden' },
+            { status: 403 }
+          );
+        }
       }
 
       // Check for version conflict (optimistic concurrency control)

@@ -18,6 +18,7 @@ interface NewTicketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketCreated?: () => void;
+  projectId: number;
 }
 
 interface FormErrors {
@@ -38,6 +39,7 @@ export function NewTicketModal({
   open,
   onOpenChange,
   onTicketCreated,
+  projectId,
 }: NewTicketModalProps) {
   const [formData, setFormData] = React.useState<CreateTicketInput>({
     title: '',
@@ -102,7 +104,7 @@ export function NewTicketModal({
     setErrors({});
 
     try {
-      const response = await fetch('/api/tickets', {
+      const response = await fetch(`/api/projects/${projectId}/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

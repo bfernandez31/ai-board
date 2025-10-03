@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
+  projectId: number;
 }
 
 /**
@@ -33,8 +34,9 @@ interface BoardProps {
  * - Version-based conflict detection
  * - Sequential stage validation
  * - Touch and pointer support
+ * - Project-scoped API calls
  */
-export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
+export function Board({ ticketsByStage: initialTicketsByStage, projectId }: BoardProps) {
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<TicketWithVersion | null>(null);
@@ -122,9 +124,9 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
       const updatedTickets = updateTicketStageOptimistically(allTickets, ticket.id, targetStage);
       setTicketsByStage(groupTicketsByStage(updatedTickets));
 
-      // Send update to server
+      // Send update to server (project-scoped API)
       try {
-        const response = await fetch(`/api/tickets/${ticket.id}`, {
+        const response = await fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -185,7 +187,7 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
         });
       }
     },
-    [allTickets, groupTicketsByStage, isOnline, toast]
+    [allTickets, groupTicketsByStage, isOnline, toast, projectId]
   );
 
   // Handle ticket click to open modal
@@ -275,6 +277,7 @@ export function Board({ ticketsByStage: initialTicketsByStage }: BoardProps) {
                 tickets={ticketsByStage[stage] || []}
                 isDraggable={isOnline}
                 onTicketClick={handleTicketClick}
+                projectId={projectId}
               />
             ))}
           </div>
