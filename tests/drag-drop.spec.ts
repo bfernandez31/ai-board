@@ -1,5 +1,6 @@
 import { test, expect, Page, APIResponse } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getPrismaClient, cleanupDatabase } from './helpers/db-cleanup';
 
 /**
  * E2E Tests: Drag-and-Drop Ticket Movement
@@ -15,16 +16,12 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   let prisma: PrismaClient;
 
   test.beforeAll(() => {
-    prisma = new PrismaClient();
+    prisma = getPrismaClient();
   });
 
   test.beforeEach(async () => {
     // Clean database before each test
-    await prisma.ticket.deleteMany({});
-  });
-
-  test.afterAll(async () => {
-    await prisma.$disconnect();
+    await cleanupDatabase();
   });
 
   /**
@@ -36,10 +33,16 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   ): Promise<{ id: number; version: number; title: string }> => {
     const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: `Test Ticket - ${stage}`,
+        title: `Test Ticket ${stage}`,
         description: `Test description for ${stage}`,
       },
     });
+
+    if (!response.ok()) {
+      const error = await response.json();
+      throw new Error(`Failed to create ticket: ${JSON.stringify(error)}`);
+    }
+
     const ticket = await response.json();
 
     // Update stage directly via Prisma for test setup
