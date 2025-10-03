@@ -41,7 +41,7 @@
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before schema migration**
 
-- [ ] **T001** Create database constraint test file `tests/database/ticket-project-constraints.spec.ts`
+- [X] **T001** Create database constraint test file `tests/database/ticket-project-constraints.spec.ts`
   - Test: Ticket creation without projectId fails (TypeScript compilation + Prisma validation)
   - Test: Ticket creation with invalid projectId fails (foreign key violation)
   - Test: Project deletion cascades to all tickets
@@ -49,7 +49,7 @@
   - **Expected**: All tests fail (schema not yet updated)
   - **Files**: `tests/database/ticket-project-constraints.spec.ts` (new file)
 
-- [ ] **T002** Add test helper for database setup in `tests/helpers/db-setup.ts`
+- [X] **T002** Add test helper for database setup in `tests/helpers/db-setup.ts`
   - Helper: Create test project and return ID
   - Helper: Create test ticket with projectId
   - Helper: Clean up test data after each test
