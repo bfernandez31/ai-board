@@ -215,45 +215,107 @@ No setup tasks required - this is a refactor of an existing project.
 
 ## Phase 3.4: Integration (Migrate Existing Tests and Clean Up)
 
-### Test Migration
-- [ ] **T023** Update all existing E2E tests to use `/projects/1/board` route
-  - Find all occurrences of `/board` in `/tests/e2e/*.spec.ts`
-  - Replace with `/projects/1/board`
-  - Update any hardcoded URLs in test setup
+### Test Migration - E2E Board Tests
+- [ ] **T023** Update board-empty.spec.ts in `/tests/e2e/board-empty.spec.ts`
+  - Replace all `/board` → `/projects/1/board` (3 occurrences on lines 18, 165, 178)
+  - Update any API calls if present
 
-- [ ] **T024** Update all existing API tests to use project-scoped endpoints
-  - Find all API calls in `/tests/api/*.spec.ts`
-  - Update GET `/api/tickets` → `/api/projects/1/tickets`
+- [ ] **T024** Update board-multiple.spec.ts in `/tests/e2e/board-multiple.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T025** Update board-responsive.spec.ts in `/tests/e2e/board-responsive.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T026** Update drag-drop.spec.ts in `/tests/drag-drop.spec.ts`
+  - Update all `/board` → `/projects/1/board` (8+ occurrences)
+  - Update POST `/api/tickets` → `/api/projects/1/tickets` (line 37)
+  - Update any PATCH calls to use `/api/projects/1/tickets/{id}`
+
+### Test Migration - Ticket E2E Tests
+- [ ] **T027** Update ticket-card.spec.ts in `/tests/e2e/ticket-card.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T028** Update ticket-create.spec.ts in `/tests/e2e/ticket-create.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
   - Update POST `/api/tickets` → `/api/projects/1/tickets`
+
+- [ ] **T029** Update ticket-errors.spec.ts in `/tests/e2e/ticket-errors.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T030** Update ticket-truncation.spec.ts in `/tests/e2e/ticket-truncation.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T031** Update inline-editing.spec.ts in `/tests/e2e/inline-editing.spec.ts`
+  - Update BASE_URL references to use `/projects/1/board`
   - Update PATCH `/api/tickets/{id}` → `/api/projects/1/tickets/{id}`
 
-- [ ] **T025** Update ticket-related E2E tests to use project-scoped APIs
-  - Update `/tests/e2e/ticket-create.spec.ts` to verify `/api/projects/1/tickets` POST
-  - Update `/tests/e2e/inline-editing.spec.ts` to verify `/api/projects/1/tickets/{id}` PATCH
-  - Update `/tests/e2e/drag-drop.spec.ts` to verify project-scoped PATCH
-  - Update any other tests that interact with ticket APIs
+### Test Migration - Root Level Tests
+- [ ] **T032** Update ticket-detail-modal.spec.ts in `/tests/ticket-detail-modal.spec.ts`
+  - Update `/board` → `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
 
-- [ ] **T026** Verify all tests pass with new routes
+- [ ] **T033** Update ticket-creation-modal-open.spec.ts in `/tests/ticket-creation-modal-open.spec.ts`
+  - Update any route references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+- [ ] **T034** Update ticket-creation-success.spec.ts in `/tests/ticket-creation-success.spec.ts`
+  - Update any route references to use `/projects/1/board`
+  - Update POST `/api/tickets` → `/api/projects/1/tickets`
+
+- [ ] **T035** Update ticket-creation-form-validation.spec.ts in `/tests/ticket-creation-form-validation.spec.ts`
+  - Update any route references to use `/projects/1/board`
+  - Update any API calls to use project-scoped endpoints
+
+### Test Migration - API Tests
+- [ ] **T036** Update tickets-get.spec.ts in `/tests/api/tickets-get.spec.ts`
+  - Update GET `/api/tickets` → `/api/projects/1/tickets`
+  - Update all test expectations for new route
+
+- [ ] **T037** Update tickets-post.spec.ts in `/tests/api/tickets-post.spec.ts`
+  - Update POST `/api/tickets` → `/api/projects/1/tickets`
+  - Update all test expectations for new route
+
+- [ ] **T038** Update tickets-patch.spec.ts in `/tests/api/tickets-patch.spec.ts`
+  - Update PATCH `/api/tickets/{id}` → `/api/projects/1/tickets/{id}`
+  - Update all test expectations for new route
+
+- [ ] **T039** Update api-tickets-post.contract.spec.ts in `/tests/api-tickets-post.contract.spec.ts`
+  - Update POST `/api/tickets` → `/api/projects/1/tickets`
+  - Update contract test expectations
+
+### Test Migration - Database Tests
+- [ ] **T040** Check ticket-project-constraints.spec.ts in `/tests/database/ticket-project-constraints.spec.ts`
+  - Review if any route updates needed
+  - Verify database constraint tests still valid
+
+### Test Migration - Verification
+- [ ] **T041** Verify all tests pass with new routes
   - Run: `npx playwright test`
   - Fix any failures related to route changes
   - Ensure no flaky tests
   - Verify test coverage maintained
+  - Check that all test files have been updated
 
 ### Component Migration
-- [ ] **T027** Update NewTicketButton to pass projectId prop in `/components/board/new-ticket-button.tsx`
+- [ ] **T042** Update NewTicketButton to pass projectId prop in `/components/board/new-ticket-button.tsx`
   - Add `projectId: number` to props interface
   - Pass projectId to NewTicketModal
 
-- [ ] **T028** Update StageColumn to pass projectId to children in `/components/board/stage-column.tsx`
+- [ ] **T043** Update StageColumn to pass projectId to children in `/components/board/stage-column.tsx`
   - Add `projectId: number` to props interface
   - Pass projectId to TicketCard components
 
-- [ ] **T029** Update TicketCard to use project-scoped API in `/components/board/ticket-card.tsx`
+- [ ] **T044** Update TicketCard to use project-scoped API in `/components/board/ticket-card.tsx`
   - Add `projectId: number` to props interface
   - Update any API calls to include projectId in URL
   - Pass projectId to TicketDetailModal if it makes API calls
 
-- [ ] **T030** Update TicketDetailModal if it makes API calls in `/components/board/ticket-detail-modal.tsx`
+- [ ] **T045** Update TicketDetailModal if it makes API calls in `/components/board/ticket-detail-modal.tsx`
   - Check if modal makes any PATCH requests
   - If yes, add `projectId: number` to props and update URLs
   - If no, skip this task
@@ -263,16 +325,16 @@ No setup tasks required - this is a refactor of an existing project.
 ## Phase 3.5: Polish (Cleanup and Validation)
 
 ### Cleanup
-- [ ] **T031** Remove old board route at `/app/board/page.tsx`
+- [ ] **T046** Remove old board route at `/app/board/page.tsx`
   - Delete the file entirely
   - Verify no imports reference it
 
-- [ ] **T032** Remove old ticket API routes
+- [ ] **T047** Remove old ticket API routes
   - Delete `/app/api/tickets/route.ts` (GET/POST)
   - Delete `/app/api/tickets/[id]/route.ts` (PATCH)
   - Verify no references remain
 
-- [ ] **T033** Run quickstart validation steps from `/specs/011-refactor-routes-and/quickstart.md`
+- [ ] **T048** Run quickstart validation steps from `/specs/011-refactor-routes-and/quickstart.md`
   - Execute Steps 1-9 manually
   - Verify root redirect works
   - Verify project-scoped board access
@@ -308,12 +370,17 @@ Phase 3.3 Implementation:
   T021, T022 ← Modal and handlers (depend on T020 for props)
 
 Phase 3.4 Migration:
-  T023-T026 ← Test updates (must wait for T015-T017 to exist)
-  T027-T030 ← Component updates (can be parallel with tests)
+  T023-T041 ← Test updates (must wait for T015-T017 to exist)
+    - T023-T031: E2E board and ticket tests
+    - T032-T035: Root level tests
+    - T036-T039: API tests
+    - T040: Database tests
+    - T041: Verification
+  T042-T045 ← Component updates (can be parallel with tests)
 
 Phase 3.5 Polish:
-  T031-T032 ← Cleanup (wait for T026 to ensure tests pass)
-  T033 ← Final validation (depends on everything)
+  T046-T047 ← Cleanup (wait for T041 to ensure tests pass)
+  T048 ← Final validation (depends on everything)
 ```
 
 ---
@@ -396,14 +463,27 @@ Task: "Update root page to redirect in /app/page.tsx"
 - [x] Each task specifies exact file path
 - [x] No task modifies same file as another [P] task (T013-T014 marked sequential)
 - [x] TDD order enforced (Phase 3.2 before 3.3)
-- [x] Migration tasks included (T023-T030)
-- [x] Cleanup tasks included (T031-T032)
-- [x] Final validation task included (T033)
+- [x] Migration tasks included (T023-T045) - 23 tasks covering all test files
+- [x] All existing test files identified and included
+- [x] Cleanup tasks included (T046-T047)
+- [x] Final validation task included (T048)
 
 ---
 
-**Total Tasks**: 33
-**Estimated Time**: 8-12 hours (with parallel execution)
+**Total Tasks**: 48
+**Estimated Time**: 10-14 hours (with parallel execution)
 **Ready for Execution**: ✅ Yes
+
+**Task Breakdown**:
+- Phase 3.2 (Tests): 10 tasks (T001-T010)
+- Phase 3.3 (Implementation): 12 tasks (T011-T022)
+- Phase 3.4 (Migration): 23 tasks (T023-T045)
+  - E2E tests: 9 tasks (T023-T031)
+  - Root tests: 4 tasks (T032-T035)
+  - API tests: 4 tasks (T036-T039)
+  - Database tests: 1 task (T040)
+  - Verification: 1 task (T041)
+  - Components: 4 tasks (T042-T045)
+- Phase 3.5 (Polish): 3 tasks (T046-T048)
 
 **Next Command**: `/implement` or start with T001
