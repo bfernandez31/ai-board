@@ -57,7 +57,7 @@
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
-- [ ] **T003** Update Prisma schema to add projectId to Ticket model in `prisma/schema.prisma`
+- [X] **T003** Update Prisma schema to add projectId to Ticket model in `prisma/schema.prisma`
   - Add `projectId Int` field to Ticket model
   - Add `project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)` relation
   - Add `@@index([projectId])` to Ticket model
@@ -65,7 +65,7 @@
   - **Expected**: TypeScript errors in seed.ts (tickets missing projectId)
   - **Files**: `prisma/schema.prisma`
 
-- [ ] **T004** Generate Prisma migration for projectId field
+- [X] **T004** Generate Prisma migration for projectId field
   - Run: `npx prisma migrate dev --name add-ticket-project-relation`
   - Verify migration SQL includes:
     - ADD COLUMN "projectId" INTEGER NOT NULL
@@ -75,7 +75,7 @@
   - **Expected**: Migration file created in `prisma/migrations/`
   - **Files**: `prisma/migrations/[timestamp]_add_ticket_project_relation/migration.sql` (generated)
 
-- [ ] **T005** Update seed script to create tickets with projectId in `prisma/seed.ts`
+- [X] **T005** Update seed script to create tickets with projectId in `prisma/seed.ts`
   - Modify existing project creation to save project reference
   - Add sample ticket creation with `projectId: project.id`
   - Create at least 6 sample tickets across different stages
@@ -83,14 +83,14 @@
   - **Expected**: Seed runs without errors
   - **Files**: `prisma/seed.ts`
 
-- [ ] **T006** Reset database and run migration
+- [X] **T006** Reset database and run migration
   - Run: `npx prisma migrate reset` (drops all data, recreates schema)
   - Confirm migration when prompted
   - Verify seed completes successfully
   - **Expected**: Database reset complete, default project + tickets created
   - **Command**: `npx prisma migrate reset`
 
-- [ ] **T007** Regenerate Prisma client with updated types
+- [X] **T007** Regenerate Prisma client with updated types
   - Run: `npx prisma generate`
   - Verify TypeScript types include `projectId` on Ticket
   - Verify relation methods available (ticket.project, project.tickets)
