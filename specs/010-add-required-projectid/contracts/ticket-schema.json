@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ticket",
+  "description": "Ticket entity with required projectId foreign key",
+  "type": "object",
+  "required": ["id", "title", "description", "stage", "version", "projectId", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Unique identifier for the ticket"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Ticket title"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Ticket description"
+    },
+    "stage": {
+      "type": "string",
+      "enum": ["INBOX", "SPECIFY", "PLAN", "BUILD", "VERIFY", "SHIP"],
+      "description": "Current stage of the ticket"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version number for optimistic locking"
+    },
+    "projectId": {
+      "type": "integer",
+      "description": "Foreign key reference to Project.id (REQUIRED)"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when ticket was created"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when ticket was last updated"
+    }
+  }
+}

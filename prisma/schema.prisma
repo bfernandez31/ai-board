@@ -25,6 +25,7 @@ model Project {
   description String   @db.VarChar(1000)
   githubOwner String   @db.VarChar(100)
   githubRepo  String   @db.VarChar(100)
+  tickets     Ticket[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -38,9 +39,12 @@ model Ticket {
   description String   @db.VarChar(1000)
   stage       Stage    @default(INBOX)
   version     Int      @default(1)
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([stage])
   @@index([updatedAt])
+  @@index([projectId])
 }

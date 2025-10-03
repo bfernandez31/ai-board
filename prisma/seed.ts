@@ -13,7 +13,7 @@ async function main() {
   }
 
   // Check if default project already exists
-  const existingProject = await prisma.project.findUnique({
+  let project = await prisma.project.findUnique({
     where: {
       githubOwner_githubRepo: {
         githubOwner,
@@ -22,22 +22,83 @@ async function main() {
     },
   });
 
-  if (existingProject) {
-    console.log("Default project already exists:", existingProject);
+  if (project) {
+    console.log("Default project already exists:", project);
+  } else {
+    // Create default project
+    project = await prisma.project.create({
+      data: {
+        name: "ai-board",
+        description: "AI-powered project management board",
+        githubOwner,
+        githubRepo,
+      },
+    });
+
+    console.log("Created default project:", project);
+  }
+
+  // Check if tickets already exist
+  const existingTickets = await prisma.ticket.count({
+    where: { projectId: project.id },
+  });
+
+  if (existingTickets > 0) {
+    console.log(`Project already has ${existingTickets} tickets`);
     return;
   }
 
-  // Create default project
-  const project = await prisma.project.create({
-    data: {
-      name: "ai-board",
-      description: "AI-powered project management board",
-      githubOwner,
-      githubRepo,
+  // Create sample tickets for the project
+  const sampleTickets = [
+    {
+      title: "Setup project structure",
+      description: "Initialize the project with basic folder structure and dependencies",
+      stage: "SHIP" as const,
+      projectId: project.id,
     },
+    {
+      title: "Design database schema",
+      description: "Create Prisma schema with all required models and relations",
+      stage: "SHIP" as const,
+      projectId: project.id,
+    },
+    {
+      title: "Implement ticket creation API",
+      description: "Add POST endpoint for creating new tickets",
+      stage: "VERIFY" as const,
+      projectId: project.id,
+    },
+    {
+      title: "Add drag-and-drop functionality",
+      description: "Enable users to drag tickets between columns",
+      stage: "BUILD" as const,
+      projectId: project.id,
+    },
+    {
+      title: "Create ticket detail modal",
+      description: "Design and implement modal for viewing/editing ticket details",
+      stage: "PLAN" as const,
+      projectId: project.id,
+    },
+    {
+      title: "Add user authentication",
+      description: "Implement authentication system with GitHub OAuth",
+      stage: "SPECIFY" as const,
+      projectId: project.id,
+    },
+    {
+      title: "Setup CI/CD pipeline",
+      description: "Configure automated testing and deployment workflow",
+      stage: "INBOX" as const,
+      projectId: project.id,
+    },
+  ];
+
+  await prisma.ticket.createMany({
+    data: sampleTickets,
   });
 
-  console.log("Created default project:", project);
+  console.log(`Created ${sampleTickets.length} sample tickets for project`);
 }
 
 main()
