@@ -110,7 +110,7 @@
   - **Expected**: All constraints present
   - **Command**: SQL verification via psql
 
-- [ ] **T009** Run constraint validation tests (previously written in T001)
+- [X] **T009** Run constraint validation tests (previously written in T001)
   - Run: `npm run test:e2e -- tests/database/ticket-project-constraints.spec.ts`
   - **Expected**: All tests PASS (previously failed)
   - Test 1: Creation without projectId fails ✅
@@ -119,14 +119,14 @@
   - Test 4: Project-scoped queries work ✅
   - **Files**: `tests/database/ticket-project-constraints.spec.ts`
 
-- [ ] **T010** Run existing E2E tests to verify no breaking changes
+- [X] **T010** Run existing E2E tests to verify no breaking changes
   - Run: `npm run test:e2e`
   - Verify board displays tickets correctly
   - Verify ticket creation/update/delete still works
   - **Expected**: All existing tests pass (no regressions)
   - **Command**: `npm run test:e2e`
 
-- [ ] **T011** Run TypeScript type check
+- [X] **T011** Run TypeScript type check
   - Run: `npm run type-check`
   - Verify no type errors in codebase
   - Verify Prisma client types generated correctly
