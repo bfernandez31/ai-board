@@ -20,7 +20,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Implement user authentication',
-        description: 'Add email/password login with JWT tokens'
+        description: 'Add email and password login with JWT tokens'
       }
     });
 
@@ -35,7 +35,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     expect(body.id).toBeGreaterThan(0);
 
     expect(body).toHaveProperty('title', 'Implement user authentication');
-    expect(body).toHaveProperty('description', 'Add email/password login with JWT tokens');
+    expect(body).toHaveProperty('description', 'Add email and password login with JWT tokens');
 
     // Contract requirement: stage MUST be INBOX for new tickets
     expect(body).toHaveProperty('stage', 'INBOX');
