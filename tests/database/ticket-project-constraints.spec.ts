@@ -28,17 +28,14 @@ test.describe('Ticket-Project Constraints', () => {
   test('should fail to create ticket without projectId', async () => {
     const prisma = getPrismaClient();
 
-    // This test verifies TypeScript compilation and Prisma validation
-    // @ts-expect-error - Testing that projectId is required
-    const createPromise = prisma.ticket.create({
-      data: {
-        title: 'Test Ticket',
-        description: 'Test description',
-        // projectId is intentionally missing
-      },
-    });
+    // This test verifies that projectId is required at the database level
+    // We bypass TypeScript checking to test the database constraint
+    const createPromise = prisma.$executeRaw`
+      INSERT INTO "Ticket" ("title", "description", "stage", "version", "createdAt", "updatedAt")
+      VALUES ('Test Ticket', 'Test description', 'INBOX', 1, NOW(), NOW())
+    `;
 
-    // Expected to fail because projectId is required
+    // Expected to fail because projectId is required (NOT NULL constraint)
     await expect(createPromise).rejects.toThrow();
   });
 

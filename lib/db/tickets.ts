@@ -47,13 +47,37 @@ export async function getTicketsByStage(): Promise<Record<Stage, TicketWithVersi
 
 /**
  * Create a new ticket in the INBOX stage
+ * Uses default project for MVP - creates it if it doesn't exist
  */
 export async function createTicket(input: CreateTicketInput) {
+  // For MVP, use the default project
+  // In the future, projectId will be passed as part of the input
+  const githubOwner = process.env.GITHUB_OWNER || 'default-owner';
+  const githubRepo = process.env.GITHUB_REPO || 'default-repo';
+
+  // Ensure default project exists (for test environments where DB is cleaned)
+  const project = await prisma.project.upsert({
+    where: {
+      githubOwner_githubRepo: {
+        githubOwner,
+        githubRepo,
+      },
+    },
+    update: {},
+    create: {
+      name: 'ai-board',
+      description: 'AI-powered project management board',
+      githubOwner,
+      githubRepo,
+    },
+  });
+
   return await prisma.ticket.create({
     data: {
       title: input.title,
       description: input.description,
       stage: 'INBOX',
+      projectId: project.id,
     },
   });
 }
