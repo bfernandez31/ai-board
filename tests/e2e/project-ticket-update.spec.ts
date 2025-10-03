@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
@@ -17,6 +17,25 @@ test.describe('Update Ticket with Project Context', () => {
     await cleanupDatabase();
   });
 
+  /**
+   * Helper: Perform drag-and-drop using mouse events for @dnd-kit compatibility
+   */
+  const dragTicketToStage = async (page: Page, ticketId: number, targetStage: string) => {
+    const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
+    const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
+
+    const ticketBox = await ticketCard.boundingBox();
+    const targetBox = await targetColumn.boundingBox();
+
+    if (ticketBox && targetBox) {
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForTimeout(500); // Wait for UI update
+    }
+  };
+
   test('should PATCH to /api/projects/1/tickets/{id} when dragging ticket', async ({ page, request }) => {
     // Create a test ticket
     const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
@@ -26,6 +45,7 @@ test.describe('Update Ticket with Project Context', () => {
       }
     });
     expect(createResponse.status()).toBe(201);
+    const ticket = await createResponse.json();
 
     // Navigate to board
     await page.goto(`${BASE_URL}/projects/1/board`);
@@ -37,10 +57,7 @@ test.describe('Update Ticket with Project Context', () => {
     );
 
     // Drag ticket from INBOX to SPECIFY
-    const ticketCard = page.getByText('Draggable ticket').first();
-    const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
-
-    await ticketCard.dragTo(specifyColumn);
+    await dragTicketToStage(page, ticket.id, 'SPECIFY');
 
     // Verify PATCH request was made to project-scoped endpoint
     const capturedRequest = await requestPromise;
@@ -64,16 +81,11 @@ test.describe('Update Ticket with Project Context', () => {
     await page.waitForLoadState('networkidle');
 
     // Drag ticket to SPECIFY
-    const ticketCard = page.getByText('Movable ticket').first();
-    const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
-
-    await ticketCard.dragTo(specifyColumn);
-
-    // Wait for update
-    await page.waitForTimeout(500);
+    await dragTicketToStage(page, ticket.id, 'SPECIFY');
 
     // Verify ticket moved
-    await expect(specifyColumn.getByText('Movable ticket')).toBeVisible();
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
     // Verify via API
     const getResponse = await request.get(`${BASE_URL}/api/projects/1/tickets`);
@@ -86,30 +98,28 @@ test.describe('Update Ticket with Project Context', () => {
 
   test('should persist ticket updates after page refresh', async ({ page, request }) => {
     // Create ticket
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Persistent ticket',
         description: 'Should stay in SPECIFY after refresh'
       }
     });
+    const ticket = await createResponse.json();
 
     // Navigate to board
     await page.goto(`${BASE_URL}/projects/1/board`);
     await page.waitForLoadState('networkidle');
 
     // Move ticket to SPECIFY
-    const ticketCard = page.getByText('Persistent ticket').first();
-    const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
-
-    await ticketCard.dragTo(specifyColumn);
-    await page.waitForTimeout(500);
+    await dragTicketToStage(page, ticket.id, 'SPECIFY');
 
     // Refresh page
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     // Verify ticket still in SPECIFY column
-    await expect(specifyColumn.getByText('Persistent ticket')).toBeVisible();
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
   });
 
   test('should use project-scoped API for inline edits', async ({ page, request: apiRequest }) => {
@@ -150,12 +160,13 @@ test.describe('Update Ticket with Project Context', () => {
 
   test('should include version in update requests', async ({ page, request }) => {
     // Create ticket
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Versioned ticket',
         description: 'Has version control'
       }
     });
+    const ticket = await createResponse.json();
 
     let patchBody: any = null;
 
@@ -171,11 +182,7 @@ test.describe('Update Ticket with Project Context', () => {
     await page.goto(`${BASE_URL}/projects/1/board`);
     await page.waitForLoadState('networkidle');
 
-    const ticketCard = page.getByText('Versioned ticket').first();
-    const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
-
-    await ticketCard.dragTo(specifyColumn);
-    await page.waitForTimeout(500);
+    await dragTicketToStage(page, ticket.id, 'SPECIFY');
 
     // Verify version was included in request
     expect(patchBody).toBeDefined();
