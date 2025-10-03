@@ -292,6 +292,7 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
         open={isModalOpen}
         onOpenChange={handleModalClose}
         onUpdate={handleTicketUpdate}
+        projectId={projectId}
       />
     </>
   );

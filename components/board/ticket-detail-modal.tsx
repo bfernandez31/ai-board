@@ -45,6 +45,9 @@ interface TicketDetailModalProps {
 
   /** Callback fired when ticket is updated successfully to refresh parent state. */
   onUpdate?: (ticket: TicketData) => void;
+
+  /** The project ID for project-scoped API calls */
+  projectId: number;
 }
 
 /**
@@ -94,7 +97,7 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
  * @param onOpenChange - Callback for state changes (e.g., when user closes modal)
  * @param onUpdate - Callback to refresh parent board state after successful update
  */
-export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: TicketDetailModalProps) {
+export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projectId }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
 
@@ -119,7 +122,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
     if (!localTicket) return;
 
     try {
-      const response = await fetch(`/api/tickets/${localTicket.id}`);
+      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`);
       if (response.ok) {
         const serverTicket = await response.json();
         const normalizedTicket: TicketData = {
@@ -147,7 +150,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
     setLocalTicket({ ...localTicket, title: newTitle });
 
     try {
-      const response = await fetch(`/api/tickets/${localTicket.id}`, {
+      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,7 +247,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate }: Tick
     setLocalTicket({ ...localTicket, description: newDescription });
 
     try {
-      const response = await fetch(`/api/tickets/${localTicket.id}`, {
+      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
