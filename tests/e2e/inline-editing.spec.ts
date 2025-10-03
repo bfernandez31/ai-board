@@ -446,7 +446,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Simulate concurrent update: update ticket directly in database
     await prisma.ticket.update({
       where: { id: ticket.id },
-      data: { title: 'Concurrent Update', version: 2 },
+      data: { title: 'Concurrent Update', version: { increment: 1 } },
     });
 
     // Now try to save in browser (with stale version 1)

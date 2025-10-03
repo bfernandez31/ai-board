@@ -16,6 +16,95 @@ const UpdateStageSchema = z.object({
 });
 
 /**
+ * GET /api/projects/[projectId]/tickets/[id]
+ * Get a single ticket by ID with project validation
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string; id: string }> }
+): Promise<NextResponse> {
+  try {
+    const params = await context.params;
+    const { projectId: projectIdString, id: ticketIdString } = params;
+
+    // Validate projectId format
+    const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
+    if (!projectIdResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
+
+    const projectId = parseInt(projectIdString, 10);
+    const ticketId = parseInt(ticketIdString, 10);
+
+    if (isNaN(ticketId)) {
+      return NextResponse.json(
+        { error: 'Invalid ticket ID' },
+        { status: 400 }
+      );
+    }
+
+    // Check if project exists
+    const project = await getProjectById(projectId);
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    // Fetch ticket with project validation
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id: ticketId,
+        projectId: projectId,
+      },
+    });
+
+    if (!ticket) {
+      // Check if ticket exists in different project
+      const ticketExists = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { id: true, projectId: true },
+      });
+
+      if (!ticketExists) {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
+          { status: 404 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      id: ticket.id,
+      title: ticket.title,
+      description: ticket.description,
+      stage: ticket.stage,
+      version: ticket.version,
+      projectId: ticket.projectId,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
  * PATCH /api/projects/[projectId]/tickets/[id]
  * Update ticket stage OR title/description with project validation and optimistic concurrency control
  *

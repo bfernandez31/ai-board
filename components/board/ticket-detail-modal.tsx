@@ -164,16 +164,17 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
 
         if (response.status === 409) {
           // Conflict: ticket modified by another user
+          // Revert optimistic update immediately
+          setLocalTicket(originalTicket);
+
           toast({
             variant: 'destructive',
             title: 'Conflict',
             description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
 
-          // Refresh ticket from server after delay to allow toast to display
-          setTimeout(() => {
-            refreshTicketFromServer();
-          }, 1500);
+          // Refresh ticket from server to get the actual current state
+          refreshTicketFromServer();
           return; // Don't throw, just return
         } else if (response.status === 400) {
           // Validation error
@@ -261,16 +262,17 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
 
         if (response.status === 409) {
           // Conflict: ticket modified by another user
+          // Revert optimistic update immediately
+          setLocalTicket(originalTicket);
+
           toast({
             variant: 'destructive',
             title: 'Conflict',
             description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
 
-          // Refresh ticket from server after delay to allow toast to display
-          setTimeout(() => {
-            refreshTicketFromServer();
-          }, 1500);
+          // Refresh ticket from server to get the actual current state
+          refreshTicketFromServer();
           return; // Don't throw, just return
         } else if (response.status === 400) {
           // Validation error
