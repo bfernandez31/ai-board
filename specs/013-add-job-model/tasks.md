@@ -172,22 +172,22 @@
   - **Expected**: All queries use indexes (Index Scan, not Seq Scan)
   - **Validation**: EXPLAIN output shows index usage
 
-## Phase 3.5: Documentation & Cleanup
+## Phase 3.5: Documentation & Cleanup ✅
 **Final polish - can run in parallel**
 
-- [ ] T017 [P] Verify CLAUDE.md updated with new feature
+- [x] T017 [P] Verify CLAUDE.md updated with new feature
   - **File**: `CLAUDE.md`
   - **Action**: Confirm 013-add-job-model listed in Active Technologies and Recent Changes
   - **Expected**: PostgreSQL 14+ and Prisma 6.x mentioned for this feature
   - **Validation**: File contains feature reference
 
-- [ ] T018 [P] Update plan.md progress tracking
+- [x] T018 [P] Update plan.md progress tracking
   - **File**: `specs/013-add-job-model/plan.md`
   - **Action**: Mark Phase 3 (Tasks generated) as complete with date
   - **Expected**: Checkbox marked, date added
   - **Validation**: Progress Tracking section updated
 
-- [ ] T019 Final schema review and cleanup
+- [x] T019 Final schema review and cleanup
   - **File**: `prisma/schema.prisma`
   - **Action**: Review entire schema for consistency, formatting, and comments
   - **Expected**: Proper formatting, consistent style with existing models
