@@ -1,0 +1,200 @@
+// Job Model Schema Contract
+// Feature: 013-add-job-model
+// This file documents the expected Prisma schema additions
+
+// ============================================================================
+// ENUM: JobStatus
+// ============================================================================
+// Purpose: Valid job execution states
+// Values: PENDING (not started), RUNNING (executing), COMPLETED (success), FAILED (error/timeout)
+//
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================================
+// MODEL: Job
+// ============================================================================
+// Purpose: Track spec-kit workflow command executions with status and logs
+// Relationships: Many-to-one with Ticket (cascade delete)
+// Indexes: ticketId, status, startedAt, composite(ticketId+status+startedAt)
+//
+model Job {
+  // Primary Key
+  id          Int       @id @default(autoincrement())
+
+  // Foreign Key (required, cascade delete when ticket deleted)
+  ticketId    Int
+
+  // Command Information
+  command     String    @db.VarChar(50)        // spec-kit command: specify, plan, task, implement, clarify
+
+  // Status Tracking
+  status      JobStatus @default(PENDING)      // Current execution state
+
+  // Git Metadata (optional - may be unavailable at job creation)
+  branch      String?   @db.VarChar(200)       // Git branch (nullable)
+  commitSha   String?   @db.VarChar(40)        // Git commit SHA-1 hash (nullable)
+
+  // Execution Logs (optional - populated during/after execution)
+  logs        String?   @db.Text               // Full execution logs including errors (unlimited length)
+
+  // Timestamps
+  startedAt   DateTime  @default(now())        // When job execution began
+  completedAt DateTime?                        // When job finished (nullable - null while running)
+  createdAt   DateTime  @default(now())        // Record creation time
+  updatedAt   DateTime  @updatedAt             // Last update time
+
+  // Relations
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // Indexes for query performance
+  @@index([ticketId])                          // Query jobs by ticket
+  @@index([status])                            // Query jobs by status
+  @@index([startedAt])                         // Query jobs by time range
+  @@index([ticketId, status, startedAt])       // Composite for common query pattern
+}
+
+// ============================================================================
+// TICKET MODEL UPDATE
+// ============================================================================
+// Add this relation field to existing Ticket model:
+//
+// model Ticket {
+//   // ... existing fields ...
+//   jobs Job[] // One-to-many relation with Job
+// }
+
+// ============================================================================
+// VALIDATION RULES (enforced at application layer)
+// ============================================================================
+// - command: Must be one of ['specify', 'plan', 'task', 'implement', 'clarify']
+// - status transitions: pending → running → (completed | failed)
+// - completedAt: Must be null when status is pending or running
+// - completedAt: Required when status is completed or failed
+// - branch: Max 200 characters (Git branch name length limit)
+// - commitSha: Max 40 characters (SHA-1 hash length)
+// - logs: Unlimited length (PostgreSQL TEXT supports up to 1GB)
+
+// ============================================================================
+// MIGRATION CHECKLIST
+// ============================================================================
+// When applying this schema:
+// [x] Create JobStatus enum with 4 values
+// [x] Create Job table with all 11 fields
+// [x] Add foreign key constraint on ticketId with CASCADE delete
+// [x] Create 4 indexes (3 individual + 1 composite)
+// [x] Set default values (status=PENDING, startedAt=now(), createdAt=now())
+// [x] Add jobs relation field to Ticket model
+// [x] Regenerate Prisma Client (@prisma/client)
+
+// ============================================================================
+// QUERY EXAMPLES
+// ============================================================================
+//
+// Create job with minimal fields:
+//   await prisma.job.create({
+//     data: {
+//       ticketId: 1,
+//       command: 'specify',
+//       status: 'PENDING',
+//     },
+//   });
+//
+// Create job with all fields:
+//   await prisma.job.create({
+//     data: {
+//       ticketId: 1,
+//       command: 'plan',
+//       status: 'RUNNING',
+//       branch: '013-add-job-model',
+//       commitSha: 'abc123def456',
+//       logs: 'Execution started...',
+//     },
+//   });
+//
+// Update job to completed:
+//   await prisma.job.update({
+//     where: { id: 1 },
+//     data: {
+//       status: 'COMPLETED',
+//       completedAt: new Date(),
+//       logs: 'Execution completed successfully!',
+//     },
+//   });
+//
+// Query jobs by ticket:
+//   await prisma.job.findMany({
+//     where: { ticketId: 1 },
+//     orderBy: { startedAt: 'desc' },
+//   });
+//
+// Query jobs by status:
+//   await prisma.job.findMany({
+//     where: { status: 'PENDING' },
+//   });
+//
+// Query jobs in time range:
+//   await prisma.job.findMany({
+//     where: {
+//       startedAt: {
+//         gte: new Date('2025-10-01'),
+//         lte: new Date('2025-10-31'),
+//       },
+//     },
+//   });
+//
+// Composite query (ticket + status + time):
+//   await prisma.job.findMany({
+//     where: {
+//       ticketId: 1,
+//       status: 'COMPLETED',
+//       startedAt: {
+//         gte: new Date('2025-10-01'),
+//       },
+//     },
+//     orderBy: { startedAt: 'desc' },
+//   });
+//
+// Cascade delete test:
+//   await prisma.ticket.delete({ where: { id: 1 } });
+//   // All jobs with ticketId=1 automatically deleted
+
+// ============================================================================
+// TYPESCRIPT TYPES (generated by Prisma Client)
+// ============================================================================
+//
+// enum JobStatus {
+//   PENDING = 'PENDING',
+//   RUNNING = 'RUNNING',
+//   COMPLETED = 'COMPLETED',
+//   FAILED = 'FAILED',
+// }
+//
+// interface Job {
+//   id: number;
+//   ticketId: number;
+//   command: string;
+//   status: JobStatus;
+//   branch: string | null;
+//   commitSha: string | null;
+//   logs: string | null;
+//   startedAt: Date;
+//   completedAt: Date | null;
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
+//
+// interface JobCreateInput {
+//   command: string;
+//   status?: JobStatus;
+//   branch?: string | null;
+//   commitSha?: string | null;
+//   logs?: string | null;
+//   startedAt?: Date;
+//   completedAt?: Date | null;
+//   ticket: { connect: { id: number } };
+// }
