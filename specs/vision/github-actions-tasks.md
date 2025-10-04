@@ -250,7 +250,7 @@ NON-GOALS:
 Create API route to dispatch GitHub Actions workflows when tickets transition between stages.
 
 WHAT:
-Add POST /api/tickets/[id]/transition endpoint that validates stage transitions, creates job records, and dispatches GitHub Actions workflows via Octokit for SPECIFY, PLAN, and BUILD stages.
+Add POST /api/projects/[projectId]/tickets/[id]/transition endpoint that validates stage transitions, creates job records, and dispatches GitHub Actions workflows via Octokit for SPECIFY, PLAN, and BUILD stages.
 
 WHY:
 This API bridges the frontend drag-and-drop UI with GitHub Actions execution, automating spec-kit command invocation without manual CLI usage.
@@ -262,15 +262,16 @@ DEPENDENCIES:
 - Use existing stage validation from lib/stage-validation.ts.
 
 API ROUTE:
-- Create app/api/tickets/[id]/transition/route.ts.
+- Create app/api/projects/[projectId]/tickets/[id]/transition/route.ts.
 - Method: POST only.
 - Request body: { targetStage: Stage }.
 - Response: { success: boolean, jobId?: number, message?: string }.
 
 WORKFLOW LOGIC:
-- Parse ticketId from route params (validate is number).
-- Fetch ticket with project relation (include: { project: true }).
-- Return 404 if ticket not found.
+- Parse projectId and ticketId from route params (validate both are numbers).
+- Verify project exists; return 404 if missing.
+- Fetch ticket with project relation (include: { project: true }) filtered by both IDs.
+- Return 403 if ticket belongs to a different project.
 - Map targetStage to spec-kit command: SPECIFY→specify, PLAN→plan, BUILD→implement.
 - If no command mapping (VERIFY, SHIP), update stage only and return success.
 
@@ -286,7 +287,7 @@ GITHUB DISPATCH:
 - Handle Octokit errors: rate limits (403), auth failures (401), workflow not found (404).
 
 STAGE UPDATE:
-- Update ticket.stage to targetStage after successful dispatch.
+- Update ticket.stage to targetStage after successful dispatch and confirm projectId alignment.
 - Increment ticket.version for optimistic concurrency.
 
 ERROR HANDLING:
@@ -298,22 +299,24 @@ ERROR HANDLING:
 ENVIRONMENT:
 - Require GITHUB_TOKEN env var (repo + workflow scopes).
 - Use ticket.project.githubOwner and githubRepo for dispatch target.
+- Respect projectId from URL when constructing downstream requests or logging.
 
 ACCEPTANCE CRITERIA:
-- POST /api/tickets/[id]/transition creates job record successfully.
+- POST /api/projects/[projectId]/tickets/[id]/transition creates job record successfully.
 - GitHub Actions workflow dispatched with correct inputs.
 - Ticket stage updated after dispatch.
 - Ticket branch field populated with feature/ticket-<id>.
 - Job ID returned in response for tracking.
 - Invalid stage transitions return 400 with error message.
 - Missing tickets return 404.
+- Cross-project access attempts return 403 without dispatching workflows.
 - Octokit authentication errors handled gracefully with logs.
 - Non-spec-kit stages (VERIFY, SHIP) update stage without dispatch.
 
 NON-GOALS:
 - No webhook listener for workflow completion.
 - No job status polling or updates.
-- No clarify endpoint (POST /api/tickets/[id]/clarify) in this ticket.
+- No clarify endpoint (POST /api/projects/[projectId]/tickets/[id]/clarify) in this ticket.
 - No autoMode automatic progression logic.
 - No real-time updates (WebSocket).
 ```
@@ -392,13 +395,14 @@ After completing all tasks, validate the integration with this workflow:
 
 2. **API Integration Test:**
    - Create new ticket in INBOX
-   - Call POST /api/tickets/[id]/transition with targetStage: SPECIFY
+   - Call POST /api/projects/1/tickets/[id]/transition with targetStage: SPECIFY
    - Verify job record created in database
    - Check GitHub Actions for running workflow
    - Confirm spec.md committed to feature/ticket-<id> branch
 
 3. **UI Integration Test:**
-   - Drag ticket from INBOX to SPECIFY on board
+   - Open /projects/1/board in the browser
+   - Drag ticket from INBOX to SPECIFY on the board
    - Monitor job status in database
    - Verify workflow execution in GitHub Actions
    - Confirm spec files appear in repository
