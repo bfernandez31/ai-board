@@ -47,10 +47,10 @@ Web app structure (Next.js App Router):
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY seed implementation**
-- [ ] T005 [P] E2E test for seed idempotency in tests/seed-idempotency.spec.ts (run seed twice, verify single project)
-- [ ] T006 [P] E2E test for environment validation in tests/seed-env-validation.spec.ts (missing env vars throws error)
-- [ ] T007 [P] E2E test for unique constraint in tests/project-uniqueness.spec.ts (duplicate repo creation fails)
-- [ ] T008 [P] E2E test for cascade delete in tests/project-cascade.spec.ts (delete project deletes tickets)
+- [X] T005 [P] E2E test for seed idempotency in tests/seed-idempotency.spec.ts (run seed twice, verify single project)
+- [X] T006 [P] E2E test for environment validation in tests/seed-env-validation.spec.ts (missing env vars throws error)
+- [X] T007 [P] E2E test for unique constraint in tests/project-uniqueness.spec.ts (duplicate repo creation fails)
+- [X] T008 [P] E2E test for cascade delete in tests/project-cascade.spec.ts (delete project deletes tickets)
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 - [ ] T009 Implement idempotent seed script in prisma/seed.ts with environment validation
