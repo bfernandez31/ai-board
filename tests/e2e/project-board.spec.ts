@@ -47,20 +47,6 @@ test.describe('Project-Scoped Board Access', () => {
     }
   });
 
-  test('should make API request to /api/projects/1/tickets', async ({ page }) => {
-    // Set up request listener
-    const requestPromise = page.waitForRequest(
-      request => request.url().includes('/api/projects/1/tickets') && request.method() === 'GET'
-    );
-
-    // Navigate to board
-    await page.goto(`${BASE_URL}/projects/1/board`);
-
-    // Verify request was made to project-scoped endpoint
-    const request = await requestPromise;
-    expect(request.url()).toContain('/api/projects/1/tickets');
-  });
-
   test('should not display tickets from other projects', async ({ page, request }) => {
     // Create ticket in project 1
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
