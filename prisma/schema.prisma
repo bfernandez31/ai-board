@@ -19,6 +19,13 @@ enum Stage {
   SHIP
 }
 
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 model Project {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(100)
@@ -41,10 +48,32 @@ model Ticket {
   version     Int      @default(1)
   projectId   Int
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobs        Job[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([stage])
   @@index([updatedAt])
   @@index([projectId])
+}
+
+model Job {
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  command     String    @db.VarChar(50)
+  status      JobStatus @default(PENDING)
+  branch      String?   @db.VarChar(200)
+  commitSha   String?   @db.VarChar(40)
+  logs        String?   @db.Text
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([ticketId, status, startedAt])
 }
