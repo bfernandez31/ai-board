@@ -53,9 +53,9 @@ Web app structure (Next.js App Router):
 - [X] T008 [P] E2E test for cascade delete in tests/project-cascade.spec.ts (delete project deletes tickets)
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
-- [ ] T009 Implement idempotent seed script in prisma/seed.ts with environment validation
-- [ ] T010 Add environment variable checks (GITHUB_OWNER, GITHUB_REPO required) in prisma/seed.ts
-- [ ] T011 Create default project with name="ai-board" using env vars in prisma/seed.ts
+- [X] T009 Implement idempotent seed script in prisma/seed.ts with environment validation
+- [X] T010 Add environment variable checks (GITHUB_OWNER, GITHUB_REPO required) in prisma/seed.ts
+- [X] T011 Create default project with name="ai-board" using env vars in prisma/seed.ts
 - [ ] T012 Verify all E2E tests pass: `npm run test:e2e`
 
 ## Dependencies
