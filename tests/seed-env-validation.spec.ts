@@ -37,12 +37,14 @@ test.describe('Seed Environment Validation', () => {
     let errorThrown = false;
     let errorMessage = '';
 
+    // Create env without GITHUB_OWNER
+    const { GITHUB_OWNER, ...envWithoutOwner } = process.env;
+
     try {
       execSync(seedCommand, {
         cwd: process.cwd(),
         env: {
-          ...process.env,
-          GITHUB_OWNER: undefined, // Explicitly unset
+          ...envWithoutOwner,
           GITHUB_REPO: 'test-repo',
         },
         stdio: 'pipe',
@@ -66,13 +68,15 @@ test.describe('Seed Environment Validation', () => {
     let errorThrown = false;
     let errorMessage = '';
 
+    // Create env without GITHUB_REPO
+    const { GITHUB_REPO, ...envWithoutRepo } = process.env;
+
     try {
       execSync(seedCommand, {
         cwd: process.cwd(),
         env: {
-          ...process.env,
+          ...envWithoutRepo,
           GITHUB_OWNER: 'test-owner',
-          GITHUB_REPO: undefined, // Explicitly unset
         },
         stdio: 'pipe',
       });
@@ -95,14 +99,13 @@ test.describe('Seed Environment Validation', () => {
     let errorThrown = false;
     let errorMessage = '';
 
+    // Create env without both variables
+    const { GITHUB_OWNER, GITHUB_REPO, ...envWithoutBoth } = process.env;
+
     try {
       execSync(seedCommand, {
         cwd: process.cwd(),
-        env: {
-          ...process.env,
-          GITHUB_OWNER: undefined, // Explicitly unset
-          GITHUB_REPO: undefined, // Explicitly unset
-        },
+        env: envWithoutBoth,
         stdio: 'pipe',
       });
     } catch (error) {
