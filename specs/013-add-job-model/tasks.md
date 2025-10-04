@@ -49,16 +49,16 @@
 - [x] T002 Dependencies installed (Prisma 6.x, PostgreSQL 14+, TypeScript 5.6)
 - [x] T003 Database connection configured (DATABASE_URL environment variable)
 
-## Phase 3.2: Schema Definition
+## Phase 3.2: Schema Definition ✅
 **Data model implementation - sequential execution (single file)**
 
-- [ ] T004 Add JobStatus enum to `prisma/schema.prisma`
+- [x] T004 Add JobStatus enum to `prisma/schema.prisma`
   - **File**: `prisma/schema.prisma`
   - **Action**: Add enum with 4 values: PENDING, RUNNING, COMPLETED, FAILED
   - **Location**: After existing Stage enum, before models
   - **Validation**: Enum appears in schema with correct values
 
-- [ ] T005 Add Job model to `prisma/schema.prisma`
+- [x] T005 Add Job model to `prisma/schema.prisma`
   - **File**: `prisma/schema.prisma`
   - **Action**: Add Job model with 11 fields as specified in data-model.md
   - **Fields**:
@@ -75,13 +75,13 @@
     - updatedAt: DateTime @updatedAt
   - **Validation**: All 11 fields present with correct types and constraints
 
-- [ ] T006 Add foreign key relation to Ticket model in `prisma/schema.prisma`
+- [x] T006 Add foreign key relation to Ticket model in `prisma/schema.prisma`
   - **File**: `prisma/schema.prisma`
   - **Action**: Add `ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)`
   - **Location**: Inside Job model, after fields
   - **Validation**: Relation defined with cascade delete
 
-- [ ] T007 Add indexes to Job model in `prisma/schema.prisma`
+- [x] T007 Add indexes to Job model in `prisma/schema.prisma`
   - **File**: `prisma/schema.prisma`
   - **Action**: Add 4 indexes after relation definition
     - @@index([ticketId])
@@ -90,16 +90,16 @@
     - @@index([ticketId, status, startedAt])
   - **Validation**: All 4 indexes defined
 
-- [ ] T008 Add jobs relation field to Ticket model in `prisma/schema.prisma`
+- [x] T008 Add jobs relation field to Ticket model in `prisma/schema.prisma`
   - **File**: `prisma/schema.prisma`
   - **Action**: Add `jobs Job[]` field to existing Ticket model
   - **Location**: Inside Ticket model, after existing fields
   - **Validation**: One-to-many relation field added
 
-## Phase 3.3: Migration
+## Phase 3.3: Migration ✅
 **Database migration - sequential execution**
 
-- [ ] T009 Generate Prisma migration for Job model
+- [x] T009 Generate Prisma migration for Job model
   - **File**: New file in `prisma/migrations/`
   - **Command**: `npx prisma migrate dev --name add-job-model`
   - **Expected Output**:
@@ -110,7 +110,7 @@
     - 4 indexes created
   - **Validation**: Migration file exists in `prisma/migrations/[timestamp]_add-job-model/`
 
-- [ ] T010 Verify migration SQL contains all requirements
+- [x] T010 Verify migration SQL contains all requirements
   - **File**: `prisma/migrations/[timestamp]_add-job-model/migration.sql`
   - **Action**: Review generated SQL for:
     - CREATE TYPE "JobStatus" with 4 enum values
@@ -119,21 +119,21 @@
     - CREATE INDEX statements for 4 indexes
   - **Validation**: SQL contains all required DDL statements
 
-- [ ] T011 Regenerate Prisma Client with new types
+- [x] T011 Regenerate Prisma Client with new types
   - **Command**: `npx prisma generate`
   - **Expected Output**: Prisma Client updated with Job and JobStatus types
   - **Validation**: TypeScript types available in node_modules/@prisma/client
 
-## Phase 3.4: Validation
+## Phase 3.4: Validation ✅
 **Verify implementation - can run in parallel after migration**
 
-- [ ] T012 [P] Verify schema structure via Prisma Studio
+- [x] T012 [P] Verify schema structure via Prisma Studio
   - **Command**: `npx prisma studio`
   - **Action**: Open Prisma Studio and navigate to Job model
   - **Expected**: Job model visible with all 11 fields, correct types, and empty table
   - **Validation**: Visual confirmation in Prisma Studio UI
 
-- [ ] T013 [P] Verify database schema via PostgreSQL
+- [x] T013 [P] Verify database schema via PostgreSQL
   - **Command**: `psql $DATABASE_URL`
   - **Action**: Run `\dT+ JobStatus` and `\d "Job"`
   - **Expected**:
@@ -143,14 +143,14 @@
     - Foreign key constraint with ON DELETE CASCADE
   - **Validation**: Database objects match schema definition
 
-- [ ] T014 [P] Verify TypeScript types generated correctly
+- [x] T014 [P] Verify TypeScript types generated correctly
   - **File**: Create temporary `test-types.ts`
   - **Action**: Import and use Job, JobStatus types from @prisma/client
   - **Expected**: No TypeScript errors, proper enum values, nullable fields correct
   - **Validation**: `npx tsc --noEmit test-types.ts` passes
   - **Cleanup**: Delete test-types.ts after verification
 
-- [ ] T015 Run quickstart validation script
+- [x] T015 Run quickstart validation script
   - **File**: Create temporary `test-job-model.ts` from quickstart.md
   - **Action**: Run all 6 quickstart tests:
     1. Create job with minimal fields
@@ -163,7 +163,7 @@
   - **Validation**: Script exits with code 0, all tests marked as passed
   - **Cleanup**: Delete test-job-model.ts after verification
 
-- [ ] T016 Verify index performance
+- [x] T016 Verify index performance
   - **Action**: Use `EXPLAIN ANALYZE` on common queries from data-model.md
     - Query jobs by ticketId
     - Query jobs by status
