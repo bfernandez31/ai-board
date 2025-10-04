@@ -1,5 +1,5 @@
 /**
- * Contract Test: POST /api/tickets
+ * Contract Test: POST /api/projects/1/tickets
  *
  * This test verifies that the API implementation matches the OpenAPI contract.
  * It must FAIL initially (Red) before implementation, then PASS after implementation (Green).
@@ -11,16 +11,16 @@ import { test, expect } from "@playwright/test";
 import { cleanupDatabase } from './helpers/db-cleanup';
 
 const API_BASE_URL = "http://localhost:3000";
-const ENDPOINT = "/api/tickets";
+const ENDPOINT = "/api/projects/1/tickets";
 
-test.describe("POST /api/tickets - Contract Tests", () => {
+test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
   test.beforeEach(async () => {
     // Clean database before each test
     await cleanupDatabase();
   });
   test.describe("Success Cases (201 Created)", () => {
     test("should create ticket with valid title and description", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Implement user authentication",
           description: "Add JWT-based authentication with login and registration endpoints.",
@@ -41,7 +41,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should create ticket with minimal valid input (1 char each)", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "A",
           description: "B",
@@ -58,7 +58,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
     test("should create ticket with maximum length title (100 chars)", async ({ request }) => {
       const maxTitle = "a".repeat(100);
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: maxTitle,
           description: "Test description",
@@ -74,7 +74,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
     test("should create ticket with maximum length description (1000 chars)", async ({ request }) => {
       const maxDescription = "a".repeat(1000);
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Test ticket",
           description: maxDescription,
@@ -89,7 +89,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should create ticket with allowed punctuation", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Test, ticket! How? Yes-it works.",
           description: "This description has periods, commas, hyphens, spaces, question marks, and exclamation points!",
@@ -107,7 +107,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should trim whitespace from title and description", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "  Trimmed title  ",
           description: "  Trimmed description  ",
@@ -124,7 +124,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
   test.describe("Validation Errors (400 Bad Request)", () => {
     test("should reject empty title", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "",
           description: "Valid description",
@@ -140,7 +140,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject whitespace-only title", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "   ",
           description: "Valid description",
@@ -154,7 +154,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject empty description", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           description: "",
@@ -170,7 +170,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject whitespace-only description", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           description: "   ",
@@ -185,7 +185,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
     test("should reject title longer than 100 characters", async ({ request }) => {
       const tooLongTitle = "a".repeat(101);
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: tooLongTitle,
           description: "Valid description",
@@ -200,7 +200,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
     test("should reject description longer than 1000 characters", async ({ request }) => {
       const tooLongDescription = "a".repeat(1001);
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           description: tooLongDescription,
@@ -214,7 +214,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject title with special characters (emoji)", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Test ticket 🚀",
           description: "Valid description",
@@ -228,7 +228,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject title with special characters (@#$%)", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Test @#$% ticket",
           description: "Valid description",
@@ -242,7 +242,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject description with special characters", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           description: "Invalid description with @#$% characters",
@@ -256,7 +256,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject missing title field", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           description: "Valid description",
           // title missing
@@ -270,7 +270,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject missing description field", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           // description missing
@@ -284,7 +284,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should reject empty request body", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {},
       });
 
@@ -303,7 +303,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
       // Skip if database is healthy
       test.skip(true, "Requires database to be unavailable");
 
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Valid title",
           description: "Valid description",
@@ -320,7 +320,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
 
   test.describe("Response Schema Validation", () => {
     test("should return all required fields in success response", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "Schema test",
           description: "Testing response schema",
@@ -355,7 +355,7 @@ test.describe("POST /api/tickets - Contract Tests", () => {
     });
 
     test("should return proper error structure for validation errors", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}${ENDPOINT}`, {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: "",
           description: "",

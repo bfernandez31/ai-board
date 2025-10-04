@@ -17,7 +17,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
   });
 
   test('should return 200 with TicketsByStage schema', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
 
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toContain('application/json');
@@ -41,7 +41,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
   test('should return tickets with correct schema when tickets exist', async ({ request }) => {
     // First, create a test ticket
-    const createResponse = await request.post(`${BASE_URL}/api/tickets`, {
+    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
         title: 'Test ticket for GET contract validation',
         description: 'This ticket validates the GET endpoint contract'
@@ -51,7 +51,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(createResponse.status()).toBe(201);
 
     // Now fetch all tickets
-    const response = await request.get(`${BASE_URL}/api/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -99,7 +99,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
   test('should return empty arrays for all stages when no tickets exist', async ({ request }) => {
     // This test assumes a clean database or handles existing tickets
-    const response = await request.get(`${BASE_URL}/api/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
 
     expect(response.status()).toBe(200);
 
@@ -120,7 +120,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     // For now, we validate that successful responses work
     // Error case testing will be added with proper test infrastructure
-    const response = await request.get(`${BASE_URL}/api/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
 
     // If response is error (unlikely in normal operation)
     if (response.status() === 500) {
@@ -141,7 +141,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
   test('should handle concurrent requests correctly', async ({ request }) => {
     // Test that multiple simultaneous requests work correctly
     const requests = Array.from({ length: 5 }, () =>
-      request.get(`${BASE_URL}/api/tickets`)
+      request.get(`${BASE_URL}/api/projects/1/tickets`)
     );
 
     const responses = await Promise.all(requests);

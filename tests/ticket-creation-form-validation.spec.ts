@@ -16,7 +16,7 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await cleanupDatabase();
 
     // Navigate to board and open modal
-    await page.goto("/board");
+    await page.goto("/projects/1/board");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: /new ticket/i }).click();
 

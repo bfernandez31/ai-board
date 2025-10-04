@@ -35,7 +35,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     title: string = 'Test Ticket',
     description: string = 'Test description'
   ): Promise<{ id: number; version: number; title: string; description: string }> => {
-    const response = await request.post(`${BASE_URL}/api/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: { title, description },
     });
     const ticket = await response.json();
@@ -62,7 +62,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate to board and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
     await ticketCard.click();
 
@@ -102,7 +102,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
@@ -143,7 +143,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and change it
@@ -172,7 +172,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Test Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Hover over description to verify pencil icon
@@ -207,7 +207,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Test Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -248,7 +248,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and delete all text
@@ -280,7 +280,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title
@@ -312,7 +312,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description
@@ -361,7 +361,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description and delete all text
@@ -397,7 +397,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
@@ -435,7 +435,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit (but don't save yet)
@@ -446,7 +446,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Simulate concurrent update: update ticket directly in database
     await prisma.ticket.update({
       where: { id: ticket.id },
-      data: { title: 'Concurrent Update', version: 2 },
+      data: { title: 'Concurrent Update', version: { increment: 1 } },
     });
 
     // Now try to save in browser (with stale version 1)
@@ -477,7 +477,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // Navigate to board
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     // Verify board shows original title
     const boardCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
@@ -506,7 +506,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // User's scroll position/context preserved (difficult to test, but verify no full page reload)
     const url = page.url();
-    expect(url).toContain('/board');
+    expect(url).toContain('/projects/1/board');
   });
 
   /**
@@ -517,7 +517,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const ticket = await createTicket(request, 'Test Title', 'Test description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit

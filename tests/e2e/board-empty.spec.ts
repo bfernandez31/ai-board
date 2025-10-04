@@ -15,7 +15,7 @@ test.describe('Empty Board Display', () => {
     await cleanupDatabase();
 
     // Navigate to board page
-    await page.goto('http://localhost:3000/board');
+    await page.goto('http://localhost:3000/projects/1/board');
   });
 
   test('should display 6 columns with correct labels', async ({ page }) => {
@@ -162,7 +162,7 @@ test.describe('Empty Board Display', () => {
   test('should load within performance budget (<2s)', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto('http://localhost:3000/board');
+    await page.goto('http://localhost:3000/projects/1/board');
 
     // Wait for board to be visible
     const board = page.locator('main').or(page.locator('[data-testid="board"]'));
@@ -175,7 +175,7 @@ test.describe('Empty Board Display', () => {
   });
 
   test('should have correct page title', async ({ page }) => {
-    await page.goto('http://localhost:3000/board');
+    await page.goto('http://localhost:3000/projects/1/board');
 
     // Check page title includes "Board" or "Kanban"
     const title = await page.title();

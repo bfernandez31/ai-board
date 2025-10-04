@@ -2,7 +2,7 @@ import { test, expect, APIResponse } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 
 /**
- * Contract Tests: PATCH /api/tickets/[id]
+ * Contract Tests: PATCH /api/projects/1/tickets/[id]
  * Feature: 007-enable-inline-editing
  * Source: contracts/patch-ticket.yaml
  *
@@ -10,7 +10,7 @@ import { PrismaClient } from '@prisma/client';
  * They should only pass after implementation of PATCH endpoint in Phase 3.3
  */
 
-test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
+test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
   const BASE_URL = 'http://localhost:3000';
   let prisma: PrismaClient;
 
@@ -35,7 +35,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     title: string = 'Test Ticket',
     description: string = 'Test description'
   ): Promise<{ id: number; version: number; title: string; description: string }> => {
-    const response: APIResponse = await request.post(`${BASE_URL}/api/tickets`, {
+    const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: { title, description },
     });
     const ticket = await response.json();
@@ -55,7 +55,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // PATCH title
-    const response = await request.patch(`${BASE_URL}/api/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         title: 'Updated Title',
         version: ticket.version,
@@ -85,7 +85,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // PATCH description
-    const response = await request.patch(`${BASE_URL}/api/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         description: 'Updated description with more details',
         version: ticket.version,
@@ -115,7 +115,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     const ticket = await createTicket(request, 'Original Title', 'Original description');
 
     // PATCH both fields
-    const response = await request.patch(`${BASE_URL}/api/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         title: 'New Title',
         description: 'New Description',
@@ -147,7 +147,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     const ticket = await createTicket(request);
 
     // PATCH with empty title (whitespace only)
-    const response = await request.patch(`${BASE_URL}/api/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         title: '   ',
         version: ticket.version,
@@ -180,7 +180,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
     });
 
     // PATCH with stale version (version = 1)
-    const response = await request.patch(`${BASE_URL}/api/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         title: 'Test',
         version: 1, // Stale version
@@ -202,7 +202,7 @@ test.describe('PATCH /api/tickets/[id] - Inline Editing API', () => {
    */
   test('PATCH non-existent ticket returns 404', async ({ request }) => {
     // PATCH to non-existent ticket ID
-    const response = await request.patch(`${BASE_URL}/api/tickets/99999`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/99999`, {
       data: {
         title: 'Test',
         version: 1,

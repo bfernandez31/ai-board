@@ -1,10 +1,19 @@
 import { z } from 'zod';
 
 /**
+ * Project ID validation schema
+ * Validates that projectId is a string representing a positive integer
+ */
+export const ProjectIdSchema = z.string().regex(/^\d+$/, {
+  message: 'Invalid project ID',
+});
+
+/**
  * Stage enum validation schema
  */
 export const StageSchema = z.enum([
   'INBOX',
+  'SPECIFY',
   'PLAN',
   'BUILD',
   'VERIFY',

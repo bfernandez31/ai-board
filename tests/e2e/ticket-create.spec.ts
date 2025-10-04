@@ -12,7 +12,7 @@ type TicketResponse = {
 const BASE_URL = 'http://localhost:3000';
 
 async function createTicket(request: APIRequestContext, data: Record<string, unknown>): Promise<TicketResponse> {
-  const response = await request.post(`${BASE_URL}/api/tickets`, { data });
+  const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, { data });
   expect(response.status()).toBe(201);
   const json = (await response.json()) as Partial<TicketResponse>;
 
@@ -46,7 +46,7 @@ test.describe('Ticket Creation and Display', () => {
     const createdTicket = await createTicket(request, ticketData);
     expect(createdTicket.stage).toBe('INBOX');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const idleColumn = page.locator('[data-testid="column-INBOX"]').or(page.getByRole('region', { name: /inbox/i }));
     await expect(idleColumn.first()).toBeVisible();
@@ -63,14 +63,14 @@ test.describe('Ticket Creation and Display', () => {
     const createdTicket = await createTicket(request, ticketData);
     expect(createdTicket.description).toBe('Minimal description');
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
     await expect(ticketCard).toBeVisible();
   });
 
   test('should update IDLE column ticket count badge after creation', async ({ page, request }) => {
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const badge = idleColumn.locator('span[class*="rounded-full"]').first();
@@ -95,7 +95,7 @@ test.describe('Ticket Creation and Display', () => {
 
     const createdTicket = await createTicket(request, ticketData);
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
     await expect(ticketCard).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('Ticket Creation and Display', () => {
       createdTickets.push(await createTicket(request, ticketData));
     }
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     for (const ticket of createdTickets) {
       const ticketCard = await findTicketCard(page, ticket.id, ticket.title);
@@ -131,7 +131,7 @@ test.describe('Ticket Creation and Display', () => {
 
     await createTicket(request, ticketData);
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
 
@@ -156,7 +156,7 @@ test.describe('Ticket Creation and Display', () => {
 
     const createdTicket = await createTicket(request, ticketData);
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     let ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
     await expect(ticketCard).toBeVisible();
@@ -175,7 +175,7 @@ test.describe('Ticket Creation and Display', () => {
 
     const createdTicket = await createTicket(request, ticketData);
 
-    await page.goto(`${BASE_URL}/board`);
+    await page.goto(`${BASE_URL}/projects/1/board`);
 
     const ticketCard = await findTicketCard(page, createdTicket.id, ticketData.title);
     await expect(ticketCard).toBeVisible();
