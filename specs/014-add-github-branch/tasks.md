@@ -47,12 +47,12 @@ This is a Next.js web application with the following structure:
 
 ## Phase 3.1: Setup
 
-- [ ] **T001** Verify Prisma is installed and database connection works
+- [x] **T001** Verify Prisma is installed and database connection works
   - Run: `npx prisma --version` to verify Prisma CLI available
   - Check: `prisma/schema.prisma` exists
   - Verify: DATABASE_URL in .env is configured
 
-- [ ] **T002** Ensure development environment is ready
+- [x] **T002** Ensure development environment is ready
   - Verify: Node.js 22.20.0 LTS installed
   - Verify: PostgreSQL 14+ running
   - Run: `npm install` to ensure all dependencies installed
@@ -66,20 +66,20 @@ This is a Next.js web application with the following structure:
 
 ### Contract Tests (from contracts/tickets-api.yml)
 
-- [ ] **T003** [P] Contract test: POST /api/tickets returns branch=null and autoMode=false
+- [x] **T003** [P] Contract test: POST /api/tickets returns branch=null and autoMode=false
   - File: `tests/contracts/tickets-create.spec.ts`
   - Verify: New ticket has `branch: null` in response
   - Verify: New ticket has `autoMode: false` in response
   - This test will FAIL until schema is updated (expected)
 
-- [ ] **T004** [P] Contract test: PATCH /api/tickets/:id accepts branch and autoMode
+- [x] **T004** [P] Contract test: PATCH /api/tickets/:id accepts branch and autoMode
   - File: `tests/contracts/tickets-update.spec.ts`
   - Verify: Can update branch field (string | null)
   - Verify: Can update autoMode field (boolean)
   - Verify: Branch max length validation (200 chars)
   - This test will FAIL until API route is updated (expected)
 
-- [ ] **T005** [P] Contract test: PATCH /api/tickets/:id/branch validates and updates branch
+- [x] **T005** [P] Contract test: PATCH /api/tickets/:id/branch validates and updates branch
   - File: `tests/contracts/tickets-branch.spec.ts`
   - Verify: Endpoint exists at `/api/projects/:projectId/tickets/:id/branch`
   - Verify: Accepts `{ branch: string | null }`
@@ -89,7 +89,7 @@ This is a Next.js web application with the following structure:
 
 ### Integration Tests (from quickstart.md scenarios)
 
-- [ ] **T006** [P] Integration test: Ticket creation with default values (Scenario 1)
+- [x] **T006** [P] Integration test: Ticket creation with default values (Scenario 1)
   - File: `tests/integration/ticket-defaults.spec.ts`
   - Create ticket via API
   - Assert: `branch === null` (not undefined, not empty string)
@@ -97,7 +97,7 @@ This is a Next.js web application with the following structure:
   - Assert: Other fields unchanged (title, description, stage, etc.)
   - This test will FAIL until schema migration applied (expected)
 
-- [ ] **T007** [P] Integration test: Branch assignment workflow (Scenario 2)
+- [x] **T007** [P] Integration test: Branch assignment workflow (Scenario 2)
   - File: `tests/integration/ticket-branch-assignment.spec.ts`
   - Create ticket (branch should be null)
   - Update branch via PATCH /api/projects/:projectId/tickets/:id/branch
@@ -105,7 +105,7 @@ This is a Next.js web application with the following structure:
   - Assert: Branch name stored correctly
   - This test will FAIL until new endpoint exists (expected)
 
-- [ ] **T008** [P] Integration test: AutoMode toggle (Scenario 3)
+- [x] **T008** [P] Integration test: AutoMode toggle (Scenario 3)
   - File: `tests/integration/ticket-automode.spec.ts`
   - Create ticket (autoMode should be false)
   - Update autoMode to true via PATCH /api/projects/:projectId/tickets/:id
@@ -113,14 +113,14 @@ This is a Next.js web application with the following structure:
   - Assert: autoMode changed correctly
   - This test will FAIL until API route updated (expected)
 
-- [ ] **T009** [P] Integration test: Multiple fields atomic update (Scenario 4)
+- [x] **T009** [P] Integration test: Multiple fields atomic update (Scenario 4)
   - File: `tests/integration/ticket-multi-field-update.spec.ts`
   - Update title, stage, and branch in single PATCH request
   - Assert: All fields updated atomically
   - Assert: Unchanged fields preserved
   - This test will FAIL until API route supports new fields (expected)
 
-- [ ] **T010** [P] Integration test: Branch validation edge cases (Scenarios 5-7)
+- [x] **T010** [P] Integration test: Branch validation edge cases (Scenarios 5-7)
   - File: `tests/integration/ticket-branch-validation.spec.ts`
   - Test: Clear branch (set to null)
   - Test: Reject branch longer than 200 chars (400 error)
