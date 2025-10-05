@@ -198,7 +198,7 @@ SETUP STEPS:
 - (Optional) Install spec-kit via `uv pip install spec-kit` if you rely on upstream templates instead of the repository’s `.specify` scripts.
 
 COMMAND EXECUTION:
-- Case statement matching command input: specify → claude /specify, plan → claude /plan, task → claude /task, implement → claude /implement.
+- Case statement matching command input: specify → `claude /specify "Ticket ${ticketId}: ${ticketTitle}\n\n${ticketDescription}"`, plan → claude /plan, task → claude /task, implement → claude /implement.
 - Clarify command: write answers_json to clarifications.json file, then run claude /clarify --answers clarifications.json.
 - Handle unknown commands with error exit.
 
