@@ -47,6 +47,8 @@ model Ticket {
   stage       Stage    @default(INBOX)
   version     Int      @default(1)
   projectId   Int
+  branch      String?  @db.VarChar(200)
+  autoMode    Boolean  @default(false)
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   jobs        Job[]
   createdAt   DateTime @default(now())

@@ -126,12 +126,24 @@ export const patchTicketSchema = z
   .object({
     title: titleSchema.optional(),
     description: descriptionSchema.optional(),
+    stage: StageSchema.optional(),
+    branch: z.string().max(200).nullable().optional(),
+    autoMode: z.boolean().optional(),
     version: versionSchema,
   })
   .refine(
-    (data) => data.title !== undefined || data.description !== undefined,
-    { message: 'At least one field (title or description) must be provided' }
+    (data) =>
+      data.title !== undefined ||
+      data.description !== undefined ||
+      data.stage !== undefined ||
+      data.branch !== undefined ||
+      data.autoMode !== undefined,
+    { message: 'At least one field must be provided' }
   );
+
+export const updateBranchSchema = z.object({
+  branch: z.string().max(200).nullable(),
+});
 
 export const ticketResponseSchema = z.object({
   id: z.number().int().positive(),
@@ -139,6 +151,9 @@ export const ticketResponseSchema = z.object({
   description: z.string(),
   stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
   version: z.number().int().positive(),
+  projectId: z.number().int().positive(),
+  branch: z.string().max(200).nullable(),
+  autoMode: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -150,4 +165,5 @@ export type Stage = z.infer<typeof StageSchema>;
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
 export type TicketValidation = z.infer<typeof TicketSchema>;
 export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
+export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 export type TicketResponse = z.infer<typeof ticketResponseSchema>;

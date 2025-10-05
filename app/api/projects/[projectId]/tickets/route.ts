@@ -10,7 +10,7 @@ import { ZodError } from 'zod';
  * Returns all tickets for a specific project, grouped by stage
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ) {
   try {
@@ -107,7 +107,10 @@ export async function POST(
 
       // Create a descriptive error message from field errors
       const fieldErrorMessages = Object.entries(flattened.fieldErrors)
-        .map(([field, errors]) => `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`)
+        .map(
+          ([field, errors]) =>
+            `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`
+        )
         .join('; ');
 
       const errorMessage = fieldErrorMessages || 'Invalid input';
@@ -139,6 +142,9 @@ export async function POST(
         description: ticket.description,
         stage: ticket.stage,
         version: ticket.version,
+        projectId: ticket.projectId,
+        branch: ticket.branch,
+        autoMode: ticket.autoMode,
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
       },
@@ -152,7 +158,10 @@ export async function POST(
       const flattened = error.flatten();
 
       const fieldErrorMessages = Object.entries(flattened.fieldErrors)
-        .map(([field, errors]) => `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`)
+        .map(
+          ([field, errors]) =>
+            `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`
+        )
         .join('; ');
 
       const errorMessage = fieldErrorMessages || 'Invalid input';

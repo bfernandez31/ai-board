@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { CreateTicketSchema, type CreateTicketInput, TitleFieldSchema, DescriptionFieldSchema } from '@/lib/validations/ticket';
+import {
+  CreateTicketSchema,
+  type CreateTicketInput,
+  TitleFieldSchema,
+  DescriptionFieldSchema,
+} from '@/lib/validations/ticket';
 import {
   Dialog,
   DialogContent,
@@ -59,7 +64,8 @@ export function NewTicketModal({
 
   // Validate a single field
   const validateField = (field: keyof CreateTicketInput, value: string) => {
-    const schema = field === 'title' ? TitleFieldSchema : DescriptionFieldSchema;
+    const schema =
+      field === 'title' ? TitleFieldSchema : DescriptionFieldSchema;
     const result = schema.safeParse(value);
     if (result.success) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -117,7 +123,9 @@ export function NewTicketModal({
           if (errorData.details?.fieldErrors) {
             Object.entries(errorData.details.fieldErrors).forEach(
               ([field, messages]) => {
-                const message = Array.isArray(messages) ? messages[0] : messages;
+                const message = Array.isArray(messages)
+                  ? messages[0]
+                  : messages;
                 if (typeof message === 'string') {
                   fieldErrors[field as keyof CreateTicketInput] = message;
                 }

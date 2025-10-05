@@ -81,6 +81,9 @@ export interface TicketWithVersion {
   description: string | null;
   stage: Stage;
   version: number;
+  projectId: number;
+  branch: string | null;
+  autoMode: boolean;
   createdAt: string;
   updatedAt: string;
 }

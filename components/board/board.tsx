@@ -18,7 +18,10 @@ import { TicketDetailModal } from './ticket-detail-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-validation';
 import { TicketWithVersion } from '@/lib/types';
-import { updateTicketStageOptimistically, revertTicketStage } from '@/lib/optimistic-updates';
+import {
+  updateTicketStageOptimistically,
+  revertTicketStage,
+} from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 
 interface BoardProps {
@@ -36,10 +39,16 @@ interface BoardProps {
  * - Touch and pointer support
  * - Project-scoped API calls
  */
-export function Board({ ticketsByStage: initialTicketsByStage, projectId }: BoardProps) {
+export function Board({
+  ticketsByStage: initialTicketsByStage,
+  projectId,
+}: BoardProps) {
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
-  const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(null);
-  const [selectedTicket, setSelectedTicket] = useState<TicketWithVersion | null>(null);
+  const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
+    null
+  );
+  const [selectedTicket, setSelectedTicket] =
+    useState<TicketWithVersion | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
@@ -64,20 +73,26 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
     })
   );
 
-  const groupTicketsByStage = useCallback((tickets: TicketWithVersion[]): Record<Stage, TicketWithVersion[]> => {
-    const grouped = getAllStages().reduce((acc, stage) => {
-      acc[stage] = [];
-      return acc;
-    }, {} as Record<Stage, TicketWithVersion[]>);
+  const groupTicketsByStage = useCallback(
+    (tickets: TicketWithVersion[]): Record<Stage, TicketWithVersion[]> => {
+      const grouped = getAllStages().reduce(
+        (acc, stage) => {
+          acc[stage] = [];
+          return acc;
+        },
+        {} as Record<Stage, TicketWithVersion[]>
+      );
 
-    tickets.forEach((ticket) => {
-      if (ticket.stage in grouped) {
-        grouped[ticket.stage as Stage].push(ticket);
-      }
-    });
+      tickets.forEach((ticket) => {
+        if (ticket.stage in grouped) {
+          grouped[ticket.stage as Stage].push(ticket);
+        }
+      });
 
-    return grouped;
-  }, []);
+      return grouped;
+    },
+    []
+  );
 
   // Get all tickets as a flat array for updates
   const allTickets = useMemo(() => {
@@ -121,19 +136,26 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
       const originalVersion = ticket.version;
 
       // Optimistic update
-      const updatedTickets = updateTicketStageOptimistically(allTickets, ticket.id, targetStage);
+      const updatedTickets = updateTicketStageOptimistically(
+        allTickets,
+        ticket.id,
+        targetStage
+      );
       setTicketsByStage(groupTicketsByStage(updatedTickets));
 
       // Send update to server (project-scoped API)
       try {
-        const response = await fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stage: targetStage,
-            version: originalVersion,
-          }),
-        });
+        const response = await fetch(
+          `/api/projects/${projectId}/tickets/${ticket.id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              stage: targetStage,
+              version: originalVersion,
+            }),
+          }
+        );
 
         if (!response.ok) {
           const error = await response.json();
@@ -158,7 +180,8 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
             toast({
               variant: 'destructive',
               title: 'Failed to update ticket',
-              description: error.message || 'An error occurred while updating the ticket.',
+              description:
+                error.message || 'An error occurred while updating the ticket.',
             });
           }
         } else {
@@ -211,6 +234,9 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
     description: string | null;
     stage: Stage | string;
     version: number;
+    projectId: number;
+    branch: string | null;
+    autoMode: boolean;
     createdAt: string | Date;
     updatedAt: string | Date;
   };
@@ -227,6 +253,9 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
         description: updatedTicket.description,
         stage: updatedTicket.stage as Stage,
         version: updatedTicket.version,
+        projectId: updatedTicket.projectId,
+        branch: updatedTicket.branch,
+        autoMode: updatedTicket.autoMode,
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()
@@ -237,9 +266,13 @@ export function Board({ ticketsByStage: initialTicketsByStage, projectId }: Boar
             : updatedTicket.updatedAt,
       };
 
-      const ticketExists = allTickets.some((ticket) => ticket.id === normalizedTicket.id);
+      const ticketExists = allTickets.some(
+        (ticket) => ticket.id === normalizedTicket.id
+      );
       const updatedTickets = ticketExists
-        ? allTickets.map((ticket) => (ticket.id === normalizedTicket.id ? normalizedTicket : ticket))
+        ? allTickets.map((ticket) =>
+            ticket.id === normalizedTicket.id ? normalizedTicket : ticket
+          )
         : [...allTickets, normalizedTicket];
 
       setTicketsByStage(groupTicketsByStage(updatedTickets));

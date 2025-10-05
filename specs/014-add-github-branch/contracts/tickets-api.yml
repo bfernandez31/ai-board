@@ -1,0 +1,305 @@
+openapi: 3.0.0
+info:
+  title: Tickets API - Branch Tracking Extension
+  version: 1.1.0
+  description: API contract for ticket branch tracking and automation mode
+
+paths:
+  /api/tickets:
+    post:
+      summary: Create new ticket
+      description: Creates a ticket with default values for branch (null) and autoMode (false)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - projectId
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 1000
+                projectId:
+                  type: integer
+                  minimum: 1
+              additionalProperties: false
+            example:
+              title: "Add user authentication"
+              description: "Implement JWT-based authentication system"
+              projectId: 1
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+              example:
+                id: 123
+                title: "Add user authentication"
+                description: "Implement JWT-based authentication system"
+                stage: "INBOX"
+                version: 1
+                projectId: 1
+                branch: null
+                autoMode: false
+                createdAt: "2025-10-04T12:00:00Z"
+                updatedAt: "2025-10-04T12:00:00Z"
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tickets/{id}:
+    get:
+      summary: Get ticket by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ticket found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update ticket (partial)
+      description: Update any ticket fields including branch and autoMode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 1000
+                stage:
+                  $ref: '#/components/schemas/Stage'
+                branch:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                autoMode:
+                  type: boolean
+              additionalProperties: false
+            examples:
+              updateBranch:
+                summary: Update branch name
+                value:
+                  branch: "014-add-github-branch"
+              enableAutoMode:
+                summary: Enable automation
+                value:
+                  autoMode: true
+              clearBranch:
+                summary: Clear branch assignment
+                value:
+                  branch: null
+              multipleFields:
+                summary: Update multiple fields
+                value:
+                  title: "Updated title"
+                  branch: "014-new-feature"
+                  autoMode: true
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tickets/{id}/branch:
+    patch:
+      summary: Update ticket branch (specialized endpoint)
+      description: Specialized endpoint for automation scripts to update branch only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - branch
+              properties:
+                branch:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+              additionalProperties: false
+            examples:
+              setBranch:
+                summary: Set branch name
+                value:
+                  branch: "014-add-github-branch"
+              clearBranch:
+                summary: Clear branch
+                value:
+                  branch: null
+      responses:
+        '200':
+          description: Branch updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - branch
+                  - updatedAt
+                properties:
+                  id:
+                    type: integer
+                  branch:
+                    type: string
+                    nullable: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+              example:
+                id: 123
+                branch: "014-add-github-branch"
+                updatedAt: "2025-10-04T12:05:00Z"
+        '400':
+          description: Invalid request body or branch too long
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                branchTooLong:
+                  summary: Branch name exceeds 200 characters
+                  value:
+                    error: "Validation error"
+                    details:
+                      - field: "branch"
+                        message: "String must contain at most 200 character(s)"
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Ticket:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - stage
+        - version
+        - projectId
+        - branch
+        - autoMode
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        stage:
+          $ref: '#/components/schemas/Stage'
+        version:
+          type: integer
+        projectId:
+          type: integer
+        branch:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Git branch name (null until /specify workflow creates branch)
+        autoMode:
+          type: boolean
+          description: Whether automation scripts should auto-advance ticket stages
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Stage:
+      type: string
+      enum:
+        - INBOX
+        - SPECIFY
+        - PLAN
+        - BUILD
+        - VERIFY
+        - SHIP
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
