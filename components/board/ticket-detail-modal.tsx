@@ -26,6 +26,9 @@ interface TicketData {
   description: string | null;
   stage: string;
   version: number;
+  projectId: number;
+  branch: string | null;
+  autoMode: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -54,11 +57,26 @@ interface TicketDetailModalProps {
  * Stage badge configuration mapping stages to Tailwind CSS classes
  */
 const stageBadgeConfig: Record<string, { label: string; className: string }> = {
-  INBOX: { label: 'Inbox', className: 'bg-zinc-600 text-zinc-50 border-zinc-500' },
-  PLAN: { label: 'Plan', className: 'bg-blue-600 text-blue-50 border-blue-500' },
-  BUILD: { label: 'Build', className: 'bg-green-600 text-green-50 border-green-500' },
-  VERIFY: { label: 'Verify', className: 'bg-orange-600 text-orange-50 border-orange-500' },
-  SHIP: { label: 'Ship', className: 'bg-purple-600 text-purple-50 border-purple-500' },
+  INBOX: {
+    label: 'Inbox',
+    className: 'bg-zinc-600 text-zinc-50 border-zinc-500',
+  },
+  PLAN: {
+    label: 'Plan',
+    className: 'bg-blue-600 text-blue-50 border-blue-500',
+  },
+  BUILD: {
+    label: 'Build',
+    className: 'bg-green-600 text-green-50 border-green-500',
+  },
+  VERIFY: {
+    label: 'Verify',
+    className: 'bg-orange-600 text-orange-50 border-orange-500',
+  },
+  SHIP: {
+    label: 'Ship',
+    className: 'bg-purple-600 text-purple-50 border-purple-500',
+  },
 };
 
 /**
@@ -97,7 +115,13 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
  * @param onOpenChange - Callback for state changes (e.g., when user closes modal)
  * @param onUpdate - Callback to refresh parent board state after successful update
  */
-export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projectId }: TicketDetailModalProps) {
+export function TicketDetailModal({
+  ticket,
+  open,
+  onOpenChange,
+  onUpdate,
+  projectId,
+}: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
 
@@ -106,7 +130,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
     if (ticket) {
       setLocalTicket((current) => {
         // Only update if different ticket or newer version
-        if (!current || current.id !== ticket.id || current.version !== ticket.version) {
+        if (
+          !current ||
+          current.id !== ticket.id ||
+          current.version !== ticket.version
+        ) {
           return ticket;
         }
         return current;
@@ -122,7 +150,9 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
     if (!localTicket) return;
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`);
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`
+      );
       if (response.ok) {
         const serverTicket = await response.json();
         const normalizedTicket: TicketData = {
@@ -150,14 +180,17 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
     setLocalTicket({ ...localTicket, title: newTitle });
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle,
-          version: localTicket.version,
-        }),
-      });
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: newTitle,
+            version: localTicket.version,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -170,7 +203,8 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
           toast({
             variant: 'destructive',
             title: 'Conflict',
-            description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
+            description:
+              'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
 
           // Refresh ticket from server to get the actual current state
@@ -194,7 +228,8 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Failed to save changes while offline. Changes reverted.',
+            description:
+              'Failed to save changes while offline. Changes reverted.',
           });
 
           // Rollback after short delay to allow optimistic state to show
@@ -239,7 +274,9 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
   };
 
   // Save handler for description
-  const handleSaveDescription = async (newDescription: string): Promise<void> => {
+  const handleSaveDescription = async (
+    newDescription: string
+  ): Promise<void> => {
     if (!localTicket) return;
 
     const originalTicket = { ...localTicket };
@@ -248,14 +285,17 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
     setLocalTicket({ ...localTicket, description: newDescription });
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tickets/${localTicket.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: newDescription,
-          version: localTicket.version,
-        }),
-      });
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: newDescription,
+            version: localTicket.version,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -268,7 +308,8 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
           toast({
             variant: 'destructive',
             title: 'Conflict',
-            description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
+            description:
+              'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
 
           // Refresh ticket from server to get the actual current state
@@ -292,7 +333,8 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
           toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Failed to save changes while offline. Changes reverted.',
+            description:
+              'Failed to save changes while offline. Changes reverted.',
           });
 
           // Rollback after short delay to allow optimistic state to show
@@ -392,7 +434,10 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                   onChange={titleEdit.handleChange}
                   onKeyDown={titleEdit.handleKeyDown}
                   onKeyUp={(event) => {
-                    if (event.key === 'Escape' || (event.key === 'Enter' && !event.shiftKey)) {
+                    if (
+                      event.key === 'Escape' ||
+                      (event.key === 'Enter' && !event.shiftKey)
+                    ) {
                       event.preventDefault();
                       event.stopPropagation();
                     }
@@ -404,10 +449,15 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                   name="title"
                   aria-label="Edit ticket title"
                   aria-invalid={!!titleEdit.error}
-                  aria-describedby={titleEdit.error ? "title-error" : undefined}
+                  aria-describedby={titleEdit.error ? 'title-error' : undefined}
                 />
                 {titleEdit.error && (
-                  <p id="title-error" className="text-sm text-red-400 font-medium" data-testid="title-error" role="alert">
+                  <p
+                    id="title-error"
+                    className="text-sm text-red-400 font-medium"
+                    data-testid="title-error"
+                    role="alert"
+                  >
                     {titleEdit.error}
                   </p>
                 )}
@@ -460,7 +510,9 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
             {descriptionEdit.isEditing ? (
               <div className="space-y-4">
                 <Textarea
-                  ref={descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>}
+                  ref={
+                    descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>
+                  }
                   value={descriptionEdit.value}
                   onChange={descriptionEdit.handleChange}
                   onKeyDown={descriptionEdit.handleKeyDown}
@@ -478,14 +530,23 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                   name="description"
                   aria-label="Edit ticket description"
                   aria-invalid={!!descriptionEdit.error}
-                  aria-describedby={descriptionEdit.error ? "description-error" : "description-counter"}
+                  aria-describedby={
+                    descriptionEdit.error
+                      ? 'description-error'
+                      : 'description-counter'
+                  }
                 />
                 <CharacterCounter
                   current={descriptionEdit.value.length}
                   max={1000}
                 />
                 {descriptionEdit.error && (
-                  <p id="description-error" className="text-sm text-red-400 font-medium" data-testid="description-error" role="alert">
+                  <p
+                    id="description-error"
+                    className="text-sm text-red-400 font-medium"
+                    data-testid="description-error"
+                    role="alert"
+                  >
                     {descriptionEdit.error}
                   </p>
                 )}
@@ -495,7 +556,12 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                     onClick={async () => {
                       await descriptionEdit.save();
                     }}
-                    disabled={descriptionEdit.isSaving || !!descriptionEdit.error || descriptionEdit.value.trim() === (localTicket?.description || '')}
+                    disabled={
+                      descriptionEdit.isSaving ||
+                      !!descriptionEdit.error ||
+                      descriptionEdit.value.trim() ===
+                        (localTicket?.description || '')
+                    }
                     className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 shadow-sm"
                     aria-label="Save description changes"
                   >
@@ -532,7 +598,11 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                 aria-label="Edit ticket description"
               >
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <Pencil className="w-5 h-5 text-zinc-400" data-testid="edit-icon-description" aria-hidden="true" />
+                  <Pencil
+                    className="w-5 h-5 text-zinc-400"
+                    data-testid="edit-icon-description"
+                    aria-hidden="true"
+                  />
                 </div>
                 <div
                   className="
@@ -542,7 +612,9 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
                     scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-900
                   "
                 >
-                  {localTicket?.description || ticket.description || 'No description provided'}
+                  {localTicket?.description ||
+                    ticket.description ||
+                    'No description provided'}
                 </div>
               </div>
             )}
@@ -551,13 +623,17 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onUpdate, projec
           {/* Dates section */}
           <div className="border-t-2 border-zinc-700/50 pt-6 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-300 font-medium">Created:</span>
+              <span className="text-sm text-zinc-300 font-medium">
+                Created:
+              </span>
               <span className="text-sm text-zinc-100 font-mono">
                 {formatTicketDate(ticket.createdAt)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-300 font-medium">Last Updated:</span>
+              <span className="text-sm text-zinc-300 font-medium">
+                Last Updated:
+              </span>
               <span className="text-sm text-zinc-100 font-mono">
                 {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
               </span>

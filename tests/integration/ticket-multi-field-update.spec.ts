@@ -175,13 +175,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
     );
 
     // Update only title and autoMode (branch should remain)
+    // Note: /branch endpoint doesn't increment version, so version is still 1
     const updateResponse = await request.patch(
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
           title: 'New title',
           autoMode: true,
-          version: 2,
+          version: 1, // Version is still 1 because /branch doesn't increment it
         },
       }
     );

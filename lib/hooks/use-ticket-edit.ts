@@ -14,8 +14,12 @@ interface UseTicketEditReturn {
   startEdit: () => void;
   cancelEdit: () => void;
   save: () => Promise<void>;
-  handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  handleKeyDown: (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  handleChange: (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+  handleKeyDown: (
+    e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
 }
 
@@ -109,7 +113,9 @@ export function useTicketEdit({
   const handleKeyDown = (
     e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const nativeEvent = e.nativeEvent as { stopImmediatePropagation?: () => void };
+    const nativeEvent = e.nativeEvent as {
+      stopImmediatePropagation?: () => void;
+    };
     const isTextarea = e.currentTarget.tagName === 'TEXTAREA';
     const hasMeta = e.ctrlKey || e.metaKey;
 
@@ -152,6 +158,8 @@ export function useTicketEdit({
     save: handleSave,
     handleChange,
     handleKeyDown,
-    inputRef: inputRef as React.RefObject<HTMLInputElement | HTMLTextAreaElement>,
+    inputRef: inputRef as React.RefObject<
+      HTMLInputElement | HTMLTextAreaElement
+    >,
   };
 }

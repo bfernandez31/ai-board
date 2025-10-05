@@ -40,4 +40,39 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 - 012-add-project-model: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router)
 
 <!-- MANUAL ADDITIONS START -->
+
+## Data Model Notes
+
+### Ticket Model
+The Ticket model includes the following fields for GitHub branch tracking and automation:
+
+- **`branch`** (String?, max 200 chars): Tracks the Git branch associated with the ticket
+  - Nullable field, defaults to `null` for new tickets
+  - Updated via PATCH `/api/projects/:projectId/tickets/:id` or specialized `/branch` endpoint
+  - Max length: 200 characters (validated at schema and API level)
+
+- **`autoMode`** (Boolean): Enables automatic workflow progression for the ticket
+  - Defaults to `false` for new tickets
+  - Updated via PATCH `/api/projects/:projectId/tickets/:id`
+
+## API Endpoints
+
+### Ticket Branch Management
+
+**PATCH `/api/projects/:projectId/tickets/:id/branch`**
+- Specialized endpoint for updating ticket branch without version control
+- Request body: `{ branch: string | null }`
+- Response: `{ id, branch, updatedAt }` (minimal response)
+- Validation: Branch max length 200 characters
+- Does NOT use optimistic concurrency control (no version checking)
+
+**PATCH `/api/projects/:projectId/tickets/:id`**
+- General update endpoint supporting all ticket fields
+- Now accepts `branch` and `autoMode` fields
+- Uses optimistic concurrency control with version field
+- Request body: `{ title?, description?, stage?, branch?, autoMode?, version }`
+- Response: Full ticket object including new fields
+
+**Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
+
 <!-- MANUAL ADDITIONS END -->

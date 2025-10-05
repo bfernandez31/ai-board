@@ -20,7 +20,7 @@ const UpdateStageSchema = z.object({
  * Get a single ticket by ID with project validation
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
@@ -40,10 +40,7 @@ export async function GET(
     const ticketId = parseInt(ticketIdString, 10);
 
     if (isNaN(ticketId)) {
-      return NextResponse.json(
-        { error: 'Invalid ticket ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid ticket ID' }, { status: 400 });
     }
 
     // Check if project exists
@@ -76,10 +73,7 @@ export async function GET(
           { status: 404 }
         );
       } else {
-        return NextResponse.json(
-          { error: 'Forbidden' },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
@@ -90,6 +84,8 @@ export async function GET(
       stage: ticket.stage,
       version: ticket.version,
       projectId: ticket.projectId,
+      branch: ticket.branch,
+      autoMode: ticket.autoMode,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
     });
@@ -187,18 +183,19 @@ export async function PATCH(
     const body = await request.json();
 
     // Determine operation type based on request body
-    const isStageUpdate = 'stage' in body;
-    const isInlineEdit = 'title' in body || 'description' in body;
-
-    if (isStageUpdate && isInlineEdit) {
-      return NextResponse.json(
-        {
-          error: 'Invalid request',
-          message: 'Cannot update stage and title/description in the same request',
-        },
-        { status: 400 }
+    const isStageUpdate =
+      'stage' in body &&
+      !(
+        'title' in body ||
+        'description' in body ||
+        'branch' in body ||
+        'autoMode' in body
       );
-    }
+    const isInlineEdit =
+      'title' in body ||
+      'description' in body ||
+      'branch' in body ||
+      'autoMode' in body;
 
     // Handle inline edit (title/description update)
     if (isInlineEdit) {
@@ -214,7 +211,14 @@ export async function PATCH(
         );
       }
 
-      const { title, description, version: requestVersion } = parseResult.data;
+      const {
+        title,
+        description,
+        stage,
+        branch,
+        autoMode,
+        version: requestVersion,
+      } = parseResult.data;
 
       // Check if ticket exists with project validation
       const currentTicket = await prisma.ticket.findFirst({
@@ -238,10 +242,7 @@ export async function PATCH(
           );
         } else {
           // Ticket exists but belongs to different project
-          return NextResponse.json(
-            { error: 'Forbidden' },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
       }
 
@@ -265,7 +266,12 @@ export async function PATCH(
           },
           data: {
             ...(title !== undefined && { title: title.trim() }),
-            ...(description !== undefined && { description: description.trim() }),
+            ...(description !== undefined && {
+              description: description.trim(),
+            }),
+            ...(stage !== undefined && { stage }),
+            ...(branch !== undefined && { branch }),
+            ...(autoMode !== undefined && { autoMode }),
             version: { increment: 1 },
           },
         });
@@ -277,6 +283,9 @@ export async function PATCH(
             description: updatedTicket.description,
             stage: updatedTicket.stage,
             version: updatedTicket.version,
+            projectId: updatedTicket.projectId,
+            branch: updatedTicket.branch,
+            autoMode: updatedTicket.autoMode,
             createdAt: updatedTicket.createdAt.toISOString(),
             updatedAt: updatedTicket.updatedAt.toISOString(),
           },
@@ -342,10 +351,7 @@ export async function PATCH(
             { status: 404 }
           );
         } else {
-          return NextResponse.json(
-            { error: 'Forbidden' },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
       }
 

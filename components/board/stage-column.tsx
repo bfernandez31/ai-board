@@ -17,18 +17,21 @@ interface StageColumnProps {
 }
 
 // Stage configuration matching original design
-const STAGE_CONFIG: Record<Stage, {
-  label: string;
-  color: string;
-  bgColor: string;
-  headerBgColor: string;
-  headerBorderColor: string;
-  textColor: string;
-  borderColor: string;
-  badgeBgColor: string;
-  badgeTextColor: string;
-  order: number;
-}> = {
+const STAGE_CONFIG: Record<
+  Stage,
+  {
+    label: string;
+    color: string;
+    bgColor: string;
+    headerBgColor: string;
+    headerBorderColor: string;
+    textColor: string;
+    borderColor: string;
+    badgeBgColor: string;
+    badgeTextColor: string;
+    order: number;
+  }
+> = {
   [Stage.INBOX]: {
     label: 'INBOX',
     color: 'gray',
@@ -107,7 +110,13 @@ const STAGE_CONFIG: Record<Stage, {
  * StageColumn Component - Original Design with Drag-and-Drop
  */
 export const StageColumn = React.memo(
-  ({ stage, tickets, isDraggable = true, onTicketClick, projectId }: StageColumnProps) => {
+  ({
+    stage,
+    tickets,
+    isDraggable = true,
+    onTicketClick,
+    projectId,
+  }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
       data: {
@@ -136,7 +145,9 @@ export const StageColumn = React.memo(
         >
           <div className="flex items-center justify-between gap-3">
             {/* Stage name */}
-            <h2 className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stageConfig.textColor}`}>
+            <h2
+              className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stageConfig.textColor}`}
+            >
               {stageConfig.label}
             </h2>
             {/* Ticket count badge */}
@@ -152,7 +163,9 @@ export const StageColumn = React.memo(
         <ScrollArea className="flex-1">
           <div className="space-y-3 px-4 pb-5 pt-3">
             {/* New Ticket Button - Only in INBOX */}
-            {showNewTicketButton && <NewTicketButton stage={stage} projectId={projectId} />}
+            {showNewTicketButton && (
+              <NewTicketButton stage={stage} projectId={projectId} />
+            )}
 
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
