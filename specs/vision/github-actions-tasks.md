@@ -194,8 +194,8 @@ SETUP STEPS:
 - Setup Node.js 22.20.0 (use actions/setup-node@v4).
 - Setup Python 3.11 (use actions/setup-python@v5).
 - Install Claude Code CLI: npm install -g @anthropic-ai/claude-code.
-- Install spec-kit: pip install uv && uv pip install spec-kit.
 - Configure Git user: ai-board[bot] <bot@ai-board.app>.
+- (Optional) Install spec-kit via `uv pip install spec-kit` if you rely on upstream templates instead of the repository’s `.specify` scripts.
 
 COMMAND EXECUTION:
 - Case statement matching command input: specify → claude /specify, plan → claude /plan, task → claude /task, implement → claude /implement.
@@ -219,7 +219,7 @@ SECRETS:
 ACCEPTANCE CRITERIA:
 - Workflow file committed at `.github/workflows/speckit.yml`.
 - Manual workflow dispatch works from GitHub Actions UI with all inputs.
-- Specify command generates spec.md in specs/<ticket-id>/ directory.
+- Specify command generates `spec.md` inside `specs/<branch-name>/` (branch created by `.specify/scripts/bash/create-new-feature.sh`).
 - Plan command generates plan.md and tasks.md files.
 - Commits created with ai-board[bot] author.
 - Changes pushed to feature branch successfully.
