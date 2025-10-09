@@ -36,13 +36,14 @@
 - ✅ ANTHROPIC_API_KEY environment variable
 
 #### Command Execution (T026-T031)
-- ✅ specify command: `claude --dangerously-skip-permissions /specify "Ticket {id}: {title}\n\n{description}"`
+- ✅ specify command: `claude --dangerously-skip-permissions /specify "[{id}] {title}: {description}"`
 - ✅ plan command: `claude --dangerously-skip-permissions /plan`
 - ✅ task command: `claude --dangerously-skip-permissions /task`
 - ✅ implement command: `claude --dangerously-skip-permissions /implement`
 - ✅ clarify command: Write answers_json to file → `claude --dangerously-skip-permissions /clarify --answers clarifications.json`
 - ✅ Bash case statement with error handling for unknown commands
 - ✅ Auto-approval flag `--dangerously-skip-permissions` for non-interactive execution
+- ✅ Environment variables for safe handling of special characters and multiline inputs
 
 #### Git Operations (T032-T036)
 - ✅ Stage all changes: `git add .`

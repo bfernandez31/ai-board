@@ -4,6 +4,10 @@ This document references the test procedures defined in quickstart.md for TDD im
 
 **Important**: All Claude commands are executed with `--dangerously-skip-permissions` flag to enable non-interactive execution in GitHub Actions CI/CD environment.
 
+**Specify Command Format**: The specify command receives ticket context in the format: `[ticket_id] ticketTitle: ticketDescription`
+
+**Special Characters Handling**: All inputs (ticket_id, ticketTitle, ticketDescription, answers_json) are passed via environment variables to safely handle multiline content, quotes, and special characters
+
 ## Phase 3.2: Tests First (TDD)
 
 ### T003: Test 1 - Specify Command Test Procedure

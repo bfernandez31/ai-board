@@ -83,7 +83,11 @@ jobs:
 
           case "${{ inputs.command }}" in
             specify)
-              claude --dangerously-skip-permissions /specify "${{ inputs.ticketDescription }}"
+              # Write description to file to handle multiline content
+              cat > /tmp/ticket-description.txt <<'TICKET_EOF'
+[${{ inputs.ticket_id }}] ${{ inputs.ticketTitle }}: ${{ inputs.ticketDescription }}
+TICKET_EOF
+              claude --dangerously-skip-permissions /specify "$(cat /tmp/ticket-description.txt)"
               ;;
             plan)
               claude --dangerously-skip-permissions /plan
