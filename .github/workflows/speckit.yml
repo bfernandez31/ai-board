@@ -10,13 +10,13 @@ on:
         type: string
 
       ticketTitle:
-        description: 'Ticket title for context'
-        required: true
+        description: 'Ticket title for context (required for specify command)'
+        required: false
         type: string
 
       ticketDescription:
-        description: 'Detailed ticket description'
-        required: true
+        description: 'Detailed ticket description (required for specify command)'
+        required: false
         type: string
 
       branch:
