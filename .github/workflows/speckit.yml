@@ -46,6 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
+    permissions:
+      contents: write
+
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
