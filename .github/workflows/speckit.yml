@@ -1,4 +1,5 @@
 name: Spec-Kit Workflow Execution
+# Manual trigger workflow for spec-kit command execution
 
 on:
   workflow_dispatch:
