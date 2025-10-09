@@ -186,7 +186,7 @@ REQUIREMENTS:
 
 WORKFLOW FILE:
 - Create `.github/workflows/speckit.yml` with workflow_dispatch trigger.
-- Inputs: ticket_id (string, required), command (choice: specify|plan|task|implement|clarify, required), branch (string, required), answers_json (string, optional for clarify).
+- Inputs: ticket_id (string, required), ticketTitle (string,required), ticketDescription(string, required),  branch (string, optional, only required for command other than specify),command (choice: specify|plan|task|implement|clarify, required), answers_json (string, optional for clarify).
 - Job: run-speckit on ubuntu-latest with 120-minute timeout.
 
 SETUP STEPS:

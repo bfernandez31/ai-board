@@ -1,0 +1,395 @@
+# GitHub Actions Workflow Contract: Spec-Kit Execution
+
+name: Spec-Kit Workflow Execution
+version: 1.0.0
+description: Manual workflow dispatch contract for executing spec-kit commands in ephemeral runner environments
+
+# Input Contract
+inputs:
+  ticket_id:
+    type: string
+    required: true
+    description: Ticket identifier (e.g., 016, PROJ-123)
+    constraints:
+      - pattern: "^[a-zA-Z0-9-]+$"
+      - min_length: 1
+      - max_length: 50
+    examples:
+      - "016"
+      - "PROJ-123"
+      - "feature-001"
+
+  ticketTitle:
+    type: string
+    required: true
+    description: Ticket title for context
+    constraints:
+      - min_length: 1
+      - max_length: 200
+    examples:
+      - "Create GitHub Actions workflow for spec-kit"
+      - "Add authentication system"
+
+  ticketDescription:
+    type: string
+    required: true
+    description: Detailed ticket description
+    constraints:
+      - min_length: 1
+      - max_length: 5000
+    examples:
+      - "Add workflow file that executes spec-kit commands..."
+      - "Implement user authentication with email/password..."
+
+  branch:
+    type: string
+    required: false
+    description: Target branch (optional for specify, required context for others)
+    default: ""
+    constraints:
+      - pattern: "^[a-zA-Z0-9/_-]*$"  # Valid git branch name
+      - max_length: 100
+    examples:
+      - "016-create-github-actions"
+      - "feature/auth-system"
+      - ""  # Empty for specify command
+
+  command:
+    type: choice
+    required: true
+    description: Spec-kit command to execute
+    options:
+      - specify
+      - plan
+      - task
+      - implement
+      - clarify
+    examples:
+      - "specify"
+      - "plan"
+
+  answers_json:
+    type: string
+    required: false
+    description: JSON answers for clarify command (optional)
+    default: "{}"
+    constraints:
+      - format: json_object
+      - max_length: 10000
+    examples:
+      - '{"question1": "answer1", "question2": "answer2"}'
+      - "{}"
+
+# Output Contract
+outputs:
+  git_commit:
+    type: object
+    description: Git commit metadata created by workflow
+    schema:
+      author_name:
+        type: string
+        value: "ai-board[bot]"
+        description: Commit author name
+      author_email:
+        type: string
+        value: "bot@ai-board.app"
+        description: Commit author email
+      message:
+        type: string
+        format: "feat(ticket-<id>): <command> - automated spec-kit execution"
+        description: Conventional commit message
+        examples:
+          - "feat(ticket-016): specify - automated spec-kit execution"
+          - "feat(ticket-123): plan - automated spec-kit execution"
+      branch:
+        type: string
+        description: Branch where commit was created
+      files_changed:
+        type: array
+        items: string
+        description: List of files modified in commit
+        examples:
+          - ["specs/016-create-github-actions/spec.md"]
+          - ["specs/016-create-github-actions/plan.md", "specs/016-create-github-actions/research.md"]
+
+  workflow_status:
+    type: object
+    description: Workflow execution status
+    schema:
+      success:
+        type: boolean
+        description: Whether workflow completed successfully
+      exit_code:
+        type: integer
+        description: Exit code (0 = success, 1 = failure)
+        enum: [0, 1]
+      message:
+        type: string
+        description: Human-readable status message
+        examples:
+          - "✅ Spec-kit command 'specify' completed successfully"
+          - "❌ Spec-kit command 'plan' failed"
+      ticket_id:
+        type: string
+        description: Ticket ID from input
+      branch:
+        type: string
+        description: Branch from input or created by script
+
+# Execution Flow Contract
+execution_flow:
+  trigger:
+    type: workflow_dispatch
+    manual: true
+    description: Manual trigger only, no automatic execution
+
+  environment:
+    runner: ubuntu-latest
+    timeout_minutes: 120
+    required_secrets:
+      - ANTHROPIC_API_KEY
+      - GITHUB_TOKEN  # Automatic, no setup needed
+
+  steps:
+    - name: checkout
+      action: actions/checkout@v4
+      parameters:
+        ref: "${{ inputs.branch || github.ref }}"
+        fetch_depth: 0
+
+    - name: setup_nodejs
+      action: actions/setup-node@v4
+      parameters:
+        node_version: "22.20.0"
+
+    - name: setup_python
+      action: actions/setup-python@v5
+      parameters:
+        python_version: "3.11"
+
+    - name: install_claude_cli
+      command: "npm install -g @anthropic-ai/claude-code"
+
+    - name: configure_git
+      commands:
+        - 'git config --global user.name "ai-board[bot]"'
+        - 'git config --global user.email "bot@ai-board.app"'
+
+    - name: execute_command
+      description: Execute spec-kit command via Claude CLI
+      commands:
+        specify: 'claude /specify "Ticket ${{ inputs.ticket_id }}: ${{ inputs.ticketTitle }}\n\n${{ inputs.ticketDescription }}"'
+        plan: "claude /plan"
+        task: "claude /task"
+        implement: "claude /implement"
+        clarify: |
+          echo '${{ inputs.answers_json }}' > clarifications.json
+          claude /clarify --answers clarifications.json
+
+    - name: commit_changes
+      commands:
+        - "git add ."
+        - 'git diff --staged --quiet || git commit -m "feat(ticket-${{ inputs.ticket_id }}): ${{ inputs.command }} - automated spec-kit execution"'
+        - "git push origin ${{ inputs.branch }}"
+
+    - name: report_status
+      success_message: |
+        ✅ Spec-kit command '${{ inputs.command }}' completed successfully
+        📍 Branch: ${{ inputs.branch }}
+        🎫 Ticket: ${{ inputs.ticket_id }}
+      failure_message: |
+        ❌ Spec-kit command '${{ inputs.command }}' failed
+        📋 Check logs above for error details
+
+# Error Handling Contract
+error_scenarios:
+  - condition: branch_not_found
+    trigger: "git checkout fails (branch doesn't exist)"
+    applicable_commands: ["plan", "task", "implement", "clarify"]
+    response:
+      exit_code: 1
+      message: "❌ Branch '${{ inputs.branch }}' not found"
+
+  - condition: missing_api_key
+    trigger: "ANTHROPIC_API_KEY secret not set"
+    applicable_commands: ["all"]
+    response:
+      exit_code: 1
+      message: "❌ ANTHROPIC_API_KEY secret not configured"
+
+  - condition: git_push_conflict
+    trigger: "git push fails (branch diverged)"
+    applicable_commands: ["all"]
+    response:
+      exit_code: 1
+      message: "❌ Git push failed - branch has conflicts"
+
+  - condition: no_changes
+    trigger: "git diff --staged --quiet returns true"
+    applicable_commands: ["all"]
+    response:
+      exit_code: 0
+      message: "✅ No changes to commit"
+      skip_commit: true
+
+  - condition: unknown_command
+    trigger: "command input not in [specify, plan, task, implement, clarify]"
+    applicable_commands: []
+    response:
+      exit_code: 1
+      message: "❌ Unknown command: ${{ inputs.command }}"
+
+  - condition: timeout
+    trigger: "Workflow exceeds 120 minutes"
+    applicable_commands: ["all"]
+    response:
+      exit_code: 1
+      message: "❌ Workflow timeout exceeded"
+      action: cancel_job
+
+# Testing Contract
+test_scenarios:
+  - name: test_specify_command
+    description: Verify specify command creates branch and spec.md
+    inputs:
+      ticket_id: "TEST-001"
+      ticketTitle: "Test Feature"
+      ticketDescription: "Test description"
+      command: "specify"
+    expected_outputs:
+      - branch_created: true
+      - files_created: ["specs/*/spec.md"]
+      - commit_message_pattern: "feat\\(ticket-TEST-001\\): specify - automated spec-kit execution"
+      - commit_author: "ai-board[bot] <bot@ai-board.app>"
+
+  - name: test_plan_command
+    description: Verify plan command generates planning artifacts
+    inputs:
+      ticket_id: "TEST-001"
+      branch: "TEST-001-test-feature"
+      command: "plan"
+    expected_outputs:
+      - files_created: ["specs/*/plan.md", "specs/*/research.md", "specs/*/data-model.md"]
+      - commit_message_pattern: "feat\\(ticket-TEST-001\\): plan - automated spec-kit execution"
+
+  - name: test_clarify_command
+    description: Verify clarify command writes answers and updates spec
+    inputs:
+      ticket_id: "TEST-001"
+      branch: "TEST-001-test-feature"
+      command: "clarify"
+      answers_json: '{"auth_method": "OAuth2", "retention_days": 90}'
+    expected_outputs:
+      - files_created: ["clarifications.json"]
+      - files_updated: ["specs/*/spec.md"]
+      - commit_author: "ai-board[bot] <bot@ai-board.app>"
+
+  - name: test_missing_branch_error
+    description: Verify error when branch not provided for non-specify command
+    inputs:
+      ticket_id: "TEST-001"
+      command: "plan"
+      branch: ""
+    expected_outputs:
+      - exit_code: 1
+      - error_message_contains: "branch"
+
+  - name: test_no_changes_scenario
+    description: Verify workflow handles no-change commits correctly
+    inputs:
+      ticket_id: "TEST-001"
+      branch: "TEST-001-test-feature"
+      command: "plan"
+    preconditions:
+      - plan_already_generated: true
+    expected_outputs:
+      - exit_code: 0
+      - commits_created: 0
+      - message_contains: "No changes to commit"
+
+# Security Contract
+security_requirements:
+  - name: secret_protection
+    requirement: Secrets must never appear in logs
+    verification:
+      - "ANTHROPIC_API_KEY not in workflow logs"
+      - "GITHUB_TOKEN not in workflow logs"
+      - "GitHub Actions automatically masks secret values"
+
+  - name: input_validation
+    requirement: All inputs validated by GitHub Actions
+    verification:
+      - "Type checking enforced (string, choice)"
+      - "Required fields enforced by UI"
+      - "Pattern validation for branch names"
+
+  - name: git_identity
+    requirement: Bot identity clearly distinguished
+    verification:
+      - 'commit_author == "ai-board[bot] <bot@ai-board.app>"'
+      - "Automated commits visually distinct in git log"
+
+# Performance Contract
+performance_requirements:
+  - metric: workflow_completion_time
+    target: "< 10 minutes for specify/plan/task commands"
+    measurement: "GitHub Actions workflow duration"
+
+  - metric: timeout_limit
+    target: "120 minutes maximum"
+    enforcement: "GitHub Actions timeout-minutes setting"
+
+  - metric: runner_resources
+    target: "Standard ubuntu-latest (2-core CPU, 7GB RAM)"
+    enforcement: "GitHub Actions runner selection"
+
+# Versioning Contract
+versioning:
+  schema_version: "1.0.0"
+  workflow_file: ".github/workflows/speckit.yml"
+  compatibility:
+    - "Input schema additions must be backward compatible (optional fields only)"
+    - "Output schema must maintain conventional commit format"
+    - "Breaking changes require major version bump"
+
+# Dependencies Contract
+dependencies:
+  external:
+    - name: "Anthropic Claude API"
+      required: true
+      authentication: "ANTHROPIC_API_KEY secret"
+      failure_mode: "Workflow fails if unavailable"
+
+    - name: "GitHub API"
+      required: true
+      authentication: "GITHUB_TOKEN (automatic)"
+      failure_mode: "Git operations fail"
+
+  internal:
+    - name: ".specify/scripts/bash/create-new-feature.sh"
+      required: true
+      used_by: ["specify command"]
+      failure_mode: "Specify command fails if script missing"
+
+    - name: "Claude Code CLI"
+      required: true
+      installation: "npm install -g @anthropic-ai/claude-code"
+      failure_mode: "All commands fail if CLI not installed"
+
+# Monitoring Contract
+monitoring:
+  - metric: workflow_success_rate
+    description: "Percentage of successful workflow executions"
+    source: "GitHub Actions workflow runs"
+
+  - metric: command_distribution
+    description: "Usage frequency of each command type"
+    source: "GitHub Actions workflow inputs"
+
+  - metric: average_execution_time
+    description: "Mean workflow duration by command type"
+    source: "GitHub Actions workflow duration"
+
+  - metric: error_frequency
+    description: "Count of errors by error type"
+    source: "GitHub Actions failure logs"

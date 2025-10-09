@@ -20,6 +20,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router) (012-add-project-model)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router), PostgreSQL 14+ (013-add-job-model)
 - PostgreSQL 14+ via Prisma ORM with existing Ticket model relation (013-add-job-model)
+- YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x) (016-create-github-actions)
+- N/A (workflow operates on repository files) (016-create-github-actions)
 
 ## Project Structure
 ```
@@ -35,9 +37,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 016-create-github-actions: Added YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x)
 - 014-add-github-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router)
 - 013-add-job-model: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router), PostgreSQL 14+
-- 012-add-project-model: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router)
 
 <!-- MANUAL ADDITIONS START -->
 

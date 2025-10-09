@@ -1,0 +1,4 @@
+name: Spec-Kit Workflow Execution
+
+on:
+  workflow_dispatch:
