@@ -100,7 +100,7 @@ jobs:
               ticket_title="${{ inputs.ticketTitle }}"
               ticket_description="${{ inputs.ticketDescription }}"
 
-              printf -v prompt '/specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
+              printf -v prompt '#%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
 
               claude --dangerously-skip-permissions /specify "$prompt"
               ;;
