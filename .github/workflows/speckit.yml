@@ -80,9 +80,7 @@ jobs:
 
           case "${{ inputs.command }}" in
             specify)
-              claude --dangerously-skip-permissions /specify "Ticket ${{ inputs.ticket_id }}: ${{ inputs.ticketTitle }}
-
-              ${{ inputs.ticketDescription }}"
+              claude --dangerously-skip-permissions /specify "${{ inputs.ticketDescription }}"
               ;;
             plan)
               claude --dangerously-skip-permissions /plan
