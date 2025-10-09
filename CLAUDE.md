@@ -22,6 +22,7 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - PostgreSQL 14+ via Prisma ORM with existing Ticket model relation (013-add-job-model)
 - YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x) (016-create-github-actions)
 - N/A (workflow operates on repository files) (016-create-github-actions)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router) (017-il-faudrait-modifier)
 
 ## Project Structure
 ```
@@ -37,9 +38,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 017-il-faudrait-modifier: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router)
 - 016-create-github-actions: Added YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x)
 - 014-add-github-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router)
-- 013-add-job-model: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router), PostgreSQL 14+
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -76,5 +77,68 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 - Response: Full ticket object including new fields
 
 **Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
+
+## Validation Rules
+
+### Ticket Title and Description
+
+The ticket validation schema allows the following characters:
+- Letters: `a-z`, `A-Z`
+- Numbers: `0-9`
+- Spaces
+- Special characters: `. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`
+
+This allows for test prefixes like `[e2e]` and other common formatting needs while preventing emojis and control characters.
+
+## E2E Test Data Isolation
+
+### Test Data Prefix Convention
+
+All E2E test-generated data MUST use the `[e2e]` prefix pattern to enable selective cleanup and data isolation:
+
+**Ticket Creation Pattern**:
+```typescript
+await createTicket(request, {
+  title: '[e2e] Fix login bug',  // ← [e2e] prefix mandatory
+  description: 'Test description',
+})
+```
+
+**Project Creation Pattern** (in `tests/helpers/db-cleanup.ts`):
+```typescript
+await client.project.upsert({
+  where: { id: 1 },
+  update: {},
+  create: {
+    id: 1,
+    name: '[e2e] Test Project',  // ← [e2e] prefix mandatory
+    ...
+  }
+})
+```
+
+### Selective Cleanup
+
+The `cleanupDatabase()` function in `tests/helpers/db-cleanup.ts` performs selective deletion:
+- **Tickets**: Deletes only tickets with `title` starting with `[e2e]`
+- **Projects**: Deletes only projects with `name` starting with `[e2e]` AND `id` NOT IN (1, 2)
+  - **Important**: Projects 1 & 2 are NEVER deleted to avoid cascade deletion of tickets
+  - These projects are stable test fixtures, created once with `[e2e]` prefix
+- **Manual Data**: All data without `[e2e]` prefix is preserved
+
+**Usage**:
+```typescript
+test.beforeEach(async () => {
+  await cleanupDatabase()  // Selective cleanup, preserves non-test data
+})
+```
+
+### Best Practices for Test Creation
+
+1. Always prefix test data: `title: '[e2e] Your Test Title'`
+2. Use `beforeEach` cleanup pattern for test isolation
+3. Assume clean database state at test start (no leftover test data)
+4. Use deterministic project IDs (1, 2) for consistency
+5. Never create data without `[e2e]` prefix in automated tests
 
 <!-- MANUAL ADDITIONS END -->

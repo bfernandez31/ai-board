@@ -43,7 +43,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     // First, create a test ticket
     const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test ticket for GET contract validation',
+        title: '[e2e] Test ticket for GET contract validation',
         description: 'This ticket validates the GET endpoint contract'
       }
     });

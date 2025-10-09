@@ -13,6 +13,10 @@ const BASE_URL = 'http://localhost:3000';
 
 async function createTicket(request: APIRequestContext, data: Record<string, unknown>): Promise<TicketResponse> {
   const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, { data });
+  if (response.status() !== 201) {
+    const errorBody = await response.text();
+    console.error(`Expected 201, got ${response.status()}. Response:`, errorBody);
+  }
   expect(response.status()).toBe(201);
   const json = (await response.json()) as Partial<TicketResponse>;
 
@@ -39,7 +43,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should create ticket via API and appear in IDLE column', async ({ page, request }) => {
     const ticketData = {
-      title: 'Fix login bug',
+      title: '[e2e] Fix login bug',
       description: 'Users cannot log in with email',
     };
 
@@ -57,7 +61,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should create ticket with minimal description and display correctly', async ({ page, request }) => {
     const ticketData = {
-      title: 'Add dark mode toggle',
+      title: '[e2e] Add dark mode toggle',
       description: 'Minimal description'
     };
     const createdTicket = await createTicket(request, ticketData);
@@ -77,7 +81,7 @@ test.describe('Ticket Creation and Display', () => {
     const initialCount = Number.parseInt((await badge.textContent()) ?? '0', 10);
 
     await createTicket(request, {
-      title: 'New ticket for count test',
+      title: '[e2e] New ticket for count test',
       description: 'Testing count update',
     });
 
@@ -89,7 +93,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should display newly created ticket with all required fields', async ({ page, request }) => {
     const ticketData = {
-      title: 'Implement user dashboard',
+      title: '[e2e] Implement user dashboard',
       description: 'Create a dashboard showing user statistics',
     };
 
@@ -104,9 +108,9 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should handle multiple sequential ticket creations', async ({ page, request }) => {
     const tickets = [
-      { title: 'First ticket', description: 'First test ticket' },
-      { title: 'Second ticket', description: 'Second test ticket' },
-      { title: 'Third ticket', description: 'Third test ticket' },
+      { title: '[e2e] First ticket', description: 'First test ticket' },
+      { title: '[e2e] Second ticket', description: 'Second test ticket' },
+      { title: '[e2e] Third ticket', description: 'Third test ticket' },
     ];
 
     const createdTickets = [] as TicketResponse[];
@@ -125,7 +129,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should display ticket in correct stage (IDLE) after creation', async ({ page, request }) => {
     const ticketData = {
-      title: 'Verify stage assignment',
+      title: '[e2e] Verify stage assignment',
       description: 'Ticket should be in IDLE stage',
     };
 
@@ -150,7 +154,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should persist ticket after page refresh', async ({ page, request }) => {
     const ticketData = {
-      title: 'Persistence test ticket',
+      title: '[e2e] Persistence test ticket',
       description: 'This ticket should persist after refresh',
     };
 
@@ -169,7 +173,7 @@ test.describe('Ticket Creation and Display', () => {
 
   test('should handle allowed punctuation in ticket title', async ({ page, request }) => {
     const ticketData = {
-      title: 'Fix bug with special chars - test, test? test! test.',
+      title: '[e2e] Fix bug with special chars - test, test? test! test.',
       description: 'Testing allowed punctuation handling',
     };
 

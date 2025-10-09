@@ -47,7 +47,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Ticket with branch to clear',
+          title: '[e2e] Ticket with branch to clear',
           description: 'Branch will be cleared',
         },
       }
@@ -96,7 +96,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Ticket for branch endpoint clear',
+          title: '[e2e] Ticket for branch endpoint clear',
           description: 'Branch will be cleared via specialized endpoint',
         },
       }
@@ -138,7 +138,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Max length test',
+          title: '[e2e] Max length test',
           description: 'Testing branch max length validation',
         },
       }
@@ -181,7 +181,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Branch endpoint max length test',
+          title: '[e2e] Branch endpoint max length test',
           description: 'Testing specialized endpoint validation',
         },
       }
@@ -218,7 +218,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Boundary test',
+          title: '[e2e] Boundary test',
           description: 'Testing exact 200 character limit',
         },
       }
@@ -254,7 +254,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'AutoMode type validation',
+          title: '[e2e] AutoMode type validation',
           description: 'Testing autoMode type checking',
         },
       }
@@ -293,7 +293,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'AutoMode number type test',
+          title: '[e2e] AutoMode number type test',
           description: 'Testing autoMode with number',
         },
       }
@@ -326,7 +326,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'AutoMode null test',
+          title: '[e2e] AutoMode null test',
           description: 'Testing autoMode with null',
         },
       }
@@ -361,7 +361,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Error message test',
+          title: '[e2e] Error message test',
           description: 'Testing error messages',
         },
       }
@@ -409,7 +409,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Empty string test',
+          title: '[e2e] Empty string test',
           description: 'Testing empty string vs null',
         },
       }

@@ -24,14 +24,14 @@ test.describe('Ticket Detail Modal', () => {
     // Create test tickets for each stage
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test Ticket in INBOX',
+        title: '[e2e] Test Ticket in INBOX',
         description: 'This is a test ticket in the INBOX stage for modal testing.',
       },
     });
 
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test Ticket in PLAN',
+        title: '[e2e] Test Ticket in PLAN',
         description: 'This is a test ticket in the PLAN stage.',
       },
     });
@@ -39,7 +39,7 @@ test.describe('Ticket Detail Modal', () => {
     // Create a ticket with a long description for scrolling tests
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Ticket with Long Description',
+        title: '[e2e] Ticket with Long Description',
         description: 'Lorem ipsum dolor sit amet, consectetur adipiscing'.repeat(20), // ~1000 chars
       },
     });

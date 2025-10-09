@@ -52,14 +52,14 @@ test.describe('Ticket Card Display', () => {
     await cleanupDatabase();
 
     await createTicket(request, {
-      title: 'Test Ticket for Card Display',
+      title: '[e2e] Test Ticket for Card Display',
       description: 'This ticket is used for card display testing',
     });
   });
 
   test('should display ticket title on card', async ({ page, request }) => {
     const ticketData = {
-      title: 'Display Title Test Ticket',
+      title: '[e2e] Display Title Test Ticket',
       description: 'Testing title display',
     };
 
@@ -77,7 +77,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should display ticket ID in format #N', async ({ page, request }) => {
     const createdTicket = await createTicket(request, {
-      title: 'ID Format Test Ticket',
+      title: '[e2e] ID Format Test Ticket',
       description: 'Testing ID display',
     });
 
@@ -93,7 +93,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should display status badge showing stage', async ({ page, request }) => {
     await createTicket(request, {
-      title: 'Badge Test Ticket',
+      title: '[e2e] Badge Test Ticket',
       description: 'Testing badge display',
     });
 
@@ -108,7 +108,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should display metadata section for ticket analytics', async ({ page, request }) => {
     await createTicket(request, {
-      title: 'Metadata Test Ticket',
+      title: '[e2e] Metadata Test Ticket',
       description: 'Testing metadata section visibility',
     });
 
@@ -123,7 +123,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should show visual feedback on hover', async ({ page, request }) => {
     await createTicket(request, {
-      title: 'Hover Test Ticket',
+      title: '[e2e] Hover Test Ticket',
       description: 'Testing hover effect',
     });
 
@@ -145,7 +145,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should expose draggable affordance on card wrapper', async ({ page, request }) => {
     await createTicket(request, {
-      title: 'Click Test Ticket',
+      title: '[e2e] Click Test Ticket',
       description: 'Testing click effect',
     });
 
@@ -163,14 +163,14 @@ test.describe('Ticket Card Display', () => {
 
   test('should open modal on click without navigation', async ({ page, request }) => {
     await createTicket(request, {
-      title: 'No Navigation Test',
+      title: '[e2e] No Navigation Test',
       description: 'Click should not navigate',
     });
 
     await page.goto(`${BASE_URL}/projects/1/board`);
 
     const initialUrl = page.url();
-    const ticketCard = page.locator('text="No Navigation Test"').first();
+    const ticketCard = page.locator('text="[e2e] No Navigation Test"').first();
     await expect(ticketCard).toBeVisible();
 
     await ticketCard.click();
@@ -189,7 +189,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should display all required card elements together', async ({ page, request }) => {
     const ticketData = {
-      title: 'Complete Card Test',
+      title: '[e2e] Complete Card Test',
       description: 'Testing all card elements',
     };
 
@@ -212,7 +212,7 @@ test.describe('Ticket Card Display', () => {
 
   test('should NOT display description on card', async ({ page, request }) => {
     const ticketData = {
-      title: 'Description Hidden Test',
+      title: '[e2e] Description Hidden Test',
       description: 'Secret description should stay hidden from the card surface',
     };
 
@@ -229,10 +229,10 @@ test.describe('Ticket Card Display', () => {
 
   test('should maintain consistent card height', async ({ page, request }) => {
     const tickets = [
-      { title: 'Short', description: 'Short title ticket' },
-      { title: 'Medium length title for testing', description: 'Medium title' },
+      { title: '[e2e] Short', description: 'Short title ticket' },
+      { title: '[e2e] Medium length title for testing', description: 'Medium title' },
       {
-        title: 'Very long title that might span multiple lines depending on card width and font size',
+        title: '[e2e] Very long title that might span multiple lines depending on card width and font size',
         description: 'Long title',
       },
     ];

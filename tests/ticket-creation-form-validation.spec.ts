@@ -108,7 +108,7 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await titleInput.blur();
 
     // Wait for error message about invalid characters
-    const errorMessage = page.getByText(/can only contain letters, numbers, and basic punctuation/i);
+    const errorMessage = page.getByText(/can only contain letters, numbers, spaces, and common special characters/i);
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled
@@ -116,47 +116,6 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test("should show error when title contains special characters", async ({ page }) => {
-    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
-    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
-
-    // Fill with special characters
-    await titleInput.fill("Test @#$% ticket");
-    await descriptionInput.fill("Valid description");
-
-    // Blur to trigger validation
-    await titleInput.blur();
-
-    // Wait for error message
-    const errorMessage = page.getByText(/can only contain letters, numbers, and basic punctuation/i);
-    await expect(errorMessage).toBeVisible();
-
-    // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
-    await expect(createButton).toBeDisabled();
-  });
-
-  test("should show error when description contains special characters", async ({ page }) => {
-    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
-    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
-
-    // Fill title with valid data
-    await titleInput.fill("Valid title");
-
-    // Fill description with special characters
-    await descriptionInput.fill("Invalid description with @#$% characters");
-
-    // Blur to trigger validation
-    await descriptionInput.blur();
-
-    // Wait for error message
-    const errorMessage = page.getByText(/can only contain letters, numbers, and basic punctuation/i);
-    await expect(errorMessage).toBeVisible();
-
-    // Create button should be disabled
-    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
-    await expect(createButton).toBeDisabled();
-  });
 
   test("should accept title with allowed punctuation", async ({ page }) => {
     const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
@@ -254,14 +213,14 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
 
     // Fill title with invalid characters
-    await titleInput.fill("Invalid @#$");
+    await titleInput.fill("Invalid @#$🚀");
 
     // Error might not show immediately while typing
     // But should show when field loses focus
     await titleInput.blur();
 
     // Error should now be visible
-    const errorMessage = page.getByText(/can only contain letters, numbers, and basic punctuation/i);
+    const errorMessage = page.getByText(/can only contain letters, numbers, spaces, and common special characters/i);
     await expect(errorMessage).toBeVisible();
   });
 

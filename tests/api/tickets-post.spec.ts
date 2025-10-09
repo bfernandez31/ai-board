@@ -18,7 +18,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
 
   test('should create ticket and return 201 with complete Ticket schema', async ({ request }) => {
     const requestBody = {
-      title: 'Fix authentication bug',
+      title: '[e2e] Fix authentication bug',
       description: 'Users cannot log in after password reset'
     };
 
@@ -61,7 +61,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
 
   test('should return 400 when description is missing', async ({ request }) => {
     const requestBody = {
-      title: 'Add dark mode toggle'
+      title: '[e2e] Add dark mode toggle'
     };
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
@@ -103,7 +103,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
 
   test('should return 400 for empty title', async ({ request }) => {
     const requestBody = {
-      title: '',
+      title: ' ',
       description: 'Empty title should be rejected'
     };
 
@@ -166,7 +166,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     const longDescription = 'B'.repeat(1001); // 1001 characters
 
     const requestBody = {
-      title: 'Valid title',
+      title: '[e2e] Valid title',
       description: longDescription
     };
 
@@ -187,7 +187,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     const maxDescription = 'B'.repeat(1000); // Exactly 1000 characters
 
     const requestBody = {
-      title: 'Valid title',
+      title: '[e2e] Valid title',
       description: maxDescription
     };
 
@@ -219,7 +219,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
 
   test('should handle allowed punctuation in title and description', async ({ request }) => {
     const requestBody = {
-      title: 'Fix bug - test, test? test! test.',
+      title: '[e2e] Fix bug - test, test? test! test.',
       description: 'Description with allowed punctuation - comma, period. question? exclamation!'
     };
 
@@ -273,7 +273,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     // For now, we validate that normal requests work
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Normal ticket for error handling test',
+        title: '[e2e] Normal ticket for error handling test',
         description: 'This should succeed'
       }
     });

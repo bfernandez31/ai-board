@@ -32,7 +32,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
    */
   const createTicket = async (
     request: any,
-    title: string = 'Test Ticket',
+    title: string = '[e2e] Test Ticket',
     description: string = 'Test description'
   ): Promise<{ id: number; version: number; title: string; description: string }> => {
     const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
@@ -52,12 +52,12 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
    */
   test('PATCH with valid title updates title and increments version', async ({ request }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, '[e2e] Original Title', 'Original description');
 
     // PATCH title
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: 'Updated Title',
+        title: '[e2e] Updated Title',
         version: ticket.version,
       },
     });
@@ -67,13 +67,13 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
 
     // Assert response body
     const updatedTicket = await response.json();
-    expect(updatedTicket.title).toBe('Updated Title');
+    expect(updatedTicket.title).toBe('[e2e] Updated Title');
     expect(updatedTicket.description).toBe('Original description'); // Unchanged
     expect(updatedTicket.version).toBe(ticket.version + 1); // Incremented
 
     // Verify database state
     const dbTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    expect(dbTicket?.title).toBe('Updated Title');
+    expect(dbTicket?.title).toBe('[e2e] Updated Title');
     expect(dbTicket?.version).toBe(ticket.version + 1);
   });
 
@@ -82,7 +82,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
    */
   test('PATCH with valid description updates description and increments version', async ({ request }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, '[e2e] Original Title', 'Original description');
 
     // PATCH description
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
@@ -97,7 +97,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
 
     // Assert response body
     const updatedTicket = await response.json();
-    expect(updatedTicket.title).toBe('Original Title'); // Unchanged
+    expect(updatedTicket.title).toBe('[e2e] Original Title'); // Unchanged
     expect(updatedTicket.description).toBe('Updated description with more details');
     expect(updatedTicket.version).toBe(ticket.version + 1); // Incremented
 
@@ -112,12 +112,12 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
    */
   test('PATCH with both fields updates both and increments version', async ({ request }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, '[e2e] Original Title', 'Original description');
 
     // PATCH both fields
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: 'New Title',
+        title: '[e2e] New Title',
         description: 'New Description',
         version: ticket.version,
       },
@@ -128,13 +128,13 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
 
     // Assert response body
     const updatedTicket = await response.json();
-    expect(updatedTicket.title).toBe('New Title');
+    expect(updatedTicket.title).toBe('[e2e] New Title');
     expect(updatedTicket.description).toBe('New Description');
     expect(updatedTicket.version).toBe(ticket.version + 1); // Incremented
 
     // Verify database state
     const dbTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    expect(dbTicket?.title).toBe('New Title');
+    expect(dbTicket?.title).toBe('[e2e] New Title');
     expect(dbTicket?.description).toBe('New Description');
     expect(dbTicket?.version).toBe(ticket.version + 1);
   });
@@ -149,7 +149,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
     // PATCH with empty title (whitespace only)
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: '   ',
+        title: '    ',
         version: ticket.version,
       },
     });
@@ -182,7 +182,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
     // PATCH with stale version (version = 1)
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: 'Test',
+        title: '[e2e] Test',
         version: 1, // Stale version
       },
     });
@@ -204,7 +204,7 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
     // PATCH to non-existent ticket ID
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/99999`, {
       data: {
-        title: 'Test',
+        title: '[e2e] Test',
         version: 1,
       },
     });

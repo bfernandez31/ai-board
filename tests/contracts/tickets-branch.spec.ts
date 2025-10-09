@@ -22,7 +22,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
     // Create a test ticket
     const ticket = await prisma.ticket.create({
       data: {
-        title: 'Test ticket for branch endpoint',
+        title: '[e2e] Test ticket for branch endpoint',
         description: 'Testing specialized branch endpoint',
         projectId: testProjectId,
       },

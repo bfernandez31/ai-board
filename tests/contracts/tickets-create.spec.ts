@@ -38,7 +38,7 @@ test.describe('Contract: POST /api/projects/:projectId/tickets', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Test ticket for branch tracking',
+          title: '[e2e] Test ticket for branch tracking',
           description: 'This ticket tests the default values for branch and autoMode',
         },
       }
@@ -50,7 +50,7 @@ test.describe('Contract: POST /api/projects/:projectId/tickets', () => {
 
     // Verify response structure
     expect(ticket).toHaveProperty('id');
-    expect(ticket).toHaveProperty('title', 'Test ticket for branch tracking');
+    expect(ticket).toHaveProperty('title', '[e2e] Test ticket for branch tracking');
     expect(ticket).toHaveProperty('description');
     expect(ticket).toHaveProperty('stage', 'INBOX');
     expect(ticket).toHaveProperty('version', 1);
@@ -77,7 +77,7 @@ test.describe('Contract: POST /api/projects/:projectId/tickets', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Test ticket',
+          title: '[e2e] Test ticket',
           description: 'Test description',
           branch: '014-should-be-ignored',
           autoMode: true,

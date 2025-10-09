@@ -18,42 +18,53 @@ export async function cleanupDatabase(): Promise<void> {
   const client = getPrismaClient();
 
   try {
-    // Delete all tickets to reset the database
-    await client.ticket.deleteMany({});
-
-    // Ensure project 1 exists for tests
-    const project1 = await client.project.findUnique({
-      where: { id: 1 }
+    // Delete ALL tickets from test projects 1 and 2 (to ensure clean state)
+    await client.ticket.deleteMany({
+      where: {
+        projectId: { in: [1, 2] }
+      }
     });
 
-    if (!project1) {
-      await client.project.create({
-        data: {
-          id: 1,
-          name: 'Test Project',
-          description: 'Project for automated tests',
-          githubOwner: 'test',
-          githubRepo: 'test',
-        },
-      });
-    }
-
-    // Ensure project 2 exists for cross-project tests
-    const project2 = await client.project.findUnique({
-      where: { id: 2 }
+    // Delete only [e2e] prefixed tickets from other projects
+    await client.ticket.deleteMany({
+      where: {
+        title: { startsWith: '[e2e]' },
+        projectId: { notIn: [1, 2] }
+      }
     });
 
-    if (!project2) {
-      await client.project.create({
-        data: {
-          id: 2,
-          name: 'Test Project 2',
-          description: 'Second project for cross-project tests',
-          githubOwner: 'test',
-          githubRepo: 'test2',
-        },
-      });
-    }
+    // Delete only [e2e] prefixed projects EXCEPT projects 1 and 2 (to avoid cascade deletion)
+    await client.project.deleteMany({
+      where: {
+        name: { startsWith: '[e2e]' },
+        id: { notIn: [1, 2] }
+      }
+    });
+
+    // Ensure test projects 1 and 2 exist with [e2e] prefix
+    await client.project.upsert({
+      where: { id: 1 },
+      update: {}, // No update needed if exists
+      create: {
+        id: 1,
+        name: '[e2e] Test Project',
+        description: 'Project for automated tests',
+        githubOwner: 'test',
+        githubRepo: 'test',
+      },
+    });
+
+    await client.project.upsert({
+      where: { id: 2 },
+      update: {}, // No update needed if exists
+      create: {
+        id: 2,
+        name: '[e2e] Test Project 2',
+        description: 'Second project for cross-project tests',
+        githubOwner: 'test',
+        githubRepo: 'test2',
+      },
+    });
 
     console.log('✓ Database cleaned successfully');
   } catch (error) {

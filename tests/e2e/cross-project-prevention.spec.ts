@@ -21,7 +21,7 @@ test.describe('Cross-Project Access Prevention', () => {
     // Create ticket in project 2
     const createResponse = await request.post(`${BASE_URL}/api/projects/2/tickets`, {
       data: {
-        title: 'Ticket in project 2',
+        title: '[e2e] Ticket in project 2',
         description: 'Should not be updatable via project 1 API'
       }
     });
@@ -54,7 +54,7 @@ test.describe('Cross-Project Access Prevention', () => {
     // Create ticket in project 2
     const createResponse = await request.post(`${BASE_URL}/api/projects/2/tickets`, {
       data: {
-        title: 'Immutable ticket',
+        title: '[e2e] Immutable ticket',
         description: 'Should not change'
       }
     });
@@ -90,7 +90,7 @@ test.describe('Cross-Project Access Prevention', () => {
     // Create ticket in project 2
     const createResponse = await request.post(`${BASE_URL}/api/projects/2/tickets`, {
       data: {
-        title: 'Secret ticket',
+        title: '[e2e] Secret ticket',
         description: 'Should not appear in project 1'
       }
     });
@@ -125,7 +125,7 @@ test.describe('Cross-Project Access Prevention', () => {
     // Create ticket in project 1
     const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Valid ticket',
+        title: '[e2e] Valid ticket',
         description: 'Should be updatable'
       }
     });

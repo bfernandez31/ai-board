@@ -65,15 +65,15 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
   test('should sort tickets by most recently updated first', async ({ page, request }) => {
     // Create tickets with delays to ensure different timestamps
-    await createTicket(request, { title: 'First Ticket', description: 'Created first' });
+    await createTicket(request, { title: '[e2e] First Ticket', description: 'Created first' });
 
     await page.waitForTimeout(100); // Small delay
 
-    await createTicket(request, { title: 'Second Ticket', description: 'Created second' });
+    await createTicket(request, { title: '[e2e] Second Ticket', description: 'Created second' });
 
     await page.waitForTimeout(100); // Small delay
 
-    await createTicket(request, { title: 'Third Ticket', description: 'Created third' });
+    await createTicket(request, { title: '[e2e] Third Ticket', description: 'Created third' });
 
     await page.goto(`${BASE_URL}/projects/1/board`);
 
@@ -161,10 +161,10 @@ test.describe('Multiple Tickets Display and Sorting', () => {
   test('should maintain consistent card heights for multiple tickets', async ({ page, request }) => {
     // Create tickets with varying title lengths
     const tickets = [
-      { title: 'Short title' },
-      { title: 'This is a medium length title for testing' },
-      { title: 'This is a very long title that will definitely span multiple lines when displayed on the card' },
-      { title: 'Another short one' }
+      { title: '[e2e] Short title' },
+      { title: '[e2e] This is a medium length title for testing' },
+      { title: '[e2e] This is a very long title that will definitely span multiple lines when displayed on the card' },
+      { title: '[e2e] Another short one' }
     ];
 
     for (const ticket of tickets) {

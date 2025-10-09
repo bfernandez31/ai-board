@@ -19,7 +19,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
   test('should return 201 with created ticket for valid request', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Implement user authentication',
+        title: '[e2e] Implement user authentication',
         description: 'Add email and password login with JWT tokens'
       }
     });
@@ -34,7 +34,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     expect(typeof body.id).toBe('number');
     expect(body.id).toBeGreaterThan(0);
 
-    expect(body).toHaveProperty('title', 'Implement user authentication');
+    expect(body).toHaveProperty('title', '[e2e] Implement user authentication');
     expect(body).toHaveProperty('description', 'Add email and password login with JWT tokens');
 
     // Contract requirement: stage MUST be INBOX for new tickets
@@ -55,7 +55,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
   test('should create ticket with projectId from URL (not request body)', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test project scoping',
+        title: '[e2e] Test project scoping',
         description: 'Verify ticket gets correct projectId'
       }
     });
@@ -71,13 +71,13 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     const foundTicket = allTickets.INBOX.find((t: any) => t.id === ticket.id);
 
     expect(foundTicket).toBeDefined();
-    expect(foundTicket.title).toBe('Test project scoping');
+    expect(foundTicket.title).toBe('[e2e] Test project scoping');
   });
 
   test('should return 400 for invalid projectId format', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/abc/tickets`, {
       data: {
-        title: 'Test ticket',
+        title: '[e2e] Test ticket',
         description: 'Should fail validation'
       }
     });
@@ -93,7 +93,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
   test('should return 404 for non-existent project', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/999999/tickets`, {
       data: {
-        title: 'Test ticket',
+        title: '[e2e] Test ticket',
         description: 'Should fail - project does not exist'
       }
     });
@@ -125,7 +125,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
   test('should return 400 for missing description', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Missing description'
+        title: '[e2e] Missing description'
       }
     });
 
@@ -160,7 +160,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Valid title',
+        title: '[e2e] Valid title',
         description: longDescription
       }
     });
@@ -176,7 +176,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
   test('should trim whitespace from title and description', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: '  Trimmed title  ',
+        title: '[e2e]   Trimmed title  ',
         description: '\n\nTrimmed description\n\n'
       }
     });
@@ -184,14 +184,14 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     expect(response.status()).toBe(201);
     const body = await response.json();
 
-    expect(body.title).toBe('Trimmed title');
+    expect(body.title).toBe('[e2e]   Trimmed title');
     expect(body.description).toBe('Trimmed description');
   });
 
   test('should allow empty title after trimming to fail validation', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: '   ',
+        title: '    ',
         description: 'Valid description'
       }
     });
@@ -203,7 +203,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     // Create ticket
     const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Queryable ticket',
+        title: '[e2e] Queryable ticket',
         description: 'Should appear in GET response'
       }
     });
@@ -219,7 +219,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     const foundTicket = allTickets.INBOX.find((t: any) => t.id === created.id);
 
     expect(foundTicket).toBeDefined();
-    expect(foundTicket.title).toBe('Queryable ticket');
+    expect(foundTicket.title).toBe('[e2e] Queryable ticket');
     expect(foundTicket.description).toBe('Should appear in GET response');
   });
 });

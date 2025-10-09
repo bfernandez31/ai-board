@@ -21,7 +21,7 @@ test.describe('Project-Scoped Board Access', () => {
     // Create ticket in project 1
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Ticket in project 1',
+        title: '[e2e] Ticket in project 1',
         description: 'Should be visible'
       }
     });
@@ -51,7 +51,7 @@ test.describe('Project-Scoped Board Access', () => {
     // Create ticket in project 1
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Ticket in project 1',
+        title: '[e2e] Ticket in project 1',
         description: 'Should be visible'
       }
     });
@@ -60,7 +60,7 @@ test.describe('Project-Scoped Board Access', () => {
     try {
       await request.post(`${BASE_URL}/api/projects/2/tickets`, {
         data: {
-          title: 'Ticket in project 2',
+          title: '[e2e] Ticket in project 2',
           description: 'Should NOT be visible on project 1 board'
         }
       });

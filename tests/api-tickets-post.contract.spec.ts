@@ -22,7 +22,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should create ticket with valid title and description", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Implement user authentication",
+          title: '[e2e] Implement user authentication',
           description: "Add JWT-based authentication with login and registration endpoints.",
         },
       });
@@ -32,7 +32,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       const body = await response.json();
       expect(body).toMatchObject({
         id: expect.any(Number),
-        title: "Implement user authentication",
+        title: '[e2e] Implement user authentication',
         description: "Add JWT-based authentication with login and registration endpoints.",
         stage: "INBOX",
         createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
@@ -43,7 +43,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should create ticket with minimal valid input (1 char each)", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "A",
+          title: '[e2e] A',
           description: "B",
         },
       });
@@ -51,7 +51,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(response.status()).toBe(201);
 
       const body = await response.json();
-      expect(body.title).toBe("A");
+      expect(body.title).toBe("[e2e] A");
       expect(body.description).toBe("B");
       expect(body.stage).toBe("INBOX");
     });
@@ -76,7 +76,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       const maxDescription = "a".repeat(1000);
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Test ticket",
+          title: '[e2e] Test ticket',
           description: maxDescription,
         },
       });
@@ -91,7 +91,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should create ticket with allowed punctuation", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Test, ticket! How? Yes-it works.",
+          title: '[e2e] Test, ticket! How? Yes-it works.',
           description: "This description has periods, commas, hyphens, spaces, question marks, and exclamation points!",
         },
       });
@@ -106,18 +106,32 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(body.title).toContain("-");
     });
 
+    test("should create title with special characters (@#$%)", async ({ request }) => {
+      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
+        data: {
+          title: '[e2e] Test @#$%[] ticket',
+          description: "Valid description",
+        },
+      });
+
+      expect(response.status()).toBe(201);
+
+    });
+
+
+
     test("should trim whitespace from title and description", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "  Trimmed title  ",
-          description: "  Trimmed description  ",
+          title: ' [e2e] Trimmed title  ',
+          description: " Trimmed description  ",
         },
       });
 
       expect(response.status()).toBe(201);
 
       const body = await response.json();
-      expect(body.title).toBe("Trimmed title");
+      expect(body.title).toBe("[e2e] Trimmed title");
       expect(body.description).toBe("Trimmed description");
     });
   });
@@ -126,7 +140,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject empty title", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "",
+          title: '',
           description: "Valid description",
         },
       });
@@ -142,7 +156,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject whitespace-only title", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "   ",
+          title: '    ',
           description: "Valid description",
         },
       });
@@ -156,7 +170,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject empty description", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Valid title",
+          title: '[e2e] Valid title',
           description: "",
         },
       });
@@ -172,7 +186,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject whitespace-only description", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Valid title",
+          title: '[e2e] Valid title',
           description: "   ",
         },
       });
@@ -202,7 +216,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       const tooLongDescription = "a".repeat(1001);
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Valid title",
+          title: '[e2e] Valid title',
           description: tooLongDescription,
         },
       });
@@ -216,7 +230,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject title with special characters (emoji)", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Test ticket 🚀",
+          title: '[e2e] Test ticket 🚀',
           description: "Valid description",
         },
       });
@@ -224,35 +238,21 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.details.fieldErrors.title).toContain("can only contain letters, numbers, and basic punctuation");
+      expect(body.details.fieldErrors.title).toContain("can only contain letters, numbers, spaces, and common special characters");
     });
 
-    test("should reject title with special characters (@#$%)", async ({ request }) => {
+    test("should reject description with emoji characters", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Test @#$% ticket",
-          description: "Valid description",
+          title: '[e2e] Valid title',
+          description: "Invalid description with emoji 🚀 characters",
         },
       });
 
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.details.fieldErrors.title).toContain("can only contain letters, numbers, and basic punctuation");
-    });
-
-    test("should reject description with special characters", async ({ request }) => {
-      const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
-        data: {
-          title: "Valid title",
-          description: "Invalid description with @#$% characters",
-        },
-      });
-
-      expect(response.status()).toBe(400);
-
-      const body = await response.json();
-      expect(body.details.fieldErrors.description).toContain("can only contain letters, numbers, and basic punctuation");
+      expect(body.details.fieldErrors.description).toContain("can only contain letters, numbers, spaces, and common special characters");
     });
 
     test("should reject missing title field", async ({ request }) => {
@@ -272,7 +272,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should reject missing description field", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Valid title",
+          title: '[e2e] Valid title',
           // description missing
         },
       });
@@ -305,7 +305,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
 
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Valid title",
+          title: '[e2e] Valid title',
           description: "Valid description",
         },
       });
@@ -322,7 +322,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should return all required fields in success response", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "Schema test",
+          title: '[e2e] Schema test',
           description: "Testing response schema",
         },
       });
@@ -357,7 +357,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
     test("should return proper error structure for validation errors", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
-          title: "",
+          title: '',
           description: "",
         },
       });
