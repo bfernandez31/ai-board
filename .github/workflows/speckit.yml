@@ -80,22 +80,22 @@ jobs:
 
           case "${{ inputs.command }}" in
             specify)
-              claude /specify "Ticket ${{ inputs.ticket_id }}: ${{ inputs.ticketTitle }}
+              claude --dangerously-skip-permissions /specify "Ticket ${{ inputs.ticket_id }}: ${{ inputs.ticketTitle }}
 
               ${{ inputs.ticketDescription }}"
               ;;
             plan)
-              claude /plan
+              claude --dangerously-skip-permissions /plan
               ;;
             task)
-              claude /task
+              claude --dangerously-skip-permissions /task
               ;;
             implement)
-              claude /implement
+              claude --dangerously-skip-permissions /implement
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              claude /clarify --answers clarifications.json
+              claude --dangerously-skip-permissions /clarify --answers clarifications.json
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"

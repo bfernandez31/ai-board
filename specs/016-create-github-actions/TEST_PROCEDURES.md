@@ -2,6 +2,8 @@
 
 This document references the test procedures defined in quickstart.md for TDD implementation.
 
+**Important**: All Claude commands are executed with `--dangerously-skip-permissions` flag to enable non-interactive execution in GitHub Actions CI/CD environment.
+
 ## Phase 3.2: Tests First (TDD)
 
 ### T003: Test 1 - Specify Command Test Procedure
