@@ -52,43 +52,57 @@ jobs:
 
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticketTitle, '[e2e]') }}
 
     steps:
+      - name: Report E2E Skip
+        if: ${{ env.SKIP_SPECKIT_EXECUTION == 'true' }}
+        run: |
+          echo "ℹ️ '[e2e]' detected in ticket title; skipping Spec-Kit execution to preserve resources"
+
       - name: Checkout repository
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22.20.0'
 
       - name: Setup Python
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Claude Code CLI
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Configure Git
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
 
       - name: Execute Spec-Kit Command
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
           set -e
 
           case "${{ inputs.command }}" in
             specify)
-              # Write description to file to handle multiline content
-              cat > /tmp/ticket-description.txt <<'TICKET_EOF'
-[${{ inputs.ticket_id }}] ${{ inputs.ticketTitle }}: ${{ inputs.ticketDescription }}
-TICKET_EOF
-              claude --dangerously-skip-permissions /specify "$(cat /tmp/ticket-description.txt)"
+              ticket_id="${{ inputs.ticket_id }}"
+              ticket_title="${{ inputs.ticketTitle }}"
+              ticket_description="${{ inputs.ticketDescription }}"
+
+              printf -v prompt '/specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
+
+              claude --dangerously-skip-permissions /specify "$prompt"
               ;;
             plan)
               claude --dangerously-skip-permissions /plan
@@ -110,6 +124,7 @@ TICKET_EOF
           esac
 
       - name: Commit and Push Changes
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
           git add .
 
@@ -129,8 +144,15 @@ TICKET_EOF
             echo "✅ Changes committed and pushed successfully"
           fi
 
+      - name: Report Success (Skipped)
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION == 'true' }}
+        run: |
+          echo "✅ Spec-kit execution skipped because ticket title contains '[e2e]'"
+          echo "📍 Branch: ${{ inputs.branch || github.ref_name }}"
+          echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+
       - name: Report Success
-        if: success()
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
           echo "✅ Spec-kit command '${{ inputs.command }}' completed successfully"
           echo "📍 Branch: ${{ inputs.branch || github.ref_name }}"
