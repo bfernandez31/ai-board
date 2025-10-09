@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Stage as PrismaStage } from '@prisma/client';
 import { z } from 'zod';
 import { Stage, isValidTransition } from '@/lib/stage-validation';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
+import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 
 const prisma = new PrismaClient();
 
@@ -220,11 +221,14 @@ export async function PATCH(
         version: requestVersion,
       } = parseResult.data;
 
-      // Check if ticket exists with project validation
+      // Check if ticket exists with project validation (load project relation for workflow)
       const currentTicket = await prisma.ticket.findFirst({
         where: {
           id: ticketId,
           projectId: projectId,
+        },
+        include: {
+          project: true,
         },
       });
 
@@ -257,6 +261,31 @@ export async function PATCH(
         );
       }
 
+      // Handle stage transition with GitHub workflow dispatch
+      let jobId: number | undefined;
+      let workflowBranchName: string | undefined;
+
+      if (stage !== undefined && stage !== currentTicket.stage) {
+        // Stage is changing - trigger GitHub workflow
+        const transitionResult = await handleTicketTransition(
+          currentTicket,
+          stage as PrismaStage
+        );
+
+        if (!transitionResult.success) {
+          return NextResponse.json(
+            {
+              error: transitionResult.error,
+              code: transitionResult.errorCode,
+            },
+            { status: transitionResult.errorCode === 'INVALID_TRANSITION' ? 400 : 500 }
+          );
+        }
+
+        jobId = transitionResult.jobId;
+        workflowBranchName = transitionResult.branchName;
+      }
+
       // Update ticket with version check
       try {
         const updatedTicket = await prisma.ticket.update({
@@ -271,6 +300,7 @@ export async function PATCH(
             }),
             ...(stage !== undefined && { stage }),
             ...(branch !== undefined && { branch }),
+            ...(workflowBranchName && { branch: workflowBranchName }),
             ...(autoMode !== undefined && { autoMode }),
             version: { increment: 1 },
           },
@@ -288,6 +318,7 @@ export async function PATCH(
             autoMode: updatedTicket.autoMode,
             createdAt: updatedTicket.createdAt.toISOString(),
             updatedAt: updatedTicket.updatedAt.toISOString(),
+            ...(jobId !== undefined && { jobId }),
           },
           { status: 200 }
         );
@@ -296,6 +327,11 @@ export async function PATCH(
         if (updateError instanceof Error && 'code' in updateError) {
           const prismaError = updateError as { code: string };
           if (prismaError.code === 'P2025') {
+            // Clean up orphaned job if it was created
+            if (jobId !== undefined) {
+              await cleanupOrphanedJob(jobId);
+            }
+
             // Re-fetch to get current version
             const latestTicket = await prisma.ticket.findUnique({
               where: { id: ticketId },
@@ -330,11 +366,14 @@ export async function PATCH(
 
       const { stage: newStage, version: requestVersion } = parseResult.data;
 
-      // Fetch current ticket with project validation
+      // Fetch current ticket with project validation (load project relation for workflow)
       const currentTicket = await prisma.ticket.findFirst({
         where: {
           id: ticketId,
           projectId: projectId,
+        },
+        include: {
+          project: true,
         },
       });
 
@@ -367,7 +406,7 @@ export async function PATCH(
         );
       }
 
-      // Validate stage transition (sequential only)
+      // Validate stage transition and trigger GitHub workflow
       const currentStage = currentTicket.stage as Stage;
       if (!isValidTransition(currentStage, newStage)) {
         return NextResponse.json(
@@ -379,28 +418,73 @@ export async function PATCH(
         );
       }
 
-      // Update ticket atomically with version increment
-      const updatedTicket = await prisma.ticket.update({
-        where: {
-          id: ticketId,
-          version: requestVersion,
-        },
-        data: {
-          stage: newStage,
-          version: { increment: 1 },
-        },
-      });
-
-      // Return successful response
-      return NextResponse.json(
-        {
-          id: updatedTicket.id,
-          stage: updatedTicket.stage,
-          version: updatedTicket.version,
-          updatedAt: updatedTicket.updatedAt.toISOString(),
-        },
-        { status: 200 }
+      // Trigger GitHub workflow for stage transition
+      const transitionResult = await handleTicketTransition(
+        currentTicket,
+        newStage as PrismaStage
       );
+
+      if (!transitionResult.success) {
+        return NextResponse.json(
+          {
+            error: transitionResult.error,
+            code: transitionResult.errorCode,
+          },
+          { status: transitionResult.errorCode === 'INVALID_TRANSITION' ? 400 : 500 }
+        );
+      }
+
+      // Update ticket atomically with version increment
+      try {
+        const updatedTicket = await prisma.ticket.update({
+          where: {
+            id: ticketId,
+            version: requestVersion,
+          },
+          data: {
+            stage: newStage,
+            ...(transitionResult.branchName && { branch: transitionResult.branchName }),
+            version: { increment: 1 },
+          },
+        });
+
+        // Return successful response with job info if workflow was triggered
+        return NextResponse.json(
+          {
+            id: updatedTicket.id,
+            stage: updatedTicket.stage,
+            version: updatedTicket.version,
+            branch: updatedTicket.branch,
+            updatedAt: updatedTicket.updatedAt.toISOString(),
+            ...(transitionResult.jobId !== undefined && { jobId: transitionResult.jobId }),
+          },
+          { status: 200 }
+        );
+      } catch (updateError) {
+        // Handle version mismatch (P2025 error)
+        if (updateError instanceof Error && 'code' in updateError) {
+          const prismaError = updateError as { code: string };
+          if (prismaError.code === 'P2025') {
+            // Clean up orphaned job if it was created
+            if (transitionResult.jobId !== undefined) {
+              await cleanupOrphanedJob(transitionResult.jobId);
+            }
+
+            // Re-fetch to get current version
+            const latestTicket = await prisma.ticket.findUnique({
+              where: { id: ticketId },
+            });
+            return NextResponse.json(
+              {
+                error: 'Ticket modified by another user',
+                currentVersion: latestTicket?.version || 0,
+              },
+              { status: 409 }
+            );
+          }
+        }
+        throw updateError;
+      }
     }
 
     // If neither stage nor inline edit, return error
