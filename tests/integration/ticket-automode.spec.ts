@@ -49,7 +49,7 @@ test.describe('Integration: AutoMode toggle', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Ticket for automation testing',
+          title: '[e2e] Ticket for automation testing',
           description: 'This ticket will have autoMode enabled',
         },
       }
@@ -92,7 +92,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Verify autoMode persisted correctly
     expect(fetchedTicket.autoMode).toBe(true);
-    expect(fetchedTicket.title).toBe('Ticket for automation testing');
+    expect(fetchedTicket.title).toBe('[e2e] Ticket for automation testing');
 
     // Step 4: Verify in database directly
     const dbTicket = await prisma.ticket.findUnique({
@@ -112,7 +112,7 @@ test.describe('Integration: AutoMode toggle', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Toggle test ticket',
+          title: '[e2e] Toggle test ticket',
           description: 'AutoMode will be toggled',
         },
       }
@@ -153,7 +153,7 @@ test.describe('Integration: AutoMode toggle', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Field preservation test',
+          title: '[e2e] Field preservation test',
           description: 'Verify other fields unchanged',
         },
       }
@@ -200,7 +200,7 @@ test.describe('Integration: AutoMode toggle', () => {
     const manualTicket = await (
       await request.post(`/api/projects/${testProjectId}/tickets`, {
         data: {
-          title: 'Manual ticket',
+          title: '[e2e] Manual ticket',
           description: 'Stays in manual mode',
         },
       })
@@ -209,7 +209,7 @@ test.describe('Integration: AutoMode toggle', () => {
     const autoTicket = await (
       await request.post(`/api/projects/${testProjectId}/tickets`, {
         data: {
-          title: 'Auto ticket',
+          title: '[e2e] Auto ticket',
           description: 'Will be automated',
         },
       })
@@ -254,7 +254,7 @@ test.describe('Integration: AutoMode toggle', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Type check ticket',
+          title: '[e2e] Type check ticket',
           description: 'Verify boolean type',
         },
       }
@@ -291,7 +291,7 @@ test.describe('Integration: AutoMode toggle', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Timestamp test',
+          title: '[e2e] Timestamp test',
           description: 'Testing updatedAt changes',
         },
       }

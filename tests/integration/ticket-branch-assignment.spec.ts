@@ -48,7 +48,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Feature requiring branch tracking',
+          title: '[e2e] Feature requiring branch tracking',
           description: 'This ticket will have a branch assigned',
         },
       }
@@ -92,7 +92,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Verify branch persisted correctly
     expect(fetchedTicket.branch).toBe('014-add-github-branch');
-    expect(fetchedTicket.title).toBe('Feature requiring branch tracking');
+    expect(fetchedTicket.title).toBe('[e2e] Feature requiring branch tracking');
     expect(fetchedTicket.autoMode).toBe(false); // Should remain unchanged
 
     // Step 4: Verify in database directly
@@ -113,7 +113,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Ticket with changing branch',
+          title: '[e2e] Ticket with changing branch',
           description: 'Branch will be updated multiple times',
         },
       }
@@ -217,7 +217,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Original Title',
+          title: '[e2e] Original Title',
           description: 'Original Description',
         },
       }
@@ -268,7 +268,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Timestamp test',
+          title: '[e2e] Timestamp test',
           description: 'Testing updatedAt changes',
         },
       }

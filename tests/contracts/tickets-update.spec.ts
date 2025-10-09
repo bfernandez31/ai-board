@@ -22,7 +22,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id', () => {
     // Create a test ticket
     const ticket = await prisma.ticket.create({
       data: {
-        title: 'Test ticket',
+        title: '[e2e] Test ticket',
         description: 'Test description',
         projectId: testProjectId,
       },
@@ -134,7 +134,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id', () => {
       `/api/projects/${testProjectId}/tickets/${testTicketId}`,
       {
         data: {
-          title: 'Updated title',
+          title: '[e2e] Updated title',
           branch: '014-updated-feature',
           autoMode: true,
           version: 1,
@@ -145,7 +145,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id', () => {
     expect(response.status()).toBe(200);
 
     const ticket = await response.json();
-    expect(ticket.title).toBe('Updated title');
+    expect(ticket.title).toBe('[e2e] Updated title');
     expect(ticket.branch).toBe('014-updated-feature');
     expect(ticket.autoMode).toBe(true);
   });
@@ -167,7 +167,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id', () => {
 
     const ticket = await response.json();
     expect(ticket.branch).toBe('014-new-branch');
-    expect(ticket.title).toBe('Test ticket'); // Unchanged
+    expect(ticket.title).toBe('[e2e] Test ticket'); // Unchanged
     expect(ticket.description).toBe('Test description'); // Unchanged
   });
 });

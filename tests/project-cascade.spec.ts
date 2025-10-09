@@ -42,19 +42,19 @@ test.describe('Project Cascade Delete', () => {
 
     // Create multiple tickets for this project
     const ticket1 = await createTestTicket(project.id, {
-      title: 'Ticket 1',
+      title: '[e2e] Ticket 1',
       description: 'First ticket',
       stage: 'INBOX',
     });
 
     const ticket2 = await createTestTicket(project.id, {
-      title: 'Ticket 2',
+      title: '[e2e] Ticket 2',
       description: 'Second ticket',
       stage: 'PLAN',
     });
 
     const ticket3 = await createTestTicket(project.id, {
-      title: 'Ticket 3',
+      title: '[e2e] Ticket 3',
       description: 'Third ticket',
       stage: 'BUILD',
     });
@@ -145,12 +145,12 @@ test.describe('Project Cascade Delete', () => {
     });
 
     await createTestTicket(project1.id, {
-      title: 'Project 1 - Ticket 1',
+      title: '[e2e] Project 1 - Ticket 1',
       description: 'Ticket for project 1',
     });
 
     await createTestTicket(project1.id, {
-      title: 'Project 1 - Ticket 2',
+      title: '[e2e] Project 1 - Ticket 2',
       description: 'Another ticket for project 1',
     });
 
@@ -163,17 +163,17 @@ test.describe('Project Cascade Delete', () => {
     });
 
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 1',
+      title: '[e2e] Project 2 - Ticket 1',
       description: 'Ticket for project 2',
     });
 
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 2',
+      title: '[e2e] Project 2 - Ticket 2',
       description: 'Another ticket for project 2',
     });
 
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 3',
+      title: '[e2e] Project 2 - Ticket 3',
       description: 'Third ticket for project 2',
     });
 
@@ -296,7 +296,7 @@ test.describe('Project Cascade Delete', () => {
 
     // Create first ticket
     await createTestTicket(project.id, {
-      title: 'Old Ticket',
+      title: '[e2e] Old Ticket',
       description: 'Created first',
     });
 
@@ -305,7 +305,7 @@ test.describe('Project Cascade Delete', () => {
 
     // Create second ticket
     await createTestTicket(project.id, {
-      title: 'Newer Ticket',
+      title: '[e2e] Newer Ticket',
       description: 'Created later',
     });
 
@@ -314,7 +314,7 @@ test.describe('Project Cascade Delete', () => {
 
     // Create third ticket
     await createTestTicket(project.id, {
-      title: 'Newest Ticket',
+      title: '[e2e] Newest Ticket',
       description: 'Created last',
     });
 

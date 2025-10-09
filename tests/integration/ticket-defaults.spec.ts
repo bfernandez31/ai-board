@@ -47,7 +47,7 @@ test.describe('Integration: Ticket creation with default values', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Add branch tracking feature',
+          title: '[e2e] Add branch tracking feature',
           description: 'Extend Ticket model with branch and autoMode fields',
         },
       }
@@ -59,7 +59,7 @@ test.describe('Integration: Ticket creation with default values', () => {
 
     // Verify standard fields
     expect(ticket).toHaveProperty('id');
-    expect(ticket).toHaveProperty('title', 'Add branch tracking feature');
+    expect(ticket).toHaveProperty('title', '[e2e] Add branch tracking feature');
     expect(ticket).toHaveProperty(
       'description',
       'Extend Ticket model with branch and autoMode fields'
@@ -143,7 +143,7 @@ test.describe('Integration: Ticket creation with default values', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Verify existing fields',
+          title: '[e2e] Verify existing fields',
           description: 'Ensure existing fields work correctly',
         },
       }
@@ -155,7 +155,7 @@ test.describe('Integration: Ticket creation with default values', () => {
 
     // Verify all existing fields are present and correct
     expect(ticket.id).toBeGreaterThan(0);
-    expect(ticket.title).toBe('Verify existing fields');
+    expect(ticket.title).toBe('[e2e] Verify existing fields');
     expect(ticket.description).toBe('Ensure existing fields work correctly');
     expect(ticket.stage).toBe('INBOX');
     expect(ticket.version).toBe(1);
@@ -176,7 +176,7 @@ test.describe('Integration: Ticket creation with default values', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Test branch null type',
+          title: '[e2e] Test branch null type',
           description: 'Verify branch is exactly null',
         },
       }
@@ -206,7 +206,7 @@ test.describe('Integration: Ticket creation with default values', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Test autoMode type',
+          title: '[e2e] Test autoMode type',
           description: 'Verify autoMode is boolean false',
         },
       }

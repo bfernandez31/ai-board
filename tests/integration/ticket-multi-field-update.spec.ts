@@ -49,7 +49,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Original Title',
+          title: '[e2e] Original Title',
           description: 'Original Description',
         },
       }
@@ -61,7 +61,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const ticketId = ticket.id;
 
     // Verify initial state
-    expect(ticket.title).toBe('Original Title');
+    expect(ticket.title).toBe('[e2e] Original Title');
     expect(ticket.stage).toBe('INBOX');
     expect(ticket.branch).toBeNull();
     expect(ticket.autoMode).toBe(false);
@@ -71,7 +71,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'Updated: GitHub Integration',
+          title: '[e2e] Updated: GitHub Integration',
           stage: 'SPECIFY',
           branch: '014-github-integration-updated',
           version: 1,
@@ -84,7 +84,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const updatedTicket = await updateResponse.json();
 
     // Verify all specified fields updated
-    expect(updatedTicket.title).toBe('Updated: GitHub Integration');
+    expect(updatedTicket.title).toBe('[e2e] Updated: GitHub Integration');
     expect(updatedTicket.stage).toBe('SPECIFY');
     expect(updatedTicket.branch).toBe('014-github-integration-updated');
 
@@ -97,7 +97,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       where: { id: ticketId },
     });
 
-    expect(dbTicket!.title).toBe('Updated: GitHub Integration');
+    expect(dbTicket!.title).toBe('[e2e] Updated: GitHub Integration');
     expect(dbTicket!.stage).toBe('SPECIFY');
     expect(dbTicket!.branch).toBe('014-github-integration-updated');
 
@@ -111,7 +111,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Test both new fields',
+          title: '[e2e] Test both new fields',
           description: 'Update branch and autoMode together',
         },
       }
@@ -141,7 +141,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     expect(updatedTicket.autoMode).toBe(true);
 
     // Verify other fields unchanged
-    expect(updatedTicket.title).toBe('Test both new fields');
+    expect(updatedTicket.title).toBe('[e2e] Test both new fields');
     expect(updatedTicket.description).toBe('Update branch and autoMode together');
     expect(updatedTicket.stage).toBe('INBOX');
 
@@ -157,7 +157,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Full ticket',
+          title: '[e2e] Full ticket',
           description: 'With all fields',
         },
       }
@@ -180,7 +180,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'New title',
+          title: '[e2e] New title',
           autoMode: true,
           version: 1, // Version is still 1 because /branch doesn't increment it
         },
@@ -190,7 +190,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const updatedTicket = await updateResponse.json();
 
     // Verify updated fields
-    expect(updatedTicket.title).toBe('New title');
+    expect(updatedTicket.title).toBe('[e2e] New title');
     expect(updatedTicket.autoMode).toBe(true);
 
     // Verify unchanged fields
@@ -209,7 +209,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Comprehensive update test',
+          title: '[e2e] Comprehensive update test',
           description: 'All fields will be updated',
         },
       }
@@ -223,7 +223,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'New Title',
+          title: '[e2e] New Title',
           description: 'New Description',
           stage: 'BUILD',
           branch: '014-comprehensive-update',
@@ -238,7 +238,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const updatedTicket = await updateResponse.json();
 
     // Verify all fields updated
-    expect(updatedTicket.title).toBe('New Title');
+    expect(updatedTicket.title).toBe('[e2e] New Title');
     expect(updatedTicket.description).toBe('New Description');
     expect(updatedTicket.stage).toBe('BUILD');
     expect(updatedTicket.branch).toBe('014-comprehensive-update');
@@ -261,7 +261,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Partial update test',
+          title: '[e2e] Partial update test',
           description: 'Testing selective updates',
         },
       }
@@ -284,7 +284,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'Only title changed',
+          title: '[e2e] Only title changed',
           version: 2,
         },
       }
@@ -293,7 +293,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const updatedTicket = await updateResponse.json();
 
     // Verify only title changed
-    expect(updatedTicket.title).toBe('Only title changed');
+    expect(updatedTicket.title).toBe('[e2e] Only title changed');
 
     // Verify all other fields unchanged
     expect(updatedTicket.description).toBe('Testing selective updates');
@@ -313,7 +313,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Branch clear test',
+          title: '[e2e] Branch clear test',
           description: 'Branch will be cleared',
         },
       }
@@ -332,7 +332,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'Branch cleared',
+          title: '[e2e] Branch cleared',
           branch: null,
           version: 2,
         },
@@ -347,7 +347,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     expect(updatedTicket.branch).toBeNull();
 
     // Verify title updated
-    expect(updatedTicket.title).toBe('Branch cleared');
+    expect(updatedTicket.title).toBe('[e2e] Branch cleared');
 
     // Clean up
     await prisma.ticket.delete({ where: { id: ticketId } });
@@ -361,7 +361,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets`,
       {
         data: {
-          title: 'Atomicity test',
+          title: '[e2e] Atomicity test',
           description: 'Testing transaction atomicity',
         },
       }
@@ -375,7 +375,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
-          title: 'Should not update',
+          title: '[e2e] Should not update',
           branch: 'a'.repeat(201), // Too long, will fail
           autoMode: true,
           version: 1,
@@ -391,7 +391,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
     ).json();
 
-    expect(fetchedTicket.title).toBe('Atomicity test'); // Unchanged
+    expect(fetchedTicket.title).toBe('[e2e] Atomicity test'); // Unchanged
     expect(fetchedTicket.branch).toBeNull(); // Unchanged
     expect(fetchedTicket.autoMode).toBe(false); // Unchanged
 

@@ -45,7 +45,7 @@ test.describe('Ticket-Project Constraints', () => {
     // Attempt to create ticket with non-existent projectId
     const createPromise = prisma.ticket.create({
       data: {
-        title: 'Test Ticket',
+        title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: 99999, // Non-existent project ID
       },
@@ -68,17 +68,17 @@ test.describe('Ticket-Project Constraints', () => {
 
     // Create multiple tickets for this project
     await createTestTicket(project.id, {
-      title: 'Ticket 1',
+      title: '[e2e] Ticket 1',
       description: 'First ticket',
     });
 
     await createTestTicket(project.id, {
-      title: 'Ticket 2',
+      title: '[e2e] Ticket 2',
       description: 'Second ticket',
     });
 
     await createTestTicket(project.id, {
-      title: 'Ticket 3',
+      title: '[e2e] Ticket 3',
       description: 'Third ticket',
     });
 
@@ -124,28 +124,28 @@ test.describe('Ticket-Project Constraints', () => {
 
     // Create tickets for project 1
     await createTestTicket(project1.id, {
-      title: 'Project 1 - Ticket 1',
+      title: '[e2e] Project 1 - Ticket 1',
       description: 'First ticket for project 1',
     });
 
     await createTestTicket(project1.id, {
-      title: 'Project 1 - Ticket 2',
+      title: '[e2e] Project 1 - Ticket 2',
       description: 'Second ticket for project 1',
     });
 
     // Create tickets for project 2
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 1',
+      title: '[e2e] Project 2 - Ticket 1',
       description: 'First ticket for project 2',
     });
 
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 2',
+      title: '[e2e] Project 2 - Ticket 2',
       description: 'Second ticket for project 2',
     });
 
     await createTestTicket(project2.id, {
-      title: 'Project 2 - Ticket 3',
+      title: '[e2e] Project 2 - Ticket 3',
       description: 'Third ticket for project 2',
     });
 
@@ -183,13 +183,13 @@ test.describe('Ticket-Project Constraints', () => {
 
     // Create tickets
     await createTestTicket(project.id, {
-      title: 'Ticket 1',
+      title: '[e2e] Ticket 1',
       description: 'First ticket',
       stage: 'INBOX',
     });
 
     await createTestTicket(project.id, {
-      title: 'Ticket 2',
+      title: '[e2e] Ticket 2',
       description: 'Second ticket',
       stage: 'PLAN',
     });
@@ -211,7 +211,7 @@ test.describe('Ticket-Project Constraints', () => {
     // Attempt to create ticket with null projectId
     const createPromise = prisma.ticket.create({
       data: {
-        title: 'Test Ticket',
+        title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: null as unknown as number, // Force null value
       },

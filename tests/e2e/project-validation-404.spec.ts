@@ -45,7 +45,7 @@ test.describe('Project Validation - 404 Errors', () => {
     // Create a ticket in project 1
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test ticket in project 1',
+        title: '[e2e] Test ticket in project 1',
         description: 'Should not appear when viewing invalid project'
       }
     });

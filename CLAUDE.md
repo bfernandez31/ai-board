@@ -78,6 +78,18 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 
 **Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
 
+## Validation Rules
+
+### Ticket Title and Description
+
+The ticket validation schema allows the following characters:
+- Letters: `a-z`, `A-Z`
+- Numbers: `0-9`
+- Spaces
+- Special characters: `. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`
+
+This allows for test prefixes like `[e2e]` and other common formatting needs while preventing emojis and control characters.
+
 ## E2E Test Data Isolation
 
 ### Test Data Prefix Convention
@@ -109,7 +121,9 @@ await client.project.upsert({
 
 The `cleanupDatabase()` function in `tests/helpers/db-cleanup.ts` performs selective deletion:
 - **Tickets**: Deletes only tickets with `title` starting with `[e2e]`
-- **Projects**: Deletes only projects with `name` starting with `[e2e]`, then recreates test projects (IDs 1, 2)
+- **Projects**: Deletes only projects with `name` starting with `[e2e]` AND `id` NOT IN (1, 2)
+  - **Important**: Projects 1 & 2 are NEVER deleted to avoid cascade deletion of tickets
+  - These projects are stable test fixtures, created once with `[e2e]` prefix
 - **Manual Data**: All data without `[e2e]` prefix is preserved
 
 **Usage**:

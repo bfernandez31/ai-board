@@ -21,10 +21,11 @@ export const StageSchema = z.enum([
 ]);
 
 /**
- * Regex pattern for allowed characters: letters, numbers, spaces, and basic punctuation
- * Allowed punctuation: . , ? ! -
+ * Regex pattern for allowed characters: letters, numbers, spaces, and extended punctuation
+ * Allowed punctuation: . , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ ` |
+ * Must contain at least one non-whitespace character
  */
-const ALLOWED_CHARS_PATTERN = /^[a-zA-Z0-9\s.,?!\-]+$/;
+const ALLOWED_CHARS_PATTERN = /^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;'"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$/;
 
 /**
  * Individual field schemas for real-time validation
@@ -35,7 +36,7 @@ export const TitleFieldSchema = z
   .max(100, 'Title must be 100 characters or less')
   .regex(
     ALLOWED_CHARS_PATTERN,
-    'can only contain letters, numbers, and basic punctuation'
+    'can only contain letters, numbers, spaces, and common special characters'
   );
 
 export const DescriptionFieldSchema = z
@@ -44,7 +45,7 @@ export const DescriptionFieldSchema = z
   .max(1000, 'Description must be 1000 characters or less')
   .regex(
     ALLOWED_CHARS_PATTERN,
-    'can only contain letters, numbers, and basic punctuation'
+    'can only contain letters, numbers, spaces, and common special characters'
   );
 
 /**
@@ -68,7 +69,7 @@ export const CreateTicketSchema = z
     path: ['title'],
   })
   .refine((data) => ALLOWED_CHARS_PATTERN.test(data.title), {
-    message: 'can only contain letters, numbers, and basic punctuation',
+    message: 'can only contain letters, numbers, spaces, and common special characters',
     path: ['title'],
   })
   .refine((data) => data.description.length > 0, {
@@ -80,7 +81,7 @@ export const CreateTicketSchema = z
     path: ['description'],
   })
   .refine((data) => ALLOWED_CHARS_PATTERN.test(data.description), {
-    message: 'can only contain letters, numbers, and basic punctuation',
+    message: 'can only contain letters, numbers, spaces, and common special characters',
     path: ['description'],
   });
 

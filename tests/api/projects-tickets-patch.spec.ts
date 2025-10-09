@@ -19,7 +19,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
   async function createTestTicket(request: any, projectId: number = 1) {
     const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
-        title: 'Test ticket',
+        title: '[e2e] Test ticket',
         description: 'For patch testing'
       }
     });
@@ -52,7 +52,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
 
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: 'Updated title',
+        title: '[e2e] Updated title',
         version: 1
       }
     });
@@ -62,7 +62,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
 
     const body = await response.json();
     expect(body).toHaveProperty('id', ticket.id);
-    expect(body).toHaveProperty('title', 'Updated title');
+    expect(body).toHaveProperty('title', '[e2e] Updated title');
     expect(body).toHaveProperty('version', 2); // Version incremented
     expect(body).toHaveProperty('updatedAt');
   });
@@ -264,7 +264,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
 
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        title: '  Trimmed title  ',
+        title: '[e2e]   Trimmed title  ',
         description: '\n\nTrimmed description\n\n',
         version: 1
       }
@@ -272,7 +272,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
 
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.title).toBe('Trimmed title');
+    expect(body.title).toBe('[e2e]   Trimmed title');
     expect(body.description).toBe('Trimmed description');
   });
 

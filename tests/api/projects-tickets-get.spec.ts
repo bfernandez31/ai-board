@@ -68,7 +68,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     // Create ticket in project 1
     const ticket1Response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Ticket in project 1',
+        title: '[e2e] Ticket in project 1',
         description: 'Should be visible'
       }
     });
@@ -78,7 +78,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     // Create ticket in project 2 (if it exists, otherwise this will fail which is fine)
     await request.post(`${BASE_URL}/api/projects/2/tickets`, {
       data: {
-        title: 'Ticket in project 2',
+        title: '[e2e] Ticket in project 2',
         description: 'Should NOT be visible in project 1'
       }
     });
@@ -105,13 +105,13 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     // Verify the ticket we created is there
     const foundTicket = allTickets.find(t => t.id === ticket1.id);
     expect(foundTicket).toBeDefined();
-    expect(foundTicket.title).toBe('Ticket in project 1');
+    expect(foundTicket.title).toBe('[e2e] Ticket in project 1');
 
     // CRITICAL: Verify no tickets from other projects leaked through
     for (const ticket of allTickets) {
       // We can't check projectId directly if it's not in response, but we verified our ticket is there
       // and the count should not include project 2's ticket
-      expect(ticket.title).not.toBe('Ticket in project 2');
+      expect(ticket.title).not.toBe('[e2e] Ticket in project 2');
     }
   });
 
@@ -119,7 +119,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     // Create a test ticket in project 1
     const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Test ticket for GET contract validation',
+        title: '[e2e] Test ticket for GET contract validation',
         description: 'This ticket validates the GET endpoint contract'
       }
     });

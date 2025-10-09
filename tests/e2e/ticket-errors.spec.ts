@@ -33,7 +33,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should return 400 for empty title', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: '',
+        title: ' ',
         description: 'Empty title should fail'
       }
     });
@@ -71,7 +71,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Valid title',
+        title: '[e2e] Valid title',
         description: longDescription
       }
     });
@@ -128,8 +128,8 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should return consistent error format for all validation errors', async ({ request }) => {
     const errorCases = [
       { data: {}, expectedField: 'title' },
-      { data: { title: '' }, expectedField: 'title' },
-      { data: { title: 'A'.repeat(101) }, expectedField: 'title' }
+      { data: { title: '[e2e] ' }, expectedField: 'title' },
+      { data: { title: '[e2e] A'.repeat(101) }, expectedField: 'title' }
     ];
 
     for (const errorCase of errorCases) {
@@ -153,7 +153,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
   test('should not leak sensitive information in error messages', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
-      data: { title: '' }
+      data: { title: '[e2e] ' }
     });
 
     expect(response.status()).toBe(400);
@@ -175,7 +175,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should handle concurrent error requests correctly', async ({ request }) => {
     const errorRequests = Array.from({ length: 5 }, () =>
       request.post(`${BASE_URL}/api/projects/1/tickets`, {
-        data: { title: '' }
+        data: { title: '[e2e] ' }
       })
     );
 
@@ -199,7 +199,7 @@ test.describe('Ticket Creation Error Handling', () => {
   test('should differentiate between validation and server errors', async ({ request }) => {
     // Validation error
     const validationResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
-      data: { title: '' }
+      data: { title: '[e2e] ' }
     });
 
     expect(validationResponse.status()).toBe(400);
@@ -233,7 +233,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Valid title',
+        title: '[e2e] Valid title',
         description: maxDescription
       }
     });
@@ -267,7 +267,7 @@ test.describe('Ticket Creation Error Handling', () => {
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: 'Valid title',
+        title: '[e2e] Valid title',
         description: tooLongDescription
       }
     });
