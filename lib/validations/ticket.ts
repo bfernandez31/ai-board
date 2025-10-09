@@ -146,6 +146,14 @@ export const updateBranchSchema = z.object({
   branch: z.string().max(200).nullable(),
 });
 
+/**
+ * Validation schema for transition API requests
+ * Validates targetStage is a valid Stage enum value
+ */
+export const TransitionRequestSchema = z.object({
+  targetStage: StageSchema,
+});
+
 export const ticketResponseSchema = z.object({
   id: z.number().int().positive(),
   title: z.string(),
@@ -167,4 +175,5 @@ export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
 export type TicketValidation = z.infer<typeof TicketSchema>;
 export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
+export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 export type TicketResponse = z.infer<typeof ticketResponseSchema>;

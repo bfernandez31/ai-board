@@ -273,17 +273,18 @@ WORKFLOW LOGIC:
 
 JOB CREATION:
 - Create Job record: ticketId, command, status: pending, branch: feature/ticket-<id>, startedAt: now.
-- Create feature branch name if not exists on ticket: feature/ticket-<id>.
+- No branch name on job creation this will be updated by the return of the github workflow.
 - Update ticket.branch field with branch name.
 
 GITHUB DISPATCH:
 - Initialize Octokit with process.env.GITHUB_TOKEN.
 - Call octokit.actions.createWorkflowDispatch with owner, repo, workflow_id: 'speckit.yml', ref: 'main'.
-- Inputs: ticket_id (string), command, branch.
+- Inputs: ticket_id (string), ticketTitle (string only for specify command), ticketDescription (string only for specify command),  command, branch (for other command than specify).
 - Handle Octokit errors: rate limits (403), auth failures (401), workflow not found (404).
 
 STAGE UPDATE:
 - Update ticket.stage to targetStage after successful dispatch and confirm projectId alignment.
+- update branch name on specify command
 - Increment ticket.version for optimistic concurrency.
 
 ERROR HANDLING:
@@ -301,7 +302,7 @@ ACCEPTANCE CRITERIA:
 - POST /api/projects/[projectId]/tickets/[id]/transition creates job record successfully.
 - GitHub Actions workflow dispatched with correct inputs.
 - Ticket stage updated after dispatch.
-- Ticket branch field populated with feature/ticket-<id>.
+- Ticket branch field populated
 - Job ID returned in response for tracking.
 - Invalid stage transitions return 400 with error message.
 - Missing tickets return 404.
