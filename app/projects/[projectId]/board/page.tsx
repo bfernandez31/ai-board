@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsByStage } from '@/lib/db/tickets';
 import { getProjectById } from '@/lib/db/projects';
+import { getJobsForTickets } from '@/lib/job-queries';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,8 @@ export const revalidate = 0;
  * Main kanban board view for a specific project
  * - Validates project exists
  * - Fetches tickets for the project
- * - Renders Board component with grouped tickets and projectId
+ * - Fetches initial jobs for all tickets
+ * - Renders Board component with grouped tickets, jobs, and projectId
  */
 export default async function ProjectBoardPage({
   params,
@@ -39,9 +41,20 @@ export default async function ProjectBoardPage({
   // Fetch tickets for this project
   const ticketsByStage = await getTicketsByStage(projectId);
 
+  // Get all ticket IDs for job fetching
+  const allTickets = Object.values(ticketsByStage).flat();
+  const ticketIds = allTickets.map((ticket) => ticket.id);
+
+  // Fetch initial jobs for all tickets (single batch query)
+  const initialJobs = await getJobsForTickets(ticketIds);
+
   return (
     <main className="h-screen bg-black overflow-hidden">
-      <Board ticketsByStage={ticketsByStage} projectId={projectId} />
+      <Board
+        ticketsByStage={ticketsByStage}
+        projectId={projectId}
+        initialJobs={initialJobs}
+      />
     </main>
   );
 }

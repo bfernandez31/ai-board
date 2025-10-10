@@ -21,15 +21,13 @@ Before starting implementation:
 
 ## Installation
 
-### 1. Install New Dependencies
+### 1. Verify No New Dependencies Needed
 
-```bash
-# Install WebSocket server library
-npm install ws@^8.18.0
+**Good News**: SSE uses browser-native EventSource API and Next.js built-in streaming!
 
-# Install type definitions for ws
-npm install --save-dev @types/ws@^8.5.10
-```
+No additional dependencies required. All necessary APIs are already available:
+- **Client**: `EventSource` (browser-native)
+- **Server**: `TransformStream` (Next.js 15 App Router)
 
 ### 2. Verify No Schema Changes Needed
 
@@ -53,27 +51,27 @@ Expected output:
 
 Follow Test-Driven Development: **Write tests first, then implement to make them pass.**
 
-### Phase 1: WebSocket Infrastructure (Tests First)
+### Phase 1: SSE Infrastructure (Tests First)
 
-**1.1 Write WebSocket Server Test** (`tests/integration/websocket-server.test.ts`)
-- Test WebSocket upgrade
-- Test connection/disconnection
+**1.1 Write SSE Server Test** (`tests/integration/sse-server.test.ts`)
+- Test SSE connection establishment
+- Test connection/disconnection cleanup
 - Test message validation with Zod
 
-**1.2 Implement WebSocket Server** (`app/api/ws/route.ts`)
-- Implement HTTP upgrade handler
-- Implement message routing
-- Implement project subscription logic
+**1.2 Implement SSE Server** (`app/api/sse/route.ts`)
+- Implement GET endpoint with TransformStream
+- Implement project subscription via query parameter
+- Implement broadcast logic to all subscribers
 
-**1.3 Write WebSocket Client Test** (`tests/integration/websocket-client.test.ts`)
-- Test connection lifecycle
-- Test automatic reconnection
+**1.3 Write SSE Client Test** (`tests/integration/sse-client.test.ts`)
+- Test EventSource connection lifecycle
+- Test automatic reconnection (built-in)
 - Test message parsing
 
-**1.4 Implement WebSocket Client** (`lib/websocket-client.ts`)
-- Implement `useWebSocket` hook
-- Implement reconnection logic
-- Implement message queue
+**1.4 Implement SSE Client** (`lib/sse-client.ts`)
+- Implement `useSSE` hook with EventSource
+- Implement status tracking (connecting, connected, disconnected)
+- Implement job updates Map
 
 ---
 
@@ -104,22 +102,22 @@ Follow Test-Driven Development: **Write tests first, then implement to make them
 ### Phase 3: Real-Time Updates (Tests First)
 
 **3.1 Write Real-Time Update E2E Test** (`tests/e2e/job-status-realtime.spec.ts`)
-- Test WebSocket connection on board load
+- Test SSE connection on board load
 - Test status update received and displayed
 - Test multiple tabs sync
 
-**3.2 Implement WebSocket Provider** (`components/board/websocket-provider.tsx`)
-- Implement WebSocketContext
-- Implement subscription management
+**3.2 Implement SSE Provider** (`components/board/sse-provider.tsx`)
+- Implement SSEContext
+- Implement automatic project subscription
 - Implement job update state management
 
-**3.3 Integrate Board with WebSocket** (`components/board/board.tsx`)
-- Wrap Board with WebSocketProvider
-- Subscribe to project updates
+**3.3 Integrate Board with SSE** (`components/board/board.tsx`)
+- Wrap Board with SSEProvider
+- Access SSE context for job updates
 - Merge real-time updates with initial data
 
 **3.4 Modify Job Status API** (`app/api/jobs/[id]/status/route.ts`)
-- Add WebSocket broadcast after database update
+- Add SSE broadcast after database update
 - Broadcast to all clients subscribed to project
 
 ---
@@ -184,7 +182,7 @@ After implementation, verify the feature works end-to-end:
 2. **Open Board in Browser**
    - Navigate to `http://localhost:3000/projects/1/board`
    - Open browser DevTools → Network tab
-   - Verify WebSocket connection established (Status: 101 Switching Protocols)
+   - Verify SSE connection established (Type: eventsource, Status: 200 OK)
 
 3. **Trigger Job Status Update**
    ```bash
@@ -219,7 +217,7 @@ After implementation, verify the feature works end-to-end:
 8. **Test Reconnection**
    - Close DevTools Network tab connection
    - Wait 2 seconds
-   - Verify automatic reconnection (new WebSocket connection in Network tab)
+   - Verify automatic reconnection (new eventsource connection in Network tab - handled by browser)
 
 ---
 
@@ -242,7 +240,7 @@ npm run test:e2e:ui
 
 Expected results:
 - ✅ All E2E tests pass
-- ✅ WebSocket connection established on board load
+- ✅ SSE connection established on board load
 - ✅ Job status updates received in real-time
 - ✅ Animations render smoothly at 60fps
 - ✅ Minimum 500ms display duration enforced
@@ -254,7 +252,7 @@ Expected results:
 
 ### Metrics to Measure
 
-1. **WebSocket Latency**
+1. **SSE Latency**
    ```javascript
    // In browser console
    const start = Date.now()
@@ -263,7 +261,7 @@ Expected results:
    const latency = Date.now() - start
    console.log('Update latency:', latency, 'ms')
    ```
-   **Target**: <200ms (database update → UI display)
+   **Target**: <100ms (database update → UI display - faster than WebSocket!)
 
 2. **Animation Frame Rate**
    - Open Chrome DevTools → Performance tab
@@ -272,32 +270,36 @@ Expected results:
 
 3. **Memory Usage**
    - Open Chrome DevTools → Memory tab
-   - Take heap snapshot before WebSocket connection
+   - Take heap snapshot before SSE connection
    - Take heap snapshot after 5 minutes of updates
-   - Verify no memory leaks (heap size should stabilize)
+   - Verify no memory leaks (heap size should stabilize - lower than WebSocket)
 
 4. **Network Bandwidth**
    - Open Chrome DevTools → Network tab
-   - Monitor WebSocket frame sizes
-   - Verify typical message size: ~200-300 bytes
+   - Monitor SSE message sizes
+   - Verify typical message size: ~300 bytes (including `data:` prefix)
 
 ---
 
 ## Troubleshooting
 
-### Issue: WebSocket Connection Fails (HTTP 400)
+### Issue: SSE Connection Fails (HTTP 400)
 
-**Symptoms**: Console error "WebSocket connection failed"
+**Symptoms**: Console error "EventSource failed"
 
 **Causes**:
-- HTTP upgrade header missing
-- Server not handling upgrade correctly
+- Missing or invalid `projectId` query parameter
+- Server not returning correct headers
 
 **Solution**:
 ```typescript
-// Verify upgrade header in app/api/ws/route.ts
-if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
-  return new Response('WebSocket upgrade required', { status: 400 })
+// Verify query parameter in app/api/sse/route.ts
+const projectId = parseInt(searchParams.get('projectId'), 10)
+if (isNaN(projectId) || projectId <= 0) {
+  return new Response(
+    JSON.stringify({ error: 'projectId must be a positive integer' }),
+    { status: 400, headers: { 'Content-Type': 'application/json' } }
+  )
 }
 ```
 
@@ -308,27 +310,27 @@ if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
 **Symptoms**: Manual refresh shows new status, but UI doesn't update automatically
 
 **Causes**:
-- WebSocket broadcast not triggered after database update
-- Client not subscribed to correct project
+- SSE broadcast not triggered after database update
+- Client not connected to correct project
 
 **Solution**:
 1. Verify broadcast in `/api/jobs/[id]/status/route.ts`:
    ```typescript
    // After Prisma update
    await broadcastJobStatusUpdate({
-     projectId: job.ticket.projectId,
-     ticketId: job.ticketId,
-     jobId: job.id,
-     status: job.status,
-     command: job.command,
+     projectId: updatedJob.ticket.projectId,
+     ticketId: updatedJob.ticketId,
+     jobId: updatedJob.id,
+     status: updatedJob.status,
+     command: updatedJob.command,
      timestamp: new Date().toISOString()
    })
    ```
 
-2. Verify subscription in browser console:
+2. Verify connection in browser console:
    ```javascript
-   // Should show subscribed to projectId
-   console.log(wsContext.subscriptions)
+   // Should show connected status
+   console.log(window.__eventSource?.readyState) // 1 = OPEN
    ```
 
 ---
@@ -396,13 +398,13 @@ useEffect(() => {
 Feature is ready for production when:
 
 - [x] All E2E tests pass (Playwright)
-- [x] WebSocket connection established on board load
-- [x] Job status updates appear within 200ms of database change
+- [x] SSE connection established on board load
+- [x] Job status updates appear within 100ms of database change
 - [x] RUNNING animation plays smoothly at 60fps
 - [x] Status displays for minimum 500ms before transitioning
 - [x] FAILED (red) and CANCELLED (gray) visually distinct
 - [x] Multiple browser tabs sync automatically
-- [x] Automatic reconnection works after disconnect
+- [x] Automatic reconnection works after disconnect (EventSource handles this)
 - [x] No memory leaks after 10 minutes of updates
 - [x] Metadata section removed from all ticket cards
 - [x] Accessibility: Screen reader announces status changes
@@ -427,7 +429,7 @@ After quickstart validation:
 - [Feature Specification](./spec.md)
 - [Research Documentation](./research.md)
 - [Data Model](./data-model.md)
-- [WebSocket API Contract](./contracts/websocket-api.md)
+- [SSE API Contract](./contracts/sse-api.md)
 - [Component Interfaces](./contracts/component-interfaces.md)
 - [Constitution](../../.specify/memory/constitution.md)
 

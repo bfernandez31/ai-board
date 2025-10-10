@@ -7,6 +7,7 @@ import { Stage } from '@/lib/stage-validation';
 import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { TicketWithVersion } from '@/lib/types';
+import { Job } from '@prisma/client';
 
 interface StageColumnProps {
   stage: Stage;
@@ -14,6 +15,7 @@ interface StageColumnProps {
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
   projectId: number;
+  getTicketJob?: (ticketId: number) => Job | null;
 }
 
 // Stage configuration matching original design
@@ -116,6 +118,7 @@ export const StageColumn = React.memo(
     isDraggable = true,
     onTicketClick,
     projectId,
+    getTicketJob,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -173,6 +176,7 @@ export const StageColumn = React.memo(
                 <TicketCard
                   key={ticket.id}
                   ticket={ticket}
+                  currentJob={getTicketJob?.(ticket.id) || null}
                   isDraggable={isDraggable}
                   {...(onTicketClick && { onTicketClick })}
                 />

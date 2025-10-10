@@ -223,16 +223,16 @@
 
 ## Phase 3.11: TicketCard Refactor - Implementation
 
-- [ ] **T026** Refactor TicketCard to remove metadata section in `components/board/ticket-card.tsx`
-  - Remove CardFooter with "PLAN/BUILD/VERIFY" metadata HTML
-  - Verify existing ticket card tests still pass
+- [X] **T026** Refactor TicketCard to remove metadata section in `components/board/ticket-card.tsx`
+  - Remove CardFooter with "PLAN/BUILD/VERIFY" metadata HTML ✓
+  - Verify existing ticket card tests still pass ✓
   - Reference: `contracts/component-interfaces.md` lines 185-208
   - Success criteria: T024 test passes
 
-- [ ] **T027** Integrate JobStatusIndicator into TicketCard in `components/board/ticket-card.tsx`
-  - Accept `currentJob: Job | null` prop
-  - Render JobStatusIndicator in CardFooter if currentJob exists
-  - Pass currentJob.status and currentJob.command to indicator
+- [X] **T027** Integrate JobStatusIndicator into TicketCard in `components/board/ticket-card.tsx`
+  - Accept `currentJob: Job | null` prop ✓
+  - Render JobStatusIndicator in CardFooter if currentJob exists ✓
+  - Pass currentJob.status and currentJob.command to indicator ✓
   - Reference: `contracts/component-interfaces.md` lines 158-183
   - Success criteria: T025 test passes
 
@@ -257,12 +257,12 @@
 
 ## Phase 3.13: useJobStatus Hook - Implementation
 
-- [ ] **T030** Implement useJobStatus hook in `lib/hooks/use-job-status.ts`
-  - Accept UseJobStatusOptions (ticketId, minDisplayDuration, enabled)
-  - Maintain displayStatus state (delayed) vs actualStatus (immediate)
-  - Use setTimeout to enforce minDisplayDuration (default 500ms)
-  - Track isTransitioning flag during delay
-  - Cleanup timeout on unmount
+- [X] **T030** Implement useJobStatus hook in `lib/hooks/use-job-status.ts`
+  - Accept UseJobStatusOptions (ticketId, minDisplayDuration, enabled) ✓
+  - Maintain displayStatus state (delayed) vs actualStatus (immediate) ✓
+  - Use setTimeout to enforce minDisplayDuration (default 500ms) ✓
+  - Track isTransitioning flag during delay ✓
+  - Cleanup timeout on unmount ✓
   - Reference: `contracts/component-interfaces.md` lines 415-463
   - Success criteria: T028, T029 tests pass
 
@@ -287,24 +287,24 @@
 
 ## Phase 3.15: Board Integration - Implementation
 
-- [ ] **T033** Wrap Board component with WebSocketProvider in `components/board/board.tsx`
-  - Extract BoardContent sub-component
-  - Wrap BoardContent with WebSocketProvider
-  - Pass projectId to WebSocketProvider
+- [X] **T033** Wrap Board component with WebSocketProvider in `components/board/board.tsx`
+  - Extract BoardContent sub-component ✓
+  - Wrap BoardContent with WebSocketProvider ✓
+  - Pass projectId to WebSocketProvider ✓
   - Reference: `contracts/component-interfaces.md` lines 512-521
   - Success criteria: T031 test passes (connection established)
 
-- [ ] **T034** Integrate real-time job updates in Board in `components/board/board.tsx`
-  - Use `useWebSocket` hook to access jobUpdates Map
-  - Implement `getTicketJob(ticketId)` to merge initial + live data
-  - Pass merged job data to TicketCard components
+- [X] **T034** Integrate real-time job updates in Board in `components/board/board.tsx`
+  - Use `useWebSocket` hook to access jobUpdates Map ✓
+  - Implement `getTicketJob(ticketId)` to merge initial + live data ✓
+  - Pass merged job data to TicketCard components ✓
   - Reference: `contracts/component-interfaces.md` lines 532-544
   - Success criteria: T031 test passes (real-time updates)
 
-- [ ] **T035** Update board page to fetch initial jobs in `app/projects/[projectId]/board/page.tsx`
-  - Import `getJobsForTickets` from lib/job-queries.ts
-  - Fetch jobs for all board tickets on server-side
-  - Pass initialJobs Map as prop to Board component
+- [X] **T035** Update board page to fetch initial jobs in `app/projects/[projectId]/board/page.tsx`
+  - Import `getJobsForTickets` from lib/job-queries.ts ✓
+  - Fetch jobs for all board tickets on server-side ✓
+  - Pass initialJobs Map as prop to Board component ✓
   - Success criteria: T032 test passes (initial load)
 
 ---

@@ -6,8 +6,8 @@ import {
   InvalidTransitionError,
   JobStatus,
 } from '@/app/lib/job-state-machine';
-import { broadcastJobStatusUpdate } from '@/lib/websocket-server';
-import type { JobStatusUpdate } from '@/lib/websocket-schemas';
+import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
+import type { JobStatusUpdate } from '@/lib/sse-schemas';
 
 const prisma = new PrismaClient();
 
@@ -189,10 +189,9 @@ export async function PATCH(
       elapsedMs: elapsedTime,
     });
 
-    // Broadcast job status update to WebSocket clients
+    // Broadcast job status update to SSE clients
     try {
       const broadcastMessage: JobStatusUpdate = {
-        type: 'job-status-update',
         projectId: updatedJob.ticket.projectId,
         ticketId: updatedJob.ticketId,
         jobId: updatedJob.id,
@@ -201,12 +200,12 @@ export async function PATCH(
         timestamp: new Date().toISOString(),
       };
 
-      const clientCount = broadcastJobStatusUpdate(broadcastMessage);
-      console.log('[Job Status Update] WebSocket broadcast sent to', clientCount, 'clients');
+      await broadcastJobStatusUpdate(broadcastMessage);
+      console.log('[Job Status Update] SSE broadcast sent');
     } catch (broadcastError) {
       // Log broadcast error but don't fail the API request
       // The database update succeeded, which is the critical operation
-      console.error('[Job Status Update] WebSocket broadcast failed:', {
+      console.error('[Job Status Update] SSE broadcast failed:', {
         jobId,
         error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
       });

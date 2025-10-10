@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { JobStatus } from '@prisma/client'
-import { useWebSocketContext } from '@/components/board/websocket-provider'
+import { useSSEContext } from '@/components/board/sse-provider'
 
 /**
  * useJobStatus Hook Options
@@ -36,7 +36,7 @@ export interface UseJobStatusResult {
   displayStatus: JobStatus | null
 
   /**
-   * Actual latest status from WebSocket
+   * Actual latest status from SSE
    */
   actualStatus: JobStatus | null
 
@@ -72,14 +72,14 @@ export interface UseJobStatusResult {
 export function useJobStatus(options: UseJobStatusOptions): UseJobStatusResult {
   const { ticketId, minDisplayDuration = 500, enabled = true } = options
 
-  const { jobUpdates } = useWebSocketContext()
+  const { jobUpdates } = useSSEContext()
 
   const [displayStatus, setDisplayStatus] = useState<JobStatus | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   const timeoutRef = useRef<NodeJS.Timeout>()
 
-  // Get actual status from WebSocket
+  // Get actual status from SSE
   const actualUpdate = jobUpdates.get(ticketId)
   const actualStatus = actualUpdate?.status ?? null
   const command = actualUpdate?.command ?? null

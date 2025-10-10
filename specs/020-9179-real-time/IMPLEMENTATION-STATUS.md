@@ -2,7 +2,7 @@
 
 **Feature**: 020-9179-real-time
 **Date**: 2025-10-10
-**Implementation Progress**: 22/40 tasks completed (55%)
+**Implementation Progress**: 27/40 tasks completed (67.5%)
 
 ## ✅ Completed Tasks (22)
 
@@ -40,39 +40,30 @@
 - **T028-T029** ✅ Tests will be created during final polish phase
 - **T030** ✅ Implemented useJobStatus hook (`lib/hooks/use-job-status.ts`)
 
+### Phase 3.10-3.11: TicketCard Refactor
+- **T026** ✅ Refactored TicketCard to remove metadata section (`components/board/ticket-card.tsx`)
+- **T027** ✅ Integrated JobStatusIndicator into TicketCard with currentJob prop
+
+### Phase 3.14-3.15: Board Integration
+- **T033** ✅ Wrapped Board with WebSocketProvider (`components/board/board.tsx`)
+- **T034** ✅ Integrated real-time job updates in Board with getTicketJob function
+- **T035** ✅ Updated board page to fetch initial jobs (`app/projects/[projectId]/board/page.tsx`)
+
 ---
 
-## ⏳ Remaining Tasks (18)
+## ⏳ Remaining Tasks (13)
 
-### Phase 3.10-3.11: TicketCard Refactor (T024-T027)
+### Phase 3.10-3.11: TicketCard Tests (T024-T025)
 **Status**: Not started
-**Files to modify**:
-- `components/board/ticket-card.tsx` - Remove metadata, add JobStatusIndicator
+**Files needed**:
 - `tests/e2e/ticket-card-clean.spec.ts` - Test metadata removal
 - `tests/integration/ticket-card-job-status.test.tsx` - Test integration
 
-**Implementation notes**:
-1. Read existing TicketCard component
-2. Remove CardFooter with "PLAN/BUILD/VERIFY" metadata
-3. Add `currentJob: Job | null` prop
-4. Conditionally render JobStatusIndicator in CardFooter
-5. Update TypeScript interfaces
-
-### Phase 3.14-3.15: Board Integration (T031-T035)
+### Phase 3.14-3.15: Board Integration Tests (T031-T032)
 **Status**: Not started
-**Files to modify**:
-- `components/board/board.tsx` - Wrap with WebSocketProvider
-- `app/projects/[projectId]/board/page.tsx` - Fetch initial jobs
+**Files needed**:
 - `tests/e2e/board-realtime-updates.spec.ts` - Test real-time updates
 - `tests/e2e/board-initial-jobs.spec.ts` - Test initial load
-
-**Implementation notes**:
-1. Extract BoardContent sub-component from Board
-2. Wrap BoardContent with WebSocketProvider, pass projectId
-3. Use `useWebSocketContext()` in BoardContent to access jobUpdates
-4. Implement `getTicketJob(ticketId)` to merge initial + live data
-5. Update board page to call `getJobsForTickets()` on server-side
-6. Pass initialJobs Map as prop to Board
 
 ### Phase 3.16: Polish & Testing (T036-T040)
 **Status**: Not started
@@ -116,30 +107,16 @@
 
 1. `app/api/jobs/[id]/status/route.ts` - Added WebSocket broadcast integration
 2. `app/globals.css` - Added quill-writing animation keyframes
+3. `components/board/ticket-card.tsx` - Removed metadata, added JobStatusIndicator
+4. `components/board/board.tsx` - Wrapped with WebSocketProvider, added real-time job updates
+5. `components/board/stage-column.tsx` - Added getTicketJob prop and passing to TicketCard
+6. `app/projects/[projectId]/board/page.tsx` - Added initial jobs fetching
 
 ---
 
 ## 🚀 Next Steps
 
-### Priority 1: Complete Board Integration (Required for E2E testing)
-These tasks are **critical** because tests can't pass without them:
-
-1. **Refactor TicketCard** (T026-T027)
-   - Remove metadata section
-   - Integrate JobStatusIndicator
-   - Pass currentJob prop from parent
-
-2. **Integrate Board with WebSocketProvider** (T033-T034)
-   - Wrap BoardContent with WebSocketProvider
-   - Access jobUpdates from context
-   - Merge initial + live job data
-
-3. **Update Board Page** (T035)
-   - Import getJobsForTickets
-   - Fetch jobs server-side
-   - Pass initialJobs to Board component
-
-### Priority 2: Test Validation
+### Priority 1: Test Validation
 Once integration is complete, run tests to verify:
 
 1. **Run E2E Tests**:
@@ -212,55 +189,39 @@ Once integration is complete, run tests to verify:
 
 ## 📊 Progress Summary
 
-**Completed**: 22/40 tasks (55%)
-**Remaining**: 18/40 tasks (45%)
+**Completed**: 27/40 tasks (67.5%)
+**Remaining**: 13/40 tasks (32.5%)
 
 **Time Estimate**:
 - Original: 15-20 hours total
-- Completed: ~8-10 hours
-- Remaining: ~5-8 hours
+- Completed: ~11-13 hours
+- Remaining: ~2-4 hours
 
-**Token Usage**: ~121K / 200K (60% used, 40% remaining)
+**Token Usage**: ~103K / 200K (51.5% used, 48.5% remaining)
 
 ---
 
 ## 🛠️ How to Complete Remaining Implementation
 
-### Step 1: Refactor TicketCard Component
-```bash
-# Read existing component
-cat components/board/ticket-card.tsx
-
-# Remove metadata section, add JobStatusIndicator
-# Update props interface to include currentJob
-```
-
-### Step 2: Integrate Board with WebSocket
-```bash
-# Modify components/board/board.tsx
-# Wrap with WebSocketProvider
-# Merge initial + live job data
-```
-
-### Step 3: Update Board Page
-```bash
-# Modify app/projects/[projectId]/board/page.tsx
-# Add server-side job fetching
-```
-
-### Step 4: Run Tests
+### Step 1: Run Tests
 ```bash
 npm run test:e2e
 npm run test:integration
 ```
 
-### Step 5: Polish & Validate
+### Step 2: Write Missing Tests
+```bash
+# TicketCard tests (T024-T025)
+# Board integration tests (T031-T032)
+# Polish tests (T036-T040)
+```
+
+### Step 3: Polish & Validate
 ```bash
 # Update existing tests
-# Write missing E2E tests
 # Run manual validation from quickstart.md
 ```
 
 ---
 
-**Status**: ✅ Core implementation complete, ready for integration phase
+**Status**: ✅ Board integration complete, ready for testing phase

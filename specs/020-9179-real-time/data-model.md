@@ -25,7 +25,7 @@ Represents an automated workflow execution (e.g., specification drafting, planni
 - `status`: JobStatus enum - Current execution state
 - `branch`: String? (max 200 chars, nullable) - Git branch name
 - `commitSha`: String? (max 40 chars, nullable) - Git commit SHA
-- `logs`: String? (Text, nullable) - Execution logs (NOT exposed to WebSocket clients)
+- `logs`: String? (Text, nullable) - Execution logs (NOT exposed to SSE clients)
 - `startedAt`: DateTime (default: now()) - Job start timestamp
 - `completedAt`: DateTime? (nullable) - Job completion timestamp
 - `createdAt`: DateTime (default: now())
@@ -74,7 +74,7 @@ Enumeration of possible job execution states.
 **Usage**:
 - Database column type for Job.status
 - TypeScript enum type in generated Prisma Client
-- WebSocket message validation schema
+- SSE message validation schema
 - UI visual state mapping
 
 ---
@@ -102,7 +102,7 @@ Represents a work item on the board with associated jobs.
 
 ### Pattern 1: Get Most Recent Active Job for Ticket
 
-**Use Case**: Initial board load, WebSocket reconnection, user refreshes ticket view
+**Use Case**: Initial board load, SSE reconnection, user refreshes ticket view
 
 **Query Logic** (two-step with single DB call):
 1. Find most recent job with `status IN ['PENDING', 'RUNNING']` for ticket
@@ -196,8 +196,8 @@ export async function getJobsForTickets(ticketIds: number[]): Promise<Map<number
 **Flow**:
 1. GitHub Actions calls `PATCH /api/jobs/:id/status` with new status
 2. API validates status transition and updates database
-3. API publishes status update to WebSocket server
-4. WebSocket server broadcasts to all connected clients viewing that ticket's project
+3. API publishes status update to SSE endpoint
+4. SSE endpoint broadcasts to all connected clients viewing that ticket's project
 
 **Prisma Update**:
 ```typescript
@@ -214,14 +214,15 @@ const updatedJob = await prisma.job.update({
 })
 ```
 
-**WebSocket Broadcast** (NEW):
+**SSE Broadcast** (NEW):
 ```typescript
 // After database update
-broadcastJobStatusUpdate({
+await broadcastJobStatusUpdate({
   projectId: updatedJob.ticket.projectId,
   ticketId: updatedJob.ticketId,
   jobId: updatedJob.id,
   status: updatedJob.status,
+  command: updatedJob.command,
   timestamp: new Date().toISOString()
 })
 ```
@@ -233,8 +234,8 @@ broadcastJobStatusUpdate({
 ### Read Consistency
 
 - **Initial Load**: Reads directly from PostgreSQL (strongly consistent)
-- **WebSocket Updates**: Eventually consistent (broadcast may have milliseconds delay)
-- **Reconnection**: Client refetches from database to reconcile any missed updates
+- **SSE Updates**: Eventually consistent (broadcast may have milliseconds delay)
+- **Reconnection**: Client refetches from database to reconcile any missed updates (EventSource API handles automatically)
 
 ### Write Consistency
 
@@ -244,29 +245,29 @@ broadcastJobStatusUpdate({
 
 ### Edge Cases
 
-**Case 1: WebSocket Message Arrives Before Database Commit**
-- **Mitigation**: Database update completes before WebSocket broadcast (synchronous call)
+**Case 1: SSE Message Arrives Before Database Commit**
+- **Mitigation**: Database update completes before SSE broadcast (await call)
 - **Guarantee**: Clients never see status before it's persisted
 
 **Case 2: Client Disconnects During Status Transition**
-- **Mitigation**: On reconnect, client fetches latest job status from database
-- **Guarantee**: Client eventually sees correct state
+- **Mitigation**: EventSource API automatically reconnects and client sees correct state
+- **Guarantee**: Client eventually sees correct state (automatic recovery)
 
 **Case 3: Multiple Tabs Open for Same Board**
-- **Mitigation**: Each tab maintains independent WebSocket connection and receives broadcasts
-- **Guarantee**: All tabs see synchronized updates (within WebSocket latency ~50-100ms)
+- **Mitigation**: Each tab maintains independent SSE connection and receives broadcasts
+- **Guarantee**: All tabs see synchronized updates (within SSE latency ~50-100ms)
 
 ---
 
 ## Data Security & Privacy
 
-### Sensitive Fields (NOT Exposed to WebSocket Clients)
+### Sensitive Fields (NOT Exposed to SSE Clients)
 
 - `Job.logs` - May contain internal errors, stack traces, or system paths
 - `Job.commitSha` - Internal Git information
 - `Job.branch` - Internal Git information (duplicate of Ticket.branch)
 
-### Exposed Fields (Safe for WebSocket Broadcast)
+### Exposed Fields (Safe for SSE Broadcast)
 
 - `Job.id` - Required for client reconciliation
 - `Job.ticketId` - Required for routing to correct ticket card
@@ -274,15 +275,14 @@ broadcastJobStatusUpdate({
 - `Job.startedAt` - Timestamp for "most recent" logic
 - `Job.command` - Safe string (e.g., "specify", "plan")
 
-### WebSocket Message Schema (Zod Validation)
+### SSE Message Schema (Zod Validation)
 
 ```typescript
-// lib/websocket-schemas.ts
+// lib/sse-schemas.ts
 export const JobStatusUpdateSchema = z.object({
-  type: z.literal('job-status-update'),
-  projectId: z.number(),
-  ticketId: z.number(),
-  jobId: z.number(),
+  projectId: z.number().int().positive(),
+  ticketId: z.number().int().positive(),
+  jobId: z.number().int().positive(),
   status: z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
   command: z.string().max(50),
   timestamp: z.string().datetime()
@@ -303,19 +303,19 @@ export type JobStatusUpdate = z.infer<typeof JobStatusUpdateSchema>
 | Batch ticket jobs (50 tickets) | `[ticketId]` + sorting | 20ms | 50ms |
 | Job status update | Primary key `[id]` | 2ms | 10ms |
 
-### WebSocket Performance
+### SSE Performance
 
 | Metric | Target | Typical | Max |
 |--------|--------|---------|-----|
-| Message latency | <100ms | 50ms | 200ms |
-| Broadcast fanout (50 clients) | <50ms | 20ms | 100ms |
-| Reconnection time | <1s | 500ms | 2s |
+| Message latency | <100ms | 50ms | 150ms |
+| Broadcast fanout (50 clients) | <30ms | 15ms | 80ms |
+| Reconnection time | <1s | 300ms | 2s |
 
 ### Memory Usage
 
-- **Per WebSocket Connection**: ~50KB (Node.js overhead + message buffers)
-- **Per Active Job in Memory**: ~500 bytes (cached for broadcast)
-- **Total for 100 concurrent users**: ~5MB server memory
+- **Per SSE Connection**: ~20KB (lower than WebSocket due to simpler protocol)
+- **Per Active Job in Memory**: ~300 bytes (cached for broadcast)
+- **Total for 100 concurrent users**: ~2MB server memory
 
 ---
 

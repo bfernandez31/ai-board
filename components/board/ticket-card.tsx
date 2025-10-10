@@ -5,9 +5,12 @@ import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TicketWithVersion } from '@/lib/types';
+import { JobStatusIndicator } from './job-status-indicator';
+import { Job } from '@prisma/client';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
+  currentJob?: Job | null;
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
 }
@@ -16,7 +19,7 @@ interface DraggableTicketCardProps {
  * TicketCard Component - Original Design with Drag-and-Drop
  */
 export const TicketCard = React.memo(
-  ({ ticket, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
+  ({ ticket, currentJob, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
     const [isMounted, setIsMounted] = useState(false);
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -87,32 +90,16 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
-          {/* Metadata */}
-          <div className="border-t border-zinc-700 pt-3">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 font-semibold">
-              MESSAGES/TOOLS PER AGENT
+          {/* Job Status Indicator */}
+          {currentJob && (
+            <div className="border-t border-zinc-700 pt-3">
+              <JobStatusIndicator
+                status={currentJob.status}
+                command={currentJob.command}
+                animated={true}
+              />
             </div>
-            <div className="flex gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-blue-300 font-semibold">
-                  PLAN
-                </span>
-                <span className="text-xs text-zinc-400 font-medium">0 · 0</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-green-300 font-semibold">
-                  BUILD
-                </span>
-                <span className="text-xs text-zinc-400 font-medium">0 · 0</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-orange-300 font-semibold">
-                  VERIFY
-                </span>
-                <span className="text-xs text-zinc-400 font-medium">0 · 0</span>
-              </div>
-            </div>
-          </div>
+          )}
         </Card>
       </div>
     );

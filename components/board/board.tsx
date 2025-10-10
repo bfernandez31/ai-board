@@ -23,14 +23,17 @@ import {
   revertTicketStage,
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
+import { SSEProvider, useSSEContext } from './sse-provider';
+import { Job } from '@prisma/client';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
+  initialJobs?: Map<number, Job>;
 }
 
 /**
- * Board Component - Drag and Drop Enabled
+ * BoardContent Component - Internal Board Logic
  *
  * Main kanban board with drag-and-drop functionality
  * - Optimistic UI updates
@@ -38,11 +41,14 @@ interface BoardProps {
  * - Sequential stage validation
  * - Touch and pointer support
  * - Project-scoped API calls
+ * - Real-time job status updates
  */
-export function Board({
+function BoardContent({
   ticketsByStage: initialTicketsByStage,
   projectId,
+  initialJobs = new Map(),
 }: BoardProps) {
+  const { jobUpdates } = useSSEContext();
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -53,9 +59,21 @@ export function Board({
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
 
-  // Sync local state with server data when props change (after router.refresh())
+  // Sync with initialTicketsByStage only when new tickets are added
+  // (e.g., from modal creation), but not during optimistic updates
+  const prevTicketCountRef = React.useRef(
+    Object.values(initialTicketsByStage).flat().length
+  );
+
   React.useEffect(() => {
-    setTicketsByStage(initialTicketsByStage);
+    const currentCount = Object.values(initialTicketsByStage).flat().length;
+    const prevCount = prevTicketCountRef.current;
+
+    // Only sync if ticket count increased (new ticket added)
+    if (currentCount > prevCount) {
+      setTicketsByStage(initialTicketsByStage);
+      prevTicketCountRef.current = currentCount;
+    }
   }, [initialTicketsByStage]);
 
   // Configure sensors for drag and drop
@@ -296,6 +314,40 @@ export function Board({
     [allTickets, groupTicketsByStage]
   );
 
+  // Get job for a specific ticket (merges initial + live data)
+  const getTicketJob = useCallback(
+    (ticketId: number): Job | null => {
+      // Prioritize real-time SSE update
+      const liveUpdate = jobUpdates.get(ticketId);
+      if (liveUpdate) {
+        // Convert to Job-like object (SSE message has minimal fields)
+        // We'll use the initial job as base if available, otherwise create minimal job
+        const baseJob = initialJobs.get(ticketId);
+        if (baseJob) {
+          return {
+            ...baseJob,
+            status: liveUpdate.status,
+            command: liveUpdate.command,
+          };
+        }
+
+        // Create minimal Job object from SSE update (for new jobs created during session)
+        return {
+          id: liveUpdate.jobId,
+          ticketId: liveUpdate.ticketId,
+          status: liveUpdate.status,
+          command: liveUpdate.command,
+          startedAt: new Date(liveUpdate.timestamp),
+          completedAt: null,
+        } as Job;
+      }
+
+      // Fall back to initial job data
+      return initialJobs.get(ticketId) || null;
+    },
+    [jobUpdates, initialJobs]
+  );
+
   const stages = getAllStages();
 
   return (
@@ -326,6 +378,7 @@ export function Board({
                 isDraggable={isOnline}
                 onTicketClick={handleTicketClick}
                 projectId={projectId}
+                getTicketJob={getTicketJob}
               />
             ))}
           </div>
@@ -343,5 +396,18 @@ export function Board({
         projectId={projectId}
       />
     </>
+  );
+}
+
+/**
+ * Board Component - SSE-Enabled Board Wrapper
+ *
+ * Wraps BoardContent with SSEProvider for real-time updates.
+ */
+export function Board(props: BoardProps) {
+  return (
+    <SSEProvider projectId={props.projectId}>
+      <BoardContent {...props} />
+    </SSEProvider>
   );
 }

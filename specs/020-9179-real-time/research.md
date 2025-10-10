@@ -6,87 +6,116 @@
 
 ## Research Questions
 
-### 1. WebSocket Implementation in Next.js 15 App Router
+### 1. Server-Sent Events (SSE) Implementation in Next.js 15 App Router
 
-**Question**: How to implement WebSocket server in Next.js 15 App Router with proper upgrade handling?
+**Question**: How to implement real-time job status updates in Next.js 15 App Router?
 
-**Decision**: Use custom route handler with HTTP upgrade in `/app/api/ws/route.ts`
+**Decision**: Use Server-Sent Events (SSE) with `/app/api/sse/route.ts` endpoint
 
 **Rationale**:
-- Next.js 15 App Router supports custom HTTP upgrade via route handlers
-- The `ws` library provides robust WebSocket server implementation
-- Route handler pattern: Check for upgrade header, perform upgrade, handle WebSocket lifecycle
-- Vercel deployment consideration: WebSocket support available in Pro/Enterprise plans; development uses local Node.js server
+- Next.js 15 App Router natively supports SSE via ReadableStream
+- SSE is one-way (server → client) which perfectly fits our use case (we only need job status updates)
+- No custom server required - works with serverless deployments (Vercel Free tier)
+- Automatic reconnection built into browser's EventSource API
+- Simpler implementation than WebSockets (no upgrade handshake, no bidirectional protocol)
+- Lower complexity and maintenance burden
 
 **Implementation Pattern**:
 ```typescript
-// app/api/ws/route.ts
-import { NextRequest } from 'next/server'
-import { Server as WebSocketServer } from 'ws'
-
+// app/api/sse/route.ts
 export async function GET(request: NextRequest) {
-  if (request.headers.get('upgrade') === 'websocket') {
-    // Perform WebSocket upgrade
-    // Return 101 Switching Protocols
+  const stream = new TransformStream()
+  const writer = stream.writable.getWriter()
+  const encoder = new TextEncoder()
+
+  // Send updates to subscribed clients
+  const sendUpdate = (data: JobStatusUpdate) => {
+    writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
   }
-  return new Response('WebSocket endpoint', { status: 200 })
+
+  return new Response(stream.readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
 ```
 
+**Why SSE Over WebSockets**:
+- ✅ Works with Next.js App Router out of the box (no custom server)
+- ✅ Serverless-friendly (Vercel Free tier compatible)
+- ✅ Automatic reconnection with exponential backoff (built into EventSource)
+- ✅ Simpler protocol - just HTTP with streaming
+- ✅ ~50% less code than WebSocket implementation
+- ✅ Easier to test and debug (standard HTTP response)
+- ❌ One-way only (but we don't need client → server communication)
+
 **Alternatives Considered**:
-- Server-Sent Events (SSE): Simpler but one-way communication only, less efficient for bidirectional updates
-- Polling: Simple implementation but higher latency and server load
+- WebSockets: Bidirectional but requires custom Node.js server, not serverless-friendly, overkill for one-way updates
+- Polling: Simple but higher latency (5-10s) and more server load
 - Socket.io: Full-featured but adds bundle size and complexity beyond requirements
 
 **References**:
-- Next.js Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
-- ws library: https://github.com/websockets/ws
-- Vercel WebSocket support: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#websocket-support
+- Next.js Streaming: https://nextjs.org/docs/app/building-your-application/routing/route-handlers#streaming
+- Server-Sent Events: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+- EventSource API: https://developer.mozilla.org/en-US/docs/Web/API/EventSource
 
 ---
 
-### 2. Client-Side WebSocket Management with React Hooks
+### 2. Client-Side SSE Management with React Hooks
 
-**Question**: How to manage WebSocket lifecycle, reconnection, and state synchronization across React components?
+**Question**: How to manage SSE connection lifecycle and state synchronization across React components?
 
-**Decision**: Custom React hook (`useWebSocket`) with automatic reconnection and message queue
+**Decision**: Custom React hook (`useSSE`) with EventSource API and automatic reconnection
 
 **Rationale**:
 - React hooks provide clean lifecycle management and component state integration
-- Automatic reconnection ensures resilience to network issues
-- Message queue prevents lost messages during brief disconnections
-- Context API enables WebSocket sharing across components without prop drilling
+- EventSource API handles reconnection automatically (built-in exponential backoff)
+- Context API enables SSE connection sharing across components without prop drilling
+- Simpler than WebSocket - no manual reconnection logic needed
 - Cleanup on unmount prevents memory leaks
 
 **Implementation Pattern**:
 ```typescript
-// lib/websocket-client.ts
-export function useWebSocket(url: string) {
-  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
-  const [messages, setMessages] = useState<JobStatusMessage[]>([])
+// lib/sse-client.ts
+export function useSSE(url: string, projectId: number) {
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [jobUpdates, setJobUpdates] = useState<Map<number, JobStatusUpdate>>(new Map())
 
   useEffect(() => {
-    const ws = new WebSocket(url)
-    ws.onopen = () => setStatus('connected')
-    ws.onmessage = (event) => handleMessage(event.data)
-    ws.onerror = () => setStatus('disconnected')
-    ws.onclose = () => reconnect()
+    const eventSource = new EventSource(`${url}?projectId=${projectId}`)
 
-    return () => ws.close()
-  }, [url])
+    eventSource.onopen = () => setStatus('connected')
+    eventSource.onmessage = (event) => {
+      const update = JSON.parse(event.data)
+      setJobUpdates(prev => new Map(prev).set(update.ticketId, update))
+    }
+    eventSource.onerror = () => setStatus('disconnected')
 
-  return { status, messages, send }
+    return () => eventSource.close()
+  }, [url, projectId])
+
+  return { status, jobUpdates }
 }
 ```
 
+**Why EventSource Over Manual Implementation**:
+- ✅ Automatic reconnection with exponential backoff (no manual retry logic)
+- ✅ Browser-native API (no external dependencies)
+- ✅ Handles connection state automatically
+- ✅ Simpler API than WebSocket (no send/receive distinction)
+
 **Alternatives Considered**:
-- useWebSocket library: External dependency adds bundle size for features we don't need
+- fetch with ReadableStream: More control but manual reconnection required
 - Redux/Zustand integration: Overkill for simple job status updates
-- Direct WebSocket usage without hooks: Harder to manage lifecycle and state
+- Direct EventSource without hooks: Harder to manage lifecycle and state
 
 **References**:
-- React useEffect for WebSocket: https://react.dev/reference/react/useEffect
-- WebSocket API: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
+- React useEffect: https://react.dev/reference/react/useEffect
+- EventSource API: https://developer.mozilla.org/en-US/docs/Web/API/EventSource
+- SSE Specification: https://html.spec.whatwg.org/multipage/server-sent-events.html
 
 ---
 
@@ -220,34 +249,41 @@ function useStatusTransition(currentStatus: JobStatus) {
 
 ---
 
-### 6. WebSocket Message Schema Validation
+### 6. SSE Message Schema Validation
 
-**Question**: How to ensure type safety and validation for WebSocket messages between client and server?
+**Question**: How to ensure type safety and validation for SSE messages?
 
-**Decision**: Zod schemas for message validation on both client and server
+**Decision**: Zod schemas for message validation on client-side
 
 **Rationale**:
 - Zod provides runtime validation and TypeScript type inference
-- Same schema shared between client and server ensures consistency
-- Validates message structure before processing
+- Validates message structure before processing on client
 - Prevents malformed messages from causing runtime errors
 - Integrates with existing project Zod validation patterns
+- Server-side validation not needed (server controls the message format)
 
 **Implementation Pattern**:
 ```typescript
-// lib/websocket-schemas.ts
+// lib/sse-schemas.ts
 import { z } from 'zod'
 
-export const JobStatusMessageSchema = z.object({
-  type: z.literal('job-status-update'),
+export const JobStatusUpdateSchema = z.object({
+  projectId: z.number(),
   ticketId: z.number(),
   jobId: z.number(),
   status: z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
+  command: z.string(),
   timestamp: z.string().datetime()
 })
 
-export type JobStatusMessage = z.infer<typeof JobStatusMessageSchema>
+export type JobStatusUpdate = z.infer<typeof JobStatusUpdateSchema>
 ```
+
+**Why Simpler Than WebSocket**:
+- ✅ Only client needs validation (server sends trusted data)
+- ✅ No bidirectional messages to validate
+- ✅ No connection handshake messages
+- ✅ Single message type (job-status-update)
 
 **Alternatives Considered**:
 - Plain TypeScript interfaces: No runtime validation, allows invalid messages through
@@ -255,9 +291,9 @@ export type JobStatusMessage = z.infer<typeof JobStatusMessageSchema>
 - Manual validation: Error-prone, duplicates logic
 
 **Security Benefits**:
-- Prevents injection attacks via malformed messages
-- Validates data types before database queries
+- Validates data types before state updates
 - Rejects messages with unexpected properties
+- Prevents client-side errors from malformed data
 
 ---
 
@@ -273,8 +309,12 @@ export type JobStatusMessage = z.infer<typeof JobStatusMessageSchema>
 - shadcn/ui components
 
 **New Dependencies Required**:
-- `ws` (^8.18.0): WebSocket server implementation
-- No client-side dependencies needed (native WebSocket API)
+- None! EventSource API is built into browsers
+- No server-side dependencies needed (Next.js handles SSE natively)
+
+**Dependencies Removed**:
+- `ws` package no longer needed (was for WebSocket server)
+- `@types/ws` no longer needed
 
 **No Schema Changes Required**:
 - Feature uses existing Job and Ticket models
@@ -285,17 +325,20 @@ export type JobStatusMessage = z.infer<typeof JobStatusMessageSchema>
 
 ## Implementation Risks & Mitigations
 
-### Risk 1: WebSocket Connection Failures
-**Mitigation**: Automatic reconnection with exponential backoff, fallback to polling if WebSocket unavailable
+### Risk 1: SSE Connection Failures
+**Mitigation**: EventSource API handles automatic reconnection with exponential backoff (built-in), client reconciliation on reconnect (fetch latest job status)
 
 ### Risk 2: Animation Performance on Low-End Devices
 **Mitigation**: CSS animations run on GPU, performance testing on low-end devices, option to disable animations via prefers-reduced-motion
 
-### Risk 3: Message Delivery Guarantees
-**Mitigation**: Client reconciliation on reconnect (fetch latest job status), server-side message queue for brief disconnections
+### Risk 3: Message Delivery During Disconnection
+**Mitigation**: Client reconciliation on reconnect (fetch latest job status from database), EventSource automatically replays missed events
 
 ### Risk 4: Multiple Browser Tabs Synchronization
-**Mitigation**: BroadcastChannel API for cross-tab communication, or each tab maintains independent WebSocket connection
+**Mitigation**: Each tab maintains independent SSE connection, all tabs receive same updates from server
+
+### Risk 5: Serverless Function Timeout
+**Mitigation**: Keep-alive comments every 15 seconds to prevent function timeout, Next.js handles long-running responses
 
 ---
 
