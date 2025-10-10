@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Job Status Update API
+  description: API for updating Job status when GitHub Actions workflows complete
+  version: 1.0.0
+  contact:
+    name: AI Board Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://ai-board.vercel.app/api
+    description: Production
+
+paths:
+  /jobs/{id}/status:
+    patch:
+      summary: Update Job status on workflow completion
+      description: |
+        Updates a Job's status and completion timestamp when a GitHub Actions workflow
+        completes execution. Implements idempotent state transitions per state machine rules.
+
+        **Valid Transitions**:
+        - RUNNING → COMPLETED
+        - RUNNING → FAILED
+        - RUNNING → CANCELLED
+
+        **Idempotent**: Requesting the same status returns 200 with current state.
+        **Invalid Transitions**: Return 400 error (e.g., COMPLETED → FAILED).
+      operationId: updateJobStatus
+      tags:
+        - Jobs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Job ID (integer)
+          schema:
+            type: integer
+            minimum: 1
+          example: 42
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - COMPLETED
+                    - FAILED
+                    - CANCELLED
+                  description: Target status for the job (must be a terminal state)
+              additionalProperties: false
+            examples:
+              success:
+                summary: Mark job as completed
+                value:
+                  status: COMPLETED
+              failure:
+                summary: Mark job as failed
+                value:
+                  status: FAILED
+              cancelled:
+                summary: Mark job as cancelled
+                value:
+                  status: CANCELLED
+      responses:
+        '200':
+          description: Job status updated successfully (or idempotent no-op)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+              examples:
+                completed:
+                  summary: Job marked as completed
+                  value:
+                    id: 42
+                    status: COMPLETED
+                    completedAt: '2025-10-10T14:32:15.123Z'
+                idempotent:
+                  summary: Job already in requested state (no-op)
+                  value:
+                    id: 42
+                    status: COMPLETED
+                    completedAt: '2025-10-10T14:32:15.123Z'
+        '400':
+          description: Invalid request (validation error or invalid state transition)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidStatus:
+                  summary: Invalid status value
+                  value:
+                    error: 'Invalid request'
+                    details:
+                      - message: 'Status must be COMPLETED, FAILED, or CANCELLED'
+                        path: ['status']
+                invalidTransition:
+                  summary: Invalid state transition
+                  value:
+                    error: 'Invalid transition from COMPLETED to FAILED'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Job ID does not exist
+                  value:
+                    error: 'Job not found'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Database connection failure
+                  value:
+                    error: 'Internal server error'
+
+components:
+  schemas:
+    JobStatusResponse:
+      type: object
+      required:
+        - id
+        - status
+        - completedAt
+      properties:
+        id:
+          type: integer
+          description: Job ID
+          example: 42
+        status:
+          type: string
+          enum:
+            - PENDING
+            - RUNNING
+            - COMPLETED
+            - FAILED
+            - CANCELLED
+          description: Current job status
+          example: COMPLETED
+        completedAt:
+          type: string
+          format: date-time
+          description: Timestamp when job reached terminal status (ISO 8601)
+          example: '2025-10-10T14:32:15.123Z'
+      additionalProperties: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: 'Invalid transition from COMPLETED to FAILED'
+        details:
+          type: array
+          description: Detailed validation errors (Zod validation failures)
+          items:
+            type: object
+            properties:
+              message:
+                type: string
+              path:
+                type: array
+                items:
+                  type: string
+      additionalProperties: false
+
+  securitySchemes:
+    # Future enhancement: GitHub workflow token verification
+    # For MVP: Job ID correlation provides implicit authorization
+    githubWorkflowToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: GitHub Actions OIDC token (not implemented in MVP)
+
+# Security note: No authentication required in MVP
+# Job ID correlation provides implicit authorization
+# Future enhancement: Verify GitHub Actions OIDC token
+security: []
+
+tags:
+  - name: Jobs
+    description: Job lifecycle management operations
