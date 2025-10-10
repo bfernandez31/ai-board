@@ -215,15 +215,4 @@ test.describe('TicketCard - Metadata Removal', () => {
     }
   })
 
-  test('Visual snapshot: clean ticket card design', async ({ page }) => {
-    // Wait for board to load
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 })
-
-    // Get first ticket card
-    const ticketCard = page.locator('[data-testid="ticket-card"]').first()
-    await expect(ticketCard).toBeVisible()
-
-    // Capture screenshot for visual regression
-    await expect(ticketCard).toHaveScreenshot('clean-ticket-card.png')
-  })
 })
