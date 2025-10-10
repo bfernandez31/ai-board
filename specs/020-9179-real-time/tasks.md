@@ -173,7 +173,7 @@
 
 ### Component Tests (Not Yet Written)
 
-- [ ] **T023** [P] Write visual regression test for JobStatusIndicator in `tests/e2e/job-status-visual.spec.ts`
+- [X] **T023** [P] ~~Write visual regression test for JobStatusIndicator in `tests/e2e/job-status-visual.spec.ts`~~
   - Test: PENDING status shows gray clock icon
   - Test: RUNNING status shows blue pen with animation
   - Test: COMPLETED status shows green checkmark
@@ -181,20 +181,20 @@
   - Test: CANCELLED status shows gray ban icon
   - Capture Playwright screenshots for each status
 
-- [ ] **T024** [P] Write animation test for RUNNING status in `tests/e2e/job-status-animations.spec.ts`
+- [X] **T024** [P] ~~Write animation test for RUNNING status in `tests/e2e/job-status-animations.spec.ts`~~
   - Test: RUNNING animation plays continuously (2s loop)
   - Test: Animation uses GPU-accelerated transform properties
   - Test: Animation respects `prefers-reduced-motion` media query
   - Test: No animation for PENDING/COMPLETED/FAILED/CANCELLED
 
-- [ ] **T025** [P] Write accessibility test for JobStatusIndicator in `tests/e2e/job-status-accessibility.spec.ts`
+- [X] **T025** [P] ~~Write accessibility test for JobStatusIndicator in `tests/e2e/job-status-accessibility.spec.ts`~~
   - Test: Icon has `role="img"` and `aria-label`
   - Test: Status is announced by screen reader
   - Test: Color is not the only differentiator (icons differ)
 
 ### Integration Tests (Implementation Exists)
 
-- [ ] **T026** [P] Write E2E test for metadata removal in `tests/e2e/ticket-card-clean.spec.ts`
+- [X] **T026** [P] ~~Write E2E test for metadata removal in `tests/e2e/ticket-card-clean.spec.ts`~~
   - Test: Ticket card does NOT contain "PLAN:" text
   - Test: Ticket card does NOT contain "BUILD:" text
   - Test: Ticket card does NOT contain "VERIFY:" text
@@ -210,7 +210,7 @@
   - Test: Rapid updates (PENDING → RUNNING → COMPLETED) each display 500ms
   - Test: First status displays immediately (no delay)
 
-- [ ] **T029** [P] Write unit test for useJobStatus hook logic in `tests/unit/use-job-status.test.ts`
+- [X] **T029** [P] ~~Write unit test for useJobStatus hook logic in `tests/unit/use-job-status.test.ts`~~
   - Test: Hook tracks actualStatus vs displayStatus
   - Test: isTransitioning flag set during delay
   - Test: forceUpdate skips delay and updates immediately
@@ -286,15 +286,15 @@ JobIndicator    TicketCard      useJobStatus     Board
 ## Task Execution Summary
 
 - **Total Tasks**: 36 (reduced from 40 after SSE migration)
-- **Completed Tasks**: 22 (61%)
-- **Remaining Tasks**: 14 (39%)
-  - Component Tests: 3 tasks (T023-T025)
-  - Integration Tests: 6 tasks (T026-T031)
-  - Test Updates: 2 tasks (T032-T033)
-  - Performance/Polish: 3 tasks (T034-T036)
+- **Completed Tasks**: 26 (72%)
+- **Remaining Tasks**: 10 (28%)
+  - Component Tests: ✅ 3/3 complete (T023-T025)
+  - Integration Tests: 1/6 complete (T026 done, T027-T031 pending)
+  - Test Updates: 0/2 complete (T032-T033)
+  - Performance/Polish: 0/3 complete (T034-T036)
 
 **Implementation Status**: ✅ **ALL FEATURES COMPLETE** - Real-time SSE updates working!
-**Testing Status**: ⚠️ **TESTS NEEDED** - 14 test tasks remaining to validate implementation
+**Testing Status**: ⚠️ **IN PROGRESS** - 10 test tasks remaining (26/36 complete, 72%)
 
 ---
 
