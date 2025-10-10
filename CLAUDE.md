@@ -24,6 +24,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - N/A (workflow operates on repository files) (016-create-github-actions)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router) (017-il-faudrait-modifier)
 - PostgreSQL 14+ via Prisma (existing Project, Ticket, Job models) (018-add-github-transition)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+ (019-update-job-on)
+- PostgreSQL via Prisma ORM (existing Job model to be extended) (019-update-job-on)
 
 ## Project Structure
 ```
@@ -39,9 +41,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 019-update-job-on: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+
 - 018-add-github-transition: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 - 017-il-faudrait-modifier: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router)
-- 016-create-github-actions: Added YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x)
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -78,6 +80,66 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 - Response: Full ticket object including new fields
 
 **Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
+
+### Job Status Management
+
+**PATCH `/api/jobs/:id/status`**
+- Updates Job status when GitHub Actions workflows complete
+- Request body: `{ status: "COMPLETED" | "FAILED" | "CANCELLED" }`
+- Response: `{ id: number, status: JobStatus, completedAt: string | null }`
+- Validation: Zod schema validation + state machine transition rules
+- Features:
+  - **Idempotent**: Same status request returns 200 with current state
+  - **State Machine**: Enforces valid transitions (RUNNING → COMPLETED/FAILED/CANCELLED)
+  - **Minimal Response**: Only id, status, completedAt (no sensitive data)
+  - **Error Logging**: All operations logged for debugging
+- Error responses:
+  - 400: Invalid request (Zod validation or invalid state transition)
+  - 404: Job not found
+  - 500: Internal server error
+
+## Data Model Notes
+
+### Job Model
+
+The Job model tracks GitHub Actions workflow execution status:
+
+- **`status`** (JobStatus enum): Current execution state
+  - Values: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`
+  - Updated via PATCH `/api/jobs/:id/status` endpoint
+  - State machine enforces valid transitions
+
+- **`completedAt`** (DateTime?, nullable): Timestamp when job reached terminal state
+  - Set automatically when status changes to COMPLETED, FAILED, or CANCELLED
+  - Null for PENDING and RUNNING states
+  - Never modified after being set (immutable for terminal states)
+
+### JobStatus State Machine
+
+**Valid Transitions**:
+```
+PENDING → RUNNING (workflow starts)
+RUNNING → COMPLETED (workflow succeeds)
+RUNNING → FAILED (workflow fails)
+RUNNING → CANCELLED (workflow cancelled)
+```
+
+**Terminal States** (no transitions allowed):
+- `COMPLETED` → COMPLETED (idempotent only)
+- `FAILED` → FAILED (idempotent only)
+- `CANCELLED` → CANCELLED (idempotent only)
+
+**Invalid Transitions** (return 400 error):
+- COMPLETED → FAILED
+- COMPLETED → RUNNING
+- FAILED → COMPLETED
+- CANCELLED → COMPLETED
+- PENDING → COMPLETED (must go through RUNNING)
+
+**Implementation**:
+- State machine logic: `app/lib/job-state-machine.ts`
+- Validation: `canTransition(from, to)` function
+- Error: `InvalidTransitionError` class
 
 ## Validation Rules
 
@@ -141,5 +203,54 @@ test.beforeEach(async () => {
 3. Assume clean database state at test start (no leftover test data)
 4. Use deterministic project IDs (1, 2) for consistency
 5. Never create data without `[e2e]` prefix in automated tests
+
+## Testing Requirements
+
+### State Transition Testing
+
+When testing features involving Job status updates:
+
+1. **Test Valid Transitions**: Verify all allowed state transitions work correctly
+   - PENDING → RUNNING
+   - RUNNING → COMPLETED/FAILED/CANCELLED
+
+2. **Test Invalid Transitions**: Verify state machine rejects invalid transitions
+   - Terminal states cannot transition to other states (except idempotent)
+   - PENDING cannot skip RUNNING state
+
+3. **Test Idempotency**: Verify same status request returns 200 without database changes
+   - COMPLETED → COMPLETED
+   - FAILED → FAILED
+   - CANCELLED → CANCELLED
+
+4. **Test Edge Cases**:
+   - Non-existent job IDs return 404
+   - Invalid status values return 400 with Zod validation errors
+   - Invalid job ID formats return 400
+
+**Test Files**:
+- Unit tests: `tests/unit/job-state-machine.test.ts` (29 tests)
+- Contract tests: `tests/e2e/job-status-update-contract.spec.ts` (14 tests)
+- E2E tests: `tests/e2e/job-status-update.spec.ts` (12 tests)
+
+**Test Data Setup for Job Tests**:
+```typescript
+test.beforeEach(async () => {
+  await cleanupDatabase();
+
+  // Create test ticket for Job foreign key constraint
+  await prisma.ticket.create({
+    data: {
+      id: 1,
+      title: '[e2e] Test Ticket for Jobs',
+      description: 'Ticket for testing Job status updates',
+      stage: 'INBOX',
+      projectId: 1,
+    },
+  });
+});
+```
+
+This ensures Job creation succeeds without foreign key constraint violations while maintaining test isolation.
 
 <!-- MANUAL ADDITIONS END -->
