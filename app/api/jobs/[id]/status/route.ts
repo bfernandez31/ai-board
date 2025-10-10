@@ -13,14 +13,14 @@ const prisma = new PrismaClient();
 
 /**
  * PATCH /api/jobs/[id]/status
- * Update Job status when GitHub Actions workflow completes
+ * Update Job status during and after GitHub Actions workflow execution
  *
  * This endpoint is called by GitHub Actions workflows to update job status
- * upon completion (success, failure, or cancellation).
+ * when starting (RUNNING) and upon completion (COMPLETED, FAILED, CANCELLED).
  *
  * Request Body:
  * {
- *   "status": "COMPLETED" | "FAILED" | "CANCELLED"
+ *   "status": "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"
  * }
  *
  * Success Response (200):
@@ -159,13 +159,16 @@ export async function PATCH(
       );
     }
 
-    // Update job status and set completedAt timestamp
-    // Include ticket relation to get projectId for WebSocket broadcast
+    // Update job status and set timestamps appropriately
+    // completedAt is only set for terminal states (COMPLETED/FAILED/CANCELLED)
+    // Include ticket relation to get projectId for SSE broadcast
+    const isTerminalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(requestedStatus);
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
         status: requestedStatus,
-        completedAt: new Date(),
+        startedAt: requestedStatus === 'RUNNING' && !job.startedAt ? new Date() : undefined,
+        completedAt: isTerminalState ? new Date() : undefined,
       },
       select: {
         id: true,

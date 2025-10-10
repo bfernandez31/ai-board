@@ -187,10 +187,9 @@
   - Test: Animation respects `prefers-reduced-motion` media query
   - Test: No animation for PENDING/COMPLETED/FAILED/CANCELLED
 
-- [X] **T025** [P] ~~Write accessibility test for JobStatusIndicator in `tests/e2e/job-status-accessibility.spec.ts`~~
-  - Test: Icon has `role="img"` and `aria-label`
-  - Test: Status is announced by screen reader
-  - Test: Color is not the only differentiator (icons differ)
+- [X] **T025** [P] ~~Write accessibility test for JobStatusIndicator~~ → **REMOVED** (per user request)
+  - Test file removed: `tests/e2e/job-status-accessibility.spec.ts`
+  - Accessibility is still implemented in component, just not tested
 
 ### Integration Tests (Implementation Exists)
 
@@ -288,7 +287,7 @@ JobIndicator    TicketCard      useJobStatus     Board
 - **Total Tasks**: 36 (reduced from 40 after SSE migration)
 - **Completed Tasks**: 36 (100%)
 - **Remaining Tasks**: 0 (0%)
-  - Component Tests: ✅ 3/3 complete (T023-T025)
+  - Component Tests: ✅ 2/3 complete (T023-T024, T025 removed)
   - Integration Tests: ✅ 6/6 complete (T026-T031)
   - Test Updates: ✅ 2/2 complete (T032-T033)
   - Performance/Polish: ✅ 3/3 complete (T034-T036)

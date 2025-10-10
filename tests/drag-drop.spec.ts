@@ -19,9 +19,20 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     prisma = getPrismaClient();
   });
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
     // Clean database before each test
     await cleanupDatabase();
+
+    // Mock SSE endpoint to prevent connection timeouts
+    // The drag-drop tests don't need real-time updates
+    await page.route('**/api/sse**', async (route) => {
+      // Return empty SSE stream that immediately closes
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
   });
 
   /**
@@ -212,6 +223,15 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Open board in two browser contexts (simulating two users)
     const page1 = page;
     const page2: Page = await context.newPage();
+
+    // Mock SSE endpoint for page2 as well
+    await page2.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
 
     await page1.goto(`${BASE_URL}/projects/1/board`);
     await page1.waitForLoadState('networkidle');

@@ -53,11 +53,12 @@
 
 ## ⏳ Remaining Tasks (13)
 
-### Phase 3.10-3.11: TicketCard Tests (T024-T025)
+### Phase 3.10-3.11: TicketCard Tests (T024, T025 removed)
 **Status**: Not started
 **Files needed**:
 - `tests/e2e/ticket-card-clean.spec.ts` - Test metadata removal
 - `tests/integration/ticket-card-job-status.test.tsx` - Test integration
+**Note**: T025 (accessibility tests) removed per user request
 
 ### Phase 3.14-3.15: Board Integration Tests (T031-T032)
 **Status**: Not started
@@ -154,7 +155,6 @@ Once integration is complete, run tests to verify:
 ### Tests Needed
 - ⏳ JobStatusIndicator visual states
 - ⏳ JobStatusIndicator animations
-- ⏳ JobStatusIndicator accessibility
 - ⏳ TicketCard metadata removal
 - ⏳ TicketCard job status integration
 - ⏳ useJobStatus display duration
@@ -211,7 +211,7 @@ npm run test:integration
 
 ### Step 2: Write Missing Tests
 ```bash
-# TicketCard tests (T024-T025)
+# TicketCard tests (T024, T025 removed)
 # Board integration tests (T031-T032)
 # Polish tests (T036-T040)
 ```

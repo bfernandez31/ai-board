@@ -18,25 +18,29 @@ test.describe('SSE Job Status Broadcast', () => {
   })
 
   test('should broadcast job status update to subscribed clients', async ({ page, request }) => {
-    // Create a test ticket with a job
+    // Create a test ticket
     const ticketResponse = await request.post('http://localhost:3000/api/projects/1/tickets', {
       data: {
         title: '[e2e] Test Ticket for Job Broadcast',
         description: 'Testing job status updates',
-        stage: 'INBOX',
       },
     })
     const ticket = await ticketResponse.json()
 
-    // Create a job for the ticket
-    const jobResponse = await request.post('http://localhost:3000/api/jobs', {
-      data: {
-        ticketId: ticket.id,
-        command: 'specify',
-        status: 'PENDING',
-      },
-    })
-    const job = await jobResponse.json()
+    // Transition ticket to SPECIFY to create a job automatically
+    const transitionResponse = await request.patch(
+      `http://localhost:3000/api/projects/1/tickets/${ticket.id}`,
+      {
+        data: {
+          stage: 'SPECIFY',
+          version: ticket.version,
+        },
+      }
+    )
+    const transitionData = await transitionResponse.json()
+    const jobId = transitionData.jobId
+
+    expect(jobId).toBeTruthy()
 
     // Open board page and establish SSE connection
     await page.goto('http://localhost:3000/projects/1/board')
@@ -58,7 +62,7 @@ test.describe('SSE Job Status Broadcast', () => {
     })
 
     // Trigger job status update via API
-    await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
       data: {
         status: 'RUNNING',
       },
@@ -74,31 +78,45 @@ test.describe('SSE Job Status Broadcast', () => {
     expect(message).not.toBeNull()
     expect((message as any).projectId).toBe(1)
     expect((message as any).ticketId).toBe(ticket.id)
-    expect((message as any).jobId).toBe(job.id)
+    expect((message as any).jobId).toBe(jobId)
     expect((message as any).status).toBe('RUNNING')
     expect((message as any).command).toBe('specify')
     expect((message as any).timestamp).toBeTruthy()
   })
 
   test('should broadcast to multiple clients simultaneously', async ({ browser, request }) => {
-    // Create test ticket and job
+    // Create test ticket
     const ticketResponse = await request.post('http://localhost:3000/api/projects/1/tickets', {
       data: {
         title: '[e2e] Multi-Client Broadcast Test',
         description: 'Testing simultaneous broadcast',
-        stage: 'INBOX',
       },
     })
     const ticket = await ticketResponse.json()
 
-    const jobResponse = await request.post('http://localhost:3000/api/jobs', {
+    // Transition to PLAN to create job (INBOX → SPECIFY → PLAN)
+    // First transition to SPECIFY
+    await request.patch(`http://localhost:3000/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        ticketId: ticket.id,
-        command: 'plan',
-        status: 'PENDING',
+        stage: 'SPECIFY',
+        version: ticket.version,
       },
     })
-    const job = await jobResponse.json()
+
+    // Then transition to PLAN
+    const transitionResponse = await request.patch(
+      `http://localhost:3000/api/projects/1/tickets/${ticket.id}`,
+      {
+        data: {
+          stage: 'PLAN',
+          version: ticket.version + 1,
+        },
+      }
+    )
+    const transitionData = await transitionResponse.json()
+    const jobId = transitionData.jobId
+
+    expect(jobId).toBeTruthy()
 
     // Create 3 browser contexts (simulate 3 users)
     const context1 = await browser.newContext()
@@ -123,45 +141,52 @@ test.describe('SSE Job Status Broadcast', () => {
       page3.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
     ])
 
-    // Set up message listeners on all pages
+    // Set up message listeners on all pages (wait for COMPLETED status)
     const messagePromises = Promise.all([
       page1.evaluate((targetJobId) => {
         return new Promise((resolve) => {
           const eventSource = (window as any).__eventSource
           eventSource.addEventListener('message', (event: MessageEvent) => {
             const data = JSON.parse(event.data)
-            if (data.jobId === targetJobId) {
+            if (data.jobId === targetJobId && data.status === 'COMPLETED') {
               resolve(data)
             }
           })
         })
-      }, job.id),
+      }, jobId),
       page2.evaluate((targetJobId) => {
         return new Promise((resolve) => {
           const eventSource = (window as any).__eventSource
           eventSource.addEventListener('message', (event: MessageEvent) => {
             const data = JSON.parse(event.data)
-            if (data.jobId === targetJobId) {
+            if (data.jobId === targetJobId && data.status === 'COMPLETED') {
               resolve(data)
             }
           })
         })
-      }, job.id),
+      }, jobId),
       page3.evaluate((targetJobId) => {
         return new Promise((resolve) => {
           const eventSource = (window as any).__eventSource
           eventSource.addEventListener('message', (event: MessageEvent) => {
             const data = JSON.parse(event.data)
-            if (data.jobId === targetJobId) {
+            if (data.jobId === targetJobId && data.status === 'COMPLETED') {
               resolve(data)
             }
           })
         })
-      }, job.id),
+      }, jobId),
     ])
 
-    // Trigger job status update
-    await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
+    // First transition to RUNNING (required by state machine)
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
+      data: {
+        status: 'RUNNING',
+      },
+    })
+
+    // Then trigger job completion
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
       data: {
         status: 'COMPLETED',
       },
@@ -178,7 +203,7 @@ test.describe('SSE Job Status Broadcast', () => {
     // All clients should receive the same message
     expect(messages).toHaveLength(3)
     ;(messages as any[]).forEach((msg) => {
-      expect(msg.jobId).toBe(job.id)
+      expect(msg.jobId).toBe(jobId)
       expect(msg.status).toBe('COMPLETED')
       expect(msg.projectId).toBe(1)
     })
@@ -193,24 +218,34 @@ test.describe('SSE Job Status Broadcast', () => {
     browser,
     request,
   }) => {
-    // Create test ticket and job in project 1
+    // Create test ticket in project 1
     const ticketResponse = await request.post('http://localhost:3000/api/projects/1/tickets', {
       data: {
         title: '[e2e] Project Isolation Test',
         description: 'Testing project-based isolation',
-        stage: 'INBOX',
       },
     })
     const ticket = await ticketResponse.json()
 
-    const jobResponse = await request.post('http://localhost:3000/api/jobs', {
-      data: {
-        ticketId: ticket.id,
-        command: 'build',
-        status: 'PENDING',
-      },
+    // Transition to BUILD to create job (INBOX → SPECIFY → PLAN → BUILD)
+    await request.patch(`http://localhost:3000/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'SPECIFY', version: ticket.version },
     })
-    const job = await jobResponse.json()
+
+    await request.patch(`http://localhost:3000/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'PLAN', version: ticket.version + 1 },
+    })
+
+    const transitionResponse = await request.patch(
+      `http://localhost:3000/api/projects/1/tickets/${ticket.id}`,
+      {
+        data: { stage: 'BUILD', version: ticket.version + 2 },
+      }
+    )
+    const transitionData = await transitionResponse.json()
+    const jobId = transitionData.jobId
+
+    expect(jobId).toBeTruthy()
 
     // Create 2 browser contexts for different projects
     const context1 = await browser.newContext()
@@ -231,18 +266,18 @@ test.describe('SSE Job Status Broadcast', () => {
       page2.waitForRequest(req => req.url().includes('/api/sse?projectId=2')),
     ])
 
-    // Set up listeners
+    // Set up listeners (wait for FAILED status)
     const page1MessagePromise = page1.evaluate((targetJobId) => {
       return new Promise((resolve) => {
         const eventSource = (window as any).__eventSource
         eventSource.addEventListener('message', (event: MessageEvent) => {
           const data = JSON.parse(event.data)
-          if (data.jobId === targetJobId) {
+          if (data.jobId === targetJobId && data.status === 'FAILED') {
             resolve(data)
           }
         })
       })
-    }, job.id)
+    }, jobId)
 
     let page2ReceivedMessage = false
     await page2.evaluate((targetJobId) => {
@@ -253,10 +288,17 @@ test.describe('SSE Job Status Broadcast', () => {
           ;(window as any).__receivedMessage = true
         }
       })
-    }, job.id)
+    }, jobId)
 
-    // Trigger job status update for project 1
-    await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
+    // First transition to RUNNING (required by state machine)
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
+      data: {
+        status: 'RUNNING',
+      },
+    })
+
+    // Trigger job failure for project 1
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
       data: {
         status: 'FAILED',
       },
@@ -286,24 +328,29 @@ test.describe('SSE Job Status Broadcast', () => {
   })
 
   test('should handle rapid successive status updates', async ({ page, request }) => {
-    // Create test ticket and job
+    // Create test ticket
     const ticketResponse = await request.post('http://localhost:3000/api/projects/1/tickets', {
       data: {
         title: '[e2e] Rapid Updates Test',
         description: 'Testing rapid status changes',
-        stage: 'INBOX',
       },
     })
     const ticket = await ticketResponse.json()
 
-    const jobResponse = await request.post('http://localhost:3000/api/jobs', {
-      data: {
-        ticketId: ticket.id,
-        command: 'specify',
-        status: 'PENDING',
-      },
-    })
-    const job = await jobResponse.json()
+    // Transition ticket to SPECIFY to create job automatically
+    const transitionResponse = await request.patch(
+      `http://localhost:3000/api/projects/1/tickets/${ticket.id}`,
+      {
+        data: {
+          stage: 'SPECIFY',
+          version: ticket.version,
+        },
+      }
+    )
+    const transitionData = await transitionResponse.json()
+    const jobId = transitionData.jobId
+
+    expect(jobId).toBeTruthy()
 
     await page.goto('http://localhost:3000/projects/1/board')
     await page.waitForRequest(req => req.url().includes('/api/sse?projectId=1'))
@@ -320,13 +367,13 @@ test.describe('SSE Job Status Broadcast', () => {
     })
 
     // Trigger rapid status updates
-    await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
       data: { status: 'RUNNING' },
     })
 
     await page.waitForTimeout(100)
 
-    await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
+    await request.patch(`http://localhost:3000/api/jobs/${jobId}/status`, {
       data: { status: 'COMPLETED' },
     })
 

@@ -75,8 +75,14 @@ export function useSSE(options: UseSSEOptions): UseSSEResult {
 
   // Connect to SSE
   const connect = useCallback(() => {
-    if (typeof window === 'undefined' || !enabled) {
-      console.log('[SSE Client] Skipping connection - window undefined or disabled')
+    if (typeof window === 'undefined') {
+      console.log('[SSE Client] Skipping connection - window undefined')
+      return
+    }
+
+    if (!enabled) {
+      console.log('[SSE Client] SSE disabled - setting disconnected status')
+      setStatus('disconnected')
       return
     }
 

@@ -30,6 +30,11 @@ interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job>;
+  /**
+   * Enable SSE real-time updates (optional, defaults to true)
+   * Set to false in test environments to avoid connection timeouts
+   */
+  sseEnabled?: boolean;
 }
 
 /**
@@ -405,9 +410,11 @@ function BoardContent({
  * Wraps BoardContent with SSEProvider for real-time updates.
  */
 export function Board(props: BoardProps) {
+  const { sseEnabled = true, ...contentProps } = props;
+
   return (
-    <SSEProvider projectId={props.projectId}>
-      <BoardContent {...props} />
+    <SSEProvider projectId={props.projectId} enabled={sseEnabled}>
+      <BoardContent {...contentProps} />
     </SSEProvider>
   );
 }
