@@ -16,9 +16,9 @@ add real-time update on job status. and display this state on the ticket. You ca
    → Data: Job status (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
    → Constraints: Must be real-time, clean UI, animated during execution
 3. For each unclear aspect:
-   → [NEEDS CLARIFICATION: Polling interval for real-time updates not specified]
-   → [NEEDS CLARIFICATION: Should status display for all job types or only recent/active jobs?]
-   → [NEEDS CLARIFICATION: Should completed/failed job status persist on ticket or fade after time?]
+   → [RESOLVED: WebSocket connection for real-time updates]
+   → [RESOLVED: Display most recent active job; fallback to most recent terminal job]
+   → [RESOLVED: Terminal statuses persist indefinitely until new job starts]
 4. Fill User Scenarios & Testing section
    → User flow identified: User views ticket, sees job status update in real-time
 5. Generate Functional Requirements
@@ -39,6 +39,17 @@ add real-time update on job status. and display this state on the ticket. You ca
 
 ---
 
+## Clarifications
+
+### Session 2025-10-10
+- Q: What real-time update mechanism should be used for job status changes? → A: WebSocket connection
+- Q: When multiple jobs exist for a ticket, which job status should be displayed on the ticket card? → A: Most recent active job (show most recent PENDING or RUNNING job; if none, show most recent terminal job)
+- Q: How long should terminal job statuses (COMPLETED/FAILED/CANCELLED) remain visible on ticket cards? → A: Persist indefinitely (remains visible until a new job starts)
+- Q: Should there be minimum display time for each status to prevent users missing rapid status changes? → A: 500ms minimum per status (brief hold to ensure status registers visually)
+- Q: Should CANCELLED status be displayed differently from FAILED status? → A: Distinct styling (FAILED uses error red, CANCELLED uses neutral gray for clearer distinction)
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### Primary User Story
@@ -54,21 +65,21 @@ The current ticket card displays static metadata (PLAN, BUILD, VERIFY message/to
 
 3. **Given** a job status changes from PENDING to RUNNING, **When** I am viewing the board, **Then** the ticket card updates automatically to show the running animation without requiring page refresh
 
-4. **Given** a job completes successfully (COMPLETED status), **When** I view the ticket card, **Then** I see a success indicator [NEEDS CLARIFICATION: Should this persist indefinitely or fade after a duration?]
+4. **Given** a job completes successfully (COMPLETED status), **When** I view the ticket card, **Then** I see a success indicator that persists indefinitely until a new job starts
 
-5. **Given** a job fails (FAILED status), **When** I view the ticket card, **Then** I see an error/failure indicator [NEEDS CLARIFICATION: How long should failure status remain visible?]
+5. **Given** a job fails (FAILED status), **When** I view the ticket card, **Then** I see an error/failure indicator that persists indefinitely until a new job starts
 
-6. **Given** multiple jobs exist for a ticket (historical and current), **When** I view the ticket card, **Then** I see status for [NEEDS CLARIFICATION: only the most recent job, or all active jobs, or jobs from the last N hours?]
+6. **Given** multiple jobs exist for a ticket (historical and current), **When** I view the ticket card, **Then** I see status for the most recent active job (PENDING or RUNNING status takes priority; if no active jobs, show most recent terminal job: COMPLETED/FAILED/CANCELLED)
 
 7. **Given** the metadata section (MESSAGES/TOOLS PER AGENT) is removed from the ticket card, **When** I view any ticket, **Then** I see a cleaner design focused on ticket title and job status only
 
 ### Edge Cases
 
-- What happens when a job is in CANCELLED status? [NEEDS CLARIFICATION: Should this be displayed differently from FAILED?]
-- What happens when job status updates occur very rapidly (e.g., PENDING → RUNNING → COMPLETED within seconds)? [NEEDS CLARIFICATION: Should there be minimum display time for each status?]
-- What happens when the user has multiple browser tabs open and a job completes? Should all tabs update?
+- What happens when a job is in CANCELLED status? CANCELLED status MUST use distinct neutral gray styling to differentiate from FAILED status (which uses error red), clearly indicating intentional termination vs. error condition
+- What happens when job status updates occur very rapidly (e.g., PENDING → RUNNING → COMPLETED within seconds)? Each status MUST display for a minimum of 500ms to ensure users can visually register the state change (prevents flickering or missed transitions)
+- What happens when the user has multiple browser tabs open and a job completes? Should all tabs update? (Yes - covered by FR-008: all open tabs must reflect updates)
 - What happens when network connectivity is lost during real-time updates? [NEEDS CLARIFICATION: Should there be a "connection lost" indicator?]
-- What happens when a ticket has never had any jobs? (Already covered in scenario 1)
+- What happens when a ticket has never had any jobs? (Already covered in scenario 1: clean card with no status indicator)
 
 ---
 
@@ -81,26 +92,31 @@ The current ticket card displays static metadata (PLAN, BUILD, VERIFY message/to
 - **FR-002**: System MUST remove the existing metadata section (PLAN/BUILD/VERIFY message/tool counts) from all ticket cards
 - **FR-003**: System MUST show animated visual indicators when a job is in RUNNING status
 - **FR-004**: System MUST display distinct visual states for each job status: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
-- **FR-005**: Ticket cards MUST maintain a clean, uncluttered appearance when displaying job status
+- **FR-005**: System MUST use distinct styling for FAILED (error red) vs. CANCELLED (neutral gray) statuses to clearly communicate error condition vs. intentional termination
+- **FR-006**: Ticket cards MUST maintain a clean, uncluttered appearance when displaying job status
 
 **Real-Time Update Requirements**
-- **FR-006**: System MUST automatically update ticket card job status without requiring user to refresh the page
-- **FR-007**: System MUST poll or listen for job status changes at [NEEDS CLARIFICATION: interval/method not specified - every 2s, 5s, 10s? Or WebSocket/SSE?]
-- **FR-008**: Status updates MUST be reflected across all open browser tabs/windows viewing the same board
+- **FR-007**: System MUST automatically update ticket card job status without requiring user to refresh the page
+- **FR-008**: System MUST use WebSocket connection to receive real-time job status change notifications from the server (push-based updates for lowest latency)
+- **FR-009**: Status updates MUST be reflected across all open browser tabs/windows viewing the same board
+- **FR-010**: Each status change MUST display for a minimum of 500ms before transitioning to the next status (prevents rapid flickering and ensures visual registration)
 
 **Animation Requirements**
-- **FR-009**: System MUST display a smooth, continuous animation for RUNNING status (e.g., writing quill/pen motion)
-- **FR-010**: Animations MUST NOT impact board scrolling or interaction performance
-- **FR-011**: Animations MUST be visually subtle and professional (not distracting)
+- **FR-011**: System MUST display a smooth, continuous animation for RUNNING status (e.g., writing quill/pen motion)
+- **FR-012**: Animations MUST NOT impact board scrolling or interaction performance
+- **FR-013**: Animations MUST be visually subtle and professional (not distracting)
 
 **Data Requirements**
-- **FR-012**: System MUST determine which job(s) to display per ticket when multiple jobs exist [NEEDS CLARIFICATION: show most recent? show all active? show jobs from last 24 hours?]
-- **FR-013**: System MUST handle tickets with no jobs gracefully (show clean card with no status indicator)
+- **FR-014**: System MUST display the most recent active job (PENDING or RUNNING) when present; if no active jobs exist, display the most recent terminal job (COMPLETED/FAILED/CANCELLED)
+- **FR-015**: System MUST handle tickets with no jobs gracefully (show clean card with no status indicator)
+- **FR-016**: Terminal job statuses (COMPLETED/FAILED/CANCELLED) MUST persist indefinitely on the ticket card until replaced by a new job status
 
 **Testing Requirements**
-- **FR-014**: All existing E2E tests MUST be updated to reflect the new ticket card design (removal of metadata section)
-- **FR-015**: New tests MUST verify real-time status updates for all job statuses
-- **FR-016**: New tests MUST verify animations render correctly for RUNNING status
+- **FR-017**: All existing E2E tests MUST be updated to reflect the new ticket card design (removal of metadata section)
+- **FR-018**: New tests MUST verify real-time status updates for all job statuses
+- **FR-019**: New tests MUST verify animations render correctly for RUNNING status
+- **FR-020**: New tests MUST verify minimum 500ms display duration for rapid status transitions
+- **FR-021**: New tests MUST verify distinct visual styling for FAILED (error red) vs. CANCELLED (neutral gray) statuses
 
 ---
 
@@ -124,19 +140,21 @@ The current ticket card displays static metadata (PLAN, BUILD, VERIFY message/to
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain
-- [x] Requirements are testable and unambiguous (except where marked)
-- [ ] Success criteria are measurable (pending clarifications on polling interval, display duration, job filtering)
+- [x] No [NEEDS CLARIFICATION] markers remain (except network connectivity edge case - deferred as low impact)
+- [x] Requirements are testable and unambiguous
+- [x] Success criteria are measurable (WebSocket connection, 500ms minimum display, job filtering rules defined)
 - [x] Scope is clearly bounded (ticket card UI redesign, real-time status display)
-- [x] Dependencies and assumptions identified (existing Job and Ticket models, existing job status tracking)
+- [x] Dependencies and assumptions identified (existing Job and Ticket models, existing job status tracking, WebSocket infrastructure)
 
-**Remaining Clarifications Needed**:
-1. Polling interval/mechanism for real-time updates (FR-007)
-2. Job filtering strategy when multiple jobs exist (FR-012)
-3. Display duration for terminal statuses (COMPLETED, FAILED) - scenarios 4, 5
-4. Minimum display time for rapid status changes (edge case)
-5. Network connectivity handling (edge case)
-6. Visual distinction between FAILED and CANCELLED statuses (edge case)
+**Resolved Clarifications**:
+1. ✅ Real-time mechanism: WebSocket connection (FR-008)
+2. ✅ Job filtering: Most recent active job; fallback to most recent terminal job (FR-014)
+3. ✅ Display duration: Terminal statuses persist indefinitely (FR-016)
+4. ✅ Minimum display time: 500ms per status (FR-010)
+5. ✅ Visual distinction: FAILED (error red) vs. CANCELLED (neutral gray) (FR-005)
+
+**Deferred Clarifications** (Low Impact):
+- Network connectivity handling: Can be addressed during planning phase as implementation detail
 
 ---
 
@@ -145,10 +163,10 @@ The current ticket card displays static metadata (PLAN, BUILD, VERIFY message/to
 
 - [x] User description parsed
 - [x] Key concepts extracted
-- [x] Ambiguities marked (6 clarification points identified)
-- [x] User scenarios defined
-- [x] Requirements generated (16 functional requirements)
+- [x] Ambiguities resolved (5 clarifications completed)
+- [x] User scenarios defined and updated
+- [x] Requirements generated (21 functional requirements)
 - [x] Entities identified (Ticket, Job, JobStatus)
-- [ ] Review checklist passed (pending clarifications)
+- [x] Review checklist passed (ready for planning)
 
 ---
