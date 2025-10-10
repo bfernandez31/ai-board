@@ -69,7 +69,9 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          # For specify command, always checkout main (branch will be created later)
+          # For other commands, checkout the provided branch
+          ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -93,6 +95,18 @@ jobs:
         run: |
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
+
+      - name: Create Branch for Specify Command
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
+        run: |
+          # Generate branch name from ticket ID
+          branch_name="feature/ticket-${{ inputs.ticket_id }}"
+
+          echo "Creating branch: $branch_name"
+          git checkout -b "$branch_name"
+
+          # Store branch name for later steps
+          echo "FEATURE_BRANCH=$branch_name" >> "$GITHUB_ENV"
 
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
@@ -165,6 +179,20 @@ jobs:
 
             echo "✅ Changes committed and pushed successfully"
           fi
+
+      - name: Update Ticket Branch (Specify Command)
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.FEATURE_BRANCH != '' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: 1
+        run: |
+          # Update ticket branch field via API
+          curl -X PATCH "https://ai-board.vercel.app/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/branch" \
+            -H "Content-Type: application/json" \
+            -d "{\"branch\": \"${FEATURE_BRANCH}\"}" \
+            -f -s -S || echo "⚠️ Failed to update ticket branch field"
+
+          echo "✅ Updated ticket branch to: ${FEATURE_BRANCH}"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id != '' && env.SKIP_SPECKIT_EXECUTION != 'true' }}
