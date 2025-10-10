@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Stage, JobStatus } from '@prisma/client';
+import { Stage, JobStatus } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-validation';
 import { TransitionRequestSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /**
  * Stage-to-command mapping for automated workflow stages
@@ -349,7 +348,5 @@ export async function POST(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

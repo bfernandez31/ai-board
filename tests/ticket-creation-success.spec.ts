@@ -21,9 +21,18 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     // Clean database before each test
     await cleanupDatabase();
 
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
+
     // Navigate to board page
     await page.goto("/projects/1/board");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
   });
 
   test("should create ticket and display it in INBOX column", async ({ page }) => {
@@ -201,8 +210,8 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
     await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
 
-    // Wait for network to settle (board refresh)
-    await page.waitForLoadState('networkidle');
+    // Wait for board to update (slight delay for optimistic update)
+    await page.waitForTimeout(1000);
 
     // Verify board was refreshed (new ticket appears WITHOUT manual page reload)
     const newTicket = idleColumn.getByText(uniqueTitle);

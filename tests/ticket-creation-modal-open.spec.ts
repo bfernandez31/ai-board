@@ -15,9 +15,18 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     // Clean database before each test
     await cleanupDatabase();
 
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
+
     // Navigate to the board page before each test
     await page.goto("/projects/1/board");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
   });
 
   test("should open modal when clicking + New Ticket button", async ({ page }) => {

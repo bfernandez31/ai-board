@@ -12,9 +12,18 @@ import { cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('Project Validation - 404 Errors', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
     // Clean database before each test
     await cleanupDatabase();
+
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
   });
 
   test('should return 404 for non-existent project ID', async ({ page }) => {
@@ -51,7 +60,7 @@ test.describe('Project Validation - 404 Errors', () => {
     });
 
     // Try to navigate to non-existent project
-    await page.goto(`${BASE_URL}/projects/999999/board`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/projects/999999/board`, { waitUntil: 'domcontentloaded' });
 
     // Verify the ticket from project 1 is NOT visible
     await expect(page.getByText('Test ticket in project 1')).not.toBeVisible();

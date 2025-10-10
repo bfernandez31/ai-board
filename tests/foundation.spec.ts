@@ -12,8 +12,8 @@ test.describe('Foundation Validation', () => {
 
     await page.goto('/');
 
-    // Wait for page to fully load
-    await page.waitForLoadState('networkidle');
+    // Wait for page to load
+    await page.waitForLoadState('domcontentloaded');
 
     expect(consoleErrors).toHaveLength(0);
   });

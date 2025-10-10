@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
 import {
   canTransition,
   InvalidTransitionError,
   JobStatus,
 } from '@/app/lib/job-state-machine';
-
-const prisma = new PrismaClient();
+import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
+import type { JobStatusUpdate } from '@/lib/sse-schemas';
+import { prisma } from '@/lib/db/client';
 
 /**
  * PATCH /api/jobs/[id]/status
- * Update Job status when GitHub Actions workflow completes
+ * Update Job status during and after GitHub Actions workflow execution
  *
  * This endpoint is called by GitHub Actions workflows to update job status
- * upon completion (success, failure, or cancellation).
+ * when starting (RUNNING) and upon completion (COMPLETED, FAILED, CANCELLED).
  *
  * Request Body:
  * {
- *   "status": "COMPLETED" | "FAILED" | "CANCELLED"
+ *   "status": "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"
  * }
  *
  * Success Response (200):
@@ -157,17 +157,28 @@ export async function PATCH(
       );
     }
 
-    // Update job status and set completedAt timestamp
+    // Update job status and set timestamps appropriately
+    // completedAt is only set for terminal states (COMPLETED/FAILED/CANCELLED)
+    // Include ticket relation to get projectId for SSE broadcast
+    const isTerminalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(requestedStatus);
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
         status: requestedStatus,
-        completedAt: new Date(),
+        startedAt: requestedStatus === 'RUNNING' && !job.startedAt ? new Date() : undefined,
+        completedAt: isTerminalState ? new Date() : undefined,
       },
       select: {
         id: true,
         status: true,
         completedAt: true,
+        ticketId: true,
+        command: true,
+        ticket: {
+          select: {
+            projectId: true,
+          },
+        },
       },
     });
 
@@ -178,6 +189,28 @@ export async function PATCH(
       completedAt: updatedJob.completedAt?.toISOString(),
       elapsedMs: elapsedTime,
     });
+
+    // Broadcast job status update to SSE clients
+    try {
+      const broadcastMessage: JobStatusUpdate = {
+        projectId: updatedJob.ticket.projectId,
+        ticketId: updatedJob.ticketId,
+        jobId: updatedJob.id,
+        status: updatedJob.status as 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED',
+        command: updatedJob.command,
+        timestamp: new Date().toISOString(),
+      };
+
+      await broadcastJobStatusUpdate(broadcastMessage);
+      console.log('[Job Status Update] SSE broadcast sent');
+    } catch (broadcastError) {
+      // Log broadcast error but don't fail the API request
+      // The database update succeeded, which is the critical operation
+      console.error('[Job Status Update] SSE broadcast failed:', {
+        jobId,
+        error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
+      });
+    }
 
     // Return minimal response (id, status, completedAt)
     return NextResponse.json(
@@ -214,7 +247,5 @@ export async function PATCH(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

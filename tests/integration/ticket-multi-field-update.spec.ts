@@ -41,7 +41,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     await prisma.$disconnect();
   });
 
-  test('should update title, stage, and branch atomically', async ({
+  test('should update title and branch atomically (without stage change)', async ({
     request,
   }) => {
     // Create ticket
@@ -66,13 +66,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
     expect(ticket.branch).toBeNull();
     expect(ticket.autoMode).toBe(false);
 
-    // Update multiple fields in single request
+    // Update title and branch (without changing stage)
+    // Note: When stage changes, the workflow generates the branch name automatically,
+    // so we can't manually set both stage and branch in the same request
     const updateResponse = await request.patch(
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] Updated: GitHub Integration',
-          stage: 'SPECIFY',
           branch: '014-github-integration-updated',
           version: 1,
         },
@@ -83,14 +84,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     const updatedTicket = await updateResponse.json();
 
-    // Verify all specified fields updated
+    // Verify specified fields updated
     expect(updatedTicket.title).toBe('[e2e] Updated: GitHub Integration');
-    expect(updatedTicket.stage).toBe('SPECIFY');
     expect(updatedTicket.branch).toBe('014-github-integration-updated');
+    expect(updatedTicket.stage).toBe('INBOX'); // Stage unchanged
 
     // Verify unchanged fields preserved
     expect(updatedTicket.description).toBe('Original Description');
-    expect(updatedTicket.autoMode).toBe(false); // Not updated, should remain false
+    expect(updatedTicket.autoMode).toBe(false);
 
     // Verify in database
     const dbTicket = await prisma.ticket.findUnique({
@@ -98,7 +99,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     });
 
     expect(dbTicket!.title).toBe('[e2e] Updated: GitHub Integration');
-    expect(dbTicket!.stage).toBe('SPECIFY');
+    expect(dbTicket!.stage).toBe('INBOX');
     expect(dbTicket!.branch).toBe('014-github-integration-updated');
 
     // Clean up
@@ -201,7 +202,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle updating all mutable fields at once', async ({
+  test('should handle updating all mutable fields at once (except stage)', async ({
     request,
   }) => {
     // Create ticket
@@ -218,14 +219,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const ticket = await createResponse.json();
     const ticketId = ticket.id;
 
-    // Update all mutable fields in one request
+    // Update all mutable fields in one request (except stage, because stage
+    // transitions trigger workflows that generate their own branch names)
     const updateResponse = await request.patch(
       `/api/projects/${testProjectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] New Title',
           description: 'New Description',
-          stage: 'BUILD',
           branch: '014-comprehensive-update',
           autoMode: true,
           version: 1,
@@ -237,12 +238,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     const updatedTicket = await updateResponse.json();
 
-    // Verify all fields updated
+    // Verify all updated fields
     expect(updatedTicket.title).toBe('[e2e] New Title');
     expect(updatedTicket.description).toBe('New Description');
-    expect(updatedTicket.stage).toBe('BUILD');
     expect(updatedTicket.branch).toBe('014-comprehensive-update');
     expect(updatedTicket.autoMode).toBe(true);
+
+    // Verify stage unchanged (we didn't update it)
+    expect(updatedTicket.stage).toBe('INBOX');
 
     // Verify immutable fields unchanged
     expect(updatedTicket.id).toBe(ticketId);

@@ -12,9 +12,18 @@ import { cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('Project-Scoped Board Access', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
     // Clean database before each test
     await cleanupDatabase();
+
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
   });
 
   test('should display only project 1 tickets on /projects/1/board', async ({ page, request }) => {
@@ -28,7 +37,7 @@ test.describe('Project-Scoped Board Access', () => {
 
     // Navigate to project 1 board
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify ticket is visible
     await expect(page.getByText('Ticket in project 1')).toBeVisible();
@@ -70,7 +79,7 @@ test.describe('Project-Scoped Board Access', () => {
 
     // Navigate to project 1 board
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify project 1 ticket is visible
     await expect(page.getByText('Ticket in project 1')).toBeVisible();

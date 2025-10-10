@@ -26,6 +26,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - PostgreSQL 14+ via Prisma (existing Project, Ticket, Job models) (018-add-github-transition)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+ (019-update-job-on)
 - PostgreSQL via Prisma ORM (existing Job model to be extended) (019-update-job-on)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components (020-9179-real-time)
+- PostgreSQL 14+ via Prisma ORM (existing Job and Ticket models) (020-9179-real-time)
 
 ## Project Structure
 ```
@@ -41,9 +43,35 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 020-9179-real-time: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components
 - 019-update-job-on: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+
 - 018-add-github-transition: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
-- 017-il-faudrait-modifier: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router)
+
+<!-- MANUAL ADDITIONS START -->
+
+## Test Environment Data Isolation
+
+### Project ID Allocation
+
+**CRITICAL**: Projects 1 and 2 are RESERVED for E2E tests only.
+
+- **Project 1**: Primary test project (githubOwner: "test", githubRepo: "test")
+- **Project 2**: Secondary test project for cross-project tests (githubOwner: "test", githubRepo: "test2")
+- **Project 3+**: Available for development and production use
+
+**Test Cleanup Behavior** (`tests/helpers/db-cleanup.ts`):
+- Deletes ALL tickets from projects 1 and 2 before each test run
+- Preserves all data in projects 3+
+- Only deletes `[e2e]` prefixed data from non-test projects
+
+**For Development**:
+- **Project 3** (`AI Board Development`) is configured for development use
+  - GitHub: `bfernandez31/ai-board`
+  - Board URL: `http://localhost:3000/projects/3/board`
+  - Script: `npx tsx scripts/create-dev-project.ts` (if needed to recreate)
+- Never use projects 1-2 for manual testing or development
+- Test data in projects 1-2 will be automatically cleaned up between test runs
+- All development work should use project 3 or higher
 
 <!-- MANUAL ADDITIONS START -->
 

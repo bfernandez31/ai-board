@@ -12,14 +12,13 @@ import { z } from 'zod';
 /**
  * Zod schema for Job status update requests.
  *
- * Validates that the status field is one of the allowed terminal states.
- * Only COMPLETED, FAILED, and CANCELLED are allowed from workflow updates.
+ * Validates that the status field is one of the allowed states.
+ * RUNNING, COMPLETED, FAILED, and CANCELLED are allowed from workflow updates.
  *
- * PENDING and RUNNING transitions are handled by separate mechanisms
- * (PENDING is default, RUNNING set when workflow starts).
+ * PENDING is the default status when a Job is created and cannot be set via this endpoint.
  */
 export const jobStatusUpdateSchema = z.object({
-  status: z.enum(['COMPLETED', 'FAILED', 'CANCELLED'])
+  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'])
 });
 
 /**

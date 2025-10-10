@@ -106,10 +106,10 @@ test.describe('Ticket Card Display', () => {
     await expect(badge).toBeVisible();
   });
 
-  test('should display metadata section for ticket analytics', async ({ page, request }) => {
+  test('should NOT display metadata section (removed for real-time job status)', async ({ page, request }) => {
     await createTicket(request, {
       title: '[e2e] Metadata Test Ticket',
-      description: 'Testing metadata section visibility',
+      description: 'Testing metadata section has been removed',
     });
 
     await page.goto(`${BASE_URL}/projects/1/board`);
@@ -117,8 +117,15 @@ test.describe('Ticket Card Display', () => {
     const ticketCard = getTicketCardByTitle(page, 'Metadata Test Ticket');
     await expect(ticketCard).toBeVisible();
 
+    // Verify metadata section is NOT present
     const metadataLabel = ticketCard.locator('text=/MESSAGES\/TOOLS PER AGENT/i').first();
-    await expect(metadataLabel).toBeVisible();
+    await expect(metadataLabel).not.toBeVisible();
+
+    // Verify no "PLAN:", "BUILD:", "VERIFY:" text
+    const cardText = await getText(ticketCard);
+    expect(cardText).not.toContain('PLAN:');
+    expect(cardText).not.toContain('BUILD:');
+    expect(cardText).not.toContain('VERIFY:');
   });
 
   test('should show visual feedback on hover', async ({ page, request }) => {

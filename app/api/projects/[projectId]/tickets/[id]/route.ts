@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Stage as PrismaStage } from '@prisma/client';
+import { Stage as PrismaStage } from '@prisma/client';
 import { z } from 'zod';
 import { Stage, isValidTransition } from '@/lib/stage-validation';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /**
  * Zod schema for validating stage update requests
@@ -96,8 +95,6 @@ export async function GET(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -519,7 +516,5 @@ export async function PATCH(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
