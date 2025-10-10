@@ -185,7 +185,22 @@ export function Board({
             });
           }
         } else {
-          // Success
+          // Success - merge server response with optimistic update
+          const serverData = await response.json();
+
+          const finalTickets = updatedTickets.map((t) =>
+            t.id === ticket.id
+              ? {
+                  ...t,
+                  stage: serverData.stage || t.stage,
+                  version: serverData.version || t.version,
+                  branch: serverData.branch !== undefined ? serverData.branch : t.branch,
+                  updatedAt: serverData.updatedAt || t.updatedAt,
+                }
+              : t
+          );
+          setTicketsByStage(groupTicketsByStage(finalTickets));
+
           toast({
             title: 'Ticket updated',
             description: `Moved to ${targetStage}`,

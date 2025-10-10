@@ -336,4 +336,109 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(body.stage).toBe('SHIP');
     expect(body.version).toBe(6);
   });
+
+  test('should trigger GitHub workflow when stage changes (drag-and-drop)', async ({ request }) => {
+    const ticket = await createTestTicket(request);
+
+    // INBOX -> SPECIFY should trigger workflow
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'SPECIFY', version: 1 }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Should include jobId in response when workflow is triggered
+    expect(body).toHaveProperty('jobId');
+    expect(body.jobId).toBeGreaterThan(0);
+
+    // Should include branch name for SPECIFY stage
+    expect(body).toHaveProperty('branch');
+    expect(body.branch).toBe(`feature/ticket-${ticket.id}`);
+
+    // Should update stage and version
+    expect(body.stage).toBe('SPECIFY');
+    expect(body.version).toBe(2);
+  });
+
+  test('should trigger workflow for inline edit with stage change', async ({ request }) => {
+    const ticket = await createTestTicket(request);
+
+    // Update both title and stage in single request
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: {
+        title: '[e2e] Updated title with stage change',
+        stage: 'SPECIFY',
+        version: 1
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Should include jobId when stage changes
+    expect(body).toHaveProperty('jobId');
+    expect(body.jobId).toBeGreaterThan(0);
+
+    // Should include branch name
+    expect(body).toHaveProperty('branch');
+    expect(body.branch).toBe(`feature/ticket-${ticket.id}`);
+
+    // Should update both title and stage
+    expect(body.title).toBe('[e2e] Updated title with stage change');
+    expect(body.stage).toBe('SPECIFY');
+  });
+
+  test('should NOT trigger workflow when only title/description changes', async ({ request }) => {
+    const ticket = await createTestTicket(request);
+
+    // Update only title (no stage change)
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: {
+        title: '[e2e] Only title updated',
+        version: 1
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Should NOT include jobId when stage doesn't change
+    expect(body.jobId).toBeUndefined();
+
+    // Title should be updated
+    expect(body.title).toBe('[e2e] Only title updated');
+
+    // Stage should remain INBOX
+    expect(body.stage).toBe('INBOX');
+  });
+
+  test('should NOT trigger workflow for manual stages (VERIFY, SHIP)', async ({ request }) => {
+    const ticket = await createTestTicket(request);
+
+    // Transition to BUILD first (via multiple steps)
+    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'SPECIFY', version: 1 }
+    });
+    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'PLAN', version: 2 }
+    });
+    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'BUILD', version: 3 }
+    });
+
+    // BUILD -> VERIFY should NOT create job (manual stage)
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'VERIFY', version: 4 }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Should NOT include jobId for manual stage
+    expect(body.jobId).toBeUndefined();
+
+    // Should update stage
+    expect(body.stage).toBe('VERIFY');
+  });
 });

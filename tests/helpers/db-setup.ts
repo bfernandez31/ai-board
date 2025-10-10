@@ -63,6 +63,39 @@ export async function createTestTicket(
 }
 
 /**
+ * Creates test project and ticket in INBOX stage (for transition API tests)
+ * Uses standard test project 1 from db-cleanup pattern
+ */
+export async function setupTestData(): Promise<{ project: TestProject; ticket: TestTicket }> {
+  const prisma = getPrismaClient();
+
+  // Ensure test project 1 exists (follows db-cleanup.ts pattern)
+  const project = await prisma.project.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      id: 1,
+      name: '[e2e] Test Project',
+      description: 'Project for automated tests',
+      githubOwner: 'test',
+      githubRepo: 'test',
+    },
+  });
+
+  // Create a fresh ticket in INBOX stage
+  const ticket = await prisma.ticket.create({
+    data: {
+      title: '[e2e] Test Ticket for Transition',
+      description: 'Test ticket for transition API E2E tests',
+      stage: 'INBOX',
+      projectId: project.id,
+    },
+  });
+
+  return { project, ticket };
+}
+
+/**
  * Clean up test data after each test
  */
 export async function cleanupTestData(): Promise<void> {

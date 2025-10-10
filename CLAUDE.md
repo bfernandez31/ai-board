@@ -23,6 +23,7 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x) (016-create-github-actions)
 - N/A (workflow operates on repository files) (016-create-github-actions)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router) (017-il-faudrait-modifier)
+- PostgreSQL 14+ via Prisma (existing Project, Ticket, Job models) (018-add-github-transition)
 
 ## Project Structure
 ```
@@ -38,9 +39,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 018-add-github-transition: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 - 017-il-faudrait-modifier: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router)
 - 016-create-github-actions: Added YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x)
-- 014-add-github-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router)
 
 <!-- MANUAL ADDITIONS START -->
 

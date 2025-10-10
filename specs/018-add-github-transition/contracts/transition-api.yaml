@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: GitHub Workflow Transition API
+  description: |
+    API endpoint for transitioning tickets between workflow stages and dispatching GitHub Actions workflows.
+
+    **Feature**: 018-add-github-transition
+    **Date**: 2025-10-09
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://ai-board.vercel.app
+    description: Production (Vercel)
+
+paths:
+  /api/projects/{projectId}/tickets/{id}/transition:
+    post:
+      summary: Transition ticket to next stage
+      description: |
+        Validates stage transition, creates job record (for automated stages), dispatches GitHub Actions workflow (for SPECIFY/PLAN/BUILD), and updates ticket stage.
+
+        **Automated Stages**: SPECIFY, PLAN, BUILD → Job created + workflow dispatched
+        **Manual Stages**: VERIFY, SHIP → Stage updated only (no job, no workflow)
+      operationId: transitionTicketStage
+      tags:
+        - Tickets
+        - Workflow Automation
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Numeric project identifier
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
+        - name: id
+          in: path
+          required: true
+          description: Numeric ticket identifier
+          schema:
+            type: integer
+            minimum: 1
+          example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetStage
+              properties:
+                targetStage:
+                  type: string
+                  enum:
+                    - INBOX
+                    - SPECIFY
+                    - PLAN
+                    - BUILD
+                    - VERIFY
+                    - SHIP
+                  description: Target workflow stage (must be next sequential stage from current)
+              example:
+                targetStage: SPECIFY
+      responses:
+        '200':
+          description: Transition successful
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/TransitionSuccessWithJob'
+                  - $ref: '#/components/schemas/TransitionSuccessWithoutJob'
+              examples:
+                withWorkflow:
+                  summary: Automated stage (SPECIFY/PLAN/BUILD)
+                  value:
+                    success: true
+                    jobId: 456
+                    message: "Workflow dispatched successfully"
+                withoutWorkflow:
+                  summary: Manual stage (VERIFY/SHIP)
+                  value:
+                    success: true
+                    message: "Stage updated (no workflow for VERIFY/SHIP)"
+        '400':
+          description: Bad request - validation error or invalid transition
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InvalidTransitionError'
+              examples:
+                validation:
+                  summary: Invalid request body
+                  value:
+                    error: "Validation failed"
+                    code: "VALIDATION_ERROR"
+                    issues:
+                      - code: "invalid_enum_value"
+                        path: ["targetStage"]
+                        message: "Invalid enum value. Expected 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP', received 'INVALID'"
+                invalidTransition:
+                  summary: Non-sequential stage transition
+                  value:
+                    error: "Invalid stage transition"
+                    message: "Cannot transition from INBOX to BUILD. Tickets must progress sequentially through stages."
+        '403':
+          description: Forbidden - ticket belongs to different project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+              example:
+                error: "Forbidden"
+                code: "FORBIDDEN"
+        '404':
+          description: Not found - project or ticket does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+              examples:
+                project:
+                  summary: Project not found
+                  value:
+                    error: "Project not found"
+                    code: "PROJECT_NOT_FOUND"
+                ticket:
+                  summary: Ticket not found
+                  value:
+                    error: "Ticket not found"
+        '409':
+          description: Conflict - optimistic concurrency version mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+              example:
+                error: "Conflict: Ticket was modified by another user"
+                currentVersion: 5
+        '500':
+          description: Internal server error - database or GitHub API failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+              examples:
+                database:
+                  summary: Database error
+                  value:
+                    error: "Internal server error"
+                github:
+                  summary: GitHub API error
+                  value:
+                    error: "GitHub workflow dispatch failed"
+                    message: "Rate limit exceeded"
+                    code: "GITHUB_ERROR"
+
+components:
+  schemas:
+    TransitionSuccessWithJob:
+      type: object
+      required:
+        - success
+        - jobId
+        - message
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        jobId:
+          type: integer
+          description: Database ID of created job record
+          example: 456
+        message:
+          type: string
+          example: "Workflow dispatched successfully"
+
+    TransitionSuccessWithoutJob:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: "Stage updated (no workflow for VERIFY/SHIP)"
+
+    ValidationError:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        code:
+          type: string
+          enum: ["VALIDATION_ERROR"]
+        issues:
+          type: array
+          description: Zod validation error details
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              path:
+                type: array
+                items:
+                  type: string
+              message:
+                type: string
+
+    InvalidTransitionError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "Invalid stage transition"
+        message:
+          type: string
+          example: "Cannot transition from BUILD to INBOX. Tickets must progress sequentially through stages."
+
+    ForbiddenError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum: ["Forbidden"]
+        code:
+          type: string
+          enum: ["FORBIDDEN"]
+
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "Project not found"
+        code:
+          type: string
+          example: "PROJECT_NOT_FOUND"
+
+    ConflictError:
+      type: object
+      required:
+        - error
+        - currentVersion
+      properties:
+        error:
+          type: string
+          example: "Conflict: Ticket was modified by another user"
+        currentVersion:
+          type: integer
+          description: Current version in database
+          example: 5
+
+    InternalServerError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "Internal server error"
+        message:
+          type: string
+          example: "Rate limit exceeded"
+        code:
+          type: string
+          example: "GITHUB_ERROR"
+
+  securitySchemes:
+    githubToken:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        Server-side only: GITHUB_TOKEN environment variable used for Octokit workflow dispatch.
+        Not exposed in API requests/responses.
+
+tags:
+  - name: Tickets
+    description: Ticket management operations
+  - name: Workflow Automation
+    description: GitHub Actions workflow automation

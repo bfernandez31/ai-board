@@ -33,7 +33,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   ): Promise<{ id: number; version: number; title: string }> => {
     const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: `Test Ticket ${stage}`,
+        title: `[e2e] Test Ticket ${stage}`,
         description: `Test description for ${stage}`,
       },
     });
@@ -116,6 +116,9 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
 
+    // Wait longer for server processing
+    await page.waitForTimeout(2000);
+
     // Verify database updated to SPECIFY
     let updatedTicket = await getTicket(ticket.id);
     expect(updatedTicket?.stage).toBe('SPECIFY');
@@ -128,6 +131,9 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const planColumn = page.locator('[data-stage="PLAN"]');
     await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
     await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
+
+    // Wait longer for server processing
+    await page.waitForTimeout(2000);
 
     // Verify database updated to PLAN
     updatedTicket = await getTicket(ticket.id);
