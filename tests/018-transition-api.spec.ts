@@ -418,7 +418,14 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     });
     expect(updatedTicket?.branch).toBe(branchName);
 
-    // Act 3: Simulate job completion
+    // Act 3: Simulate job starting (required by state machine)
+    const jobRunningResponse = await request.patch(`/api/jobs/${jobId}/status`, {
+      data: { status: 'RUNNING' },
+    });
+
+    expect(jobRunningResponse.status()).toBe(200);
+
+    // Act 4: Simulate job completion
     const jobStatusResponse = await request.patch(`/api/jobs/${jobId}/status`, {
       data: { status: 'COMPLETED' },
     });
