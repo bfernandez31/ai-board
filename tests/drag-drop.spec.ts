@@ -33,7 +33,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
   ): Promise<{ id: number; version: number; title: string }> => {
     const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
-        title: `Test Ticket ${stage}`,
+        title: `[e2e] Test Ticket ${stage}`,
         description: `Test description for ${stage}`,
       },
     });
