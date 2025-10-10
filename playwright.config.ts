@@ -22,7 +22,7 @@ const config = defineConfig({
   webServer: {
     command: 'NODE_ENV=test npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // Always restart to ensure test environment is loaded
   },
 });
 
