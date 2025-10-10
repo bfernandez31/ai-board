@@ -4,19 +4,29 @@
 
 ### Development Environment Setup
 
-1. **Start the development server:**
+1. **Create the development project (one-time setup):**
+   ```bash
+   npx tsx scripts/create-dev-project.ts
+   ```
+
+   This creates Project 3 with:
+   - Name: "AI Board Development"
+   - GitHub: `bfernandez31/ai-board`
+   - Persistent data (not affected by test cleanup)
+
+2. **Start the development server:**
    ```bash
    npm run dev
    ```
 
-2. **Access your development board:**
+3. **Access your development board:**
    ```
    http://localhost:3000/projects/3/board
    ```
 
    **⚠️ Important:** Always use **Project 3** for development, not projects 1-2 (reserved for tests).
 
-3. **Create tickets and test features:**
+4. **Create tickets and test features:**
    - All tickets created in Project 3 will be saved permanently
    - GitHub Actions workflows will dispatch to `bfernandez31/ai-board`
    - Your data won't be affected by test runs
@@ -123,6 +133,17 @@ When you drag a ticket from INBOX → SPECIFY in Project 3:
 **Cause:** Using projects 1-2 instead of project 3
 
 **Solution:** Always use `http://localhost:3000/projects/3/board` for development
+
+### Issue: "Project 3 doesn't exist / 404 error"
+
+**Cause:** Development project was never created or database was reset
+
+**Solution:** Run the create-dev-project script:
+```bash
+npx tsx scripts/create-dev-project.ts
+```
+
+This is a one-time setup that persists across test runs.
 
 ### Issue: "SSE connection timeout in tests"
 

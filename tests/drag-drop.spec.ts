@@ -113,7 +113,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
     // Navigate to board AFTER creating ticket so server renders it
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify ticket is in INBOX column
     const inboxColumn = page.locator('[data-stage="INBOX"]');
@@ -161,7 +161,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'PLAN');
 
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Attempt to drag from PLAN to SHIP (invalid - skipping BUILD and VERIFY)
     // Use mouse events for @dnd-kit compatibility
@@ -194,7 +194,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'BUILD');
 
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Attempt to drag from BUILD to PLAN (invalid - backwards)
     const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
@@ -234,9 +234,9 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     });
 
     await page1.goto(`${BASE_URL}/projects/1/board`);
-    await page1.waitForLoadState('networkidle');
+    await page1.waitForLoadState('domcontentloaded');
     await page2.goto(`${BASE_URL}/projects/1/board`);
-    await page2.waitForLoadState('networkidle');
+    await page2.waitForLoadState('domcontentloaded');
 
     // Wait for both pages to load
     await page1.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
@@ -277,7 +277,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'INBOX');
 
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go offline
     await context.setOffline(true);
@@ -317,7 +317,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'INBOX');
 
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Drag using mouse events (works on mobile viewport) - INBOX to SPECIFY
     await dragTicketToColumn(page, ticket.id, 'SPECIFY');
@@ -336,7 +336,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticket = await createTicket(request, 'INBOX');
 
     await page.goto(`${BASE_URL}/projects/1/board`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Measure time from drag start to visual update
     const startTime = Date.now();
