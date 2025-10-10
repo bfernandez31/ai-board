@@ -43,10 +43,21 @@ test.describe('SSE Job Status Broadcast', () => {
     expect(jobId).toBeTruthy()
 
     // Open board page and establish SSE connection
-    await page.goto('http://localhost:3000/projects/1/board')
+    await page.goto('http://localhost:3000/projects/1/board', {
+      waitUntil: 'domcontentloaded'
+    })
 
-    // Wait for SSE connection
-    await page.waitForRequest(req => req.url().includes('/api/sse?projectId=1'))
+    // Wait for React hydration and SSE connection
+    await page.waitForTimeout(2000)
+
+    // Wait for EventSource to be ready
+    let isConnected = false
+    for (let i = 0; i < 10; i++) {
+      isConnected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+      if (isConnected) break
+      await page.waitForTimeout(1000)
+    }
+    expect(isConnected).toBe(true)
 
     // Set up listener for SSE message
     const messagePromise = page.evaluate(() => {
@@ -129,17 +140,33 @@ test.describe('SSE Job Status Broadcast', () => {
 
     // Navigate all to board and establish SSE connections
     await Promise.all([
-      page1.goto('http://localhost:3000/projects/1/board'),
-      page2.goto('http://localhost:3000/projects/1/board'),
-      page3.goto('http://localhost:3000/projects/1/board'),
+      page1.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page2.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page3.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
     ])
 
-    // Wait for all SSE connections
-    await Promise.all([
-      page1.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page2.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page3.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
+    // Wait for React hydration
+    await page1.waitForTimeout(2000)
+
+    // Wait for all EventSource connections to be ready
+    const waitForConnection = async (page: any) => {
+      for (let i = 0; i < 10; i++) {
+        const connected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+        if (connected) return true
+        await page.waitForTimeout(1000)
+      }
+      return false
+    }
+
+    const [connected1, connected2, connected3] = await Promise.all([
+      waitForConnection(page1),
+      waitForConnection(page2),
+      waitForConnection(page3),
     ])
+
+    expect(connected1).toBe(true)
+    expect(connected2).toBe(true)
+    expect(connected3).toBe(true)
 
     // Set up message listeners on all pages (wait for COMPLETED status)
     const messagePromises = Promise.all([
@@ -256,15 +283,30 @@ test.describe('SSE Job Status Broadcast', () => {
 
     // Client 1 connects to project 1, Client 2 connects to project 2
     await Promise.all([
-      page1.goto('http://localhost:3000/projects/1/board'),
-      page2.goto('http://localhost:3000/projects/2/board'),
+      page1.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page2.goto('http://localhost:3000/projects/2/board', { waitUntil: 'domcontentloaded' }),
     ])
 
-    // Wait for SSE connections
-    await Promise.all([
-      page1.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page2.waitForRequest(req => req.url().includes('/api/sse?projectId=2')),
+    // Wait for React hydration
+    await page1.waitForTimeout(2000)
+
+    // Wait for EventSource connections to be ready
+    const waitForConnection = async (page: any) => {
+      for (let i = 0; i < 10; i++) {
+        const connected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+        if (connected) return true
+        await page.waitForTimeout(1000)
+      }
+      return false
+    }
+
+    const [connected1, connected2] = await Promise.all([
+      waitForConnection(page1),
+      waitForConnection(page2),
     ])
+
+    expect(connected1).toBe(true)
+    expect(connected2).toBe(true)
 
     // Set up listeners (wait for FAILED status)
     const page1MessagePromise = page1.evaluate((targetJobId) => {
@@ -352,8 +394,21 @@ test.describe('SSE Job Status Broadcast', () => {
 
     expect(jobId).toBeTruthy()
 
-    await page.goto('http://localhost:3000/projects/1/board')
-    await page.waitForRequest(req => req.url().includes('/api/sse?projectId=1'))
+    await page.goto('http://localhost:3000/projects/1/board', {
+      waitUntil: 'domcontentloaded'
+    })
+
+    // Wait for React hydration and SSE connection
+    await page.waitForTimeout(2000)
+
+    // Wait for EventSource to be ready
+    let isConnected = false
+    for (let i = 0; i < 10; i++) {
+      isConnected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+      if (isConnected) break
+      await page.waitForTimeout(1000)
+    }
+    expect(isConnected).toBe(true)
 
     // Collect all messages
     const messages: any[] = []
