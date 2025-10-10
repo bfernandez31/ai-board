@@ -67,24 +67,31 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 
 The correct branch lifecycle for automated workflows:
 
-1. **INBOX → SPECIFY Transition**:
+1. **INBOX → SPECIFY Transition** (API):
    - `POST /api/projects/:projectId/tickets/:id/transition` with `targetStage: "SPECIFY"`
    - Creates Job record with status PENDING
-   - Dispatches GitHub Actions workflow
+   - Dispatches GitHub Actions workflow with `command: "specify"`
    - **Branch remains `null`** (NOT set during transition)
+   - Workflow receives `branch: ""` (empty string) in inputs
 
 2. **GitHub Workflow Execution** (specify command):
-   - Workflow creates Git branch: `feature/ticket-{id}`
-   - Executes `/sc:specify` command
-   - On completion, calls `PATCH /api/projects/:projectId/tickets/:id/branch`
+   - **Checkout**: Checks out `main` branch (ignores empty branch input)
+   - **Create Branch**: Creates `feature/ticket-{id}` from main
+   - **Execute Command**: Runs `/sc:specify` command
+   - **Commit & Push**: Pushes changes to feature branch
+   - **Update Branch**: Calls `PATCH /api/projects/:projectId/tickets/:id/branch`
+   - **Update Status**: Calls `PATCH /api/jobs/:id/status` with `COMPLETED`
 
-3. **Job Completion**:
-   - Workflow updates job status via `PATCH /api/jobs/:id/status`
-   - Branch is now set on ticket record
+3. **Post-Specify State**:
+   - Ticket stage: SPECIFY
+   - Ticket branch: `feature/ticket-{id}` (set by workflow)
+   - Job status: COMPLETED
 
 4. **Subsequent Transitions** (SPECIFY → PLAN → BUILD):
-   - Branch reused for all transitions
+   - API passes existing `branch: "feature/ticket-{id}"` to workflow
+   - Workflow checks out the existing branch
    - Branch field remains unchanged during transitions
+   - New Job created for each transition
 
 ## API Endpoints
 
