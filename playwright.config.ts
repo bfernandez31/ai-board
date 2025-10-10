@@ -23,6 +23,9 @@ const config = defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    env: {
+      E2E_TEST: 'true', // Disable GitHub API calls during E2E tests
+    },
   },
 });
 

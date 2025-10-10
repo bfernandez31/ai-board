@@ -103,7 +103,12 @@ export async function handleTicketTransition(
     const githubToken = process.env.GITHUB_TOKEN;
 
     // Skip GitHub API call in test mode (when token is placeholder or missing)
-    const isTestMode = !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
+    // Also skip if E2E_TEST environment variable is set (for E2E tests)
+    const isTestMode =
+      process.env.E2E_TEST === 'true' ||
+      !githubToken ||
+      githubToken.includes('test') ||
+      githubToken.includes('placeholder');
 
     if (!isTestMode) {
       try {
