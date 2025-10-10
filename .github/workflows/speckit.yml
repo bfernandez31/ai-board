@@ -96,18 +96,6 @@ jobs:
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
 
-      - name: Create Branch for Specify Command
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
-        run: |
-          # Generate branch name from ticket ID
-          branch_name="feature/ticket-${{ inputs.ticket_id }}"
-
-          echo "Creating branch: $branch_name"
-          git checkout -b "$branch_name"
-
-          # Store branch name for later steps
-          echo "FEATURE_BRANCH=$branch_name" >> "$GITHUB_ENV"
-
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
@@ -154,6 +142,11 @@ jobs:
           fi
 
           echo "CURRENT_BRANCH=$current_branch" >> "$GITHUB_ENV"
+
+          # For specify command, also store branch for ticket update
+          if [ "${{ inputs.command }}" = "specify" ]; then
+            echo "FEATURE_BRANCH=$current_branch" >> "$GITHUB_ENV"
+          fi
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}

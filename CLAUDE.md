@@ -76,25 +76,27 @@ The correct branch lifecycle for automated workflows:
 
 2. **GitHub Workflow Execution** (specify command):
    - **Checkout**: Checks out `main` branch (since branch input is empty)
-   - **Create Feature Branch**: Workflow creates `feature/ticket-{id}` from main
-   - **Execute `/sc:specify`**: Spec-kit command generates spec.md and other artifacts
-     - Note: The `/specify` command does NOT create the Git branch
-     - The branch was already created by the workflow in the previous step
-   - **Commit & Push**: Workflow commits spec-kit output to feature branch
+   - **Execute `/specify`**: Project slash command runs (`.claude/commands/specify.md`)
+     - Calls `.specify/scripts/bash/create-new-feature.sh` script
+     - **Script creates Git branch**: `{num}-{description}` (e.g., `020-real-time-update`)
+     - Script initializes spec.md from template
+     - Claude writes the specification to spec.md
+   - **Commit & Push**: Workflow commits spec.md to the created branch
+   - **Capture Branch**: Workflow detects current branch name (created by script)
    - **Update Ticket Branch**: Workflow calls `PATCH /api/projects/:projectId/tickets/:id/branch`
-     - Sets `branch: "feature/ticket-{id}"` in database
+     - Sets `branch: "{num}-{description}"` in database
    - **Update Job Status**: Workflow calls `PATCH /api/jobs/:id/status` with `COMPLETED`
 
 3. **Post-Specify State**:
    - Ticket stage: SPECIFY
-   - Ticket branch: `feature/ticket-{id}` (set by workflow API call)
+   - Ticket branch: `{num}-{description}` (e.g., `020-real-time-update`)
    - Job status: COMPLETED
-   - Git repository: feature/ticket-{id} branch exists with spec artifacts
+   - Git repository: Feature branch exists with specs/{num}-{description}/spec.md
 
 4. **Subsequent Transitions** (SPECIFY → PLAN → BUILD):
-   - API passes existing `branch: "feature/ticket-{id}"` to workflow
+   - API passes existing `branch: "{num}-{description}"` to workflow
    - Workflow checks out the existing feature branch
-   - Spec-kit commands (`/plan`, `/implement`) add to existing branch
+   - Spec-kit commands (`/plan`, `/tasks`, `/implement`) add to existing branch
    - Branch field remains unchanged during transitions
    - New Job created for each transition
 
