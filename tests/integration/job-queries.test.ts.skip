@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from '@jest/globals'
+import { test, expect } from '@playwright/test'
 import { PrismaClient } from '@prisma/client'
 import { getMostRecentActiveJob, getJobsForTickets } from '@/lib/job-queries'
 
@@ -10,14 +10,12 @@ import { getMostRecentActiveJob, getJobsForTickets } from '@/lib/job-queries'
  * - Falls back to most recent terminal job if no active jobs
  * - getJobsForTickets returns Map with single database query
  * - Prioritizes active jobs over terminal jobs
- *
- * Expected: FAIL (functions not implemented yet)
  */
 
 const prisma = new PrismaClient()
 
-describe('Job Query Functions', () => {
-  beforeEach(async () => {
+test.describe('Job Query Functions', () => {
+  test.beforeEach(async () => {
     // Clean up test data
     await prisma.job.deleteMany({
       where: {
@@ -38,11 +36,11 @@ describe('Job Query Functions', () => {
     })
   })
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await prisma.$disconnect()
   })
 
-  describe('getMostRecentActiveJob', () => {
+  test.describe('getMostRecentActiveJob', () => {
     test('should return most recent RUNNING job if exists', async () => {
       // Create test ticket
       const ticket = await prisma.ticket.create({
@@ -199,7 +197,7 @@ describe('Job Query Functions', () => {
     })
   })
 
-  describe('getJobsForTickets', () => {
+  test.describe('getJobsForTickets', () => {
     test('should return Map of ticketId to Job for all tickets', async () => {
       // Create multiple tickets with jobs
       const ticket1 = await prisma.ticket.create({

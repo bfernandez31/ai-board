@@ -34,15 +34,12 @@ test.describe('Project Routing', () => {
     // Navigate directly to project board
     await page.goto('http://localhost:3000/projects/1/board');
 
-    // Verify page loaded
-    await page.waitForLoadState('networkidle');
+    // Verify page loaded by waiting for board content
+    const column = page.locator('[data-testid="column-INBOX"]').first();
+    await expect(column).toBeVisible();
 
     // Verify URL didn't change
     expect(page.url()).toBe('http://localhost:3000/projects/1/board');
-
-    // Verify board is visible
-    const column = page.locator('[data-testid="column-INBOX"]').first();
-    await expect(column).toBeVisible();
   });
 
   test('should maintain project context in URL', async ({ page }) => {

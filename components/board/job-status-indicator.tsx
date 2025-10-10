@@ -66,6 +66,7 @@ export function JobStatusIndicator({
 
   return (
     <div
+      data-testid="job-status-indicator"
       className={cn(
         'flex items-center gap-2',
         className
