@@ -81,6 +81,66 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 
 **Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
 
+### Job Status Management
+
+**PATCH `/api/jobs/:id/status`**
+- Updates Job status when GitHub Actions workflows complete
+- Request body: `{ status: "COMPLETED" | "FAILED" | "CANCELLED" }`
+- Response: `{ id: number, status: JobStatus, completedAt: string | null }`
+- Validation: Zod schema validation + state machine transition rules
+- Features:
+  - **Idempotent**: Same status request returns 200 with current state
+  - **State Machine**: Enforces valid transitions (RUNNING → COMPLETED/FAILED/CANCELLED)
+  - **Minimal Response**: Only id, status, completedAt (no sensitive data)
+  - **Error Logging**: All operations logged for debugging
+- Error responses:
+  - 400: Invalid request (Zod validation or invalid state transition)
+  - 404: Job not found
+  - 500: Internal server error
+
+## Data Model Notes
+
+### Job Model
+
+The Job model tracks GitHub Actions workflow execution status:
+
+- **`status`** (JobStatus enum): Current execution state
+  - Values: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`
+  - Updated via PATCH `/api/jobs/:id/status` endpoint
+  - State machine enforces valid transitions
+
+- **`completedAt`** (DateTime?, nullable): Timestamp when job reached terminal state
+  - Set automatically when status changes to COMPLETED, FAILED, or CANCELLED
+  - Null for PENDING and RUNNING states
+  - Never modified after being set (immutable for terminal states)
+
+### JobStatus State Machine
+
+**Valid Transitions**:
+```
+PENDING → RUNNING (workflow starts)
+RUNNING → COMPLETED (workflow succeeds)
+RUNNING → FAILED (workflow fails)
+RUNNING → CANCELLED (workflow cancelled)
+```
+
+**Terminal States** (no transitions allowed):
+- `COMPLETED` → COMPLETED (idempotent only)
+- `FAILED` → FAILED (idempotent only)
+- `CANCELLED` → CANCELLED (idempotent only)
+
+**Invalid Transitions** (return 400 error):
+- COMPLETED → FAILED
+- COMPLETED → RUNNING
+- FAILED → COMPLETED
+- CANCELLED → COMPLETED
+- PENDING → COMPLETED (must go through RUNNING)
+
+**Implementation**:
+- State machine logic: `app/lib/job-state-machine.ts`
+- Validation: `canTransition(from, to)` function
+- Error: `InvalidTransitionError` class
+
 ## Validation Rules
 
 ### Ticket Title and Description
@@ -143,5 +203,54 @@ test.beforeEach(async () => {
 3. Assume clean database state at test start (no leftover test data)
 4. Use deterministic project IDs (1, 2) for consistency
 5. Never create data without `[e2e]` prefix in automated tests
+
+## Testing Requirements
+
+### State Transition Testing
+
+When testing features involving Job status updates:
+
+1. **Test Valid Transitions**: Verify all allowed state transitions work correctly
+   - PENDING → RUNNING
+   - RUNNING → COMPLETED/FAILED/CANCELLED
+
+2. **Test Invalid Transitions**: Verify state machine rejects invalid transitions
+   - Terminal states cannot transition to other states (except idempotent)
+   - PENDING cannot skip RUNNING state
+
+3. **Test Idempotency**: Verify same status request returns 200 without database changes
+   - COMPLETED → COMPLETED
+   - FAILED → FAILED
+   - CANCELLED → CANCELLED
+
+4. **Test Edge Cases**:
+   - Non-existent job IDs return 404
+   - Invalid status values return 400 with Zod validation errors
+   - Invalid job ID formats return 400
+
+**Test Files**:
+- Unit tests: `tests/unit/job-state-machine.test.ts` (29 tests)
+- Contract tests: `tests/e2e/job-status-update-contract.spec.ts` (14 tests)
+- E2E tests: `tests/e2e/job-status-update.spec.ts` (12 tests)
+
+**Test Data Setup for Job Tests**:
+```typescript
+test.beforeEach(async () => {
+  await cleanupDatabase();
+
+  // Create test ticket for Job foreign key constraint
+  await prisma.ticket.create({
+    data: {
+      id: 1,
+      title: '[e2e] Test Ticket for Jobs',
+      description: 'Ticket for testing Job status updates',
+      stage: 'INBOX',
+      projectId: 1,
+    },
+  });
+});
+```
+
+This ensures Job creation succeeds without foreign key constraint violations while maintaining test isolation.
 
 <!-- MANUAL ADDITIONS END -->

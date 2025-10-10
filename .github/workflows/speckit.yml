@@ -42,6 +42,11 @@ on:
         type: string
         default: '{}'
 
+      job_id:
+        description: 'Job ID for status tracking (optional)'
+        required: false
+        type: number
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -160,6 +165,30 @@ jobs:
 
             echo "✅ Changes committed and pushed successfully"
           fi
+
+      - name: Update Job Status - Success
+        if: ${{ success() && inputs.job_id != '' && env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        run: |
+          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
+
+      - name: Update Job Status - Failure
+        if: ${{ failure() && inputs.job_id != '' }}
+        run: |
+          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -d '{"status": "FAILED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to FAILED"
+
+      - name: Update Job Status - Cancelled
+        if: ${{ cancelled() && inputs.job_id != '' }}
+        run: |
+          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -d '{"status": "CANCELLED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
 
       - name: Report Success (Skipped)
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION == 'true' }}
