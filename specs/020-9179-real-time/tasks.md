@@ -12,10 +12,10 @@
 
 ## Phase 3.1: Setup & Dependencies
 
-- [ ] **T001** Install WebSocket dependency: `npm install ws@^8.18.0 @types/ws@^8.5.10`
+- [X] **T001** Install WebSocket dependency: `npm install ws@^8.18.0 @types/ws@^8.5.10`
   - File: `package.json`
-  - Verify: `npm list ws` shows version 8.18.0
-  - Constitutional check: Confirm TypeScript types included
+  - Verify: `npm list ws` shows version 8.18.3 ✓
+  - Constitutional check: Confirm TypeScript types included ✓
 
 ---
 
@@ -23,59 +23,59 @@
 
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY infrastructure implementation**
 
-- [ ] **T002** Write Zod schemas for WebSocket messages in `lib/websocket-schemas.ts`
-  - Create `ClientMessageSchema` (subscribe, unsubscribe, ping)
-  - Create `ServerMessageSchema` (connected, subscribed, job-status-update, error, pong)
-  - Export TypeScript types using `z.infer`
+- [X] **T002** Write Zod schemas for WebSocket messages in `lib/websocket-schemas.ts`
+  - Create `ClientMessageSchema` (subscribe, unsubscribe, ping) ✓
+  - Create `ServerMessageSchema` (connected, subscribed, job-status-update, error, pong) ✓
+  - Export TypeScript types using `z.infer` ✓
   - Reference: `contracts/websocket-api.md` lines 497-561
 
-- [ ] **T003** [P] Write E2E test for WebSocket connection establishment in `tests/e2e/websocket-connection.spec.ts`
-  - Test: HTTP upgrade to WebSocket succeeds (101 Switching Protocols)
-  - Test: Server sends `connected` message with clientId
-  - Test: Invalid upgrade request returns 400
-  - Expected: **FAIL** (no WebSocket server yet)
+- [X] **T003** [P] Write E2E test for WebSocket connection establishment in `tests/e2e/websocket-connection.spec.ts`
+  - Test: HTTP upgrade to WebSocket succeeds (101 Switching Protocols) ✓
+  - Test: Server sends `connected` message with clientId ✓
+  - Test: Invalid upgrade request returns 400 ✓
+  - Expected: **FAIL** (no WebSocket server yet) - Tests written, will fail until T006 complete
 
-- [ ] **T004** [P] Write E2E test for project subscription in `tests/e2e/websocket-subscription.spec.ts`
-  - Test: Client sends `subscribe` message → receives `subscribed` acknowledgment
-  - Test: Client sends `unsubscribe` → receives `unsubscribed` acknowledgment
-  - Test: Invalid projectId returns error message
-  - Expected: **FAIL** (no subscription logic yet)
+- [X] **T004** [P] Write E2E test for project subscription in `tests/e2e/websocket-subscription.spec.ts`
+  - Test: Client sends `subscribe` message → receives `subscribed` acknowledgment ✓
+  - Test: Client sends `unsubscribe` → receives `unsubscribed` acknowledgment ✓
+  - Test: Invalid projectId returns error message ✓
+  - Expected: **FAIL** (no subscription logic yet) - Tests written, will fail until T007 complete
 
-- [ ] **T005** [P] Write E2E test for job status broadcast in `tests/e2e/websocket-job-broadcast.spec.ts`
-  - Test: Job status update triggers WebSocket broadcast to subscribed clients
-  - Test: Multiple clients receive same update simultaneously
-  - Test: Unsubscribed clients do not receive updates
-  - Expected: **FAIL** (no broadcast logic yet)
+- [X] **T005** [P] Write E2E test for job status broadcast in `tests/e2e/websocket-job-broadcast.spec.ts`
+  - Test: Job status update triggers WebSocket broadcast to subscribed clients ✓
+  - Test: Multiple clients receive same update simultaneously ✓
+  - Test: Unsubscribed clients do not receive updates ✓
+  - Expected: **FAIL** (no broadcast logic yet) - Tests written, will fail until T008 complete
 
 ---
 
 ## Phase 3.3: WebSocket Infrastructure - Implementation
 
-- [ ] **T006** Implement WebSocket server in `app/api/ws/route.ts`
-  - Handle HTTP upgrade (check `upgrade: websocket` header)
-  - Initialize WebSocket server from `ws` library
-  - Send `connected` message with UUID clientId
-  - Validate messages with Zod schemas
+- [X] **T006** Implement WebSocket server in `app/api/ws/route.ts`
+  - Handle HTTP upgrade (check `upgrade: websocket` header) ✓
+  - Initialize WebSocket server from `ws` library ✓
+  - Send `connected` message with UUID clientId ✓
+  - Validate messages with Zod schemas ✓
   - Success criteria: T003 test passes (connection establishment)
 
-- [ ] **T007** Implement subscription management in `lib/websocket-server.ts`
-  - Maintain Map of clientId → Set<projectId> subscriptions
-  - Handle `subscribe` message → add to subscription map → send `subscribed`
-  - Handle `unsubscribe` message → remove from map → send `unsubscribed`
-  - Validate projectId exists in database
+- [X] **T007** Implement subscription management in `lib/websocket-server.ts`
+  - Maintain Map of clientId → Set<projectId> subscriptions ✓
+  - Handle `subscribe` message → add to subscription map → send `subscribed` ✓
+  - Handle `unsubscribe` message → remove from map → send `unsubscribed` ✓
+  - Validate projectId exists in database ✓
   - Success criteria: T004 test passes (subscription)
 
-- [ ] **T008** Implement broadcast logic in `lib/websocket-server.ts`
-  - Export `broadcastJobStatusUpdate(message: JobStatusUpdate)` function
-  - Find all clients subscribed to message.projectId
-  - Send message to each client's WebSocket connection
-  - Handle disconnected clients gracefully
+- [X] **T008** Implement broadcast logic in `lib/websocket-server.ts`
+  - Export `broadcastJobStatusUpdate(message: JobStatusUpdate)` function ✓
+  - Find all clients subscribed to message.projectId ✓
+  - Send message to each client's WebSocket connection ✓
+  - Handle disconnected clients gracefully ✓
   - Success criteria: T005 test passes (broadcast)
 
-- [ ] **T009** Integrate WebSocket broadcast into job status API in `app/api/jobs/[id]/status/route.ts`
-  - After Prisma update succeeds, call `broadcastJobStatusUpdate`
-  - Include projectId (from job.ticket.projectId), ticketId, jobId, status, command
-  - Handle broadcast errors without failing API request
+- [X] **T009** Integrate WebSocket broadcast into job status API in `app/api/jobs/[id]/status/route.ts`
+  - After Prisma update succeeds, call `broadcastJobStatusUpdate` ✓
+  - Include projectId (from job.ticket.projectId), ticketId, jobId, status, command ✓
+  - Handle broadcast errors without failing API request ✓
   - Success criteria: T005 test passes (end-to-end broadcast)
 
 ---
@@ -125,34 +125,34 @@
 
 ## Phase 3.6: Job Query Functions - Tests First ⚠️ MUST FAIL
 
-- [ ] **T015** [P] Write integration test for `getMostRecentActiveJob` in `tests/integration/job-queries.test.ts`
-  - Test: Returns most recent RUNNING job if exists
-  - Test: Returns most recent PENDING job if no RUNNING
-  - Test: Falls back to most recent COMPLETED if no active jobs
-  - Test: Returns null if no jobs for ticket
-  - Expected: **FAIL** (no function yet)
+- [X] **T015** [P] Write integration test for `getMostRecentActiveJob` in `tests/integration/job-queries.test.ts`
+  - Test: Returns most recent RUNNING job if exists ✓
+  - Test: Returns most recent PENDING job if no RUNNING ✓
+  - Test: Falls back to most recent COMPLETED if no active jobs ✓
+  - Test: Returns null if no jobs for ticket ✓
+  - Expected: **FAIL** (no function yet) - Tests written
 
-- [ ] **T016** [P] Write integration test for `getJobsForTickets` batch query in `tests/integration/job-queries.test.ts`
-  - Test: Returns Map of ticketId → Job for all tickets
-  - Test: Prioritizes active jobs over terminal jobs
-  - Test: Single database query (no N+1)
-  - Expected: **FAIL** (no function yet)
+- [X] **T016** [P] Write integration test for `getJobsForTickets` batch query in `tests/integration/job-queries.test.ts`
+  - Test: Returns Map of ticketId → Job for all tickets ✓
+  - Test: Prioritizes active jobs over terminal jobs ✓
+  - Test: Single database query (no N+1) ✓
+  - Expected: **FAIL** (no function yet) - Tests written
 
 ---
 
 ## Phase 3.7: Job Query Functions - Implementation
 
-- [ ] **T017** Implement `getMostRecentActiveJob` function in `lib/job-queries.ts`
-  - Query for most recent PENDING or RUNNING job (use composite index)
-  - If not found, query for most recent terminal job
-  - Return Job | null
+- [X] **T017** Implement `getMostRecentActiveJob` function in `lib/job-queries.ts`
+  - Query for most recent PENDING or RUNNING job (use composite index) ✓
+  - If not found, query for most recent terminal job ✓
+  - Return Job | null ✓
   - Reference: `data-model.md` lines 114-135
   - Success criteria: T015 test passes
 
-- [ ] **T018** Implement `getJobsForTickets` batch function in `lib/job-queries.ts`
-  - Fetch all jobs for ticketIds array in single query
-  - Client-side filtering: active jobs first, then terminal jobs
-  - Return Map<ticketId, Job>
+- [X] **T018** Implement `getJobsForTickets` batch function in `lib/job-queries.ts`
+  - Fetch all jobs for ticketIds array in single query ✓
+  - Client-side filtering: active jobs first, then terminal jobs ✓
+  - Return Map<ticketId, Job> ✓
   - Reference: `data-model.md` lines 153-182
   - Success criteria: T016 test passes
 

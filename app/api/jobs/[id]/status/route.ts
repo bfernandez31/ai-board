@@ -6,6 +6,8 @@ import {
   InvalidTransitionError,
   JobStatus,
 } from '@/app/lib/job-state-machine';
+import { broadcastJobStatusUpdate } from '@/lib/websocket-server';
+import type { JobStatusUpdate } from '@/lib/websocket-schemas';
 
 const prisma = new PrismaClient();
 
@@ -158,6 +160,7 @@ export async function PATCH(
     }
 
     // Update job status and set completedAt timestamp
+    // Include ticket relation to get projectId for WebSocket broadcast
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
@@ -168,6 +171,13 @@ export async function PATCH(
         id: true,
         status: true,
         completedAt: true,
+        ticketId: true,
+        command: true,
+        ticket: {
+          select: {
+            projectId: true,
+          },
+        },
       },
     });
 
@@ -178,6 +188,29 @@ export async function PATCH(
       completedAt: updatedJob.completedAt?.toISOString(),
       elapsedMs: elapsedTime,
     });
+
+    // Broadcast job status update to WebSocket clients
+    try {
+      const broadcastMessage: JobStatusUpdate = {
+        type: 'job-status-update',
+        projectId: updatedJob.ticket.projectId,
+        ticketId: updatedJob.ticketId,
+        jobId: updatedJob.id,
+        status: updatedJob.status as 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED',
+        command: updatedJob.command,
+        timestamp: new Date().toISOString(),
+      };
+
+      const clientCount = broadcastJobStatusUpdate(broadcastMessage);
+      console.log('[Job Status Update] WebSocket broadcast sent to', clientCount, 'clients');
+    } catch (broadcastError) {
+      // Log broadcast error but don't fail the API request
+      // The database update succeeded, which is the critical operation
+      console.error('[Job Status Update] WebSocket broadcast failed:', {
+        jobId,
+        error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
+      });
+    }
 
     // Return minimal response (id, status, completedAt)
     return NextResponse.json(

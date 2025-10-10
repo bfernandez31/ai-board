@@ -57,3 +57,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Job Status Indicator Animations */
+@keyframes quill-writing {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(2deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(-2deg);
+  }
+}
+
+@layer utilities {
+  .animate-quill-writing {
+    animation: quill-writing 2s ease-in-out infinite;
+  }
+
+  /* Respect prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-quill-writing {
+      animation: none;
+    }
+  }
+}
