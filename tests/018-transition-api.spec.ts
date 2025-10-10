@@ -19,7 +19,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
    * Test Scenario 1: Valid SPECIFY Transition
    * Given: Ticket in INBOX stage
    * When: POST with targetStage="SPECIFY"
-   * Then: Job created, branch generated, stage updated
+   * Then: Job created, branch remains null (created by workflow), stage updated
    */
   test('should transition ticket from INBOX to SPECIFY', async ({ request }) => {
     // Arrange
@@ -48,7 +48,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     });
 
     expect(updatedTicket?.stage).toBe('SPECIFY');
-    expect(updatedTicket?.branch).toBe(`feature/ticket-${ticket.id}`);
+    expect(updatedTicket?.branch).toBeNull(); // Branch not set during transition
     expect(updatedTicket?.version).toBe(2); // Incremented from 1
     expect(updatedTicket?.jobs).toHaveLength(1);
     expect(updatedTicket?.jobs[0]?.command).toBe('specify');
@@ -57,7 +57,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
   /**
    * Test Scenario 2: Valid PLAN Transition
-   * Given: Ticket in SPECIFY stage with existing branch
+   * Given: Ticket in SPECIFY stage with existing branch (set by workflow)
    * When: POST with targetStage="PLAN"
    * Then: Job created, branch reused
    */
@@ -69,6 +69,12 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Transition to SPECIFY first
     await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
       data: { targetStage: 'SPECIFY' },
+    });
+
+    // Simulate workflow setting the branch (via /branch endpoint)
+    const branchName = `feature/ticket-${ticket.id}`;
+    await request.patch(`/api/projects/1/tickets/${ticket.id}/branch`, {
+      data: { branch: branchName },
     });
 
     // Get updated ticket with branch
@@ -98,6 +104,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
     expect(updatedTicket?.stage).toBe('PLAN');
     expect(updatedTicket?.branch).toBe(specifyTicket?.branch); // Unchanged
+    expect(updatedTicket?.branch).toBe(branchName);
     expect(updatedTicket?.jobs[0]?.command).toBe('plan');
   });
 
@@ -363,7 +370,71 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   });
 
   /**
-   * Test Scenario 10: GitHub API Rate Limit (500 Error)
+   * Test Scenario 10: Complete Workflow (INBOX -> SPECIFY with branch creation)
+   * Given: Ticket in INBOX stage
+   * When: Transition to SPECIFY, simulate workflow creating branch, update job status
+   * Then: Branch created by workflow, job completed, branch updated
+   */
+  test('should support complete workflow with branch creation and job completion', async ({
+    request,
+  }) => {
+    // Arrange
+    const { ticket } = await setupTestData();
+    const prisma = getPrismaClient();
+
+    // Act 1: Transition to SPECIFY
+    const transitionResponse = await request.post(
+      `/api/projects/1/tickets/${ticket.id}/transition`,
+      {
+        data: { targetStage: 'SPECIFY' },
+      }
+    );
+
+    expect(transitionResponse.status()).toBe(200);
+    const transitionBody = await transitionResponse.json();
+    const jobId = transitionBody.jobId;
+
+    // Assert 1: Branch is null after transition
+    let updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+    });
+    expect(updatedTicket?.stage).toBe('SPECIFY');
+    expect(updatedTicket?.branch).toBeNull();
+
+    // Act 2: Simulate GitHub workflow creating branch and updating via /branch endpoint
+    const branchName = `feature/ticket-${ticket.id}`;
+    const branchResponse = await request.patch(
+      `/api/projects/1/tickets/${ticket.id}/branch`,
+      {
+        data: { branch: branchName },
+      }
+    );
+
+    expect(branchResponse.status()).toBe(200);
+
+    // Assert 2: Branch is now set
+    updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+    });
+    expect(updatedTicket?.branch).toBe(branchName);
+
+    // Act 3: Simulate job completion
+    const jobStatusResponse = await request.patch(`/api/jobs/${jobId}/status`, {
+      data: { status: 'COMPLETED' },
+    });
+
+    expect(jobStatusResponse.status()).toBe(200);
+
+    // Assert 3: Job status updated
+    const completedJob = await prisma.job.findUnique({
+      where: { id: jobId },
+    });
+    expect(completedJob?.status).toBe('COMPLETED');
+    expect(completedJob?.completedAt).not.toBeNull();
+  });
+
+  /**
+   * Test Scenario 11: GitHub API Rate Limit (500 Error)
    * Given: GitHub API rate limit exceeded
    * When: POST transition request
    * Then: 500 error, transaction rolled back

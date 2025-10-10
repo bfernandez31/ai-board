@@ -28,9 +28,10 @@ const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
  * - Validates stage transition is sequential (via isValidTransition)
  * - For automated stages (SPECIFY, PLAN, BUILD):
  *   - Creates a Job record with PENDING status
- *   - Generates branch name for SPECIFY stage (feature/ticket-{id})
  *   - Dispatches GitHub Actions workflow via Octokit
  *   - Updates ticket stage and version atomically
+ *   - Note: Branch is NOT set here - it's created by the GitHub workflow
+ *     and updated via PATCH /branch when the job completes
  * - For manual stages (VERIFY, SHIP):
  *   - Updates ticket stage only (no job, no workflow dispatch)
  *
@@ -190,14 +191,8 @@ export async function POST(
 
     // Handle automated stages (SPECIFY, PLAN, BUILD)
     let job;
-    let branchName: string | undefined;
 
     try {
-      // Generate branch name for SPECIFY stage only
-      if (targetStage === Stage.SPECIFY) {
-        branchName = `feature/ticket-${ticketId}`;
-      }
-
       // Create job record
       job = await prisma.job.create({
         data: {
@@ -223,7 +218,7 @@ export async function POST(
         const workflowInputs: Record<string, string> = {
           ticket_id: ticketId.toString(),
           command: command,
-          branch: branchName || currentTicket.branch || '',
+          branch: currentTicket.branch || '',
         };
 
         // Add ticket context for SPECIFY stage
@@ -252,7 +247,6 @@ export async function POST(
           data: {
             stage: targetStage as Stage,
             version: { increment: 1 },
-            ...(branchName && { branch: branchName }),
           },
         });
       } catch (updateError) {

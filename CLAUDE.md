@@ -54,12 +54,37 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 
 - **`branch`** (String?, max 200 chars): Tracks the Git branch associated with the ticket
   - Nullable field, defaults to `null` for new tickets
-  - Updated via PATCH `/api/projects/:projectId/tickets/:id` or specialized `/branch` endpoint
+  - **Important**: Branch is NOT set during stage transitions
+  - Branch is created by GitHub Actions workflow during command execution
+  - Updated via PATCH `/api/projects/:projectId/tickets/:id/branch` when workflow completes
   - Max length: 200 characters (validated at schema and API level)
 
 - **`autoMode`** (Boolean): Enables automatic workflow progression for the ticket
   - Defaults to `false` for new tickets
   - Updated via PATCH `/api/projects/:projectId/tickets/:id`
+
+### Branch Management Flow
+
+The correct branch lifecycle for automated workflows:
+
+1. **INBOX → SPECIFY Transition**:
+   - `POST /api/projects/:projectId/tickets/:id/transition` with `targetStage: "SPECIFY"`
+   - Creates Job record with status PENDING
+   - Dispatches GitHub Actions workflow
+   - **Branch remains `null`** (NOT set during transition)
+
+2. **GitHub Workflow Execution** (specify command):
+   - Workflow creates Git branch: `feature/ticket-{id}`
+   - Executes `/sc:specify` command
+   - On completion, calls `PATCH /api/projects/:projectId/tickets/:id/branch`
+
+3. **Job Completion**:
+   - Workflow updates job status via `PATCH /api/jobs/:id/status`
+   - Branch is now set on ticket record
+
+4. **Subsequent Transitions** (SPECIFY → PLAN → BUILD):
+   - Branch reused for all transitions
+   - Branch field remains unchanged during transitions
 
 ## API Endpoints
 
