@@ -75,21 +75,26 @@ The correct branch lifecycle for automated workflows:
    - Workflow receives `branch: ""` (empty string) in inputs
 
 2. **GitHub Workflow Execution** (specify command):
-   - **Checkout**: Checks out `main` branch (ignores empty branch input)
-   - **Create Branch**: Creates `feature/ticket-{id}` from main
-   - **Execute Command**: Runs `/sc:specify` command
-   - **Commit & Push**: Pushes changes to feature branch
-   - **Update Branch**: Calls `PATCH /api/projects/:projectId/tickets/:id/branch`
-   - **Update Status**: Calls `PATCH /api/jobs/:id/status` with `COMPLETED`
+   - **Checkout**: Checks out `main` branch (since branch input is empty)
+   - **Create Feature Branch**: Workflow creates `feature/ticket-{id}` from main
+   - **Execute `/sc:specify`**: Spec-kit command generates spec.md and other artifacts
+     - Note: The `/specify` command does NOT create the Git branch
+     - The branch was already created by the workflow in the previous step
+   - **Commit & Push**: Workflow commits spec-kit output to feature branch
+   - **Update Ticket Branch**: Workflow calls `PATCH /api/projects/:projectId/tickets/:id/branch`
+     - Sets `branch: "feature/ticket-{id}"` in database
+   - **Update Job Status**: Workflow calls `PATCH /api/jobs/:id/status` with `COMPLETED`
 
 3. **Post-Specify State**:
    - Ticket stage: SPECIFY
-   - Ticket branch: `feature/ticket-{id}` (set by workflow)
+   - Ticket branch: `feature/ticket-{id}` (set by workflow API call)
    - Job status: COMPLETED
+   - Git repository: feature/ticket-{id} branch exists with spec artifacts
 
 4. **Subsequent Transitions** (SPECIFY → PLAN → BUILD):
    - API passes existing `branch: "feature/ticket-{id}"` to workflow
-   - Workflow checks out the existing branch
+   - Workflow checks out the existing feature branch
+   - Spec-kit commands (`/plan`, `/implement`) add to existing branch
    - Branch field remains unchanged during transitions
    - New Job created for each transition
 
