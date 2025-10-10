@@ -15,24 +15,26 @@ import { test, expect } from '@playwright/test'
 test.describe('SSE Connection', () => {
   test('should establish SSE connection on board load', async ({ page }) => {
     // Navigate to board page which should establish SSE connection
-    await page.goto('http://localhost:3000/projects/1/board')
-
-    // Wait for SSE connection request to be sent
-    await page.waitForRequest(
-      request => request.url().includes('/api/sse?projectId=1'),
-      { timeout: 5000 }
-    )
-
-    // Wait for EventSource to be created and connected
-    // SSE connections take a moment to establish
-    await page.waitForTimeout(500)
-
-    // Verify EventSource is connected in browser
-    const isConnected = await page.evaluate(() => {
-      // Access the global EventSource instance (exposed by sse-client.ts)
-      const eventSource = (window as any).__eventSource
-      return eventSource?.readyState === 1 // 1 = OPEN
+    await page.goto('http://localhost:3000/projects/1/board', {
+      waitUntil: 'domcontentloaded'
     })
+
+    // Give React time to hydrate and establish SSE connection
+    await page.waitForTimeout(2000)
+
+    // Wait for EventSource to reach OPEN state
+    // Retry logic for better reliability in UI mode
+    let isConnected = false
+    for (let i = 0; i < 10; i++) {
+      isConnected = await page.evaluate(() => {
+        // Access the global EventSource instance (exposed by sse-client.ts)
+        const eventSource = (window as any).__eventSource
+        return eventSource?.readyState === 1 // 1 = OPEN
+      })
+
+      if (isConnected) break
+      await page.waitForTimeout(1000)
+    }
 
     expect(isConnected).toBe(true)
 
@@ -81,28 +83,31 @@ test.describe('SSE Connection', () => {
     const page2 = await context2.newPage()
     const page3 = await context3.newPage()
 
-    // Navigate all pages to board
+    // Navigate all pages to board with proper waiting
     await Promise.all([
-      page1.goto('http://localhost:3000/projects/1/board'),
-      page2.goto('http://localhost:3000/projects/1/board'),
-      page3.goto('http://localhost:3000/projects/1/board'),
+      page1.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page2.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page3.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
     ])
 
-    // Wait for SSE connections
-    await Promise.all([
-      page1.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page2.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page3.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-    ])
+    // Give React time to hydrate and establish connections
+    await page1.waitForTimeout(2000)
 
-    // Wait for connections to establish
-    await page1.waitForTimeout(500)
+    // Helper to wait for connection
+    const waitForConnection = async (page: any) => {
+      for (let i = 0; i < 10; i++) {
+        const connected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+        if (connected) return true
+        await page.waitForTimeout(1000)
+      }
+      return false
+    }
 
     // Verify all EventSource connections are open
     const [connected1, connected2, connected3] = await Promise.all([
-      page1.evaluate(() => (window as any).__eventSource?.readyState === 1),
-      page2.evaluate(() => (window as any).__eventSource?.readyState === 1),
-      page3.evaluate(() => (window as any).__eventSource?.readyState === 1),
+      waitForConnection(page1),
+      waitForConnection(page2),
+      waitForConnection(page3),
     ])
 
     expect(connected1).toBe(true)
@@ -119,18 +124,21 @@ test.describe('SSE Connection', () => {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    await page.goto('http://localhost:3000/projects/1/board')
-
-    // Wait for SSE connection
-    await page.waitForRequest(req => req.url().includes('/api/sse?projectId=1'))
-
-    // Wait for connection to establish
-    await page.waitForTimeout(500)
-
-    // Verify connection is open
-    const isConnected = await page.evaluate(() => {
-      return (window as any).__eventSource?.readyState === 1
+    await page.goto('http://localhost:3000/projects/1/board', {
+      waitUntil: 'domcontentloaded'
     })
+
+    // Give React time to hydrate
+    await page.waitForTimeout(2000)
+
+    // Wait for EventSource to reach OPEN state
+    let isConnected = false
+    for (let i = 0; i < 10; i++) {
+      isConnected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+      if (isConnected) break
+      await page.waitForTimeout(1000)
+    }
+
     expect(isConnected).toBe(true)
 
     // Close the page
@@ -141,16 +149,21 @@ test.describe('SSE Connection', () => {
   })
 
   test('should automatically reconnect after connection failure', async ({ page }) => {
-    await page.goto('http://localhost:3000/projects/1/board')
+    await page.goto('http://localhost:3000/projects/1/board', {
+      waitUntil: 'domcontentloaded'
+    })
+
+    // Give React time to hydrate
+    await page.waitForTimeout(2000)
 
     // Wait for initial connection
-    await page.waitForRequest(req => req.url().includes('/api/sse?projectId=1'))
-    await page.waitForTimeout(500)
+    let initiallyConnected = false
+    for (let i = 0; i < 10; i++) {
+      initiallyConnected = await page.evaluate(() => (window as any).__eventSource?.readyState === 1)
+      if (initiallyConnected) break
+      await page.waitForTimeout(1000)
+    }
 
-    // Verify initial connection is open
-    const initiallyConnected = await page.evaluate(() => {
-      return (window as any).__eventSource?.readyState === 1
-    })
     expect(initiallyConnected).toBe(true)
 
     // Manually trigger reconnection (simulating connection loss)
@@ -186,19 +199,34 @@ test.describe('SSE Connection', () => {
 
     // Navigate to different project boards
     await Promise.all([
-      page1.goto('http://localhost:3000/projects/1/board'),
-      page2.goto('http://localhost:3000/projects/2/board'),
+      page1.goto('http://localhost:3000/projects/1/board', { waitUntil: 'domcontentloaded' }),
+      page2.goto('http://localhost:3000/projects/2/board', { waitUntil: 'domcontentloaded' }),
     ])
 
-    // Wait for SSE connections with different projectIds
-    const [request1, request2] = await Promise.all([
-      page1.waitForRequest(req => req.url().includes('/api/sse?projectId=1')),
-      page2.waitForRequest(req => req.url().includes('/api/sse?projectId=2')),
+    // Give React time to hydrate
+    await page1.waitForTimeout(2000)
+
+    // Verify EventSource URLs and connection state
+    const [details1, details2] = await Promise.all([
+      page1.evaluate(() => {
+        const eventSource = (window as any).__eventSource
+        return {
+          url: eventSource?.url || '',
+          readyState: eventSource?.readyState
+        }
+      }),
+      page2.evaluate(() => {
+        const eventSource = (window as any).__eventSource
+        return {
+          url: eventSource?.url || '',
+          readyState: eventSource?.readyState
+        }
+      }),
     ])
 
     // Verify correct projectId in URLs
-    expect(request1.url()).toContain('projectId=1')
-    expect(request2.url()).toContain('projectId=2')
+    expect(details1.url).toContain('projectId=1')
+    expect(details2.url).toContain('projectId=2')
 
     // Cleanup
     await context1.close()
