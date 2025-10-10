@@ -15,9 +15,18 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     // Clean database before each test
     await cleanupDatabase();
 
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
+
     // Navigate to board and open modal
     await page.goto("/projects/1/board");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.getByRole("button", { name: /new ticket/i }).click();
 
     // Wait for modal to be visible
