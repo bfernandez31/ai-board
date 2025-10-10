@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { jobStatusUpdateSchema } from '@/app/lib/job-update-validator';
 import {
   canTransition,
@@ -8,8 +7,7 @@ import {
 } from '@/app/lib/job-state-machine';
 import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
 import type { JobStatusUpdate } from '@/lib/sse-schemas';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -249,7 +247,5 @@ export async function PATCH(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

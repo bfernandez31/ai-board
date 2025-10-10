@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { updateBranchSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db/client';
 
 /**
  * PATCH /api/projects/[projectId]/tickets/[id]/branch
@@ -141,7 +139,5 @@ export async function PATCH(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
