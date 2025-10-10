@@ -20,7 +20,7 @@ const config = defineConfig({
     },
   ],
   webServer: {
-    command: 'E2E_TEST=true npm run dev',
+    command: 'NODE_ENV=test npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
   },
