@@ -456,7 +456,7 @@ export function TicketDetailModal({
         className="
           h-screen w-screen p-6
           sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
-          bg-zinc-900 border-zinc-600 text-zinc-100
+          bg-[#181825] border-[#313244] text-[#cdd6f4]
         "
       >
         {/* Header with editable title */}
@@ -479,7 +479,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={100}
-                  className="text-2xl font-bold bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 px-4 py-3 focus:ring-2 focus:ring-blue-500/50"
+                  className="text-2xl font-bold bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50"
                   disabled={titleEdit.isSaving}
                   data-testid="title-input"
                   name="title"
@@ -500,7 +500,7 @@ export function TicketDetailModal({
               </div>
             ) : (
               <div
-                className="flex items-center gap-3 cursor-pointer hover:bg-zinc-800/50 p-3 -ml-3 rounded-lg transition-all duration-200"
+                className="flex items-center gap-3 cursor-pointer hover:bg-[#313244]/50 p-3 -ml-3 rounded-lg transition-all duration-200"
                 onClick={titleEdit.startEdit}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -513,11 +513,11 @@ export function TicketDetailModal({
                 tabIndex={0}
                 aria-label="Edit ticket title"
               >
-                <DialogTitle className="text-2xl font-bold text-zinc-50 flex-1">
+                <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
                   {localTicket?.title || ticket.title}
                 </DialogTitle>
                 <Pencil
-                  className="w-5 h-5 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className="w-5 h-5 text-[#a6adc8] opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   data-testid="edit-icon-title"
                   aria-hidden="true"
                 />
@@ -540,7 +540,7 @@ export function TicketDetailModal({
 
           {/* Description section with inline editing */}
           <div className="group">
-            <h3 className="text-sm text-zinc-300 uppercase tracking-wider mb-4 font-bold">
+            <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
               Description
             </h3>
             {descriptionEdit.isEditing ? (
@@ -560,7 +560,7 @@ export function TicketDetailModal({
                   }}
                   maxLength={1000}
                   rows={8}
-                  className="bg-zinc-800/50 border-2 border-blue-500 text-zinc-50 resize-none px-4 py-3 focus:ring-2 focus:ring-blue-500/50 leading-relaxed"
+                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-none px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
                   name="description"
@@ -598,7 +598,7 @@ export function TicketDetailModal({
                       descriptionEdit.value.trim() ===
                         (localTicket?.description || '')
                     }
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 shadow-sm"
+                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-6 shadow-sm"
                     aria-label="Save description changes"
                   >
                     {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
@@ -608,7 +608,7 @@ export function TicketDetailModal({
                     onClick={descriptionEdit.cancelEdit}
                     variant="outline"
                     disabled={descriptionEdit.isSaving}
-                    className="border-2 border-zinc-500 bg-transparent hover:bg-zinc-800/80 text-zinc-100 font-medium px-6"
+                    className="border-2 border-[#45475a] bg-transparent hover:bg-[#313244] text-[#cdd6f4] font-medium px-6"
                     aria-label="Cancel editing"
                   >
                     Cancel
@@ -618,7 +618,7 @@ export function TicketDetailModal({
             ) : (
               <div
                 className="
-                  cursor-pointer hover:bg-zinc-800/50 p-4 -ml-4 rounded-lg transition-all duration-200
+                  cursor-pointer hover:bg-[#313244]/50 p-4 -ml-4 rounded-lg transition-all duration-200
                   relative
                 "
                 onClick={descriptionEdit.startEdit}
@@ -635,17 +635,17 @@ export function TicketDetailModal({
               >
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <Pencil
-                    className="w-5 h-5 text-zinc-400"
+                    className="w-5 h-5 text-[#a6adc8]"
                     data-testid="edit-icon-description"
                     aria-hidden="true"
                   />
                 </div>
                 <div
                   className="
-                    text-base text-zinc-100 leading-relaxed
+                    text-base text-[#cdd6f4] leading-relaxed
                     max-h-96 overflow-y-auto
                     pr-2
-                    scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-900
+                    scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e]
                   "
                 >
                   {localTicket?.description ||
@@ -658,10 +658,10 @@ export function TicketDetailModal({
 
           {/* View Specification button */}
           {hasCompletedSpecifyJob && (
-            <div className="border-t-2 border-zinc-700/50 pt-6">
+            <div className="border-t-2 border-[#313244]/50 pt-6">
               <Button
                 onClick={() => setSpecViewerOpen(true)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 flex items-center justify-center gap-2"
+                className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3 flex items-center justify-center gap-2"
               >
                 <FileText className="w-5 h-5" />
                 View Specification
@@ -670,20 +670,20 @@ export function TicketDetailModal({
           )}
 
           {/* Dates section */}
-          <div className="border-t-2 border-zinc-700/50 pt-6 space-y-3">
+          <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-300 font-medium">
+              <span className="text-sm text-[#a6adc8] font-medium">
                 Created:
               </span>
-              <span className="text-sm text-zinc-100 font-mono">
+              <span className="text-sm text-[#cdd6f4] font-mono">
                 {formatTicketDate(ticket.createdAt)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-300 font-medium">
+              <span className="text-sm text-[#a6adc8] font-medium">
                 Last Updated:
               </span>
-              <span className="text-sm text-zinc-100 font-mono">
+              <span className="text-sm text-[#cdd6f4] font-mono">
                 {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
               </span>
             </div>
