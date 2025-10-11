@@ -17,7 +17,7 @@
 - Include exact file paths in descriptions
 
 ## Phase 3.1: Core Implementation
-- [ ] T001 Add regex validation to titleSchema and descriptionSchema in lib/validations/ticket.ts
+- [X] T001 Add regex validation to titleSchema and descriptionSchema in lib/validations/ticket.ts
 
 **Details**: Update `titleSchema` and `descriptionSchema` to include `.regex(ALLOWED_CHARS_PATTERN, 'can only contain letters, numbers, spaces, and common special characters')` after `.max()` validation, matching the pattern used in `CreateTicketSchema`.
 
@@ -47,8 +47,8 @@ export const descriptionSchema = z
 ```
 
 ## Phase 3.2: Tests (Validation)
-- [ ] T002 [P] Add character validation test cases to tests/api/tickets-patch.spec.ts
-- [ ] T003 [P] Update inline editing tests in tests/e2e/tickets/inline-editing.spec.ts
+- [X] T002 [P] Add character validation test cases to tests/api/tickets-patch.spec.ts
+- [X] T003 [P] Update inline editing tests in tests/e2e/tickets/inline-editing.spec.ts
 
 **T002 Details**: Add test cases in `tests/api/tickets-patch.spec.ts` to verify:
 - Valid special characters accepted: `[e2e]`, `{braces}`, `(parens)`, `'quotes'`, `@symbols`
@@ -85,7 +85,7 @@ test('validation error message is clear and actionable', ...)
 ```
 
 ## Phase 3.3: Verification
-- [ ] T004 Run all existing contract tests to verify no regressions (npm test -- tests/api/)
+- [X] T004 Run all existing contract tests to verify no regressions (npm test -- tests/api/)
 - [ ] T005 Run all existing E2E tests to verify no regressions (npm test -- tests/e2e/)
 - [ ] T006 Manual validation using quickstart.md test scenarios
 

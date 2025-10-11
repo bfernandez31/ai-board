@@ -110,13 +110,21 @@ export const titleSchema = z
   .string()
   .trim()
   .min(1, { message: 'Title cannot be empty' })
-  .max(100, { message: 'Title must be 100 characters or less' });
+  .max(100, { message: 'Title must be 100 characters or less' })
+  .regex(
+    ALLOWED_CHARS_PATTERN,
+    'can only contain letters, numbers, spaces, and common special characters'
+  );
 
 export const descriptionSchema = z
   .string()
   .trim()
   .min(1, { message: 'Description cannot be empty' })
-  .max(1000, { message: 'Description must be 1000 characters or less' });
+  .max(1000, { message: 'Description must be 1000 characters or less' })
+  .regex(
+    ALLOWED_CHARS_PATTERN,
+    'can only contain letters, numbers, spaces, and common special characters'
+  );
 
 export const versionSchema = z
   .number()

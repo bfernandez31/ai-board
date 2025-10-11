@@ -543,4 +543,161 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Assert: Save button disabled again
     await expect(saveButton).toBeDisabled();
   });
+
+  /**
+   * T023: Inline edit description with [e2e] prefix succeeds
+   * Feature: 024-16204-description-validation
+   */
+  test('inline edit description with [e2e] prefix succeeds', async ({ page, request }) => {
+    // Create ticket
+    const ticket = await createTicket(request, '[e2e] Test', 'Original description');
+
+    // Navigate and open modal
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
+
+    // Click description to edit
+    const descriptionElement = page.getByTestId('ticket-description');
+    await descriptionElement.click();
+    const textarea = page.getByTestId('description-textarea');
+
+    // Update with [e2e] prefix
+    await textarea.fill('[e2e] Updated description with brackets');
+
+    // Save
+    const saveButton = page.locator('button:has-text("Save")');
+    await saveButton.click();
+
+    // Wait for success toast
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
+    await expect(toast).toBeVisible({ timeout: 5000 });
+
+    // Verify database
+    const dbTicket = await getTicket(ticket.id);
+    expect(dbTicket?.description).toBe('[e2e] Updated description with brackets');
+  });
+
+  /**
+   * T024: Inline edit description with special characters succeeds
+   * Feature: 024-16204-description-validation
+   */
+  test('inline edit description with special characters succeeds', async ({ page, request }) => {
+    // Create ticket
+    const ticket = await createTicket(request);
+
+    // Navigate and open modal
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
+
+    // Click description to edit
+    const descriptionElement = page.getByTestId('ticket-description');
+    await descriptionElement.click();
+    const textarea = page.getByTestId('description-textarea');
+
+    // Update with various special characters
+    await textarea.fill("Test with [brackets], (parens), {braces}, and 'quotes'");
+
+    // Save
+    const saveButton = page.locator('button:has-text("Save")');
+    await saveButton.click();
+
+    // Wait for success toast
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
+    await expect(toast).toBeVisible({ timeout: 5000 });
+
+    // Verify database
+    const dbTicket = await getTicket(ticket.id);
+    expect(dbTicket?.description).toBe("Test with [brackets], (parens), {braces}, and 'quotes'");
+  });
+
+  /**
+   * T025: Inline edit description with emoji shows validation error
+   * Feature: 024-16204-description-validation
+   */
+  test('inline edit description with emoji shows validation error', async ({ page, request }) => {
+    // Create ticket
+    const ticket = await createTicket(request);
+
+    // Navigate and open modal
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
+
+    // Click description to edit
+    const descriptionElement = page.getByTestId('ticket-description');
+    await descriptionElement.click();
+    const textarea = page.getByTestId('description-textarea');
+
+    // Type invalid character (emoji)
+    await textarea.fill('Bug with emoji 😀');
+
+    // Wait for validation to run
+    await page.waitForTimeout(100);
+
+    // Verify error message appears
+    const errorMessage = page.getByTestId('description-error');
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).toContainText('can only contain letters, numbers, spaces, and common special characters');
+
+    // Verify Save button is disabled
+    const saveButton = page.locator('button:has-text("Save")');
+    await expect(saveButton).toBeDisabled();
+
+    // Verify database not updated
+    const dbTicket = await getTicket(ticket.id);
+    expect(dbTicket?.version).toBe(1);
+  });
+
+  /**
+   * T026: Validation error message is clear and actionable
+   * Feature: 024-16204-description-validation
+   */
+  test('validation error message is clear and actionable', async ({ page, request }) => {
+    // Create ticket
+    const ticket = await createTicket(request);
+
+    // Navigate and open modal
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
+
+    // Click description to edit
+    const descriptionElement = page.getByTestId('ticket-description');
+    await descriptionElement.click();
+    const textarea = page.getByTestId('description-textarea');
+
+    // Type invalid characters (newline - but this is actually allowed by \s in the regex)
+    // Use emoji instead which is definitely invalid
+    await textarea.fill('Bug 🚀');
+
+    // Wait for validation to run
+    await page.waitForTimeout(100);
+
+    // Wait for error message
+    const errorMessage = page.getByTestId('description-error');
+    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+
+    // Assert: Error message is clear
+    await expect(errorMessage).toContainText('can only contain letters, numbers, spaces, and common special characters');
+
+    // Assert: Save button is disabled
+    const saveButton = page.locator('button:has-text("Save")');
+    await expect(saveButton).toBeDisabled();
+
+    // Assert: textarea remains in edit mode (not saved)
+    await expect(textarea).toBeVisible();
+
+    // Verify: User can fix the error and save
+    await textarea.fill('Bug fixed'); // Remove emoji
+    await page.waitForTimeout(100);
+
+    // Error should be gone and Save button enabled
+    await expect(errorMessage).not.toBeVisible();
+    await expect(saveButton).toBeEnabled();
+
+    // Now save
+    await saveButton.click();
+
+    // Success toast appears
+    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
+    await expect(toast).toBeVisible({ timeout: 5000 });
+  });
 });
