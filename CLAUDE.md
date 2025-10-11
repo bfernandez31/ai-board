@@ -30,6 +30,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - PostgreSQL 14+ via Prisma ORM (existing Job and Ticket models) (020-9179-real-time)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router) (021-clean-test-clean)
 - PostgreSQL 14+ (test database fixtures) (021-clean-test-clean)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest, shadcn/ui (Dialog, ScrollArea), Playwright (022-display-generated-spec)
+- PostgreSQL 14+ via Prisma ORM (existing Ticket, Job, Project models) (022-display-generated-spec)
 
 ## Project Structure
 ```
@@ -45,7 +47,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
-- 022-display-generated-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 022-display-generated-spec: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest (GitHub API), shadcn/ui (Dialog, ScrollArea), Playwright (E2E tests)
 - 021-clean-test-clean: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router)
 - 020-9179-real-time: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components
 

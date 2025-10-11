@@ -1,8 +1,8 @@
 'use client';
 
 import { format } from 'date-fns';
-import { useState, useEffect } from 'react';
-import { Pencil } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Pencil, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
+import SpecViewer from './spec-viewer';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -124,6 +125,8 @@ export function TicketDetailModal({
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
+  const [specViewerOpen, setSpecViewerOpen] = useState(false);
+  const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
 
   // Update local ticket when a different ticket is selected or version changes
   useEffect(() => {
@@ -141,6 +144,39 @@ export function TicketDetailModal({
       });
     }
   }, [ticket]);
+
+  // Fetch jobs for the ticket to check for completed specify job
+  useEffect(() => {
+    if (!ticket || !open) {
+      setJobs([]);
+      return;
+    }
+
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/tickets/${ticket.id}/jobs`
+        );
+        if (response.ok) {
+          const jobsData = await response.json();
+          setJobs(jobsData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch jobs:', error);
+        setJobs([]);
+      }
+    };
+
+    fetchJobs();
+  }, [ticket, open, projectId]);
+
+  // Check if "View Specification" button should be visible
+  const hasCompletedSpecifyJob = useMemo(() => {
+    if (!localTicket?.branch || jobs.length === 0) return false;
+    return jobs.some(
+      (job) => job.command === 'specify' && job.status === 'COMPLETED'
+    );
+  }, [localTicket?.branch, jobs]);
 
   /**
    * Refresh ticket data from server
@@ -620,6 +656,19 @@ export function TicketDetailModal({
             )}
           </div>
 
+          {/* View Specification button */}
+          {hasCompletedSpecifyJob && (
+            <div className="border-t-2 border-zinc-700/50 pt-6">
+              <Button
+                onClick={() => setSpecViewerOpen(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 flex items-center justify-center gap-2"
+              >
+                <FileText className="w-5 h-5" />
+                View Specification
+              </Button>
+            </div>
+          )}
+
           {/* Dates section */}
           <div className="border-t-2 border-zinc-700/50 pt-6 space-y-3">
             <div className="flex justify-between items-center">
@@ -641,6 +690,17 @@ export function TicketDetailModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* SpecViewer modal */}
+      {ticket && (
+        <SpecViewer
+          ticketId={ticket.id}
+          projectId={projectId}
+          ticketTitle={ticket.title}
+          open={specViewerOpen}
+          onOpenChange={setSpecViewerOpen}
+        />
+      )}
     </Dialog>
   );
 }
