@@ -49,7 +49,7 @@ export default async function ProjectBoardPage({
   const initialJobs = await getJobsForTickets(ticketIds);
 
   return (
-    <main className="h-screen bg-black overflow-hidden">
+    <main className="h-[calc(100vh-4rem)] bg-black overflow-hidden">
       <Board
         ticketsByStage={ticketsByStage}
         projectId={projectId}

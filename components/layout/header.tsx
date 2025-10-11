@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +19,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-[hsl(var(--ctp-mantle))] text-[hsl(var(--ctp-text))]">
       <div className="flex h-16 items-center px-6">
         {/* Left: Logo + Title */}
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <Image
             src="/logo.svg"
             alt="AI-BOARD Logo"
@@ -27,7 +28,7 @@ export function Header() {
             priority
           />
           <span className="text-xl font-bold">AI-BOARD</span>
-        </div>
+        </Link>
 
         {/* Spacer to push buttons to the right */}
         <div className="flex-1" />

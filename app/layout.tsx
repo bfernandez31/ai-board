@@ -14,8 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-background text-foreground antialiased">
+    <html lang="en" className="dark overflow-hidden">
+      <body className="bg-background text-foreground antialiased overflow-hidden">
         <Header />
         {children}
         <Toaster />
