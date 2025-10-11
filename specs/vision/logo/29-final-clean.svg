@@ -1,0 +1,11 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- FINAL: Version épurée sans ornements -->
+  <rect width="120" height="120" fill="#000000"/>
+
+  <!-- Colonne centrale proéminente -->
+  <rect x="52" y="35" width="16" height="50" rx="4" fill="#8B5CF6"/>
+
+  <!-- Colonnes latérales subtiles -->
+  <rect x="30" y="45" width="12" height="30" rx="3" fill="#6366F1" opacity="0.4"/>
+  <rect x="78" y="45" width="12" height="30" rx="3" fill="#6366F1" opacity="0.4"/>
+</svg>
