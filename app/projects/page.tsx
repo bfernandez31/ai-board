@@ -32,9 +32,10 @@ export default async function ProjectsPage() {
   const projects = await getProjects();
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[#cdd6f4]">Projects</h1>
+    <div className="min-h-screen bg-[#1e1e2e]">
+      <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-[#cdd6f4]">Projects</h1>
         <div className="flex gap-4">
           <Button variant="outline" disabled>
             <Upload className="mr-2 h-4 w-4" />
@@ -47,7 +48,8 @@ export default async function ProjectsPage() {
         </div>
       </div>
 
-      <ProjectsContainer projects={projects} />
+        <ProjectsContainer projects={projects} />
+      </div>
     </div>
   );
 }

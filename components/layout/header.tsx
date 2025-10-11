@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,16 @@ import { MobileMenu } from '@/components/layout/mobile-menu';
 
 export function Header() {
   const { toast } = useToast();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleButtonClick = () => {
     toast({
@@ -16,7 +27,11 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-[hsl(var(--ctp-mantle))] text-[hsl(var(--ctp-text))]">
+    <header
+      className={`sticky top-0 z-50 w-full bg-[#1e1e2e] text-[hsl(var(--ctp-text))] transition-all duration-200 ${
+        isScrolled ? 'border-b shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : ''
+      }`}
+    >
       <div className="flex h-16 items-center px-6">
         {/* Left: Logo + Title */}
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
