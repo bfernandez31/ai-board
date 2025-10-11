@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react';
 
+// Regex pattern for allowed characters (same as backend validation)
+const ALLOWED_CHARS_PATTERN = /^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;'"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$/;
+
 interface UseTicketEditParams {
   initialValue: string;
   onSave: (value: string) => Promise<void>;
@@ -77,6 +80,12 @@ export function useTicketEdit({
       return;
     }
 
+    // Validate character set
+    if (!ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
+      setError('can only contain letters, numbers, spaces, and common special characters');
+      return;
+    }
+
     // Check if value actually changed
     if (trimmedValue === originalValueRef.current) {
       setIsEditing(false);
@@ -103,9 +112,19 @@ export function useTicketEdit({
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    setValue(e.target.value);
-    // Clear error when user starts typing
-    if (error) {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Validate in real-time as user types
+    const trimmedValue = newValue.trim();
+
+    if (trimmedValue.length === 0) {
+      setError(null); // Don't show error while typing if empty
+    } else if (trimmedValue.length > maxLength) {
+      setError(`Value must be ${maxLength} characters or less`);
+    } else if (!ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
+      setError('can only contain letters, numbers, spaces, and common special characters');
+    } else {
       setError(null);
     }
   };

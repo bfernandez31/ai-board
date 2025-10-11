@@ -256,9 +256,11 @@ The system enables editing title and description directly in the detail modal:
 - `updatedAt`: Set to current timestamp on save
 
 **Validation Rules**:
-- Alphanumeric + basic punctuation only
+- Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
+- Rejects characters outside allowed set (emojis, control characters, other Unicode)
 - No empty or whitespace-only values
 - Character limits enforced
+- Same validation rules apply to both title and description fields
 
 ---
 
@@ -329,7 +331,9 @@ The system enables editing title and description directly in the detail modal:
 - Title: 1-100 characters
 - Description: 1-1000 characters
 - Both required (no empty values)
-- Alphanumeric + basic punctuation only
+- Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
+- Rejects emojis, control characters, and other Unicode characters outside allowed set
+- Title and description use identical character validation rules
 - Version-based conflict detection prevents lost updates
 - Optimistic updates with rollback on failure
 
