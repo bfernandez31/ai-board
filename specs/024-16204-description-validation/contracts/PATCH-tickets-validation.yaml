@@ -1,0 +1,326 @@
+openapi: 3.1.0
+info:
+  title: Ticket Update API - Character Validation
+  version: 1.0.0
+  description: |
+    Contract for PATCH /api/projects/{projectId}/tickets/{id} endpoint
+    with updated character set validation for title and description fields.
+
+    This contract defines the expected behavior after implementing
+    feature 024-16204-description-validation.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /api/projects/{projectId}/tickets/{id}:
+    patch:
+      summary: Update ticket title, description, or other fields
+      description: |
+        Updates one or more fields of an existing ticket with optimistic concurrency control.
+
+        **Validation Changes**:
+        - Title and description now validate character set using ALLOWED_CHARS_PATTERN
+        - Same validation rules apply as POST /api/projects/{projectId}/tickets
+        - Character set: letters, numbers, spaces, and common special characters
+
+      operationId: updateTicket
+      tags:
+        - tickets
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Project ID (must be positive integer)
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Ticket ID (must be positive integer)
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - version
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: '^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;''"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$'
+                  description: |
+                    Ticket title with character set validation.
+                    Must contain at least one non-whitespace character.
+                    Allowed: letters, numbers, spaces, . , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ ` |
+                  example: "[e2e] Fix login bug"
+
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  pattern: '^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;''"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$'
+                  description: |
+                    Ticket description with character set validation.
+                    Must contain at least one non-whitespace character.
+                    Same character set as title field.
+                  example: "Test description with [brackets], (parens), and 'quotes'"
+
+                stage:
+                  type: string
+                  enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                  description: Target stage (triggers workflow if changed)
+
+                branch:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                  description: Git branch name associated with ticket
+                  example: "024-16204-description-validation"
+
+                autoMode:
+                  type: boolean
+                  description: Enable automatic workflow progression
+
+                version:
+                  type: integer
+                  minimum: 1
+                  description: Current version for optimistic concurrency control
+                  example: 1
+
+              # At least one field besides version must be provided
+              minProperties: 2
+
+            examples:
+              updateTitleAndDescription:
+                summary: Update title and description
+                value:
+                  title: "[e2e] Update: Fix login bug"
+                  description: "Updated description with [special] (characters) 'like' this!"
+                  version: 1
+
+              updateDescriptionOnly:
+                summary: Update description with special characters
+                value:
+                  description: "Description with brackets [e2e], quotes \"hello\", and symbols @#$%"
+                  version: 2
+
+              updateWithStageTransition:
+                summary: Update description and transition stage
+                value:
+                  description: "Ready for specification phase"
+                  stage: "SPECIFY"
+                  version: 1
+
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - title
+                  - description
+                  - stage
+                  - version
+                  - projectId
+                  - branch
+                  - autoMode
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: integer
+                    example: 123
+                  title:
+                    type: string
+                    example: "[e2e] Fix login bug"
+                  description:
+                    type: string
+                    example: "Updated description with [brackets]"
+                  stage:
+                    type: string
+                    enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                    example: "INBOX"
+                  version:
+                    type: integer
+                    description: Incremented version after update
+                    example: 2
+                  projectId:
+                    type: integer
+                    example: 1
+                  branch:
+                    type: string
+                    nullable: true
+                    example: "024-16204-description-validation"
+                  autoMode:
+                    type: boolean
+                    example: false
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-10-11T12:00:00.000Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-10-11T12:05:00.000Z"
+                  jobId:
+                    type: integer
+                    description: Present only if stage transition triggered workflow
+                    example: 456
+
+        '400':
+          description: Validation error (invalid characters, empty fields, or invalid request)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Validation failed"
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "invalid_string"
+                        validation:
+                          type: string
+                          example: "regex"
+                        message:
+                          type: string
+                          example: "can only contain letters, numbers, spaces, and common special characters"
+                        path:
+                          type: array
+                          items:
+                            type: string
+                          example: ["description"]
+
+              examples:
+                invalidCharactersDescription:
+                  summary: Description contains invalid characters (emoji)
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "invalid_string"
+                        validation: "regex"
+                        message: "can only contain letters, numbers, spaces, and common special characters"
+                        path: ["description"]
+
+                invalidCharactersTitle:
+                  summary: Title contains invalid characters (newline)
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "invalid_string"
+                        validation: "regex"
+                        message: "can only contain letters, numbers, spaces, and common special characters"
+                        path: ["title"]
+
+                tooLong:
+                  summary: Description exceeds max length
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "too_big"
+                        maximum: 1000
+                        type: "string"
+                        inclusive: true
+                        message: "Description must be 1000 characters or less"
+                        path: ["description"]
+
+        '403':
+          description: Forbidden - Ticket belongs to different project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Forbidden"
+
+        '404':
+          description: Project or ticket not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Ticket not found"
+
+        '409':
+          description: Conflict - Ticket was modified by another user (version mismatch)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Conflict: Ticket was modified by another user"
+                  currentVersion:
+                    type: integer
+                    example: 3
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+components:
+  schemas:
+    AllowedCharacterSet:
+      type: string
+      description: |
+        Character set allowed in title and description fields.
+
+        **Pattern**: /^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;'"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$/
+
+        **Allowed**:
+        - Letters: a-z, A-Z
+        - Numbers: 0-9
+        - Spaces
+        - Punctuation: . , ? ! - : ; ' "
+        - Brackets: ( ) [ ] { }
+        - Slashes: / \
+        - Symbols: @ # $ % & * + = _ ~ ` |
+
+        **Prohibited**:
+        - Emojis (e.g., 😀, ✅)
+        - Control characters (e.g., \n, \t)
+        - Extended Unicode outside ASCII printable range
+
+        **Special Rules**:
+        - Must contain at least one non-whitespace character
+        - Leading/trailing whitespace is trimmed before validation
+      pattern: '^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;''"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$'
+      example: "[e2e] Test ticket with (special) [characters] and 'quotes'"
+
+tags:
+  - name: tickets
+    description: Ticket management operations
