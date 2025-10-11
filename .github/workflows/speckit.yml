@@ -173,6 +173,20 @@ jobs:
             echo "✅ Changes committed and pushed successfully"
           fi
 
+      - name: Update Documentation
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
+        run: |
+          claude --dangerously-skip-permissions "Update /specs/specifications/ with spec from specs/${CURRENT_BRANCH}/spec.md. Update CLAUDE.md only if new tech. Don't commit."
+
+          git add specs/specifications/ CLAUDE.md
+          if ! git diff --staged --quiet; then
+            git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation"
+            git push origin "$CURRENT_BRANCH"
+            echo "✅ Documentation updated and committed"
+          else
+            echo "ℹ️ No documentation changes needed"
+          fi
+
       - name: Update Ticket Branch (Specify Command)
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.FEATURE_BRANCH != '' }}
         env:
