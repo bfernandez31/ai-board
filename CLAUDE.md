@@ -28,6 +28,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - PostgreSQL via Prisma ORM (existing Job model to be extended) (019-update-job-on)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components (020-9179-real-time)
 - PostgreSQL 14+ via Prisma ORM (existing Job and Ticket models) (020-9179-real-time)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router) (021-clean-test-clean)
+- PostgreSQL 14+ (test database fixtures) (021-clean-test-clean)
 
 ## Project Structure
 ```
@@ -43,9 +45,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 021-clean-test-clean: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router)
 - 020-9179-real-time: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components
 - 019-update-job-on: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+
-- 018-add-github-transition: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 
 <!-- MANUAL ADDITIONS START -->
 
