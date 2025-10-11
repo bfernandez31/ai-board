@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { Header } from '@/components/layout/header';
 
 export const metadata: Metadata = {
   title: 'AI Board',
@@ -13,8 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-background text-foreground antialiased">
+    <html lang="en" className="dark overflow-hidden">
+      <body className="bg-background text-foreground antialiased overflow-hidden">
+        <Header />
         {children}
         <Toaster />
       </body>
