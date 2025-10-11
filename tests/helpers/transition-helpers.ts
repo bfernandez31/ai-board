@@ -24,40 +24,12 @@ export async function transitionThrough(
 }
 
 /**
- * Cleans up [e2e] prefixed test data from database
- * Follows the selective cleanup pattern from db-cleanup.ts
+ * @deprecated Use cleanupDatabase() from db-cleanup.ts instead.
+ * This function is redundant with cleanupDatabase() and should not be used.
  */
 export async function cleanupTestData(): Promise<void> {
-  const prisma = getPrismaClient();
-
-  try {
-    // Delete jobs associated with [e2e] tickets first
-    await prisma.job.deleteMany({
-      where: {
-        ticket: {
-          title: { startsWith: '[e2e]' },
-        },
-      },
-    });
-
-    // Delete [e2e] prefixed tickets
-    await prisma.ticket.deleteMany({
-      where: {
-        title: { startsWith: '[e2e]' },
-      },
-    });
-
-    // Delete [e2e] prefixed projects (except 1 and 2 to avoid cascade issues)
-    await prisma.project.deleteMany({
-      where: {
-        name: { startsWith: '[e2e]' },
-        id: { notIn: [1, 2] },
-      },
-    });
-
-    console.log(' Test data cleaned successfully');
-  } catch (error) {
-    console.error(' Test data cleanup failed:', error);
-    throw error;
-  }
+  throw new Error(
+    'cleanupTestData() is deprecated. Use cleanupDatabase() from db-cleanup.ts instead. ' +
+    'This ensures consistent cleanup behavior across all tests.'
+  );
 }

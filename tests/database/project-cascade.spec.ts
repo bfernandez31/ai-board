@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../helpers/db-cleanup';
-import { createTestProject, createTestTicket, cleanupTestData } from '../helpers/db-setup';
+import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { createTestProject, createTestTicket } from '../helpers/db-setup';
 
 /**
  * Project Cascade Delete Test
@@ -21,12 +21,12 @@ import { createTestProject, createTestTicket, cleanupTestData } from '../helpers
 test.describe('Project Cascade Delete', () => {
   test.beforeEach(async () => {
     // Clean database before each test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {
     // Cleanup after all tests
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test('should cascade delete all tickets when project is deleted', async () => {

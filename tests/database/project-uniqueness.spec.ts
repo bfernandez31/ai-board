@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../helpers/db-cleanup';
-import { createTestProject, cleanupTestData } from '../helpers/db-setup';
+import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { createTestProject } from '../helpers/db-setup';
 
 /**
  * Project Uniqueness Test
@@ -20,12 +20,12 @@ import { createTestProject, cleanupTestData } from '../helpers/db-setup';
 test.describe('Project Uniqueness Constraint', () => {
   test.beforeEach(async () => {
     // Clean database before each test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {
     // Cleanup after all tests
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test('should prevent duplicate projects with same githubOwner and githubRepo', async () => {

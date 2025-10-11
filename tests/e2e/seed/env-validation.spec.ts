@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { cleanupTestData } from '../../helpers/db-setup';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { execSync } from 'child_process';
 
 /**
@@ -22,12 +22,12 @@ import { execSync } from 'child_process';
 test.describe('Seed Environment Validation', () => {
   test.beforeEach(async () => {
     // Clean database before test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {
     // Cleanup after test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test('should fail when GITHUB_OWNER is missing or empty', async () => {

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../helpers/db-cleanup';
-import { createTestProject, createTestTicket, cleanupTestData } from '../helpers/db-setup';
+import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { createTestProject, createTestTicket } from '../helpers/db-setup';
 
 /**
  * Database constraint tests for Ticket-Project relationship
@@ -17,12 +17,12 @@ import { createTestProject, createTestTicket, cleanupTestData } from '../helpers
 test.describe('Ticket-Project Constraints', () => {
   test.beforeEach(async () => {
     // Clean database before each test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {
     // Cleanup after all tests
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test('should fail to create ticket without projectId', async () => {

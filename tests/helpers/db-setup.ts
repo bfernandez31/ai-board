@@ -96,21 +96,13 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
 }
 
 /**
- * Clean up test data after each test
+ * @deprecated Use cleanupDatabase() from db-cleanup.ts instead.
+ * This function deletes ALL projects and tickets without selective cleanup.
+ * The cleanupDatabase() function preserves non-test data (projects 3+).
  */
 export async function cleanupTestData(): Promise<void> {
-  const prisma = getPrismaClient();
-
-  try {
-    // Delete tickets first (child records)
-    await prisma.ticket.deleteMany({});
-
-    // Then delete projects (parent records)
-    await prisma.project.deleteMany({});
-
-    console.log('✓ Test data cleaned successfully');
-  } catch (error) {
-    console.error('✗ Test data cleanup failed:', error);
-    throw error;
-  }
+  throw new Error(
+    'cleanupTestData() is deprecated. Use cleanupDatabase() from db-cleanup.ts instead. ' +
+    'This prevents accidental deletion of development data (e.g., Project 3).'
+  );
 }

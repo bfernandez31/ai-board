@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../../helpers/db-cleanup';
-import { cleanupTestData } from '../../helpers/db-setup';
+import { getPrismaClient, cleanupDatabase } from '../../helpers/db-cleanup';
 import { execSync } from 'child_process';
 
 /**
@@ -23,12 +22,12 @@ import { execSync } from 'child_process';
 test.describe('Seed Idempotency', () => {
   test.beforeEach(async () => {
     // Clean database before test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {
     // Cleanup after test
-    await cleanupTestData();
+    await cleanupDatabase();
   });
 
   test('should create project on first run and skip on subsequent runs', async () => {
