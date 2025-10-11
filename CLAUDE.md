@@ -35,6 +35,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, TailwindCSS 3.4 (023-16193-page-projects)
 - PostgreSQL 14+ via Prisma ORM (existing Project model with tickets relation) (023-16193-page-projects)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Zod 4.x (validation) (024-16204-description-validation)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui (@radix-ui/react-toast), TailwindCSS 3.4, lucide-react (icons) (025-header-ajoute-un)
+- N/A (stateless UI component) (025-header-ajoute-un)
 
 ## Project Structure
 ```
@@ -50,9 +52,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 025-header-ajoute-un: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui (@radix-ui/react-toast), TailwindCSS 3.4, lucide-react (icons)
 - 024-16204-description-validation: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Zod 4.x (validation)
 - 023-16193-page-projects: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, TailwindCSS 3.4
-- 022-display-generated-spec: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest (GitHub API), shadcn/ui (Dialog, ScrollArea), Playwright (E2E tests)
 
 <!-- MANUAL ADDITIONS START -->
 

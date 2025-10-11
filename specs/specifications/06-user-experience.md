@@ -8,6 +8,7 @@ This domain covers user-facing experience features that provide real-time feedba
 - Real-time job status visualization on ticket cards
 - Specification document viewer
 - Projects list page with navigation
+- Application header with branding and placeholder navigation buttons
 
 ---
 
@@ -218,6 +219,86 @@ The system displays all projects in a clean, navigable list:
 
 ---
 
+## Application Header
+
+**Purpose**: Users need consistent site-wide navigation with branding and action buttons across all application pages. The header provides visual identity and placeholder navigation for future functionality.
+
+### What It Does
+
+The system displays a persistent header at the top of all pages:
+
+**Header Layout**:
+- **Left Side**: AI-BOARD logo and title
+  - Logo from existing SVG file (29-final-clean.svg)
+  - "AI-BOARD" text title next to logo
+  - Visually harmonious with Catppuccin Mocha theme
+- **Right Side**: Three action buttons (desktop)
+  - "Log In" button
+  - "Contact" button
+  - "Sign Up" button
+  - All styled with Catppuccin Mocha theme colors
+
+**Responsive Behavior**:
+- **Desktop**: All three buttons visible
+- **Mobile**: Buttons collapse into hamburger menu
+  - Hamburger icon displays on right side
+  - Clicking reveals three action buttons
+
+**Placeholder Functionality**:
+- All three buttons are interactive (clickable)
+- Clicking any button displays toast notification
+- Toast message: "This feature is not yet implemented"
+- No actual authentication or contact functionality
+
+**Visual Design**:
+- Fixed/sticky positioning (always visible when scrolling)
+- Catppuccin Mocha color palette
+  - Background: ctp-mantle or ctp-base
+  - Text: ctp-text
+  - Accents: primary-violet
+- Vercel-inspired layout (logo left, actions right)
+- Clean, modern aesthetic
+
+### Requirements
+
+**Display**:
+- Header appears on all application pages (site-wide)
+- Fixed positioning keeps header visible during scrolling
+- Logo displays from 29-final-clean.svg file
+- "AI-BOARD" title adjacent to logo
+- Three action buttons on right: "Log In", "Contact", "Sign Up"
+
+**Responsive**:
+- Desktop: All buttons visible
+- Mobile: Hamburger menu with collapsible button list
+
+**Styling**:
+- Catppuccin Mocha palette (from globals.css CSS variables)
+- Logo visually harmonious with site theme
+- Vercel-style layout (branding left, actions right)
+- Modern, clean design
+
+**Interaction**:
+- All buttons are clickable and interactive
+- Toast notification on button click
+- Toast message: "This feature is not yet implemented"
+- No functional implementation beyond toast
+
+### Data Model
+
+**Static Content**:
+- Logo: `specs/vision/logo/29-final-clean.svg`
+- Title: "AI-BOARD" (hardcoded)
+- Button labels: "Log In", "Contact", "Sign Up" (hardcoded)
+- Toast message: "This feature is not yet implemented" (hardcoded)
+
+**No Backend Dependencies**:
+- Stateless UI component
+- No database queries
+- No API endpoints
+
+---
+
 ## Current State Summary
 
 ### Available Features
@@ -243,6 +324,15 @@ The system displays all projects in a clean, navigable list:
 - ✅ Placeholder buttons for future features
 - ✅ Empty state messaging
 
+**Application Header**:
+- ✅ Site-wide persistent header
+- ✅ AI-BOARD logo and branding
+- ✅ Fixed/sticky positioning
+- ✅ Three placeholder action buttons
+- ✅ Responsive mobile hamburger menu
+- ✅ Catppuccin Mocha theme styling
+- ✅ Toast notifications for placeholders
+
 ### User Workflows
 
 **Viewing Job Status**:
@@ -267,6 +357,15 @@ The system displays all projects in a clean, navigable list:
 4. User clicks project
 5. System navigates to project's board
 
+**Using Application Header**:
+1. User visits any page in application
+2. Header displays at top with logo and title
+3. User sees "Log In", "Contact", "Sign Up" buttons (desktop)
+4. User clicks any button
+5. System displays toast: "This feature is not yet implemented"
+6. User scrolls page (header remains fixed at top)
+7. On mobile: user clicks hamburger menu to reveal buttons
+
 ### Business Rules
 
 - Only most recent active or terminal job shown per ticket
@@ -274,6 +373,9 @@ The system displays all projects in a clean, navigable list:
 - Specification button only for tickets with completed specify jobs
 - All projects visible (no pagination or filtering)
 - Import/Create buttons are placeholders (no functionality)
+- Header action buttons are placeholders (no authentication/contact functionality)
+- Header appears on all pages (site-wide)
+- Header remains visible during scrolling (fixed positioning)
 
 ### Technical Details
 
@@ -290,5 +392,12 @@ The system displays all projects in a clean, navigable list:
 **UI Components**:
 - react-markdown for content rendering
 - react-syntax-highlighter for code blocks
-- shadcn/ui components (Dialog, ScrollArea, Button)
+- shadcn/ui components (Dialog, ScrollArea, Button, Toast)
 - Zinc color palette (dark theme)
+
+**Header**:
+- shadcn/ui Toast component (@radix-ui/react-toast)
+- lucide-react for icons
+- Catppuccin Mocha color palette
+- Fixed positioning CSS
+- Responsive hamburger menu (mobile)
