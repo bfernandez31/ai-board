@@ -30,19 +30,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Card
-      className="transition-transform duration-200 hover:scale-105 cursor-pointer"
+      className="bg-[#181825] border-[#313244] transition-all duration-200 hover:scale-[1.02] hover:border-[#45475a] hover:shadow-lg cursor-pointer"
       onClick={handleClick}
       data-testid="project-card"
       data-project-id={project.id}
     >
       <CardHeader>
-        <CardTitle data-testid="project-name">{project.name}</CardTitle>
-        <CardDescription data-testid="project-description">
+        <CardTitle className="text-[#cdd6f4]" data-testid="project-name">{project.name}</CardTitle>
+        <CardDescription className="text-[#a6adc8]" data-testid="project-description">
           {project.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between text-sm text-gray-500">
+        <div className="flex justify-between text-sm text-[#6c7086]">
           <span data-testid="project-updated">
             Last updated: {formattedDate}
           </span>

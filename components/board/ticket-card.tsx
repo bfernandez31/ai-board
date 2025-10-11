@@ -68,23 +68,23 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="bg-zinc-900 border-zinc-700 p-4 transition-all hover:border-zinc-600 hover:bg-zinc-800 overflow-hidden"
+          className="bg-[#181825] border-[#313244] p-4 transition-all hover:border-[#45475a] hover:bg-[#1e1e2e] overflow-hidden shadow-sm"
           role="article"
           aria-label={`Ticket ${ticket.id}: ${ticket.title}`}
         >
           {/* Header: ID and Badge */}
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs text-zinc-400 font-mono font-semibold">
+            <span className="text-xs text-[#a6adc8] font-mono font-semibold">
               #{ticket.id}
             </span>
-            <Badge className="bg-blue-600 text-blue-50 border-blue-500 hover:bg-blue-700 text-xs px-2 py-0.5 font-semibold">
+            <Badge className="bg-[#89b4fa]/20 text-[#89b4fa] border-[#89b4fa]/50 hover:bg-[#89b4fa]/30 text-xs px-2 py-0.5 font-semibold">
               SONNET
             </Badge>
           </div>
 
           {/* Title - truncated at 2 lines */}
           <h3
-            className="font-semibold text-sm mb-3 line-clamp-2 text-zinc-100 break-all overflow-hidden"
+            className="font-semibold text-sm mb-3 line-clamp-2 text-[#cdd6f4] break-all overflow-hidden"
             title={ticket.title}
           >
             {ticket.title}
@@ -92,7 +92,7 @@ export const TicketCard = React.memo(
 
           {/* Job Status Indicator */}
           {currentJob && (
-            <div className="border-t border-zinc-700 pt-3">
+            <div className="border-t border-[#313244] pt-3">
               <JobStatusIndicator
                 status={currentJob.status}
                 command={currentJob.command}

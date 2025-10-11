@@ -34,7 +34,7 @@ export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
     <>
       <button
         onClick={handleClick}
-        className="w-full rounded-lg border border-dashed border-white/15 bg-white/5 px-5 py-4 text-sm text-zinc-100/90 transition-all hover:border-white/30 hover:bg-white/10 hover:text-white flex items-center justify-center gap-2 font-medium"
+        className="w-full rounded-lg border border-dashed border-[#45475a] bg-[#313244]/30 px-5 py-4 text-sm text-[#cdd6f4] transition-all hover:border-[#8B5CF6] hover:bg-[#8B5CF6]/10 hover:text-[#8B5CF6] flex items-center justify-center gap-2 font-medium"
       >
         <Plus className="w-4 h-4" />
         <span className="text-sm">New Ticket</span>

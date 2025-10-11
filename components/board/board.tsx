@@ -365,7 +365,7 @@ function BoardContent({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="w-full h-full bg-black">
+        <div className="w-full h-full bg-[#1e1e2e]">
           {/* Board Grid - Restored original styling */}
           <div
             data-testid="board-grid"
