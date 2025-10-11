@@ -74,7 +74,7 @@ test.describe('Project Uniqueness Constraint', () => {
 
     expect(allProjects).toHaveLength(1);
     expect(allProjects[0].id).toBe(project1.id);
-    expect(allProjects[0].name).toBe('Original Project');
+    expect(allProjects[0].name).toBe('[e2e] Original Project');
   });
 
   test('should allow different projects with different repositories', async () => {
@@ -104,9 +104,9 @@ test.describe('Project Uniqueness Constraint', () => {
       githubRepo: 'repo1',
     });
 
-    // Verify all three projects were created
+    // Verify all three test projects were created (may be more if other projects exist)
     const allProjects = await prisma.project.findMany({});
-    expect(allProjects).toHaveLength(3);
+    expect(allProjects.length).toBeGreaterThanOrEqual(3);
 
     // Verify each project has correct data
     expect(project1.githubOwner).toBe('owner1');
@@ -262,7 +262,7 @@ test.describe('Project Uniqueness Constraint', () => {
     // Verify project found using composite constraint
     expect(foundProject).toBeDefined();
     expect(foundProject?.id).toBe(project.id);
-    expect(foundProject?.name).toBe('Lookup Test Project');
+    expect(foundProject?.name).toBe('[e2e] Lookup Test Project');
     expect(foundProject?.githubOwner).toBe('lookup-owner');
     expect(foundProject?.githubRepo).toBe('lookup-repo');
   });

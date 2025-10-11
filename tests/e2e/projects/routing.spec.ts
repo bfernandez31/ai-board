@@ -3,10 +3,8 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
  * E2E Test: Project Routing (T004)
- * User Story: As a user, I want the root URL to redirect to the default project board
+ * User Story: As a user, I want the root URL to redirect to the projects list page
  * Source: quickstart.md - Step 2
- *
- * This test MUST FAIL until the root redirect is implemented
  */
 
 test.describe('Project Routing', () => {
@@ -15,18 +13,18 @@ test.describe('Project Routing', () => {
     await cleanupDatabase();
   });
 
-  test('should redirect from root to /projects/1/board', async ({ page }) => {
+  test('should redirect from root to /projects', async ({ page }) => {
     // Navigate to root URL
     await page.goto('http://localhost:3000/');
 
     // Wait for navigation to complete
-    await page.waitForURL('**/projects/1/board');
+    await page.waitForURL('**/projects');
 
-    // Verify URL changed to project-scoped board
-    expect(page.url()).toBe('http://localhost:3000/projects/1/board');
+    // Verify URL changed to projects list page
+    expect(page.url()).toBe('http://localhost:3000/projects');
 
-    // Verify board loaded successfully
-    const heading = page.getByRole('heading', { name: /inbox/i }).first();
+    // Verify projects page loaded successfully
+    const heading = page.getByRole('heading', { name: /projects/i });
     await expect(heading).toBeVisible();
   });
 

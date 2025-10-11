@@ -1,0 +1,142 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Projects API",
+    "version": "1.0.0",
+    "description": "API contract for fetching projects list with ticket counts"
+  },
+  "paths": {
+    "/api/projects": {
+      "get": {
+        "summary": "Get all projects with ticket counts",
+        "description": "Fetches all projects ordered by last updated timestamp (descending) with computed ticket counts",
+        "operationId": "getProjects",
+        "tags": ["projects"],
+        "responses": {
+          "200": {
+            "description": "Successful response with projects array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectWithCount"
+                  }
+                },
+                "examples": {
+                  "multipleProjects": {
+                    "summary": "Multiple projects response",
+                    "value": [
+                      {
+                        "id": 1,
+                        "name": "AI Board Development",
+                        "description": "Main development project for the AI Board application",
+                        "updatedAt": "2025-10-11T14:30:00.000Z",
+                        "ticketCount": 15
+                      },
+                      {
+                        "id": 2,
+                        "name": "Mobile App",
+                        "description": "iOS and Android mobile applications",
+                        "updatedAt": "2025-10-10T09:15:00.000Z",
+                        "ticketCount": 8
+                      }
+                    ]
+                  },
+                  "emptyProjects": {
+                    "summary": "No projects available",
+                    "value": []
+                  },
+                  "singleProject": {
+                    "summary": "Single project response",
+                    "value": [
+                      {
+                        "id": 3,
+                        "name": "Documentation Site",
+                        "description": "User documentation and guides",
+                        "updatedAt": "2025-10-11T10:00:00.000Z",
+                        "ticketCount": 0
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Failed to fetch projects",
+                  "code": "DATABASE_ERROR"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProjectWithCount": {
+        "type": "object",
+        "required": ["id", "name", "description", "updatedAt", "ticketCount"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique project identifier",
+            "example": 1,
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Project name",
+            "example": "AI Board Development",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description",
+            "example": "Main development project for the AI Board application",
+            "maxLength": 1000
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of last project update",
+            "example": "2025-10-11T14:30:00.000Z"
+          },
+          "ticketCount": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total number of tickets in the project",
+            "example": 15,
+            "minimum": 0
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable error code",
+            "enum": ["DATABASE_ERROR", "INTERNAL_ERROR"]
+          }
+        }
+      }
+    }
+  }
+}
