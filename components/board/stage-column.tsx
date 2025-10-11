@@ -188,11 +188,6 @@ export const StageColumn = React.memo(
             )}
           </div>
         </ScrollArea>
-
-        {/* Drop Zone Visual Feedback */}
-        {isOver && (
-          <div className="absolute inset-0 border-4 border-dashed border-blue-500 rounded-lg pointer-events-none bg-blue-500/10" />
-        )}
       </div>
     );
   }

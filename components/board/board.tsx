@@ -355,6 +355,9 @@ function BoardContent({
 
   const stages = getAllStages();
 
+  // Check if any column is being hovered during drag
+  const isAnyColumnOver = activeTicket !== null;
+
   return (
     <>
       <OfflineIndicator />
@@ -365,11 +368,16 @@ function BoardContent({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="w-full h-full bg-[#1e1e2e]">
+        <div className="w-full h-full bg-[#1e1e2e] relative">
+          {/* Drop Zone Visual Feedback - Full Board */}
+          {isAnyColumnOver && (
+            <div className="absolute inset-0 border-4 border-dashed border-blue-500 pointer-events-none bg-blue-500/5 z-10" />
+          )}
+
           {/* Board Grid - Restored original styling */}
           <div
             data-testid="board-grid"
-            className="grid gap-4 overflow-x-auto pb-6 px-4 pt-4"
+            className="grid gap-4 overflow-x-auto pb-6 px-4 pt-4 relative z-20"
             style={{
               gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))',
               height: 'calc(100vh - 4rem - 4px)',
