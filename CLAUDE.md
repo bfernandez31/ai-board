@@ -45,9 +45,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 022-display-generated-spec: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 021-clean-test-clean: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router)
 - 020-9179-real-time: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components
-- 019-update-job-on: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+
 
 <!-- MANUAL ADDITIONS START -->
 
