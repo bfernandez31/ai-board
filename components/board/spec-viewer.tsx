@@ -95,9 +95,9 @@ export default function SpecViewer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw]">
+      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-zinc-50">
             Specification - Ticket #{ticketId}: {ticketTitle}
           </DialogTitle>
         </DialogHeader>
@@ -117,57 +117,57 @@ export default function SpecViewer({
 
           {content && (
             <ScrollArea className="h-[60vh] w-full rounded-md pr-4">
-              <div className="prose prose-invert max-w-none">
+              <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                 <ReactMarkdown
                   className="text-zinc-100"
                   components={{
                     h1: ({ node, ...props }) => (
                       <h1
-                        className="text-3xl font-bold mb-4 text-zinc-100"
+                        className="text-3xl font-bold mb-4 text-zinc-50"
                         {...props}
                       />
                     ),
                     h2: ({ node, ...props }) => (
                       <h2
-                        className="text-2xl font-semibold mb-3 mt-6 text-zinc-200"
+                        className="text-2xl font-semibold mb-3 mt-6 text-zinc-50"
                         {...props}
                       />
                     ),
                     h3: ({ node, ...props }) => (
                       <h3
-                        className="text-xl font-semibold mb-2 mt-4 text-zinc-200"
+                        className="text-xl font-semibold mb-2 mt-4 text-zinc-100"
                         {...props}
                       />
                     ),
                     h4: ({ node, ...props }) => (
                       <h4
-                        className="text-lg font-semibold mb-2 mt-3 text-zinc-300"
+                        className="text-lg font-semibold mb-2 mt-3 text-zinc-100"
                         {...props}
                       />
                     ),
                     h5: ({ node, ...props }) => (
                       <h5
-                        className="text-base font-semibold mb-1 mt-2 text-zinc-300"
+                        className="text-base font-semibold mb-1 mt-2 text-zinc-200"
                         {...props}
                       />
                     ),
                     h6: ({ node, ...props }) => (
                       <h6
-                        className="text-sm font-semibold mb-1 mt-2 text-zinc-400"
+                        className="text-sm font-semibold mb-1 mt-2 text-zinc-200"
                         {...props}
                       />
                     ),
                     p: ({ node, ...props }) => (
-                      <p className="mb-4 text-zinc-300 leading-relaxed" {...props} />
+                      <p className="mb-4 text-zinc-200 leading-relaxed" {...props} />
                     ),
                     ul: ({ node, ...props }) => (
-                      <ul className="list-disc ml-6 mb-4 text-zinc-300" {...props} />
+                      <ul className="list-disc ml-6 mb-4 text-zinc-200" {...props} />
                     ),
                     ol: ({ node, ...props }) => (
-                      <ol className="list-decimal ml-6 mb-4 text-zinc-300" {...props} />
+                      <ol className="list-decimal ml-6 mb-4 text-zinc-200" {...props} />
                     ),
                     li: ({ node, ...props }) => (
-                      <li className="mb-1 text-zinc-300" {...props} />
+                      <li className="mb-1 text-zinc-200" {...props} />
                     ),
                     a: ({ node, ...props }) => (
                       <a
@@ -220,10 +220,10 @@ export default function SpecViewer({
                       <tr className="border-b border-zinc-700" {...props} />
                     ),
                     th: ({ node, ...props }) => (
-                      <th className="px-4 py-2 text-left text-zinc-200 font-semibold" {...props} />
+                      <th className="px-4 py-2 text-left text-zinc-50 font-semibold" {...props} />
                     ),
                     td: ({ node, ...props }) => (
-                      <td className="px-4 py-2 text-zinc-300" {...props} />
+                      <td className="px-4 py-2 text-zinc-200" {...props} />
                     ),
                     hr: ({ node, ...props }) => (
                       <hr className="border-zinc-700 my-6" {...props} />
