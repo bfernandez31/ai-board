@@ -86,7 +86,7 @@ test('validation error message is clear and actionable', ...)
 
 ## Phase 3.3: Verification
 - [X] T004 Run all existing contract tests to verify no regressions (npm test -- tests/api/)
-- [ ] T005 Run all existing E2E tests to verify no regressions (npm test -- tests/e2e/)
+- [X] T005 Run all existing E2E tests to verify no regressions (npm test -- tests/e2e/)
 - [ ] T006 Manual validation using quickstart.md test scenarios
 
 **T004 Details**: Run contract test suite:
@@ -169,16 +169,16 @@ npm test -- tests/e2e/
 ## Validation Checklist
 *Required before marking feature complete*
 
-- [ ] lib/validations/ticket.ts updated with regex validation
-- [ ] titleSchema includes ALLOWED_CHARS_PATTERN
-- [ ] descriptionSchema includes ALLOWED_CHARS_PATTERN
-- [ ] Contract tests added for character validation
-- [ ] E2E tests updated for inline editing validation
-- [ ] All existing tests pass (no regressions)
+- [X] lib/validations/ticket.ts updated with regex validation
+- [X] titleSchema includes ALLOWED_CHARS_PATTERN
+- [X] descriptionSchema includes ALLOWED_CHARS_PATTERN
+- [X] Contract tests added for character validation
+- [X] E2E tests updated for inline editing validation
+- [X] All existing tests pass (no regressions)
 - [ ] Manual quickstart scenarios verified
-- [ ] Error messages clear and actionable
-- [ ] [e2e] prefix works in all contexts
-- [ ] Performance benchmarks met
+- [X] Error messages clear and actionable
+- [X] [e2e] prefix works in all contexts
+- [X] Performance benchmarks met
 
 ## Files Modified
 1. **lib/validations/ticket.ts** (T001)
