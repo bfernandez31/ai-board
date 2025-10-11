@@ -23,15 +23,20 @@ export interface TestTicket {
 
 /**
  * Create a test project and return its data
+ * Automatically prefixes project names with [e2e] for test isolation
  */
 export async function createTestProject(
   data?: Partial<Pick<TestProject, 'name' | 'description' | 'githubOwner' | 'githubRepo'>>
 ): Promise<TestProject> {
   const prisma = getPrismaClient();
 
+  // Ensure test project names have [e2e] prefix for cleanup
+  const projectName = data?.name ?? 'Test Project';
+  const prefixedName = projectName.startsWith('[e2e]') ? projectName : `[e2e] ${projectName}`;
+
   const project = await prisma.project.create({
     data: {
-      name: data?.name ?? 'Test Project',
+      name: prefixedName,
       description: data?.description ?? 'Test project description',
       githubOwner: data?.githubOwner ?? 'test-owner',
       githubRepo: data?.githubRepo ?? `test-repo-${Date.now()}`,

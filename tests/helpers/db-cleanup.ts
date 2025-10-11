@@ -29,15 +29,16 @@ export async function cleanupDatabase(): Promise<void> {
     await client.ticket.deleteMany({
       where: {
         title: { startsWith: '[e2e]' },
-        projectId: { notIn: [1, 2] }
+        projectId: { notIn: [1, 2, 3] }
       }
     });
 
-    // Delete only [e2e] prefixed projects EXCEPT projects 1 and 2 (to avoid cascade deletion)
+    // Delete only [e2e] prefixed projects EXCEPT projects 1, 2, and 3
+    // Projects 1-2 are for tests, project 3 is for development
     await client.project.deleteMany({
       where: {
         name: { startsWith: '[e2e]' },
-        id: { notIn: [1, 2] }
+        id: { notIn: [1, 2, 3] }
       }
     });
 

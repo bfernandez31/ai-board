@@ -32,6 +32,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-30
 - PostgreSQL 14+ (test database fixtures) (021-clean-test-clean)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest, shadcn/ui (Dialog, ScrollArea), Playwright (022-display-generated-spec)
 - PostgreSQL 14+ via Prisma ORM (existing Ticket, Job, Project models) (022-display-generated-spec)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, TailwindCSS 3.4 (023-16193-page-projects)
+- PostgreSQL 14+ via Prisma ORM (existing Project model with tickets relation) (023-16193-page-projects)
 
 ## Project Structure
 ```
@@ -47,9 +49,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 023-16193-page-projects: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, TailwindCSS 3.4
 - 022-display-generated-spec: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest (GitHub API), shadcn/ui (Dialog, ScrollArea), Playwright (E2E tests)
 - 021-clean-test-clean: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router)
-- 020-9179-real-time: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -65,8 +67,9 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 **Test Cleanup Behavior** (`tests/helpers/db-cleanup.ts`):
 - Deletes ALL tickets from projects 1 and 2 before each test run
-- Preserves all data in projects 3+
-- Only deletes `[e2e]` prefixed data from non-test projects
+- Preserves all data in project 3 (development project)
+- Only deletes `[e2e]` prefixed tickets from projects 4+
+- Only deletes `[e2e]` prefixed projects with IDs 4+
 
 **For Development**:
 - **Project 3** (`AI Board Development`) is configured for development use
@@ -254,11 +257,15 @@ await client.project.upsert({
 ### Selective Cleanup
 
 The `cleanupDatabase()` function in `tests/helpers/db-cleanup.ts` performs selective deletion:
-- **Tickets**: Deletes only tickets with `title` starting with `[e2e]`
-- **Projects**: Deletes only projects with `name` starting with `[e2e]` AND `id` NOT IN (1, 2)
-  - **Important**: Projects 1 & 2 are NEVER deleted to avoid cascade deletion of tickets
-  - These projects are stable test fixtures, created once with `[e2e]` prefix
-- **Manual Data**: All data without `[e2e]` prefix is preserved
+- **Tickets**:
+  - Deletes ALL tickets from projects 1 and 2 (test projects)
+  - Deletes only `[e2e]` prefixed tickets from projects 4+
+  - Preserves all tickets in project 3 (development project)
+- **Projects**: Deletes only projects with `name` starting with `[e2e]` AND `id` NOT IN (1, 2, 3)
+  - **Important**: Projects 1, 2, and 3 are NEVER deleted
+  - Projects 1 & 2 are stable test fixtures with `[e2e]` prefix
+  - Project 3 is the development project (no `[e2e]` prefix)
+- **Manual Data**: All data without `[e2e]` prefix in projects 4+ is preserved
 
 **Usage**:
 ```typescript
