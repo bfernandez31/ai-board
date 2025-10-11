@@ -5,9 +5,13 @@ test.describe('Selective Project Cleanup Contract', () => {
   const prisma = getPrismaClient();
 
   test.beforeEach(async () => {
-    // Clean all projects (except those needed for tests)
+    // Clean all projects EXCEPT project 3 (development project)
     await prisma.ticket.deleteMany({});
-    await prisma.project.deleteMany({});
+    await prisma.project.deleteMany({
+      where: {
+        id: { notIn: [3] } // Preserve project 3 for development
+      }
+    });
   });
 
   test('should delete only [e2e] prefixed projects', async () => {
