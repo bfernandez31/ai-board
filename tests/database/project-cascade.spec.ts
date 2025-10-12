@@ -88,9 +88,14 @@ test.describe('Project Cascade Delete', () => {
     });
     expect(ticketsAfterDelete).toHaveLength(0);
 
-    // Verify no orphaned tickets remain
-    const allTickets = await prisma.ticket.findMany({});
-    expect(allTickets).toHaveLength(0);
+    // Verify no orphaned tickets remain for THIS test project
+    // (Note: Project 3 may have tickets, so we don't check global count)
+    const orphanedTickets = await prisma.ticket.findMany({
+      where: {
+        id: { in: [ticket1.id, ticket2.id, ticket3.id] }
+      },
+    });
+    expect(orphanedTickets).toHaveLength(0);
   });
 
   test('should cascade delete tickets with different stages', async () => {
@@ -198,9 +203,15 @@ test.describe('Project Cascade Delete', () => {
     });
     expect(project2Tickets).toHaveLength(3);
 
-    // Verify total ticket count is now 3 (only project 2 tickets)
-    const allTicketsAfterDelete = await prisma.ticket.findMany({});
-    expect(allTicketsAfterDelete).toHaveLength(3);
+    // Verify only project 2 tickets remain (not project 1 tickets)
+    // (Note: We don't check global count because project 3 may have tickets)
+    const remainingTestTickets = await prisma.ticket.findMany({
+      where: {
+        projectId: { in: [project1.id, project2.id] }
+      }
+    });
+    expect(remainingTestTickets).toHaveLength(3);
+    expect(remainingTestTickets.every(t => t.projectId === project2.id)).toBe(true);
   });
 
   test('should handle cascade delete with large number of tickets', async () => {

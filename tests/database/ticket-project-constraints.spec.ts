@@ -99,9 +99,12 @@ test.describe('Ticket-Project Constraints', () => {
     });
     expect(ticketsAfterDelete).toHaveLength(0);
 
-    // Verify no orphaned tickets remain
-    const allTickets = await prisma.ticket.findMany({});
-    expect(allTickets).toHaveLength(0);
+    // Verify this project's tickets were deleted
+    // (Note: Project 3 may have tickets, so we only check this project)
+    const projectTickets = await prisma.ticket.findMany({
+      where: { projectId: project.id },
+    });
+    expect(projectTickets).toHaveLength(0);
   });
 
   test('should return only tickets for specified project', async () => {
@@ -165,9 +168,14 @@ test.describe('Ticket-Project Constraints', () => {
     expect(project2Tickets).toHaveLength(3);
     expect(project2Tickets.every((t) => t.projectId === project2.id)).toBe(true);
 
-    // Verify total ticket count
-    const allTickets = await prisma.ticket.findMany({});
-    expect(allTickets).toHaveLength(5);
+    // Verify total ticket count for these test projects only
+    // (Note: Project 3 may have tickets, so we only count test projects)
+    const testTickets = await prisma.ticket.findMany({
+      where: {
+        projectId: { in: [project1.id, project2.id] }
+      }
+    });
+    expect(testTickets).toHaveLength(5);
   });
 
   test('should allow querying tickets via project relation', async () => {
