@@ -7,10 +7,10 @@ test.describe('Contract: POST /api/projects/:projectId/tickets', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'Contract Test Project',
+        name: '[e2e] Contract Test Project',
         description: 'Project for contract testing',
         githubOwner: 'test-owner',
         githubRepo: 'contract-test-repo',
