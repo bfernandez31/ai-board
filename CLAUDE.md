@@ -1,46 +1,42 @@
 # ai-board Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-09-30
+Auto-generated from all feature plans. Last updated: 2025-10-12
 
 ## Active Technologies
-- TypeScript 5.x (strict mode), Node.js 22.20.0 LTS + Next.js 15, React 18, TailwindCSS 3.x, Playwright (001-initialize-the-ai)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma (to be added), shadcn/ui (to be added) (002-create-a-basic)
-- PostgreSQL via Prisma ORM (database setup required) (002-create-a-basic)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TailwindCSS 3.4, Prisma 6.x, Zod 4.x, shadcn/ui (003-add-new-ticket)
-- PostgreSQL 14+ via Prisma ORM (003-add-new-ticket)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, @dnd-kit/core, @dnd-kit/sortable, Prisma 6.x, Zod 4.x, shadcn/ui (004-add-drag-and)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui (Dialog component), Radix UI (005-add-ticket-detail)
-- PostgreSQL 14+ via Prisma ORM (existing Ticket model) (005-add-ticket-detail)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, @dnd-kit/core, @dnd-kit/sortable, Zod 4.x, shadcn/ui (Radix UI) (006-specify-add-specify)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui (Radix UI), @dnd-ki (007-enable-inline-editing)
-- PostgreSQL 14+ via Prisma ORM (existing Ticket model with version field) (007-enable-inline-editing)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, PostgreSQL 14+ (010-add-required-projectid)
-- PostgreSQL 14+ via Prisma ORM with existing Project and Ticket models (010-add-required-projectid)
-- PostgreSQL 14+ via Prisma ORM (existing Project and Ticket models) (011-refactor-routes-and)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router) (012-add-project-model)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Prisma 6.x (ORM), Zod 4.x (validation), Next.js 15 (App Router), PostgreSQL 14+ (013-add-job-model)
-- PostgreSQL 14+ via Prisma ORM with existing Ticket model relation (013-add-job-model)
-- YAML (GitHub Actions Workflow Syntax 2.0), Shell (Bash 5.x) (016-create-github-actions)
-- N/A (workflow operates on repository files) (016-create-github-actions)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), Prisma 6.x (ORM), Next.js 15 (App Router) (017-il-faudrait-modifier)
-- PostgreSQL 14+ via Prisma (existing Project, Ticket, Job models) (018-add-github-transition)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, PostgreSQL 14+ (019-update-job-on)
-- PostgreSQL via Prisma ORM (existing Job model to be extended) (019-update-job-on)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, WebSocket (ws library for server, native WebSocket API for client), TailwindCSS 3.4, shadcn/ui components (020-9179-real-time)
-- PostgreSQL 14+ via Prisma ORM (existing Job and Ticket models) (020-9179-real-time)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Playwright (testing), @dnd-kit (drag-drop), Prisma 6.x (ORM), Next.js 15 (App Router) (021-clean-test-clean)
-- PostgreSQL 14+ (test database fixtures) (021-clean-test-clean)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest, shadcn/ui (Dialog, ScrollArea), Playwright (022-display-generated-spec)
-- PostgreSQL 14+ via Prisma ORM (existing Ticket, Job, Project models) (022-display-generated-spec)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, TailwindCSS 3.4 (023-16193-page-projects)
-- PostgreSQL 14+ via Prisma ORM (existing Project model with tickets relation) (023-16193-page-projects)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Zod 4.x (validation) (024-16204-description-validation)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui (@radix-ui/react-toast), TailwindCSS 3.4, lucide-react (icons) (025-header-ajoute-un)
-- N/A (stateless UI component) (025-header-ajoute-un)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest ^22.0.0 (027-display-project-specifications)
-- PostgreSQL 14+ via Prisma ORM (existing Project model) (027-display-project-specifications)
+
+### Core Stack
+
+- **TypeScript**: 5.6 (strict mode)
+- **Runtime**: Node.js 22.20.0 LTS
+- **Framework**: Next.js 15 (App Router)
+- **UI Library**: React 18
+- **Database**: PostgreSQL 14+
+- **ORM**: Prisma 6.x
+
+### UI & Styling
+
+- **Styling**: TailwindCSS 3.4
+- **Components**: shadcn/ui (Radix UI primitives)
+- **Icons**: lucide-react
+- **Drag & Drop**: @dnd-kit/core, @dnd-kit/sortable
+
+### Data & Validation
+
+- **Validation**: Zod 4.x
+- **Real-time**: Server-Sent Events (SSE)
+
+### Testing
+
+- **E2E Testing**: Playwright
+
+### Integration & Tooling
+
+- **GitHub API**: @octokit/rest ^22.0.0
+- **Markdown**: react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0
+- **CI/CD**: GitHub Actions (YAML 2.0, Bash 5.x)
 
 ## Project Structure
+
 ```
 backend/
 frontend/
@@ -48,15 +44,18 @@ tests/
 ```
 
 ## Commands
+
 npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] npm run lint
 
 ## Code Style
+
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
-- 027-display-project-specifications: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0, @octokit/rest ^22.0.0
-- 025-header-ajoute-un: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui (@radix-ui/react-toast), TailwindCSS 3.4, lucide-react (icons)
-- 024-16204-description-validation: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), Zod 4.x (validation)
+
+- 027-display-project-specifications: Added GitHub spec viewer with markdown rendering
+- 025-header-ajoute-un: Added project header with toast notifications
+- 024-16204-description-validation: Enhanced ticket validation rules
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -71,12 +70,14 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 - **Project 3+**: Available for development and production use
 
 **Test Cleanup Behavior** (`tests/helpers/db-cleanup.ts`):
+
 - Deletes ALL tickets from projects 1 and 2 before each test run
 - Preserves all data in project 3 (development project)
 - Only deletes `[e2e]` prefixed tickets from projects 4+
 - Only deletes `[e2e]` prefixed projects with IDs 4+
 
 **For Development**:
+
 - **Project 3** (`AI Board Development`) is configured for development use
   - GitHub: `bfernandez31/ai-board`
   - Board URL: `http://localhost:3000/projects/3/board`
@@ -90,6 +91,7 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 ## Data Model Notes
 
 ### Ticket Model
+
 The Ticket model includes the following fields for GitHub branch tracking and automation:
 
 - **`branch`** (String?, max 200 chars): Tracks the Git branch associated with the ticket
@@ -145,6 +147,7 @@ The correct branch lifecycle for automated workflows:
 ### Ticket Branch Management
 
 **PATCH `/api/projects/:projectId/tickets/:id/branch`**
+
 - Specialized endpoint for updating ticket branch without version control
 - Request body: `{ branch: string | null }`
 - Response: `{ id, branch, updatedAt }` (minimal response)
@@ -152,6 +155,7 @@ The correct branch lifecycle for automated workflows:
 - Does NOT use optimistic concurrency control (no version checking)
 
 **PATCH `/api/projects/:projectId/tickets/:id`**
+
 - General update endpoint supporting all ticket fields
 - Now accepts `branch` and `autoMode` fields
 - Uses optimistic concurrency control with version field
@@ -163,6 +167,7 @@ The correct branch lifecycle for automated workflows:
 ### Job Status Management
 
 **PATCH `/api/jobs/:id/status`**
+
 - Updates Job status when GitHub Actions workflows complete
 - Request body: `{ status: "COMPLETED" | "FAILED" | "CANCELLED" }`
 - Response: `{ id: number, status: JobStatus, completedAt: string | null }`
@@ -196,6 +201,7 @@ The Job model tracks GitHub Actions workflow execution status:
 ### JobStatus State Machine
 
 **Valid Transitions**:
+
 ```
 PENDING → RUNNING (workflow starts)
 RUNNING → COMPLETED (workflow succeeds)
@@ -204,11 +210,13 @@ RUNNING → CANCELLED (workflow cancelled)
 ```
 
 **Terminal States** (no transitions allowed):
+
 - `COMPLETED` → COMPLETED (idempotent only)
 - `FAILED` → FAILED (idempotent only)
 - `CANCELLED` → CANCELLED (idempotent only)
 
 **Invalid Transitions** (return 400 error):
+
 - COMPLETED → FAILED
 - COMPLETED → RUNNING
 - FAILED → COMPLETED
@@ -216,6 +224,7 @@ RUNNING → CANCELLED (workflow cancelled)
 - PENDING → COMPLETED (must go through RUNNING)
 
 **Implementation**:
+
 - State machine logic: `app/lib/job-state-machine.ts`
 - Validation: `canTransition(from, to)` function
 - Error: `InvalidTransitionError` class
@@ -225,6 +234,7 @@ RUNNING → CANCELLED (workflow cancelled)
 ### Ticket Title and Description
 
 The ticket validation schema allows the following characters:
+
 - Letters: `a-z`, `A-Z`
 - Numbers: `0-9`
 - Spaces
@@ -239,14 +249,16 @@ This allows for test prefixes like `[e2e]` and other common formatting needs whi
 All E2E test-generated data MUST use the `[e2e]` prefix pattern to enable selective cleanup and data isolation:
 
 **Ticket Creation Pattern**:
+
 ```typescript
 await createTicket(request, {
-  title: '[e2e] Fix login bug',  // ← [e2e] prefix mandatory
+  title: '[e2e] Fix login bug', // ← [e2e] prefix mandatory
   description: 'Test description',
-})
+});
 ```
 
 **Project Creation Pattern** (in `tests/helpers/db-cleanup.ts`):
+
 ```typescript
 await client.project.upsert({
   where: { id: 1 },
@@ -262,6 +274,7 @@ await client.project.upsert({
 ### Selective Cleanup
 
 The `cleanupDatabase()` function in `tests/helpers/db-cleanup.ts` performs selective deletion:
+
 - **Tickets**:
   - Deletes ALL tickets from projects 1 and 2 (test projects)
   - Deletes only `[e2e]` prefixed tickets from projects 4+
@@ -273,10 +286,11 @@ The `cleanupDatabase()` function in `tests/helpers/db-cleanup.ts` performs selec
 - **Manual Data**: All data without `[e2e]` prefix in projects 4+ is preserved
 
 **Usage**:
+
 ```typescript
 test.beforeEach(async () => {
-  await cleanupDatabase()  // Selective cleanup, preserves non-test data
-})
+  await cleanupDatabase(); // Selective cleanup, preserves non-test data
+});
 ```
 
 ### Best Practices for Test Creation
@@ -312,11 +326,13 @@ When testing features involving Job status updates:
    - Invalid job ID formats return 400
 
 **Test Files**:
+
 - Unit tests: `tests/unit/job-state-machine.test.ts` (29 tests)
 - Contract tests: `tests/e2e/job-status-update-contract.spec.ts` (14 tests)
 - E2E tests: `tests/e2e/job-status-update.spec.ts` (12 tests)
 
 **Test Data Setup for Job Tests**:
+
 ```typescript
 test.beforeEach(async () => {
   await cleanupDatabase();
