@@ -1,5 +1,5 @@
 import { test, expect, APIResponse } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 
 /**
  * Contract Tests: PATCH /api/projects/1/tickets/[id]
@@ -12,15 +12,11 @@ import { PrismaClient } from '@prisma/client';
 
 test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
   const BASE_URL = 'http://localhost:3000';
-  let prisma: PrismaClient;
-
-  test.beforeAll(() => {
-    prisma = new PrismaClient();
-  });
+  const prisma = getPrismaClient();
 
   test.beforeEach(async () => {
-    // Clean database before each test
-    await prisma.ticket.deleteMany({});
+    // Clean database before each test - protects project 3
+    await cleanupDatabase();
   });
 
   test.afterAll(async () => {

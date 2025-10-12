@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
 
 /**
  * E2E Tests for Ticket Detail Modal
@@ -11,15 +11,11 @@ import { PrismaClient } from '@prisma/client';
 
 test.describe('Ticket Detail Modal', () => {
   const BASE_URL = 'http://localhost:3000';
-  let prisma: PrismaClient;
-
-  test.beforeAll(() => {
-    prisma = new PrismaClient();
-  });
+  const prisma = getPrismaClient();
 
   test.beforeEach(async ({ request }) => {
-    // Clean database before each test
-    await prisma.ticket.deleteMany({});
+    // Clean database before each test - protects project 3
+    await cleanupDatabase();
 
     // Create test tickets for each stage
     await request.post(`${BASE_URL}/api/projects/1/tickets`, {
