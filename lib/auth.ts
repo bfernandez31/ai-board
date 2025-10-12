@@ -19,9 +19,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string
       }
       return session
     },
@@ -33,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   session: {
-    strategy: "database",
+    strategy: "jwt", // Use JWT for middleware compatibility
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 })
