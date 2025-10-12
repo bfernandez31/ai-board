@@ -197,9 +197,14 @@ test.describe('Project Cascade Delete', () => {
       description: 'Third ticket for project 2',
     });
 
-    // Verify total ticket count
-    const allTicketsBeforeDelete = await prisma.ticket.findMany({});
-    expect(allTicketsBeforeDelete).toHaveLength(5);
+    // Verify total ticket count for test projects only
+    // (Note: Project 3 may have tickets, so we only count test projects)
+    const testTicketsBeforeDelete = await prisma.ticket.findMany({
+      where: {
+        projectId: { in: [project1.id, project2.id] }
+      }
+    });
+    expect(testTicketsBeforeDelete).toHaveLength(5);
 
     // Delete project 1
     await prisma.project.delete({
