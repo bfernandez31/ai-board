@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth';
 
 test.describe('Application Header', () => {
   test('should display header on all pages', async ({ page }) => {

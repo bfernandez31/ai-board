@@ -42,28 +42,45 @@ export async function cleanupDatabase(): Promise<void> {
       }
     });
 
-    // Ensure test projects 1 and 2 exist with [e2e] prefix
+    // Ensure test user exists for E2E tests
+    const testUser = await client.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
+    // Ensure test projects 1 and 2 exist with [e2e] prefix and assigned to test user
     await client.project.upsert({
       where: { id: 1 },
-      update: {}, // No update needed if exists
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
 
     await client.project.upsert({
       where: { id: 2 },
-      update: {}, // No update needed if exists
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 2,
         name: '[e2e] Test Project 2',
         description: 'Second project for cross-project tests',
         githubOwner: 'test',
         githubRepo: 'test2',
+        userId: testUser.id,
       },
     });
 

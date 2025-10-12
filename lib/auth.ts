@@ -6,6 +6,11 @@ import { prisma } from "@/lib/db/client"
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
 
+  // Use test secret in test environment
+  ...(process.env.NEXTAUTH_SECRET || process.env.NODE_ENV === 'test'
+    ? { secret: process.env.NEXTAUTH_SECRET || 'test-secret-min-32-chars-long-for-nextauth' }
+    : {}),
+
   providers: [
     GitHub({
       clientId: process.env.GITHUB_ID!,
@@ -25,9 +30,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return token
     },
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string
+    async session({ session, token, user }) {
+      // In test mode with database sessions, user comes from database
+      // In production with JWT, user.id comes from token
+      if (session.user) {
+        session.user.id = (user?.id || token?.id) as string
       }
       return session
     },
@@ -39,7 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   session: {
-    strategy: "jwt", // Use JWT for middleware compatibility
+    strategy: process.env.NODE_ENV === 'test' ? "database" : "jwt", // Use database for tests, JWT for production
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 })

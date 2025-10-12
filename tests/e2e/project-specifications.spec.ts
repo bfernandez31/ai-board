@@ -5,7 +5,7 @@
  * correctly redirects to GitHub specs/specifications directory.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 test.describe('Project Specifications', () => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth';
 
 test.describe('Foundation Validation', () => {
   test('no console errors on homepage', async ({ page }) => {

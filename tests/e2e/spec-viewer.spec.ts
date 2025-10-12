@@ -12,7 +12,7 @@
  * TDD Approach: These tests are written BEFORE implementation and should fail initially
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth';
 import { getPrismaClient } from '../helpers/db-cleanup';
 
 const prisma = getPrismaClient();

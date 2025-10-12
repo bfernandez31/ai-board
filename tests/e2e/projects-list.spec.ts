@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 test.describe('Projects List Page', () => {
@@ -7,7 +7,7 @@ test.describe('Projects List Page', () => {
     await cleanupDatabase(); // This function preserves non-[e2e] prefixed data
   });
 
-  test('displays all projects with correct information', async ({ page }) => {
+  test('displays all projects with correct information', async ({ authenticatedPage: page }) => {
     // Navigate to projects page
     await page.goto('http://localhost:3000/projects');
 
@@ -26,7 +26,7 @@ test.describe('Projects List Page', () => {
     await expect(firstCard.locator('[data-testid="project-ticket-count"]')).toBeVisible();
   });
 
-  test('navigates to board when clicking project card', async ({ page }) => {
+  test('navigates to board when clicking project card', async ({ authenticatedPage: page }) => {
     await page.goto('http://localhost:3000/projects');
     await page.waitForSelector('[data-testid="project-card"]');
 
@@ -41,7 +41,7 @@ test.describe('Projects List Page', () => {
     await expect(page).toHaveURL(`/projects/${projectId}/board`);
   });
 
-  test('shows hover effect on project cards', async ({ page }) => {
+  test('shows hover effect on project cards', async ({ authenticatedPage: page }) => {
     await page.goto('http://localhost:3000/projects');
     await page.waitForSelector('[data-testid="project-card"]');
 
@@ -59,7 +59,7 @@ test.describe('Projects List Page', () => {
     expect(transform).not.toBe('none');
   });
 
-  test('displays Import and Create Project buttons as disabled', async ({ page }) => {
+  test('displays Import and Create Project buttons as disabled', async ({ authenticatedPage: page }) => {
     await page.goto('http://localhost:3000/projects');
 
     // Verify Import Project button
@@ -79,7 +79,7 @@ test.describe('Projects List Page', () => {
   // 1. Temporarily delete all projects (violates data preservation policy), OR
   // 2. Add a query parameter to force empty state (not production code), OR
   // 3. Use a separate test database (infrastructure change)
-  test.skip('displays empty state when no projects exist', async ({ page }) => {
+  test.skip('displays empty state when no projects exist', async ({ authenticatedPage: page }) => {
     // This test verifies the empty state UI when no projects are available
     // Empty state component code is at: /components/projects/empty-projects-state.tsx
     // Manual testing: Delete all projects and visit /projects

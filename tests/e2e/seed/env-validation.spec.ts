@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../fixtures/auth';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { execSync } from 'child_process';
 
