@@ -64,27 +64,41 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 - Priorité 4: GitHub Preparation (project model, URLs)
 - Prompts `/specify` prêts à l'emploi
 
+### 7. [Authentication Multi-Platform](./authentication-multiplatform.md) - Auth & Git Support 🔐
+**Architecture authentification et support multi-plateformes Git**
+
+- Authentification multi-provider (GitHub, Google, GitLab, Bitbucket)
+- Isolation multi-utilisateurs et sécurité
+- Support multi-plateformes Git (GitHub, GitLab, Bitbucket)
+- Abstraction Git client unifiée
+- Plan d'implémentation en 4 phases (MVP → Google → GitLab → Bitbucket)
+- RBAC futur (owner/admin/editor/viewer)
+- **Temps de dev Phase 1: 16-24h**
+
 ## 🚀 Par Où Commencer ?
 
 ### Pour Développeurs
 1. ✅ Lire [Overview](./overview.md) - comprendre la vision
 2. ✅ Lire [MVP Quickstart](./mvp-quickstart.md) - guide d'implémentation
 3. ✅ Lire [Timeout Analysis](./timeout-analysis.md) - comprendre les limites
-4. ✅ Implémenter le MVP
-5. ⏳ Monitorer métriques
-6. ⏳ Migrer vers Target si besoin
+4. ✅ Lire [Authentication Multi-Platform](./authentication-multiplatform.md) - authentification et multi-plateformes
+5. ✅ Implémenter le MVP
+6. ⏳ Monitorer métriques
+7. ⏳ Migrer vers Target si besoin
 
 ### Pour Product Managers
 1. ✅ Lire [Overview](./overview.md) - workflow et vision
 2. ✅ Lire [Feasibility Analysis](./feasibility.md) - ROI et décisions
 3. ✅ Lire [Timeout Analysis](./timeout-analysis.md) - contraintes techniques
-4. ✅ Prioriser [Next Features](./next-features.md) - roadmap
+4. ✅ Lire [Authentication Multi-Platform](./authentication-multiplatform.md) - stratégie multi-provider
+5. ✅ Prioriser [Next Features](./next-features.md) - roadmap
 
 ### Pour Architectes
 1. ✅ Lire [Overview](./overview.md) - architecture globale
 2. ✅ Comparer [MVP Quickstart](./mvp-quickstart.md) vs [Architecture Target](./architecture-target.md)
 3. ✅ Analyser [Feasibility Analysis](./feasibility.md) - risques et migration
 4. ✅ Évaluer [Timeout Analysis](./timeout-analysis.md) - contraintes critiques
+5. ✅ Concevoir [Authentication Multi-Platform](./authentication-multiplatform.md) - sécurité et extensibilité
 
 ## 📊 Recommandations Clés
 
@@ -159,9 +173,15 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 
 ## 📝 Notes de Mise à Jour
 
-**Dernière mise à jour**: 2025-10-02
+**Dernière mise à jour**: 2025-10-12
 
 **Changements récents**:
+- ✅ Ajout document Authentication Multi-Platform complet
+- ✅ Architecture NextAuth avec support multi-provider (GitHub, Google, GitLab, Bitbucket)
+- ✅ Support multi-plateformes Git (GitHub, GitLab, Bitbucket)
+- ✅ Modèle de données extensible avec isolation multi-utilisateurs
+- ✅ Sécurité et RBAC futur
+- ✅ Plan d'implémentation en 4 phases (MVP → Extensions)
 - ✅ Ajout analyse timeout GitHub Actions
 - ✅ Mise à jour triggers migration (volume + performance)
 - ✅ Documentation complète MVP vs Target
@@ -169,6 +189,7 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 - ✅ Métriques de monitoring ajoutées
 
 **Prochaines étapes**:
+- [ ] Implémenter authentification GitHub (Phase 1)
 - [ ] Implémenter colonne SPECIFY
 - [ ] Créer workflow GitHub Actions
 - [ ] Ajouter monitoring durée jobs
