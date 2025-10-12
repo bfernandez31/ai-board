@@ -96,8 +96,8 @@ model Project {
   description String   @db.VarChar(1000)
   githubOwner String   @db.VarChar(100)
   githubRepo  String   @db.VarChar(100)
-  userId      Int?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets     Ticket[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
