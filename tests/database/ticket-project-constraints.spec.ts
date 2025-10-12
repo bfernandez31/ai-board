@@ -15,13 +15,28 @@ import { createTestProject, createTestTicket } from '../helpers/db-setup';
  */
 
 test.describe('Ticket-Project Constraints', () => {
+  // Track projects created in each test for cleanup
+  const createdProjectIds: number[] = [];
+
   test.beforeEach(async () => {
     // Clean database before each test
     await cleanupDatabase();
+    // Reset project tracking
+    createdProjectIds.length = 0;
+  });
+
+  test.afterEach(async () => {
+    // Clean up projects created in this test
+    const prisma = getPrismaClient();
+    if (createdProjectIds.length > 0) {
+      await prisma.project.deleteMany({
+        where: { id: { in: createdProjectIds } }
+      });
+    }
   });
 
   test.afterAll(async () => {
-    // Cleanup after all tests
+    // Final cleanup after all tests
     await cleanupDatabase();
   });
 
@@ -65,6 +80,7 @@ test.describe('Ticket-Project Constraints', () => {
       githubOwner: 'test-owner',
       githubRepo: 'cascade-test-repo',
     });
+    createdProjectIds.push(project.id);
 
     // Create multiple tickets for this project
     await createTestTicket(project.id, {
@@ -117,6 +133,7 @@ test.describe('Ticket-Project Constraints', () => {
       githubOwner: 'owner1',
       githubRepo: 'repo1',
     });
+    createdProjectIds.push(project1.id);
 
     const project2 = await createTestProject({
       name: 'Project 2',
@@ -124,6 +141,7 @@ test.describe('Ticket-Project Constraints', () => {
       githubOwner: 'owner2',
       githubRepo: 'repo2',
     });
+    createdProjectIds.push(project2.id);
 
     // Create tickets for project 1
     await createTestTicket(project1.id, {
@@ -188,6 +206,7 @@ test.describe('Ticket-Project Constraints', () => {
       githubOwner: 'relation-owner',
       githubRepo: 'relation-repo',
     });
+    createdProjectIds.push(project.id);
 
     // Create tickets
     await createTestTicket(project.id, {

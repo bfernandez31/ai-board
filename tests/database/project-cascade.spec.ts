@@ -19,13 +19,28 @@ import { createTestProject, createTestTicket } from '../helpers/db-setup';
  */
 
 test.describe('Project Cascade Delete', () => {
+  // Track projects created in each test for cleanup
+  const createdProjectIds: number[] = [];
+
   test.beforeEach(async () => {
     // Clean database before each test
     await cleanupDatabase();
+    // Reset project tracking
+    createdProjectIds.length = 0;
+  });
+
+  test.afterEach(async () => {
+    // Clean up projects created in this test
+    const prisma = getPrismaClient();
+    if (createdProjectIds.length > 0) {
+      await prisma.project.deleteMany({
+        where: { id: { in: createdProjectIds } }
+      });
+    }
   });
 
   test.afterAll(async () => {
-    // Cleanup after all tests
+    // Final cleanup after all tests
     await cleanupDatabase();
   });
 
