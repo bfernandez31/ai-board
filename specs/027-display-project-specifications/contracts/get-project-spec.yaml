@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Project Specification API
+  description: API endpoint for retrieving project specification content from GitHub
+  version: 1.0.0
+  contact:
+    name: AI Board Development Team
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://ai-board.vercel.app
+    description: Production
+
+paths:
+  /api/projects/{projectId}/spec:
+    get:
+      summary: Get project specification
+      description: |
+        Retrieves the README.md file from /specs/specifications/ directory
+        in the project's GitHub repository. Returns markdown content and metadata.
+
+        **File Location**: `/specs/specifications/README.md` on main branch
+        **Content Type**: Markdown (text/plain)
+        **Size Limit**: None (per FR-013)
+
+        **Error Scenarios**:
+        - 400: Invalid project ID format
+        - 404: Project not found or README.md missing
+        - 429: GitHub API rate limit exceeded
+        - 500: GitHub API error or internal server error
+
+      operationId: getProjectSpec
+      tags:
+        - Projects
+        - Specifications
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Unique identifier of the project
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          examples:
+            valid:
+              value: 1
+              summary: Valid project ID
+            invalid:
+              value: -1
+              summary: Invalid project ID (negative)
+
+      responses:
+        '200':
+          description: Specification retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - content
+                  - metadata
+                properties:
+                  content:
+                    type: string
+                    description: Markdown content of the specification file
+                    minLength: 1
+                    maxLength: 10485760  # 10MB (no hard limit, but for schema validation)
+                    example: |
+                      # Project Specification
+
+                      ## Overview
+                      This document describes...
+
+                  metadata:
+                    type: object
+                    required:
+                      - projectId
+                      - projectName
+                      - fileName
+                      - filePath
+                      - size
+                      - lastModified
+                      - githubUrl
+                    properties:
+                      projectId:
+                        type: integer
+                        format: int32
+                        description: Project ID from request
+                        example: 1
+
+                      projectName:
+                        type: string
+                        description: Human-readable project name
+                        example: "AI Board Development"
+
+                      fileName:
+                        type: string
+                        description: Name of the specification file
+                        const: "README.md"
+                        example: "README.md"
+
+                      filePath:
+                        type: string
+                        description: Full path to file in repository
+                        const: "/specs/specifications/README.md"
+                        example: "/specs/specifications/README.md"
+
+                      size:
+                        type: integer
+                        format: int64
+                        description: File size in bytes
+                        minimum: 0
+                        example: 15420
+
+                      lastModified:
+                        type: string
+                        format: date-time
+                        description: Last modification timestamp (ISO 8601)
+                        example: "2025-10-12T14:30:00Z"
+
+                      githubUrl:
+                        type: string
+                        format: uri
+                        description: Direct link to file on GitHub
+                        example: "https://github.com/owner/repo/blob/main/specs/specifications/README.md"
+
+              examples:
+                successful_response:
+                  summary: Successful specification retrieval
+                  value:
+                    content: |
+                      # AI Board Development
+
+                      ## Project Overview
+                      A Kanban-style board application...
+
+                      ## Architecture
+                      - Frontend: Next.js 15
+                      - Backend: Prisma + PostgreSQL
+                    metadata:
+                      projectId: 1
+                      projectName: "AI Board Development"
+                      fileName: "README.md"
+                      filePath: "/specs/specifications/README.md"
+                      size: 2048
+                      lastModified: "2025-10-12T14:30:00Z"
+                      githubUrl: "https://github.com/bfernandez31/ai-board/blob/main/specs/specifications/README.md"
+
+        '400':
+          description: Invalid request (malformed project ID)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_project_id:
+                  summary: Invalid project ID format
+                  value:
+                    error: "Invalid project ID"
+                    code: "VALIDATION_ERROR"
+
+        '404':
+          description: Project or specification file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                project_not_found:
+                  summary: Project doesn't exist
+                  value:
+                    error: "Project not found"
+                    code: "PROJECT_NOT_FOUND"
+
+                file_not_found:
+                  summary: README.md missing from repository
+                  value:
+                    error: "Specification file not found"
+                    code: "FILE_NOT_FOUND"
+                    message: "File does not exist at /specs/specifications/README.md"
+
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rate_limit:
+                  summary: GitHub rate limit hit
+                  value:
+                    error: "GitHub API rate limit exceeded"
+                    code: "RATE_LIMIT"
+          headers:
+            Retry-After:
+              description: Seconds until rate limit resets
+              schema:
+                type: integer
+              example: 3600
+
+        '500':
+          description: Internal server error or GitHub API failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                github_error:
+                  summary: GitHub API error
+                  value:
+                    error: "Failed to fetch specification"
+                    code: "GITHUB_API_ERROR"
+
+                internal_error:
+                  summary: Unexpected server error
+                  value:
+                    error: "Internal server error"
+                    code: "INTERNAL_ERROR"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Project not found"
+
+        code:
+          type: string
+          description: Machine-readable error code for client handling
+          enum:
+            - VALIDATION_ERROR
+            - PROJECT_NOT_FOUND
+            - FILE_NOT_FOUND
+            - RATE_LIMIT
+            - GITHUB_API_ERROR
+            - INTERNAL_ERROR
+          example: "PROJECT_NOT_FOUND"
+
+        message:
+          type: string
+          description: Additional error details (optional)
+          example: "Project with ID 999 does not exist"
+
+  securitySchemes:
+    GitHubToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        GitHub personal access token used server-side to access repository.
+        Not exposed to client. Configured via GITHUB_TOKEN environment variable.
+
+security:
+  - GitHubToken: []
+
+tags:
+  - name: Projects
+    description: Project-related endpoints
+  - name: Specifications
+    description: Specification document retrieval
