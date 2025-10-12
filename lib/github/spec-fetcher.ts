@@ -40,6 +40,7 @@ export async function fetchSpecContent(params: FetchSpecParams): Promise<string>
 
   // Test mode detection (matches pattern from transition.ts)
   const isTestMode =
+    process.env.NODE_ENV === 'test' ||
     !githubToken ||
     githubToken.includes('test') ||
     githubToken.includes('placeholder');
@@ -90,3 +91,4 @@ const test = 'example';
     throw new Error('Failed to fetch specification from GitHub');
   }
 }
+
