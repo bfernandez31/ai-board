@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github } from "lucide-react"
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: { callbackUrl?: string }
+  searchParams: Promise<{ callbackUrl?: string }>
 }) {
+  const params = await searchParams
+  const callbackUrl = params.callbackUrl || "/projects"
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <Card className="w-[400px]">
@@ -21,7 +24,7 @@ export default function SignInPage({
           <form action={async () => {
             "use server"
             await signIn("github", {
-              redirectTo: searchParams.callbackUrl || "/projects"
+              redirectTo: callbackUrl
             })
           }}>
             <Button type="submit" className="w-full" size="lg">
