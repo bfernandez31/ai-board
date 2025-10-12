@@ -17,10 +17,10 @@ test.describe('Integration: Branch assignment workflow', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'Branch Assignment Test Project',
+        name: '[e2e] Branch Assignment Test Project',
         description: 'Project for testing branch assignment workflow',
         githubOwner: 'integration-test-owner',
         githubRepo: 'branch-assignment-test',

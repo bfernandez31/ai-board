@@ -18,10 +18,10 @@ test.describe('Integration: AutoMode toggle', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'AutoMode Test Project',
+        name: '[e2e] AutoMode Test Project',
         description: 'Project for testing autoMode flag',
         githubOwner: 'integration-test-owner',
         githubRepo: 'automode-test',

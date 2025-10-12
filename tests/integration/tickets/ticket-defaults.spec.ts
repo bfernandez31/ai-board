@@ -16,10 +16,10 @@ test.describe('Integration: Ticket creation with default values', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project for integration testing
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'Integration Test Project',
+        name: '[e2e] Integration Test Project',
         description: 'Project for integration testing default values',
         githubOwner: 'integration-test-owner',
         githubRepo: 'ticket-defaults-test',

@@ -18,10 +18,10 @@ test.describe('Integration: Branch validation edge cases', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'Validation Test Project',
+        name: '[e2e] Validation Test Project',
         description: 'Project for testing validation edge cases',
         githubOwner: 'integration-test-owner',
         githubRepo: 'validation-test',

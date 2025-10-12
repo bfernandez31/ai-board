@@ -18,10 +18,10 @@ test.describe('Integration: Multiple fields atomic update', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
-    // Create a test project
+    // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
-        name: 'Multi-Field Update Test Project',
+        name: '[e2e] Multi-Field Update Test Project',
         description: 'Project for testing atomic multi-field updates',
         githubOwner: 'integration-test-owner',
         githubRepo: 'multi-field-test',
