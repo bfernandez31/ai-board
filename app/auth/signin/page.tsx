@@ -1,4 +1,4 @@
-import { signIn } from "@/app/api/auth/[...nextauth]/route"
+import { signIn } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github } from "lucide-react"
