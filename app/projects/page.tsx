@@ -3,6 +3,7 @@ import { ProjectsContainer } from '@/components/projects/projects-container';
 import { Button } from '@/components/ui/button';
 import { Upload, Plus } from 'lucide-react';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
+import { getUserProjects } from '@/lib/db/projects';
 
 export const metadata: Metadata = {
   title: 'Projects | AI Board',
@@ -11,20 +12,20 @@ export const metadata: Metadata = {
 
 async function getProjects(): Promise<ProjectsListResponse> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/projects`, {
-      cache: 'no-store', // Always fetch fresh data
-    });
+    // Use data access layer directly instead of fetch
+    const projects = await getUserProjects();
 
-    if (!response.ok) {
-      console.error('Failed to fetch projects:', response.statusText);
-      return []; // Return empty array on error (graceful degradation)
-    }
-
-    return response.json();
+    // Transform to API response shape
+    return projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      updatedAt: project.updatedAt.toISOString(),
+      ticketCount: project._count.tickets,
+    }));
   } catch (error) {
     console.error('Failed to fetch projects:', error);
-    return []; // Return empty array on error
+    return []; // Return empty array on error (graceful degradation)
   }
 }
 
