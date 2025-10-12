@@ -1,4 +1,4 @@
-import { test, expect, Page, APIResponse } from '@playwright/test';
+import { test, expect, Page, APIResponse } from '../../fixtures/auth';
 import { PrismaClient } from '@prisma/client';
 import { getPrismaClient, cleanupDatabase } from '../../helpers/db-cleanup';
 
@@ -19,20 +19,9 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     prisma = getPrismaClient();
   });
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async () => {
     // Clean database before each test
     await cleanupDatabase();
-
-    // Mock SSE endpoint to prevent connection timeouts
-    // The drag-drop tests don't need real-time updates
-    await page.route('**/api/sse**', async (route) => {
-      // Return empty SSE stream that immediately closes
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/event-stream',
-        body: '',
-      });
-    });
   });
 
   /**
@@ -49,31 +38,29 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
       },
     });
 
+    console.log(`Create ticket - Status: ${response.status()}, Content-Type: ${response.headers()['content-type']}`);
+
     if (!response.ok()) {
-      const error = await response.json();
-      throw new Error(`Failed to create ticket: ${JSON.stringify(error)}`);
+      const errorText = await response.text();
+      console.log(`Error response body: ${errorText.substring(0, 500)}`);
+      throw new Error(`Failed to create ticket: ${response.status()} - ${errorText.substring(0, 200)}`);
     }
 
-    const ticket = await response.json();
+    const responseText = await response.text();
+    console.log(`Response body: ${responseText.substring(0, 200)}`);
 
-    // Update stage directly via Prisma for test setup
-    if (stage !== 'INBOX') {
-      await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { stage: stage as any },
-      });
+    try {
+      const ticket = JSON.parse(responseText);
+      return {
+        id: ticket.id,
+        version: ticket.version,
+        title: ticket.title,
+      };
+    } catch (e) {
+      throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 500)}`);
     }
 
-    // Fetch updated ticket with version
-    const updatedTicket = await prisma.ticket.findUnique({
-      where: { id: ticket.id },
-    });
 
-    return {
-      id: updatedTicket!.id,
-      version: updatedTicket!.version,
-      title: updatedTicket!.title,
-    };
   };
 
   /**
@@ -107,7 +94,16 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T005: Test sequential drag through workflow (INBOX → SPECIFY → PLAN)
    * Updated for SPECIFY stage addition
    */
-  test('user can drag ticket sequentially through workflow', async ({ page, request }) => {
+  test('user can drag ticket sequentially through workflow', async ({ authenticatedPage: page, request }) => {
+    // Mock SSE endpoint to prevent connection timeouts
+    await page.route('**/api/sse**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
+
     // Setup: Create ticket in INBOX
     const ticket = await createTicket(request, 'INBOX');
 
@@ -156,7 +152,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T006: Test rejecting invalid stage transition (skipping)
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot skip stages when dragging', async ({ page, request }) => {
+  test('user cannot skip stages when dragging', async ({ authenticatedPage: page, request }) => {
     // Setup: Create ticket in PLAN
     const ticket = await createTicket(request, 'PLAN');
 
@@ -189,7 +185,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T007: Test rejecting backwards movement
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot move ticket backwards', async ({ page, request }) => {
+  test('user cannot move ticket backwards', async ({ authenticatedPage: page, request }) => {
     // Setup: Create ticket in BUILD
     const ticket = await createTicket(request, 'BUILD');
 
@@ -216,7 +212,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T008: Test handling concurrent updates with first-write-wins
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('handles concurrent updates with first-write-wins', async ({ page, context, request }) => {
+  test('handles concurrent updates with first-write-wins', async ({ authenticatedPage: page, context, request }) => {
     // Setup: Create ticket in INBOX
     const ticket = await createTicket(request, 'INBOX');
 
@@ -272,7 +268,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T009: Test disabling drag when offline
    * Expected: FAILS (offline detection not implemented)
    */
-  test('disables drag when network is offline', async ({ page, context, request }) => {
+  test('disables drag when network is offline', async ({ authenticatedPage: page, context, request }) => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 
@@ -309,7 +305,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T010: Test touch drag on mobile viewport
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('supports touch drag on mobile viewport', async ({ page, request }) => {
+  test('supports touch drag on mobile viewport', async ({ authenticatedPage: page, request }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -331,7 +327,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T011: Test sub-100ms latency validation
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('meets sub-100ms latency requirement', async ({ page, request }) => {
+  test('meets sub-100ms latency requirement', async ({ authenticatedPage: page, request }) => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 

@@ -1,4 +1,4 @@
-import { test as base, Page } from '@playwright/test';
+import { test as base, Page, APIRequestContext } from '@playwright/test';
 import { getTestSessionCookie } from '../helpers/auth';
 
 /**
@@ -8,6 +8,7 @@ import { getTestSessionCookie } from '../helpers/auth';
 
 type AuthFixtures = {
   authenticatedPage: Page;
+  request: APIRequestContext;
 };
 
 export const test = base.extend<AuthFixtures>({
@@ -18,6 +19,22 @@ export const test = base.extend<AuthFixtures>({
 
     // Use the authenticated page
     await use(page);
+  },
+
+  // Override request fixture to include auth cookie
+  request: async ({ playwright }, use) => {
+    const sessionCookie = await getTestSessionCookie();
+
+    const context = await playwright.request.newContext({
+      baseURL: 'http://localhost:3000',
+      extraHTTPHeaders: {
+        // Add session cookie to all API requests
+        'Cookie': `${sessionCookie.name}=${sessionCookie.value}`
+      }
+    });
+
+    await use(context);
+    await context.dispose();
   },
 });
 
