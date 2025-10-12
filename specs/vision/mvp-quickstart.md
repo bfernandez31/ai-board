@@ -1,5 +1,17 @@
 # MVP Quickstart - GitHub Actions Approach
 
+> ⚠️ **IMPORTANT**: Ce document décrit l'architecture technique MVP. Pour un guide de déploiement complet avec authentification, voir **[mvp-with-auth-deployment.md](./mvp-with-auth-deployment.md)**.
+
+## 🔐 Authentication Required for MVP
+
+**L'authentification est REQUISE dès le MVP** pour garantir :
+- ✅ Isolation multi-utilisateurs native
+- ✅ Architecture finale dès V1 (pas de migration post-déploiement)
+- ✅ Sécurité by design
+- ✅ Scalabilité jour 1
+
+**Voir** : [authentication-multiplatform.md](./authentication-multiplatform.md) pour la vision complète de l'authentification.
+
 ## Overview
 
 The MVP uses **GitHub Actions** as the spec-kit execution environment, eliminating the need for additional infrastructure while providing a simple, cost-effective solution.
@@ -10,24 +22,32 @@ The MVP uses **GitHub Actions** as the spec-kit execution environment, eliminati
 - ✅ Repository already cloned in runner environment
 - ✅ Built-in logs and monitoring via GitHub UI
 - ✅ Simple deployment (Vercel + managed Postgres)
+- ✅ Multi-user ready with NextAuth integration
 
 **Limitations:**
 - ⚠️ Execution latency: ~20-40s (includes queue time + runner boot)
 - ⚠️ Limited to GitHub Actions quotas (2000 free minutes/month)
 - ⚠️ Less control over execution environment
 
-## Architecture Diagram
+## Architecture Diagram (with Authentication)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    User Browser                                 │
+│  - Sign in with GitHub OAuth (NextAuth)                         │
 │  - Drag ticket to SPECIFY/PLAN/BUILD                            │
 └─────────────────┬───────────────────────────────────────────────┘
-                  │ HTTPS POST /api/tickets/[id]/transition
+                  │ HTTPS + Session Cookie
+                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Middleware (Auth Protection)                       │
+│  - Verify session → Extract userId → Inject context            │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ POST /api/tickets/[id]/transition
                   ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │              Next.js API Routes (Vercel)                        │
-│  - Validate transition                                          │
+│  - Validate userId ownership                                    │
 │  - Create job record in PostgreSQL                              │
 │  - Dispatch GitHub Actions workflow via Octokit                 │
 └─────────────────┬───────────────────────────────────────────────┘
@@ -36,15 +56,15 @@ The MVP uses **GitHub Actions** as the spec-kit execution environment, eliminati
                   ▼                 ▼                            ▼
          ┌────────────────┐  ┌──────────────┐     ┌─────────────────┐
          │   PostgreSQL   │  │   GitHub     │     │   GitHub        │
-         │   (Neon/       │  │   API        │     │   Actions       │
-         │   Supabase)    │  │   (Octokit)  │     │   Runner        │
-         │                │  │              │     │                 │
+         │   (Neon)       │  │   API        │     │   Actions       │
+         │                │  │   (Octokit)  │     │   Runner        │
+         │ - User/Auth    │  │              │     │                 │
          │ - Tickets      │  │ - Dispatch   │     │ 1. Checkout     │
          │ - Jobs         │  │   workflow   │     │    branch       │
          │ - Projects     │  │              │     │ 2. Install deps │
-         └────────────────┘  └──────────────┘     │ 3. Run spec-kit │
-                  ▲                                │ 4. Commit files │
-                  │                                │ 5. Push branch  │
+         │   (+ userId)   │  │              │     │ 3. Run spec-kit │
+         └────────────────┘  └──────────────┘     │ 4. Commit files │
+                  ▲                                │ 5. Push branch  │
                   │                                └────────┬────────┘
                   │                                         │
                   │ Webhook callback                        │
@@ -566,32 +586,61 @@ model Job {
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/aiboard_dev"
 
+# NextAuth (Authentication)
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
+
+# GitHub OAuth (Development)
+GITHUB_ID="Ov23liABC123..."
+GITHUB_SECRET="dev_secret_here..."
+
 # Anthropic Claude API
 ANTHROPIC_API_KEY="sk-ant-api03-..."
 
-# GitHub Personal Access Token
+# GitHub Personal Access Token (for workflow dispatch)
 # Scopes needed: repo, workflow
 GITHUB_TOKEN="ghp_..."
 
 # App Configuration
 GITHUB_OWNER="your-username"
 GITHUB_REPO="ai-board"
+
+# Optional
+NODE_ENV="development"
+PORT="3000"
 ```
 
 ### Production (Vercel Environment Variables)
 
 ```bash
-# Database (Neon or Supabase)
-DATABASE_URL="postgresql://..."
+# Database (Neon)
+DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+
+# NextAuth (Authentication)
+NEXTAUTH_URL="https://your-app.vercel.app"
+NEXTAUTH_SECRET="production_secret_here..."
+
+# GitHub OAuth (Production - separate OAuth App)
+GITHUB_ID="Ov23liPROD123..."
+GITHUB_SECRET="prod_secret_here..."
 
 # Anthropic Claude API
 ANTHROPIC_API_KEY="sk-ant-..."
 
-# GitHub Integration
+# GitHub Personal Access Token (for workflow dispatch)
 GITHUB_TOKEN="ghp_..."
 GITHUB_OWNER="your-org"
 GITHUB_REPO="ai-board"
+
+# Node Environment
+NODE_ENV="production"
 ```
+
+**Notes importantes** :
+- Utiliser **2 OAuth Apps séparées** pour dev et prod (callback URLs différentes)
+- Générer `NEXTAUTH_SECRET` avec : `openssl rand -base64 32`
+- Ne JAMAIS commit ces variables dans git
+- Voir [mvp-with-auth-deployment.md](./mvp-with-auth-deployment.md) pour le setup complet
 
 ## Local Development Setup
 
