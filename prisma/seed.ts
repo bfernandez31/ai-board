@@ -12,6 +12,17 @@ async function main() {
     );
   }
 
+  // Ensure admin user exists
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@ai-board.local' },
+    update: {},
+    create: {
+      email: 'admin@ai-board.local',
+      name: 'Admin User',
+      emailVerified: new Date(),
+    },
+  });
+
   // Check if default project already exists
   let project = await prisma.project.findUnique({
     where: {
@@ -32,6 +43,7 @@ async function main() {
         description: "AI-powered project management board",
         githubOwner,
         githubRepo,
+        userId: admin.id,
       },
     });
 

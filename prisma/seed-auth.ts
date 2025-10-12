@@ -18,13 +18,12 @@ async function main() {
 
   console.log('✅ Default admin user created:', admin.email)
 
-  // Assign existing projects to admin
-  const result = await prisma.project.updateMany({
-    where: { userId: null },
-    data: { userId: admin.id },
+  // Count projects assigned to admin
+  const projectCount = await prisma.project.count({
+    where: { userId: admin.id },
   })
 
-  console.log(`✅ Assigned ${result.count} projects to admin user`)
+  console.log(`✅ Admin user has ${projectCount} projects`)
 }
 
 main()
