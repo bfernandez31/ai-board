@@ -13,10 +13,13 @@ async function globalSetup() {
   const envPath = path.resolve(process.cwd(), '.env');
   dotenv.config({ path: envPath });
 
-  // Clean database before test run
-  await cleanupDatabase();
+  // Clean database and get test user ID
+  const testUserId = await cleanupDatabase();
 
-  console.log('✅ Global setup complete\n');
+  // Store test user ID in environment for Playwright to use
+  process.env.TEST_USER_ID = testUserId.toString();
+
+  console.log(`✅ Global setup complete (test user ID: ${testUserId})\n`);
 }
 
 export default globalSetup;

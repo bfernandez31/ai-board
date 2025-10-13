@@ -1,7 +1,7 @@
-import { test, expect } from '../fixtures/auth';
+import { test, expect } from '@playwright/test';
 
 test.describe('Debug Authentication', () => {
-  test('verify session cookie is set', async ({ authenticatedPage: page }) => {
+  test('verify session cookie is set', async ({ page }) => {
     // Get all cookies
     const cookies = await page.context().cookies();
     console.log('Page cookies:', JSON.stringify(cookies, null, 2));

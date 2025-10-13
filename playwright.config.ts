@@ -20,6 +20,10 @@ const config = defineConfig({
     trace: 'on-first-retry',
     actionTimeout: 10000, // 10 seconds for actions
     navigationTimeout: 30000, // 30 seconds for navigation
+    // Global auth header for all tests (bypasses NextAuth)
+    extraHTTPHeaders: {
+      'x-test-user-id': process.env.TEST_USER_ID || '1', // Set by global-setup.ts
+    },
   },
   projects: [
     {

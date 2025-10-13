@@ -14,7 +14,7 @@ export function getPrismaClient(): PrismaClient {
   return prisma;
 }
 
-export async function cleanupDatabase(): Promise<void> {
+export async function cleanupDatabase(): Promise<number> {
   const client = getPrismaClient();
 
   try {
@@ -85,6 +85,7 @@ export async function cleanupDatabase(): Promise<void> {
     });
 
     console.log('✓ Database cleaned successfully');
+    return testUser.id;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const reachable =
@@ -94,7 +95,7 @@ export async function cleanupDatabase(): Promise<void> {
 
     if (message.includes("Can't reach database server") || reachable === 'P1001') {
       console.warn('⚠️ Skipping database cleanup: database unreachable.');
-      return;
+      return 1; // Default test user ID
     }
 
     console.error('✗ Database cleanup failed:', error);

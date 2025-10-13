@@ -1,4 +1,4 @@
-import { test, expect, Page, APIResponse } from '../../fixtures/auth';
+import { test, expect, Page, APIResponse } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import { getPrismaClient, cleanupDatabase } from '../../helpers/db-cleanup';
 
@@ -94,7 +94,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T005: Test sequential drag through workflow (INBOX → SPECIFY → PLAN)
    * Updated for SPECIFY stage addition
    */
-  test('user can drag ticket sequentially through workflow', async ({ authenticatedPage: page, request }) => {
+  test('user can drag ticket sequentially through workflow', async ({ page, request }) => {
     // Mock SSE endpoint to prevent connection timeouts
     await page.route('**/api/sse**', async (route) => {
       await route.fulfill({
@@ -152,7 +152,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T006: Test rejecting invalid stage transition (skipping)
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot skip stages when dragging', async ({ authenticatedPage: page, request }) => {
+  test('user cannot skip stages when dragging', async ({ page, request }) => {
     // Setup: Create ticket in PLAN
     const ticket = await createTicket(request, 'PLAN');
 
@@ -185,7 +185,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T007: Test rejecting backwards movement
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot move ticket backwards', async ({ authenticatedPage: page, request }) => {
+  test('user cannot move ticket backwards', async ({ page, request }) => {
     // Setup: Create ticket in BUILD
     const ticket = await createTicket(request, 'BUILD');
 
@@ -212,7 +212,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T008: Test handling concurrent updates with first-write-wins
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('handles concurrent updates with first-write-wins', async ({ authenticatedPage: page, context, request }) => {
+  test('handles concurrent updates with first-write-wins', async ({ page, context, request }) => {
     // Setup: Create ticket in INBOX
     const ticket = await createTicket(request, 'INBOX');
 
@@ -268,7 +268,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T009: Test disabling drag when offline
    * Expected: FAILS (offline detection not implemented)
    */
-  test('disables drag when network is offline', async ({ authenticatedPage: page, context, request }) => {
+  test('disables drag when network is offline', async ({ page, context, request }) => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 
@@ -305,7 +305,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T010: Test touch drag on mobile viewport
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('supports touch drag on mobile viewport', async ({ authenticatedPage: page, request }) => {
+  test('supports touch drag on mobile viewport', async ({ page, request }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -327,7 +327,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T011: Test sub-100ms latency validation
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('meets sub-100ms latency requirement', async ({ authenticatedPage: page, request }) => {
+  test('meets sub-100ms latency requirement', async ({ page, request }) => {
     // Setup: Create ticket
     const ticket = await createTicket(request, 'INBOX');
 

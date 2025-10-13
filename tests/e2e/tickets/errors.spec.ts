@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/auth';
+import { test, expect } from '@playwright/test';
 
 /**
  * E2E Test: Error Handling for Ticket Creation

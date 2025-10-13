@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/auth';
+import { test, expect } from '@playwright/test';
 
 test.describe('GET /api/projects Contract', () => {
   test('returns projects array matching contract', async ({ request }) => {
