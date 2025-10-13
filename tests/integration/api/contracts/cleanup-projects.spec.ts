@@ -15,6 +15,17 @@ test.describe('Selective Project Cleanup Contract', () => {
   });
 
   test('should delete only [e2e] prefixed projects', async () => {
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Arrange
     await prisma.project.createMany({
       data: [
@@ -23,12 +34,14 @@ test.describe('Selective Project Cleanup Contract', () => {
           description: 'Temp',
           githubOwner: 'test',
           githubRepo: 'temp1',
+          userId: testUser.id,
         },
         {
           name: 'Production Project',
           description: 'Prod',
           githubOwner: 'prod',
           githubRepo: 'prod',
+          userId: testUser.id,
         },
       ],
     });
@@ -80,6 +93,17 @@ test.describe('Selective Project Cleanup Contract', () => {
   });
 
   test('should preserve projects without [e2e] prefix', async () => {
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Arrange
     const projects = [
       { name: 'Important Project', repo: 'important-project' },
@@ -95,6 +119,7 @@ test.describe('Selective Project Cleanup Contract', () => {
           description: 'Test',
           githubOwner: 'test',
           githubRepo: repo,
+          userId: testUser.id,
         },
       });
     }
@@ -110,6 +135,17 @@ test.describe('Selective Project Cleanup Contract', () => {
   });
 
   test('should complete in <100ms', async () => {
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Arrange: Create some [e2e] projects
     await prisma.project.createMany({
       data: [
@@ -118,12 +154,14 @@ test.describe('Selective Project Cleanup Contract', () => {
           description: 'Temp',
           githubOwner: 'test',
           githubRepo: 'temp1',
+          userId: testUser.id,
         },
         {
           name: '[e2e] Temp 2',
           description: 'Temp',
           githubOwner: 'test',
           githubRepo: 'temp2',
+          userId: testUser.id,
         },
       ],
     });

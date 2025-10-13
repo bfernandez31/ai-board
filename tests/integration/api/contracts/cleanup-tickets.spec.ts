@@ -8,16 +8,30 @@ test.describe('Selective Ticket Cleanup Contract', () => {
     // Start with clean database for each test
     await prisma.ticket.deleteMany({});
 
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Ensure project 1 exists with [e2e] prefix (matches real test usage)
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project', // Use [e2e] prefix as real tests will
         description: 'Project for contract tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
   });
@@ -41,6 +55,17 @@ test.describe('Selective Ticket Cleanup Contract', () => {
   });
 
   test('should preserve tickets without [e2e] prefix in non-test projects', async () => {
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Arrange - Create a non-test project (project ID > 2)
     const project = await prisma.project.create({
       data: {
@@ -48,6 +73,7 @@ test.describe('Selective Ticket Cleanup Contract', () => {
         description: 'Non-test project',
         githubOwner: 'prod',
         githubRepo: 'prod-repo',
+        userId: testUser.id,
       },
     });
 

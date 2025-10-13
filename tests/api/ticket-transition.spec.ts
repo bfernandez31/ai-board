@@ -230,28 +230,45 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Arrange
     const prisma = getPrismaClient();
 
+    // Ensure test user exists (matches db-cleanup.ts pattern)
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Ensure both test projects exist (from db-cleanup.ts pattern)
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
 
     await prisma.project.upsert({
       where: { id: 2 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 2,
         name: '[e2e] Test Project 2',
         description: 'Second project for cross-project tests',
         githubOwner: 'test',
         githubRepo: 'test2',
+        userId: testUser.id,
       },
     });
 

@@ -8,6 +8,7 @@ import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { MobileMenu } from '@/components/layout/mobile-menu';
+import { UserMenu } from '@/components/auth/user-menu';
 
 interface ProjectInfo {
   id: number;
@@ -110,19 +111,11 @@ export function Header() {
         {/* Spacer to push buttons to the right */}
         <div className="flex-1" />
 
-        {/* Right: Desktop Buttons + Mobile Menu */}
+        {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">
-          {/* Desktop buttons (visible on md and above) */}
+          {/* User menu (visible on md and above) */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="outline" onClick={handleButtonClick}>
-              Log In
-            </Button>
-            <Button variant="outline" onClick={handleButtonClick}>
-              Contact
-            </Button>
-            <Button variant="default" onClick={handleButtonClick}>
-              Sign Up
-            </Button>
+            <UserMenu />
           </div>
 
           {/* Mobile menu (visible below md breakpoint) */}

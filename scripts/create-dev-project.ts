@@ -10,6 +10,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🚀 Creating development project...');
 
+  // Find user with GitHub account (assumes you've signed in at least once)
+  const githubAccount = await prisma.account.findFirst({
+    where: {
+      provider: 'github',
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!githubAccount) {
+    console.error('❌ No GitHub authenticated user found.');
+    console.error('   Please sign in at least once with GitHub OAuth before running this script.');
+    process.exit(1);
+  }
+
+  const userId = githubAccount.userId;
+  console.log(`✅ Found GitHub user: ${githubAccount.user.name || githubAccount.user.email}`);
+
   const project = await prisma.project.upsert({
     where: { id: 3 },
     update: {
@@ -17,6 +36,7 @@ async function main() {
       description: 'Main development project for AI Board kanban application',
       githubOwner: 'bfernandez31',
       githubRepo: 'ai-board',
+      userId,
     },
     create: {
       id: 3,
@@ -24,6 +44,7 @@ async function main() {
       description: 'Main development project for AI Board kanban application',
       githubOwner: 'bfernandez31',
       githubRepo: 'ai-board',
+      userId,
     },
   });
 
@@ -32,6 +53,7 @@ async function main() {
   console.log('\n📋 Project Details:');
   console.log(`   ID: ${project.id}`);
   console.log(`   Name: ${project.name}`);
+  console.log(`   Owner: ${githubAccount.user.name || githubAccount.user.email}`);
   console.log(`   GitHub: ${project.githubOwner}/${project.githubRepo}`);
   console.log(`   Board URL: http://localhost:3000/projects/${project.id}/board`);
   console.log('\n💡 Use this project for all development work to avoid test interference.');

@@ -1,10 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load .env file for test environment
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const config = defineConfig({
   testDir: './tests',
   fullyParallel: false, // Disabled to prevent race conditions with database
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 1, // Allow 1 retry in dev for flaky SSE tests
+  retries: 0, // No retries for faster feedback during auth setup
   workers: 1, // Single worker to ensure database consistency
   reporter: 'html',
   globalSetup: './tests/global-setup.ts',
@@ -15,6 +20,10 @@ const config = defineConfig({
     trace: 'on-first-retry',
     actionTimeout: 10000, // 10 seconds for actions
     navigationTimeout: 30000, // 30 seconds for navigation
+    // Global auth header for all tests (bypasses NextAuth)
+    extraHTTPHeaders: {
+      'x-test-user-id': process.env.TEST_USER_ID || '1', // Set by global-setup.ts
+    },
   },
   projects: [
     {
@@ -29,6 +38,9 @@ const config = defineConfig({
     timeout: 120000, // 2 minutes for server startup
     stdout: 'pipe', // Show server output
     stderr: 'pipe',
+    env: {
+      NODE_ENV: 'test',
+    },
   },
 });
 

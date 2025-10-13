@@ -4,7 +4,7 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-validation';
 import { TransitionRequestSchema, ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 
 /**
@@ -91,17 +91,8 @@ export async function POST(
       );
     }
 
-    // Check if project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json(
-        {
-          error: 'Project not found',
-          code: 'PROJECT_NOT_FOUND',
-        },
-        { status: 404 }
-      );
-    }
+    // Verify project ownership (throws if unauthorized or not found)
+    await verifyProjectOwnership(projectId);
 
     // Parse and validate request body
     const body = await request.json();
@@ -121,13 +112,20 @@ export async function POST(
     const { targetStage } = parseResult.data;
 
     // Fetch current ticket with project relation
+    // Note: We've already verified project ownership above, so we can safely fetch
     const currentTicket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
         projectId: projectId,
       },
       include: {
-        project: true,
+        project: {
+          select: {
+            id: true,
+            githubOwner: true,
+            githubRepo: true,
+          },
+        },
       },
     });
 
@@ -205,8 +203,8 @@ export async function POST(
       // Initialize Octokit with GitHub token
       const githubToken = process.env.GITHUB_TOKEN;
 
-      // Skip GitHub API call in test mode (when token is placeholder or missing)
-      const isTestMode = !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
+      // Skip GitHub API call in test mode (when NODE_ENV is test, token is placeholder, or missing)
+      const isTestMode = process.env.NODE_ENV === 'test' || !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
 
       if (!isTestMode) {
         const octokit = new Octokit({
@@ -343,6 +341,22 @@ export async function POST(
     }
   } catch (error) {
     console.error('Error transitioning ticket:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'AUTH_ERROR' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
 
     return NextResponse.json(
       { error: 'Internal server error' },

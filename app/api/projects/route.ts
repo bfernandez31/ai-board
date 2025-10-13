@@ -1,18 +1,11 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/client';
+import { getUserProjects } from '@/lib/db/projects';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 
 export async function GET() {
   try {
-    // Fetch all projects with ticket counts
-    const projects = await prisma.project.findMany({
-      include: {
-        _count: {
-          select: { tickets: true },
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    // Fetch user's projects with ticket counts (userId filtering applied)
+    const projects = await getUserProjects();
 
     // Transform to API response shape
     const response: ProjectsListResponse = projects.map((project) => ({
@@ -25,6 +18,13 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'AUTH_ERROR' },
+        { status: 401 }
+      );
+    }
+
     console.error('Failed to fetch projects:', error);
     return NextResponse.json(
       { error: 'Failed to fetch projects', code: 'DATABASE_ERROR' },

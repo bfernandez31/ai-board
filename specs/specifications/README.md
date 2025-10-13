@@ -25,6 +25,7 @@ Specifications are organized by feature domain. Each category documents the curr
 | **Workflow Automation** | [04-workflow-automation.md](04-workflow-automation.md) | Job tracking, GitHub Actions, spec-kit automation |
 | **Testing & Quality** | [05-testing-quality.md](05-testing-quality.md) | Test infrastructure, data isolation |
 | **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation |
+| **Authentication** | [07-authentication.md](07-authentication.md) | User auth, project ownership, test authentication |
 
 ## How to Read This Documentation
 
@@ -95,5 +96,5 @@ This documentation consolidates those specifications into **current state** docu
 
 ---
 
-**Last Updated**: 2025-10-11
-**Version**: Current State (consolidated from 24 specifications)
+**Last Updated**: 2025-10-13
+**Version**: Current State (consolidated from 27 specifications + authentication)

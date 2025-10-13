@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getTicketsByStage, createTicket } from '@/lib/db/tickets';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { ZodError } from 'zod';
 
@@ -32,22 +32,28 @@ export async function GET(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Check if project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json(
-        {
-          error: 'Project not found',
-          code: 'PROJECT_NOT_FOUND',
-        },
-        { status: 404 }
-      );
-    }
+    // Verify project ownership (throws if unauthorized or not found)
+    await verifyProjectOwnership(projectId);
 
     // Fetch tickets for this project
     const ticketsByStage = await getTicketsByStage(projectId);
     return NextResponse.json(ticketsByStage, { status: 200 });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'AUTH_ERROR' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
+
     console.error('Error fetching tickets:', error);
     return NextResponse.json(
       {
@@ -86,17 +92,8 @@ export async function POST(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Check if project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json(
-        {
-          error: 'Project not found',
-          code: 'PROJECT_NOT_FOUND',
-        },
-        { status: 404 }
-      );
-    }
+    // Verify project ownership (throws if unauthorized or not found)
+    await verifyProjectOwnership(projectId);
 
     // Parse and validate request body
     const body = await request.json();
@@ -152,6 +149,22 @@ export async function POST(
     );
   } catch (error) {
     console.error('Error in POST /api/projects/[projectId]/tickets:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'AUTH_ERROR' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
 
     // Handle Zod validation errors
     if (error instanceof ZodError) {

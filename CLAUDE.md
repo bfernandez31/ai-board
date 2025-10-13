@@ -35,6 +35,13 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - **Markdown**: react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0
 - **CI/CD**: GitHub Actions (YAML 2.0, Bash 5.x)
 
+### Authentication
+
+- **Auth Library**: NextAuth.js
+- **Strategy**: Session-based authentication
+- **Test Mode**: Mock authentication (NODE_ENV !== 'production')
+- **User Management**: PostgreSQL via Prisma
+
 ## Project Structure
 
 ```
@@ -53,11 +60,100 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
 
+- Authentication: Added NextAuth.js authentication with user-project ownership
 - 027-display-project-specifications: Added GitHub spec viewer with markdown rendering
 - 025-header-ajoute-un: Added project header with toast notifications
 - 024-16204-description-validation: Enhanced ticket validation rules
 
 <!-- MANUAL ADDITIONS START -->
+
+## Authentication System
+
+### Overview
+
+The application uses **NextAuth.js** for authentication with a user-project ownership model:
+
+- Every project belongs to a user (required `userId` foreign key)
+- Users can only access their own projects
+- Server-side session validation on all routes
+- Mock authentication in development/test environments
+
+### User-Project Relationship
+
+**Database Schema**:
+- `Project.userId` → `User.id` (required, NOT NULL)
+- One user can have many projects
+- Projects cannot exist without an owner
+- Index on `userId` for query performance
+
+**Authorization Flow**:
+1. Extract user ID from NextAuth session
+2. Filter project queries by `userId`
+3. Validate project ownership before operations
+4. Return 403 if project belongs to different user
+
+### Test Authentication Strategy
+
+**Why Mock Authentication?**
+
+E2E tests use mock authentication to focus on business logic without authentication complexity:
+
+- **Mock Mode**: Enabled when `NODE_ENV !== 'production'`
+- **Auto-Login**: Tests automatically authenticated as test user
+- **Same Validation**: Security model enforced, just with simplified auth
+- **Fast Tests**: No manual login flows needed
+
+**Test User Pattern**:
+
+All test files MUST create the test user before creating/upserting projects:
+
+```typescript
+// REQUIRED pattern in all test helpers
+const testUser = await prisma.user.upsert({
+  where: { email: 'test@e2e.local' },
+  update: {},
+  create: {
+    email: 'test@e2e.local',
+    name: 'E2E Test User',
+    emailVerified: new Date(),
+  },
+});
+
+// Then use testUser.id for projects
+await prisma.project.upsert({
+  where: { id: 1 },
+  update: {
+    userId: testUser.id,  // ← Required in update branch
+  },
+  create: {
+    id: 1,
+    name: '[e2e] Test Project',
+    userId: testUser.id,  // ← Required in create branch
+    // ... other fields
+  },
+});
+```
+
+**Why This Pattern?**
+
+- Prevents `PrismaClientValidationError: Argument 'user' is missing`
+- Ensures consistent test user across all tests
+- Works with upsert pattern (safe to run multiple times)
+- Self-documenting in test code
+
+**Global Test Setup**:
+
+The `tests/global-setup.ts` file:
+1. Cleans database
+2. Creates test user ('test@e2e.local')
+3. Creates test projects (1, 2) with correct userId
+4. Configures Playwright with auth context
+
+**Implementation Locations**:
+- `tests/global-setup.ts`: Initial test user creation
+- `tests/helpers/db-setup.ts`: Helper functions with user creation
+- `tests/api/*.spec.ts`: API tests with inline user creation
+- `tests/e2e/*.spec.ts`: E2E tests with user creation in beforeEach
 
 ## Test Environment Data Isolation
 
@@ -89,6 +185,43 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 <!-- MANUAL ADDITIONS START -->
 
 ## Data Model Notes
+
+### User Model
+
+The User model manages authentication and project ownership:
+
+- **`id`** (String): Unique identifier (auto-generated)
+- **`email`** (String): User email address (unique, required)
+  - Used for authentication and user identification
+  - Unique constraint ensures one account per email
+- **`name`** (String?, nullable): Display name (optional)
+- **`emailVerified`** (DateTime?, nullable): Email verification timestamp
+- **`createdAt`** (DateTime): Account creation timestamp
+- **`updatedAt`** (DateTime): Last modification timestamp
+
+**Relationships**:
+- User → Projects (one-to-many)
+- Every project must have a userId (required foreign key)
+
+**Test User**:
+- Email: `test@e2e.local`
+- Created in global test setup
+- Used across all E2E and API tests
+- Never deleted (stable test fixture)
+
+### Project Model
+
+The Project model now includes user ownership:
+
+- **`userId`** (String): Owner of the project (required foreign key to User.id)
+  - Every project must belong to a user
+  - Index on userId for efficient filtering
+  - Used for authorization checks
+
+**Authorization**:
+- Projects filtered by userId from session
+- Cross-user access returns 403 Forbidden
+- Project queries always include userId validation
 
 ### Ticket Model
 

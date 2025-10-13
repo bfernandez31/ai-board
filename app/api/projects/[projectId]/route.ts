@@ -1,11 +1,11 @@
 /**
  * GET /api/projects/[projectId]
  *
- * Retrieves a single project by ID
+ * Retrieves a single project by ID (with authentication)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjectById } from '@/lib/db/projects';
+import { getProject } from '@/lib/db/projects';
 
 export async function GET(
   _request: NextRequest,
@@ -22,17 +22,26 @@ export async function GET(
       );
     }
 
-    const project = await getProjectById(projectId);
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
-    }
+    // getProject now verifies userId ownership
+    const project = await getProject(projectId);
 
     return NextResponse.json(project);
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+    }
+
     console.error('Error fetching project:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -7,15 +7,9 @@ test.describe('Application Header', () => {
     const header = page.locator('header').first();
     await expect(header).toBeVisible();
 
-    // Verify logo and title
+    // Verify logo and title (core header elements)
     await expect(header.locator('img[alt="AI-BOARD Logo"]')).toBeVisible();
     await expect(header.getByText('AI-BOARD')).toBeVisible();
-
-    // Verify desktop buttons visible on desktop viewport
-    await page.setViewportSize({ width: 1024, height: 768 });
-    await expect(header.getByRole('button', { name: 'Log In' })).toBeVisible();
-    await expect(header.getByRole('button', { name: 'Contact' })).toBeVisible();
-    await expect(header.getByRole('button', { name: 'Sign Up' })).toBeVisible();
 
     // Test 2: Site-wide presence - verify on projects page
     await page.goto('/projects');
@@ -28,25 +22,20 @@ test.describe('Application Header', () => {
     await expect(page.locator('header').getByText('AI-BOARD')).toBeVisible();
   });
 
-  test('should trigger toast notification when clicking buttons', async ({
-    page,
-  }) => {
-    await page.goto('/');
+  test('should display project info in header on project pages', async ({ page }) => {
+    // Navigate to a project board
+    await page.goto('/projects/1/board');
 
-    // Ensure desktop viewport for button visibility
-    await page.setViewportSize({ width: 1024, height: 768 });
+    const header = page.locator('header');
 
-    // Click "Log In" button
-    const logInButton = page
-      .locator('header')
-      .getByRole('button', { name: 'Log In' });
-    await logInButton.click();
+    // Verify header is visible
+    await expect(header).toBeVisible();
 
-    // Verify toast notification appears with correct message
-    const toast = page
-      .locator('[role="region"]')
-      .getByText('This feature is not yet implemented')
-      .first();
-    await expect(toast).toBeVisible();
+    // Verify project name is displayed
+    await expect(header.getByText('[e2e] Test Project')).toBeVisible();
+
+    // Verify GitHub specs link is visible
+    const specsLink = header.locator('a[href*="github.com"][href*="/specs/specifications"]');
+    await expect(specsLink).toBeVisible();
   });
 });

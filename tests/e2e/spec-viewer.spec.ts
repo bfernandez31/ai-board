@@ -58,16 +58,30 @@ test.describe('Spec Viewer - Button Visibility', () => {
     await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Spec' } } } });
     await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Spec' } } });
 
+    // Ensure test user exists (matches db-cleanup.ts pattern)
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Ensure test project exists
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
   });
@@ -156,15 +170,29 @@ test.describe('Spec Viewer - Content Display', () => {
     await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Spec' } } } });
     await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Spec' } } });
 
+    // Ensure test user exists (matches db-cleanup.ts pattern)
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
   });
@@ -267,15 +295,29 @@ test.describe('Spec Viewer - Error Handling', () => {
     await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Spec' } } } });
     await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Spec' } } });
 
+    // Ensure test user exists (matches db-cleanup.ts pattern)
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
   });
@@ -341,15 +383,29 @@ test.describe('Spec Viewer - Modal Interactions', () => {
     await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Spec' } } } });
     await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Spec' } } });
 
+    // Ensure test user exists (matches db-cleanup.ts pattern)
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     await prisma.project.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        userId: testUser.id,
+      },
       create: {
         id: 1,
         name: '[e2e] Test Project',
         description: 'Project for automated tests',
         githubOwner: 'test',
         githubRepo: 'test',
+        userId: testUser.id,
       },
     });
   });

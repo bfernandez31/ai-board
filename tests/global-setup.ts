@@ -1,4 +1,6 @@
 import { cleanupDatabase } from './helpers/db-cleanup';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 
 /**
  * Global setup for Playwright tests
@@ -7,10 +9,17 @@ import { cleanupDatabase } from './helpers/db-cleanup';
 async function globalSetup() {
   console.log('\n🧹 Running global test setup...');
 
-  // Clean database before test run
-  await cleanupDatabase();
+  // Load environment variables from .env file
+  const envPath = path.resolve(process.cwd(), '.env');
+  dotenv.config({ path: envPath });
 
-  console.log('✅ Global setup complete\n');
+  // Clean database and get test user ID
+  const testUserId = await cleanupDatabase();
+
+  // Store test user ID in environment for Playwright to use
+  process.env.TEST_USER_ID = testUserId.toString();
+
+  console.log(`✅ Global setup complete (test user ID: ${testUserId})\n`);
 }
 
 export default globalSetup;
