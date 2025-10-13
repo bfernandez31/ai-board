@@ -17,7 +17,7 @@ async function globalSetup() {
   const testUserId = await cleanupDatabase();
 
   // Store test user ID in environment for Playwright to use
-  process.env.TEST_USER_ID = testUserId.toString();
+  process.env.TEST_USER_ID = testUserId;
 
   console.log(`✅ Global setup complete (test user ID: ${testUserId})\n`);
 }
