@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "rm -rf node_modules/.prisma && prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
