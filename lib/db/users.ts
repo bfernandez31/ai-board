@@ -13,11 +13,11 @@ export async function getCurrentUser() {
 
   if (testUserId) {
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(testUserId) }
+      where: { id: testUserId }
     })
     if (user) {
       return {
-        id: user.id.toString(),
+        id: user.id,
         email: user.email,
         name: user.name
       }
@@ -35,7 +35,7 @@ export async function getCurrentUser() {
  * Require authentication and return userId
  * @throws Error if user is not authenticated
  */
-export async function requireAuth() {
+export async function requireAuth(): Promise<string> {
   const user = await getCurrentUser()
-  return parseInt(user.id)
+  return user.id
 }
