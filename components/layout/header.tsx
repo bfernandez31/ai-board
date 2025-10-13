@@ -63,6 +63,11 @@ export function Header() {
     }
   }, [pathname]);
 
+  // Don't render header on auth pages
+  if (pathname?.startsWith('/auth')) {
+    return null;
+  }
+
   return (
     <header
       className={`sticky top-0 z-50 w-full bg-[#1e1e2e] text-[hsl(var(--ctp-text))] transition-all duration-200 ${

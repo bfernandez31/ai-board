@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react"
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,16 @@ import { LogOut } from "lucide-react"
 export function UserMenu() {
   const { data: session } = useSession()
 
-  if (!session?.user) return null
+  // Show sign in button when not authenticated
+  if (!session?.user) {
+    return (
+      <Link href="/auth/signin">
+        <Button variant="default" size="sm">
+          Sign In
+        </Button>
+      </Link>
+    )
+  }
 
   const initials = session.user.name
     ?.split(' ')

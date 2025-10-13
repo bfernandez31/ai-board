@@ -12,7 +12,7 @@ export default async function SignInPage({
   const callbackUrl = params.callbackUrl || "/projects"
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center">
       <Card className="w-[400px]">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome to AI Board</CardTitle>
