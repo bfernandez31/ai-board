@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Force regeneration - UUID migration
 }
 
 datasource db {
