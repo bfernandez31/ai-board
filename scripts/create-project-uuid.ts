@@ -54,7 +54,7 @@ async function main() {
         id: userId,
         email: email,
         emailVerified: new Date(),
-        name: email.split('@')[0],
+        name: email.split('@')[0] || null,
       },
     });
     console.log('   ✅ User created');
