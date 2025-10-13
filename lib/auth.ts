@@ -1,10 +1,19 @@
 import NextAuth from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
+import type { Adapter } from "next-auth/adapters"
 import GitHub from "next-auth/providers/github"
-import { prisma } from "@/lib/db/client"
+
+// Conditional imports to reduce Edge Runtime bundle size
+// Only import Prisma in test mode (database sessions)
+// Production uses JWT strategy which doesn't need database adapter
+let adapter: Adapter | undefined
+if (process.env.NODE_ENV === 'test') {
+  const { PrismaAdapter } = await import("@auth/prisma-adapter")
+  const { prisma } = await import("@/lib/db/client")
+  adapter = PrismaAdapter(prisma)
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  ...(adapter ? { adapter } : {}),
 
   // Use test secret in test environment
   ...(process.env.NEXTAUTH_SECRET || process.env.NODE_ENV === 'test'
