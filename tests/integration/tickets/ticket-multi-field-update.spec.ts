@@ -18,6 +18,17 @@ test.describe('Integration: Multiple fields atomic update', () => {
   let testProjectId: number;
 
   test.beforeAll(async () => {
+    // REQUIRED pattern: Create test user before any project operations
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Create a test project with [e2e] prefix for automatic cleanup
     const project = await prisma.project.create({
       data: {
@@ -25,6 +36,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
         description: 'Project for testing atomic multi-field updates',
         githubOwner: 'integration-test-owner',
         githubRepo: 'multi-field-test',
+        userId: testUser.id,
       },
     });
     testProjectId = project.id;
