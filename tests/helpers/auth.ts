@@ -59,3 +59,23 @@ export async function getTestSessionCookie() {
     expires: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
   };
 }
+
+/**
+ * Get test user ID for API authentication via header
+ */
+export async function getTestUserId(): Promise<number> {
+  const prisma = getPrismaClient();
+
+  // Get or create test user
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@e2e.local' },
+    update: {},
+    create: {
+      email: 'test@e2e.local',
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+    },
+  });
+
+  return testUser.id;
+}

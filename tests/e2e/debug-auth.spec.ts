@@ -30,6 +30,7 @@ test.describe('Debug Authentication', () => {
   });
 
   test('verify POST ticket API with cookie', async ({ request }) => {
+    // Use the request fixture which has x-test-user-id header configured
     const response = await request.post('http://localhost:3000/api/projects/1/tickets', {
       data: {
         title: '[e2e] Debug Test Ticket',
