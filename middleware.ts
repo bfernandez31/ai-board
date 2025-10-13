@@ -12,8 +12,10 @@ export default auth((req) => {
   const hasTestHeader = req.headers.get('x-test-user-id') !== null
   const isTestMode = hasTestHeader
 
-  // In test mode, bypass auth for API routes (handled by route handlers)
-  if (isTestMode && isApiRoute) {
+  // In test mode, bypass auth for ALL routes (API and pages)
+  // Page routes use headers() to get x-test-user-id in getCurrentUser()
+  // API routes also use headers() for authentication
+  if (isTestMode) {
     return NextResponse.next()
   }
 

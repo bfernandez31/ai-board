@@ -30,6 +30,17 @@ export async function createTestProject(
 ): Promise<TestProject> {
   const prisma = getPrismaClient();
 
+  // Ensure test user exists (matches db-cleanup.ts pattern)
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@e2e.local' },
+    update: {},
+    create: {
+      email: 'test@e2e.local',
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+    },
+  });
+
   // Ensure test project names have [e2e] prefix for cleanup
   const projectName = data?.name ?? 'Test Project';
   const prefixedName = projectName.startsWith('[e2e]') ? projectName : `[e2e] ${projectName}`;
@@ -40,6 +51,7 @@ export async function createTestProject(
       description: data?.description ?? 'Test project description',
       githubOwner: data?.githubOwner ?? 'test-owner',
       githubRepo: data?.githubRepo ?? `test-repo-${Date.now()}`,
+      userId: testUser.id,
     },
   });
 
@@ -74,16 +86,30 @@ export async function createTestTicket(
 export async function setupTestData(): Promise<{ project: TestProject; ticket: TestTicket }> {
   const prisma = getPrismaClient();
 
-  // Ensure test project 1 exists (follows db-cleanup.ts pattern)
+  // Ensure test user exists (matches db-cleanup.ts pattern)
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@e2e.local' },
+    update: {},
+    create: {
+      email: 'test@e2e.local',
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+    },
+  });
+
+  // Ensure test project 1 exists with test user (follows db-cleanup.ts pattern)
   const project = await prisma.project.upsert({
     where: { id: 1 },
-    update: {},
+    update: {
+      userId: testUser.id,
+    },
     create: {
       id: 1,
       name: '[e2e] Test Project',
       description: 'Project for automated tests',
       githubOwner: 'test',
       githubRepo: 'test',
+      userId: testUser.id,
     },
   });
 

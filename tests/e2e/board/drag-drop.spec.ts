@@ -19,9 +19,20 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     prisma = getPrismaClient();
   });
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
     // Clean database before each test
     await cleanupDatabase();
+
+    // Mock SSE endpoint to prevent connection timeouts
+    // The drag-drop tests don't need real-time updates
+    await page.route('**/api/sse**', async (route) => {
+      // Return empty SSE stream that immediately closes
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: '',
+      });
+    });
   });
 
   /**
@@ -38,29 +49,31 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
       },
     });
 
-    console.log(`Create ticket - Status: ${response.status()}, Content-Type: ${response.headers()['content-type']}`);
-
     if (!response.ok()) {
-      const errorText = await response.text();
-      console.log(`Error response body: ${errorText.substring(0, 500)}`);
-      throw new Error(`Failed to create ticket: ${response.status()} - ${errorText.substring(0, 200)}`);
+      const error = await response.json();
+      throw new Error(`Failed to create ticket: ${JSON.stringify(error)}`);
     }
 
-    const responseText = await response.text();
-    console.log(`Response body: ${responseText.substring(0, 200)}`);
+    const ticket = await response.json();
 
-    try {
-      const ticket = JSON.parse(responseText);
-      return {
-        id: ticket.id,
-        version: ticket.version,
-        title: ticket.title,
-      };
-    } catch (e) {
-      throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 500)}`);
+    // Update stage directly via Prisma for test setup
+    if (stage !== 'INBOX') {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { stage: stage as any },
+      });
     }
 
+    // Fetch updated ticket with version
+    const updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+    });
 
+    return {
+      id: updatedTicket!.id,
+      version: updatedTicket!.version,
+      title: updatedTicket!.title,
+    };
   };
 
   /**
@@ -95,15 +108,6 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * Updated for SPECIFY stage addition
    */
   test('user can drag ticket sequentially through workflow', async ({ page, request }) => {
-    // Mock SSE endpoint to prevent connection timeouts
-    await page.route('**/api/sse**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/event-stream',
-        body: '',
-      });
-    });
-
     // Setup: Create ticket in INBOX
     const ticket = await createTicket(request, 'INBOX');
 

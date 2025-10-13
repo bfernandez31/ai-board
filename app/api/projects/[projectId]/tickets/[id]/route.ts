@@ -3,7 +3,7 @@ import { Stage as PrismaStage } from '@prisma/client';
 import { z } from 'zod';
 import { Stage, isValidTransition } from '@/lib/stage-validation';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
+import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { prisma } from '@/lib/db/client';
 
@@ -43,14 +43,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ticket ID' }, { status: 400 });
     }
 
-    // Check if project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
+    // Verify project ownership (throws if unauthorized or not found)
+    await verifyProjectOwnership(projectId);
 
     // Fetch ticket with project validation
     const ticket = await prisma.ticket.findFirst({
@@ -91,6 +85,23 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching ticket:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'AUTH_ERROR' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -165,17 +176,8 @@ export async function PATCH(
       );
     }
 
-    // Check if project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      return NextResponse.json(
-        {
-          error: 'Project not found',
-          code: 'PROJECT_NOT_FOUND',
-        },
-        { status: 404 }
-      );
-    }
+    // Verify project ownership (throws if unauthorized or not found)
+    await verifyProjectOwnership(projectId);
 
     // Parse request body
     const body = await request.json();
@@ -494,6 +496,22 @@ export async function PATCH(
     );
   } catch (error) {
     console.error('Error updating ticket:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'AUTH_ERROR' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
 
     // Handle Prisma errors
     if (error instanceof Error && 'code' in error) {

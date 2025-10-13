@@ -17,8 +17,8 @@ test.describe('Debug Authentication', () => {
   });
 
   test('verify API request has cookie', async ({ request }) => {
-    // Try to call API
-    const response = await request.get('http://localhost:3000/api/tickets');
+    // Try to call API (using project-scoped tickets endpoint)
+    const response = await request.get('http://localhost:3000/api/projects/1/tickets');
 
     console.log('API response status:', response.status());
     console.log('API response headers:', response.headers());
