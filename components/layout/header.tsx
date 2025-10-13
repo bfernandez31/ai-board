@@ -5,8 +5,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 
@@ -18,7 +16,6 @@ interface ProjectInfo {
 }
 
 export function Header() {
-  const { toast } = useToast();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
@@ -41,7 +38,7 @@ export function Header() {
 
     const projectMatch = pathname.match(/^\/projects\/(\d+)/);
 
-    if (projectMatch) {
+    if (projectMatch && projectMatch[1]) {
       const projectId = parseInt(projectMatch[1], 10);
 
       // Fetch project info
@@ -65,12 +62,6 @@ export function Header() {
       setProjectInfo(null);
     }
   }, [pathname]);
-
-  const handleButtonClick = () => {
-    toast({
-      title: 'This feature is not yet implemented',
-    });
-  };
 
   return (
     <header

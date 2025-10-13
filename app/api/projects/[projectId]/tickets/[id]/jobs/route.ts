@@ -24,7 +24,7 @@ import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {

@@ -1,5 +1,4 @@
 import { APIRequestContext } from '@playwright/test';
-import { getPrismaClient } from './db-cleanup';
 
 /**
  * Test helpers for transition API E2E tests

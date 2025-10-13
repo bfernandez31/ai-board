@@ -25,7 +25,7 @@ import { prisma } from '@/lib/db/client';
 import { fetchSpecContent } from '@/lib/github/spec-fetcher';
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {

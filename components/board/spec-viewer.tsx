@@ -181,10 +181,12 @@ export default function SpecViewer({
                         {...props}
                       />
                     ),
-                    code: ({ node, inline, className, children, ...props }) => {
+                    code: ({ node, className, children, ...props }) => {
                       const match = /language-(\w+)/.exec(className || '');
+                      const inline = !className;
                       return !inline && match ? (
                         <SyntaxHighlighter
+                          /* @ts-expect-error - vscDarkPlus type mismatch with react-syntax-highlighter */
                           style={vscDarkPlus}
                           language={match[1]}
                           PreTag="div"

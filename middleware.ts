@@ -6,7 +6,6 @@ export default auth((req) => {
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
-  const isApiRoute = req.nextUrl.pathname.startsWith('/api/')
 
   // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
   const hasTestHeader = req.headers.get('x-test-user-id') !== null

@@ -161,13 +161,28 @@ export async function PATCH(
     // completedAt is only set for terminal states (COMPLETED/FAILED/CANCELLED)
     // Include ticket relation to get projectId for SSE broadcast
     const isTerminalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(requestedStatus);
+
+    // Build update data dynamically to satisfy exactOptionalPropertyTypes: true
+    // Cannot pass undefined explicitly, must omit the field entirely
+    const updateData: {
+      status: JobStatus;
+      startedAt?: Date;
+      completedAt?: Date;
+    } = {
+      status: requestedStatus,
+    };
+
+    if (requestedStatus === 'RUNNING' && !job.startedAt) {
+      updateData.startedAt = new Date();
+    }
+
+    if (isTerminalState) {
+      updateData.completedAt = new Date();
+    }
+
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
-      data: {
-        status: requestedStatus,
-        startedAt: requestedStatus === 'RUNNING' && !job.startedAt ? new Date() : undefined,
-        completedAt: isTerminalState ? new Date() : undefined,
-      },
+      data: updateData,
       select: {
         id: true,
         status: true,
