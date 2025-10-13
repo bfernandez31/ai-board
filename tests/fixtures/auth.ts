@@ -21,16 +21,24 @@ export const test = base.extend<AuthFixtures>({
     await use(page);
   },
 
-  // Override request fixture to include auth cookie
+  // Override request fixture to include auth cookie via storageState
   request: async ({ playwright }, use) => {
     const sessionCookie = await getTestSessionCookie();
 
+    // Create browser context first to get cookies in proper format
+    const browser = await playwright.chromium.launch();
+    const browserContext = await browser.newContext();
+    await browserContext.addCookies([sessionCookie]);
+
+    // Get storage state with cookies
+    const storageState = await browserContext.storageState();
+    await browserContext.close();
+    await browser.close();
+
+    // Create request context with storage state
     const context = await playwright.request.newContext({
       baseURL: 'http://localhost:3000',
-      extraHTTPHeaders: {
-        // Add session cookie to all API requests
-        'Cookie': `${sessionCookie.name}=${sessionCookie.value}`
-      }
+      storageState,
     });
 
     await use(context);
