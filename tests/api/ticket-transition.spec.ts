@@ -73,8 +73,13 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
     // Simulate workflow setting the branch (via /branch endpoint)
     const branchName = `feature/ticket-${ticket.id}`;
+    const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+
     await request.patch(`/api/projects/1/tickets/${ticket.id}/branch`, {
       data: { branch: branchName },
+      headers: {
+        'Authorization': `Bearer ${workflowToken}`,
+      },
     });
 
     // Get updated ticket with branch
@@ -373,10 +378,11 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     const statuses = [response1.status(), response2.status()].sort();
 
     // In concurrent scenarios, we expect either:
+    // - 200 + 400 (invalid state transition - ticket already transitioned)
     // - 200 + 409 (ideal optimistic concurrency handling)
     // - 200 + 500 (acceptable race condition between job creation and ticket update)
     expect(statuses[0]).toBe(200); // At least one should succeed
-    expect([409, 500]).toContain(statuses[1]); // The other should fail with conflict or error
+    expect([400, 409, 500]).toContain(statuses[1]); // The other should fail with conflict or error
 
     // Verify only ONE ticket update occurred (version should be 2, not 3)
     const updatedTicket = await prisma.ticket.findUnique({
@@ -420,10 +426,15 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
     // Act 2: Simulate GitHub workflow creating branch and updating via /branch endpoint
     const branchName = `feature/ticket-${ticket.id}`;
+    const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+
     const branchResponse = await request.patch(
       `/api/projects/1/tickets/${ticket.id}/branch`,
       {
         data: { branch: branchName },
+        headers: {
+          'Authorization': `Bearer ${workflowToken}`,
+        },
       }
     );
 
@@ -438,6 +449,9 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Act 3: Simulate job starting (required by state machine)
     const jobRunningResponse = await request.patch(`/api/jobs/${jobId}/status`, {
       data: { status: 'RUNNING' },
+      headers: {
+        'Authorization': `Bearer ${workflowToken}`,
+      },
     });
 
     expect(jobRunningResponse.status()).toBe(200);
@@ -445,6 +459,9 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Act 4: Simulate job completion
     const jobStatusResponse = await request.patch(`/api/jobs/${jobId}/status`, {
       data: { status: 'COMPLETED' },
+      headers: {
+        'Authorization': `Bearer ${workflowToken}`,
+      },
     });
 
     expect(jobStatusResponse.status()).toBe(200);

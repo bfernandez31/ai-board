@@ -15,10 +15,10 @@
    → Data: Job status (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
    → Constraints: Vercel serverless limitations, maintain existing UX
 3. For each unclear aspect:
-   → [NEEDS CLARIFICATION: Polling interval - how frequently should clients poll?]
-   → [NEEDS CLARIFICATION: Should polling stop when job reaches terminal state?]
-   → [NEEDS CLARIFICATION: Error handling - retry strategy when polling fails?]
-   → [NEEDS CLARIFICATION: Should polling be project-scoped (all jobs) or ticket-scoped (single job)?]
+   → Polling interval: 2 seconds
+   → Stop polling terminal state jobs: Yes
+   → Error retry strategy: Fixed interval (2s)
+   → Polling scope: Single request for all project jobs
 4. Fill User Scenarios & Testing section
    → User flows: View job status on board, see updates, handle errors
 5. Generate Functional Requirements
@@ -27,7 +27,7 @@
 6. Identify Key Entities
    → Job status, Polling state
 7. Run Review Checklist
-   → WARN "Spec has uncertainties" (polling interval, scope not specified)
+   → Polling lifecycle: Start on mount, stop on unmount or all jobs terminal
 8. Return: SUCCESS (spec ready for planning)
 ```
 
@@ -40,6 +40,16 @@
 
 ---
 
+## Clarifications
+
+### Session 2025-10-14
+
+- Q: What polling interval should the client use to check for job status updates? → A: 2 seconds (aggressive, ~30 requests/min)
+- Q: Should the system stop polling for jobs that have reached a terminal state (COMPLETED/FAILED/CANCELLED) to reduce server load? → A: Yes, stop polling terminal jobs
+- Q: When a polling request fails due to network error, what retry strategy should the system use? → A: Fixed interval (retry every 2s)
+- Q: Should the system poll for all project jobs in a single request, or poll for individual ticket jobs separately? → A: Single request for all project jobs (efficient, one endpoint call)
+- Q: When should polling start and stop? → A: Start on mount, stop on unmount or when all jobs terminal
+
 ## User Scenarios & Testing
 
 ### Primary User Story
@@ -48,22 +58,22 @@ When a user views the project board, they see live job status updates for ticket
 
 ### Acceptance Scenarios
 
-1. **Given** a user is viewing the project board with a ticket in RUNNING state, **When** the job completes successfully, **Then** the board displays COMPLETED status within [NEEDS CLARIFICATION: acceptable delay not specified - 5 seconds? 30 seconds?]
+1. **Given** a user is viewing the project board with a ticket in RUNNING state, **When** the job completes successfully, **Then** the board displays COMPLETED status within 2 seconds (polling interval)
 
 2. **Given** a user is viewing the project board with multiple tickets having active jobs, **When** job status updates occur, **Then** all affected tickets display their new statuses
 
-3. **Given** a job has reached a terminal state (COMPLETED/FAILED/CANCELLED), **When** the user continues viewing the board, **Then** [NEEDS CLARIFICATION: should polling stop for that job to reduce server load?]
+3. **Given** a job has reached a terminal state (COMPLETED/FAILED/CANCELLED), **When** the user continues viewing the board, **Then** the system stops polling for that specific job to reduce server load
 
-4. **Given** the board is open but the user is in a different browser tab, **When** jobs update, **Then** [NEEDS CLARIFICATION: should polling pause to conserve resources, or continue?]
+4. **Given** the board is open but the user is in a different browser tab, **When** jobs update, **Then** polling continues (no pause on tab visibility changes)
 
-5. **Given** a polling request fails due to network error, **When** the error occurs, **Then** [NEEDS CLARIFICATION: retry behavior not specified - exponential backoff? fixed interval? max retries?]
+5. **Given** a polling request fails due to network error, **When** the error occurs, **Then** the system retries at the standard 2-second polling interval without exponential backoff
 
 6. **Given** multiple users viewing the same project board, **When** a job updates, **Then** all users see the update independently (no shared broadcast mechanism)
 
 ### Edge Cases
 
-- What happens when a user has slow/intermittent network connection?
-- What happens when the board page loses focus (user switches tabs)?
+- What happens when a user has slow/intermittent network connection? (System continues retrying at 2-second intervals)
+- What happens when the board page loses focus (user switches tabs)? (Polling continues without pause)
 - What happens when polling encounters rate limiting?
 - What happens when jobs update faster than the polling interval?
 - How does the system handle stale data (job status changed but poll hasn't occurred yet)?
@@ -73,17 +83,17 @@ When a user views the project board, they see live job status updates for ticket
 
 ### Functional Requirements
 
-- **FR-001**: System MUST periodically fetch job status updates at [NEEDS CLARIFICATION: polling interval not specified - e.g., every 2 seconds, 5 seconds, 10 seconds?]
+- **FR-001**: System MUST periodically fetch job status updates every 2 seconds
 
 - **FR-002**: System MUST display job status changes for all jobs associated with the current project board
 
 - **FR-003**: Users MUST see the same real-time status update experience as with the current SSE implementation (no degradation in UX)
 
-- **FR-004**: System MUST [NEEDS CLARIFICATION: polling scope not defined - poll for all project jobs in single request, or individual ticket jobs separately?]
+- **FR-004**: System MUST fetch all project job statuses in a single polling request to minimize network overhead and server load
 
-- **FR-005**: System MUST handle network errors gracefully and [NEEDS CLARIFICATION: retry strategy not specified]
+- **FR-005**: System MUST handle network errors gracefully and retry failed polling requests at the standard 2-second interval (no exponential backoff or retry limits)
 
-- **FR-006**: System MUST [NEEDS CLARIFICATION: polling lifecycle not defined - when to start/stop polling? On component mount/unmount? On visibility change?]
+- **FR-006**: System MUST start polling when the board component mounts and stop polling when the component unmounts or when all project jobs reach terminal states
 
 - **FR-007**: System MUST remove all SSE-specific infrastructure (EventSource connections, text/event-stream endpoints, broadcast mechanisms)
 
@@ -91,15 +101,15 @@ When a user views the project board, they see live job status updates for ticket
 
 - **FR-009**: System MUST support the same job status transitions as current implementation (PENDING → RUNNING → COMPLETED/FAILED/CANCELLED)
 
-- **FR-010**: System MUST [NEEDS CLARIFICATION: polling optimization not specified - should terminal state jobs be excluded from polling to reduce load?]
+- **FR-010**: System MUST stop polling for jobs once they reach a terminal state (COMPLETED, FAILED, or CANCELLED) to reduce server load and network traffic
 
 ### Key Entities
 
 - **Job**: Workflow execution tracking entity with status field (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED), command, ticketId, and projectId relationship
 
-- **Polling State**: Client-side state tracking when polling is active, last successful poll timestamp, and error state
+- **Polling State**: Client-side state tracking when polling is active (mount to unmount or all jobs terminal), last successful poll timestamp, error state, and which jobs are in terminal states (to exclude from polling)
 
-- **Job Status Update**: Data structure representing current status of one or more jobs, returned from polling endpoint
+- **Job Status Update**: Data structure representing current status of all project jobs (aggregated response), returned from a single polling endpoint call
 
 ---
 
@@ -112,9 +122,9 @@ When a user views the project board, they see live job status updates for ticket
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain (7 clarifications needed)
-- [ ] Requirements are testable and unambiguous (pending clarifications)
-- [ ] Success criteria are measurable (pending polling interval definition)
+- [x] No [NEEDS CLARIFICATION] markers remain (5 clarifications resolved)
+- [x] Requirements are testable and unambiguous
+- [x] Success criteria are measurable (2-second polling interval defined)
 - [x] Scope is clearly bounded (replacing SSE with polling)
 - [x] Dependencies and assumptions identified (Vercel serverless limitations)
 
@@ -124,11 +134,11 @@ When a user views the project board, they see live job status updates for ticket
 
 - [x] User description parsed
 - [x] Key concepts extracted
-- [x] Ambiguities marked (7 clarifications identified)
+- [x] Ambiguities resolved (5 critical clarifications answered)
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (pending clarifications)
+- [x] Review checklist passed
 
 ---
 

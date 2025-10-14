@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-10-12
 
 ## Active Technologies
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x (028-519-replace-sse)
+- PostgreSQL 14+ (Job status tracking, existing schema) (028-519-replace-sse)
 
 ### Core Stack
 
@@ -59,11 +61,13 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 028-519-replace-sse: Replaced Server-Sent Events (SSE) with client-side polling for job status updates
+  - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
+  - Implemented 2-second polling interval with terminal state optimization
+  - Added `projectId` field to Job model for efficient querying
 
 - Authentication: Added NextAuth.js authentication with user-project ownership
 - 027-display-project-specifications: Added GitHub spec viewer with markdown rendering
-- 025-header-ajoute-un: Added project header with toast notifications
-- 024-16204-description-validation: Enhanced ticket validation rules
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -484,5 +488,101 @@ test.beforeEach(async () => {
 ```
 
 This ensures Job creation succeeds without foreign key constraint violations while maintaining test isolation.
+
+## Real-Time Job Status Updates
+
+### Polling Implementation
+
+The application uses **client-side polling** instead of Server-Sent Events (SSE) for real-time job status updates:
+
+**Why Polling?**:
+- Vercel serverless functions don't support long-lived SSE connections
+- Polling provides predictable, reliable updates without connection management complexity
+- 2-second interval provides real-time feel while minimizing server load
+
+### Polling API Endpoint
+
+**GET `/api/projects/[projectId]/jobs/status`**
+
+- Returns all jobs for a project with current status
+- Used by frontend polling hook at 2-second intervals
+- Request: Authenticated session cookie required
+- Response: `{ jobs: Array<{ id, status, ticketId, updatedAt }> }`
+- Performance: <100ms p95 response time (indexed query on `projectId`)
+- Authorization: Project ownership validated (userId match)
+- Error responses:
+  - 401: Unauthorized (no session)
+  - 403: Forbidden (project not owned)
+  - 404: Not Found (project doesn't exist)
+  - 500: Internal Server Error
+
+### useJobPolling Hook
+
+**Location**: `app/lib/hooks/useJobPolling.ts`
+
+**Features**:
+- 2-second polling interval (configurable)
+- Terminal state tracking (COMPLETED, FAILED, CANCELLED)
+- Auto-stop when all jobs terminal
+- Fixed retry interval (no exponential backoff)
+- Automatic cleanup on unmount
+
+**Usage**:
+```typescript
+import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
+
+function BoardComponent({ projectId }: { projectId: number }) {
+  const { jobs, isPolling, error } = useJobPolling(projectId);
+
+  // jobs array updates every 2 seconds
+  // isPolling = false when all jobs terminal
+}
+```
+
+**Terminal State Optimization**:
+- Client tracks job IDs that reached terminal states
+- Polling stops automatically when all jobs are COMPLETED/FAILED/CANCELLED
+- Reduces unnecessary API calls and server load
+
+### Data Model Updates
+
+**Job Model** (`prisma/schema.prisma`):
+- Added `projectId` field for direct project filtering
+- Added index on `projectId` for efficient polling queries
+- Migration: `20251014112141_add_job_project_id`
+
+**Why projectId on Job?**:
+- Enables single-query job fetching without joins
+- Improves API performance (<100ms p95 requirement)
+- Simplifies polling logic
+
+### Implementation Files
+
+**Backend**:
+- API endpoint: `app/api/projects/[projectId]/jobs/status/route.ts`
+- Zod schemas: `app/lib/schemas/job-polling.ts`
+- Database migration: `prisma/migrations/20251014112141_add_job_project_id/`
+
+**Frontend**:
+- Polling hook: `app/lib/hooks/useJobPolling.ts`
+- Board component: `components/board/board.tsx` (uses hook)
+
+**Tests**:
+- Contract tests: `tests/api/polling/job-status.spec.ts`
+- Unit tests: `tests/unit/useJobPolling.test.ts`
+
+### Migration from SSE
+
+**Removed Files**:
+- `app/api/sse/route.ts` (SSE API endpoint)
+- `components/board/sse-provider.tsx` (SSE React context)
+- `tests/e2e/real-time/sse-connection.spec.ts` (SSE-specific tests)
+- `tests/e2e/real-time/sse-job-broadcast.spec.ts` (SSE-specific tests)
+
+**Updated Files**:
+- `app/api/jobs/[id]/status/route.ts`: Removed SSE broadcast logic
+- `components/board/board.tsx`: Replaced SSEProvider with useJobPolling hook
+
+**Breaking Changes**: None - polling provides same UX as SSE to end users
 
 <!-- MANUAL ADDITIONS END -->

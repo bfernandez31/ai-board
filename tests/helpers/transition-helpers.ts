@@ -16,9 +16,33 @@ export async function transitionThrough(
   stages: string[]
 ): Promise<void> {
   for (const stage of stages) {
-    await request.post(`/api/projects/1/tickets/${ticketId}/transition`, {
+    const response = await request.post(`/api/projects/1/tickets/${ticketId}/transition`, {
       data: { targetStage: stage },
     });
+
+    // Check response status
+    if (!response.ok()) {
+      const body = await response.json();
+      throw new Error(`Transition to ${stage} failed: ${JSON.stringify(body)}`);
+    }
+
+    // After SPECIFY transition, simulate workflow setting branch
+    if (stage === 'SPECIFY') {
+      const branchName = `feature/ticket-${ticketId}`;
+      const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+
+      const branchResponse = await request.patch(`/api/projects/1/tickets/${ticketId}/branch`, {
+        data: { branch: branchName },
+        headers: {
+          'Authorization': `Bearer ${workflowToken}`,
+        },
+      });
+
+      if (!branchResponse.ok()) {
+        const body = await branchResponse.json();
+        throw new Error(`Branch update failed: ${JSON.stringify(body)}`);
+      }
+    }
   }
 }
 

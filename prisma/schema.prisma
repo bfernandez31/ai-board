@@ -130,6 +130,7 @@ model Ticket {
 model Job {
   id          Int       @id @default(autoincrement())
   ticketId    Int
+  projectId   Int
   command     String    @db.VarChar(50)
   status      JobStatus @default(PENDING)
   branch      String?   @db.VarChar(200)
@@ -143,6 +144,7 @@ model Job {
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+  @@index([projectId])
   @@index([status])
   @@index([startedAt])
   @@index([ticketId, status, startedAt])

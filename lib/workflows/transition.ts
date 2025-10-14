@@ -2,8 +2,6 @@ import { PrismaClient, Stage, JobStatus, Ticket, Project } from '@prisma/client'
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-validation';
-import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
-import type { JobStatusUpdate } from '@/lib/sse-schemas';
 
 const prisma = new PrismaClient();
 
@@ -95,32 +93,12 @@ export async function handleTicketTransition(
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: ticket.projectId,
         command: command,
         status: JobStatus.PENDING,
         startedAt: new Date(),
       },
     });
-
-    // Broadcast job creation to SSE clients
-    try {
-      const jobCreatedMessage: JobStatusUpdate = {
-        projectId: ticket.projectId,
-        ticketId: ticket.id,
-        jobId: job.id,
-        status: 'PENDING',
-        command: command,
-        timestamp: new Date().toISOString(),
-      };
-
-      await broadcastJobStatusUpdate(jobCreatedMessage);
-      console.log(`[Transition] SSE broadcast sent for new job ${job.id}`);
-    } catch (broadcastError) {
-      // Log broadcast error but don't fail the transition
-      console.error('[Transition] SSE broadcast failed:', {
-        jobId: job.id,
-        error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
-      });
-    }
 
     // Initialize Octokit with GitHub token
     const githubToken = process.env.GITHUB_TOKEN;

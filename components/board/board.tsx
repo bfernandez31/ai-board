@@ -23,18 +23,13 @@ import {
   revertTicketStage,
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
-import { SSEProvider, useSSEContext } from './sse-provider';
+import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { Job } from '@prisma/client';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job>;
-  /**
-   * Enable SSE real-time updates (optional, defaults to true)
-   * Set to false in test environments to avoid connection timeouts
-   */
-  sseEnabled?: boolean;
 }
 
 /**
@@ -53,7 +48,8 @@ function BoardContent({
   projectId,
   initialJobs = new Map(),
 }: BoardProps) {
-  const { jobUpdates } = useSSEContext();
+  // Poll for job status updates (replaces SSE)
+  const { jobs: polledJobs } = useJobPolling(projectId, 2000);
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -319,30 +315,29 @@ function BoardContent({
     [allTickets, groupTicketsByStage]
   );
 
-  // Get job for a specific ticket (merges initial + live data)
+  // Get job for a specific ticket (merges initial + polled data)
   const getTicketJob = useCallback(
     (ticketId: number): Job | null => {
-      // Prioritize real-time SSE update
-      const liveUpdate = jobUpdates.get(ticketId);
-      if (liveUpdate) {
-        // Convert to Job-like object (SSE message has minimal fields)
-        // We'll use the initial job as base if available, otherwise create minimal job
+      // Prioritize real-time polled update
+      const polledJob = polledJobs.find(job => job.ticketId === ticketId);
+      if (polledJob) {
+        // Convert polled job to Job type
         const baseJob = initialJobs.get(ticketId);
         if (baseJob) {
           return {
             ...baseJob,
-            status: liveUpdate.status,
-            command: liveUpdate.command,
+            status: polledJob.status,
+            updatedAt: new Date(polledJob.updatedAt),
           };
         }
 
-        // Create minimal Job object from SSE update (for new jobs created during session)
+        // Create minimal Job object from polled data (for new jobs created during session)
         return {
-          id: liveUpdate.jobId,
-          ticketId: liveUpdate.ticketId,
-          status: liveUpdate.status,
-          command: liveUpdate.command,
-          startedAt: new Date(liveUpdate.timestamp),
+          id: polledJob.id,
+          ticketId: polledJob.ticketId,
+          status: polledJob.status,
+          command: '', // Not included in polling response
+          startedAt: new Date(polledJob.updatedAt),
           completedAt: null,
         } as Job;
       }
@@ -350,7 +345,7 @@ function BoardContent({
       // Fall back to initial job data
       return initialJobs.get(ticketId) || null;
     },
-    [jobUpdates, initialJobs]
+    [polledJobs, initialJobs]
   );
 
   const stages = getAllStages();
@@ -413,16 +408,10 @@ function BoardContent({
 }
 
 /**
- * Board Component - SSE-Enabled Board Wrapper
+ * Board Component - Polling-Enabled Board
  *
- * Wraps BoardContent with SSEProvider for real-time updates.
+ * Main board component with client-side polling for real-time updates.
  */
 export function Board(props: BoardProps) {
-  const { sseEnabled = true, ...contentProps } = props;
-
-  return (
-    <SSEProvider projectId={props.projectId} enabled={sseEnabled}>
-      <BoardContent {...contentProps} />
-    </SSEProvider>
-  );
+  return <BoardContent {...props} />;
 }

@@ -5,8 +5,6 @@ import {
   InvalidTransitionError,
   JobStatus,
 } from '@/app/lib/job-state-machine';
-import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
-import type { JobStatusUpdate } from '@/lib/sse-schemas';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
@@ -170,7 +168,6 @@ export async function PATCH(
 
     // Update job status and set timestamps appropriately
     // completedAt is only set for terminal states (COMPLETED/FAILED/CANCELLED)
-    // Include ticket relation to get projectId for SSE broadcast
     const isTerminalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(requestedStatus);
 
     // Build update data dynamically to satisfy exactOptionalPropertyTypes: true
@@ -198,13 +195,6 @@ export async function PATCH(
         id: true,
         status: true,
         completedAt: true,
-        ticketId: true,
-        command: true,
-        ticket: {
-          select: {
-            projectId: true,
-          },
-        },
       },
     });
 
@@ -215,28 +205,6 @@ export async function PATCH(
       completedAt: updatedJob.completedAt?.toISOString(),
       elapsedMs: elapsedTime,
     });
-
-    // Broadcast job status update to SSE clients
-    try {
-      const broadcastMessage: JobStatusUpdate = {
-        projectId: updatedJob.ticket.projectId,
-        ticketId: updatedJob.ticketId,
-        jobId: updatedJob.id,
-        status: updatedJob.status as 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED',
-        command: updatedJob.command,
-        timestamp: new Date().toISOString(),
-      };
-
-      await broadcastJobStatusUpdate(broadcastMessage);
-      console.log('[Job Status Update] SSE broadcast sent');
-    } catch (broadcastError) {
-      // Log broadcast error but don't fail the API request
-      // The database update succeeded, which is the critical operation
-      console.error('[Job Status Update] SSE broadcast failed:', {
-        jobId,
-        error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
-      });
-    }
 
     // Return minimal response (id, status, completedAt)
     return NextResponse.json(

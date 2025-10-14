@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: Job Polling API
+  description: API contract for client-side polling of job status updates
+  version: 1.0.0
+  contact:
+    name: AI Board Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://ai-board.vercel.app/api
+    description: Production (Vercel)
+
+paths:
+  /projects/{projectId}/jobs/status:
+    get:
+      summary: Get job status for project
+      description: |
+        Returns current status of all jobs associated with a project.
+        Used for client-side polling (2-second interval).
+        Requires authenticated session and project ownership.
+      operationId: getJobStatus
+      tags:
+        - Jobs
+        - Polling
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Unique project identifier
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 3
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+              examples:
+                mixedStatuses:
+                  summary: Jobs in various states
+                  value:
+                    jobs:
+                      - id: 42
+                        status: RUNNING
+                        ticketId: 15
+                        updatedAt: '2025-10-14T10:30:45.123Z'
+                      - id: 43
+                        status: COMPLETED
+                        ticketId: 16
+                        updatedAt: '2025-10-14T10:29:12.456Z'
+                      - id: 44
+                        status: PENDING
+                        ticketId: 17
+                        updatedAt: '2025-10-14T10:28:00.000Z'
+                emptyJobs:
+                  summary: No jobs for project
+                  value:
+                    jobs: []
+        '401':
+          description: Unauthorized - No valid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Unauthorized'
+                code: 'AUTH_REQUIRED'
+        '403':
+          description: Forbidden - Project not owned by session user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Forbidden'
+                code: 'PROJECT_NOT_OWNED'
+        '404':
+          description: Not Found - Project does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Not Found'
+                code: 'PROJECT_NOT_FOUND'
+        '500':
+          description: Internal Server Error - Database or server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Internal Server Error'
+                code: 'DATABASE_ERROR'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+  schemas:
+    JobStatusResponse:
+      type: object
+      required:
+        - jobs
+      properties:
+        jobs:
+          type: array
+          description: Array of job status objects for the project
+          items:
+            $ref: '#/components/schemas/JobStatusDto'
+      example:
+        jobs:
+          - id: 42
+            status: RUNNING
+            ticketId: 15
+            updatedAt: '2025-10-14T10:30:45.123Z'
+          - id: 43
+            status: COMPLETED
+            ticketId: 16
+            updatedAt: '2025-10-14T10:29:12.456Z'
+
+    JobStatusDto:
+      type: object
+      required:
+        - id
+        - status
+        - ticketId
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Unique job identifier
+          example: 42
+        status:
+          type: string
+          enum:
+            - PENDING
+            - RUNNING
+            - COMPLETED
+            - FAILED
+            - CANCELLED
+          description: Current job state (see JobStatus enum)
+          example: RUNNING
+        ticketId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Associated ticket ID (for UI mapping)
+          example: 15
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of last status change
+          example: '2025-10-14T10:30:45.123Z'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: 'Unauthorized'
+        code:
+          type: string
+          description: Machine-readable error code
+          example: 'AUTH_REQUIRED'
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: User does not own the project
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Project not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Jobs
+    description: Job status management operations
+  - name: Polling
+    description: Client-side polling endpoints (2-second interval)

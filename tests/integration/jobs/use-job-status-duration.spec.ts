@@ -38,6 +38,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -81,6 +82,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -134,6 +136,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -204,6 +207,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -240,6 +244,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'RUNNING',
         branch: '020-test-branch',

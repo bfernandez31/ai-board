@@ -38,6 +38,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'RUNNING',
         branch: '020-test-branch',
@@ -79,6 +80,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -119,6 +121,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
+        projectId: 1,
         command: 'plan',
         status: 'COMPLETED',
         branch: '020-test-branch',
@@ -201,6 +204,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
       const job = await prisma.job.create({
         data: {
           ticketId: ticket.id,
+          projectId: 1,
           command: testCase.command,
           status: testCase.status,
           branch: testCase.status === 'PENDING' ? null : '020-test-branch',
