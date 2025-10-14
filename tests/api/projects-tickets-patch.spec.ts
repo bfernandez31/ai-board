@@ -352,9 +352,9 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(body).toHaveProperty('jobId');
     expect(body.jobId).toBeGreaterThan(0);
 
-    // Should include branch name for SPECIFY stage
+    // Branch should be NULL after transition (workflow will set it later via PATCH /branch)
     expect(body).toHaveProperty('branch');
-    expect(body.branch).toBe(`feature/ticket-${ticket.id}`);
+    expect(body.branch).toBeNull();
 
     // Should update stage and version
     expect(body.stage).toBe('SPECIFY');
@@ -380,9 +380,9 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(body).toHaveProperty('jobId');
     expect(body.jobId).toBeGreaterThan(0);
 
-    // Should include branch name
+    // Branch should be NULL after transition (workflow will set it later via PATCH /branch)
     expect(body).toHaveProperty('branch');
-    expect(body.branch).toBe(`feature/ticket-${ticket.id}`);
+    expect(body.branch).toBeNull();
 
     // Should update both title and stage
     expect(body.title).toBe('[e2e] Updated title with stage change');

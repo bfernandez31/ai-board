@@ -286,6 +286,8 @@ export async function PATCH(
       }
 
       // Update ticket with version check
+      // Note: workflowBranchName is NOT written here - the GitHub workflow
+      // will create the Git branch and update via PATCH /branch endpoint
       try {
         const updatedTicket = await prisma.ticket.update({
           where: {
@@ -299,7 +301,6 @@ export async function PATCH(
             }),
             ...(stage !== undefined && { stage }),
             ...(branch !== undefined && { branch }),
-            ...(workflowBranchName && { branch: workflowBranchName }),
             ...(autoMode !== undefined && { autoMode }),
             version: { increment: 1 },
           },
@@ -434,6 +435,8 @@ export async function PATCH(
       }
 
       // Update ticket atomically with version increment
+      // Note: Branch is NOT set here - it's created by the GitHub workflow
+      // and updated via PATCH /branch when the workflow completes
       try {
         const updatedTicket = await prisma.ticket.update({
           where: {
@@ -442,7 +445,6 @@ export async function PATCH(
           },
           data: {
             stage: newStage,
-            ...(transitionResult.branchName && { branch: transitionResult.branchName }),
             version: { increment: 1 },
           },
         });
