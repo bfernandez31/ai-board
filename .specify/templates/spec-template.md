@@ -5,6 +5,23 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+## Auto-Resolved Decisions *(mandatory when clarification policies apply)*
+
+<!--
+  ACTION REQUIRED: Document each automated clarification so reviewers understand
+  which policy fired, why, and any trade-offs. Duplicate the block below when
+  multiple decisions were auto-resolved.
+-->
+
+- **Decision**: [What ambiguity was resolved]
+- **Policy Applied**: [AUTO | CONSERVATIVE | PRAGMATIC | INTERACTIVE]
+- **Confidence**: [numeric score or high/medium/low + justification]
+- **Fallback Triggered?**: [Yes/No — explain if AUTO promoted to CONSERVATIVE]
+- **Trade-offs**:
+  1. [Impact on scope/quality]
+  2. [Impact on timeline/cost]
+- **Reviewer Notes**: [What humans must validate before implementation]
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
