@@ -67,7 +67,6 @@ jobs:
           echo "🔍 Debug workflow inputs:"
           echo "  ticket_id: ${{ inputs.ticket_id }}"
           echo "  job_id: ${{ inputs.job_id }}"
-          echo "  job_id type: ${{ type(inputs.job_id) }}"
           echo "  command: ${{ inputs.command }}"
           echo "  ticketTitle: ${{ inputs.ticketTitle }}"
 
