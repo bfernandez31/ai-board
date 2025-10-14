@@ -201,11 +201,27 @@ export async function POST(
         },
       });
 
+      console.log('[Job Created]', {
+        jobId: job.id,
+        ticketId: ticketId,
+        projectId: projectId,
+        command: command,
+        status: job.status,
+      });
+
       // Initialize Octokit with GitHub token
       const githubToken = process.env.GITHUB_TOKEN;
 
       // Skip GitHub API call in test mode (when NODE_ENV is test, token is placeholder, or missing)
       const isTestMode = process.env.NODE_ENV === 'test' || !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
+
+      console.log('[Transition Debug]', {
+        NODE_ENV: process.env.NODE_ENV,
+        hasGithubToken: !!githubToken,
+        tokenIncludesTest: githubToken?.includes('test'),
+        tokenIncludesPlaceholder: githubToken?.includes('placeholder'),
+        isTestMode: isTestMode,
+      });
 
       if (!isTestMode) {
         const octokit = new Octokit({
@@ -225,6 +241,8 @@ export async function POST(
           workflowInputs.ticketTitle = currentTicket.title;
           workflowInputs.ticketDescription = currentTicket.description;
         }
+
+        console.log('[Workflow Dispatch] Sending inputs:', JSON.stringify(workflowInputs, null, 2));
 
         // Dispatch GitHub Actions workflow
         await octokit.actions.createWorkflowDispatch({
