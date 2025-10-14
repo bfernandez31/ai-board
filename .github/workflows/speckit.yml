@@ -45,7 +45,8 @@ on:
       job_id:
         description: 'Job ID for status tracking (optional)'
         required: false
-        type: number
+        type: string
+        default: ''
 
 jobs:
   run-speckit:
