@@ -262,7 +262,6 @@ export async function PATCH(
 
       // Handle stage transition with GitHub workflow dispatch
       let jobId: number | undefined;
-      let workflowBranchName: string | undefined;
 
       if (stage !== undefined && stage !== currentTicket.stage) {
         // Stage is changing - trigger GitHub workflow
@@ -282,7 +281,8 @@ export async function PATCH(
         }
 
         jobId = transitionResult.jobId;
-        workflowBranchName = transitionResult.branchName;
+        // Note: branchName from transitionResult is not used here
+        // The branch is created by GitHub workflow and updated via PATCH /branch endpoint
       }
 
       // Update ticket with version check
