@@ -106,6 +106,41 @@ Project: PRAGMATIC (rapid delivery)
 - "millions of users", "high traffic" → CONSERVATIVE
 - "prototype", "small team" → PRAGMATIC
 
+#### Confidence Scoring Mechanics
+
+AUTO assigns each detected signal a weight and derives both the recommended policy and a confidence score (0.0–1.0). The confidence score determines whether the decision can stand or must fall back to CONSERVATIVE.
+
+| Signal Bucket              | Examples (non-exhaustive)                  | Weight | Policy Bias |
+|----------------------------|-------------------------------------------|--------|-------------|
+| Sensitive / Compliance     | payment, auth, PII, GDPR, PCI-DSS, audit  | +3     | CONSERVATIVE|
+| Scalability / Reliability  | millions of users, mission critical, SLA  | +2     | CONSERVATIVE|
+| Neutral Feature Context    | user-facing UI, general CRUD              | +1     | CONSERVATIVE|
+| Internal / Speed Keywords  | admin, internal, prototype, MVP          | -2     | PRAGMATIC   |
+| Explicit Speed Directive   | "optimize for speed", "temporary"       | -3     | PRAGMATIC   |
+
+**Computation**:
+
+```
+netScore = Σ(weight for each signal)
+absScore = |netScore|
+
+if absScore >= 5 and conflicting buckets <= 1:
+    confidence = 0.9 (High)
+elif absScore >= 3:
+    confidence = 0.6 (Medium)
+else:
+    confidence = 0.3 (Low)
+
+selectedPolicy =
+    CONSERVATIVE if netScore >= 0
+    PRAGMATIC if netScore < 0 (unless manual override)
+```
+
+**Fallback Rules**:
+- If `confidence < 0.5` OR there are ≥2 conflicting signal buckets (e.g., both compliance and prototype), AUTO MUST default to CONSERVATIVE and log the conflict in the `Auto-Resolved Decisions` section.
+- Ticket overrides (if present) always win, independent of score.
+- Medium confidence decisions require a reviewer note identifying assumptions to validate.
+
 **Resolution Examples**:
 
 **Feature: "User Login System"**
@@ -601,12 +636,12 @@ const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificati
 
 **Command**:
 ```bash
-claude --slash-command "/specify --policy ${{ steps.get_policy.outputs.policy }} \"$DESCRIPTION\""
+claude --slash-command '/specify {"featureDescription":"'"$DESCRIPTION"'","clarificationPolicy":"'"${{ steps.get_policy.outputs.policy }}"'""}'
 ```
 
 **Input /specify**:
-- Parse `--policy` flag in `$ARGUMENTS`
-- Extract policy value and feature description
+- Parse JSON payload for `featureDescription` and optional `clarificationPolicy`
+- Use provided `clarificationPolicy` directly; if absent, default to AUTO (fallback to INTERACTIVE when payload not JSON)
 
 ---
 
@@ -622,7 +657,7 @@ claude --slash-command "/specify --policy ${{ steps.get_policy.outputs.policy }}
 
 **After (with auto-resolution)**:
 1. Get effective policy
-2. Run /specify --policy X → generates complete spec
+2. Run `/specify {"featureDescription":...,"clarificationPolicy":"..."}` → generates complete spec
 3. Job status COMPLETED
 
 **Gain**:
@@ -634,28 +669,28 @@ claude --slash-command "/specify --policy ${{ steps.get_policy.outputs.policy }}
 
 ## 9. `/specify` Command Extension
 
-### 9.1 Parse --policy Flag
+### 9.1 Parse JSON Payload
 
 **Input Format**:
 ```bash
-/specify --policy CONSERVATIVE "Add user authentication"
+/specify {"featureDescription":"Add user authentication","clarificationPolicy":"CONSERVATIVE"}
 ```
 
-**Parsing in $ARGUMENTS**:
-- Extract `--policy <VALUE>`
-- Extract description (remaining text)
-- If no flag → default INTERACTIVE (current behavior)
+**Parsing in `$ARGUMENTS`**:
+- Detect JSON payload (leading `{`).
+- Extract `featureDescription` (required) and optional `clarificationPolicy` field.
+- Use provided `clarificationPolicy` as the effective policy; if missing ➜ default to `AUTO` (or `INTERACTIVE` when payload is plain text).
 
 ---
 
 ### 9.2 Conditional Logic
 
-**IF policy = INTERACTIVE**:
+**IF effective policy = INTERACTIVE** (no metadata provided):
 - Current behavior preserved
 - Generate spec with `[NEEDS CLARIFICATION: ...]` markers
 - User will need to run `/clarify` next (future feature)
 
-**IF policy = AUTO | CONSERVATIVE | PRAGMATIC**:
+**IF effective policy = AUTO | CONSERVATIVE | PRAGMATIC**:
 - DO NOT use `[NEEDS CLARIFICATION]`
 - Resolve ambiguities inline according to policy guidelines
 - Add "## Auto-Resolved Decisions" section with justifications
@@ -731,7 +766,7 @@ Given that feature description, do this:
 
 #### Enhanced Command Structure
 
-**Step 1: Parse Policy Flag from $ARGUMENTS**
+**Step 1: Parse Command Payload**
 
 Add parsing logic at the beginning of the command:
 
@@ -742,16 +777,21 @@ description: Create or update the feature specification from a natural language 
 
 User input: $ARGUMENTS
 
-**STEP 1: PARSE POLICY FLAG**
+**STEP 1: PARSE COMMAND PAYLOAD**
 
-Extract clarification policy from $ARGUMENTS:
-- If $ARGUMENTS contains "--policy <VALUE>", extract VALUE and remaining description
-- Valid policies: AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE
-- If no --policy flag found, default to INTERACTIVE (current behavior)
-- Store policy in POLICY variable, description in FEATURE_DESCRIPTION
+Extract feature description and policy metadata from `$ARGUMENTS`:
+- If payload begins with `{`, parse as JSON.
+- Required field: `featureDescription` (string).
+- Optional fields: `ticket.clarificationPolicy`, `project.clarificationPolicy`.
+- Normalize policies to uppercase enum values (AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE).
+- Compute derived variables:
+  - `TICKET_POLICY`
+  - `PROJECT_POLICY`
+  - `POLICY = TICKET_POLICY ?? PROJECT_POLICY ?? 'AUTO'`
+- If payload is plain text (legacy usage), set `POLICY = 'INTERACTIVE'` and treat entire string as `FEATURE_DESCRIPTION`.
 
 Example parsing:
-- Input: "--policy CONSERVATIVE Add user authentication"
+- Input JSON: `{"featureDescription":"Add user authentication","clarificationPolicy":"CONSERVATIVE"}`
 - POLICY = "CONSERVATIVE"
 - FEATURE_DESCRIPTION = "Add user authentication"
 ```
@@ -936,9 +976,11 @@ Update the execution steps to be conditional:
 ```markdown
 **STEP 6: EXECUTE SPECIFICATION GENERATION**
 
-1. Run `.specify/scripts/bash/create-new-feature.sh --json "$FEATURE_DESCRIPTION"`
-2. Load `.specify/templates/spec-template.md`
-3. **CONDITIONAL WRITING**:
+1. Parse the slash-command payload (JSON) to extract `featureDescription` and optional `clarificationPolicy`.
+2. Run `.specify/scripts/bash/create-new-feature.sh --json "$featureDescription"`.
+3. Load `.specify/templates/spec-template.md`.
+4. Resolve the effective policy: use provided `clarificationPolicy` if present; otherwise default to `AUTO` (or `INTERACTIVE` when payload is plain text).
+5. **CONDITIONAL WRITING**:
 
    IF POLICY = "INTERACTIVE":
      - Write spec using template guidelines
@@ -947,16 +989,19 @@ Update the execution steps to be conditional:
 
    IF POLICY = "AUTO" OR "CONSERVATIVE" OR "PRAGMATIC":
      - Write spec WITHOUT [NEEDS CLARIFICATION] markers
-     - Apply resolution guidelines from Step 3
+     - Apply resolution guidelines from Step 3 (including AUTO scoring & fallbacks)
      - Use decision matrix from Step 4
      - Generate Auto-Resolved Decisions section from Step 5
-     - Document all automatic decisions with rationales
+     - Document all automatic decisions with rationales, confidence, and trade-offs
 
-4. Write specification to SPEC_FILE
-5. Report completion with policy used:
-   - "Specification generated with [POLICY] policy"
-   - "Auto-resolved [N] ambiguities" (if applicable)
-   - "See 'Auto-Resolved Decisions' section for details" (if applicable)
+6. Write specification to SPEC_FILE and ensure Auto-Resolved Decisions section is populated (or explicitly `- None`).
+7. Report completion with policy used and reference the Auto-Resolved Decisions summary.
+
+Example payload:
+
+```bash
+/specify {"featureDescription":"Add admin debug panel","clarificationPolicy":"PRAGMATIC"}
+```
 ```
 
 #### Complete Enhanced Command Example
@@ -968,7 +1013,7 @@ description: Create or update the feature specification from a natural language 
 
 User input: $ARGUMENTS
 
-**STEP 1: PARSE POLICY FLAG**
+**STEP 1: PARSE COMMAND PAYLOAD**
 [... parsing logic as above ...]
 
 **STEP 2: DETERMINE RESOLUTION MODE**
@@ -995,22 +1040,22 @@ Test cases to validate implementation:
    - Should generate spec with [NEEDS CLARIFICATION] markers
    - Preserves current behavior
 
-2. **Test CONSERVATIVE**: `./specify --policy CONSERVATIVE "Add payment processing"`
+2. **Test CONSERVATIVE**: `./specify '{"featureDescription":"Add payment processing","clarificationPolicy":"CONSERVATIVE"}'`
    - Should generate spec WITHOUT [NEEDS CLARIFICATION]
    - Should include "Auto-Resolved Decisions" section
    - Decisions should follow CONSERVATIVE guidelines
 
-3. **Test PRAGMATIC**: `./specify --policy PRAGMATIC "Add admin dashboard"`
+3. **Test PRAGMATIC**: `./specify '{"featureDescription":"Add admin dashboard","clarificationPolicy":"PRAGMATIC"}'`
    - Should generate spec WITHOUT [NEEDS CLARIFICATION]
    - Should include "Auto-Resolved Decisions" section
    - Decisions should follow PRAGMATIC guidelines
 
-4. **Test AUTO with payment context**: `./specify --policy AUTO "Add payment processing"`
+4. **Test AUTO with payment context**: `./specify '{"featureDescription":"Add payment processing","clarificationPolicy":"AUTO"}'`
    - Should detect "payment" keyword
    - Should apply CONSERVATIVE guidelines
    - Should log context detection
 
-5. **Test AUTO with admin context**: `./specify --policy AUTO "Add admin debug panel"`
+5. **Test AUTO with admin context**: `./specify '{"featureDescription":"Add admin debug panel","clarificationPolicy":"AUTO"}'`
    - Should detect "admin" keyword
    - Should apply PRAGMATIC guidelines
    - Should log context detection
@@ -1089,7 +1134,7 @@ Test cases to validate implementation:
 2. API call to `/api/tickets/:id` (include project)
 3. Resolution logic: ticket ?? project ?? 'AUTO'
 4. Policy source logging
-5. Pass policy to /specify via flag
+5. Embed ticket/project policy metadata in JSON payload sent to /specify
 6. Remove /clarify check logic (simplification)
 7. Test workflow with different policies
 
@@ -1103,10 +1148,10 @@ Test cases to validate implementation:
 ### Phase 5: `/specify` Command Extension (~1.5 days)
 
 **Tasks**:
-1. Parse `--policy` flag in `$ARGUMENTS`
-2. Extract policy value + feature description
+1. Parse JSON payload for `featureDescription`, `ticket.clarificationPolicy`, `project.clarificationPolicy`
+2. Compute effective policy (ticket override → project default → AUTO)
 3. Conditional logic (INTERACTIVE vs AUTO/CONSERVATIVE/PRAGMATIC)
-4. Implement resolution guidelines per policy
+4. Implement resolution guidelines per policy (including AUTO scoring/fallback)
 5. Generate "Auto-Resolved Decisions" section
 6. Context detection for AUTO policy (keywords)
 7. Local tests with spec-kit
@@ -1166,7 +1211,7 @@ Test cases to validate implementation:
 
 **Flow**:
 1. Get effective policy
-2. /specify --policy X generates complete spec
+2. `/specify {"featureDescription":...,"clarificationPolicy":"..."}` generates complete spec
 3. Job status → COMPLETED
 
 **Simplicity**:

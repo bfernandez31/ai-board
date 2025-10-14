@@ -14,12 +14,12 @@ Added Rules:
 - Ticket overrides supersede project defaults when present
 
 Templates Requiring Updates:
-⚠ spec-template.md: Add Auto-Resolved Decisions summary section once automation ships
+✅ spec-template.md: Auto-Resolved Decisions section stub added for policy transparency
 ✅ plan-template.md: No changes required (guardrails are policy-level)
 ✅ tasks-template.md: No changes required (tasks already reference constitution principles)
 
 Follow-up TODOs:
-- Define AUTO confidence scoring mechanics to operationalize fallback trigger
+- None (AUTO confidence scoring defined in specs/vision/auto-resolution-clarifications.md)
 -->
 
 # AI Board Constitution
