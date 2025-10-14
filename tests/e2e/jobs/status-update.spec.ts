@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 /**
  * E2E Tests: Job Status Update Feature
@@ -39,13 +40,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'specify',
         status: 'RUNNING',
         branch: 'feature/test',
+        projectId: 1,
         startedAt: startTime,
       },
     });
 
     // Action: Send PATCH request to mark as COMPLETED
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 200 response
@@ -83,13 +86,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'plan',
         status: 'RUNNING',
         branch: 'feature/bug-fix',
+        projectId: 1,
         startedAt: startTime,
       },
     });
 
     // Action: Send PATCH request to mark as FAILED
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'FAILED' }
+      data: { status: 'FAILED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 200 response
@@ -120,13 +125,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'build',
         status: 'RUNNING',
         branch: 'feature/cancelled-test',
+        projectId: 1,
         startedAt: startTime,
       },
     });
 
     // Action: Send PATCH request to mark as CANCELLED
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'CANCELLED' }
+      data: { status: 'CANCELLED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 200 response
@@ -157,6 +164,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'verify',
         status: 'COMPLETED',
         branch: 'feature/idempotent',
+        projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
       },
@@ -164,7 +172,8 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
 
     // Action: Send same status again (idempotent request)
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 200 response (success, no error)
@@ -192,6 +201,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'test',
         status: 'COMPLETED',
         branch: 'feature/invalid-transition',
+        projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: new Date('2025-10-10T10:05:00Z'),
       },
@@ -199,7 +209,8 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
 
     // Action: Attempt invalid transition
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'FAILED' }
+      data: { status: 'FAILED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 400 response
@@ -223,13 +234,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         command: 'deploy',
         status: 'RUNNING',
         branch: 'feature/invalid-status',
+        projectId: 1,
         startedAt: new Date(),
       },
     });
 
     // Action: Send request with invalid status
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'INVALID' }
+      data: { status: 'INVALID' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 400 response
@@ -255,7 +268,8 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
   test('T012: should return 404 for non-existent job', async ({ request }) => {
     // Action: Send request for non-existent job ID
     const response = await request.patch(`${BASE_URL}/api/jobs/999999/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Assert: HTTP 404 response
@@ -293,13 +307,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         command: 'test',
         status: 'FAILED',
         branch: 'test',
+        projectId: 1,
         startedAt: new Date(),
         completedAt: new Date(),
       },
     });
 
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -314,13 +330,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         command: 'test',
         status: 'CANCELLED',
         branch: 'test',
+        projectId: 1,
         startedAt: new Date(),
         completedAt: new Date(),
       },
     });
 
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -335,12 +353,14 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         command: 'test',
         status: 'PENDING',
         branch: 'test',
+        projectId: 1,
         startedAt: new Date(),
       },
     });
 
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -356,13 +376,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         command: 'test',
         status: 'FAILED',
         branch: 'test',
+        projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
       },
     });
 
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'FAILED' }
+      data: { status: 'FAILED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(200);
@@ -382,13 +404,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         command: 'test',
         status: 'CANCELLED',
         branch: 'test',
+        projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
       },
     });
 
     const response = await request.patch(`${BASE_URL}/api/jobs/${job.id}/status`, {
-      data: { status: 'CANCELLED' }
+      data: { status: 'CANCELLED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(200);

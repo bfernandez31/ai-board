@@ -441,6 +441,120 @@ CANCELLED → CANCELLED (idempotent)
 
 ---
 
+## Real-Time Job Status Updates
+
+**Purpose**: Users need to see job status changes as they happen without manually refreshing the page. The system uses client-side polling to periodically fetch job status updates and display them in real-time on the project board.
+
+### What It Does
+
+The system provides real-time visibility into workflow execution status:
+
+**Polling Mechanism**:
+- Client polls server at regular intervals for job status updates
+- Board automatically displays status changes when jobs transition
+- Polling continues while user views the board
+- No server-side connection management required
+
+**Update Flow**:
+1. User views project board with active jobs
+2. Client polls for job status updates every N seconds
+3. Server returns current job statuses for all project jobs
+4. Client updates UI when status changes detected
+5. Client continues polling while board is visible
+
+**Visual Feedback**:
+- Job status badges update automatically (PENDING → RUNNING → COMPLETED/FAILED/CANCELLED)
+- Minimum display duration prevents status flickering
+- Same real-time experience as previous SSE implementation
+
+**Resource Management**:
+- Polling stops when user navigates away from board
+- No persistent server-side connections
+- Compatible with serverless platforms (Vercel, AWS Lambda)
+
+### Requirements
+
+**Polling Configuration**:
+- Configurable polling interval (default: TBD)
+- Start polling when board component mounts
+- Stop polling when board component unmounts
+- Handle visibility changes (optional: pause when tab inactive)
+
+**API Endpoint**:
+- GET `/api/projects/{projectId}/jobs/status`
+- Returns array of job status objects for project
+- Minimal response size (only changed data)
+- Authentication: User session (NextAuth.js)
+
+**Client-Side State**:
+- Track last known status for each job
+- Detect status changes by comparing with previous poll
+- Update UI only when changes detected
+- Maintain polling interval timer
+
+**Error Handling**:
+- Network errors: Retry with exponential backoff
+- Rate limiting: Respect 429 responses
+- Authentication errors: Redirect to login
+- Display error indicator if polling fails
+
+**Optimization**:
+- Terminal state jobs excluded from polling
+- Batch all job status queries per project
+- Minimal data transfer (only job id and status)
+- Debounce rapid status changes
+
+### Why Polling Instead of SSE?
+
+**Serverless Platform Limitations**:
+- Vercel serverless functions have execution time limits
+- Connection persistence not guaranteed in serverless
+- Cold starts interrupt SSE connections
+- Horizontal scaling disconnects clients
+
+**Polling Benefits**:
+- No persistent connections required
+- Works reliably on serverless platforms
+- Simple error recovery (just poll again)
+- No server-side subscriber state management
+
+**Trade-offs**:
+- Slight delay between status change and UI update (polling interval)
+- More frequent server requests than SSE
+- Client-side polling timer management required
+
+### Data Model
+
+**Poll Request**:
+```
+GET /api/projects/{projectId}/jobs/status
+Authorization: Session cookie
+```
+
+**Poll Response**:
+```json
+[
+  {
+    "id": 123,
+    "ticketId": 456,
+    "status": "RUNNING"
+  },
+  {
+    "id": 124,
+    "ticketId": 457,
+    "status": "COMPLETED"
+  }
+]
+```
+
+**Client Polling State**:
+- `pollingInterval`: Timer ID for interval
+- `lastKnownStatuses`: Map<jobId, status>
+- `isPolling`: Boolean flag
+- `errorCount`: Number of consecutive failures
+
+---
+
 ## Workflow Authentication
 
 **Purpose**: API endpoints called by GitHub Actions workflows must be protected from unauthorized access. The system validates workflow requests using Bearer token authentication to prevent external manipulation of job status and ticket data.
@@ -563,6 +677,13 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 - ✅ State machine enforcement
 - ✅ Idempotent updates
 - ✅ Terminal state protection
+
+**Real-Time Updates**:
+- ✅ Client-side polling for job status
+- ✅ Automatic UI updates on status changes
+- ✅ Serverless platform compatibility
+- ✅ Resource-efficient polling (stops when not viewing board)
+- ✅ Error handling with exponential backoff
 
 **Workflow Authentication**:
 - ✅ Bearer token authentication

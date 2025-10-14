@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -65,6 +66,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: '014-add-github-branch',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -89,6 +91,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: '123-feature-name',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -112,6 +115,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: null,
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -132,6 +136,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: longBranch,
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -150,6 +155,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           // Missing branch field
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -169,6 +175,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: '014-test',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -183,6 +190,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: '014-persisted-branch',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -211,6 +219,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         data: {
           branch: '014-timestamp-test',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 

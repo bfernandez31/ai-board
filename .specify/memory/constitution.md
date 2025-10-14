@@ -1,29 +1,25 @@
 <!--
 Sync Impact Report
 ===================
-Version Change: 0.0.0 → 1.0.0
-Rationale: Initial constitution establishment for AI Board project
+Version Change: 1.0.0 → 1.1.0
+Rationale: Enforce test discovery before test creation to prevent duplicate test files
 
 Modified Principles:
-- NEW: TypeScript-First Development
-- NEW: Component-Driven Architecture
-- NEW: Test-Driven Development (NON-NEGOTIABLE)
-- NEW: Security-First Design
-- NEW: Database Integrity
+- ENHANCED: Test-Driven Development - Added mandatory test discovery workflow
+- ENHANCED: AI Agent Implementation Guidelines - Added test file management rules
 
-Added Sections:
-- Core Principles (5 principles)
-- Technology Standards
-- Development Workflow
-- Governance
+Added Rules:
+- ALWAYS search for existing tests FIRST before creating new test files
+- Test Discovery Workflow (5-step mandatory process)
+- Test File Management guidelines
 
 Templates Requiring Updates:
-✅ plan-template.md: Constitution Check gates aligned
-✅ spec-template.md: Requirements structure compatible
-✅ tasks-template.md: Task categorization matches principles
+✅ plan-template.md: No changes required (test discovery is execution-time guidance)
+✅ spec-template.md: No changes required (specs don't dictate test file structure)
+✅ tasks-template.md: No changes required (tasks reference constitution principles)
 
 Follow-up TODOs:
-- None - all placeholders resolved
+- None - constitution update sufficient for AI agent compliance
 -->
 
 # AI Board Constitution
@@ -58,13 +54,23 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 Tests must be written BEFORE implementation. Red-Green-Refactor cycle is mandatory for all critical user flows.
 
 **Non-Negotiable Rules**:
+- **ALWAYS search for existing tests FIRST** before creating new test files
+- Use `Grep` or `Glob` tools to find existing tests for the feature/component/API being modified
+- Update and extend existing test files rather than creating duplicates
 - Critical user flows require Playwright E2E tests before implementation
 - Tests must fail initially (Red), then implementation makes them pass (Green)
 - E2E tests in `/tests/[feature].spec.ts` using Playwright with MCP support
 - Test names describe user actions: `test("user can create board and add card")`
 - No feature is complete without passing tests
 
-**Rationale**: TDD ensures requirements are testable, catches integration issues early, and provides regression protection. Writing tests first forces clear thinking about user value before implementation details. Playwright with MCP integration enables reliable cross-browser testing.
+**Test Discovery Workflow** (MANDATORY before writing tests):
+1. **Search by feature**: `npx grep -r "describe.*[feature-name]" tests/`
+2. **Search by file path**: `npx glob "tests/**/*[feature-keyword]*.spec.ts"`
+3. **Search by API route**: `npx grep -r "/api/[route-path]" tests/`
+4. **Check test structure**: Read existing test file to understand patterns
+5. **Extend or create**: Add tests to existing file OR create new file if truly needed
+
+**Rationale**: TDD ensures requirements are testable, catches integration issues early, and provides regression protection. Writing tests first forces clear thinking about user value before implementation details. Searching for existing tests prevents duplication, maintains consistency, and leverages established test patterns. Playwright with MCP integration enables reliable cross-browser testing.
 
 ### IV. Security-First Design
 Security is not an afterthought. Input validation, secure database queries, and secret management are required at every layer.
@@ -167,13 +173,21 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 **AI Agent Implementation Guidelines**:
 When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 1. Read `specs/[feature]/spec.md` for requirements
-2. Follow existing code patterns (review similar components/routes)
-3. Use shadcn/ui components (never create UI primitives from scratch)
-4. Match existing folder structure conventions
-5. Write Playwright tests for critical paths before implementation
-6. Add TypeScript types explicitly (no implicit `any`)
-7. Handle errors gracefully with try-catch and user-friendly messages
-8. Update relevant tests if modifying existing features
+2. **Search for existing tests** using Grep/Glob before writing any tests
+3. **Update existing tests** if found, or create new tests only if none exist
+4. Follow existing code patterns (review similar components/routes)
+5. Use shadcn/ui components (never create UI primitives from scratch)
+6. Match existing folder structure conventions
+7. Write Playwright tests for critical paths before implementation (following Test Discovery Workflow)
+8. Add TypeScript types explicitly (no implicit `any`)
+9. Handle errors gracefully with try-catch and user-friendly messages
+10. Verify all tests pass before considering feature complete
+
+**Test File Management**:
+- Before creating `tests/[new-feature].spec.ts`, search for existing test files that cover the same area
+- Extend existing test suites rather than creating parallel test files
+- Group related tests in the same file (e.g., all `/api/tickets` tests in one file)
+- Only create new test files when testing genuinely new functionality with no existing coverage
 
 ## Governance
 
@@ -203,4 +217,4 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.0.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-09-30
+**Version**: 1.1.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-10-14

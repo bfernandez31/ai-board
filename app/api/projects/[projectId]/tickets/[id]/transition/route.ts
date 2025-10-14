@@ -194,6 +194,7 @@ export async function POST(
       job = await prisma.job.create({
         data: {
           ticketId: ticketId,
+          projectId: projectId,
           command: command,
           status: JobStatus.PENDING,
           startedAt: new Date(),
