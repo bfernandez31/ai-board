@@ -165,9 +165,10 @@ The system runs spec-kit commands via GitHub Actions workflow:
 
 **Workflow Configuration**:
 - Manual workflow_dispatch trigger only
-- Inputs: ticket_id, ticketTitle, ticketDescription, branch, command, answers_json (optional)
+- Inputs: ticket_id, ticketTitle, ticketDescription, branch, command, job_id, answers_json (optional)
 - Ubuntu-latest runner
 - 120-minute timeout
+- Environment variables: APP_URL, WORKFLOW_API_TOKEN
 
 **Environment**:
 - Node.js 22.20.0 setup
@@ -192,7 +193,14 @@ The system runs spec-kit commands via GitHub Actions workflow:
 **Security**:
 - ANTHROPIC_API_KEY for Claude API
 - GITHUB_TOKEN for Git push
+- WORKFLOW_API_TOKEN for API authentication
 - No secret values in logs
+
+**API Communication**:
+- APP_URL variable for configurable API endpoint
+- Bearer token authentication on all API calls
+- Status updates via PATCH `/api/jobs/{id}/status`
+- Branch updates via PATCH `/api/projects/{projectId}/tickets/{id}/branch`
 
 ### Data Model
 
@@ -202,7 +210,14 @@ The system runs spec-kit commands via GitHub Actions workflow:
 - `ticketDescription`: String (for specify command)
 - `branch`: String (feature branch name)
 - `command`: Choice (specify|plan|task|implement|clarify)
+- `job_id`: String (job record identifier)
 - `answers_json`: String (optional, for clarify command)
+
+**Environment Variables**:
+- `APP_URL`: Configurable API endpoint (GitHub repository variable)
+- `WORKFLOW_API_TOKEN`: Bearer token for API authentication (GitHub secret)
+- `ANTHROPIC_API_KEY`: Claude API key (GitHub secret)
+- `SKIP_SPECKIT_EXECUTION`: Auto-set for [e2e] test tickets
 
 **Workflow File**: `.github/workflows/speckit.yml`
 
@@ -368,6 +383,7 @@ The system updates job status when workflows complete:
 - PATCH `/api/jobs/{id}/status`
 - Accepts status in request body
 - Returns job id, status, completedAt
+- Requires Bearer token authentication (WORKFLOW_API_TOKEN)
 
 **Status Updates**:
 - RUNNING → COMPLETED: Workflow finished successfully
@@ -425,6 +441,96 @@ CANCELLED → CANCELLED (idempotent)
 
 ---
 
+## Workflow Authentication
+
+**Purpose**: API endpoints called by GitHub Actions workflows must be protected from unauthorized access. The system validates workflow requests using Bearer token authentication to prevent external manipulation of job status and ticket data.
+
+### What It Does
+
+The system authenticates all workflow-initiated API calls:
+
+**Authentication Flow**:
+1. Workflow includes `Authorization: Bearer <token>` header
+2. API endpoint validates token using constant-time comparison
+3. System processes request if token valid
+4. System returns 401 Unauthorized if token invalid or missing
+
+**Protected Endpoints**:
+- PATCH `/api/jobs/{id}/status` - Job status updates
+- PATCH `/api/projects/{projectId}/tickets/{id}/branch` - Branch name updates
+
+**Security Features**:
+- **Constant-time comparison**: Prevents timing attack vulnerabilities
+- **Bearer token scheme**: Industry-standard authentication pattern
+- **Centralized validation**: Single authentication helper used by all endpoints
+- **Clear error messages**: Distinguishes between missing token, invalid format, and incorrect token
+
+**Token Management**:
+- Stored as GitHub repository secret (WORKFLOW_API_TOKEN)
+- Not logged or exposed in workflow output
+- Reusable across all workflow API calls
+- Independent of GitHub authentication
+
+### Requirements
+
+**Authentication Helper**:
+- Location: `app/lib/workflow-auth.ts`
+- Function: `validateWorkflowAuth(request: NextRequest)`
+- Returns: `{ isValid: boolean, error?: string }`
+- Uses constant-time string comparison for security
+
+**Token Validation**:
+- Checks Authorization header exists
+- Validates Bearer scheme format
+- Compares token using constant-time algorithm
+- Returns specific error messages for debugging
+
+**API Integration**:
+- All workflow-callable endpoints must validate auth
+- Validation happens before any business logic
+- Returns 401 status for authentication failures
+- Preserves existing error handling for other failures
+
+**Environment Configuration**:
+- `WORKFLOW_API_TOKEN`: Server environment variable
+- Must be set in production environments
+- Same token used across all workflow requests
+- Token rotation requires updating GitHub secret and server environment
+
+**Security Requirements**:
+- Constant-time comparison prevents timing attacks
+- Token never logged or included in error responses
+- Failed auth attempts logged without exposing token
+- Token validation independent of request content
+
+### Data Model
+
+**Authentication Request**:
+```
+Authorization: Bearer <WORKFLOW_API_TOKEN>
+```
+
+**Validation Result**:
+```typescript
+{
+  isValid: boolean;
+  error?: string; // Only present when isValid = false
+}
+```
+
+**Error Messages**:
+- "Workflow authentication not configured" - Server missing WORKFLOW_API_TOKEN
+- "Missing Authorization header" - No Authorization header in request
+- "Invalid Authorization header format" - Not "Bearer <token>" format
+- "Invalid authentication token" - Token doesn't match expected value
+
+**Implementation Details**:
+- Helper: `app/lib/workflow-auth.ts`
+- Used by: `app/api/jobs/[id]/status/route.ts`
+- Used by: `app/api/projects/[projectId]/tickets/[id]/branch/route.ts`
+
+---
+
 ## Current State Summary
 
 ### Available Features
@@ -457,6 +563,13 @@ CANCELLED → CANCELLED (idempotent)
 - ✅ State machine enforcement
 - ✅ Idempotent updates
 - ✅ Terminal state protection
+
+**Workflow Authentication**:
+- ✅ Bearer token authentication
+- ✅ Constant-time comparison security
+- ✅ Protected job status endpoint
+- ✅ Protected branch update endpoint
+- ✅ Centralized validation helper
 
 ### User Workflows
 
@@ -513,7 +626,8 @@ CANCELLED → CANCELLED (idempotent)
 **GitHub Integration**:
 - Octokit (@octokit/rest) for API calls
 - Workflow file: `.github/workflows/speckit.yml`
-- Secrets: ANTHROPIC_API_KEY, GITHUB_TOKEN
+- Secrets: ANTHROPIC_API_KEY, GITHUB_TOKEN, WORKFLOW_API_TOKEN
+- Variables: APP_URL (configurable API endpoint)
 - Environment: ubuntu-latest
 
 **State Machine**:

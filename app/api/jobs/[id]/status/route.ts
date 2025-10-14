@@ -8,6 +8,7 @@ import {
 import { broadcastJobStatusUpdate } from '@/lib/sse-broadcast';
 import type { JobStatusUpdate } from '@/lib/sse-schemas';
 import { prisma } from '@/lib/db/client';
+import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -52,6 +53,16 @@ export async function PATCH(
   let requestedStatus: JobStatus | undefined;
 
   try {
+    // Validate workflow authentication
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
+      console.error('[Job Status Update] Authentication failed:', authResult.error);
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Extract and validate job ID from URL
     const params = await context.params;
     const { id: jobIdString } = params;

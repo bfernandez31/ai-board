@@ -358,8 +358,8 @@ test.describe('Project Cascade Delete', () => {
 
     // Verify tickets have different creation times
     const creationTimes = ticketsBeforeDelete.map((t) => t.createdAt.getTime());
-    expect(creationTimes[0]).toBeLessThan(creationTimes[1]);
-    expect(creationTimes[1]).toBeLessThan(creationTimes[2]);
+    expect(creationTimes[0]!).toBeLessThan(creationTimes[1]!);
+    expect(creationTimes[1]!).toBeLessThan(creationTimes[2]!);
 
     // Delete the project
     await prisma.project.delete({

@@ -1,9 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Load .env file for test environment
 dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Read test user ID from file (set by global-setup.ts)
+const testUserIdPath = path.resolve(__dirname, '.test-user-id');
+let testUserId = 'test-user-id'; // Default fallback
+try {
+  if (fs.existsSync(testUserIdPath)) {
+    testUserId = fs.readFileSync(testUserIdPath, 'utf-8').trim();
+  }
+} catch (error) {
+  console.warn('Could not read test user ID file, using default');
+}
 
 const config = defineConfig({
   testDir: './tests',
@@ -22,7 +34,7 @@ const config = defineConfig({
     navigationTimeout: 30000, // 30 seconds for navigation
     // Global auth header for all tests (bypasses NextAuth)
     extraHTTPHeaders: {
-      'x-test-user-id': process.env.TEST_USER_ID || '1', // Set by global-setup.ts
+      'x-test-user-id': testUserId, // Set by global-setup.ts
     },
   },
   projects: [

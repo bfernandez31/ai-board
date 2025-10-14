@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateBranchSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
+import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 /**
  * PATCH /api/projects/[projectId]/tickets/[id]/branch
@@ -30,6 +31,16 @@ export async function PATCH(
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
+    // Validate workflow authentication
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
+      console.error('[Branch Update] Authentication failed:', authResult.error);
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Await params in Next.js 15
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdString } = params;

@@ -14,34 +14,25 @@ export function getPrismaClient(): PrismaClient {
   return prisma;
 }
 
-export async function cleanupDatabase(): Promise<string> {
+/**
+ * Get the test user ID without creating fixtures
+ * Useful for getting the ID before tests run
+ */
+export async function getTestUserId(): Promise<string> {
+  const client = getPrismaClient();
+  const testUser = await client.user.findUnique({
+    where: { email: 'test@e2e.local' },
+  });
+  return testUser?.id || 'test-user-id';
+}
+
+/**
+ * Ensure test user and projects exist (called once in global setup)
+ */
+export async function ensureTestFixtures(): Promise<string> {
   const client = getPrismaClient();
 
   try {
-    // Delete ALL tickets from test projects 1 and 2 (to ensure clean state)
-    await client.ticket.deleteMany({
-      where: {
-        projectId: { in: [1, 2] }
-      }
-    });
-
-    // Delete only [e2e] prefixed tickets from other projects
-    await client.ticket.deleteMany({
-      where: {
-        title: { startsWith: '[e2e]' },
-        projectId: { notIn: [1, 2, 3] }
-      }
-    });
-
-    // Delete only [e2e] prefixed projects EXCEPT projects 1, 2, and 3
-    // Projects 1-2 are for tests, project 3 is for development
-    await client.project.deleteMany({
-      where: {
-        name: { startsWith: '[e2e]' },
-        id: { notIn: [1, 2, 3] }
-      }
-    });
-
     // Ensure test user exists for E2E tests
     const testUser = await client.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -84,7 +75,7 @@ export async function cleanupDatabase(): Promise<string> {
       },
     });
 
-    console.log('✓ Database cleaned successfully');
+    console.log('✓ Test fixtures ensured (user + 2 projects)');
     return testUser.id;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -94,8 +85,77 @@ export async function cleanupDatabase(): Promise<string> {
         : undefined;
 
     if (message.includes("Can't reach database server") || reachable === 'P1001') {
-      console.warn('⚠️ Skipping database cleanup: database unreachable.');
+      console.warn('⚠️ Skipping test fixtures: database unreachable.');
       return 'test-user-id'; // Default test user ID when database is unreachable
+    }
+
+    console.error('✗ Test fixtures setup failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Clean test data (called before each test)
+ * Fast operation - only deletes tickets, no upserts
+ */
+export async function cleanupDatabase(): Promise<void> {
+  const client = getPrismaClient();
+
+  try {
+    // Delete all tickets from test projects 1 and 2
+    await client.ticket.deleteMany({
+      where: {
+        projectId: {
+          in: [1, 2],
+        },
+      },
+    });
+
+    // Delete [e2e] tickets from projects 4+
+    await client.ticket.deleteMany({
+      where: {
+        AND: [
+          {
+            projectId: {
+              gte: 4,
+            },
+          },
+          {
+            title: {
+              startsWith: '[e2e]',
+            },
+          },
+        ],
+      },
+    });
+
+    // Delete [e2e] projects (except 1, 2, 3)
+    await client.project.deleteMany({
+      where: {
+        AND: [
+          {
+            id: {
+              notIn: [1, 2, 3],
+            },
+          },
+          {
+            name: {
+              startsWith: '[e2e]',
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const reachable =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? (error as { code?: string }).code
+        : undefined;
+
+    if (message.includes("Can't reach database server") || reachable === 'P1001') {
+      console.warn('⚠️ Skipping database cleanup: database unreachable.');
+      return;
     }
 
     console.error('✗ Database cleanup failed:', error);

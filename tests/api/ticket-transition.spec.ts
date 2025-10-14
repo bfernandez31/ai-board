@@ -466,7 +466,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
    * Note: This test would require mocking Octokit, which is complex in Playwright.
    * For now, we'll skip this test and implement it later with proper mocking.
    */
-  test.skip('should handle GitHub API rate limit errors', async ({ request }) => {
+  test.skip('should handle GitHub API rate limit errors', async () => {
     // This test requires Octokit mocking infrastructure
     // Skip for initial implementation, add with proper mock setup later
   });

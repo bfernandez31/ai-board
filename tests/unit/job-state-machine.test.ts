@@ -3,7 +3,6 @@ import {
   canTransition,
   isTerminalStatus,
   InvalidTransitionError,
-  type JobStatus,
 } from '../../app/lib/job-state-machine';
 
 /**

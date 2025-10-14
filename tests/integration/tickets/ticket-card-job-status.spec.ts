@@ -215,7 +215,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
 
     // Verify each ticket shows correct job status indicator
     for (let i = 0; i < testCases.length; i++) {
-      const testCase = testCases[i];
+      const testCase = testCases[i]!;
       const ticketTitle = `[e2e] Test ${testCase.command} command`;
 
       const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticketTitle }).first();

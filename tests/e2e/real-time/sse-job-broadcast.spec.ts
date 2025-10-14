@@ -410,8 +410,7 @@ test.describe('SSE Job Status Broadcast', () => {
     }
     expect(isConnected).toBe(true)
 
-    // Collect all messages
-    const messages: any[] = []
+    // Set up message collection
     await page.evaluate(() => {
       const eventSource = (window as any).__eventSource
       ;(window as any).__messages = []

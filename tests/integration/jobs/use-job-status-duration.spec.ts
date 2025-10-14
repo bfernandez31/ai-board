@@ -109,7 +109,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     await page.waitForTimeout(600);
 
     // Verify status has transitioned to RUNNING
-    const ariaLabel = await statusIndicator.getAttribute('aria-label');
+    await statusIndicator.getAttribute('aria-label');
 
     // The transition should have taken at least 500ms
     const transitionTime = Date.now() - transitionStart;

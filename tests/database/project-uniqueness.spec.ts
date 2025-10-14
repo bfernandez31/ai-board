@@ -43,6 +43,17 @@ test.describe('Project Uniqueness Constraint', () => {
     expect(project1.githubOwner).toBe('test-owner');
     expect(project1.githubRepo).toBe('test-repo');
 
+    // Ensure test user exists for duplicate attempt
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+      },
+    });
+
     // Attempt to create duplicate project with same githubOwner and githubRepo
     const duplicateProjectPromise = prisma.project.create({
       data: {
@@ -50,6 +61,7 @@ test.describe('Project Uniqueness Constraint', () => {
         description: 'Attempting to create duplicate',
         githubOwner: 'test-owner', // Same as project1
         githubRepo: 'test-repo', // Same as project1
+        userId: testUser.id,
       },
     });
 
@@ -73,8 +85,8 @@ test.describe('Project Uniqueness Constraint', () => {
     });
 
     expect(allProjects).toHaveLength(1);
-    expect(allProjects[0].id).toBe(project1.id);
-    expect(allProjects[0].name).toBe('[e2e] Original Project');
+    expect(allProjects[0]!.id).toBe(project1.id);
+    expect(allProjects[0]!.name).toBe('[e2e] Original Project');
   });
 
   test('should allow different projects with different repositories', async () => {
@@ -123,7 +135,7 @@ test.describe('Project Uniqueness Constraint', () => {
     const prisma = getPrismaClient();
 
     // Create project with owner1
-    const project1 = await createTestProject({
+    await createTestProject({
       name: 'Project A',
       description: 'Owner 1 repository',
       githubOwner: 'owner1',
@@ -131,7 +143,7 @@ test.describe('Project Uniqueness Constraint', () => {
     });
 
     // Create project with owner2 and same repo name (should succeed)
-    const project2 = await createTestProject({
+    await createTestProject({
       name: 'Project B',
       description: 'Owner 2 repository',
       githubOwner: 'owner2',
@@ -155,7 +167,7 @@ test.describe('Project Uniqueness Constraint', () => {
     const prisma = getPrismaClient();
 
     // Create first project for owner
-    const project1 = await createTestProject({
+    await createTestProject({
       name: 'Project 1',
       description: 'First repository',
       githubOwner: 'shared-owner',
@@ -163,7 +175,7 @@ test.describe('Project Uniqueness Constraint', () => {
     });
 
     // Create second project with same owner but different repo (should succeed)
-    const project2 = await createTestProject({
+    await createTestProject({
       name: 'Project 2',
       description: 'Second repository',
       githubOwner: 'shared-owner', // Same owner
@@ -171,7 +183,7 @@ test.describe('Project Uniqueness Constraint', () => {
     });
 
     // Create third project with same owner but different repo (should succeed)
-    const project3 = await createTestProject({
+    await createTestProject({
       name: 'Project 3',
       description: 'Third repository',
       githubOwner: 'shared-owner', // Same owner
@@ -195,7 +207,7 @@ test.describe('Project Uniqueness Constraint', () => {
     const prisma = getPrismaClient();
 
     // Create project with lowercase owner/repo
-    const project1 = await createTestProject({
+    await createTestProject({
       name: 'Lowercase Project',
       description: 'Lowercase repository',
       githubOwner: 'testowner',
@@ -203,7 +215,7 @@ test.describe('Project Uniqueness Constraint', () => {
     });
 
     // Create project with different case (should succeed - case sensitive)
-    const project2 = await createTestProject({
+    await createTestProject({
       name: 'Uppercase Project',
       description: 'Uppercase repository',
       githubOwner: 'TestOwner', // Different case
@@ -242,7 +254,7 @@ test.describe('Project Uniqueness Constraint', () => {
     const prisma = getPrismaClient();
 
     // Create test project
-    const project = await createTestProject({
+    const createdProject = await createTestProject({
       name: 'Lookup Test Project',
       description: 'Testing composite unique constraint',
       githubOwner: 'lookup-owner',
@@ -261,7 +273,7 @@ test.describe('Project Uniqueness Constraint', () => {
 
     // Verify project found using composite constraint
     expect(foundProject).toBeDefined();
-    expect(foundProject?.id).toBe(project.id);
+    expect(foundProject?.id).toBe(createdProject.id);
     expect(foundProject?.name).toBe('[e2e] Lookup Test Project');
     expect(foundProject?.githubOwner).toBe('lookup-owner');
     expect(foundProject?.githubRepo).toBe('lookup-repo');

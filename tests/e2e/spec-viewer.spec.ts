@@ -25,14 +25,25 @@ async function createTestTicket(data: {
   projectId: number;
   stage?: string;
 }) {
+  const ticketData: {
+    title: string;
+    description: string;
+    branch?: string | null;
+    projectId: number;
+    stage: any;
+  } = {
+    title: data.title,
+    description: data.description ?? 'Test description',
+    projectId: data.projectId,
+    stage: (data.stage ?? 'INBOX') as any,
+  };
+
+  if (data.branch !== undefined) {
+    ticketData.branch = data.branch;
+  }
+
   return prisma.ticket.create({
-    data: {
-      title: data.title,
-      description: data.description ?? 'Test description',
-      branch: data.branch,
-      projectId: data.projectId,
-      stage: (data.stage ?? 'INBOX') as any,
-    },
+    data: ticketData,
   });
 }
 

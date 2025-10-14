@@ -58,6 +58,8 @@ jobs:
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticketTitle, '[e2e]') }}
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
     steps:
       - name: Report E2E Skip
@@ -99,8 +101,9 @@ jobs:
       - name: Update Job Status - Running
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.job_id != '' }}
         run: |
-          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
@@ -240,8 +243,9 @@ jobs:
           PROJECT_ID: 1
         run: |
           # Update ticket branch field via API
-          curl -X PATCH "https://ai-board.vercel.app/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/branch" \
+          curl -X PATCH "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/branch" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{\"branch\": \"${FEATURE_BRANCH}\"}" \
             -f -s -S || echo "⚠️ Failed to update ticket branch field"
 
@@ -250,24 +254,27 @@ jobs:
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id != '' && env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
-          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "COMPLETED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
       - name: Update Job Status - Failure
         if: ${{ failure() && inputs.job_id != '' }}
         run: |
-          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "FAILED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to FAILED"
 
       - name: Update Job Status - Cancelled
         if: ${{ cancelled() && inputs.job_id != '' }}
         run: |
-          curl -X PATCH "https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status" \
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "CANCELLED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
 
