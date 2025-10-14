@@ -117,6 +117,7 @@ export async function handleTicketTransition(
           ticket_id: ticket.id.toString(),
           command: command,
           branch: branchName || ticket.branch || '',
+          job_id: job.id.toString(),
         };
 
         // Add ticket context for SPECIFY stage
