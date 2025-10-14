@@ -17,12 +17,12 @@ import { JobStatusResponseSchema } from '@/app/lib/schemas/job-polling';
 /**
  * GET /api/projects/[projectId]/jobs/status
  *
- * @param request - Next.js request object
+ * @param _request - Next.js request object (unused but required by Next.js route signature)
  * @param params - Route parameters { projectId: string }
  * @returns JSON response with job statuses or error
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
