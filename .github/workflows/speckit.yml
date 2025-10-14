@@ -269,6 +269,15 @@ jobs:
             -d '{"status": "COMPLETED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
+      - name: Update Job Status - Skipped (E2E)
+        if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION == 'true' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
+
       - name: Update Job Status - Failure
         if: ${{ failure() && inputs.job_id }}
         run: |
