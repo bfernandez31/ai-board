@@ -1,25 +1,25 @@
 <!--
 Sync Impact Report
 ===================
-Version Change: 1.0.0 → 1.1.0
-Rationale: Enforce test discovery before test creation to prevent duplicate test files
+Version Change: 1.1.0 → 1.2.0
+Rationale: Add clarification guardrails so AUTO never produces low-quality PRAGMATIC outcomes
 
 Modified Principles:
-- ENHANCED: Test-Driven Development - Added mandatory test discovery workflow
-- ENHANCED: AI Agent Implementation Guidelines - Added test file management rules
+- ADDED: Specification Clarification Guardrails (new Principle V)
 
 Added Rules:
-- ALWAYS search for existing tests FIRST before creating new test files
-- Test Discovery Workflow (5-step mandatory process)
-- Test File Management guidelines
+- AUTO policy must fall back to CONSERVATIVE when confidence is low or risk signals conflict
+- PRAGMATIC policies retain security, data integrity, and testing obligations
+- Auto-Resolved Decisions summary documents trade-offs for human review
+- Ticket overrides supersede project defaults when present
 
 Templates Requiring Updates:
-✅ plan-template.md: No changes required (test discovery is execution-time guidance)
-✅ spec-template.md: No changes required (specs don't dictate test file structure)
-✅ tasks-template.md: No changes required (tasks reference constitution principles)
+⚠ spec-template.md: Add Auto-Resolved Decisions summary section once automation ships
+✅ plan-template.md: No changes required (guardrails are policy-level)
+✅ tasks-template.md: No changes required (tasks already reference constitution principles)
 
 Follow-up TODOs:
-- None - constitution update sufficient for AI agent compliance
+- Define AUTO confidence scoring mechanics to operationalize fallback trigger
 -->
 
 # AI Board Constitution
@@ -189,6 +189,17 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 - Group related tests in the same file (e.g., all `/api/tickets` tests in one file)
 - Only create new test files when testing genuinely new functionality with no existing coverage
 
+### V. Specification Clarification Guardrails
+Auto-resolved specification decisions MUST preserve quality while avoiding unnecessary over-engineering. Mode selection prioritizes risk management without sacrificing baseline safeguards.
+
+**Non-Negotiable Rules**:
+- Clarification policies follow `ticket` override → `project` default → system fallback ordering. Overrides MUST be documented in the generated spec.
+- `AUTO` mode MUST default to `CONSERVATIVE` whenever heuristics confidence is low, risk signals conflict, or sensitive keywords appear without explicit overrides.
+- `PRAGMATIC` mode MUST retain security controls, data integrity requirements, and test commitments defined elsewhere in this constitution; it only trims polish, not safeguards.
+- Every auto-resolved spec MUST include an `Auto-Resolved Decisions` summary that lists applied policies and trade-offs for human review before implementation.
+
+**Rationale**: These guardrails let automation accelerate routine clarifications while guaranteeing that critical protections (security, data quality, verified tests) remain intact. Teams gain speed from PRAGMATIC choices when appropriate, but AUTO cannot degrade quality silently and CONSERVATIVE remains the safe default for uncertain work.
+
 ## Governance
 
 **Authority**: This constitution supersedes all other development practices, coding guidelines, and architectural decisions. When conflicts arise, constitution principles take precedence.
@@ -217,4 +228,4 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.1.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-10-14
+**Version**: 1.2.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-10-14
