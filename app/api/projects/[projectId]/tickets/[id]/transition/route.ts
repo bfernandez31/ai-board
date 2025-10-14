@@ -217,6 +217,7 @@ export async function POST(
           ticket_id: ticketId.toString(),
           command: command,
           branch: currentTicket.branch || '',
+          job_id: job.id.toString(),
         };
 
         // Add ticket context for SPECIFY stage

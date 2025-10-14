@@ -67,6 +67,15 @@ jobs:
         run: |
           echo "ℹ️ '[e2e]' detected in ticket title; skipping Spec-Kit execution to preserve resources"
 
+      - name: Update Job Status - Running
+        if: ${{ inputs.job_id != '' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "RUNNING"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
+
       - name: Checkout repository
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
@@ -97,15 +106,6 @@ jobs:
         run: |
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
-
-      - name: Update Job Status - Running
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.job_id != '' }}
-        run: |
-          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "RUNNING"}' \
-            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
