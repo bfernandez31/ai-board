@@ -127,13 +127,13 @@ jobs:
               ticket_title="${{ inputs.ticketTitle }}"
               ticket_description="${{ inputs.ticketDescription }}"
 
-              printf -v prompt '/specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
+              printf -v prompt '/speckit.specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
 
               claude --dangerously-skip-permissions "$prompt"
               ;;
             plan)
-              echo "📋 Executing /plan command..."
-              claude --dangerously-skip-permissions /plan
+              echo "📋 Executing /speckit.plan command..."
+              claude --dangerously-skip-permissions /speckit.plan
 
               # Commit plan changes
               git add .
@@ -152,8 +152,8 @@ jobs:
                 echo "ℹ️ No plan changes to commit"
               fi
 
-              echo "📋 Executing /tasks command..."
-              claude --dangerously-skip-permissions /tasks
+              echo "📋 Executing /speckit.tasks command..."
+              claude --dangerously-skip-permissions /speckit.tasks
 
               # Commit tasks changes
               git add .
@@ -173,14 +173,14 @@ jobs:
               fi
               ;;
             task)
-              claude --dangerously-skip-permissions /tasks
+              claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions /implement
+              claude --dangerously-skip-permissions /speckit.implement
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              claude --dangerously-skip-permissions /clarify --answers clarifications.json
+              claude --dangerously-skip-permissions /speckit.clarify --answers clarifications.json
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"

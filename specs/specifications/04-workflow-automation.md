@@ -138,11 +138,11 @@ The system runs spec-kit commands via GitHub Actions workflow:
 - Authentication (ANTHROPIC_API_KEY, GITHUB_TOKEN)
 
 **Command Execution**:
-- **specify**: `claude /specify` with ticket title and description
-- **plan**: `claude /plan`
-- **task**: `claude /task`
-- **implement**: `claude /implement`
-- **clarify**: `claude /clarify --answers clarifications.json`
+- **specify**: `claude /speckit.specify` with ticket title and description
+- **plan**: `claude /speckit.plan`
+- **task**: `claude /speckit.tasks`
+- **implement**: `claude /speckit.implement`
+- **clarify**: `claude /speckit.clarify --answers clarifications.json`
 
 **Git Operations**:
 - Checkout repository on specified branch (or main for specify)
@@ -246,9 +246,9 @@ The system triggers workflows automatically during stage transitions:
 6. User sees real-time job status updates
 
 **Stage-to-Command Mapping**:
-- **INBOX → SPECIFY**: Dispatches "specify" command, generates branch name `feature/ticket-<id>`
-- **SPECIFY → PLAN**: Dispatches "plan" command, uses existing branch
-- **PLAN → BUILD**: Dispatches "implement" command, uses existing branch
+- **INBOX → SPECIFY**: Dispatches "specify" command (`/speckit.specify`), generates branch name `feature/ticket-<id>`
+- **SPECIFY → PLAN**: Dispatches "plan" command (`/speckit.plan`), uses existing branch
+- **PLAN → BUILD**: Dispatches "implement" command (`/speckit.implement`), uses existing branch
 - **BUILD → VERIFY**: No workflow (manual stage transition)
 - **VERIFY → SHIP**: No workflow (manual stage transition)
 
@@ -699,7 +699,7 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 2. System creates Job (status: PENDING)
 3. System generates branch: `feature/ticket-123`
 4. System dispatches GitHub workflow
-5. Workflow runs `/specify` command
+5. Workflow runs `/speckit.specify` command
 6. Workflow commits spec.md to branch
 7. Workflow updates Job status to COMPLETED
 8. User sees completion status on ticket card
