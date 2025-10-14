@@ -96,7 +96,7 @@ export async function POST(
 
     const { targetStage } = parseResult.data;
 
-    // Fetch current ticket with project relation
+    // Fetch current ticket with full project relation
     // Note: We've already verified project ownership above, so we can safely fetch
     const currentTicket = await prisma.ticket.findFirst({
       where: {
@@ -104,13 +104,7 @@ export async function POST(
         projectId: projectId,
       },
       include: {
-        project: {
-          select: {
-            id: true,
-            githubOwner: true,
-            githubRepo: true,
-          },
-        },
+        project: true,
       },
     });
 

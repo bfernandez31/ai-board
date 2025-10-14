@@ -56,6 +56,7 @@ async function createTestJob(data: {
   return prisma.job.create({
     data: {
       ticketId: data.ticketId,
+      projectId: 1, // Add required projectId field
       command: data.command,
       status: data.status as any,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,

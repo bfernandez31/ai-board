@@ -37,7 +37,7 @@ async function main() {
     console.log(`   Name: ${user.name || 'N/A'}`);
     console.log(`   Email: ${user.email}`);
 
-    if (user.accounts.length > 0) {
+    if (user.accounts.length > 0 && user.accounts[0]) {
       console.log(`   GitHub Account ID: ${user.accounts[0].providerAccountId}`);
     }
 

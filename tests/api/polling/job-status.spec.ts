@@ -291,7 +291,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
     expect(p95).toBeLessThan(100); // Performance requirement: <100ms p95
   });
 
-  test('handles database errors gracefully with 500 status', async ({ request }) => {
+  test('handles database errors gracefully with 500 status', async ({ request: _request }) => {
     // This test requires mocking or intentionally breaking database connection
     // Placeholder for implementation-specific error injection
     //
@@ -302,7 +302,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
     // - Reconnect database
 
     // TODO: Implement once database mocking strategy is defined
-    test.skip('Database error scenario requires mocking infrastructure');
+    test.skip(true, 'Database error scenario requires mocking infrastructure');
   });
 
   test('excludes sensitive fields from response', async ({ request }) => {
