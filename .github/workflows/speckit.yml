@@ -62,13 +62,22 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
     steps:
+      - name: Debug Inputs
+        run: |
+          echo "🔍 Debug workflow inputs:"
+          echo "  ticket_id: ${{ inputs.ticket_id }}"
+          echo "  job_id: ${{ inputs.job_id }}"
+          echo "  job_id type: ${{ type(inputs.job_id) }}"
+          echo "  command: ${{ inputs.command }}"
+          echo "  ticketTitle: ${{ inputs.ticketTitle }}"
+
       - name: Report E2E Skip
         if: ${{ env.SKIP_SPECKIT_EXECUTION == 'true' }}
         run: |
           echo "ℹ️ '[e2e]' detected in ticket title; skipping Spec-Kit execution to preserve resources"
 
       - name: Update Job Status - Running
-        if: ${{ inputs.job_id != '' }}
+        if: ${{ inputs.job_id }}
         run: |
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
@@ -252,7 +261,7 @@ jobs:
           echo "✅ Updated ticket branch to: ${FEATURE_BRANCH}"
 
       - name: Update Job Status - Success
-        if: ${{ success() && inputs.job_id != '' && env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
@@ -261,7 +270,7 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
       - name: Update Job Status - Failure
-        if: ${{ failure() && inputs.job_id != '' }}
+        if: ${{ failure() && inputs.job_id }}
         run: |
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
@@ -270,7 +279,7 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update job status to FAILED"
 
       - name: Update Job Status - Cancelled
-        if: ${{ cancelled() && inputs.job_id != '' }}
+        if: ${{ cancelled() && inputs.job_id }}
         run: |
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
