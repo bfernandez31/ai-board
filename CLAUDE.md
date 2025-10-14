@@ -23,7 +23,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 ### Data & Validation
 
 - **Validation**: Zod 4.x
-- **Real-time**: Server-Sent Events (SSE)
+- **Real-time Updates**: Client-side polling
 
 ### Testing
 
