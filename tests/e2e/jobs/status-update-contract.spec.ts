@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 /**
  * Contract Test: PATCH /api/jobs/[id]/status
@@ -36,6 +37,7 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
         status: 'RUNNING',
         branch: 'test-branch',
         startedAt: new Date(),
+        projectId: 1,
       },
     });
     testJobId = job.id;
@@ -43,7 +45,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should have correct endpoint path pattern', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Endpoint should exist (not 404)
@@ -52,7 +55,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should accept PATCH method', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Should not return 405 Method Not Allowed
@@ -61,7 +65,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should return JSON content type', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.headers()['content-type']).toContain('application/json');
@@ -70,7 +75,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
   test('should validate request body schema (Zod)', async ({ request }) => {
     // Missing status field
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: {}
+      data: {},
+      headers: getWorkflowHeaders(),
     });
 
     expect(response.status()).toBe(400);
@@ -80,7 +86,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should validate status enum values', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'INVALID_STATUS' }
+      data: { status: 'INVALID_STATUS' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -92,7 +99,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should accept COMPLETED status value', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Should be either 200 (success) or 400 (validation), not 500
@@ -101,7 +109,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should accept FAILED status value', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'FAILED' }
+      data: { status: 'FAILED' },
+      headers: getWorkflowHeaders()
     });
 
     expect([200, 400]).toContain(response.status());
@@ -109,7 +118,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should accept CANCELLED status value', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'CANCELLED' }
+      data: { status: 'CANCELLED' },
+      headers: getWorkflowHeaders()
     });
 
     expect([200, 400]).toContain(response.status());
@@ -117,7 +127,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should return 200 for successful update', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(200);
@@ -125,7 +136,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should return response schema matching OpenAPI spec', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(200);
@@ -151,12 +163,14 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
   test('should return 400 for invalid state transition', async ({ request }) => {
     // First, complete the job
     await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Try to transition from COMPLETED to FAILED (invalid)
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'FAILED' }
+      data: { status: 'FAILED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -167,7 +181,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should return 404 for non-existent job', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/999999/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(404);
@@ -178,7 +193,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
 
   test('should return error response schema for validation errors', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/jobs/${testJobId}/status`, {
-      data: { status: 'INVALID' }
+      data: { status: 'INVALID' },
+      headers: getWorkflowHeaders()
     });
 
     expect(response.status()).toBe(400);
@@ -202,7 +218,8 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
     // Use an invalid job ID format to potentially trigger database error
     // This tests error handling, not just validation
     const response = await request.patch(`${BASE_URL}/api/jobs/abc/status`, {
-      data: { status: 'COMPLETED' }
+      data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders()
     });
 
     // Should return either 400 (validation) or 500 (error), not crash

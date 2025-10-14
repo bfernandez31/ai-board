@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -105,6 +106,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
 
     await page.request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
       data: { status: 'RUNNING' },
+      headers: getWorkflowHeaders(),
     });
 
     // Wait at least 500ms for the transition (SSE + display duration)
@@ -159,6 +161,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     // Change 1: PENDING → RUNNING (immediately)
     await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
       data: { status: 'RUNNING' },
+      headers: getWorkflowHeaders(),
     });
 
     // Wait 100ms (rapid transition)
@@ -167,6 +170,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
     // Change 2: RUNNING → COMPLETED (before 500ms elapsed)
     await request.patch(`http://localhost:3000/api/jobs/${job.id}/status`, {
       data: { status: 'COMPLETED' },
+      headers: getWorkflowHeaders(),
     });
 
     // The total time for both transitions should be at least 500ms
