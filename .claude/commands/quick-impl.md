@@ -13,6 +13,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Overview
 
 This command implements simple features directly from ticket context without formal specifications. **Use ONLY for**:
+
 - Bug fixes (typos, minor logic fixes)
 - UI tweaks (button colors, spacing adjustments)
 - Simple refactoring (renaming, file moves)
@@ -30,14 +31,14 @@ This command implements simple features directly from ticket context without for
 
 2. **Load ticket context from created spec.md**:
    - Read `spec.md` from SPEC_FILE path to extract:
-     * Ticket title (from header)
-     * Ticket description (from Description section)
-     * Any implementation hints or requirements
+     - Ticket title (from header)
+     - Ticket description (from Description section)
+     - Any implementation hints or requirements
 
 3. **Validate task simplicity**:
    - **If spec.md indicates complex requirements** (>200 words, multiple entities, API changes):
-     * **STOP** and recommend: "This task appears complex. Consider using full workflow: /speckit.specify → /speckit.plan → /speckit.implement"
-     * Exit without implementation
+     - **STOP** and recommend: "This task appears complex. Consider using full workflow: /speckit.specify → /speckit.plan → /speckit.implement"
+     - Exit without implementation
    - **If task is simple**: Continue to step 4
 
 4. **Understand project context**:
@@ -46,7 +47,7 @@ This command implements simple features directly from ticket context without for
    - Review existing patterns and code style
 
 5. **Test-Driven Development (TDD) approach**:
-   - **ALWAYS write tests first** before implementation
+   - **ALWAYS write tests first** before implementation if the feature change the behavior
    - Create or update test files based on ticket requirements
    - Follow existing test patterns (Playwright for E2E, Vitest for unit tests)
    - Ensure tests FAIL initially (red phase)
@@ -73,15 +74,17 @@ This command implements simple features directly from ticket context without for
    - Update inline documentation if public APIs changed
    - Add JSDoc comments for new functions
    - Update README.md ONLY if user-facing behavior changed
+   - Update specs/specifications folder
    - **DO NOT** create separate feature documentation (this is quick-impl)
 
 10. **Completion checklist**:
-   - ✓ Tests written and passing
-   - ✓ Type check passes (`npm run type-check`)
-   - ✓ Linter passes (`npm run lint`)
-   - ✓ Code follows project conventions
-   - ✓ No breaking changes to existing functionality
-   - ✓ Implementation matches ticket requirements
+
+- ✓ Tests written and passing
+- ✓ Type check passes (`npm run type-check`)
+- ✓ Linter passes (`npm run lint`)
+- ✓ Code follows project conventions
+- ✓ No breaking changes to existing functionality
+- ✓ Implementation matches ticket requirements
 
 11. **Report completion**:
     - Summarize changes made (files modified, tests added)
@@ -94,7 +97,7 @@ This command implements simple features directly from ticket context without for
 - **No formal spec generation**: Quick-impl works directly from ticket title + description
 - **Minimal planning**: Focus on immediate implementation, not long-term architecture
 - **Fast iteration**: Prioritize speed while maintaining quality (tests + type safety)
-- **TDD mandatory**: Tests must be written before implementation code
+- **TDD mandatory**: Tests must be written before implementation code if new behavior
 - **Simplicity threshold**: If task feels complex during implementation, STOP and recommend full workflow
 
 ## Error Handling
@@ -108,6 +111,7 @@ This command implements simple features directly from ticket context without for
 ## Success Criteria
 
 Implementation is complete when:
+
 1. All new/modified tests pass
 2. Type checking passes with no errors
 3. Linting passes with no warnings
