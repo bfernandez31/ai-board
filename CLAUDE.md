@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - PostgreSQL 14+ (Job status tracking, existing schema) (028-519-replace-sse)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui (029-999-auto-clarification)
 - PostgreSQL 14+ (enum ClarificationPolicy, Project.clarificationPolicy NOT NULL default AUTO, Ticket.clarificationPolicy NULLABLE) (029-999-auto-clarification)
+- TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0 (030-should-not-be)
+- PostgreSQL 14+ (existing Job, Ticket tables with indexed queries) (030-should-not-be)
 
 ### Core Stack
 
@@ -63,13 +65,13 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 030-should-not-be: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0
 - 029-999-auto-clarification: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui
 - 028-519-replace-sse: Replaced Server-Sent Events (SSE) with client-side polling for job status updates
   - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
   - Implemented 2-second polling interval with terminal state optimization
   - Added `projectId` field to Job model for efficient querying
 
-- Authentication: Added NextAuth.js authentication with user-project ownership
 
 <!-- MANUAL ADDITIONS START -->
 

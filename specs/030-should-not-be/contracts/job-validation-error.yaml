@@ -1,0 +1,231 @@
+# Job Validation Error Response Contract
+# Feature: 030-should-not-be
+# Date: 2025-10-15
+
+openapi: 3.0.3
+info:
+  title: Job Completion Validation Error Response
+  version: 1.0.0
+  description: |
+    Error response schema for ticket stage transitions blocked by incomplete job validation.
+    Returned when attempting to transition from SPECIFY, PLAN, or BUILD stages while
+    the most recent job has status PENDING, RUNNING, FAILED, or CANCELLED.
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/transition:
+    post:
+      summary: Transition ticket to next stage
+      operationId: transitionTicket
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 42
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetStage
+              properties:
+                targetStage:
+                  type: string
+                  enum: [SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                  example: PLAN
+      responses:
+        '400':
+          description: Bad Request - Job validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobValidationError'
+              examples:
+                jobPending:
+                  summary: Job is PENDING
+                  value:
+                    error: Cannot transition
+                    code: JOB_NOT_COMPLETED
+                    message: "Cannot transition: workflow is still running"
+                    details:
+                      currentStage: SPECIFY
+                      targetStage: PLAN
+                      jobStatus: PENDING
+                      jobCommand: specify
+
+                jobRunning:
+                  summary: Job is RUNNING
+                  value:
+                    error: Cannot transition
+                    code: JOB_NOT_COMPLETED
+                    message: "Cannot transition: workflow is still running"
+                    details:
+                      currentStage: SPECIFY
+                      targetStage: PLAN
+                      jobStatus: RUNNING
+                      jobCommand: specify
+
+                jobFailed:
+                  summary: Job FAILED
+                  value:
+                    error: Cannot transition
+                    code: JOB_NOT_COMPLETED
+                    message: "Cannot transition: previous workflow failed. Please retry the workflow."
+                    details:
+                      currentStage: SPECIFY
+                      targetStage: PLAN
+                      jobStatus: FAILED
+                      jobCommand: specify
+
+                jobCancelled:
+                  summary: Job CANCELLED
+                  value:
+                    error: Cannot transition
+                    code: JOB_NOT_COMPLETED
+                    message: "Cannot transition: workflow was cancelled. Please retry the workflow."
+                    details:
+                      currentStage: SPECIFY
+                      targetStage: PLAN
+                      jobStatus: CANCELLED
+                      jobCommand: specify
+
+                jobMissing:
+                  summary: Job missing (data integrity issue)
+                  value:
+                    error: Internal server error
+                    code: MISSING_JOB
+                    message: "Expected job for stage SPECIFY but none found"
+
+        '200':
+          description: Success - Transition allowed (job COMPLETED)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  jobId:
+                    type: integer
+                    description: ID of newly created job for automated stages
+                    example: 123
+                  message:
+                    type: string
+                    example: "Workflow dispatched successfully"
+
+components:
+  schemas:
+    JobValidationError:
+      type: object
+      required:
+        - error
+        - code
+        - message
+      properties:
+        error:
+          type: string
+          description: High-level error category
+          enum:
+            - Cannot transition
+            - Internal server error
+          example: Cannot transition
+
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - JOB_NOT_COMPLETED
+            - MISSING_JOB
+          example: JOB_NOT_COMPLETED
+
+        message:
+          type: string
+          description: Human-readable error message with actionable guidance
+          examples:
+            - "Cannot transition: workflow is still running"
+            - "Cannot transition: previous workflow failed. Please retry the workflow."
+            - "Cannot transition: workflow was cancelled. Please retry the workflow."
+
+        details:
+          type: object
+          description: Additional context about the validation failure
+          required:
+            - currentStage
+            - targetStage
+            - jobStatus
+            - jobCommand
+          properties:
+            currentStage:
+              type: string
+              description: Ticket's current stage
+              enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+              example: SPECIFY
+
+            targetStage:
+              type: string
+              description: Requested target stage
+              enum: [SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+              example: PLAN
+
+            jobStatus:
+              type: string
+              description: Status of the most recent job
+              enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+              example: RUNNING
+
+            jobCommand:
+              type: string
+              description: Command of the most recent job
+              enum: [specify, plan, implement]
+              example: specify
+
+# Validation Rules
+
+# Rule 1: Job validation only applies when transitioning FROM automated stages
+# Automated stages: SPECIFY, PLAN, BUILD
+# Manual stages: INBOX, VERIFY, SHIP
+
+# Rule 2: Job validation checks the most recent job by startedAt DESC
+# If multiple jobs exist, only the most recent is validated
+
+# Rule 3: Only COMPLETED status allows transition
+# PENDING, RUNNING, FAILED, CANCELLED all block transition with 400 error
+
+# Rule 4: Missing job for automated stage is data integrity error (500)
+# Should not occur in normal operation; indicates system issue
+
+# Error Message Guidelines
+
+# For PENDING/RUNNING jobs:
+# - Message: "Cannot transition: workflow is still running"
+# - User Action: Wait for workflow to complete or cancel it
+# - Frontend should poll job status and auto-retry when COMPLETED
+
+# For FAILED/CANCELLED jobs:
+# - Message: "Cannot transition: previous workflow failed/cancelled. Please retry the workflow."
+# - User Action: Review failure logs and retry transition (creates new job)
+# - Frontend should provide "Retry" button to re-attempt transition
+
+# HTTP Status Codes
+
+# 400 Bad Request:
+# - Used for JOB_NOT_COMPLETED errors
+# - Indicates client attempted invalid state transition
+# - Consistent with existing INVALID_TRANSITION errors
+
+# 500 Internal Server Error:
+# - Used for MISSING_JOB errors
+# - Indicates data integrity issue requiring investigation
+# - Should trigger logging/monitoring alerts
