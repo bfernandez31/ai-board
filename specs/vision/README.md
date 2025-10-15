@@ -75,6 +75,16 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 - RBAC futur (owner/admin/editor/viewer)
 - **Temps de dev Phase 1: 16-24h**
 
+### 8. [AI Chat Assistant](./ai-chat-assistant.md) - Project Context Q&A 🤖
+**AI-powered chat for project documentation and codebase queries**
+
+- Ask questions about project specs and code
+- Two implementation options: Minimalist (MVP) vs Optimal (Full RAG)
+- Vercel Free tier compatible with Edge Functions
+- Streaming responses with OpenAI/Claude integration
+- **Minimalist MVP: 5-8h | Optimal RAG: 15-20h**
+- **Cost: $1-12/month depending on implementation**
+
 ## 🚀 Par Où Commencer ?
 
 ### Pour Développeurs
@@ -82,16 +92,18 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 2. ✅ Lire [MVP Quickstart](./mvp-quickstart.md) - guide d'implémentation
 3. ✅ Lire [Timeout Analysis](./timeout-analysis.md) - comprendre les limites
 4. ✅ Lire [Authentication Multi-Platform](./authentication-multiplatform.md) - authentification et multi-plateformes
-5. ✅ Implémenter le MVP
-6. ⏳ Monitorer métriques
-7. ⏳ Migrer vers Target si besoin
+5. ⏳ Lire [AI Chat Assistant](./ai-chat-assistant.md) - AI-powered Q&A for projects
+6. ✅ Implémenter le MVP
+7. ⏳ Monitorer métriques
+8. ⏳ Migrer vers Target si besoin
 
 ### Pour Product Managers
 1. ✅ Lire [Overview](./overview.md) - workflow et vision
 2. ✅ Lire [Feasibility Analysis](./feasibility.md) - ROI et décisions
 3. ✅ Lire [Timeout Analysis](./timeout-analysis.md) - contraintes techniques
 4. ✅ Lire [Authentication Multi-Platform](./authentication-multiplatform.md) - stratégie multi-provider
-5. ✅ Prioriser [Next Features](./next-features.md) - roadmap
+5. ✅ Lire [AI Chat Assistant](./ai-chat-assistant.md) - feature ROI and implementation options
+6. ✅ Prioriser [Next Features](./next-features.md) - roadmap
 
 ### Pour Architectes
 1. ✅ Lire [Overview](./overview.md) - architecture globale
@@ -99,6 +111,7 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 3. ✅ Analyser [Feasibility Analysis](./feasibility.md) - risques et migration
 4. ✅ Évaluer [Timeout Analysis](./timeout-analysis.md) - contraintes critiques
 5. ✅ Concevoir [Authentication Multi-Platform](./authentication-multiplatform.md) - sécurité et extensibilité
+6. ✅ Évaluer [AI Chat Assistant](./ai-chat-assistant.md) - RAG architecture and scaling
 
 ## 📊 Recommandations Clés
 
@@ -173,9 +186,16 @@ Documentation complète de l'architecture et de la stratégie d'implémentation 
 
 ## 📝 Notes de Mise à Jour
 
-**Dernière mise à jour**: 2025-10-12
+**Dernière mise à jour**: 2025-10-15
 
 **Changements récents**:
+- ✅ Ajout document AI Chat Assistant complet
+- ✅ Architecture Edge Functions compatible Vercel Free
+- ✅ Deux options: Minimalist MVP (5-8h) vs Full RAG (15-20h)
+- ✅ Support streaming avec OpenAI/Claude API
+- ✅ Implémentation code complète (API + Frontend + Database)
+- ✅ Sécurité et rate limiting
+- ✅ Migration path MVP → Full RAG
 - ✅ Ajout document Authentication Multi-Platform complet
 - ✅ Architecture NextAuth avec support multi-provider (GitHub, Google, GitLab, Bitbucket)
 - ✅ Support multi-plateformes Git (GitHub, GitLab, Bitbucket)
