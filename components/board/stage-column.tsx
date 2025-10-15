@@ -198,8 +198,8 @@ export const StageColumn = React.memo(
         {isBlockedByJob && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 pointer-events-none">
             <Ban className="w-16 h-16 text-red-400 mb-3" strokeWidth={2.5} />
-            <p className="text-red-300 font-semibold text-sm">Workflow en cours</p>
-            <p className="text-zinc-400 text-xs mt-1">Attendez la fin du job</p>
+            <p className="text-red-300 font-semibold text-sm">Workflow in progress</p>
+            <p className="text-zinc-400 text-xs mt-1">Wait for job completion</p>
           </div>
         )}
       </div>
