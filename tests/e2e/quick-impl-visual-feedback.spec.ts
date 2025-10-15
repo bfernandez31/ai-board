@@ -18,8 +18,8 @@ test.describe('Quick-Impl Visual Feedback', () => {
   test.beforeEach(async () => {
     await cleanupDatabase();
 
-    // Create test user
-    await prisma.user.upsert({
+    // Create test user (same pattern as db-cleanup.ts)
+    const testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
@@ -28,6 +28,24 @@ test.describe('Quick-Impl Visual Feedback', () => {
         name: 'E2E Test User',
         emailVerified: new Date(),
         updatedAt: new Date(),
+      },
+    });
+
+    // Ensure test project 1 exists with correct userId
+    await prisma.project.upsert({
+      where: { id: 1 },
+      update: {
+        userId: testUser.id,
+      },
+      create: {
+        id: 1,
+        name: '[e2e] Test Project',
+        description: 'Project for automated tests',
+        githubOwner: 'test',
+        githubRepo: 'test',
+        userId: testUser.id,
+        updatedAt: new Date(),
+        createdAt: new Date(),
       },
     });
 
