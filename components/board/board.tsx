@@ -557,6 +557,7 @@ function BoardContent({
                 projectId={projectId}
                 getTicketJob={getTicketJob}
                 dropZoneStyle={getDropZoneStyle(stage)}
+                isBlockedByJob={isDragging && draggedTicketHasJob}
               />
             ))}
           </div>

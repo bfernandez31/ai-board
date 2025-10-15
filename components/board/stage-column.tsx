@@ -8,6 +8,7 @@ import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Job } from '@prisma/client';
+import { Ban } from 'lucide-react';
 
 interface StageColumnProps {
   stage: Stage;
@@ -17,6 +18,7 @@ interface StageColumnProps {
   projectId: number;
   getTicketJob?: (ticketId: number) => Job | null;
   dropZoneStyle?: string;
+  isBlockedByJob?: boolean;
 }
 
 // Stage configuration matching original design
@@ -121,6 +123,7 @@ export const StageColumn = React.memo(
     projectId,
     getTicketJob,
     dropZoneStyle,
+    isBlockedByJob = false,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -140,7 +143,7 @@ export const StageColumn = React.memo(
         data-testid={`column-${stage}`}
         data-column={stage}
         data-stage={stage}
-        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor} ${dropZoneStyle || ''} ${
+        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 relative ${stageConfig.bgColor} ${stageConfig.borderColor} ${dropZoneStyle || ''} ${
           isOver ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-black' : ''
         }`}
       >
@@ -190,6 +193,15 @@ export const StageColumn = React.memo(
             )}
           </div>
         </ScrollArea>
+
+        {/* Blocked by Job Overlay */}
+        {isBlockedByJob && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 pointer-events-none">
+            <Ban className="w-16 h-16 text-red-400 mb-3" strokeWidth={2.5} />
+            <p className="text-red-300 font-semibold text-sm">Workflow en cours</p>
+            <p className="text-zinc-400 text-xs mt-1">Attendez la fin du job</p>
+          </div>
+        )}
       </div>
     );
   }
