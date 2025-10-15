@@ -321,6 +321,7 @@ export async function PATCH(
             ...(autoMode !== undefined && { autoMode }),
             ...(clarificationPolicy !== undefined && { clarificationPolicy }),
             version: { increment: 1 },
+            updatedAt: new Date(), // Explicitly update timestamp
           },
         });
 
@@ -465,6 +466,7 @@ export async function PATCH(
           data: {
             stage: newStage,
             version: { increment: 1 },
+            updatedAt: new Date(), // Explicitly update timestamp
           },
         });
 

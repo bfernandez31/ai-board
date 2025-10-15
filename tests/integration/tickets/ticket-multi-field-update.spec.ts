@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -188,6 +189,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 

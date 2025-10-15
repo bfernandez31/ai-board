@@ -128,7 +128,10 @@ export async function PATCH(
     // Update branch
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
-      data: { branch },
+      data: {
+        branch,
+        updatedAt: new Date(), // Explicitly update timestamp
+      },
       select: {
         id: true,
         branch: true,

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -85,6 +86,7 @@ test.describe('Integration: Branch assignment workflow', () => {
         data: {
           branch: '014-add-github-branch',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -143,6 +145,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -156,6 +159,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '002-updated-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -169,6 +173,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '003-final-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -212,6 +217,7 @@ test.describe('Integration: Branch assignment workflow', () => {
         `/api/projects/${testProjectId}/tickets/${ticket.id}/branch`,
         {
           data: { branch: branchName },
+          headers: getWorkflowHeaders(),
         }
       );
 
@@ -254,6 +260,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-new-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -302,6 +309,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-timestamp-test' },
+        headers: getWorkflowHeaders(),
       }
     );
 

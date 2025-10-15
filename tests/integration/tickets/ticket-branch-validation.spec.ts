@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -126,6 +127,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-to-clear' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -134,6 +136,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: null },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -213,6 +216,7 @@ test.describe('Integration: Branch validation edge cases', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: longBranch },
+        headers: getWorkflowHeaders(),
       }
     );
 
