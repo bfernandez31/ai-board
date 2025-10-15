@@ -1,5 +1,5 @@
 import { prisma } from './client';
-import type { Project } from '@prisma/client';
+import type { Project, ClarificationPolicy } from '@prisma/client';
 import { requireAuth } from './users';
 
 /**
@@ -75,6 +75,7 @@ export async function createProject(data: {
     data: {
       ...data,
       userId, // ← CRITICAL: inject userId
+      updatedAt: new Date(), // Required field
     },
   });
 }
@@ -86,10 +87,11 @@ export async function createProject(data: {
 export async function updateProject(
   projectId: number,
   data: {
-    name?: string;
-    description?: string;
-    githubOwner?: string;
-    githubRepo?: string;
+    name?: string | undefined;
+    description?: string | undefined;
+    githubOwner?: string | undefined;
+    githubRepo?: string | undefined;
+    clarificationPolicy?: ClarificationPolicy | undefined;
   }
 ) {
   const userId = await requireAuth();
@@ -103,9 +105,17 @@ export async function updateProject(
     throw new Error('Project not found');
   }
 
+  // Filter out undefined values for exactOptionalPropertyTypes
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.githubOwner !== undefined) updateData.githubOwner = data.githubOwner;
+  if (data.githubRepo !== undefined) updateData.githubRepo = data.githubRepo;
+  if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
+
   return prisma.project.update({
     where: { id: projectId },
-    data,
+    data: updateData,
   });
 }
 

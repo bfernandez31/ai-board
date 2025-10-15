@@ -17,9 +17,11 @@ async function main() {
     where: { email: 'admin@ai-board.local' },
     update: {},
     create: {
+      id: 'admin-user-id',
       email: 'admin@ai-board.local',
       name: 'Admin User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -44,6 +46,7 @@ async function main() {
         githubOwner,
         githubRepo,
         userId: admin.id,
+        updatedAt: new Date(),
       },
     });
 
@@ -61,48 +64,56 @@ async function main() {
   }
 
   // Create sample tickets for the project
+  const now = new Date();
   const sampleTickets = [
     {
       title: "Setup project structure",
       description: "Initialize the project with basic folder structure and dependencies",
       stage: "SHIP" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Design database schema",
       description: "Create Prisma schema with all required models and relations",
       stage: "SHIP" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Implement ticket creation API",
       description: "Add POST endpoint for creating new tickets",
       stage: "VERIFY" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Add drag-and-drop functionality",
       description: "Enable users to drag tickets between columns",
       stage: "BUILD" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Create ticket detail modal",
       description: "Design and implement modal for viewing/editing ticket details",
       stage: "PLAN" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Add user authentication",
       description: "Implement authentication system with GitHub OAuth",
       stage: "SPECIFY" as const,
       projectId: project.id,
+      updatedAt: now,
     },
     {
       title: "Setup CI/CD pipeline",
       description: "Configure automated testing and deployment workflow",
       stage: "INBOX" as const,
       projectId: project.id,
+      updatedAt: now,
     },
   ];
 

@@ -63,6 +63,7 @@ The system organizes all tickets within projects:
 - `description`: Optional details (text, nullable)
 - `githubOwner`: GitHub repository owner
 - `githubRepo`: GitHub repository name
+- `clarificationPolicy`: Default clarification policy for all tickets (enum: AUTO/CONSERVATIVE/PRAGMATIC/INTERACTIVE, NOT NULL, default: AUTO)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 - **Unique**: (githubOwner, githubRepo)

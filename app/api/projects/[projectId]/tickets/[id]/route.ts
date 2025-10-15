@@ -46,11 +46,20 @@ export async function GET(
     // Verify project ownership (throws if unauthorized or not found)
     await verifyProjectOwnership(projectId);
 
-    // Fetch ticket with project validation
+    // Fetch ticket with project validation (include project for clarificationPolicy)
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
         projectId: projectId,
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            clarificationPolicy: true,
+          },
+        },
       },
     });
 
@@ -80,8 +89,14 @@ export async function GET(
       projectId: ticket.projectId,
       branch: ticket.branch,
       autoMode: ticket.autoMode,
+      clarificationPolicy: ticket.clarificationPolicy,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
+      project: {
+        id: ticket.project.id,
+        name: ticket.project.name,
+        clarificationPolicy: ticket.project.clarificationPolicy,
+      },
     });
   } catch (error) {
     console.error('Error fetching ticket:', error);
@@ -195,7 +210,8 @@ export async function PATCH(
       'title' in body ||
       'description' in body ||
       'branch' in body ||
-      'autoMode' in body;
+      'autoMode' in body ||
+      'clarificationPolicy' in body;
 
     // Handle inline edit (title/description update)
     if (isInlineEdit) {
@@ -217,6 +233,7 @@ export async function PATCH(
         stage,
         branch,
         autoMode,
+        clarificationPolicy,
         version: requestVersion,
       } = parseResult.data;
 
@@ -302,7 +319,9 @@ export async function PATCH(
             ...(stage !== undefined && { stage }),
             ...(branch !== undefined && { branch }),
             ...(autoMode !== undefined && { autoMode }),
+            ...(clarificationPolicy !== undefined && { clarificationPolicy }),
             version: { increment: 1 },
+            updatedAt: new Date(), // Explicitly update timestamp
           },
         });
 
@@ -316,6 +335,7 @@ export async function PATCH(
             projectId: updatedTicket.projectId,
             branch: updatedTicket.branch,
             autoMode: updatedTicket.autoMode,
+            clarificationPolicy: updatedTicket.clarificationPolicy,
             createdAt: updatedTicket.createdAt.toISOString(),
             updatedAt: updatedTicket.updatedAt.toISOString(),
             ...(jobId !== undefined && { jobId }),
@@ -446,6 +466,7 @@ export async function PATCH(
           data: {
             stage: newStage,
             version: { increment: 1 },
+            updatedAt: new Date(), // Explicitly update timestamp
           },
         });
 

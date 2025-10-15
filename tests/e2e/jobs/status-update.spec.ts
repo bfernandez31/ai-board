@@ -27,6 +27,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
   });
@@ -42,6 +43,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         branch: 'feature/test',
         projectId: 1,
         startedAt: startTime,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -88,6 +90,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         branch: 'feature/bug-fix',
         projectId: 1,
         startedAt: startTime,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -127,6 +130,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         branch: 'feature/cancelled-test',
         projectId: 1,
         startedAt: startTime,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -167,6 +171,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -204,6 +209,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: new Date('2025-10-10T10:05:00Z'),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -236,6 +242,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         branch: 'feature/invalid-status',
         projectId: 1,
         startedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -296,6 +303,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
   });
@@ -310,6 +318,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         projectId: 1,
         startedAt: new Date(),
         completedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -333,6 +342,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         projectId: 1,
         startedAt: new Date(),
         completedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -355,6 +365,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         branch: 'test',
         projectId: 1,
         startedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -379,6 +390,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -407,6 +419,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         projectId: 1,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
+        updatedAt: new Date(), // Required field
       },
     });
 

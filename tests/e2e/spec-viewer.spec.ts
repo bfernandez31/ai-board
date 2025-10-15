@@ -31,11 +31,13 @@ async function createTestTicket(data: {
     branch?: string | null;
     projectId: number;
     stage: any;
+    updatedAt: Date;
   } = {
     title: data.title,
     description: data.description ?? 'Test description',
     projectId: data.projectId,
     stage: (data.stage ?? 'INBOX') as any,
+    updatedAt: new Date(), // Required field
   };
 
   if (data.branch !== undefined) {
@@ -60,6 +62,7 @@ async function createTestJob(data: {
       command: data.command,
       status: data.status as any,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,
+      updatedAt: new Date(), // Required field
     },
   });
 }
@@ -75,9 +78,11 @@ test.describe('Spec Viewer - Button Visibility', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -94,6 +99,8 @@ test.describe('Spec Viewer - Button Visibility', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
   });
@@ -187,9 +194,11 @@ test.describe('Spec Viewer - Content Display', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -205,6 +214,8 @@ test.describe('Spec Viewer - Content Display', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
   });
@@ -312,9 +323,11 @@ test.describe('Spec Viewer - Error Handling', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -330,6 +343,8 @@ test.describe('Spec Viewer - Error Handling', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
   });
@@ -400,9 +415,11 @@ test.describe('Spec Viewer - Modal Interactions', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -418,6 +435,8 @@ test.describe('Spec Viewer - Modal Interactions', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
   });

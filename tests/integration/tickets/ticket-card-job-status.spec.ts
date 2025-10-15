@@ -32,6 +32,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         description: 'Ticket for testing job status indicator',
         stage: 'SPECIFY',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -42,6 +43,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         command: 'specify',
         status: 'RUNNING',
         branch: '020-test-branch',
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -74,6 +76,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         description: 'Ticket for testing pending job status',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -84,6 +87,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         command: 'specify',
         status: 'PENDING',
         branch: null,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -115,6 +119,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         description: 'Ticket for testing completed job status',
         stage: 'PLAN',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -126,6 +131,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         status: 'COMPLETED',
         branch: '020-test-branch',
         completedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -157,6 +163,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
         description: 'Ticket for testing no job status indicator',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -197,6 +204,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
           description: `Testing ${testCase.command} job indicator`,
           stage: testCase.stage,
           projectId: 1,
+          updatedAt: new Date(), // Required field
         },
       });
       ticketIds.push(ticket.id);
@@ -209,6 +217,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
           status: testCase.status,
           branch: testCase.status === 'PENDING' ? null : '020-test-branch',
           completedAt: testCase.status === 'FAILED' ? new Date() : null,
+          updatedAt: new Date(), // Required field
         },
       });
       jobIds.push(job.id);

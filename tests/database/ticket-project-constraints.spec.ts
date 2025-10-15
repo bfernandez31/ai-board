@@ -63,6 +63,7 @@ test.describe('Ticket-Project Constraints', () => {
         title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: 99999, // Non-existent project ID
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -241,6 +242,7 @@ test.describe('Ticket-Project Constraints', () => {
         title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: null as unknown as number, // Force null value
+        updatedAt: new Date(), // Required field
       },
     });
 

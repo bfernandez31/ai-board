@@ -48,9 +48,11 @@ test.describe('Project Uniqueness Constraint', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -62,6 +64,8 @@ test.describe('Project Uniqueness Constraint', () => {
         githubOwner: 'test-owner', // Same as project1
         githubRepo: 'test-repo', // Same as project1
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 

@@ -38,9 +38,11 @@ export async function ensureTestFixtures(): Promise<string> {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -57,6 +59,7 @@ export async function ensureTestFixtures(): Promise<string> {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required: Project.updatedAt has no default
       },
     });
 
@@ -72,6 +75,7 @@ export async function ensureTestFixtures(): Promise<string> {
         githubOwner: 'test',
         githubRepo: 'test2',
         userId: testUser.id,
+        updatedAt: new Date(), // Required: Project.updatedAt has no default
       },
     });
 

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -22,9 +23,11 @@ test.describe('Integration: Branch assignment workflow', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -36,6 +39,8 @@ test.describe('Integration: Branch assignment workflow', () => {
         githubOwner: 'integration-test-owner',
         githubRepo: 'branch-assignment-test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
     testProjectId = project.id;
@@ -81,6 +86,7 @@ test.describe('Integration: Branch assignment workflow', () => {
         data: {
           branch: '014-add-github-branch',
         },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -139,6 +145,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -152,6 +159,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '002-updated-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -165,6 +173,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '003-final-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -208,6 +217,7 @@ test.describe('Integration: Branch assignment workflow', () => {
         `/api/projects/${testProjectId}/tickets/${ticket.id}/branch`,
         {
           data: { branch: branchName },
+          headers: getWorkflowHeaders(),
         }
       );
 
@@ -250,6 +260,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-new-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 
@@ -298,6 +309,7 @@ test.describe('Integration: Branch assignment workflow', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-timestamp-test' },
+        headers: getWorkflowHeaders(),
       }
     );
 

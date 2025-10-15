@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 const prisma = new PrismaClient();
 
@@ -23,9 +24,11 @@ test.describe('Integration: Multiple fields atomic update', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -37,6 +40,8 @@ test.describe('Integration: Multiple fields atomic update', () => {
         githubOwner: 'integration-test-owner',
         githubRepo: 'multi-field-test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
     testProjectId = project.id;
@@ -184,6 +189,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
       `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
+        headers: getWorkflowHeaders(),
       }
     );
 

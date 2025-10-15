@@ -97,6 +97,7 @@ export async function handleTicketTransition(
         command: command,
         status: JobStatus.PENDING,
         startedAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
@@ -122,6 +123,19 @@ export async function handleTicketTransition(
 
         // Add ticket context for SPECIFY stage
         if (targetStage === Stage.SPECIFY) {
+          // Resolve effective clarification policy (ticket ?? project)
+          const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
+
+          // Construct JSON payload with feature description and policy
+          const specifyPayload = {
+            featureDescription: `#${ticket.id} ${ticket.title}\n${ticket.description}`,
+            clarificationPolicy: effectivePolicy,
+          };
+
+          // Pass as JSON string to workflow
+          workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
+
+          // Keep legacy fields for backward compatibility (deprecated)
           workflowInputs.ticketTitle = ticket.title;
           workflowInputs.ticketDescription = ticket.description;
         }

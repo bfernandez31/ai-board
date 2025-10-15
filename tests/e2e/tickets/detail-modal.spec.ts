@@ -68,19 +68,17 @@ test.describe('Ticket Detail Modal', () => {
     const ticketTitle = await firstTicket.locator('h3').textContent();
     await firstTicket.click();
 
-    // Assert modal is visible
-    const dialog = page.locator('[role="dialog"]');
+    // Assert modal is visible - find dialog containing the ticket title
+    const dialog = page.locator('[role="dialog"]').filter({ hasText: ticketTitle || '' });
     await expect(dialog).toBeVisible();
 
     // Assert ticket title is displayed in modal
     await expect(dialog.locator('h2, [data-testid="modal-title"]')).toContainText(ticketTitle || '');
 
-    // Click close button (shadcn/ui Dialog has a built-in close button in top-right)
-    // The button contains an X icon and sr-only "Close" text
-    const closeButton = dialog.locator('button').first(); // First button in dialog is the close button
-    await closeButton.click();
+    // Close the dialog by pressing ESC (more reliable than finding close button)
+    await page.keyboard.press('Escape');
 
-    // Assert modal is hidden
+    // Dialog should no longer be visible (Radix UI removes it from DOM)
     await expect(dialog).not.toBeVisible();
   });
 

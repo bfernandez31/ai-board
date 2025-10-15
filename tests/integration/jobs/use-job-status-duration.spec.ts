@@ -33,6 +33,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         description: 'Testing first status displays without delay',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -43,6 +44,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         command: 'specify',
         status: 'PENDING',
         branch: null,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -77,6 +79,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         description: 'Testing minimum display duration',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -87,6 +90,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         command: 'specify',
         status: 'PENDING',
         branch: null,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -132,6 +136,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         description: 'Testing rapid PENDING → RUNNING → COMPLETED',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -142,6 +147,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         command: 'specify',
         status: 'PENDING',
         branch: null,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -205,6 +211,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         description: 'Testing status without minimum duration',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -215,6 +222,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         command: 'specify',
         status: 'PENDING',
         branch: null,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -242,6 +250,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         description: 'Testing duration persists during interactions',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -252,6 +261,7 @@ test.describe('Integration: useJobStatus 500ms Display Duration', () => {
         command: 'specify',
         status: 'RUNNING',
         branch: '020-test-branch',
+        updatedAt: new Date(), // Required field
       },
     });
 

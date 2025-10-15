@@ -45,6 +45,7 @@ async function main() {
       githubOwner: 'bfernandez31',
       githubRepo: 'ai-board',
       userId,
+      updatedAt: new Date(),
     },
   });
 

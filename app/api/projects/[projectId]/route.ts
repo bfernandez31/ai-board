@@ -5,7 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getProject } from '@/lib/db/projects';
+import { ZodError } from 'zod';
+import { getProject, updateProject } from '@/lib/db/projects';
+import { projectUpdateSchema } from '@/app/lib/schemas/clarification-policy';
 
 export async function GET(
   _request: NextRequest,
@@ -43,6 +45,63 @@ export async function GET(
     }
 
     console.error('Error fetching project:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/projects/[projectId]
+ *
+ * Updates a project (with authentication)
+ */
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string }> }
+): Promise<NextResponse> {
+  try {
+    const params = await context.params;
+    const projectId = parseInt(params.projectId, 10);
+
+    if (isNaN(projectId) || projectId <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid project ID' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const validated = projectUpdateSchema.parse(body);
+
+    const updatedProject = await updateProject(projectId, validated);
+
+    return NextResponse.json(updatedProject);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', issues: error.issues },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+    }
+
+    console.error('Error updating project:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

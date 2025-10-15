@@ -52,9 +52,11 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -63,9 +65,11 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
       where: { email: 'other@e2e.local' },
       update: {},
       create: {
+        id: 'other-user-id', // Required: User.id is String (not auto-generated)
         email: 'other@e2e.local',
         name: 'Other Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -80,6 +84,8 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 
@@ -94,6 +100,8 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         githubOwner: 'test',
         githubRepo: 'test2',
         userId: otherUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 
@@ -104,6 +112,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         description: 'Ticket for testing job polling',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -114,6 +123,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         command: 'specify',
         ticketId: ticket.id,
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -124,6 +134,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         ticketId: ticket.id,
         projectId: 1,
         startedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
 
@@ -135,6 +146,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
         projectId: 1,
         startedAt: new Date(),
         completedAt: new Date(),
+        updatedAt: new Date(), // Required field
       },
     });
   });
