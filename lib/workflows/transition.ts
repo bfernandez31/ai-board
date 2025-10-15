@@ -237,36 +237,45 @@ export async function handleTicketTransition(
           auth: githubToken,
         });
 
-        // Prepare workflow inputs
-        const workflowInputs: Record<string, string> = {
-          ticket_id: ticket.id.toString(),
-          command: command,
-          branch: branchName || ticket.branch || '',
-          job_id: job.id.toString(),
-        };
+        // Prepare workflow inputs based on mode
+        let workflowInputs: Record<string, string>;
 
-        // Add mode-specific inputs
         if (isQuickImpl) {
-          // Quick-impl mode: Add ticket title and description for workflow
-          workflowInputs.ticketTitle = ticket.title;
-          workflowInputs.ticketDescription = ticket.description;
-        } else if (targetStage === Stage.SPECIFY) {
-          // Normal SPECIFY mode: Add clarification policy
-          // Resolve effective clarification policy (ticket ?? project)
-          const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
-
-          // Construct JSON payload with feature description and policy
-          const specifyPayload = {
-            featureDescription: `#${ticket.id} ${ticket.title}\n${ticket.description}`,
-            clarificationPolicy: effectivePolicy,
+          // Quick-impl mode: Use quick-impl.yml input schema
+          workflowInputs = {
+            ticket_id: ticket.id.toString(),
+            ticketTitle: ticket.title,
+            ticketDescription: ticket.description,
+            job_id: job.id.toString(),
+            project_id: ticket.projectId.toString(),
+          };
+        } else {
+          // Normal mode: Use speckit.yml input schema
+          workflowInputs = {
+            ticket_id: ticket.id.toString(),
+            command: command,
+            branch: branchName || ticket.branch || '',
+            job_id: job.id.toString(),
           };
 
-          // Pass as JSON string to workflow
-          workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
+          // Add SPECIFY-specific inputs
+          if (targetStage === Stage.SPECIFY) {
+            // Resolve effective clarification policy (ticket ?? project)
+            const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
 
-          // Keep legacy fields for backward compatibility (deprecated)
-          workflowInputs.ticketTitle = ticket.title;
-          workflowInputs.ticketDescription = ticket.description;
+            // Construct JSON payload with feature description and policy
+            const specifyPayload = {
+              featureDescription: `#${ticket.id} ${ticket.title}\n${ticket.description}`,
+              clarificationPolicy: effectivePolicy,
+            };
+
+            // Pass as JSON string to workflow
+            workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
+
+            // Keep legacy fields for backward compatibility (deprecated)
+            workflowInputs.ticketTitle = ticket.title;
+            workflowInputs.ticketDescription = ticket.description;
+          }
         }
 
         // Determine workflow file based on mode
