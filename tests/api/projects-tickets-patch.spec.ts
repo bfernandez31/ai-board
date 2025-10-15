@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { cleanupDatabase } from '../helpers/db-cleanup';
+import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 
 /**
  * Contract Test: PATCH /api/projects/[projectId]/tickets/[id]
@@ -25,6 +25,29 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     });
     expect(response.status()).toBe(201);
     return await response.json();
+  }
+
+  /**
+   * Helper: Complete most recent job for a ticket
+   * Required after stage transitions to automated stages (SPECIFY, PLAN, BUILD)
+   * This simulates the workflow completing successfully
+   */
+  async function completeJobForTicket(ticketId: number) {
+    const prisma = getPrismaClient();
+    const job = await prisma.job.findFirst({
+      where: { ticketId },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (job && job.status !== 'COMPLETED') {
+      await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+        },
+      });
+    }
   }
 
   test('should return 200 for valid stage update', async ({ request }) => {
@@ -96,6 +119,9 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(response1.status()).toBe(200);
     const body1 = await response1.json();
     expect(body1.version).toBe(2);
+
+    // Complete the SPECIFY job before next transition (job validation requirement)
+    await completeJobForTicket(ticket.id);
 
     // Second update
     const response2 = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
@@ -308,11 +334,17 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     });
     expect(response.status()).toBe(200);
 
+    // Complete SPECIFY job before next transition
+    await completeJobForTicket(ticket.id);
+
     // SPECIFY -> PLAN
     response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'PLAN', version: 2 }
     });
     expect(response.status()).toBe(200);
+
+    // Complete PLAN job before next transition
+    await completeJobForTicket(ticket.id);
 
     // PLAN -> BUILD
     response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
@@ -320,13 +352,16 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     });
     expect(response.status()).toBe(200);
 
-    // BUILD -> VERIFY
+    // Complete BUILD job before next transition
+    await completeJobForTicket(ticket.id);
+
+    // BUILD -> VERIFY (manual stage - no job completion needed)
     response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'VERIFY', version: 4 }
     });
     expect(response.status()).toBe(200);
 
-    // VERIFY -> SHIP
+    // VERIFY -> SHIP (manual stage - no job completion needed)
     response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'SHIP', version: 5 }
     });
@@ -420,12 +455,20 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'SPECIFY', version: 1 }
     });
+    // Complete SPECIFY job
+    await completeJobForTicket(ticket.id);
+
     await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'PLAN', version: 2 }
     });
+    // Complete PLAN job
+    await completeJobForTicket(ticket.id);
+
     await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: { stage: 'BUILD', version: 3 }
     });
+    // Complete BUILD job
+    await completeJobForTicket(ticket.id);
 
     // BUILD -> VERIFY should NOT create job (manual stage)
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {

@@ -26,7 +26,13 @@ export interface TransitionResult {
   jobId?: number;
   branchName?: string;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  details?: {
+    currentStage?: Stage;
+    targetStage?: Stage;
+    jobStatus?: JobStatus;
+    jobCommand?: string;
+  };
 }
 
 /**
@@ -35,6 +41,108 @@ export interface TransitionResult {
 export type TicketWithProject = Ticket & {
   project: Project;
 };
+
+/**
+ * Determines if job completion validation is required for a given stage.
+ *
+ * Rules:
+ * - INBOX: No validation (no prior job exists)
+ * - SPECIFY, PLAN, BUILD: Requires validation (automated stages with prior jobs)
+ * - VERIFY, SHIP: No validation (manual stages)
+ *
+ * @param currentStage - Current stage of the ticket
+ * @returns true if validation is required, false otherwise
+ */
+function shouldValidateJobCompletion(currentStage: Stage): boolean {
+  const stagesRequiringValidation: Stage[] = [Stage.SPECIFY, Stage.PLAN, Stage.BUILD];
+  return stagesRequiringValidation.includes(currentStage);
+}
+
+/**
+ * Maps job status to user-friendly error message.
+ *
+ * @param status - Current status of the job
+ * @returns User-friendly error message explaining why transition is blocked
+ */
+function getJobValidationErrorMessage(status: JobStatus): string {
+  switch (status) {
+    case JobStatus.PENDING:
+    case JobStatus.RUNNING:
+      return 'Cannot transition: workflow is still running';
+
+    case JobStatus.FAILED:
+      return 'Cannot transition: previous workflow failed. Please retry the workflow.';
+
+    case JobStatus.CANCELLED:
+      return 'Cannot transition: workflow was cancelled. Please retry the workflow.';
+
+    default:
+      return 'Cannot transition: job is not completed';
+  }
+}
+
+/**
+ * Validates that the most recent job for a ticket has completed successfully.
+ *
+ * This validation ensures workflow integrity by checking:
+ * 1. If the current stage requires job validation
+ * 2. Whether a job exists for the ticket (data integrity check)
+ * 3. Whether the most recent job has status COMPLETED
+ *
+ * @param ticket - Ticket with project relation loaded
+ * @param targetStage - Target stage for transition
+ * @returns TransitionResult indicating validation success or error details
+ */
+async function validateJobCompletion(
+  ticket: TicketWithProject,
+  targetStage: Stage
+): Promise<TransitionResult> {
+  // 1. Check if validation is required for current stage
+  const requiresValidation = shouldValidateJobCompletion(ticket.stage);
+  if (!requiresValidation) {
+    return { success: true };
+  }
+
+  // 2. Fetch most recent job for ticket (ordered by startedAt DESC)
+  const mostRecentJob = await prisma.job.findFirst({
+    where: { ticketId: ticket.id },
+    orderBy: { startedAt: 'desc' },
+    select: {
+      id: true,
+      status: true,
+      command: true,
+      startedAt: true,
+    },
+  });
+
+  // 3. Handle missing job (data integrity issue)
+  if (!mostRecentJob) {
+    return {
+      success: false,
+      errorCode: 'MISSING_JOB',
+      error: `Expected job for stage ${ticket.stage} but none found`,
+    };
+  }
+
+  // 4. Validate job status is COMPLETED
+  if (mostRecentJob.status !== JobStatus.COMPLETED) {
+    const errorMessage = getJobValidationErrorMessage(mostRecentJob.status);
+    return {
+      success: false,
+      errorCode: 'JOB_NOT_COMPLETED',
+      error: errorMessage,
+      details: {
+        currentStage: ticket.stage,
+        targetStage: targetStage,
+        jobStatus: mostRecentJob.status,
+        jobCommand: mostRecentJob.command,
+      },
+    };
+  }
+
+  // 5. Validation passed
+  return { success: true };
+}
 
 /**
  * Handle ticket stage transition with GitHub workflow dispatch
@@ -62,7 +170,7 @@ export async function handleTicketTransition(
   try {
     const currentStage = ticket.stage as Stage;
 
-    // Validate stage transition (sequential only)
+    // 1. Validate stage transition (sequential only)
     if (!isValidTransition(currentStage as unknown as ValidationStage, targetStage as unknown as ValidationStage)) {
       return {
         success: false,
@@ -71,7 +179,13 @@ export async function handleTicketTransition(
       };
     }
 
-    // Check if target stage has automated workflow
+    // 2. Validate job completion before proceeding
+    const jobValidation = await validateJobCompletion(ticket, targetStage);
+    if (!jobValidation.success) {
+      return jobValidation;
+    }
+
+    // 3. Check if target stage has automated workflow
     const command = STAGE_COMMAND_MAP[targetStage];
 
     // Handle manual stages (VERIFY, SHIP) - no job/workflow needed

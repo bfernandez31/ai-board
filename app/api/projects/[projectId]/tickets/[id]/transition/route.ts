@@ -133,15 +133,30 @@ export async function POST(
     );
 
     if (!transitionResult.success) {
+      // Determine error message based on error code
+      let errorMessage = transitionResult.error || 'Transition failed';
+      if (transitionResult.errorCode === 'INVALID_TRANSITION') {
+        errorMessage = 'Invalid stage transition';
+      } else if (transitionResult.errorCode === 'JOB_NOT_COMPLETED' || transitionResult.errorCode === 'MISSING_JOB') {
+        errorMessage = 'Cannot transition';
+      }
+
+      // Determine HTTP status code
+      const statusCode =
+        transitionResult.errorCode === 'INVALID_TRANSITION' ||
+        transitionResult.errorCode === 'JOB_NOT_COMPLETED' ||
+        transitionResult.errorCode === 'MISSING_JOB'
+          ? 400
+          : 500;
+
       return NextResponse.json(
         {
-          error: transitionResult.errorCode === 'INVALID_TRANSITION'
-            ? 'Invalid stage transition'
-            : transitionResult.error,
+          error: errorMessage,
           message: transitionResult.error,
           code: transitionResult.errorCode,
+          ...(transitionResult.details && { details: transitionResult.details }),
         },
-        { status: transitionResult.errorCode === 'INVALID_TRANSITION' ? 400 : 500 }
+        { status: statusCode }
       );
     }
 
