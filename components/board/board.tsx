@@ -64,6 +64,7 @@ function BoardContent({
   // Drag state for visual feedback (T019)
   const [isDragging, setIsDragging] = useState(false);
   const [dragSource, setDragSource] = useState<Stage | null>(null);
+  const [draggedTicketHasJob, setDraggedTicketHasJob] = useState(false);
 
   // Pending transition for quick-impl modal (T035)
   const [pendingTransition, setPendingTransition] = useState<{
@@ -129,6 +130,39 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
+  // Get job for a specific ticket (merges initial + polled data)
+  const getTicketJob = useCallback(
+    (ticketId: number): Job | null => {
+      // Prioritize real-time polled update
+      const polledJob = polledJobs.find(job => job.ticketId === ticketId);
+      if (polledJob) {
+        // Convert polled job to Job type
+        const baseJob = initialJobs.get(ticketId);
+        if (baseJob) {
+          return {
+            ...baseJob,
+            status: polledJob.status,
+            updatedAt: new Date(polledJob.updatedAt),
+          };
+        }
+
+        // Create minimal Job object from polled data (for new jobs created during session)
+        return {
+          id: polledJob.id,
+          ticketId: polledJob.ticketId,
+          status: polledJob.status,
+          command: '', // Not included in polling response
+          startedAt: new Date(polledJob.updatedAt),
+          completedAt: null,
+        } as Job;
+      }
+
+      // Fall back to initial job data
+      return initialJobs.get(ticketId) || null;
+    },
+    [polledJobs, initialJobs]
+  );
+
   // Handle drag start (T020 - Add drag state)
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const ticket = event.active.data.current?.ticket as TicketWithVersion;
@@ -136,8 +170,13 @@ function BoardContent({
       setActiveTicket(ticket);
       setIsDragging(true);
       setDragSource(ticket.stage);
+
+      // Check if ticket has a non-completed job
+      const job = getTicketJob(ticket.id);
+      const hasActiveJob = job && job.status !== 'COMPLETED';
+      setDraggedTicketHasJob(!!hasActiveJob);
     }
-  }, []);
+  }, [getTicketJob]);
 
   // Handle drag end with API call
   const handleDragEnd = useCallback(
@@ -145,6 +184,7 @@ function BoardContent({
       setActiveTicket(null);
       setIsDragging(false);
       setDragSource(null);
+      setDraggedTicketHasJob(false);
 
       const { active, over } = event;
 
@@ -209,19 +249,26 @@ function BoardContent({
           );
           setTicketsByStage(groupTicketsByStage(revertedTickets));
 
-          // Show error message
+          // Show error message with backend-provided details
           if (response.status === 409) {
             toast({
               variant: 'destructive',
               title: 'Ticket modified by another user',
               description: 'Please refresh the page and try again.',
             });
+          } else if (response.status === 500 && error.error) {
+            // Display server-provided error message directly
+            toast({
+              variant: 'destructive',
+              title: 'Cannot move ticket',
+              description: error.error,
+            });
           } else {
             toast({
               variant: 'destructive',
               title: 'Failed to update ticket',
               description:
-                error.message || 'An error occurred while updating the ticket.',
+                error.error || error.message || 'An error occurred while updating the ticket.',
             });
           }
         } else {
@@ -436,43 +483,15 @@ function BoardContent({
     setPendingTransition(null);
   }, []);
 
-  // Get job for a specific ticket (merges initial + polled data)
-  const getTicketJob = useCallback(
-    (ticketId: number): Job | null => {
-      // Prioritize real-time polled update
-      const polledJob = polledJobs.find(job => job.ticketId === ticketId);
-      if (polledJob) {
-        // Convert polled job to Job type
-        const baseJob = initialJobs.get(ticketId);
-        if (baseJob) {
-          return {
-            ...baseJob,
-            status: polledJob.status,
-            updatedAt: new Date(polledJob.updatedAt),
-          };
-        }
-
-        // Create minimal Job object from polled data (for new jobs created during session)
-        return {
-          id: polledJob.id,
-          ticketId: polledJob.ticketId,
-          status: polledJob.status,
-          command: '', // Not included in polling response
-          startedAt: new Date(polledJob.updatedAt),
-          completedAt: null,
-        } as Job;
-      }
-
-      // Fall back to initial job data
-      return initialJobs.get(ticketId) || null;
-    },
-    [polledJobs, initialJobs]
-  );
-
   // Get drop zone style based on drag state (T021)
   const getDropZoneStyle = useCallback(
     (stage: Stage): string => {
       if (!isDragging || !dragSource) return '';
+
+      // If ticket has active job, disable all drop zones
+      if (draggedTicketHasJob) {
+        return 'opacity-50 cursor-not-allowed';
+      }
 
       // Quick-impl mode: Dragging from INBOX
       if (dragSource === Stage.INBOX) {
@@ -495,7 +514,7 @@ function BoardContent({
         return 'opacity-50 cursor-not-allowed';
       }
     },
-    [isDragging, dragSource]
+    [isDragging, dragSource, draggedTicketHasJob]
   );
 
   const stages = getAllStages();
