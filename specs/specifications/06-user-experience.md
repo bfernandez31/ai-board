@@ -333,6 +333,14 @@ The system displays a persistent header at the top of all pages:
 - ✅ Catppuccin Mocha theme styling
 - ✅ Toast notifications for placeholders
 
+**Job-Blocked Ticket Visual Feedback** (added 2025-10-15):
+- ✅ Backend-specific error messages displayed in toast notifications
+- ✅ Visual feedback during drag (opacity reduction + cursor change)
+- ✅ Blocked column overlay with ban icon and explanatory text
+- ✅ Automatic job status detection on drag start
+- ✅ Applies to all columns when ticket has active job
+- ✅ English messaging consistent with application language
+
 ### User Workflows
 
 **Viewing Job Status**:
@@ -366,6 +374,15 @@ The system displays a persistent header at the top of all pages:
 6. User scrolls page (header remains fixed at top)
 7. On mobile: user clicks hamburger menu to reveal buttons
 
+**Dragging Job-Blocked Ticket**:
+1. User attempts to drag ticket with active workflow job
+2. System checks job status on drag start
+3. All columns show reduced opacity and cursor changes to not-allowed
+4. Columns display semi-transparent overlay with ban icon
+5. Overlay shows "Workflow in progress" and "Wait for job completion" messages
+6. User releases drag (ticket returns to origin)
+7. User sees backend-specific error message in toast if drop attempted
+
 ### Business Rules
 
 - Only most recent active or terminal job shown per ticket
@@ -376,6 +393,8 @@ The system displays a persistent header at the top of all pages:
 - Header action buttons are placeholders (no authentication/contact functionality)
 - Header appears on all pages (site-wide)
 - Header remains visible during scrolling (fixed positioning)
+- Job-blocked tickets cannot be moved until workflow completes (visual feedback prevents confusion)
+- Backend error messages displayed for failed transitions (user understands why operation failed)
 
 ### Technical Details
 
@@ -401,3 +420,126 @@ The system displays a persistent header at the top of all pages:
 - Catppuccin Mocha color palette
 - Fixed positioning CSS
 - Responsive hamburger menu (mobile)
+
+---
+
+## Job-Blocked Ticket Visual Feedback
+
+**Purpose**: Users need clear visual indication when tickets cannot be moved due to active workflows. The system provides immediate feedback during drag operations to explain why drop zones are disabled and displays backend-specific error messages when transitions fail.
+
+### What It Does
+
+The system provides visual and textual feedback for job-blocked tickets:
+
+**Error Message Improvements**:
+- **Backend-specific messages**: Display actual error from API instead of generic fallback
+- **Job validation errors**: Show specific reasons (workflow running, failed, cancelled)
+- **User-friendly language**:
+  - PENDING/RUNNING: "Cannot transition: workflow is still running"
+  - FAILED: "Cannot transition: previous workflow failed. Please retry the workflow."
+  - CANCELLED: "Cannot transition: workflow was cancelled. Please retry the workflow."
+- **Toast notifications**: Error toasts display backend message with "Cannot move ticket" title
+
+**Visual Feedback During Drag**:
+- **Trigger**: When dragging ticket with active job (PENDING, RUNNING, FAILED, CANCELLED)
+- **All columns disabled**: Every column shows blocked state during drag
+- **Opacity reduction**: Columns appear with `opacity-50` to indicate unavailability
+- **Cursor feedback**: `cursor-not-allowed` on all columns to prevent interaction
+- **Automatic detection**: System checks job status on drag start
+
+**Blocked Column Overlay** (when dragging job-blocked ticket):
+- **Semi-transparent overlay**: `bg-black/60` with `backdrop-blur-sm` effect
+- **Ban icon**: Large red prohibition icon (⊘) from lucide-react (`Ban` component)
+  - Size: 64x64 pixels (`w-16 h-16`)
+  - Color: `text-red-400`
+  - Stroke width: 2.5 for visibility
+- **Primary message**: "Workflow in progress" in `text-red-300` (semibold, small)
+- **Secondary message**: "Wait for job completion" in `text-zinc-400` (extra small)
+- **Positioning**: Absolute overlay covering entire column content
+- **Z-index**: `z-50` to appear above all column content
+- **Pointer events**: `pointer-events-none` to prevent interaction
+
+**Workflow Integration**:
+- State tracked in board component: `draggedTicketHasJob` boolean
+- Job status checked via `getTicketJob` function during drag start
+- Active job = PENDING, RUNNING, FAILED, or CANCELLED status
+- Visual feedback applies to ALL columns when job active
+- Feedback removed immediately on drag end
+
+### Requirements
+
+**Error Message Display**:
+- Display backend error message from API response (500 status with `error.error` field)
+- Show toast with "Cannot move ticket" title and backend message as description
+- Use destructive variant (`variant: 'destructive'`) for error styling
+- Preserve existing 500 error handling for other scenarios
+
+**Drag Start Detection**:
+- Check job status when user starts dragging ticket
+- Set `draggedTicketHasJob` state to true if active job exists
+- Query most recent job for ticket using `getTicketJob(ticketId)`
+- Active job condition: `job && job.status !== 'COMPLETED'`
+
+**Drop Zone Styling**:
+- Apply `opacity-50 cursor-not-allowed` to all columns when `draggedTicketHasJob` is true
+- Override other drop zone styles (blue/green highlighting for valid zones)
+- Reset styling on drag end
+
+**Blocked Overlay**:
+- Display on all StageColumn components when `isBlockedByJob` prop is true
+- Absolute positioning with `inset-0` to cover entire column
+- Semi-transparent black background (`bg-black/60`) with backdrop blur
+- Ban icon (lucide-react `Ban` component) centered with messages
+- Messages centered vertically and horizontally in overlay
+- English language (consistent with application)
+
+**Component Integration**:
+- Board component (`components/board/board.tsx`):
+  - Track `draggedTicketHasJob` state
+  - Check job status in `handleDragStart`
+  - Pass `isBlockedByJob` prop to StageColumn components
+  - Update `getDropZoneStyle` to disable zones when job active
+- StageColumn component (`components/board/stage-column.tsx`):
+  - Accept `isBlockedByJob` optional prop (boolean)
+  - Import `Ban` icon from lucide-react
+  - Render overlay when prop is true
+  - Add `relative` class to column container for absolute positioning
+
+**Performance**:
+- Drag start check: <10ms (uses existing `getTicketJob` function)
+- Visual update: Immediate (CSS state change)
+- No additional API calls during drag
+
+### Data Model
+
+**Board State** (updated):
+- `draggedTicketHasJob`: boolean (tracks if dragged ticket has active job)
+- Set during `handleDragStart`, reset during `handleDragEnd`
+
+**StageColumn Props** (updated):
+- `isBlockedByJob?: boolean` (optional, indicates column should show blocked overlay)
+
+**Job Status Detection**:
+- Query: `getTicketJob(ticketId)` returns Job | null
+- Active job: `job && job.status !== 'COMPLETED'`
+- Status check: PENDING, RUNNING, FAILED, CANCELLED all considered "active"
+
+**Visual Styling Classes**:
+- Disabled zone: `opacity-50 cursor-not-allowed`
+- Overlay: `absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 pointer-events-none`
+- Ban icon: `w-16 h-16 text-red-400`
+- Primary text: `text-red-300 font-semibold text-sm`
+- Secondary text: `text-zinc-400 text-xs mt-1`
+
+**Error Message Mapping**:
+- PENDING/RUNNING: "Cannot transition: workflow is still running"
+- FAILED: "Cannot transition: previous workflow failed. Please retry the workflow."
+- CANCELLED: "Cannot transition: workflow was cancelled. Please retry the workflow."
+- Generic 500: Existing fallback message
+
+**Implementation Files**:
+- `components/board/board.tsx`: State management, job detection, prop passing
+- `components/board/stage-column.tsx`: Overlay rendering, Ban icon display
+- `lib/workflows/transition.ts`: Backend error message generation
+
+---

@@ -830,6 +830,16 @@ export interface TransitionResult {
 - ✅ Performance optimized (<50ms query using composite index)
 - ✅ Two new error codes: JOB_NOT_COMPLETED, MISSING_JOB
 
+**Quick Implementation Workflow** (added 2025-01-15):
+- ✅ Direct INBOX → BUILD transition bypassing SPECIFY and PLAN
+- ✅ Warning modal with benefits/trade-offs explanation
+- ✅ Visual feedback: green BUILD zone, blue SPECIFY zone, grayed invalid zones
+- ✅ Lightning bolt (⚡) badge on BUILD column during INBOX drag
+- ✅ Separate workflow file (quick-impl.yml) with minimal spec creation
+- ✅ Same branch naming and job tracking as full workflow
+- ✅ Mode detection: INBOX → BUILD triggers quick-impl, preserves normal workflow
+- ✅ Error handling with user-friendly messages
+
 ### User Workflows
 
 **Triggering Specification Generation**:
@@ -865,6 +875,15 @@ export interface TransitionResult {
 - Manual stages (VERIFY, SHIP) and initial transition (INBOX → SPECIFY) bypass validation
 - Error responses include job status, command, and suggested actions for failed/cancelled jobs
 - Missing jobs for automated stages return MISSING_JOB error (data integrity issue)
+
+**Quick Implementation Workflow** (added 2025-01-15):
+- INBOX → BUILD direct transition triggers quick-impl mode
+- Warning modal displays before execution (no "don't show again")
+- Visual feedback distinguishes quick-impl (green) from normal (blue) workflow
+- Separate quick-impl.yml workflow file with minimal spec generation
+- Job command="quick-impl" tracked same as other commands
+- Same branch naming pattern (`{num}-{description}`) as full workflow
+- Bypasses job completion validation (no prior job exists)
 
 **Branch Management**:
 - SPECIFY generates: `feature/ticket-<id>`
@@ -902,3 +921,159 @@ export interface TransitionResult {
 - Implementation: `app/lib/job-state-machine.ts`
 - Validation: `canTransition(from, to)`
 - Error: `InvalidTransitionError`
+
+---
+
+## Quick Implementation Workflow
+
+**Purpose**: Users need to fast-track simple fixes and minor changes without creating formal specifications and plans. The quick-impl workflow allows tickets to jump directly from INBOX to BUILD, bypassing SPECIFY and PLAN stages for speed while maintaining job tracking and validation.
+
+### What It Does
+
+The system provides an express workflow for simple tasks:
+
+**Quick-Impl Transition**:
+- Direct transition from INBOX → BUILD (bypassing SPECIFY and PLAN)
+- Warning modal explains trade-offs before execution
+- Same branch management and job tracking as full workflow
+- Optimized for: typo fixes, minor UI tweaks, obvious bugs
+
+**Modal Confirmation**:
+- **Required confirmation**: Modal displays every time (no "don't show again")
+- **Benefits explained**: Faster implementation, ideal for simple fixes
+- **Trade-offs highlighted**: No formal spec, limited planning, may need more iterations
+- **Action buttons**: "Cancel" (reverts to INBOX) or "Proceed" (executes quick-impl)
+- **Performance requirement**: Modal appears within 100ms of drop event
+
+**Visual Feedback During Drag**:
+- **Blue drop zone**: SPECIFY column shows blue border (`border-blue-400`) for normal workflow
+- **Green drop zone**: BUILD column shows green border (`border-green-400`) for quick-impl
+- **Quick-impl badge**: BUILD column displays lightning bolt (⚡) and "Quick Implementation" text
+- **Invalid zones grayed**: PLAN/VERIFY/SHIP show reduced opacity (`opacity-50`) and prohibited icon (🚫)
+- **Cursor feedback**: `not-allowed` cursor on invalid drop zones
+
+**Workflow Execution**:
+- Creates Job with `command="quick-impl"` and `status=PENDING`
+- Dispatches `.github/workflows/quick-impl.yml` (separate workflow file)
+- Workflow creates feature branch using `create-new-feature.sh --mode=quick-impl`
+- Executes `/quick-impl` Claude command (bypasses specification generation)
+- Updates ticket branch field after branch creation
+- Updates job status on completion (COMPLETED/FAILED/CANCELLED)
+
+**Script Behavior**:
+- `create-new-feature.sh --mode=quick-impl`: Creates minimal spec.md with only title and description
+- `create-new-feature.sh --mode=specify`: Creates full spec template (default)
+- Branch naming: Same `{num}-{description}` pattern as full workflow
+
+**Error Handling**:
+- Workflow dispatch failures: User-friendly error suggesting full workflow alternative
+- Transition API failures: Rollback to INBOX with error toast
+- Job status update failures: Warning to manually refresh page
+- Workflow execution failures: Job status set to FAILED with link to GitHub Actions logs
+
+### Requirements
+
+**Drag-and-Drop**:
+- Allow INBOX → BUILD direct transition
+- Detect quick-impl mode when `currentStage === INBOX && targetStage === BUILD`
+- Preserve existing stage transitions (no regression)
+- Prevent invalid transitions (INBOX → PLAN/VERIFY/SHIP)
+
+**Visual Feedback**:
+- Blue dashed border + blue background on SPECIFY during INBOX drag
+- Green dashed border + green background on BUILD during INBOX drag
+- Lightning bolt emoji (⚡) + "Quick Implementation" badge on BUILD
+- Prohibited emoji (🚫) + 50% opacity on PLAN/VERIFY/SHIP
+- `not-allowed` cursor on invalid zones
+
+**Warning Modal**:
+- Display before API call (100ms performance target)
+- Show benefits (speed, simple fixes) and trade-offs (no spec, limited planning)
+- Provide "Cancel" (no API call) and "Proceed" (execute) buttons
+- Amber styling (`bg-amber-600`) for warning emphasis
+- Test ID: `quick-impl-modal` for E2E testing
+
+**API Integration**:
+- **Endpoint**: POST `/api/projects/{projectId}/tickets/{id}/transition`
+- **Detection**: `currentStage === INBOX && targetStage === BUILD` triggers quick-impl
+- **Validation**: Skip job completion validation (no prior job exists)
+- **Job Creation**: Create Job with `command="quick-impl"`, `status=PENDING`
+- **Workflow Dispatch**: Dispatch `quick-impl.yml` instead of `speckit.yml`
+- **Concurrency**: Maintain optimistic concurrency control (version field)
+
+**Workflow File** (`.github/workflows/quick-impl.yml`):
+- Same environment setup as speckit.yml (Node 22.20.0, Python 3.11, Claude Code CLI)
+- Checkout main branch initially (branch created by script)
+- Execute `create-new-feature.sh --mode=quick-impl`
+- Run `/quick-impl` command with ticket context
+- Commit and push changes to created branch
+- Update ticket branch via API
+- Update job status via API
+
+**Script Modification** (`create-new-feature.sh`):
+- Accept `--mode` parameter (values: "specify", "quick-impl")
+- Quick-impl mode: Create minimal spec.md (title, description only)
+- Specify mode: Create full spec template (existing behavior)
+- Branch naming: Consistent `{num}-{description}` pattern
+
+### Requirements
+
+**Stage Validation**:
+- INBOX → SPECIFY: Normal workflow (specify command)
+- INBOX → BUILD: Quick-impl workflow (quick-impl command)
+- SPECIFY → PLAN: Normal workflow (plan command)
+- PLAN → BUILD: Normal workflow (implement command)
+- BUILD → VERIFY: Manual transition (no workflow)
+- VERIFY → SHIP: Manual transition (no workflow)
+
+**Job Validation**:
+- Quick-impl bypasses job completion validation (no prior job)
+- Full workflow still validates job completion at each stage
+
+**Modal State Management**:
+- Store drop intent (ticket, target stage) when modal opens
+- Execute API call only after confirmation
+- Rollback optimistic update if API fails
+- Prevent multiple API calls (disable button during execution)
+
+**Error Messages**:
+- Workflow dispatch fail: "Quick implementation failed. Try using the full workflow (INBOX → SPECIFY → PLAN → BUILD)."
+- Network error: "Failed to start workflow. Check your connection and try again."
+- Job validation error: Should not occur for INBOX → BUILD (no prior job)
+
+### Data Model
+
+**Job Entity** (updated):
+- `command`: Spec-kit command (specify|plan|task|implement|clarify|**quick-impl**, max 50 chars)
+- Quick-impl jobs tracked same as other jobs
+
+**Quick-Impl Modal State**:
+- `isOpen`: Boolean (modal visibility)
+- `pendingTicket`: TicketWithVersion | null (ticket to transition)
+- `pendingTarget`: Stage | null (target stage, always BUILD for quick-impl)
+
+**API Request** (unchanged):
+```json
+{
+  "targetStage": "BUILD"
+}
+```
+
+**API Response** (unchanged):
+```json
+{
+  "success": true,
+  "jobId": 123,
+  "message": "optional message"
+}
+```
+
+**Workflow Detection**:
+- Normal: `currentStage !== INBOX || targetStage !== BUILD` → dispatch speckit.yml
+- Quick-impl: `currentStage === INBOX && targetStage === BUILD` → dispatch quick-impl.yml
+
+**Branch Naming**:
+- Format: `{num}-{description}` (e.g., `031-quick-implementation`)
+- Same pattern as full workflow for consistency
+
+---
