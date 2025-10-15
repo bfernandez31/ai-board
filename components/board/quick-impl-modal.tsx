@@ -38,7 +38,7 @@ export function QuickImplModal({ open, onConfirm, onCancel }: QuickImplModalProp
             Quick Implementation
           </DialogTitle>
           <DialogDescription className="pt-2">
-            You're about to skip the specification and planning phases.
+            You&apos;re about to skip the specification and planning phases.
           </DialogDescription>
         </DialogHeader>
 
