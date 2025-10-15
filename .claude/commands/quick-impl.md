@@ -22,55 +22,60 @@ This command implements simple features directly from ticket context without for
 
 ## Outline
 
-1. **Load ticket context from feature spec.md**:
-   - Run `.specify/scripts/bash/check-prerequisites.sh --json --require-spec --include-spec` to get FEATURE_DIR
-   - Read `spec.md` in FEATURE_DIR to extract:
+1. **Create feature branch and minimal spec**:
+   - Parse ticket title from `$ARGUMENTS` (first argument is the ticket title)
+   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl "$TICKET_TITLE"` from repo root
+   - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)
+   - Verify branch was created and spec.md exists
+
+2. **Load ticket context from created spec.md**:
+   - Read `spec.md` from SPEC_FILE path to extract:
      * Ticket title (from header)
-     * Ticket description (from body)
+     * Ticket description (from Description section)
      * Any implementation hints or requirements
 
-2. **Validate task simplicity**:
+3. **Validate task simplicity**:
    - **If spec.md indicates complex requirements** (>200 words, multiple entities, API changes):
      * **STOP** and recommend: "This task appears complex. Consider using full workflow: /speckit.specify → /speckit.plan → /speckit.implement"
      * Exit without implementation
-   - **If task is simple**: Continue to step 3
+   - **If task is simple**: Continue to step 4
 
-3. **Understand project context**:
+4. **Understand project context**:
    - Read project CLAUDE.md for tech stack, conventions, and architecture
    - Identify relevant source files based on ticket description
    - Review existing patterns and code style
 
-4. **Test-Driven Development (TDD) approach**:
+5. **Test-Driven Development (TDD) approach**:
    - **ALWAYS write tests first** before implementation
    - Create or update test files based on ticket requirements
    - Follow existing test patterns (Playwright for E2E, Vitest for unit tests)
    - Ensure tests FAIL initially (red phase)
 
-5. **Implement the change**:
+6. **Implement the change**:
    - Make minimal changes to achieve ticket goals
    - Follow existing code patterns and conventions
    - Maintain consistency with project architecture
    - Add inline comments for non-obvious logic
 
-6. **Validate implementation**:
+7. **Validate implementation**:
    - Run relevant tests and verify they PASS (green phase)
    - Perform type checking: `npm run type-check`
    - Run linter: `npm run lint`
    - Fix any type errors or lint warnings
 
-7. **Refactor if needed**:
+8. **Refactor if needed**:
    - Clean up code for readability (refactor phase)
    - Remove any duplication
    - Ensure code meets project quality standards
    - Re-run tests to ensure changes still pass
 
-8. **Document changes**:
+9. **Document changes**:
    - Update inline documentation if public APIs changed
    - Add JSDoc comments for new functions
    - Update README.md ONLY if user-facing behavior changed
    - **DO NOT** create separate feature documentation (this is quick-impl)
 
-9. **Completion checklist**:
+10. **Completion checklist**:
    - ✓ Tests written and passing
    - ✓ Type check passes (`npm run type-check`)
    - ✓ Linter passes (`npm run lint`)
@@ -78,7 +83,7 @@ This command implements simple features directly from ticket context without for
    - ✓ No breaking changes to existing functionality
    - ✓ Implementation matches ticket requirements
 
-10. **Report completion**:
+11. **Report completion**:
     - Summarize changes made (files modified, tests added)
     - Confirm all validation checks passed
     - Note any deviations from ticket description
