@@ -37,6 +37,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * Helper: Create a ticket via API and return its ID and version
+   * For automated stages (SPECIFY, PLAN, BUILD), creates a COMPLETED job to satisfy validation
    */
   const createTicket = async (
     request: any,
@@ -62,6 +63,33 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
         where: { id: ticket.id },
         data: { stage: stage as any },
       });
+
+      // For automated stages, create a COMPLETED job to satisfy validation
+      // This simulates the workflow having completed successfully
+      if (['SPECIFY', 'PLAN', 'BUILD'].includes(stage)) {
+        const commandMap: Record<string, string> = {
+          SPECIFY: 'specify',
+          PLAN: 'plan',
+          BUILD: 'implement',
+        };
+
+        const command = commandMap[stage];
+        if (!command) {
+          throw new Error(`Unknown command for stage: ${stage}`);
+        }
+
+        await prisma.job.create({
+          data: {
+            ticketId: ticket.id,
+            projectId: 1,
+            command: command,
+            status: 'COMPLETED',
+            startedAt: new Date(),
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+      }
     }
 
     // Fetch updated ticket with version
@@ -81,6 +109,27 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    */
   const getTicket = async (id: number) => {
     return await prisma.ticket.findUnique({ where: { id } });
+  };
+
+  /**
+   * Helper: Complete most recent job for a ticket
+   * Used to simulate workflow completion after drag-and-drop transitions
+   */
+  const completeJobForTicket = async (ticketId: number) => {
+    const job = await prisma.job.findFirst({
+      where: { ticketId },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (job && job.status !== 'COMPLETED') {
+      await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+        },
+      });
+    }
   };
 
   /**
@@ -134,6 +183,10 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     let updatedTicket = await getTicket(ticket.id);
     expect(updatedTicket?.stage).toBe('SPECIFY');
     expect(updatedTicket?.version).toBe(2); // Version incremented
+
+    // Simulate workflow completion: Complete the SPECIFY job before next transition
+    // This is required because job validation was added in feature 030-should-not-be
+    await completeJobForTicket(ticket.id);
 
     // Step 2: Drag ticket from SPECIFY to PLAN
     await dragTicketToColumn(page, ticket.id, 'PLAN');

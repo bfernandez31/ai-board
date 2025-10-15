@@ -645,6 +645,135 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 
 ---
 
+## Job Completion Validation
+
+**Purpose**: The system must prevent ticket transitions when automated workflows are incomplete to maintain workflow integrity and prevent premature progression through stages.
+
+### What It Does
+
+The system validates job completion status before allowing stage transitions:
+
+**Validation Flow**:
+1. User attempts to move ticket from SPECIFY, PLAN, or BUILD stage
+2. System performs sequential validation (existing)
+3. System validates job completion status (new)
+4. System blocks transition if job not completed
+5. System allows transition if job completed
+
+**Validation Rules**:
+- **Automated Stages**: SPECIFY, PLAN, BUILD require completed workflow job
+- **Manual Stages**: VERIFY, SHIP bypass validation (no jobs created)
+- **Initial Transition**: INBOX → SPECIFY bypasses validation (no prior job)
+- **Job Selection**: Most recent job by `startedAt DESC` when multiple exist
+
+**Blocking Conditions**:
+- **PENDING**: Workflow created but not started yet
+- **RUNNING**: Workflow currently executing
+- **FAILED**: Workflow encountered error
+- **CANCELLED**: Workflow manually terminated
+
+**Allowing Conditions**:
+- **COMPLETED**: Workflow finished successfully
+- System creates new job for next stage after validation passes
+
+**Error Response**:
+```json
+{
+  "error": "Cannot transition",
+  "message": "Cannot transition: workflow is still running",
+  "code": "JOB_NOT_COMPLETED",
+  "details": {
+    "currentStage": "SPECIFY",
+    "targetStage": "PLAN",
+    "jobStatus": "PENDING",
+    "jobCommand": "specify"
+  }
+}
+```
+
+**User-Friendly Error Messages**:
+- PENDING/RUNNING: "Cannot transition: workflow is still running"
+- FAILED: "Cannot transition: previous workflow failed. Please retry the workflow."
+- CANCELLED: "Cannot transition: workflow was cancelled. Please retry the workflow."
+
+**Retry Workflow Support**:
+- Users can retry failed/cancelled workflows by triggering same transition again
+- System validates against most recent job (by `startedAt DESC`)
+- Historical jobs preserved for audit trail but don't affect validation
+
+### Requirements
+
+**Stage Validation**:
+- SPECIFY → PLAN: Requires specify job COMPLETED
+- PLAN → BUILD: Requires plan job COMPLETED
+- BUILD → VERIFY: Requires implement job COMPLETED
+- VERIFY → SHIP: No validation (manual stage)
+- INBOX → SPECIFY: No validation (first transition)
+
+**Job Query**:
+- Query: `prisma.job.findFirst({ where: { ticketId }, orderBy: { startedAt: 'desc' } })`
+- Performance: <50ms using composite index [ticketId, status, startedAt]
+- Returns: Most recent job with id, status, command, startedAt
+
+**Validation Logic**:
+- Location: `lib/workflows/transition.ts`
+- Functions:
+  - `shouldValidateJobCompletion(stage)`: Determines if stage requires validation
+  - `getJobValidationErrorMessage(status)`: Maps status to user-friendly message
+  - `validateJobCompletion(ticket, targetStage)`: Performs validation check
+- Integration: Called after sequential validation, before workflow dispatch
+
+**Error Handling**:
+- Status code: 400 Bad Request for validation failures
+- Error codes: `JOB_NOT_COMPLETED`, `MISSING_JOB`
+- Details object: Includes currentStage, targetStage, jobStatus, jobCommand
+- Location: `app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
+
+**Data Integrity**:
+- Missing job when expected: Return `MISSING_JOB` error (data integrity issue)
+- Race conditions: Acceptable with PostgreSQL read-committed isolation
+- Concurrent updates: Version-based conflict detection prevents lost updates
+
+**Performance**:
+- Query uses existing composite index [ticketId, status, startedAt]
+- Expected performance: <10ms for indexed query
+- Target overhead: <50ms additional latency per transition request
+
+### Data Model
+
+**TransitionResult Interface** (updated):
+```typescript
+export interface TransitionResult {
+  success: boolean;
+  jobId?: number;
+  branchName?: string;
+  error?: string;
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  details?: {
+    currentStage?: Stage;
+    targetStage?: Stage;
+    jobStatus?: JobStatus;
+    jobCommand?: string;
+  };
+}
+```
+
+**Validation Error Codes**:
+- `JOB_NOT_COMPLETED`: Job exists but status is not COMPLETED (PENDING, RUNNING, FAILED, CANCELLED)
+- `MISSING_JOB`: Expected job for automated stage but none found (data integrity issue)
+
+**Stage-to-Command Mapping**:
+- SPECIFY stage validates "specify" command
+- PLAN stage validates "plan" command
+- BUILD stage validates "implement" command
+
+**Job Selection Logic**:
+- When multiple jobs exist: SELECT * FROM jobs WHERE ticketId = ? ORDER BY startedAt DESC LIMIT 1
+- Supports retry workflows: Most recent job represents latest attempt
+- Historical jobs: Preserved for audit trail, don't affect validation
+
+---
+
 ## Current State Summary
 
 ### Available Features
@@ -692,6 +821,15 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 - ✅ Protected branch update endpoint
 - ✅ Centralized validation helper
 
+**Job Completion Validation** (added 2025-10-15):
+- ✅ Stage transition validation for automated stages (SPECIFY, PLAN, BUILD)
+- ✅ Job status validation (blocks PENDING, RUNNING, FAILED, CANCELLED)
+- ✅ Most recent job selection for retry workflow support
+- ✅ Manual stage bypass (VERIFY, SHIP)
+- ✅ User-friendly error messages with job context
+- ✅ Performance optimized (<50ms query using composite index)
+- ✅ Two new error codes: JOB_NOT_COMPLETED, MISSING_JOB
+
 ### User Workflows
 
 **Triggering Specification Generation**:
@@ -718,6 +856,15 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 - Status follows PENDING → RUNNING → terminal state
 - Terminal states: COMPLETED, FAILED, CANCELLED
 - All jobs retained indefinitely
+
+**Job Completion Validation** (added 2025-10-15):
+- SPECIFY, PLAN, BUILD stages require completed job before next transition
+- System validates most recent job (by `startedAt DESC`) for retry workflow support
+- Transitions blocked when job status is PENDING, RUNNING, FAILED, or CANCELLED
+- Transitions allowed when job status is COMPLETED
+- Manual stages (VERIFY, SHIP) and initial transition (INBOX → SPECIFY) bypass validation
+- Error responses include job status, command, and suggested actions for failed/cancelled jobs
+- Missing jobs for automated stages return MISSING_JOB error (data integrity issue)
 
 **Branch Management**:
 - SPECIFY generates: `feature/ticket-<id>`

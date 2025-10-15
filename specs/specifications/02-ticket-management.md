@@ -38,6 +38,11 @@ The system enables dragging tickets between columns with visual feedback:
   - VERIFY → SHIP
 - **No Skipping**: Cannot skip stages (e.g., INBOX → PLAN blocked)
 - **No Backwards**: Cannot move to earlier stages (e.g., BUILD → PLAN blocked)
+- **Job Completion Required**: Automated stages (SPECIFY, PLAN, BUILD) require workflow completion before next transition
+  - SPECIFY → PLAN: Blocked until specify job status is COMPLETED
+  - PLAN → BUILD: Blocked until plan job status is COMPLETED
+  - BUILD → VERIFY: Blocked until implement job status is COMPLETED
+  - Manual stages (VERIFY, SHIP) and initial transition (INBOX → SPECIFY) have no job completion requirements
 
 **Visual Indicators**:
 - Smooth animations for drag, drop, and return
@@ -65,6 +70,10 @@ The system enables dragging tickets between columns with visual feedback:
 - No skipping stages
 - No backwards movement
 - Visual rejection for invalid transitions
+- Job completion validation for automated stages (SPECIFY, PLAN, BUILD)
+- Transitions blocked when job status is PENDING, RUNNING, FAILED, or CANCELLED
+- Transitions allowed when job status is COMPLETED
+- Clear error messages when blocked due to incomplete job
 
 **Data Updates**:
 - Optimistic UI update (immediate visual change)
@@ -328,6 +337,14 @@ The system enables editing title and description directly in the detail modal:
 - Any authenticated user can move any ticket
 - First-write-wins for concurrent moves
 - Offline: drag-and-drop disabled
+- **Job Completion Validation** (added 2025-10-15):
+  - Automated stages (SPECIFY, PLAN, BUILD) require completed workflow job before next transition
+  - System validates most recent job by `startedAt DESC` to support retry workflows
+  - Transitions blocked when job status is PENDING, RUNNING, FAILED, or CANCELLED
+  - Transitions allowed when job status is COMPLETED
+  - Manual stages (VERIFY, SHIP) and initial transition (INBOX → SPECIFY) bypass validation
+  - Error responses include job status, command, and suggested actions
+  - Query performance: <50ms using existing composite index [ticketId, status, startedAt]
 
 **Editing**:
 - Title: 1-100 characters
