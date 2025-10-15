@@ -26,8 +26,8 @@ This command implements simple features directly from ticket context without for
 1. **Create feature branch and minimal spec**:
    - Parse `$ARGUMENTS` which contains: `#<ticket_id> <ticket_title>\n<ticket_description>`
    - Extract ticket ID (after `#`), title (first line after ID), and description (remaining lines)
-   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl "<ticket_title>"` from repo root
-   - Script creates: branch, specs/<num>-<slug>/ directory, and minimal spec.md with title only
+   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-id=<ticket_id> "<ticket_title>"` from repo root
+   - Script creates: branch (<ticket_id>-<slug>), specs/<ticket_id>-<slug>/ directory, and minimal spec.md with title only
    - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)
    - **Rewrite spec.md** to include full ticket description in the Description section (replace template description with actual ticket description)
    - Verify branch was created and spec.md contains both title and full description

@@ -100,8 +100,8 @@ jobs:
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Execute /quick-impl command with ticket title and description
-          # Command will internally call create-new-feature.sh --mode=quick-impl
+          # Execute /quick-impl command with ticket ID, title, and description
+          # Command will internally call create-new-feature.sh --mode=quick-impl --ticket-id=<id>
           ticket_id="${{ inputs.ticket_id }}"
           ticket_title="${{ inputs.ticketTitle }}"
           ticket_description="${{ inputs.ticketDescription }}"

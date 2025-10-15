@@ -4,12 +4,14 @@ set -e
 
 JSON_MODE=false
 MODE="specify"  # Default mode: full spec template
+TICKET_ID=""    # Optional ticket ID to use instead of auto-increment
 ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --json) JSON_MODE=true ;;
         --mode=*) MODE="${arg#--mode=}" ;;
-        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl] <feature_description>"; exit 0 ;;
+        --ticket-id=*) TICKET_ID="${arg#--ticket-id=}" ;;
+        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl] [--ticket-id=<id>] <feature_description>"; exit 0 ;;
         *) ARGS+=("$arg") ;;
     esac
 done
@@ -61,19 +63,24 @@ cd "$REPO_ROOT"
 SPECS_DIR="$REPO_ROOT/specs"
 mkdir -p "$SPECS_DIR"
 
-HIGHEST=0
-if [ -d "$SPECS_DIR" ]; then
-    for dir in "$SPECS_DIR"/*; do
-        [ -d "$dir" ] || continue
-        dirname=$(basename "$dir")
-        number=$(echo "$dirname" | grep -o '^[0-9]\+' || echo "0")
-        number=$((10#$number))
-        if [ "$number" -gt "$HIGHEST" ]; then HIGHEST=$number; fi
-    done
-fi
+# Determine feature number: use ticket ID if provided, otherwise auto-increment
+if [ -n "$TICKET_ID" ]; then
+    FEATURE_NUM="$TICKET_ID"
+else
+    HIGHEST=0
+    if [ -d "$SPECS_DIR" ]; then
+        for dir in "$SPECS_DIR"/*; do
+            [ -d "$dir" ] || continue
+            dirname=$(basename "$dir")
+            number=$(echo "$dirname" | grep -o '^[0-9]\+' || echo "0")
+            number=$((10#$number))
+            if [ "$number" -gt "$HIGHEST" ]; then HIGHEST=$number; fi
+        done
+    fi
 
-NEXT=$((HIGHEST + 1))
-FEATURE_NUM=$(printf "%03d" "$NEXT")
+    NEXT=$((HIGHEST + 1))
+    FEATURE_NUM=$(printf "%03d" "$NEXT")
+fi
 
 BRANCH_NAME=$(echo "$FEATURE_DESCRIPTION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
 WORDS=$(echo "$BRANCH_NAME" | tr '-' '\n' | grep -v '^$' | head -3 | tr '\n' '-' | sed 's/-$//')
