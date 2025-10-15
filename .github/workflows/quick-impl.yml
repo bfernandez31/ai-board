@@ -100,9 +100,14 @@ jobs:
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Execute /quick-impl command with ticket title
+          # Execute /quick-impl command with ticket title and description
           # Command will internally call create-new-feature.sh --mode=quick-impl
-          claude --dangerously-skip-permissions "/quick-impl ${{ inputs.ticketTitle }}"
+          ticket_id="${{ inputs.ticket_id }}"
+          ticket_title="${{ inputs.ticketTitle }}"
+          ticket_description="${{ inputs.ticketDescription }}"
+
+          printf -v prompt '/quick-impl #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
+          claude --dangerously-skip-permissions "$prompt"
 
       - name: Capture Branch Name
         if: ${{ env.SKIP_EXECUTION != 'true' }}
