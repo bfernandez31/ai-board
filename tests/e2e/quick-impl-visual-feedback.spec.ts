@@ -52,7 +52,6 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Create test ticket in INBOX
     await prisma.ticket.create({
       data: {
-        id: 1,
         title: '[e2e] Quick-Impl Visual Test',
         description: 'Testing visual feedback during drag',
         stage: 'INBOX',
@@ -82,7 +81,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await page.waitForSelector('[data-testid="column-INBOX"]');
 
     // Get the ticket card
-    const ticketCard = page.locator('[data-testid="column-INBOX"] [draggable="true"]').first();
+    const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
     // Start dragging (long press for touch sensor)
@@ -133,7 +132,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await page.waitForSelector('[data-testid="column-INBOX"]');
 
     // Get the ticket card
-    const ticketCard = page.locator('[data-testid="column-INBOX"] [draggable="true"]').first();
+    const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
     // Start dragging
@@ -163,10 +162,15 @@ test.describe('Quick-Impl Visual Feedback', () => {
   test('should show normal workflow visual feedback for SPECIFY → PLAN', async ({
     page,
   }) => {
-    // Create ticket in SPECIFY stage
-    await prisma.ticket.update({
-      where: { id: 1 },
-      data: { stage: 'SPECIFY' },
+    // Create ticket in SPECIFY stage (instead of INBOX)
+    await prisma.ticket.create({
+      data: {
+        title: '[e2e] SPECIFY Visual Test',
+        description: 'Testing visual feedback for SPECIFY stage',
+        stage: 'SPECIFY',
+        projectId: 1,
+        updatedAt: new Date(),
+      },
     });
 
     // Navigate to board
@@ -176,7 +180,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await page.waitForSelector('[data-testid="column-SPECIFY"]');
 
     // Get the ticket card
-    const ticketCard = page.locator('[data-testid="column-SPECIFY"] [draggable="true"]').first();
+    const ticketCard = page.locator('[data-testid="column-SPECIFY"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
     // Start dragging
