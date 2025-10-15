@@ -158,6 +158,7 @@ The system displays full ticket details in a modal dialog:
 - `title`: Full text without truncation
 - `description`: Complete description
 - `stage`: Current workflow stage
+- `clarificationPolicy`: Optional policy override (enum: AUTO/CONSERVATIVE/PRAGMATIC/INTERACTIVE, NULLABLE)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -252,6 +253,7 @@ The system enables editing title and description directly in the detail modal:
 **Editable Fields**:
 - `title`: 1-100 characters
 - `description`: 1-1000 characters
+- `clarificationPolicy`: Optional policy override (nullable, see [08-clarification-policies.md](08-clarification-policies.md))
 - `version`: Incremented on each update (concurrency control)
 - `updatedAt`: Set to current timestamp on save
 

@@ -26,6 +26,7 @@ Specifications are organized by feature domain. Each category documents the curr
 | **Testing & Quality** | [05-testing-quality.md](05-testing-quality.md) | Test infrastructure, data isolation |
 | **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation |
 | **Authentication** | [07-authentication.md](07-authentication.md) | User auth, project ownership, test authentication |
+| **Clarification Policies** | [08-clarification-policies.md](08-clarification-policies.md) | Auto-resolution, policy configuration, AI-driven spec generation |
 
 ## How to Read This Documentation
 
@@ -96,5 +97,5 @@ This documentation consolidates those specifications into **current state** docu
 
 ---
 
-**Last Updated**: 2025-10-13
-**Version**: Current State (consolidated from 27 specifications + authentication)
+**Last Updated**: 2025-10-15
+**Version**: Current State (consolidated from 29 specifications + authentication + clarification policies)
