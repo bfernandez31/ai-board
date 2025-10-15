@@ -1,0 +1,58 @@
+import { notFound } from 'next/navigation';
+import { getProject } from '@/lib/db/projects';
+import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
+
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+/**
+ * Project Settings Page (Server Component)
+ *
+ * Displays project configuration including:
+ * - Default clarification policy
+ * - Other project settings (future)
+ */
+export default async function ProjectSettingsPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  // Await params (Next.js 15 requirement)
+  const { projectId: projectIdString } = await params;
+
+  // Parse and validate projectId
+  const projectId = parseInt(projectIdString, 10);
+
+  // Return 404 if projectId is not a valid number
+  if (isNaN(projectId) || projectId <= 0) {
+    notFound();
+  }
+
+  // Fetch project (with authentication check)
+  const project = await getProject(projectId);
+
+  return (
+    <main className="container mx-auto py-10 max-w-4xl">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure default behavior for {project.name}
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <ClarificationPolicyCard
+            project={{
+              id: project.id,
+              clarificationPolicy: project.clarificationPolicy,
+            }}
+          />
+
+          {/* Future settings cards can be added here */}
+        </div>
+      </div>
+    </main>
+  );
+}

@@ -1,4 +1,4 @@
-import { Ticket as PrismaTicket } from '@prisma/client';
+import { Ticket as PrismaTicket, ClarificationPolicy } from '@prisma/client';
 import { Stage } from './stage-validation';
 
 /**
@@ -84,8 +84,12 @@ export interface TicketWithVersion {
   projectId: number;
   branch: string | null;
   autoMode: boolean;
+  clarificationPolicy: ClarificationPolicy | null;
   createdAt: string;
   updatedAt: string;
+  project?: {
+    clarificationPolicy: ClarificationPolicy;
+  };
 }
 
 /**

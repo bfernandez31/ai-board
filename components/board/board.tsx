@@ -24,7 +24,7 @@ import {
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
-import { Job } from '@prisma/client';
+import { Job, ClarificationPolicy } from '@prisma/client';
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -271,6 +271,7 @@ function BoardContent({
     projectId: number;
     branch: string | null;
     autoMode: boolean;
+    clarificationPolicy: ClarificationPolicy | null;
     createdAt: string | Date;
     updatedAt: string | Date;
   };
@@ -290,6 +291,7 @@ function BoardContent({
         projectId: updatedTicket.projectId,
         branch: updatedTicket.branch,
         autoMode: updatedTicket.autoMode,
+        clarificationPolicy: updatedTicket.clarificationPolicy,
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()

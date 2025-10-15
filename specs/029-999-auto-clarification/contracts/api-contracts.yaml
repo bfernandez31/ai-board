@@ -1,0 +1,425 @@
+openapi: 3.0.3
+info:
+  title: AI Board - Clarification Policy API
+  description: API contracts for clarification policy management (feature 029-999-auto-clarification)
+  version: 1.0.0
+  contact:
+    name: AI Board Development
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://ai-board.vercel.app/api
+    description: Production
+
+components:
+  schemas:
+    ClarificationPolicy:
+      type: string
+      enum:
+        - AUTO
+        - CONSERVATIVE
+        - PRAGMATIC
+        - INTERACTIVE
+      description: |
+        Clarification resolution strategy:
+        - AUTO: Context-aware (detects keywords, applies CONSERVATIVE or PRAGMATIC)
+        - CONSERVATIVE: Security & quality first (payment, auth, PII, compliance)
+        - PRAGMATIC: Speed & simplicity first (admin tools, internal features)
+        - INTERACTIVE: Manual clarification (future feature, preserves current behavior)
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - githubOwner
+        - githubRepo
+        - userId
+        - clarificationPolicy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Project unique identifier
+          example: 1
+        name:
+          type: string
+          maxLength: 200
+          description: Project display name
+          example: "AI Board"
+        githubOwner:
+          type: string
+          maxLength: 100
+          description: GitHub repository owner
+          example: "bfernandez31"
+        githubRepo:
+          type: string
+          maxLength: 100
+          description: GitHub repository name
+          example: "ai-board"
+        userId:
+          type: string
+          description: Owner user ID
+          example: "user_123"
+        clarificationPolicy:
+          $ref: '#/components/schemas/ClarificationPolicy'
+          description: Default clarification policy for all tickets (NOT NULL, default AUTO)
+          example: "AUTO"
+        createdAt:
+          type: string
+          format: date-time
+          description: Project creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    Ticket:
+      type: object
+      required:
+        - id
+        - title
+        - stage
+        - projectId
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Ticket unique identifier
+          example: 42
+        title:
+          type: string
+          maxLength: 200
+          description: Ticket title
+          example: "Add payment processing"
+        description:
+          type: string
+          nullable: true
+          description: Ticket detailed description
+          example: "Integrate Stripe for credit card payments"
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, DONE]
+          description: Current workflow stage
+          example: "INBOX"
+        branch:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Git branch associated with ticket
+          example: "042-payment-processing"
+        autoMode:
+          type: boolean
+          description: Enable automatic workflow progression
+          example: false
+        clarificationPolicy:
+          allOf:
+            - $ref: '#/components/schemas/ClarificationPolicy'
+            - nullable: true
+          description: Optional policy override (null = inherit from project)
+          example: "CONSERVATIVE"
+        projectId:
+          type: integer
+          format: int32
+          description: Parent project ID
+          example: 1
+        project:
+          $ref: '#/components/schemas/Project'
+          description: Nested project data (for effective policy resolution)
+        version:
+          type: integer
+          format: int32
+          description: Optimistic concurrency control version
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+          description: Ticket creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    ProjectUpdateRequest:
+      type: object
+      properties:
+        clarificationPolicy:
+          $ref: '#/components/schemas/ClarificationPolicy'
+          description: Update project default policy
+      example:
+        clarificationPolicy: "CONSERVATIVE"
+
+    TicketUpdateRequest:
+      type: object
+      properties:
+        clarificationPolicy:
+          allOf:
+            - $ref: '#/components/schemas/ClarificationPolicy'
+            - nullable: true
+          description: Override project policy (null to reset)
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, DONE]
+        autoMode:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+          description: Current version (optimistic concurrency control)
+      example:
+        clarificationPolicy: "CONSERVATIVE"
+        version: 3
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Validation failed"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "INVALID_ENUM_VALUE"
+        details:
+          type: array
+          description: Detailed validation errors (Zod format)
+          items:
+            type: object
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+                example: ["clarificationPolicy"]
+              message:
+                type: string
+                example: "Invalid enum value. Expected 'AUTO' | 'CONSERVATIVE' | 'PRAGMATIC' | 'INTERACTIVE'"
+
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie for authentication
+
+security:
+  - SessionCookie: []
+
+paths:
+  /projects/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+        description: Project ID
+        example: 1
+
+    get:
+      operationId: getProject
+      summary: Get project details
+      description: Returns project with clarificationPolicy field
+      tags:
+        - Projects
+      responses:
+        '200':
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          description: Unauthorized (no session)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+        '403':
+          description: Forbidden (project not owned by user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Forbidden"
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project not found"
+
+    patch:
+      operationId: updateProject
+      summary: Update project
+      description: Update project fields including clarificationPolicy
+      tags:
+        - Projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdateRequest'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error (invalid enum value)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Validation failed"
+                details:
+                  - path: ["clarificationPolicy"]
+                    message: "Invalid enum value. Expected 'AUTO' | 'CONSERVATIVE' | 'PRAGMATIC' | 'INTERACTIVE'"
+        '401':
+          description: Unauthorized (no session)
+        '403':
+          description: Forbidden (project not owned by user)
+        '404':
+          description: Project not found
+
+  /projects/{projectId}/tickets/{ticketId}:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+        description: Project ID
+        example: 1
+      - name: ticketId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+        description: Ticket ID
+        example: 42
+
+    get:
+      operationId: getTicket
+      summary: Get ticket details
+      description: Returns ticket with nested project (for effective policy resolution)
+      tags:
+        - Tickets
+      responses:
+        '200':
+          description: Ticket found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+              example:
+                id: 42
+                title: "Add payment processing"
+                description: "Integrate Stripe for credit card payments"
+                stage: "SPECIFY"
+                branch: "042-payment-processing"
+                autoMode: false
+                clarificationPolicy: "CONSERVATIVE"
+                projectId: 1
+                project:
+                  id: 1
+                  name: "AI Board"
+                  clarificationPolicy: "AUTO"
+                version: 3
+                createdAt: "2025-01-14T10:00:00Z"
+                updatedAt: "2025-01-14T12:00:00Z"
+        '401':
+          description: Unauthorized (no session)
+        '403':
+          description: Forbidden (project not owned by user)
+        '404':
+          description: Ticket not found
+
+    patch:
+      operationId: updateTicket
+      summary: Update ticket
+      description: Update ticket fields including clarificationPolicy (null to reset)
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketUpdateRequest'
+            examples:
+              override:
+                summary: Override project policy
+                value:
+                  clarificationPolicy: "CONSERVATIVE"
+                  version: 3
+              reset:
+                summary: Reset to project default
+                value:
+                  clarificationPolicy: null
+                  version: 3
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Validation error (invalid enum value or version conflict)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEnum:
+                  summary: Invalid enum value
+                  value:
+                    error: "Validation failed"
+                    details:
+                      - path: ["clarificationPolicy"]
+                        message: "Invalid enum value. Expected 'AUTO' | 'CONSERVATIVE' | 'PRAGMATIC' | 'INTERACTIVE' | null"
+                versionConflict:
+                  summary: Version conflict (optimistic concurrency)
+                  value:
+                    error: "Version conflict"
+                    code: "OPTIMISTIC_LOCK_ERROR"
+        '401':
+          description: Unauthorized (no session)
+        '403':
+          description: Forbidden (project not owned by user)
+        '404':
+          description: Ticket not found
+
+tags:
+  - name: Projects
+    description: Project management endpoints
+  - name: Tickets
+    description: Ticket management endpoints

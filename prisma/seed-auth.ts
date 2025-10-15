@@ -10,9 +10,11 @@ async function main() {
     where: { email: 'admin@ai-board.local' },
     update: {},
     create: {
+      id: 'admin-user-id',
       email: 'admin@ai-board.local',
       name: 'Admin User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   })
 

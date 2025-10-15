@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText } from 'lucide-react';
+import { Pencil, FileText, Settings2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
+import { PolicyBadge } from '@/components/ui/policy-badge';
+import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import SpecViewer from './spec-viewer';
+import { ClarificationPolicy } from '@prisma/client';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -30,8 +33,12 @@ interface TicketData {
   projectId: number;
   branch: string | null;
   autoMode: boolean;
+  clarificationPolicy: ClarificationPolicy | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  project?: {
+    clarificationPolicy: ClarificationPolicy;
+  };
 }
 
 /**
@@ -126,6 +133,7 @@ export function TicketDetailModal({
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [specViewerOpen, setSpecViewerOpen] = useState(false);
+  const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
 
   // Update local ticket when a different ticket is selected or version changes
@@ -144,6 +152,14 @@ export function TicketDetailModal({
       });
     }
   }, [ticket]);
+
+  // Reset child dialog states when parent dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSpecViewerOpen(false);
+      setPolicyEditOpen(false);
+    }
+  }, [open]);
 
   // Fetch jobs for the ticket to check for completed specify job
   useEffect(() => {
@@ -195,6 +211,8 @@ export function TicketDetailModal({
           ...serverTicket,
           createdAt: new Date(serverTicket.createdAt),
           updatedAt: new Date(serverTicket.updatedAt),
+          // Preserve project field (API doesn't return it)
+          project: localTicket.project,
         };
         setLocalTicket(normalizedTicket);
         if (onUpdate) {
@@ -282,6 +300,8 @@ export function TicketDetailModal({
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
+        // Preserve project field (API doesn't return it)
+        project: localTicket.project,
       };
 
       // Update local ticket with all fields including new version
@@ -306,6 +326,119 @@ export function TicketDetailModal({
 
       // Rollback on error
       setLocalTicket(originalTicket);
+    }
+  };
+
+  // Save handler for clarification policy
+  const handleSavePolicy = async (
+    newPolicy: ClarificationPolicy | null
+  ): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    // Optimistic update
+    setLocalTicket({ ...localTicket, clarificationPolicy: newPolicy });
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clarificationPolicy: newPolicy,
+            version: localTicket.version,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          // Conflict: ticket modified by another user
+          setLocalTicket(originalTicket);
+
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description:
+              'Ticket was modified by another user. Please refresh to see the latest changes.',
+          });
+
+          refreshTicketFromServer();
+          throw new Error('Conflict');
+        } else if (response.status === 400) {
+          // Validation error
+          toast({
+            variant: 'destructive',
+            title: 'Validation Error',
+            description:
+              error.issues?.[0]?.message || 'Invalid clarification policy',
+          });
+
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          throw new Error('Validation error');
+        } else {
+          // Network or other error
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description:
+              'Failed to save changes while offline. Changes reverted.',
+          });
+
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          throw new Error('Network error');
+        }
+      }
+
+      const updatedTicket = await response.json();
+
+      const normalizedTicket: TicketData = {
+        ...updatedTicket,
+        createdAt: new Date(updatedTicket.createdAt),
+        updatedAt: new Date(updatedTicket.updatedAt),
+        // Preserve project field (API doesn't return it)
+        project: localTicket.project,
+      };
+
+      // Update local ticket with all fields including new version
+      setLocalTicket(normalizedTicket);
+
+      toast({
+        title: 'Success',
+        description: 'Clarification policy updated',
+      });
+
+      // Notify parent to refresh board
+      if (onUpdate) {
+        onUpdate(normalizedTicket);
+      }
+    } catch (error) {
+      // Network error (e.g., offline, fetch failed completely)
+      if (
+        error instanceof Error &&
+        !['Conflict', 'Validation error', 'Network error'].includes(
+          error.message
+        )
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description:
+            'Failed to save changes while offline. Changes reverted.',
+        });
+
+        // Rollback on error
+        setLocalTicket(originalTicket);
+      }
+      throw error;
     }
   };
 
@@ -387,6 +520,8 @@ export function TicketDetailModal({
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
+        // Preserve project field (API doesn't return it)
+        project: localTicket.project,
       };
 
       // Update local ticket with all fields including new version
@@ -528,14 +663,44 @@ export function TicketDetailModal({
 
         {/* Modal body content */}
         <div className="space-y-8">
-          {/* Stage badge */}
-          <div>
-            <Badge
-              className={`${stageBadge.className} text-sm px-4 py-1.5 font-semibold shadow-sm`}
-              data-testid="stage-badge"
-            >
-              {stageBadge.label}
-            </Badge>
+          {/* Stage badge and Policy section */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Badge
+                className={`${stageBadge.className} text-sm px-4 py-1.5 font-semibold shadow-sm`}
+                data-testid="stage-badge"
+              >
+                {stageBadge.label}
+              </Badge>
+              {/* Policy badge - show for all tickets */}
+              {localTicket?.project && (
+                <PolicyBadge
+                  policy={
+                    localTicket.clarificationPolicy ??
+                    localTicket.project.clarificationPolicy
+                  }
+                  isOverride={localTicket.clarificationPolicy !== null}
+                  variant={
+                    localTicket.clarificationPolicy !== null
+                      ? 'default'
+                      : 'secondary'
+                  }
+                />
+              )}
+            </div>
+            {/* Edit Policy button */}
+            {localTicket?.project && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPolicyEditOpen(true)}
+                className="flex items-center gap-2"
+                data-testid="edit-policy-button"
+              >
+                <Settings2 className="w-4 h-4" />
+                Edit Policy
+              </Button>
+            )}
           </div>
 
           {/* Description section with inline editing */}
@@ -691,14 +856,25 @@ export function TicketDetailModal({
         </div>
       </DialogContent>
 
-      {/* SpecViewer modal */}
-      {ticket && (
+      {/* SpecViewer modal - only render when parent dialog is open */}
+      {ticket && open && (
         <SpecViewer
           ticketId={ticket.id}
           projectId={projectId}
           ticketTitle={ticket.title}
           open={specViewerOpen}
           onOpenChange={setSpecViewerOpen}
+        />
+      )}
+
+      {/* PolicyEditDialog - only render when parent dialog is open */}
+      {localTicket?.project && open && (
+        <PolicyEditDialog
+          open={policyEditOpen}
+          onOpenChange={setPolicyEditOpen}
+          currentPolicy={localTicket.clarificationPolicy}
+          projectDefaultPolicy={localTicket.project.clarificationPolicy}
+          onSave={handleSavePolicy}
         />
       )}
     </Dialog>

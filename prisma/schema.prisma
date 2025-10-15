@@ -1,9 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
-  // Force regeneration - UUID migration
 }
 
 datasource db {
@@ -11,76 +7,108 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Stage {
-  INBOX
-  SPECIFY
-  PLAN
-  BUILD
-  VERIFY
-  SHIP
-}
-
-enum JobStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
-
-enum AuthProvider {
-  GITHUB
-  GOOGLE
-  GITLAB
-  BITBUCKET
-}
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([email])
-}
-
 model Account {
-  id                String  @id @default(cuid())
+  id                String  @id
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
 
+model Job {
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  command     String    @db.VarChar(50)
+  status      JobStatus @default(PENDING)
+  branch      String?   @db.VarChar(200)
+  commitSha   String?   @db.VarChar(40)
+  logs        String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  projectId   Int
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([startedAt])
+  @@index([status])
+  @@index([ticketId])
+  @@index([ticketId, status, startedAt])
+}
+
+model Project {
+  id                  Int                 @id @default(autoincrement())
+  name                String              @db.VarChar(100)
+  description         String              @db.VarChar(1000)
+  githubOwner         String              @db.VarChar(100)
+  githubRepo          String              @db.VarChar(100)
+  userId              String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  clarificationPolicy ClarificationPolicy @default(AUTO)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets             Ticket[]
+
+  @@unique([githubOwner, githubRepo])
+  @@index([githubOwner, githubRepo])
+  @@index([userId])
+}
+
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Ticket {
+  id                  Int                  @id @default(autoincrement())
+  title               String               @db.VarChar(100)
+  description         String               @db.VarChar(1000)
+  stage               Stage                @default(INBOX)
+  version             Int                  @default(1)
+  projectId           Int
+  branch              String?              @db.VarChar(200)
+  autoMode            Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime
+  clarificationPolicy ClarificationPolicy?
+  jobs                Job[]
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([stage])
+  @@index([updatedAt])
+}
+
+model User {
+  id            String    @id
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  accounts      Account[]
+  projects      Project[]
+  sessions      Session[]
+
+  @@index([email])
 }
 
 model VerificationToken {
@@ -91,61 +119,33 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Project {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String   @db.VarChar(1000)
-  githubOwner String   @db.VarChar(100)
-  githubRepo  String   @db.VarChar(100)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tickets     Ticket[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([githubOwner, githubRepo])
-  @@index([githubOwner, githubRepo])
-  @@index([userId])
+enum AuthProvider {
+  GITHUB
+  GOOGLE
+  GITLAB
+  BITBUCKET
 }
 
-model Ticket {
-  id          Int      @id @default(autoincrement())
-  title       String   @db.VarChar(100)
-  description String   @db.VarChar(1000)
-  stage       Stage    @default(INBOX)
-  version     Int      @default(1)
-  projectId   Int
-  branch      String?  @db.VarChar(200)
-  autoMode    Boolean  @default(false)
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  jobs        Job[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([stage])
-  @@index([updatedAt])
-  @@index([projectId])
+enum ClarificationPolicy {
+  AUTO
+  CONSERVATIVE
+  PRAGMATIC
+  INTERACTIVE
 }
 
-model Job {
-  id          Int       @id @default(autoincrement())
-  ticketId    Int
-  projectId   Int
-  command     String    @db.VarChar(50)
-  status      JobStatus @default(PENDING)
-  branch      String?   @db.VarChar(200)
-  commitSha   String?   @db.VarChar(40)
-  logs        String?   @db.Text
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
 
-  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  @@index([ticketId])
-  @@index([projectId])
-  @@index([status])
-  @@index([startedAt])
-  @@index([ticketId, status, startedAt])
+enum Stage {
+  INBOX
+  SPECIFY
+  PLAN
+  BUILD
+  VERIFY
+  SHIP
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClarificationPolicy } from '@prisma/client';
 
 /**
  * Project ID validation schema
@@ -55,10 +56,12 @@ export const CreateTicketSchema = z
   .object({
     title: z.string().optional().default(''),
     description: z.string().optional().default(''),
+    clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
   })
   .transform((data) => ({
     title: data.title.trim(),
     description: data.description.trim(),
+    clarificationPolicy: data.clarificationPolicy,
   }))
   .refine((data) => data.title.length > 0, {
     message: 'Title is required',
@@ -138,6 +141,7 @@ export const patchTicketSchema = z
     stage: StageSchema.optional(),
     branch: z.string().max(200).nullable().optional(),
     autoMode: z.boolean().optional(),
+    clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
     version: versionSchema,
   })
   .refine(
@@ -146,7 +150,8 @@ export const patchTicketSchema = z
       data.description !== undefined ||
       data.stage !== undefined ||
       data.branch !== undefined ||
-      data.autoMode !== undefined,
+      data.autoMode !== undefined ||
+      data.clarificationPolicy !== undefined,
     { message: 'At least one field must be provided' }
   );
 
@@ -171,8 +176,14 @@ export const ticketResponseSchema = z.object({
   projectId: z.number().int().positive(),
   branch: z.string().max(200).nullable(),
   autoMode: z.boolean(),
+  clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  project: z.object({
+    id: z.number().int().positive(),
+    name: z.string(),
+    clarificationPolicy: z.nativeEnum(ClarificationPolicy),
+  }).optional(),
 });
 
 /**

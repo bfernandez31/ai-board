@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 ## Active Technologies
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x (028-519-replace-sse)
 - PostgreSQL 14+ (Job status tracking, existing schema) (028-519-replace-sse)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui (029-999-auto-clarification)
+- PostgreSQL 14+ (enum ClarificationPolicy, Project.clarificationPolicy NOT NULL default AUTO, Ticket.clarificationPolicy NULLABLE) (029-999-auto-clarification)
 
 ### Core Stack
 
@@ -61,13 +63,13 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 029-999-auto-clarification: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui
 - 028-519-replace-sse: Replaced Server-Sent Events (SSE) with client-side polling for job status updates
   - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
   - Implemented 2-second polling interval with terminal state optimization
   - Added `projectId` field to Job model for efficient querying
 
 - Authentication: Added NextAuth.js authentication with user-project ownership
-- 027-display-project-specifications: Added GitHub spec viewer with markdown rendering
 
 <!-- MANUAL ADDITIONS START -->
 

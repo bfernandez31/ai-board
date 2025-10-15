@@ -35,9 +35,11 @@ export async function createTestProject(
     where: { email: 'test@e2e.local' },
     update: {},
     create: {
+      id: 'test-user-id',
       email: 'test@e2e.local',
       name: 'E2E Test User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -52,6 +54,7 @@ export async function createTestProject(
       githubOwner: data?.githubOwner ?? 'test-owner',
       githubRepo: data?.githubRepo ?? `test-repo-${Date.now()}`,
       userId: testUser.id,
+      updatedAt: new Date(),
     },
   });
 
@@ -73,6 +76,7 @@ export async function createTestTicket(
       description: data?.description ?? 'Test ticket description',
       projectId,
       stage: (data?.stage ?? 'INBOX') as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP',
+      updatedAt: new Date(),
     },
   });
 
@@ -91,9 +95,11 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
     where: { email: 'test@e2e.local' },
     update: {},
     create: {
+      id: 'test-user-id',
       email: 'test@e2e.local',
       name: 'E2E Test User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -110,6 +116,7 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
       githubOwner: 'test',
       githubRepo: 'test',
       userId: testUser.id,
+      updatedAt: new Date(),
     },
   });
 
@@ -120,6 +127,7 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
       description: 'Test ticket for transition API E2E tests',
       stage: 'INBOX',
       projectId: project.id,
+      updatedAt: new Date(),
     },
   });
 

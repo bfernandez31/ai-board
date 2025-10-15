@@ -23,8 +23,14 @@ export async function getTicketsByStage(
       projectId: true,
       branch: true,
       autoMode: true,
+      clarificationPolicy: true,
       createdAt: true,
       updatedAt: true,
+      project: {
+        select: {
+          clarificationPolicy: true,
+        },
+      },
     },
     orderBy: { updatedAt: 'desc' },
   });
@@ -49,8 +55,12 @@ export async function getTicketsByStage(
         projectId: ticket.projectId,
         branch: ticket.branch,
         autoMode: ticket.autoMode,
+        clarificationPolicy: ticket.clarificationPolicy,
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
+        project: {
+          clarificationPolicy: ticket.project.clarificationPolicy,
+        },
       });
     }
   });
@@ -67,12 +77,24 @@ export async function createTicket(
   projectId: number,
   input: CreateTicketInput
 ) {
+  // Build data object conditionally to satisfy exactOptionalPropertyTypes
   return await prisma.ticket.create({
-    data: {
-      title: input.title,
-      description: input.description,
-      stage: 'INBOX',
-      projectId: projectId,
-    },
+    data:
+      input.clarificationPolicy !== undefined
+        ? {
+            title: input.title,
+            description: input.description,
+            stage: 'INBOX',
+            projectId: projectId,
+            clarificationPolicy: input.clarificationPolicy,
+            updatedAt: new Date(),
+          }
+        : {
+            title: input.title,
+            description: input.description,
+            stage: 'INBOX',
+            projectId: projectId,
+            updatedAt: new Date(),
+          },
   });
 }

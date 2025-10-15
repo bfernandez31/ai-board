@@ -55,6 +55,7 @@ async function main() {
         email: email,
         emailVerified: new Date(),
         name: email.split('@')[0] || null,
+        updatedAt: new Date(),
       },
     });
     console.log('   ✅ User created');
@@ -79,6 +80,7 @@ async function main() {
       githubOwner: 'bfernandez31',
       githubRepo: 'ai-board',
       userId: user.id,
+      updatedAt: new Date(),
     },
   });
 

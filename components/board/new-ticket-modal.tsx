@@ -17,7 +17,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { ClarificationPolicy } from '@prisma/client';
+import {
+  getPolicyIcon,
+  getPolicyLabel,
+  getPolicyDescription,
+} from '@/app/lib/utils/policy-icons';
 
 interface NewTicketModalProps {
   open: boolean;
@@ -29,6 +42,7 @@ interface NewTicketModalProps {
 interface FormErrors {
   title?: string;
   description?: string;
+  clarificationPolicy?: string;
   submit?: string;
 }
 
@@ -49,6 +63,7 @@ export function NewTicketModal({
   const [formData, setFormData] = React.useState<CreateTicketInput>({
     title: '',
     description: '',
+    clarificationPolicy: undefined, // undefined = use project default
   });
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -56,7 +71,11 @@ export function NewTicketModal({
   // Reset form when modal closes
   React.useEffect(() => {
     if (!open) {
-      setFormData({ title: '', description: '' });
+      setFormData({
+        title: '',
+        description: '',
+        clarificationPolicy: undefined,
+      });
       setErrors({});
       setIsSubmitting(false);
     }
@@ -110,10 +129,20 @@ export function NewTicketModal({
     setErrors({});
 
     try {
+      // Build request body - only include clarificationPolicy if explicitly set
+      const requestBody: Record<string, unknown> = {
+        title: formData.title,
+        description: formData.description,
+      };
+
+      if (formData.clarificationPolicy !== undefined) {
+        requestBody.clarificationPolicy = formData.clarificationPolicy;
+      }
+
       const response = await fetch(`/api/projects/${projectId}/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -206,6 +235,54 @@ export function NewTicketModal({
             )}
             <p className="text-xs text-muted-foreground">
               {formData.description.length}/1000 characters
+            </p>
+          </div>
+
+          {/* Clarification Policy Field (Optional) */}
+          <div className="space-y-2">
+            <Label htmlFor="clarificationPolicy">
+              Clarification Policy (Optional)
+            </Label>
+            <Select
+              value={formData.clarificationPolicy ?? 'project-default'}
+              onValueChange={(value) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  clarificationPolicy:
+                    value === 'project-default'
+                      ? undefined
+                      : (value as ClarificationPolicy),
+                }));
+              }}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger id="clarificationPolicy">
+                <SelectValue placeholder="Use project default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="project-default">
+                  Use project default
+                </SelectItem>
+                <SelectItem value={ClarificationPolicy.AUTO}>
+                  {getPolicyIcon(ClarificationPolicy.AUTO)}{' '}
+                  {getPolicyLabel(ClarificationPolicy.AUTO)} -{' '}
+                  {getPolicyDescription(ClarificationPolicy.AUTO)}
+                </SelectItem>
+                <SelectItem value={ClarificationPolicy.CONSERVATIVE}>
+                  {getPolicyIcon(ClarificationPolicy.CONSERVATIVE)}{' '}
+                  {getPolicyLabel(ClarificationPolicy.CONSERVATIVE)} -{' '}
+                  {getPolicyDescription(ClarificationPolicy.CONSERVATIVE)}
+                </SelectItem>
+                <SelectItem value={ClarificationPolicy.PRAGMATIC}>
+                  {getPolicyIcon(ClarificationPolicy.PRAGMATIC)}{' '}
+                  {getPolicyLabel(ClarificationPolicy.PRAGMATIC)} -{' '}
+                  {getPolicyDescription(ClarificationPolicy.PRAGMATIC)}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Leave as default to inherit from project settings. Override for
+              specific requirements.
             </p>
           </div>
 

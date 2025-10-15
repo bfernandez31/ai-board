@@ -15,9 +15,11 @@ async function main() {
     where: { email: 'test@e2e.local' },
     update: {},
     create: {
+      id: 'test-user-id',
       email: 'test@e2e.local',
       name: 'E2E Test User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -40,6 +42,7 @@ async function main() {
       githubOwner: 'bfernandez31',
       githubRepo: 'ai-board',
       userId: testUser.id,
+      updatedAt: new Date(),
     },
   });
 
