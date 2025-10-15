@@ -170,7 +170,7 @@ export async function handleTicketTransition(
   try {
     const currentStage = ticket.stage as Stage;
 
-    // 1. Validate stage transition (sequential only)
+    // 1. Validate stage transition (sequential only, with quick-impl special case)
     if (!isValidTransition(currentStage as unknown as ValidationStage, targetStage as unknown as ValidationStage)) {
       return {
         success: false,
@@ -179,14 +179,24 @@ export async function handleTicketTransition(
       };
     }
 
-    // 2. Validate job completion before proceeding
-    const jobValidation = await validateJobCompletion(ticket, targetStage);
-    if (!jobValidation.success) {
-      return jobValidation;
+    // 2. Detect quick-impl mode (INBOX → BUILD special case)
+    const isQuickImpl = currentStage === Stage.INBOX && targetStage === Stage.BUILD;
+
+    // 3. Validate job completion before proceeding (skip for quick-impl)
+    if (!isQuickImpl) {
+      const jobValidation = await validateJobCompletion(ticket, targetStage);
+      if (!jobValidation.success) {
+        return jobValidation;
+      }
     }
 
-    // 3. Check if target stage has automated workflow
-    const command = STAGE_COMMAND_MAP[targetStage];
+    // 4. Determine command based on mode
+    let command: string | null;
+    if (isQuickImpl) {
+      command = 'quick-impl'; // Override for quick-impl mode
+    } else {
+      command = STAGE_COMMAND_MAP[targetStage]; // Normal mode
+    }
 
     // Handle manual stages (VERIFY, SHIP) - no job/workflow needed
     if (!command) {
@@ -235,8 +245,13 @@ export async function handleTicketTransition(
           job_id: job.id.toString(),
         };
 
-        // Add ticket context for SPECIFY stage
-        if (targetStage === Stage.SPECIFY) {
+        // Add mode-specific inputs
+        if (isQuickImpl) {
+          // Quick-impl mode: Add ticket title and description for workflow
+          workflowInputs.ticketTitle = ticket.title;
+          workflowInputs.ticketDescription = ticket.description;
+        } else if (targetStage === Stage.SPECIFY) {
+          // Normal SPECIFY mode: Add clarification policy
           // Resolve effective clarification policy (ticket ?? project)
           const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
 
@@ -254,11 +269,14 @@ export async function handleTicketTransition(
           workflowInputs.ticketDescription = ticket.description;
         }
 
+        // Determine workflow file based on mode
+        const workflowFile = isQuickImpl ? 'quick-impl.yml' : 'speckit.yml';
+
         // Dispatch GitHub Actions workflow
         await octokit.actions.createWorkflowDispatch({
           owner: ticket.project.githubOwner,
           repo: ticket.project.githubRepo,
-          workflow_id: 'speckit.yml',
+          workflow_id: workflowFile,
           ref: 'main',
           inputs: workflowInputs,
         });

@@ -16,6 +16,7 @@ interface StageColumnProps {
   onTicketClick?: (ticket: TicketWithVersion) => void;
   projectId: number;
   getTicketJob?: (ticketId: number) => Job | null;
+  dropZoneStyle?: string;
 }
 
 // Stage configuration matching original design
@@ -119,6 +120,7 @@ export const StageColumn = React.memo(
     onTicketClick,
     projectId,
     getTicketJob,
+    dropZoneStyle,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -138,7 +140,7 @@ export const StageColumn = React.memo(
         data-testid={`column-${stage}`}
         data-column={stage}
         data-stage={stage}
-        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor} ${
+        className={`flex flex-col h-full min-w-[280px] rounded-lg border overflow-hidden shadow-[0_0_24px_rgba(0,0,0,0.35)] transition-all duration-300 ${stageConfig.bgColor} ${stageConfig.borderColor} ${dropZoneStyle || ''} ${
           isOver ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-black' : ''
         }`}
       >

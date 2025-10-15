@@ -52,20 +52,29 @@ export function getNextStage(currentStage: Stage): Stage | null {
 
 /**
  * Validate if a stage transition is allowed.
- * Only sequential transitions to the immediately next stage are valid.
+ * Sequential transitions to the immediately next stage are valid.
+ * Special case: Quick-impl allows INBOX → BUILD (skipping SPECIFY and PLAN).
  *
  * @param fromStage - The current stage
  * @param toStage - The target stage
- * @returns true if transition is valid (sequential), false otherwise
+ * @returns true if transition is valid (sequential or quick-impl), false otherwise
  *
  * @example
  * isValidTransition(Stage.INBOX, Stage.SPECIFY)  // true (valid: next stage)
+ * isValidTransition(Stage.INBOX, Stage.BUILD)    // true (valid: quick-impl special case)
  * isValidTransition(Stage.INBOX, Stage.PLAN)    // false (invalid: skipping SPECIFY)
  * isValidTransition(Stage.SPECIFY, Stage.PLAN)  // true (valid: next stage)
+ * isValidTransition(Stage.SPECIFY, Stage.BUILD) // false (invalid: skipping PLAN)
  * isValidTransition(Stage.BUILD, Stage.PLAN)    // false (invalid: backwards)
  * isValidTransition(Stage.SHIP, Stage.INBOX)    // false (invalid: backwards from terminal)
  */
 export function isValidTransition(fromStage: Stage, toStage: Stage): boolean {
+  // Special case: Quick-impl allows INBOX → BUILD
+  if (fromStage === Stage.INBOX && toStage === Stage.BUILD) {
+    return true;
+  }
+
+  // Normal sequential validation
   const nextStage = getNextStage(fromStage);
   return nextStage === toStage;
 }

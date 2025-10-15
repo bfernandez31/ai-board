@@ -15,6 +15,7 @@ import { StageColumn } from './stage-column';
 import { DragOverlay } from './drag-overlay';
 import { OfflineIndicator } from './offline-indicator';
 import { TicketDetailModal } from './ticket-detail-modal';
+import { QuickImplModal } from './quick-impl-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-validation';
 import { TicketWithVersion } from '@/lib/types';
@@ -59,6 +60,16 @@ function BoardContent({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
+
+  // Drag state for visual feedback (T019)
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragSource, setDragSource] = useState<Stage | null>(null);
+
+  // Pending transition for quick-impl modal (T035)
+  const [pendingTransition, setPendingTransition] = useState<{
+    ticket: TicketWithVersion;
+    targetStage: Stage;
+  } | null>(null);
 
   // Sync with initialTicketsByStage only when new tickets are added
   // (e.g., from modal creation), but not during optimistic updates
@@ -118,11 +129,13 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
-  // Handle drag start
+  // Handle drag start (T020 - Add drag state)
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const ticket = event.active.data.current?.ticket as TicketWithVersion;
     if (ticket) {
       setActiveTicket(ticket);
+      setIsDragging(true);
+      setDragSource(ticket.stage);
     }
   }, []);
 
@@ -130,6 +143,8 @@ function BoardContent({
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       setActiveTicket(null);
+      setIsDragging(false);
+      setDragSource(null);
 
       const { active, over } = event;
 
@@ -147,6 +162,12 @@ function BoardContent({
           title: 'Invalid stage transition',
           description: `Cannot move from ${ticket.stage} to ${targetStage}. Tickets must progress sequentially.`,
         });
+        return;
+      }
+
+      // T036: Detect INBOX → BUILD and show quick-impl modal
+      if (ticket.stage === Stage.INBOX && targetStage === Stage.BUILD) {
+        setPendingTransition({ ticket, targetStage });
         return;
       }
 
@@ -317,6 +338,104 @@ function BoardContent({
     [allTickets, groupTicketsByStage]
   );
 
+  // T037: Handle quick-impl confirmation
+  const handleQuickImplConfirm = useCallback(async () => {
+    if (!pendingTransition) return;
+
+    const { ticket, targetStage } = pendingTransition;
+    setPendingTransition(null);
+
+    // Store original state for rollback
+    const originalStage = ticket.stage;
+    const originalVersion = ticket.version;
+
+    // Optimistic update
+    const updatedTickets = updateTicketStageOptimistically(
+      allTickets,
+      ticket.id,
+      targetStage
+    );
+    setTicketsByStage(groupTicketsByStage(updatedTickets));
+
+    // Send update to server using transition endpoint
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetStage,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        // Rollback optimistic update
+        const revertedTickets = revertTicketStage(
+          updatedTickets,
+          ticket.id,
+          originalStage,
+          originalVersion
+        );
+        setTicketsByStage(groupTicketsByStage(revertedTickets));
+
+        // Show error message
+        toast({
+          variant: 'destructive',
+          title: 'Failed to start quick implementation',
+          description:
+            error.message || 'An error occurred while starting the workflow.',
+        });
+      } else {
+        // Success - merge server response with optimistic update
+        const serverData = await response.json();
+
+        const finalTickets = updatedTickets.map((t) =>
+          t.id === ticket.id
+            ? {
+                ...t,
+                stage: serverData.stage || t.stage,
+                version: serverData.version || t.version,
+                branch: serverData.branch !== undefined ? serverData.branch : t.branch,
+                updatedAt: serverData.updatedAt || t.updatedAt,
+              }
+            : t
+        );
+        setTicketsByStage(groupTicketsByStage(finalTickets));
+
+        toast({
+          title: 'Quick implementation started',
+          description: `Workflow dispatched for ticket #${ticket.id}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error starting quick-impl:', error);
+
+      // Rollback on network error
+      const revertedTickets = revertTicketStage(
+        updatedTickets,
+        ticket.id,
+        originalStage,
+        originalVersion
+      );
+      setTicketsByStage(groupTicketsByStage(revertedTickets));
+
+      toast({
+        variant: 'destructive',
+        title: 'Network error',
+        description: 'Could not start workflow. Please check your connection.',
+      });
+    }
+  }, [pendingTransition, allTickets, groupTicketsByStage, toast, projectId]);
+
+  // T038: Handle quick-impl cancellation
+  const handleQuickImplCancel = useCallback(() => {
+    setPendingTransition(null);
+  }, []);
+
   // Get job for a specific ticket (merges initial + polled data)
   const getTicketJob = useCallback(
     (ticketId: number): Job | null => {
@@ -348,6 +467,35 @@ function BoardContent({
       return initialJobs.get(ticketId) || null;
     },
     [polledJobs, initialJobs]
+  );
+
+  // Get drop zone style based on drag state (T021)
+  const getDropZoneStyle = useCallback(
+    (stage: Stage): string => {
+      if (!isDragging || !dragSource) return '';
+
+      // Quick-impl mode: Dragging from INBOX
+      if (dragSource === Stage.INBOX) {
+        if (stage === Stage.SPECIFY) {
+          // Normal workflow - blue
+          return 'border-4 border-dashed border-blue-500 bg-blue-500/10';
+        } else if (stage === Stage.BUILD) {
+          // Quick-impl - green
+          return 'border-4 border-dashed border-green-500 bg-green-500/10';
+        } else {
+          // Invalid - gray with reduced opacity
+          return 'opacity-50 cursor-not-allowed';
+        }
+      }
+
+      // Normal drag: Check if valid transition
+      if (isValidTransition(dragSource, stage)) {
+        return 'border-4 border-dashed border-blue-500 bg-blue-500/10';
+      } else {
+        return 'opacity-50 cursor-not-allowed';
+      }
+    },
+    [isDragging, dragSource]
   );
 
   const stages = getAllStages();
@@ -389,6 +537,7 @@ function BoardContent({
                 onTicketClick={handleTicketClick}
                 projectId={projectId}
                 getTicketJob={getTicketJob}
+                dropZoneStyle={getDropZoneStyle(stage)}
               />
             ))}
           </div>
@@ -404,6 +553,13 @@ function BoardContent({
         onOpenChange={handleModalClose}
         onUpdate={handleTicketUpdate}
         projectId={projectId}
+      />
+
+      {/* Quick Implementation Modal (T039) */}
+      <QuickImplModal
+        open={!!pendingTransition}
+        onConfirm={handleQuickImplConfirm}
+        onCancel={handleQuickImplCancel}
       />
     </>
   );
