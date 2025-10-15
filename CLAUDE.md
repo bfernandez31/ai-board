@@ -65,6 +65,13 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 031-quick-implementation: Added Quick Implementation workflow for simple tasks
+  - Created `.github/workflows/quick-impl.yml` workflow file
+  - Created `.claude/commands/quick-impl.md` command for direct implementation
+  - Modified `create-new-feature.sh` to support `--mode=quick-impl` parameter
+  - Enabled INBOX → BUILD direct transition (bypassing SPECIFY and PLAN)
+  - Added color-coded visual feedback (blue for SPECIFY, green for BUILD)
+  - Added mandatory confirmation modal for quick-impl transitions
 - 030-should-not-be: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0
 - 029-999-auto-clarification: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui
 - 028-519-replace-sse: Replaced Server-Sent Events (SSE) with client-side polling for job status updates
@@ -74,6 +81,91 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 
 <!-- MANUAL ADDITIONS START -->
+
+## Quick Implementation Workflow
+
+### Overview
+
+The Quick Implementation workflow allows tickets to transition directly from **INBOX → BUILD**, bypassing the SPECIFY and PLAN stages. This is designed for simple tasks where formal specification and planning are unnecessary overhead.
+
+**Use quick-impl for**:
+- Bug fixes (typos, minor logic corrections)
+- UI tweaks (button colors, spacing adjustments, text changes)
+- Simple refactoring (renaming, file organization)
+- Documentation updates
+
+**Use full workflow (INBOX → SPECIFY → PLAN → BUILD) for**:
+- Complex features requiring architecture design
+- Changes affecting multiple modules
+- New APIs or database schema changes
+- Features requiring detailed planning or trade-off analysis
+
+### Workflow Comparison
+
+| Aspect | Normal Workflow | Quick Implementation |
+|--------|-----------------|----------------------|
+| **Stages** | INBOX → SPECIFY → PLAN → BUILD | INBOX → BUILD |
+| **Documentation** | Full specification (spec.md, plan.md, tasks.md) | Minimal spec (title + description only) |
+| **Command** | `/speckit.specify` → `/speckit.plan` → `/speckit.implement` | `/quick-impl` |
+| **Workflow File** | `.github/workflows/speckit.yml` | `.github/workflows/quick-impl.yml` |
+| **Job Command** | `specify`, `plan`, `implement` | `quick-impl` |
+| **Branch Creation** | `create-new-feature.sh` (full template) | `create-new-feature.sh --mode=quick-impl` (minimal template) |
+| **Visual Feedback** | Blue border on SPECIFY column | Green border on BUILD column |
+| **Confirmation** | No modal (normal progression) | Mandatory warning modal |
+| **Typical Time** | 15-30 minutes (full cycle) | 5-10 minutes |
+| **Best For** | Complex features, architectural changes | Simple fixes, minor improvements |
+
+### Usage Instructions
+
+1. **Drag Ticket**: Drag ticket from INBOX column to BUILD column
+2. **Confirm Modal**: Review warning modal explaining trade-offs
+   - **Cancel**: Ticket remains in INBOX
+   - **Proceed**: Workflow dispatches with `command=quick-impl`
+3. **Automatic Execution**:
+   - GitHub Actions workflow `quick-impl.yml` runs
+   - Script creates feature branch: `{num}-{description}`
+   - Creates minimal spec.md with title + description
+   - Claude executes `/quick-impl` command
+   - Implementation committed and pushed to branch
+   - Ticket branch field updated via API
+   - Job status updated to COMPLETED
+
+### Visual Feedback
+
+During drag operations from INBOX column:
+
+- **SPECIFY Column**: Blue dashed border (`border-blue-500 bg-blue-500/10`) - Normal workflow option
+- **BUILD Column**: Green dashed border (`border-green-500 bg-green-500/10`) - Quick-impl option
+- **Invalid Columns**: Grayed out (`opacity-50 cursor-not-allowed`) - PLAN, VERIFY, SHIP
+
+### Technical Implementation
+
+**API Detection**:
+```typescript
+const isQuickImpl = currentStage === Stage.INBOX && targetStage === Stage.BUILD;
+```
+
+**Workflow Dispatch**:
+- Workflow: `.github/workflows/quick-impl.yml`
+- Inputs: `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
+- Command: `/quick-impl` (simplified implementation without full spec-kit)
+- Branch: Created via `create-new-feature.sh --mode=quick-impl`
+
+**Job Validation**:
+- Quick-impl skips job completion validation (no prior job exists for INBOX tickets)
+- Job created with `command="quick-impl"` for tracking
+- Normal workflow job validation still applies for SPECIFY → PLAN → BUILD
+
+### When NOT to Use Quick-Impl
+
+- **Complex features**: Multiple components, architectural changes
+- **Database migrations**: Schema changes require planning
+- **Breaking changes**: API changes affecting other systems
+- **Security-sensitive**: Authentication, authorization, data protection
+- **Performance-critical**: Optimization requiring measurement and analysis
+- **Unclear requirements**: Tasks needing clarification or design discussion
+
+If unsure, use the full workflow (INBOX → SPECIFY → PLAN → BUILD) to ensure proper documentation and planning.
 
 ## Authentication System
 
