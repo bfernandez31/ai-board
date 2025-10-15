@@ -26,6 +26,7 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 

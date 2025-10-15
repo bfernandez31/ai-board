@@ -27,6 +27,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
   });
@@ -296,6 +297,7 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
   });
