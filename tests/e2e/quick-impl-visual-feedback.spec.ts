@@ -84,35 +84,47 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
-    // Start dragging (long press for touch sensor)
-    await ticketCard.hover();
+    // Start dragging - need actual mouse movement to trigger @dnd-kit
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    // Move to ticket center and press down
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
     await page.mouse.down();
-    await page.waitForTimeout(300); // Wait for drag to activate
+
+    // Move mouse slightly to trigger drag (important for @dnd-kit)
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(100); // Wait for drag state to activate
 
     // Check SPECIFY column - should have blue border (normal workflow)
     const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
-    await expect(specifyColumn).toHaveClass(/border-blue-500/);
-    await expect(specifyColumn).toHaveClass(/bg-blue-500\/10/);
+    const specifyClasses = await specifyColumn.getAttribute('class');
+    expect(specifyClasses).toContain('border-blue-500');
+    expect(specifyClasses).toContain('bg-blue-500/10');
 
     // Check BUILD column - should have green border (quick-impl)
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
-    await expect(buildColumn).toHaveClass(/border-green-500/);
-    await expect(buildColumn).toHaveClass(/bg-green-500\/10/);
+    const buildClasses = await buildColumn.getAttribute('class');
+    expect(buildClasses).toContain('border-green-500');
+    expect(buildClasses).toContain('bg-green-500/10');
 
     // Check PLAN column - should be grayed out (invalid)
     const planColumn = page.locator('[data-testid="column-PLAN"]');
-    await expect(planColumn).toHaveClass(/opacity-50/);
-    await expect(planColumn).toHaveClass(/cursor-not-allowed/);
+    const planClasses = await planColumn.getAttribute('class');
+    expect(planClasses).toContain('opacity-50');
+    expect(planClasses).toContain('cursor-not-allowed');
 
     // Check VERIFY column - should be grayed out (invalid)
     const verifyColumn = page.locator('[data-testid="column-VERIFY"]');
-    await expect(verifyColumn).toHaveClass(/opacity-50/);
-    await expect(verifyColumn).toHaveClass(/cursor-not-allowed/);
+    const verifyClasses = await verifyColumn.getAttribute('class');
+    expect(verifyClasses).toContain('opacity-50');
+    expect(verifyClasses).toContain('cursor-not-allowed');
 
     // Check SHIP column - should be grayed out (invalid)
     const shipColumn = page.locator('[data-testid="column-SHIP"]');
-    await expect(shipColumn).toHaveClass(/opacity-50/);
-    await expect(shipColumn).toHaveClass(/cursor-not-allowed/);
+    const shipClasses = await shipColumn.getAttribute('class');
+    expect(shipClasses).toContain('opacity-50');
+    expect(shipClasses).toContain('cursor-not-allowed');
 
     // End drag
     await page.mouse.up();
@@ -135,22 +147,31 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
-    // Start dragging
-    await ticketCard.hover();
+    // Start dragging - need actual mouse movement to trigger @dnd-kit
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    // Move to ticket center and press down
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
     await page.mouse.down();
-    await page.waitForTimeout(300);
+
+    // Move mouse slightly to trigger drag
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(100);
 
     // Verify styling is applied during drag
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
-    await expect(buildColumn).toHaveClass(/border-green-500/);
+    let buildClasses = await buildColumn.getAttribute('class');
+    expect(buildClasses).toContain('border-green-500');
 
     // End drag
     await page.mouse.up();
     await page.waitForTimeout(100);
 
     // Verify styling is removed after drag
-    await expect(buildColumn).not.toHaveClass(/border-green-500/);
-    await expect(buildColumn).not.toHaveClass(/bg-green-500\/10/);
+    buildClasses = await buildColumn.getAttribute('class');
+    expect(buildClasses).not.toContain('border-green-500');
+    expect(buildClasses).not.toContain('bg-green-500/10');
   });
 
   /**
@@ -183,25 +204,35 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketCard = page.locator('[data-testid="column-SPECIFY"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
-    // Start dragging
-    await ticketCard.hover();
+    // Start dragging - need actual mouse movement to trigger @dnd-kit
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    // Move to ticket center and press down
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
     await page.mouse.down();
-    await page.waitForTimeout(300);
+
+    // Move mouse slightly to trigger drag
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(100);
 
     // Check PLAN column - should have blue border (valid transition)
     const planColumn = page.locator('[data-testid="column-PLAN"]');
-    await expect(planColumn).toHaveClass(/border-blue-500/);
-    await expect(planColumn).toHaveClass(/bg-blue-500\/10/);
+    const planClasses = await planColumn.getAttribute('class');
+    expect(planClasses).toContain('border-blue-500');
+    expect(planClasses).toContain('bg-blue-500/10');
 
     // Check BUILD column - should be grayed out (invalid, skipping PLAN)
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
-    await expect(buildColumn).toHaveClass(/opacity-50/);
-    await expect(buildColumn).toHaveClass(/cursor-not-allowed/);
+    const buildClasses = await buildColumn.getAttribute('class');
+    expect(buildClasses).toContain('opacity-50');
+    expect(buildClasses).toContain('cursor-not-allowed');
 
     // Check INBOX column - should be grayed out (can't go backwards)
     const inboxColumn = page.locator('[data-testid="column-INBOX"]');
-    await expect(inboxColumn).toHaveClass(/opacity-50/);
-    await expect(inboxColumn).toHaveClass(/cursor-not-allowed/);
+    const inboxClasses = await inboxColumn.getAttribute('class');
+    expect(inboxClasses).toContain('opacity-50');
+    expect(inboxClasses).toContain('cursor-not-allowed');
 
     // End drag
     await page.mouse.up();
