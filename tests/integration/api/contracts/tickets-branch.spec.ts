@@ -14,9 +14,11 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -28,6 +30,8 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         githubOwner: 'test-owner',
         githubRepo: 'contract-branch-test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
     testProjectId = project.id;
@@ -38,6 +42,7 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
         title: '[e2e] Test ticket for branch endpoint',
         description: 'Testing specialized branch endpoint',
         projectId: testProjectId,
+        updatedAt: new Date(), // Required field
       },
     });
     testTicketId = ticket.id;

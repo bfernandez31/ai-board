@@ -73,7 +73,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     expect(updatedProject?.clarificationPolicy).toBe('CONSERVATIVE');
   });
 
-  test('T024: New tickets inherit project policy', async ({ page }) => {
+  test('T024: New tickets inherit project policy', async () => {
     // Update project policy to CONSERVATIVE
     await prisma.project.update({
       where: { id: testProjectId },
@@ -430,7 +430,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     // Verify persistence in database
     ticket = await prisma.ticket.findUnique({
       where: { id: testTicketId },
-      select: { clarificationPolicy: true },
+      select: { clarificationPolicy: true, version: true },
     });
     expect(ticket?.clarificationPolicy).toBe('PRAGMATIC');
   });

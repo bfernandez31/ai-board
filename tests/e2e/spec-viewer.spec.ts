@@ -62,6 +62,7 @@ async function createTestJob(data: {
       command: data.command,
       status: data.status as any,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,
+      updatedAt: new Date(), // Required field
     },
   });
 }

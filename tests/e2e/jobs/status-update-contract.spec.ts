@@ -39,6 +39,7 @@ test.describe('PATCH /api/jobs/[id]/status - Contract Validation', () => {
         branch: 'test-branch',
         startedAt: new Date(),
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
     testJobId = job.id;

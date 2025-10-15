@@ -13,9 +13,11 @@ test.describe('Selective Ticket Cleanup Contract', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -32,6 +34,8 @@ test.describe('Selective Ticket Cleanup Contract', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
   });
@@ -40,9 +44,9 @@ test.describe('Selective Ticket Cleanup Contract', () => {
     // Arrange - Create test tickets in project 1 (test project)
     await prisma.ticket.createMany({
       data: [
-        { title: '[e2e] Test 1', description: 'Test', stage: 'INBOX', projectId: 1 },
-        { title: '[e2e] Test 2', description: 'Test', stage: 'INBOX', projectId: 1 },
-        { title: 'Manual Ticket', description: 'Manual', stage: 'INBOX', projectId: 1 },
+        { title: '[e2e] Test 1', description: 'Test', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
+        { title: '[e2e] Test 2', description: 'Test', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
+        { title: 'Manual Ticket', description: 'Manual', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
       ],
     });
 
@@ -60,9 +64,11 @@ test.describe('Selective Ticket Cleanup Contract', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -74,6 +80,8 @@ test.describe('Selective Ticket Cleanup Contract', () => {
         githubOwner: 'prod',
         githubRepo: 'prod-repo',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 
@@ -86,7 +94,7 @@ test.describe('Selective Ticket Cleanup Contract', () => {
 
     for (const title of tickets) {
       await prisma.ticket.create({
-        data: { title, description: 'Test', stage: 'INBOX', projectId: project.id },
+        data: { title, description: 'Test', stage: 'INBOX', projectId: project.id, updatedAt: new Date() },
       });
     }
 
@@ -118,6 +126,7 @@ test.describe('Selective Ticket Cleanup Contract', () => {
       description: 'Test',
       stage: 'INBOX' as const,
       projectId: 1,
+      updatedAt: new Date(),
     }));
     await prisma.ticket.createMany({ data: tickets });
 

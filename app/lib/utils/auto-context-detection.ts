@@ -94,10 +94,10 @@ export function detectAutoPolicy(featureDescription: string): DetectionResult {
   let fallbackTriggered = false;
   let reason: string | undefined;
 
-  // Fallback: Low confidence
-  if (confidence < 0.5) {
+  // Fallback: Conflicting signals (SENSITIVE + INTERNAL) - Check first for explicit conflicts
+  if (bucketCount >= 2 && activeBuckets.has('SENSITIVE') && activeBuckets.has('INTERNAL')) {
     fallbackTriggered = true;
-    reason = 'Low confidence score';
+    reason = 'Conflicting signals (SENSITIVE + INTERNAL)';
     return {
       selectedPolicy: 'CONSERVATIVE',
       confidence,
@@ -107,10 +107,10 @@ export function detectAutoPolicy(featureDescription: string): DetectionResult {
     };
   }
 
-  // Fallback: Conflicting signals (SENSITIVE + INTERNAL)
-  if (bucketCount >= 2 && activeBuckets.has('SENSITIVE') && activeBuckets.has('INTERNAL')) {
+  // Fallback: Low confidence
+  if (confidence < 0.5) {
     fallbackTriggered = true;
-    reason = 'Conflicting signals (SENSITIVE + INTERNAL)';
+    reason = 'Low confidence score';
     return {
       selectedPolicy: 'CONSERVATIVE',
       confidence,

@@ -20,9 +20,11 @@ test.describe('Selective Project Cleanup Contract', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -35,6 +37,8 @@ test.describe('Selective Project Cleanup Contract', () => {
           githubOwner: 'test',
           githubRepo: 'temp1',
           userId: testUser.id,
+          updatedAt: new Date(), // Required field
+          createdAt: new Date(), // Required field
         },
         {
           name: 'Production Project',
@@ -42,6 +46,8 @@ test.describe('Selective Project Cleanup Contract', () => {
           githubOwner: 'prod',
           githubRepo: 'prod',
           userId: testUser.id,
+          updatedAt: new Date(), // Required field
+          createdAt: new Date(), // Required field
         },
       ],
     });
@@ -98,9 +104,11 @@ test.describe('Selective Project Cleanup Contract', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -120,6 +128,8 @@ test.describe('Selective Project Cleanup Contract', () => {
           githubOwner: 'test',
           githubRepo: repo,
           userId: testUser.id,
+          updatedAt: new Date(), // Required field
+          createdAt: new Date(), // Required field
         },
       });
     }
@@ -140,9 +150,11 @@ test.describe('Selective Project Cleanup Contract', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -155,6 +167,8 @@ test.describe('Selective Project Cleanup Contract', () => {
           githubOwner: 'test',
           githubRepo: 'temp1',
           userId: testUser.id,
+          updatedAt: new Date(), // Required field
+          createdAt: new Date(), // Required field
         },
         {
           name: '[e2e] Temp 2',
@@ -162,6 +176,8 @@ test.describe('Selective Project Cleanup Contract', () => {
           githubOwner: 'test',
           githubRepo: 'temp2',
           userId: testUser.id,
+          updatedAt: new Date(), // Required field
+          createdAt: new Date(), // Required field
         },
       ],
     });

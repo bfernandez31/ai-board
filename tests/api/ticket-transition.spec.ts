@@ -240,9 +240,11 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
+        updatedAt: new Date(), // Required: User.updatedAt has no default
       },
     });
 
@@ -259,6 +261,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 
@@ -274,6 +278,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         githubOwner: 'test',
         githubRepo: 'test2',
         userId: testUser.id,
+        updatedAt: new Date(), // Required field
+        createdAt: new Date(), // Required field
       },
     });
 
@@ -284,6 +290,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         description: 'Test',
         stage: 'INBOX',
         projectId: 1,
+        updatedAt: new Date(), // Required field
       },
     });
 
