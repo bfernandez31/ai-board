@@ -217,12 +217,17 @@ The User model manages authentication and project ownership:
 
 ### Project Model
 
-The Project model now includes user ownership:
+The Project model now includes user ownership and clarification policies:
 
 - **`userId`** (String): Owner of the project (required foreign key to User.id)
   - Every project must belong to a user
   - Index on userId for efficient filtering
   - Used for authorization checks
+
+- **`clarificationPolicy`** (ClarificationPolicy enum, NOT NULL, default: AUTO): Default policy for all tickets
+  - Values: AUTO (context-aware), CONSERVATIVE (security-first), PRAGMATIC (speed-first), INTERACTIVE (manual)
+  - Provides project-wide default for specification generation
+  - Tickets inherit this policy unless overridden
 
 **Authorization**:
 - Projects filtered by userId from session
@@ -243,6 +248,12 @@ The Ticket model includes the following fields for GitHub branch tracking and au
 - **`autoMode`** (Boolean): Enables automatic workflow progression for the ticket
   - Defaults to `false` for new tickets
   - Updated via PATCH `/api/projects/:projectId/tickets/:id`
+
+- **`clarificationPolicy`** (ClarificationPolicy enum?, NULLABLE): Optional policy override
+  - Values: AUTO (context-aware), CONSERVATIVE (security-first), PRAGMATIC (speed-first), INTERACTIVE (manual)
+  - Defaults to `null` (inherits from project)
+  - Overrides project default when set
+  - Hierarchical resolution: `ticket.clarificationPolicy ?? project.clarificationPolicy ?? 'AUTO'`
 
 ### Branch Management Flow
 
