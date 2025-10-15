@@ -22,8 +22,8 @@
 
 **Purpose**: Prepare test helpers and validation infrastructure for all user stories
 
-- [ ] T001 [P] Update `tests/helpers/transition-helpers.ts` to add job completion simulation in `transitionThrough()` helper
-- [ ] T002 [P] Add `createTicketWithJob()` helper to `tests/helpers/db-setup.ts` for creating tickets with specific job statuses
+- [X] T001 [P] Update `tests/helpers/transition-helpers.ts` to add job completion simulation in `transitionThrough()` helper
+- [X] T002 [P] Add `createTicketWithJob()` helper to `tests/helpers/db-setup.ts` for creating tickets with specific job statuses
 
 ---
 
@@ -33,12 +33,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `shouldValidateJobCompletion()` function to `lib/workflows/transition.ts` to determine which stages require validation
-- [ ] T004 Add `getJobValidationErrorMessage()` function to `lib/workflows/transition.ts` to map job statuses to user-friendly error messages
-- [ ] T005 Add `validateJobCompletion()` function to `lib/workflows/transition.ts` to query most recent job and validate status
-- [ ] T006 Update `TransitionResult` interface in `lib/workflows/transition.ts` to add `JOB_NOT_COMPLETED` and `MISSING_JOB` error codes with optional `details` field
-- [ ] T007 Integrate `validateJobCompletion()` call into `handleTicketTransition()` in `lib/workflows/transition.ts` after sequential validation but before workflow dispatch
-- [ ] T008 Update error handling in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to support new error codes and include details in response
+- [X] T003 Add `shouldValidateJobCompletion()` function to `lib/workflows/transition.ts` to determine which stages require validation
+- [X] T004 Add `getJobValidationErrorMessage()` function to `lib/workflows/transition.ts` to map job statuses to user-friendly error messages
+- [X] T005 Add `validateJobCompletion()` function to `lib/workflows/transition.ts` to query most recent job and validate status
+- [X] T006 Update `TransitionResult` interface in `lib/workflows/transition.ts` to add `JOB_NOT_COMPLETED` and `MISSING_JOB` error codes with optional `details` field
+- [X] T007 Integrate `validateJobCompletion()` call into `handleTicketTransition()` in `lib/workflows/transition.ts` after sequential validation but before workflow dispatch
+- [X] T008 Update error handling in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to support new error codes and include details in response
 
 **Checkpoint**: Foundation ready - validation logic implemented, all user stories can now be tested
 
@@ -54,17 +54,17 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before foundational implementation**
 
-- [ ] T009 [P] [US1] Add test "should block transition when job is PENDING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T010 [P] [US1] Add test "should block transition when job is RUNNING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T011 [P] [US1] Add test "should block transition when job is FAILED" with retry message in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T012 [P] [US1] Add test "should block transition when job is CANCELLED" with retry message in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T013 [P] [US1] Add test "should block PLAN→BUILD transition when plan job is PENDING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T014 [P] [US1] Add test "should block BUILD→VERIFY transition when build job is RUNNING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T009 [P] [US1] Add test "should block transition when job is PENDING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T010 [P] [US1] Add test "should block transition when job is RUNNING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T011 [P] [US1] Add test "should block transition when job is FAILED" with retry message in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T012 [P] [US1] Add test "should block transition when job is CANCELLED" with retry message in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T013 [P] [US1] Add test "should block PLAN→BUILD transition when plan job is PENDING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T014 [P] [US1] Add test "should block BUILD→VERIFY transition when build job is RUNNING" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
 
 ### Validation for User Story 1
 
-- [ ] T015 [US1] Run tests to verify all 6 blocking scenarios return 400 error with correct error messages and job details
-- [ ] T016 [US1] Verify error response includes `details` object with `currentStage`, `targetStage`, `jobStatus`, and `jobCommand` fields
+- [X] T015 [US1] Run tests to verify all 6 blocking scenarios return 400 error with correct error messages and job details
+- [X] T016 [US1] Verify error response includes `details` object with `currentStage`, `targetStage`, `jobStatus`, and `jobCommand` fields
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - transitions are blocked when jobs incomplete
 
@@ -78,14 +78,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Add test "should allow transition when job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T018 [P] [US2] Add test "should allow PLAN→BUILD transition when plan job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T019 [P] [US2] Add test "should allow BUILD→VERIFY transition when build job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T017 [P] [US2] Add test "should allow transition when job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T018 [P] [US2] Add test "should allow PLAN→BUILD transition when plan job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T019 [P] [US2] Add test "should allow BUILD→VERIFY transition when build job is COMPLETED" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
 
 ### Validation for User Story 2
 
-- [ ] T020 [US2] Run tests to verify all 3 scenarios return 200 success with new job created and ticket stage updated
-- [ ] T021 [US2] Verify response includes `jobId` for automated stages (SPECIFY→PLAN, PLAN→BUILD)
+- [X] T020 [US2] Run tests to verify all 3 scenarios return 200 success with new job created and ticket stage updated
+- [X] T021 [US2] Verify response includes `jobId` for automated stages (SPECIFY→PLAN, PLAN→BUILD)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - transitions blocked when incomplete, allowed when completed
 
@@ -99,14 +99,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Update existing test "should transition ticket from SPECIFY to PLAN" (line 64) in `tests/api/ticket-transition.spec.ts` to add job completion simulation after SPECIFY job creation before PLAN transition
-- [ ] T023 [P] [US3] Verify existing test "should transition ticket from PLAN to BUILD" still passes with updated `transitionThrough()` helper that completes jobs
-- [ ] T024 [P] [US3] Add test "should allow INBOX→SPECIFY transition without job validation" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T022 [P] [US3] Update existing test "should transition ticket from SPECIFY to PLAN" (line 64) in `tests/api/ticket-transition.spec.ts` to add job completion simulation after SPECIFY job creation before PLAN transition
+- [X] T023 [P] [US3] Verify existing test "should transition ticket from PLAN to BUILD" still passes with updated `transitionThrough()` helper that completes jobs
+- [X] T024 [P] [US3] Add test "should allow INBOX→SPECIFY transition without job validation" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
 
 ### Validation for User Story 3
 
-- [ ] T025 [US3] Run tests to verify manual stage transitions (INBOX→SPECIFY, VERIFY→SHIP) work without job validation
-- [ ] T026 [US3] Verify updated helper function `transitionThrough()` properly completes jobs for automated stages before next transition
+- [X] T025 [US3] Run tests to verify manual stage transitions (INBOX→SPECIFY, VERIFY→SHIP) work without job validation
+- [X] T026 [US3] Verify updated helper function `transitionThrough()` properly completes jobs for automated stages before next transition
 
 **Checkpoint**: All P1 and P2 user stories should now be independently functional
 
@@ -120,14 +120,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] Add test "should validate against most recent job (COMPLETED after FAILED)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T028 [P] [US4] Add test "should validate against most recent job (FAILED after COMPLETED)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
-- [ ] T029 [P] [US4] Add test "should validate against most recent job with three jobs (FAILED, COMPLETED, RUNNING)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T027 [P] [US4] Add test "should validate against most recent job (COMPLETED after FAILED)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T028 [P] [US4] Add test "should validate against most recent job (FAILED after COMPLETED)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
+- [X] T029 [P] [US4] Add test "should validate against most recent job with three jobs (FAILED, COMPLETED, RUNNING)" in nested `describe('Job Completion Validation')` block in `tests/api/ticket-transition.spec.ts`
 
 ### Validation for User Story 4
 
-- [ ] T030 [US4] Run tests to verify system always checks most recent job by `startedAt DESC` regardless of job status history
-- [ ] T031 [US4] Verify query performance using existing composite index `[ticketId, status, startedAt]` achieves <10ms execution time
+- [X] T030 [US4] Run tests to verify system always checks most recent job by `startedAt DESC` regardless of job status history
+- [X] T031 [US4] Verify query performance using existing composite index `[ticketId, status, startedAt]` achieves <10ms execution time
 
 **Checkpoint**: All user stories should now be independently functional with retry workflow support
 
@@ -137,8 +137,8 @@
 
 **Purpose**: Ensure new validation doesn't break existing tests
 
-- [ ] T032 Update existing test "should handle optimistic concurrency conflicts" (line 369) in `tests/api/ticket-transition.spec.ts` to add `JOB_NOT_COMPLETED` to expected error codes for concurrent transition failures
-- [ ] T033 Run all existing tests in `tests/api/ticket-transition.spec.ts` to verify no regressions (should see 10 existing + 10 new tests pass)
+- [X] T032 Update existing test "should handle optimistic concurrency conflicts" (line 369) in `tests/api/ticket-transition.spec.ts` to add `JOB_NOT_COMPLETED` to expected error codes for concurrent transition failures
+- [X] T033 Run all existing tests in `tests/api/ticket-transition.spec.ts` to verify no regressions (should see 10 existing + 10 new tests pass)
 
 ---
 
@@ -146,13 +146,13 @@
 
 **Purpose**: Quality assurance and documentation
 
-- [ ] T034 [P] Run TypeScript type check: `npm run type-check` to verify all types are correct
-- [ ] T035 [P] Run linter: `npm run lint` to ensure code quality standards
-- [ ] T036 Run full test suite: `npx playwright test tests/api/ticket-transition.spec.ts` to verify all 20 test scenarios pass
-- [ ] T037 Manual testing: Follow quickstart.md Test Scenario 1 (Block PENDING Job) to verify error response
-- [ ] T038 Manual testing: Follow quickstart.md Test Scenario 2 (Allow After Completion) to verify success response
-- [ ] T039 Performance validation: Verify job validation query executes in <50ms using database query logs
-- [ ] T040 Run quickstart.md validation checklist to ensure all implementation steps completed
+- [X] T034 [P] Run TypeScript type check: `npm run type-check` to verify all types are correct
+- [X] T035 [P] Run linter: `npm run lint` to ensure code quality standards
+- [X] T036 Run full test suite: `npx playwright test tests/api/ticket-transition.spec.ts` to verify all 20 test scenarios pass
+- [X] T037 Manual testing: Follow quickstart.md Test Scenario 1 (Block PENDING Job) to verify error response
+- [X] T038 Manual testing: Follow quickstart.md Test Scenario 2 (Allow After Completion) to verify success response
+- [X] T039 Performance validation: Verify job validation query executes in <50ms using database query logs
+- [X] T040 Run quickstart.md validation checklist to ensure all implementation steps completed
 
 ---
 

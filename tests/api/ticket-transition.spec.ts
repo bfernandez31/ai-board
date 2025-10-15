@@ -67,13 +67,27 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     const { ticket } = await setupTestData();
 
     // Transition to SPECIFY first
-    await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
+    const specifyResponse = await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
       data: { targetStage: 'SPECIFY' },
+    });
+    const specifyBody = await specifyResponse.json();
+    const jobId = specifyBody.jobId;
+
+    // Complete the SPECIFY job
+    const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+
+    await request.patch(`/api/jobs/${jobId}/status`, {
+      data: { status: 'RUNNING' },
+      headers: { 'Authorization': `Bearer ${workflowToken}` },
+    });
+
+    await request.patch(`/api/jobs/${jobId}/status`, {
+      data: { status: 'COMPLETED' },
+      headers: { 'Authorization': `Bearer ${workflowToken}` },
     });
 
     // Simulate workflow setting the branch (via /branch endpoint)
     const branchName = `feature/ticket-${ticket.id}`;
-    const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
 
     await request.patch(`/api/projects/1/tickets/${ticket.id}/branch`, {
       data: { branch: branchName },
@@ -385,11 +399,19 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     const statuses = [response1.status(), response2.status()].sort();
 
     // In concurrent scenarios, we expect either:
-    // - 200 + 400 (invalid state transition - ticket already transitioned)
+    // - 200 + 400 (invalid state transition, job validation, or ticket already transitioned)
     // - 200 + 409 (ideal optimistic concurrency handling)
     // - 200 + 500 (acceptable race condition between job creation and ticket update)
     expect(statuses[0]).toBe(200); // At least one should succeed
     expect([400, 409, 500]).toContain(statuses[1]); // The other should fail with conflict or error
+
+    // If one failed with 400, it could be JOB_NOT_COMPLETED or INVALID_TRANSITION
+    const failedResponse = response1.status() === 400 ? response1 : response2.status() === 400 ? response2 : null;
+    if (failedResponse) {
+      const failedBody = await failedResponse.json();
+      // Accept either job validation failure or invalid transition
+      expect(['JOB_NOT_COMPLETED', 'INVALID_TRANSITION']).toContain(failedBody.code);
+    }
 
     // Verify only ONE ticket update occurred (version should be 2, not 3)
     const updatedTicket = await prisma.ticket.findUnique({
@@ -493,5 +515,564 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   test.skip('should handle GitHub API rate limit errors', async () => {
     // This test requires Octokit mocking infrastructure
     // Skip for initial implementation, add with proper mock setup later
+  });
+
+  /**
+   * Job Completion Validation Tests
+   * Feature: 030-should-not-be
+   *
+   * Tests job validation logic that prevents transitions when workflows are incomplete
+   */
+  test.describe('Job Completion Validation', () => {
+    /**
+     * User Story 1: Block transition when job is PENDING
+     * Given: Ticket in SPECIFY stage with PENDING job
+     * When: Attempt transition to PLAN
+     * Then: 400 error with JOB_NOT_COMPLETED code
+     */
+    test('should block transition when job is PENDING', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Transition to SPECIFY (creates PENDING job)
+      const specifyResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+      expect(specifyResponse.status()).toBe(200);
+
+      // Act - Attempt transition while job is PENDING
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow is still running');
+      expect(body.details.jobStatus).toBe('PENDING');
+      expect(body.details.currentStage).toBe('SPECIFY');
+      expect(body.details.targetStage).toBe('PLAN');
+    });
+
+    /**
+     * User Story 1: Block transition when job is RUNNING
+     * Given: Ticket in SPECIFY stage with RUNNING job
+     * When: Attempt transition to PLAN
+     * Then: 400 error with message about workflow running
+     */
+    test('should block transition when job is RUNNING', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Transition to SPECIFY
+      const specifyResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+      const specifyBody = await specifyResponse.json();
+      const jobId = specifyBody.jobId;
+
+      // Update job to RUNNING
+      const workflowToken =
+        process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'RUNNING' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+
+      // Act - Attempt transition while job is RUNNING
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow is still running');
+      expect(body.details.jobStatus).toBe('RUNNING');
+    });
+
+    /**
+     * User Story 1: Block transition when job is FAILED
+     * Given: Ticket in SPECIFY stage with FAILED job
+     * When: Attempt transition to PLAN
+     * Then: 400 error with retry message
+     */
+    test('should block transition when job is FAILED', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Transition to SPECIFY
+      const specifyResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+      const specifyBody = await specifyResponse.json();
+      const jobId = specifyBody.jobId;
+
+      // Update job to RUNNING then FAILED
+      const workflowToken =
+        process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'RUNNING' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'FAILED' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+
+      // Act - Attempt transition with FAILED job
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow failed');
+      expect(body.message).toContain('retry');
+      expect(body.details.jobStatus).toBe('FAILED');
+    });
+
+    /**
+     * User Story 1: Block transition when job is CANCELLED
+     * Given: Ticket in SPECIFY stage with CANCELLED job
+     * When: Attempt transition to PLAN
+     * Then: 400 error with retry message
+     */
+    test('should block transition when job is CANCELLED', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Transition to SPECIFY
+      const specifyResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+      const specifyBody = await specifyResponse.json();
+      const jobId = specifyBody.jobId;
+
+      // Update job to RUNNING then CANCELLED
+      const workflowToken =
+        process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'RUNNING' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'CANCELLED' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+
+      // Act - Attempt transition with CANCELLED job
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow was cancelled');
+      expect(body.message).toContain('retry');
+      expect(body.details.jobStatus).toBe('CANCELLED');
+    });
+
+    /**
+     * User Story 1: Block PLAN→BUILD transition when plan job is PENDING
+     * Given: Ticket in PLAN stage with PENDING plan job
+     * When: Attempt transition to BUILD
+     * Then: 400 error blocking transition
+     */
+    test('should block PLAN→BUILD transition when plan job is PENDING', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Complete SPECIFY stage
+      await transitionThrough(request, ticket.id, ['SPECIFY']);
+
+      // Transition to PLAN (creates PENDING job)
+      const planResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+      expect(planResponse.status()).toBe(200);
+
+      // Act - Attempt transition to BUILD while plan job is PENDING
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'BUILD' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.details.currentStage).toBe('PLAN');
+      expect(body.details.targetStage).toBe('BUILD');
+      expect(body.details.jobStatus).toBe('PENDING');
+    });
+
+    /**
+     * User Story 1: Block BUILD→VERIFY transition when build job is RUNNING
+     * Given: Ticket in BUILD stage with RUNNING build job
+     * When: Attempt transition to VERIFY
+     * Then: 400 error blocking transition
+     */
+    test('should block BUILD→VERIFY transition when build job is RUNNING', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Complete SPECIFY and PLAN stages
+      await transitionThrough(request, ticket.id, ['SPECIFY', 'PLAN']);
+
+      // Transition to BUILD
+      const buildResponse = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'BUILD' } }
+      );
+      const buildBody = await buildResponse.json();
+      const jobId = buildBody.jobId;
+
+      // Update job to RUNNING
+      const workflowToken =
+        process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+      await request.patch(`/api/jobs/${jobId}/status`, {
+        data: { status: 'RUNNING' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+
+      // Act - Attempt transition to VERIFY while build job is RUNNING
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'VERIFY' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.details.currentStage).toBe('BUILD');
+      expect(body.details.targetStage).toBe('VERIFY');
+      expect(body.details.jobStatus).toBe('RUNNING');
+    });
+
+    /**
+     * User Story 2: Allow transition when job is COMPLETED
+     * Given: Ticket in SPECIFY stage with COMPLETED job
+     * When: Attempt transition to PLAN
+     * Then: 200 success, new job created
+     */
+    test('should allow transition when job is COMPLETED', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Transition to SPECIFY and complete the job
+      await transitionThrough(request, ticket.id, ['SPECIFY']);
+
+      // Act - Transition to PLAN with COMPLETED job
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert - Success response
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeGreaterThan(0);
+
+      // Assert - Ticket updated and new job created
+      const updatedTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      });
+      expect(updatedTicket?.stage).toBe('PLAN');
+      expect(updatedTicket?.jobs[0]?.command).toBe('plan');
+      expect(updatedTicket?.jobs[0]?.status).toBe('PENDING');
+    });
+
+    /**
+     * User Story 2: Allow PLAN→BUILD transition when plan job is COMPLETED
+     * Given: Ticket in PLAN stage with COMPLETED plan job
+     * When: Attempt transition to BUILD
+     * Then: 200 success, build job created
+     */
+    test('should allow PLAN→BUILD transition when plan job is COMPLETED', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Complete SPECIFY and PLAN stages
+      await transitionThrough(request, ticket.id, ['SPECIFY', 'PLAN']);
+
+      // Act - Transition to BUILD with COMPLETED plan job
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'BUILD' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeGreaterThan(0);
+
+      // Assert - Build stage and new job
+      const updatedTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      });
+      expect(updatedTicket?.stage).toBe('BUILD');
+      expect(updatedTicket?.jobs[0]?.command).toBe('implement');
+    });
+
+    /**
+     * User Story 2: Allow BUILD→VERIFY transition when build job is COMPLETED
+     * Given: Ticket in BUILD stage with COMPLETED build job
+     * When: Attempt transition to VERIFY
+     * Then: 200 success, no new job (manual stage)
+     */
+    test('should allow BUILD→VERIFY transition when build job is COMPLETED', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Complete SPECIFY, PLAN, and BUILD stages
+      await transitionThrough(request, ticket.id, ['SPECIFY', 'PLAN', 'BUILD']);
+
+      // Act - Transition to VERIFY with COMPLETED build job
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'VERIFY' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeUndefined(); // VERIFY is manual stage
+
+      // Assert - VERIFY stage reached
+      const updatedTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+      });
+      expect(updatedTicket?.stage).toBe('VERIFY');
+    });
+
+    /**
+     * User Story 3: Allow INBOX→SPECIFY transition without job validation
+     * Given: Ticket in INBOX stage (no prior jobs)
+     * When: Attempt transition to SPECIFY
+     * Then: 200 success, no job validation performed
+     */
+    test('should allow INBOX→SPECIFY transition without job validation', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+
+      // Act - Transition from INBOX to SPECIFY (no prior jobs to validate)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeGreaterThan(0);
+    });
+
+    /**
+     * User Story 4: Validate against most recent job (COMPLETED after FAILED)
+     * Given: Ticket with old FAILED job and new COMPLETED job
+     * When: Attempt transition
+     * Then: 200 success (validates against most recent COMPLETED job)
+     */
+    test('should validate against most recent job (COMPLETED after FAILED)', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Create first job (FAILED)
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'FAILED',
+          startedAt: new Date(Date.now() - 10000), // 10 seconds ago
+          completedAt: new Date(Date.now() - 9000),
+          updatedAt: new Date(Date.now() - 10000),
+        },
+      });
+
+      // Update ticket to SPECIFY stage
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { stage: 'SPECIFY', version: { increment: 1 } },
+      });
+
+      // Create second job (COMPLETED) - most recent
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'COMPLETED',
+          startedAt: new Date(), // Now (most recent)
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Act - Transition to PLAN (should validate against most recent COMPLETED job)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeGreaterThan(0);
+    });
+
+    /**
+     * User Story 4: Validate against most recent job (FAILED after COMPLETED)
+     * Given: Ticket with old COMPLETED job and new FAILED job
+     * When: Attempt transition
+     * Then: 400 error (validates against most recent FAILED job)
+     */
+    test('should validate against most recent job (FAILED after COMPLETED)', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Create first job (COMPLETED)
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'COMPLETED',
+          startedAt: new Date(Date.now() - 10000), // 10 seconds ago
+          completedAt: new Date(Date.now() - 9000),
+          updatedAt: new Date(Date.now() - 10000),
+        },
+      });
+
+      // Update ticket to SPECIFY stage
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { stage: 'SPECIFY', version: { increment: 1 } },
+      });
+
+      // Create second job (FAILED) - most recent
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'FAILED',
+          startedAt: new Date(), // Now (most recent)
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Act - Transition to PLAN (should validate against most recent FAILED job)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow failed');
+      expect(body.details.jobStatus).toBe('FAILED');
+    });
+
+    /**
+     * User Story 4: Validate against most recent job with three jobs
+     * Given: Ticket with FAILED, COMPLETED, and RUNNING jobs
+     * When: Attempt transition
+     * Then: 400 error (validates against most recent RUNNING job)
+     */
+    test('should validate against most recent job with three jobs (FAILED, COMPLETED, RUNNING)', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Create first job (FAILED)
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'FAILED',
+          startedAt: new Date(Date.now() - 20000), // 20 seconds ago
+          completedAt: new Date(Date.now() - 19000),
+          updatedAt: new Date(Date.now() - 20000),
+        },
+      });
+
+      // Update ticket to SPECIFY stage
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { stage: 'SPECIFY', version: { increment: 1 } },
+      });
+
+      // Create second job (COMPLETED)
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'COMPLETED',
+          startedAt: new Date(Date.now() - 10000), // 10 seconds ago
+          completedAt: new Date(Date.now() - 9000),
+          updatedAt: new Date(Date.now() - 10000),
+        },
+      });
+
+      // Create third job (RUNNING) - most recent
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'RUNNING',
+          startedAt: new Date(), // Now (most recent)
+          updatedAt: new Date(),
+        },
+      });
+
+      // Act - Transition to PLAN (should validate against most recent RUNNING job)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow is still running');
+      expect(body.details.jobStatus).toBe('RUNNING');
+    });
   });
 });

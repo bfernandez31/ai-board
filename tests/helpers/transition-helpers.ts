@@ -26,21 +26,40 @@ export async function transitionThrough(
       throw new Error(`Transition to ${stage} failed: ${JSON.stringify(body)}`);
     }
 
-    // After SPECIFY transition, simulate workflow setting branch
-    if (stage === 'SPECIFY') {
-      const branchName = `feature/ticket-${ticketId}`;
+    // For automated stages, simulate job completion
+    if (['SPECIFY', 'PLAN', 'BUILD'].includes(stage)) {
+      const body = await response.json();
+      const jobId = body.jobId;
       const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
 
-      const branchResponse = await request.patch(`/api/projects/1/tickets/${ticketId}/branch`, {
-        data: { branch: branchName },
-        headers: {
-          'Authorization': `Bearer ${workflowToken}`,
-        },
-      });
+      if (jobId) {
+        // Transition job to RUNNING then COMPLETED
+        await request.patch(`/api/jobs/${jobId}/status`, {
+          data: { status: 'RUNNING' },
+          headers: { 'Authorization': `Bearer ${workflowToken}` },
+        });
 
-      if (!branchResponse.ok()) {
-        const body = await branchResponse.json();
-        throw new Error(`Branch update failed: ${JSON.stringify(body)}`);
+        await request.patch(`/api/jobs/${jobId}/status`, {
+          data: { status: 'COMPLETED' },
+          headers: { 'Authorization': `Bearer ${workflowToken}` },
+        });
+      }
+
+      // After SPECIFY transition, simulate workflow setting branch
+      if (stage === 'SPECIFY') {
+        const branchName = `feature/ticket-${ticketId}`;
+
+        const branchResponse = await request.patch(`/api/projects/1/tickets/${ticketId}/branch`, {
+          data: { branch: branchName },
+          headers: {
+            'Authorization': `Bearer ${workflowToken}`,
+          },
+        });
+
+        if (!branchResponse.ok()) {
+          const body = await branchResponse.json();
+          throw new Error(`Branch update failed: ${JSON.stringify(body)}`);
+        }
       }
     }
   }

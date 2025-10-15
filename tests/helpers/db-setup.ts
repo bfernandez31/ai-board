@@ -135,6 +135,77 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
 }
 
 /**
+ * Create a test ticket with a specific job status for testing job validation
+ */
+export async function createTicketWithJob(
+  data: {
+    stage: 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP';
+    jobStatus: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+    jobCommand: string;
+    title?: string;
+    description?: string;
+  }
+): Promise<{ ticket: TestTicket; jobId: number }> {
+  const prisma = getPrismaClient();
+
+  // Ensure test user exists
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@e2e.local' },
+    update: {},
+    create: {
+      id: 'test-user-id',
+      email: 'test@e2e.local',
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Ensure test project 1 exists
+  const project = await prisma.project.upsert({
+    where: { id: 1 },
+    update: {
+      userId: testUser.id,
+    },
+    create: {
+      id: 1,
+      name: '[e2e] Test Project',
+      description: 'Project for automated tests',
+      githubOwner: 'test',
+      githubRepo: 'test',
+      userId: testUser.id,
+      updatedAt: new Date(),
+    },
+  });
+
+  // Create ticket
+  const ticket = await prisma.ticket.create({
+    data: {
+      title: data.title ?? `[e2e] Test Ticket in ${data.stage}`,
+      description: data.description ?? 'Test ticket for job validation',
+      stage: data.stage,
+      projectId: project.id,
+      updatedAt: new Date(),
+    },
+  });
+
+  // Create job with specified status
+  const job = await prisma.job.create({
+    data: {
+      ticketId: ticket.id,
+      projectId: project.id,
+      command: data.jobCommand,
+      status: data.jobStatus,
+      startedAt: new Date(),
+      completedAt: data.jobStatus === 'COMPLETED' ? new Date() : null,
+      updatedAt: new Date(),
+    },
+  });
+
+  return { ticket, jobId: job.id };
+}
+
+/**
  * @deprecated Use cleanupDatabase() from db-cleanup.ts instead.
  * This function deletes ALL projects and tickets without selective cleanup.
  * The cleanupDatabase() function preserves non-test data (projects 3+).
