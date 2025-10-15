@@ -203,12 +203,13 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   });
 
   /**
-   * Test Scenario 5: Invalid Transition (Skipping Stage)
+   * Test Scenario 5: Quick-Impl Transition (INBOX → BUILD)
+   * Feature: 031-quick-implementation
    * Given: Ticket in INBOX stage
-   * When: POST with targetStage="BUILD" (skipping SPECIFY and PLAN)
-   * Then: 400 error, no changes
+   * When: POST with targetStage="BUILD" (quick-impl mode)
+   * Then: 200 success, job created with command="quick-impl", stage updated to BUILD
    */
-  test('should reject invalid transition (skipping stages)', async ({ request }) => {
+  test('should transition ticket from INBOX to BUILD via quick-impl', async ({ request }) => {
     // Arrange
     const { ticket } = await setupTestData();
     const prisma = getPrismaClient();
@@ -221,22 +222,68 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
+    // Assert - Response
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.jobId).toBeGreaterThan(0);
+    expect(body.message).toContain('Workflow dispatched');
+
+    // Assert - Database state
+    const updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+      include: { jobs: true },
+    });
+
+    expect(updatedTicket?.stage).toBe('BUILD');
+    expect(updatedTicket?.branch).toBeNull(); // Branch not set during transition
+    expect(updatedTicket?.version).toBe(2); // Incremented from 1
+    expect(updatedTicket?.jobs).toHaveLength(1);
+    expect(updatedTicket?.jobs[0]?.command).toBe('quick-impl'); // Quick-impl specific command
+    expect(updatedTicket?.jobs[0]?.status).toBe('PENDING');
+  });
+
+  /**
+   * Test Scenario 5b: Invalid Transition (Skipping Stage - SPECIFY → BUILD)
+   * Feature: 031-quick-implementation
+   * Given: Ticket in SPECIFY stage
+   * When: POST with targetStage="BUILD" (skipping PLAN, not quick-impl)
+   * Then: 400 error, no changes
+   * Note: INBOX → BUILD is now valid (quick-impl), but SPECIFY → BUILD is not
+   */
+  test('should reject invalid transition (skipping stages)', async ({ request }) => {
+    // Arrange
+    const { ticket } = await setupTestData();
+    const prisma = getPrismaClient();
+
+    // Complete SPECIFY stage
+    await transitionThrough(request, ticket.id, ['SPECIFY']);
+
+    // Act - Try to skip PLAN stage (not quick-impl context)
+    const response = await request.post(
+      `/api/projects/1/tickets/${ticket.id}/transition`,
+      {
+        data: { targetStage: 'BUILD' },
+      }
+    );
+
     // Assert - Error response
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.error).toBe('Invalid stage transition');
     expect(body.message).toContain('Cannot transition');
-    expect(body.message).toContain('INBOX');
+    expect(body.message).toContain('SPECIFY');
     expect(body.message).toContain('BUILD');
 
-    // Assert - No changes
+    // Assert - No changes (still in SPECIFY)
     const unchangedTicket = await prisma.ticket.findUnique({
       where: { id: ticket.id },
-      include: { jobs: true },
+      include: { jobs: { orderBy: { createdAt: 'desc' } } },
     });
 
-    expect(unchangedTicket?.stage).toBe('INBOX'); // Unchanged
-    expect(unchangedTicket?.jobs).toHaveLength(0); // No jobs created
+    expect(unchangedTicket?.stage).toBe('SPECIFY'); // Unchanged
+    expect(unchangedTicket?.jobs).toHaveLength(1); // Only SPECIFY job exists
+    expect(unchangedTicket?.jobs[0]?.command).toBe('specify');
   });
 
   /**

@@ -3,18 +3,26 @@
 set -e
 
 JSON_MODE=false
+MODE="specify"  # Default mode: full spec template
 ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --json) JSON_MODE=true ;;
-        --help|-h) echo "Usage: $0 [--json] <feature_description>"; exit 0 ;;
+        --mode=*) MODE="${arg#--mode=}" ;;
+        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl] <feature_description>"; exit 0 ;;
         *) ARGS+=("$arg") ;;
     esac
 done
 
+# Validate mode parameter
+if [ "$MODE" != "specify" ] && [ "$MODE" != "quick-impl" ]; then
+    echo "Error: Invalid mode '$MODE'. Must be 'specify' or 'quick-impl'" >&2
+    exit 1
+fi
+
 FEATURE_DESCRIPTION="${ARGS[*]}"
 if [ -z "$FEATURE_DESCRIPTION" ]; then
-    echo "Usage: $0 [--json] <feature_description>" >&2
+    echo "Usage: $0 [--json] [--mode=specify|quick-impl] <feature_description>" >&2
     exit 1
 fi
 
@@ -80,9 +88,47 @@ fi
 FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
-TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
 SPEC_FILE="$FEATURE_DIR/spec.md"
-if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
+
+# Choose template based on mode
+if [ "$MODE" = "quick-impl" ]; then
+    # Quick-impl mode: Create minimal spec.md with only title and description
+    cat > "$SPEC_FILE" <<EOF
+# Quick Implementation: ${FEATURE_DESCRIPTION}
+
+**Feature Branch**: \`${BRANCH_NAME}\`
+**Created**: $(date +%Y-%m-%d)
+**Mode**: Quick Implementation (bypassing formal specification)
+
+## Description
+
+${FEATURE_DESCRIPTION}
+
+## Implementation Notes
+
+This feature is being implemented via quick-impl workflow, bypassing formal specification and planning phases.
+
+**Quick-impl is suitable for**:
+- Bug fixes (typos, minor logic corrections)
+- UI tweaks (colors, spacing, text changes)
+- Simple refactoring (renaming, file organization)
+- Documentation updates
+
+**For complex features**, use the full workflow: INBOX → SPECIFY → PLAN → BUILD
+
+## Implementation
+
+Implementation will be done directly by Claude Code based on the description above.
+EOF
+else
+    # Specify mode: Use full spec template (existing behavior)
+    TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
+    if [ -f "$TEMPLATE" ]; then
+        cp "$TEMPLATE" "$SPEC_FILE"
+    else
+        touch "$SPEC_FILE"
+    fi
+fi
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 export SPECIFY_FEATURE="$BRANCH_NAME"

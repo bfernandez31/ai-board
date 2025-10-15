@@ -22,9 +22,9 @@ Specifications are organized by feature domain. Each category documents the curr
 | **Foundation** | [01-foundation.md](01-foundation.md) | Kanban board, ticket display, basic workflow |
 | **Ticket Management** | [02-ticket-management.md](02-ticket-management.md) | Creation, editing, drag-drop, workflow stages |
 | **Project Architecture** | [03-project-architecture.md](03-project-architecture.md) | Multi-project support, GitHub integration |
-| **Workflow Automation** | [04-workflow-automation.md](04-workflow-automation.md) | Job tracking, GitHub Actions, spec-kit automation |
+| **Workflow Automation** | [04-workflow-automation.md](04-workflow-automation.md) | Job tracking, GitHub Actions, spec-kit automation, quick-impl workflow |
 | **Testing & Quality** | [05-testing-quality.md](05-testing-quality.md) | Test infrastructure, data isolation |
-| **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation |
+| **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation, job-blocked feedback |
 | **Authentication** | [07-authentication.md](07-authentication.md) | User auth, project ownership, test authentication |
 | **Clarification Policies** | [08-clarification-policies.md](08-clarification-policies.md) | Auto-resolution, policy configuration, AI-driven spec generation |
 
@@ -98,4 +98,4 @@ This documentation consolidates those specifications into **current state** docu
 ---
 
 **Last Updated**: 2025-10-15
-**Version**: Current State (consolidated from 29 specifications + authentication + clarification policies)
+**Version**: Current State (consolidated from 31 specifications + authentication + clarification policies + quick-implementation + job-blocked UX)
