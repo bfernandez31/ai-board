@@ -90,6 +90,7 @@ export async function GET(
       branch: ticket.branch,
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
+      workflowType: ticket.workflowType,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
       project: {
@@ -336,6 +337,7 @@ export async function PATCH(
             branch: updatedTicket.branch,
             autoMode: updatedTicket.autoMode,
             clarificationPolicy: updatedTicket.clarificationPolicy,
+            workflowType: updatedTicket.workflowType,
             createdAt: updatedTicket.createdAt.toISOString(),
             updatedAt: updatedTicket.updatedAt.toISOString(),
             ...(jobId !== undefined && { jobId }),
@@ -477,6 +479,7 @@ export async function PATCH(
             stage: updatedTicket.stage,
             version: updatedTicket.version,
             branch: updatedTicket.branch,
+            workflowType: updatedTicket.workflowType,
             updatedAt: updatedTicket.updatedAt.toISOString(),
             ...(transitionResult.jobId !== undefined && { jobId: transitionResult.jobId }),
           },

@@ -352,6 +352,9 @@ function BoardContent({
         return;
       }
 
+      // Find existing ticket to preserve fields not in update
+      const existingTicket = allTickets.find(t => t.id === updatedTicket.id);
+
       const normalizedTicket: TicketWithVersion = {
         id: updatedTicket.id,
         title: updatedTicket.title,
@@ -362,7 +365,8 @@ function BoardContent({
         branch: updatedTicket.branch,
         autoMode: updatedTicket.autoMode,
         clarificationPolicy: updatedTicket.clarificationPolicy,
-        workflowType: updatedTicket.workflowType,
+        // Preserve workflowType from existing ticket if not in update (defensive)
+        workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()
