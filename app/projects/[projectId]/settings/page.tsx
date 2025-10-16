@@ -18,7 +18,6 @@ export default async function ProjectSettingsPage({
 }: {
   params: Promise<{ projectId: string }>;
 }) {
-  // Await params (Next.js 15 requirement)
   const { projectId: projectIdString } = await params;
 
   // Parse and validate projectId
@@ -30,7 +29,15 @@ export default async function ProjectSettingsPage({
   }
 
   // Fetch project (with authentication check)
-  const project = await getProject(projectId);
+  const project = await getProject(projectId).catch((error) => {
+    if (
+      error instanceof Error &&
+      (error.message === 'Project not found' || error.message === 'Unauthorized')
+    ) {
+      notFound();
+    }
+    throw error;
+  });
 
   return (
     <main className="container mx-auto py-10 max-w-4xl">

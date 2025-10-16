@@ -14,9 +14,7 @@ export async function GET(
   context: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    // Await and parse projectId from params (Next.js 15 requirement)
-    const params = await context.params;
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
@@ -74,9 +72,7 @@ export async function POST(
   context: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    // Await and parse projectId from params
-    const params = await context.params;
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);

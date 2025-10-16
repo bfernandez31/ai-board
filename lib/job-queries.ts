@@ -1,4 +1,5 @@
-import { PrismaClient, Job } from '@prisma/client'
+import type { Job } from '@prisma/client'
+import { prisma } from './db/client'
 
 /**
  * Job Query Functions
@@ -8,8 +9,6 @@ import { PrismaClient, Job } from '@prisma/client'
  *
  * See: specs/020-9179-real-time/data-model.md for query patterns
  */
-
-const prisma = new PrismaClient()
 
 /**
  * Get Most Recent Active Job for Ticket
