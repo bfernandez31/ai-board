@@ -11,10 +11,10 @@ import { ZodError } from 'zod';
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { projectId: string } }
+  context: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
@@ -69,10 +69,10 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  context: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
