@@ -167,6 +167,7 @@ The system displays full ticket details in a modal dialog:
 - `title`: Full text without truncation
 - `description`: Complete description
 - `stage`: Current workflow stage
+- `workflowType`: Workflow path indicator (enum: FULL/QUICK, defaults to FULL)
 - `clarificationPolicy`: Optional policy override (enum: AUTO/CONSERVATIVE/PRAGMATIC/INTERACTIVE, NULLABLE)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
@@ -266,12 +267,109 @@ The system enables editing title and description directly in the detail modal:
 - `version`: Incremented on each update (concurrency control)
 - `updatedAt`: Set to current timestamp on save
 
+**Read-Only Fields**:
+- `workflowType`: Set automatically during initial BUILD transition, immutable thereafter
+
 **Validation Rules**:
 - Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
 - Rejects characters outside allowed set (emojis, control characters, other Unicode)
 - No empty or whitespace-only values
 - Character limits enforced
 - Same validation rules apply to both title and description fields
+
+---
+
+## Workflow Type Tracking
+
+**Purpose**: Users need to quickly identify which tickets were implemented through the quick-implementation path versus the full specification workflow. The workflow type badge provides a persistent visual indicator that distinguishes between these two implementation approaches.
+
+### What It Does
+
+The system tracks and displays the workflow path used for each ticket:
+
+**Workflow Types**:
+- **FULL** (default): Standard workflow path (INBOX → SPECIFY → PLAN → BUILD)
+  - Creates complete specification, planning documents, and task breakdown
+  - Appropriate for complex features, architectural changes, and unclear requirements
+  - No badge displayed on ticket card
+- **QUICK**: Quick-implementation path (INBOX → BUILD)
+  - Bypasses formal specification and planning
+  - Appropriate for simple fixes, typos, obvious bugs, and minor UI tweaks
+  - Displays ⚡ Quick badge on ticket card
+
+**Badge Display**:
+- **Visual Indicator**: Lightning bolt emoji (⚡) with "Quick" text
+- **Positioning**: Appears in ticket card header, positioned LEFT of the model badge (SONNET)
+- **Styling**: Amber color scheme for visual distinction
+  - Light theme: `bg-amber-100` background, `text-amber-800` text
+  - Dark theme: `bg-amber-900` background, `text-amber-200` text
+- **Persistence**: Badge remains visible throughout ticket lifecycle (BUILD → VERIFY → SHIP)
+
+**Automatic Detection**:
+- System automatically sets `workflowType=QUICK` when ticket transitions INBOX → BUILD
+- System maintains `workflowType=FULL` (default) for all other transitions
+- Field is immutable after initial setting (cannot be changed through UI)
+
+**Data Integrity**:
+- Atomic transaction: `workflowType` updated in same transaction as Job creation
+- Rollback safety: If workflow dispatch fails, `workflowType` is NOT updated
+- Version control: Included in optimistic concurrency control
+
+### Requirements
+
+**Field Definition**:
+- Database field: `workflowType` enum (FULL, QUICK)
+- Default value: FULL (backward compatible with existing tickets)
+- Nullability: NOT NULL (always has a value)
+- Index: Composite index on (projectId, workflowType) for future filtering features
+
+**Automatic Setting**:
+- Quick-impl detection: `currentStage === INBOX && targetStage === BUILD`
+- Set to QUICK: During INBOX → BUILD transition, atomic with Job creation
+- Set to FULL: All other transitions (default value preserved)
+- Immutability: Value never changed after initial BUILD transition
+
+**Badge Rendering**:
+- Conditional display: Show badge only when `workflowType === 'QUICK'`
+- Component: shadcn/ui Badge with variant="outline"
+- Position: Card header, left of model badge (SONNET)
+- Accessibility: Proper ARIA labels for screen readers
+- Performance: <100ms render time, no layout shift
+
+**Data Model Integration**:
+- TypeScript type: `TicketWithVersion` includes `workflowType: WorkflowType`
+- Board query: Selects `workflowType` field from database
+- API response: Includes `workflowType` in transition endpoint response
+- State management: Merged from server response into client state after transitions
+
+**Validation**:
+- Migration: All existing tickets default to FULL
+- New tickets: Default to FULL via database default
+- Quick-impl tickets: Automatically set to QUICK during transition
+- Manual updates: Not supported through UI (database-only for corrections)
+
+### Data Model
+
+**WorkflowType Enum**:
+- `FULL`: Standard workflow (INBOX → SPECIFY → PLAN → BUILD)
+- `QUICK`: Quick-implementation (INBOX → BUILD)
+
+**Ticket Field**:
+- `workflowType`: WorkflowType enum, NOT NULL, defaults to FULL
+- Set during first BUILD transition
+- Immutable after setting (application-level enforcement)
+- Indexed with projectId for future filtering
+
+**Badge Styling**:
+- Light theme: `bg-amber-100 text-amber-800`
+- Dark theme: `bg-amber-900 dark:text-amber-200`
+- Size: `text-xs px-1.5 py-0.5 font-semibold`
+- Layout: `flex items-center gap-2` with model badge
+
+**State Management**:
+- Optimistic update: Badge appears immediately after drag-and-drop
+- Server sync: `workflowType` merged from API response into local state
+- Rollback: Reverts to FULL if transition fails
 
 ---
 
@@ -302,6 +400,15 @@ The system enables editing title and description directly in the detail modal:
 - ✅ Optimistic updates with rollback
 - ✅ Concurrent edit protection
 - ✅ Success/error notifications
+
+**Workflow Type Tracking**:
+- ✅ Automatic detection (INBOX → BUILD = QUICK, other paths = FULL)
+- ✅ ⚡ Quick badge on ticket cards
+- ✅ Amber styling (light/dark theme support)
+- ✅ Badge positioned left of model badge
+- ✅ Persistent across stage transitions
+- ✅ Atomic transaction with Job creation
+- ✅ Immutable after initial setting
 
 ### User Workflows
 
@@ -355,6 +462,15 @@ The system enables editing title and description directly in the detail modal:
 - Title and description use identical character validation rules
 - Version-based conflict detection prevents lost updates
 - Optimistic updates with rollback on failure
+
+**Workflow Type** (added 2025-01-16):
+- Automatically set during first BUILD transition
+- INBOX → BUILD sets `workflowType=QUICK` (quick-implementation path)
+- All other paths maintain `workflowType=FULL` (default)
+- Immutable after initial setting (application-level enforcement)
+- Badge displayed only for QUICK workflow type
+- Badge persists through all stage transitions (BUILD → VERIFY → SHIP)
+- Atomic transaction with Job creation ensures data consistency
 
 ### Technical Details
 
