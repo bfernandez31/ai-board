@@ -7,6 +7,7 @@ This domain covers user-facing experience features that provide real-time feedba
 **Current Capabilities**:
 - Real-time job status visualization on ticket cards
 - Specification document viewer
+- Branch link in ticket details for quick GitHub access
 - Projects list page with navigation
 - Application header with branding and placeholder navigation buttons
 
@@ -144,6 +145,101 @@ The system provides one-click access to view generated specifications:
 - Ticket must have `branch` field populated
 - At least one Job with `command="specify"` and `status="COMPLETED"`
 - Ticket must belong to current project
+
+---
+
+## Branch Link in Ticket Details
+
+**Purpose**: Users need quick access to review branch changes in GitHub without manually constructing URLs. The branch link provides one-click navigation from ticket details to the GitHub compare view, showing all changes made in the branch.
+
+### What It Does
+
+The system displays a clickable branch link in the ticket detail modal:
+
+**Link Display**:
+- Appears in ticket detail header row alongside stage and policy badges
+- Compact inline badge design with:
+  - GitBranch icon (left)
+  - Branch name (truncated at 150px for long names)
+  - ExternalLink icon (right)
+- Blue color scheme (#89b4fa) consistent with GitHub links
+- Tooltip shows full branch name on hover
+
+**Visibility Conditions**:
+- Link displays when:
+  - Ticket has `branch` field populated (non-empty)
+  - Ticket stage is NOT "SHIP" (development/review stages only)
+  - Project has `githubOwner` and `githubRepo` configured
+- Link hidden when:
+  - Branch is null or empty string
+  - Ticket reaches SHIP stage (deployed)
+  - GitHub configuration missing
+
+**Navigation**:
+- Opens in new browser tab (target="_blank")
+- Security attributes: rel="noopener noreferrer" prevents Tabnabbing
+- URL format: `https://github.com/{owner}/{repo}/compare/main...{branch}`
+- Branch name properly URL-encoded for special characters
+
+**URL Encoding**:
+- Spaces encoded as `%20`
+- Slashes encoded as `%2F`
+- Hash symbols encoded as `%23`
+- All special characters properly encoded via `encodeURIComponent()`
+
+### Requirements
+
+**Display**:
+- Branch link appears in ticket detail modal header
+- Positioned in compact header row with stage badge, policy badge, and edit policy button
+- Compact inline badge design saves vertical space
+- GitBranch and ExternalLink icons provide clear visual affordance
+- Branch name truncates at 150px with CSS `truncate` class
+- Blue color scheme (#89b4fa) distinguishes from other badges
+
+**Visibility Logic**:
+- System displays link when ticket.branch is non-empty string
+- System hides link when ticket.branch is null or empty
+- System hides link when ticket.stage equals "SHIP"
+- System hides link when project.githubOwner or project.githubRepo missing
+- All conditions must be met for link to display
+
+**Navigation**:
+- Link opens in new browser tab (target="_blank")
+- Security attributes prevent Tabnabbing (rel="noopener noreferrer")
+- URL follows pattern: `https://github.com/{owner}/{repo}/compare/main...{branch}`
+- Compare view shows diff between main branch and feature branch
+- Branch name URL-encoded to handle special characters
+
+**URL Construction**:
+- Uses project.githubOwner for repository owner
+- Uses project.githubRepo for repository name
+- Uses ticket.branch for branch name
+- Applies `encodeURIComponent()` to branch name
+- Assumes 'main' as base branch name (standard convention)
+
+### Data Model
+
+**Required Fields**:
+- `ticket.branch`: String (nullable), stores Git branch name
+- `project.githubOwner`: String, GitHub repository owner/organization
+- `project.githubRepo`: String, GitHub repository name
+- `ticket.stage`: Stage enum, determines visibility
+
+**Visual Components**:
+- GitBranch icon (lucide-react, 12x12px)
+- Branch name text (max-width: 150px, truncated)
+- ExternalLink icon (lucide-react, 12x12px)
+- Blue badge background (#89b4fa/#b4befe hover)
+- Border and padding (text-xs, px-2, py-0.5)
+
+**URL Structure**:
+```
+https://github.com/{githubOwner}/{githubRepo}/compare/main...{encodedBranch}
+
+Example:
+https://github.com/bfernandez31/ai-board/compare/main...033-link-to-branch
+```
 
 ---
 
@@ -316,6 +412,15 @@ The system displays a persistent header at the top of all pages:
 - ✅ Dark theme modal dialog
 - ✅ Responsive mobile/desktop layout
 - ✅ Project-scoped validation
+
+**Branch Link**:
+- ✅ One-click GitHub branch access from ticket details
+- ✅ GitHub compare view (main...branch diff)
+- ✅ Compact inline badge design in header row
+- ✅ Stage-based visibility (hidden in SHIP)
+- ✅ URL encoding for special characters
+- ✅ Security attributes (noopener noreferrer)
+- ✅ Branch name truncation at 150px
 
 **Project Navigation**:
 - ✅ Projects list with comprehensive information
