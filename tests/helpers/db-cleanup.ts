@@ -51,6 +51,7 @@ export async function ensureTestFixtures(): Promise<string> {
       where: { id: 1 },
       update: {
         userId: testUser.id,
+        clarificationPolicy: 'AUTO', // Reset to default for test isolation
       },
       create: {
         id: 1,
@@ -59,6 +60,7 @@ export async function ensureTestFixtures(): Promise<string> {
         githubOwner: 'test',
         githubRepo: 'test',
         userId: testUser.id,
+        clarificationPolicy: 'AUTO', // Default policy
         updatedAt: new Date(), // Required: Project.updatedAt has no default
       },
     });
@@ -67,6 +69,7 @@ export async function ensureTestFixtures(): Promise<string> {
       where: { id: 2 },
       update: {
         userId: testUser.id,
+        clarificationPolicy: 'AUTO', // Reset to default for test isolation
       },
       create: {
         id: 2,
@@ -75,6 +78,7 @@ export async function ensureTestFixtures(): Promise<string> {
         githubOwner: 'test',
         githubRepo: 'test2',
         userId: testUser.id,
+        clarificationPolicy: 'AUTO', // Default policy
         updatedAt: new Date(), // Required: Project.updatedAt has no default
       },
     });
@@ -100,7 +104,7 @@ export async function ensureTestFixtures(): Promise<string> {
 
 /**
  * Clean test data (called before each test)
- * Fast operation - only deletes tickets, no upserts
+ * Fast operation - deletes tickets and resets project policies
  */
 export async function cleanupDatabase(): Promise<void> {
   const client = getPrismaClient();
@@ -148,6 +152,18 @@ export async function cleanupDatabase(): Promise<void> {
             },
           },
         ],
+      },
+    });
+
+    // Reset test project policies to AUTO for test isolation
+    await client.project.updateMany({
+      where: {
+        id: {
+          in: [1, 2],
+        },
+      },
+      data: {
+        clarificationPolicy: 'AUTO',
       },
     });
   } catch (error) {

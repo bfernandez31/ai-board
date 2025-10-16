@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 import { setupTestData } from '../helpers/db-setup';
-import { transitionThrough } from '../helpers/transition-helpers';
+import { transitionThrough, getLatestJobId } from '../helpers/transition-helpers';
 
 /**
  * E2E tests for GitHub Workflow Transition API
@@ -34,12 +34,12 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Response
+    // Assert - Response (API returns full ticket object)
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.jobId).toBeGreaterThan(0);
-    expect(body.message).toContain('Workflow dispatched');
+    expect(body.id).toBe(ticket.id);
+    expect(body.stage).toBe('SPECIFY');
+    expect(body.version).toBe(2); // Incremented from 1
 
     // Assert - Database state
     const updatedTicket = await prisma.ticket.findUnique({
@@ -71,7 +71,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       data: { targetStage: 'SPECIFY' },
     });
     const specifyBody = await specifyResponse.json();
-    const jobId = specifyBody.jobId;
+    const jobId = await getLatestJobId(request, ticket.id);
 
     // Complete the SPECIFY job
     const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
@@ -112,8 +112,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Assert - Response
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.jobId).toBeGreaterThan(0);
+    expect(body.id).toBeGreaterThan(0);
+    expect(body.stage).toBeDefined();
 
     // Assert - Branch reused
     const updatedTicket = await prisma.ticket.findUnique({
@@ -147,10 +147,11 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Response
+    // Assert - Response (API returns full ticket)
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.jobId).toBeGreaterThan(0);
+    expect(body.id).toBe(ticket.id);
+    expect(body.stage).toBe('BUILD');
 
     // Assert - Database
     const updatedTicket = await prisma.ticket.findUnique({
@@ -187,9 +188,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Assert - Response
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.jobId).toBeUndefined();
-    expect(body.message).toContain('no workflow');
+    expect(body.id).toBeGreaterThan(0);
+    expect(body.stage).toBe('VERIFY');
 
     // Assert - No new job created
     const afterJobs = await prisma.job.findMany({ where: { ticketId: ticket.id } });
@@ -222,12 +222,11 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Response
+    // Assert - Response (API returns full ticket)
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.jobId).toBeGreaterThan(0);
-    expect(body.message).toContain('Workflow dispatched');
+    expect(body.id).toBe(ticket.id);
+    expect(body.stage).toBe('BUILD');
 
     // Assert - Database state
     const updatedTicket = await prisma.ticket.findUnique({
@@ -491,7 +490,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
     expect(transitionResponse.status()).toBe(200);
     const transitionBody = await transitionResponse.json();
-    const jobId = transitionBody.jobId;
+    const jobId = await getLatestJobId(request, ticket.id);
 
     // Assert 1: Branch is null after transition
     let updatedTicket = await prisma.ticket.findUnique({
@@ -620,7 +619,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         { data: { targetStage: 'SPECIFY' } }
       );
       const specifyBody = await specifyResponse.json();
-      const jobId = specifyBody.jobId;
+      const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING
       const workflowToken =
@@ -660,7 +659,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         { data: { targetStage: 'SPECIFY' } }
       );
       const specifyBody = await specifyResponse.json();
-      const jobId = specifyBody.jobId;
+      const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING then FAILED
       const workflowToken =
@@ -705,7 +704,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         { data: { targetStage: 'SPECIFY' } }
       );
       const specifyBody = await specifyResponse.json();
-      const jobId = specifyBody.jobId;
+      const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING then CANCELLED
       const workflowToken =
@@ -788,7 +787,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         { data: { targetStage: 'BUILD' } }
       );
       const buildBody = await buildResponse.json();
-      const jobId = buildBody.jobId;
+      const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING
       const workflowToken =
@@ -836,8 +835,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert - Success response
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeGreaterThan(0);
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBeDefined();
 
       // Assert - Ticket updated and new job created
       const updatedTicket = await prisma.ticket.findUnique({
@@ -872,8 +871,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeGreaterThan(0);
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBeDefined();
 
       // Assert - Build stage and new job
       const updatedTicket = await prisma.ticket.findUnique({
@@ -907,8 +906,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeUndefined(); // VERIFY is manual stage
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBe('VERIFY');
 
       // Assert - VERIFY stage reached
       const updatedTicket = await prisma.ticket.findUnique({
@@ -936,8 +935,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeGreaterThan(0);
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBeDefined();
     });
 
     /**
@@ -992,8 +991,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeGreaterThan(0);
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBeDefined();
     });
 
     /**
@@ -1150,8 +1149,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       // Assert - Response success
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.success).toBe(true);
-      expect(body.jobId).toBeGreaterThan(0);
+      expect(body.id).toBeGreaterThan(0);
+      expect(body.stage).toBeDefined();
 
       // Assert - Database state
       const updatedTicket = await prisma.ticket.findUnique({

@@ -237,13 +237,45 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(body).toHaveProperty('error');
   });
 
-  test('should return 400 for invalid stage transition (skip stages)', async ({ request }) => {
+  test('should allow INBOX → BUILD transition (quick-impl workflow)', async ({ request }) => {
     const ticket = await createTestTicket(request);
 
+    // INBOX → BUILD is now allowed via quick-impl workflow
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        stage: 'BUILD', // Skipping SPECIFY and PLAN
+        stage: 'BUILD',
         version: 1
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.stage).toBe('BUILD');
+    expect(body.version).toBe(2);
+
+    // Should create a job for quick-impl
+    expect(body).toHaveProperty('jobId');
+    expect(body.jobId).toBeGreaterThan(0);
+
+    // WorkflowType should be set to QUICK for quick-impl transitions
+    const prisma = getPrismaClient();
+    const updatedTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(updatedTicket?.workflowType).toBe('QUICK');
+  });
+
+  test('should return 400 for other invalid stage transitions (SPECIFY → BUILD)', async ({ request }) => {
+    const ticket = await createTestTicket(request);
+
+    // First transition to SPECIFY
+    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: { stage: 'SPECIFY', version: 1 }
+    });
+
+    // Try to skip PLAN stage (SPECIFY → BUILD)
+    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+      data: {
+        stage: 'BUILD', // Should go SPECIFY → PLAN → BUILD
+        version: 2
       }
     });
 

@@ -5,6 +5,23 @@ import { APIRequestContext } from '@playwright/test';
  */
 
 /**
+ * Extract job ID from transition response
+ * The API returns the full updated ticket object, but we need to fetch the job ID separately
+ */
+export async function getLatestJobId(
+  request: APIRequestContext,
+  ticketId: number
+): Promise<number | undefined> {
+  const prisma = (await import('../helpers/db-cleanup')).getPrismaClient();
+  const jobs = await prisma.job.findMany({
+    where: { ticketId },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  });
+  return jobs[0]?.id;
+}
+
+/**
  * Transitions a ticket through multiple stages sequentially
  * @param request Playwright APIRequestContext
  * @param ticketId Ticket ID to transition
@@ -28,8 +45,8 @@ export async function transitionThrough(
 
     // For automated stages, simulate job completion
     if (['SPECIFY', 'PLAN', 'BUILD'].includes(stage)) {
-      const body = await response.json();
-      const jobId = body.jobId;
+      // API returns full ticket, fetch job ID from database
+      const jobId = await getLatestJobId(request, ticketId);
       const workflowToken = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
 
       if (jobId) {
