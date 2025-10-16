@@ -19,9 +19,9 @@ export const revalidate = 0;
 export default async function ProjectBoardPage({
   params,
 }: {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }) {
-  const { projectId: projectIdString } = params;
+  const { projectId: projectIdString } = await params;
 
   // Parse and validate projectId
   const projectId = parseInt(projectIdString, 10);
