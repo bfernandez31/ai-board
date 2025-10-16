@@ -419,10 +419,10 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     // Verify link text contains branch name (compact design)
     await expect(branchLink).toContainText('033-test-branch');
 
-    // Verify href attribute
+    // Verify href attribute (compare URL format)
     await expect(branchLink).toHaveAttribute(
       'href',
-      'https://github.com/testorg/testrepo/tree/033-test-branch'
+      'https://github.com/testorg/testrepo/compare/main...033-test-branch'
     );
 
     // Verify security attributes
@@ -469,9 +469,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
       branchLink.click(),
     ]);
 
-    // Verify new page URL contains GitHub
+    // Verify new page URL contains GitHub compare URL
     expect(newPage.url()).toContain('github.com');
-    expect(newPage.url()).toContain('/tree/033-new-tab-test');
+    expect(newPage.url()).toContain('/compare/main...033-new-tab-test');
 
     // Clean up new page
     await newPage.close();
@@ -508,9 +508,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     const dialog = page.locator('[role="dialog"]');
     const branchLink = dialog.locator('[data-testid="github-branch-link"]');
 
-    // Verify complete URL structure
+    // Verify complete URL structure (compare format)
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/tree/033-url-test');
+    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...033-url-test');
   });
 
   /**
@@ -762,9 +762,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     const dialog = page.locator('[role="dialog"]');
     const branchLink = dialog.locator('[data-testid="github-branch-link"]');
 
-    // Verify URL encoding (spaces become %20)
+    // Verify URL encoding (spaces become %20) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%20branch%20name');
+    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%20branch%20name');
   });
 
   /**
@@ -798,9 +798,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     const dialog = page.locator('[role="dialog"]');
     const branchLink = dialog.locator('[data-testid="github-branch-link"]');
 
-    // Verify URL encoding (slashes become %2F)
+    // Verify URL encoding (slashes become %2F) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%2Flogin');
+    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%2Flogin');
   });
 
   /**
@@ -834,8 +834,8 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     const dialog = page.locator('[role="dialog"]');
     const branchLink = dialog.locator('[data-testid="github-branch-link"]');
 
-    // Verify URL encoding (all special chars encoded)
+    // Verify URL encoding (all special chars encoded) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%2Flogin%20page%232');
+    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%2Flogin%20page%232');
   });
 });

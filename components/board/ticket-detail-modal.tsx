@@ -105,18 +105,18 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
 };
 
 /**
- * Constructs GitHub branch URL with proper encoding
+ * Constructs GitHub compare URL for viewing branch changes against main
  * @param owner - GitHub repository owner/organization
  * @param repo - GitHub repository name
  * @param branch - Git branch name (will be URL encoded)
- * @returns Fully qualified GitHub branch tree URL
+ * @returns Fully qualified GitHub compare URL (main...branch)
  */
 const buildGitHubBranchUrl = (
   owner: string,
   repo: string,
   branch: string
 ): string => {
-  return `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(branch)}`;
+  return `https://github.com/${owner}/${repo}/compare/main...${encodeURIComponent(branch)}`;
 };
 
 /**
