@@ -163,8 +163,9 @@ export async function POST(
     // Update ticket atomically with version increment
     // Note: Branch is NOT set here - it's created by the GitHub workflow
     // and updated via PATCH /branch when the workflow completes
+    let updatedTicket;
     try {
-      await prisma.ticket.update({
+      updatedTicket = await prisma.ticket.update({
         where: {
           id: ticketId,
           version: currentTicket.version,
@@ -200,14 +201,12 @@ export async function POST(
       throw updateError;
     }
 
-    // Return success response
+    // Return success response with updated ticket data
     return NextResponse.json(
       {
-        success: true,
-        ...(transitionResult.jobId !== undefined && { jobId: transitionResult.jobId }),
-        message: transitionResult.jobId
-          ? 'Workflow dispatched successfully'
-          : 'Stage updated (no workflow for VERIFY/SHIP)',
+        ...updatedTicket,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+        createdAt: updatedTicket.createdAt.toISOString(),
       },
       { status: 200 }
     );

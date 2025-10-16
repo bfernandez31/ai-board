@@ -1,10 +1,10 @@
-import { Ticket as PrismaTicket, ClarificationPolicy } from '@prisma/client';
+import { Ticket as PrismaTicket, ClarificationPolicy, WorkflowType } from '@prisma/client';
 import { Stage } from './stage-validation';
 
 /**
  * Re-export types
  */
-export type { Stage };
+export type { Stage, WorkflowType };
 export type Ticket = PrismaTicket;
 
 /**
@@ -85,6 +85,7 @@ export interface TicketWithVersion {
   branch: string | null;
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
+  workflowType: WorkflowType;
   createdAt: string;
   updatedAt: string;
   project?: {

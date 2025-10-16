@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - PostgreSQL 14+ (enum ClarificationPolicy, Project.clarificationPolicy NOT NULL default AUTO, Ticket.clarificationPolicy NULLABLE) (029-999-auto-clarification)
 - TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0 (030-should-not-be)
 - PostgreSQL 14+ (existing Job, Ticket tables with indexed queries) (030-should-not-be)
+- TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki (032-add-workflow-type)
+- PostgreSQL 14+ via Prisma ORM (032-add-workflow-type)
 
 ### Core Stack
 
@@ -65,6 +67,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 032-add-workflow-type: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki
 - 031-quick-implementation: Added Quick Implementation workflow for simple tasks
   - Created `.github/workflows/quick-impl.yml` workflow file
   - Created `.claude/commands/quick-impl.md` command for direct implementation
@@ -73,8 +76,6 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
   - Added color-coded visual feedback (blue for SPECIFY, green for BUILD)
   - Added mandatory confirmation modal for quick-impl transitions
 - 030-should-not-be: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0
-- 029-999-auto-clarification: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui
-- 028-519-replace-sse: Replaced Server-Sent Events (SSE) with client-side polling for job status updates
   - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
   - Implemented 2-second polling interval with terminal state optimization
   - Added `projectId` field to Job model for efficient querying
@@ -348,6 +349,14 @@ The Ticket model includes the following fields for GitHub branch tracking and au
   - Defaults to `null` (inherits from project)
   - Overrides project default when set
   - Hierarchical resolution: `ticket.clarificationPolicy ?? project.clarificationPolicy ?? 'AUTO'`
+
+- **`workflowType`** (WorkflowType enum, NOT NULL, default: FULL): Tracks which workflow path was used
+  - Values: FULL (normal workflow: INBOX → SPECIFY → PLAN → BUILD), QUICK (quick-impl: INBOX → BUILD)
+  - Set once during first BUILD transition, immutable thereafter (application-level enforcement)
+  - Quick-impl tickets: Set to QUICK atomically with Job creation in `lib/workflows/transition.ts`
+  - Normal workflow tickets: Remain FULL (default value)
+  - Persists through stage transitions, rollbacks, and retries
+  - Used for visual badge indicator: ⚡ Quick badge shown on ticket cards when workflowType=QUICK
 
 ### Branch Management Flow
 

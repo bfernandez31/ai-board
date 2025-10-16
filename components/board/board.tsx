@@ -282,6 +282,7 @@ function BoardContent({
                   stage: serverData.stage || t.stage,
                   version: serverData.version || t.version,
                   branch: serverData.branch !== undefined ? serverData.branch : t.branch,
+                  workflowType: serverData.workflowType || t.workflowType,
                   updatedAt: serverData.updatedAt || t.updatedAt,
                 }
               : t
@@ -340,6 +341,7 @@ function BoardContent({
     branch: string | null;
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
+    workflowType: 'FULL' | 'QUICK';
     createdAt: string | Date;
     updatedAt: string | Date;
   };
@@ -360,6 +362,7 @@ function BoardContent({
         branch: updatedTicket.branch,
         autoMode: updatedTicket.autoMode,
         clarificationPolicy: updatedTicket.clarificationPolicy,
+        workflowType: updatedTicket.workflowType,
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()
@@ -447,6 +450,7 @@ function BoardContent({
                 stage: serverData.stage || t.stage,
                 version: serverData.version || t.version,
                 branch: serverData.branch !== undefined ? serverData.branch : t.branch,
+                workflowType: serverData.workflowType || t.workflowType,
                 updatedAt: serverData.updatedAt || t.updatedAt,
               }
             : t
