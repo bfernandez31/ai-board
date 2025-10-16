@@ -416,8 +416,8 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     const branchLink = dialog.locator('[data-testid="github-branch-link"]');
     await expect(branchLink).toBeVisible();
 
-    // Verify link text
-    await expect(branchLink).toContainText('View in GitHub');
+    // Verify link text contains branch name (compact design)
+    await expect(branchLink).toContainText('033-test-branch');
 
     // Verify href attribute
     await expect(branchLink).toHaveAttribute(

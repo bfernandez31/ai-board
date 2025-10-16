@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -614,6 +614,76 @@ export function TicketDetailModal({
       >
         {/* Header with editable title */}
         <DialogHeader className="pb-4">
+          {/* Compact metadata row - badges and branch link */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <Badge
+              className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium`}
+              data-testid="stage-badge"
+            >
+              {stageBadge.label}
+            </Badge>
+            {localTicket?.project && (
+              <PolicyBadge
+                policy={
+                  localTicket.clarificationPolicy ??
+                  localTicket.project.clarificationPolicy
+                }
+                isOverride={localTicket.clarificationPolicy !== null}
+                variant={
+                  localTicket.clarificationPolicy !== null
+                    ? 'default'
+                    : 'secondary'
+                }
+              />
+            )}
+            {/* Branch link - compact icon button */}
+            {localTicket?.branch &&
+              localTicket.branch.length > 0 &&
+              localTicket.stage !== 'SHIP' &&
+              localTicket.project?.githubOwner &&
+              localTicket.project?.githubRepo && (
+                <a
+                  href={buildGitHubBranchUrl(
+                    localTicket.project.githubOwner,
+                    localTicket.project.githubRepo,
+                    localTicket.branch
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-flex items-center gap-1.5 px-2 py-0.5
+                    text-xs font-medium
+                    bg-[#313244] hover:bg-[#45475a]
+                    text-[#89b4fa] hover:text-[#b4befe]
+                    rounded border border-[#45475a]
+                    transition-colors duration-200
+                    focus:outline-none focus:ring-2 focus:ring-[#89b4fa] focus:ring-offset-2 focus:ring-offset-[#181825]
+                  "
+                  data-testid="github-branch-link"
+                  aria-label={`View branch ${localTicket.branch} in GitHub`}
+                  title={`Branch: ${localTicket.branch}`}
+                >
+                  <GitBranch className="w-3 h-3" aria-hidden="true" />
+                  <span className="max-w-[150px] truncate">{localTicket.branch}</span>
+                  <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                </a>
+              )}
+            {/* Edit Policy button - compact */}
+            {localTicket?.project && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPolicyEditOpen(true)}
+                className="ml-auto h-6 px-2 text-xs"
+                data-testid="edit-policy-button"
+                title="Edit clarification policy"
+              >
+                <Settings2 className="w-3 h-3 mr-1" />
+                Edit Policy
+              </Button>
+            )}
+          </div>
+
           <div className="group">
             {titleEdit.isEditing ? (
               <div className="space-y-3">
@@ -681,45 +751,6 @@ export function TicketDetailModal({
 
         {/* Modal body content */}
         <div className="space-y-8">
-          {/* Stage badge and Policy section */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Badge
-                className={`${stageBadge.className} text-sm px-4 py-1.5 font-semibold shadow-sm`}
-                data-testid="stage-badge"
-              >
-                {stageBadge.label}
-              </Badge>
-              {/* Policy badge - show for all tickets */}
-              {localTicket?.project && (
-                <PolicyBadge
-                  policy={
-                    localTicket.clarificationPolicy ??
-                    localTicket.project.clarificationPolicy
-                  }
-                  isOverride={localTicket.clarificationPolicy !== null}
-                  variant={
-                    localTicket.clarificationPolicy !== null
-                      ? 'default'
-                      : 'secondary'
-                  }
-                />
-              )}
-            </div>
-            {/* Edit Policy button */}
-            {localTicket?.project && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPolicyEditOpen(true)}
-                className="flex items-center gap-2"
-                data-testid="edit-policy-button"
-              >
-                <Settings2 className="w-4 h-4" />
-                Edit Policy
-              </Button>
-            )}
-          </div>
 
           {/* Description section with inline editing */}
           <div className="group">
@@ -839,48 +870,31 @@ export function TicketDetailModal({
             )}
           </div>
 
-          {/* View Specification button */}
+          {/* Action buttons section - compact horizontal layout */}
           {hasCompletedSpecifyJob && (
             <div className="border-t-2 border-[#313244]/50 pt-6">
-              <Button
-                onClick={() => setSpecViewerOpen(true)}
-                className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3 flex items-center justify-center gap-2"
-              >
-                <FileText className="w-5 h-5" />
-                View Specification
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  onClick={() => setSpecViewerOpen(true)}
+                  size="sm"
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                  title="View specification document"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Spec
+                </Button>
+                {/* Placeholder for future buttons */}
+                {/* <Button size="sm" variant="secondary" className="...">
+                  <FileText className="w-3.5 h-3.5" />
+                  Plan
+                </Button>
+                <Button size="sm" variant="secondary" className="...">
+                  <FileText className="w-3.5 h-3.5" />
+                  Tasks
+                </Button> */}
+              </div>
             </div>
           )}
-
-          {/* Branch link - show when branch exists and stage is not SHIP */}
-          {localTicket?.branch &&
-            localTicket.branch.length > 0 &&
-            localTicket.stage !== 'SHIP' &&
-            localTicket.project?.githubOwner &&
-            localTicket.project?.githubRepo && (
-              <div className="border-t-2 border-[#313244]/50 pt-6">
-                <a
-                  href={buildGitHubBranchUrl(
-                    localTicket.project.githubOwner,
-                    localTicket.project.githubRepo,
-                    localTicket.branch
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="
-                    w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3
-                    flex items-center justify-center gap-2 rounded-md
-                    transition-colors duration-200
-                    focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:ring-offset-2 focus:ring-offset-[#181825]
-                  "
-                  data-testid="github-branch-link"
-                  aria-label={`View branch ${localTicket.branch} in GitHub`}
-                >
-                  <GitBranch className="w-5 h-5" aria-hidden="true" />
-                  <span>View in GitHub</span>
-                </a>
-              </div>
-            )}
 
           {/* Dates section */}
           <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">
