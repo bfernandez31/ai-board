@@ -9,7 +9,7 @@ import { APIRequestContext } from '@playwright/test';
  * The API returns the full updated ticket object, but we need to fetch the job ID separately
  */
 export async function getLatestJobId(
-  request: APIRequestContext,
+  _request: APIRequestContext,
   ticketId: number
 ): Promise<number | undefined> {
   const prisma = (await import('../helpers/db-cleanup')).getPrismaClient();

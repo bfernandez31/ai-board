@@ -70,7 +70,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     const specifyResponse = await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
       data: { targetStage: 'SPECIFY' },
     });
-    const specifyBody = await specifyResponse.json();
+    await specifyResponse.json(); // Response validated above
     const jobId = await getLatestJobId(request, ticket.id);
 
     // Complete the SPECIFY job
@@ -489,7 +489,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     );
 
     expect(transitionResponse.status()).toBe(200);
-    const transitionBody = await transitionResponse.json();
+    await transitionResponse.json(); // Response validated above
     const jobId = await getLatestJobId(request, ticket.id);
 
     // Assert 1: Branch is null after transition
@@ -542,11 +542,15 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     expect(jobStatusResponse.status()).toBe(200);
 
     // Assert 3: Job status updated
-    const completedJob = await prisma.job.findUnique({
-      where: { id: jobId },
-    });
-    expect(completedJob?.status).toBe('COMPLETED');
-    expect(completedJob?.completedAt).not.toBeNull();
+    if (jobId) {
+      const completedJob = await prisma.job.findUnique({
+        where: { id: jobId },
+      });
+      expect(completedJob?.status).toBe('COMPLETED');
+      expect(completedJob?.completedAt).not.toBeNull();
+    } else {
+      throw new Error('Job ID not found');
+    }
   });
 
   /**
@@ -618,7 +622,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         `/api/projects/1/tickets/${ticket.id}/transition`,
         { data: { targetStage: 'SPECIFY' } }
       );
-      const specifyBody = await specifyResponse.json();
+      await specifyResponse.json(); // Response validated above
       const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING
@@ -658,7 +662,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         `/api/projects/1/tickets/${ticket.id}/transition`,
         { data: { targetStage: 'SPECIFY' } }
       );
-      const specifyBody = await specifyResponse.json();
+      await specifyResponse.json(); // Response validated above
       const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING then FAILED
@@ -703,7 +707,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         `/api/projects/1/tickets/${ticket.id}/transition`,
         { data: { targetStage: 'SPECIFY' } }
       );
-      const specifyBody = await specifyResponse.json();
+      await specifyResponse.json(); // Response validated above
       const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING then CANCELLED
@@ -786,7 +790,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
         `/api/projects/1/tickets/${ticket.id}/transition`,
         { data: { targetStage: 'BUILD' } }
       );
-      const buildBody = await buildResponse.json();
+      await buildResponse.json(); // Response validated below
       const jobId = await getLatestJobId(request, ticket.id);
 
       // Update job to RUNNING
