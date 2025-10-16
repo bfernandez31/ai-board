@@ -34,6 +34,7 @@ interface TicketData {
   branch: string | null;
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
+  workflowType: 'FULL' | 'QUICK';
   createdAt: Date | string;
   updatedAt: Date | string;
   project?: {

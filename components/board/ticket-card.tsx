@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
-import { Job, WorkflowType } from '@prisma/client';
+import { Job } from '@prisma/client';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
