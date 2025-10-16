@@ -11,6 +11,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - PostgreSQL 14+ (existing Job, Ticket tables with indexed queries) (030-should-not-be)
 - TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki (032-add-workflow-type)
 - PostgreSQL 14+ via Prisma ORM (032-add-workflow-type)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac (033-link-to-branch)
+- PostgreSQL 14+ via Prisma (existing Ticket.branch and Project.githubOwner/githubRepo fields) (033-link-to-branch)
 
 ### Core Stack
 
@@ -67,6 +69,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 033-link-to-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac
 - 032-add-workflow-type: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki
 - 031-quick-implementation: Added Quick Implementation workflow for simple tasks
   - Created `.github/workflows/quick-impl.yml` workflow file
@@ -75,7 +78,6 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
   - Enabled INBOX → BUILD direct transition (bypassing SPECIFY and PLAN)
   - Added color-coded visual feedback (blue for SPECIFY, green for BUILD)
   - Added mandatory confirmation modal for quick-impl transitions
-- 030-should-not-be: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0
   - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
   - Implemented 2-second polling interval with terminal state optimization
   - Added `projectId` field to Job model for efficient querying

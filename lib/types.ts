@@ -90,6 +90,8 @@ export interface TicketWithVersion {
   updatedAt: string;
   project?: {
     clarificationPolicy: ClarificationPolicy;
+    githubOwner?: string;
+    githubRepo?: string;
   };
 }
 

@@ -30,6 +30,8 @@ export async function getTicketsByStage(
       project: {
         select: {
           clarificationPolicy: true,
+          githubOwner: true,
+          githubRepo: true,
         },
       },
     },
@@ -62,6 +64,8 @@ export async function getTicketsByStage(
         updatedAt: ticket.updatedAt.toISOString(),
         project: {
           clarificationPolicy: ticket.project.clarificationPolicy,
+          githubOwner: ticket.project.githubOwner,
+          githubRepo: ticket.project.githubRepo,
         },
       });
     }
