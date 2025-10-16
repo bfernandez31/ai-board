@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsByStage } from '@/lib/db/tickets';
-import { getProjectById } from '@/lib/db/projects';
+import { getProject } from '@/lib/db/projects';
 import { getJobsForTickets } from '@/lib/job-queries';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
@@ -19,10 +19,9 @@ export const revalidate = 0;
 export default async function ProjectBoardPage({
   params,
 }: {
-  params: Promise<{ projectId: string }>;
+  params: { projectId: string };
 }) {
-  // Await params (Next.js 15 requirement)
-  const { projectId: projectIdString } = await params;
+  const { projectId: projectIdString } = params;
 
   // Parse and validate projectId
   const projectId = parseInt(projectIdString, 10);
@@ -32,10 +31,17 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  // Check if project exists
-  const project = await getProjectById(projectId);
-  if (!project) {
-    notFound();
+  // Check if project exists and belongs to current user
+  try {
+    await getProject(projectId);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === 'Project not found' || error.message === 'Unauthorized')
+    ) {
+      notFound();
+    }
+    throw error;
   }
 
   // Fetch tickets for this project

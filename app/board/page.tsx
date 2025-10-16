@@ -1,6 +1,6 @@
 import { Board } from '@/components/board/board';
 import { getTicketsByStage } from '@/lib/db/tickets';
-import { getProjectById } from '@/lib/db/projects';
+import { getProject } from '@/lib/db/projects';
 import { notFound } from 'next/navigation';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
@@ -17,10 +17,16 @@ export default async function BoardPage() {
   // This route is deprecated - redirect handled by root page
   // Keeping for backwards compatibility during migration
   const projectId = 1; // Default project
-  const project = await getProjectById(projectId);
-
-  if (!project) {
-    notFound();
+  try {
+    await getProject(projectId);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === 'Project not found' || error.message === 'Unauthorized')
+    ) {
+      notFound();
+    }
+    throw error;
   }
 
   const ticketsByStage = await getTicketsByStage(projectId);

@@ -38,14 +38,9 @@ export interface FetchSpecParams {
 export async function fetchSpecContent(params: FetchSpecParams): Promise<string> {
   const githubToken = process.env.GITHUB_TOKEN;
 
-  // Test mode detection (matches pattern from transition.ts)
-  const isTestMode =
-    process.env.NODE_ENV === 'test' ||
-    !githubToken ||
-    githubToken.includes('test') ||
-    githubToken.includes('placeholder');
+  const isTestEnvironment = process.env.NODE_ENV === 'test';
 
-  if (isTestMode) {
+  if (isTestEnvironment) {
     // Return mock content for E2E tests
     return `# Test Mode Specification
 
@@ -58,6 +53,14 @@ This is mock content returned in test mode.
 \`\`\`typescript
 const test = 'example';
 \`\`\``;
+  }
+
+  if (!githubToken) {
+    throw new Error('GITHUB_TOKEN not configured');
+  }
+
+  if (githubToken.includes('test') || githubToken.includes('placeholder')) {
+    throw new Error('GITHUB_TOKEN is using a placeholder value');
   }
 
   try {
@@ -91,4 +94,3 @@ const test = 'example';
     throw new Error('Failed to fetch specification from GitHub');
   }
 }
-

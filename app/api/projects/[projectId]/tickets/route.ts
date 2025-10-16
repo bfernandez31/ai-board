@@ -11,11 +11,9 @@ import { ZodError } from 'zod';
  */
 export async function GET(
   _request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  { params }: { params: { projectId: string } }
 ) {
   try {
-    // Await and parse projectId from params (Next.js 15 requirement)
-    const params = await context.params;
     const { projectId: projectIdString } = params;
 
     // Validate projectId format
@@ -71,11 +69,9 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  { params }: { params: { projectId: string } }
 ) {
   try {
-    // Await and parse projectId from params
-    const params = await context.params;
     const { projectId: projectIdString } = params;
 
     // Validate projectId format

@@ -11,10 +11,9 @@ import { projectUpdateSchema } from '@/app/lib/schemas/clarification-policy';
 
 export async function GET(
   _request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  { params }: { params: { projectId: string } }
 ): Promise<NextResponse> {
   try {
-    const params = await context.params;
     const projectId = parseInt(params.projectId, 10);
 
     if (isNaN(projectId) || projectId <= 0) {
@@ -59,10 +58,9 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  { params }: { params: { projectId: string } }
 ): Promise<NextResponse> {
   try {
-    const params = await context.params;
     const projectId = parseInt(params.projectId, 10);
 
     if (isNaN(projectId) || projectId <= 0) {
