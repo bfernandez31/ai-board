@@ -54,9 +54,9 @@ test.describe('Projects List Page', () => {
     const cursor = await firstCard.evaluate(el => window.getComputedStyle(el).cursor);
     expect(cursor).toBe('pointer');
 
-    // Verify scale transform applied (check for transform property)
-    const transform = await firstCard.evaluate(el => window.getComputedStyle(el).transform);
-    expect(transform).not.toBe('none');
+    // Verify brightness filter applied on hover (check for filter property)
+    const filter = await firstCard.evaluate(el => window.getComputedStyle(el).filter);
+    expect(filter).toContain('brightness');
   });
 
   test('displays Import and Create Project buttons as disabled', async ({ page }) => {
