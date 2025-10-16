@@ -85,6 +85,7 @@ model Ticket {
   projectId           Int
   branch              String?              @db.VarChar(200)
   autoMode            Boolean              @default(false)
+  workflowType        WorkflowType         @default(FULL)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy?
@@ -94,6 +95,7 @@ model Ticket {
   @@index([projectId])
   @@index([stage])
   @@index([updatedAt])
+  @@index([projectId, workflowType])
 }
 
 model User {
@@ -148,4 +150,9 @@ enum Stage {
   BUILD
   VERIFY
   SHIP
+}
+
+enum WorkflowType {
+  FULL
+  QUICK
 }

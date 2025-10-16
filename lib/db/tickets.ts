@@ -24,6 +24,7 @@ export async function getTicketsByStage(
       branch: true,
       autoMode: true,
       clarificationPolicy: true,
+      workflowType: true,
       createdAt: true,
       updatedAt: true,
       project: {
@@ -56,6 +57,7 @@ export async function getTicketsByStage(
         branch: ticket.branch,
         autoMode: ticket.autoMode,
         clarificationPolicy: ticket.clarificationPolicy,
+        workflowType: ticket.workflowType,
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
         project: {

@@ -213,17 +213,40 @@ export async function handleTicketTransition(
       branchName = `feature/ticket-${ticket.id}`;
     }
 
-    // Create job record
-    const job = await prisma.job.create({
-      data: {
-        ticketId: ticket.id,
-        projectId: ticket.projectId,
-        command: command,
-        status: JobStatus.PENDING,
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Create job record (with atomic workflowType update for quick-impl)
+    let job;
+    if (isQuickImpl) {
+      // Atomic transaction: Job creation + workflowType update
+      const [createdJob, _updatedTicket] = await prisma.$transaction([
+        prisma.job.create({
+          data: {
+            ticketId: ticket.id,
+            projectId: ticket.projectId,
+            command: command,
+            status: JobStatus.PENDING,
+            startedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }),
+        prisma.ticket.update({
+          where: { id: ticket.id },
+          data: { workflowType: 'QUICK' },
+        }),
+      ]);
+      job = createdJob;
+    } else {
+      // Normal workflow: workflowType remains FULL (default)
+      job = await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: ticket.projectId,
+          command: command,
+          status: JobStatus.PENDING,
+          startedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
 
     // Initialize Octokit with GitHub token
     const githubToken = process.env.GITHUB_TOKEN;

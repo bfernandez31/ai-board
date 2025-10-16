@@ -1122,4 +1122,128 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       expect(body.details.jobStatus).toBe('RUNNING');
     });
   });
+
+  /**
+   * WorkflowType Field Tests
+   * Feature: 032-add-workflow-type
+   *
+   * Tests workflowType field behavior during transitions
+   */
+  test.describe('WorkflowType Field', () => {
+    /**
+     * Test: INBOX → BUILD sets workflowType to QUICK
+     * Given: Ticket in INBOX stage
+     * When: Transition directly to BUILD (quick-impl)
+     * Then: workflowType set to QUICK atomically with Job creation
+     */
+    test('should set workflowType to QUICK for quick-impl transition', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+      const prisma = getPrismaClient();
+
+      // Act - Quick-impl transition (INBOX → BUILD)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'BUILD' } }
+      );
+
+      // Assert - Response success
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.jobId).toBeGreaterThan(0);
+
+      // Assert - Database state
+      const updatedTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        select: { workflowType: true, stage: true },
+      });
+
+      expect(updatedTicket?.stage).toBe('BUILD');
+      expect(updatedTicket?.workflowType).toBe('QUICK');
+    });
+
+    /**
+     * Test: INBOX → SPECIFY preserves workflowType FULL
+     * Given: Ticket in INBOX stage
+     * When: Transition to SPECIFY (normal workflow)
+     * Then: workflowType remains FULL (default value)
+     */
+    test('should preserve workflowType FULL for normal workflow', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+      const prisma = getPrismaClient();
+
+      // Act - Normal workflow transition (INBOX → SPECIFY)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'SPECIFY' } }
+      );
+
+      // Assert - Response success
+      expect(response.status()).toBe(200);
+
+      // Assert - Database state
+      const updatedTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        select: { workflowType: true, stage: true },
+      });
+
+      expect(updatedTicket?.stage).toBe('SPECIFY');
+      expect(updatedTicket?.workflowType).toBe('FULL');
+    });
+
+    /**
+     * Test: workflowType immutable after setting to QUICK
+     * Given: Ticket with workflowType=QUICK in BUILD stage
+     * When: Transition to VERIFY
+     * Then: workflowType remains QUICK (immutable)
+     */
+    test('should keep workflowType QUICK after subsequent transitions', async ({ request }) => {
+      // Arrange
+      const { ticket } = await setupTestData();
+      const prisma = getPrismaClient();
+
+      // Quick-impl transition (INBOX → BUILD, sets workflowType=QUICK)
+      await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
+        data: { targetStage: 'BUILD' },
+      });
+
+      // Complete the BUILD job
+      const buildTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { jobs: { orderBy: { createdAt: 'desc' } } },
+      });
+      const buildJobId = buildTicket?.jobs[0]?.id;
+
+      const workflowToken =
+        process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+      await request.patch(`/api/jobs/${buildJobId}/status`, {
+        data: { status: 'RUNNING' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+      await request.patch(`/api/jobs/${buildJobId}/status`, {
+        data: { status: 'COMPLETED' },
+        headers: { Authorization: `Bearer ${workflowToken}` },
+      });
+
+      // Act - Transition to VERIFY (should NOT change workflowType)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'VERIFY' } }
+      );
+
+      // Assert - Response success
+      expect(response.status()).toBe(200);
+
+      // Assert - workflowType unchanged
+      const verifyTicket = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        select: { workflowType: true, stage: true },
+      });
+
+      expect(verifyTicket?.stage).toBe('VERIFY');
+      expect(verifyTicket?.workflowType).toBe('QUICK'); // Still QUICK
+    });
+  });
 });

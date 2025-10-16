@@ -835,6 +835,8 @@ export interface TransitionResult {
 - ✅ Warning modal with benefits/trade-offs explanation
 - ✅ Visual feedback: green BUILD zone, blue SPECIFY zone, grayed invalid zones
 - ✅ Lightning bolt (⚡) badge on BUILD column during INBOX drag
+- ✅ Persistent ⚡ Quick badge on ticket cards (added 2025-01-16)
+- ✅ Automatic `workflowType=QUICK` setting with atomic transaction (added 2025-01-16)
 - ✅ Separate workflow file (quick-impl.yml) with minimal spec creation
 - ✅ Same branch naming and job tracking as full workflow
 - ✅ Mode detection: INBOX → BUILD triggers quick-impl, preserves normal workflow
@@ -880,6 +882,8 @@ export interface TransitionResult {
 - INBOX → BUILD direct transition triggers quick-impl mode
 - Warning modal displays before execution (no "don't show again")
 - Visual feedback distinguishes quick-impl (green) from normal (blue) workflow
+- Persistent ⚡ Quick badge on ticket cards throughout lifecycle (added 2025-01-16)
+- Automatic `workflowType=QUICK` setting in atomic transaction (added 2025-01-16)
 - Separate quick-impl.yml workflow file with minimal spec generation
 - Job command="quick-impl" tracked same as other commands
 - Same branch naming pattern (`{num}-{description}`) as full workflow
@@ -959,6 +963,14 @@ The system provides an express workflow for simple tasks:
 - Executes `/quick-impl` Claude command (bypasses specification generation)
 - Updates ticket branch field after branch creation
 - Updates job status on completion (COMPLETED/FAILED/CANCELLED)
+
+**Workflow Type Tracking** (added 2025-01-16):
+- System automatically sets `workflowType=QUICK` during INBOX → BUILD transition
+- Field updated atomically in same transaction as Job creation
+- Persistent ⚡ Quick badge appears on ticket card (positioned left of model badge)
+- Badge visible throughout ticket lifecycle (BUILD → VERIFY → SHIP)
+- Amber color scheme distinguishes quick-impl from full workflow tickets
+- Field immutable after initial setting (application-level enforcement)
 
 **Script Behavior**:
 - `create-new-feature.sh --mode=quick-impl`: Creates minimal spec.md with only title and description
