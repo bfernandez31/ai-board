@@ -9,23 +9,27 @@
 
 - **Decision**: GitHub URL construction pattern for branch links
 - **Policy Applied**: AUTO
-- **Confidence**: High (0.8) - Standard GitHub URL patterns are well-established
+- **Confidence**: High (0.8) - GitHub compare URLs provide better UX for code review
 - **Fallback Triggered?**: No
 - **Trade-offs**:
-  1. Using standard GitHub branch URL format `https://github.com/{owner}/{repo}/tree/{branch}` ensures compatibility
-  2. Assumes project configuration already contains GitHub owner/repo information
+  1. Using GitHub compare URL format `https://github.com/{owner}/{repo}/compare/main...{branch}` shows diff at a glance
+  2. Compare view is more useful for understanding branch changes than file tree view
+  3. Assumes project configuration already contains GitHub owner/repo information
+  4. Assumes 'main' as the base branch name (standard convention)
 - **Reviewer Notes**: Verify that all projects have githubOwner and githubRepo fields populated
 
 ---
 
 - **Decision**: Visual placement of branch link in ticket detail view
 - **Policy Applied**: AUTO
-- **Confidence**: Medium (0.6) - Common UX pattern for related actions
+- **Confidence**: High (0.8) - Compact header layout improves space efficiency
 - **Fallback Triggered?**: No
 - **Trade-offs**:
-  1. Placing link near ticket title makes it discoverable but not intrusive
-  2. Using icon + text pattern (e.g., branch icon + "View in GitHub") provides clear affordance
-- **Reviewer Notes**: UX review should validate visibility and discoverability with actual users
+  1. Placing link in header row with stage/policy badges makes it immediately discoverable
+  2. Compact inline badge design (GitBranch icon + branch name + ExternalLink icon) saves vertical space
+  3. Branch name truncates at 150px to prevent layout overflow
+  4. Blue color scheme (#89b4fa) provides clear visual distinction from other badges
+- **Reviewer Notes**: Compact design allows for future addition of Plan and Tasks buttons without UI clutter
 
 ---
 
@@ -50,9 +54,9 @@ A project manager reviews a ticket in the BUILD stage and wants to examine the c
 
 **Acceptance Scenarios**:
 
-1. **Given** a ticket with a branch value set (e.g., "033-link-to-branch"), **When** user views ticket details, **Then** they see a clickable branch link with GitHub icon
-2. **Given** user sees branch link in ticket details, **When** user clicks the link, **Then** a new browser tab opens showing the branch in GitHub at `https://github.com/{owner}/{repo}/tree/{branch}`
-3. **Given** a ticket in BUILD stage with branch "033-link-to-branch" and project GitHub settings (owner: "myorg", repo: "myrepo"), **When** user clicks branch link, **Then** browser opens `https://github.com/myorg/myrepo/tree/033-link-to-branch`
+1. **Given** a ticket with a branch value set (e.g., "033-link-to-branch"), **When** user views ticket details, **Then** they see a compact branch link badge with GitBranch icon, branch name, and ExternalLink icon
+2. **Given** user sees branch link in ticket details, **When** user clicks the link, **Then** a new browser tab opens showing the branch compare view in GitHub at `https://github.com/{owner}/{repo}/compare/main...{branch}`
+3. **Given** a ticket in BUILD stage with branch "033-link-to-branch" and project GitHub settings (owner: "myorg", repo: "myrepo"), **When** user clicks branch link, **Then** browser opens `https://github.com/myorg/myrepo/compare/main...033-link-to-branch`
 
 ---
 
@@ -104,12 +108,12 @@ A user views a ticket that has been fully deployed (SHIP stage) and no longer ne
 - **FR-002**: Branch link MUST NOT be displayed when ticket.branch field is null or empty
 - **FR-003**: Branch link MUST NOT be displayed when ticket.stage equals "SHIP"
 - **FR-004**: Branch link MUST open in a new browser tab (target="_blank") with rel="noopener noreferrer" for security
-- **FR-005**: Branch link URL MUST follow the pattern `https://github.com/{project.githubOwner}/{project.githubRepo}/tree/{ticket.branch}`
+- **FR-005**: Branch link URL MUST follow the pattern `https://github.com/{project.githubOwner}/{project.githubRepo}/compare/main...{ticket.branch}`
 - **FR-006**: Branch link MUST URL-encode the branch name to handle special characters
-- **FR-007**: Branch link MUST include a visual indicator (icon) that clearly identifies it as a GitHub link
-- **FR-008**: Branch link MUST be positioned in a consistent location within ticket details for predictable user experience
+- **FR-007**: Branch link MUST include visual indicators (GitBranch icon and ExternalLink icon) that clearly identify it as a GitHub link
+- **FR-008**: Branch link MUST be positioned in ticket detail header row alongside stage and policy badges
 - **FR-009**: System MUST handle missing project.githubOwner or project.githubRepo by not displaying the link
-- **FR-010**: Branch link text MUST be descriptive (e.g., "View in GitHub" or similar) and not just an icon
+- **FR-010**: Branch link MUST display the branch name (truncated at 150px) rather than generic text like "View in GitHub"
 
 ### Key Entities
 
