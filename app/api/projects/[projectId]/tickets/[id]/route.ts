@@ -58,6 +58,8 @@ export async function GET(
             id: true,
             name: true,
             clarificationPolicy: true,
+            githubOwner: true,
+            githubRepo: true,
           },
         },
       },
@@ -97,6 +99,8 @@ export async function GET(
         id: ticket.project.id,
         name: ticket.project.name,
         clarificationPolicy: ticket.project.clarificationPolicy,
+        githubOwner: ticket.project.githubOwner,
+        githubRepo: ticket.project.githubRepo,
       },
     });
   } catch (error) {
