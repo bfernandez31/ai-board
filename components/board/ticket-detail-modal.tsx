@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2 } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,8 @@ interface TicketData {
   updatedAt: Date | string;
   project?: {
     clarificationPolicy: ClarificationPolicy;
+    githubOwner?: string;
+    githubRepo?: string;
   };
 }
 
@@ -100,6 +102,21 @@ const formatTicketDate = (date: Date | string | null | undefined): string => {
     console.error('Error formatting date:', error);
     return 'Invalid date';
   }
+};
+
+/**
+ * Constructs GitHub branch URL with proper encoding
+ * @param owner - GitHub repository owner/organization
+ * @param repo - GitHub repository name
+ * @param branch - Git branch name (will be URL encoded)
+ * @returns Fully qualified GitHub branch tree URL
+ */
+const buildGitHubBranchUrl = (
+  owner: string,
+  repo: string,
+  branch: string
+): string => {
+  return `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(branch)}`;
 };
 
 /**
@@ -834,6 +851,36 @@ export function TicketDetailModal({
               </Button>
             </div>
           )}
+
+          {/* Branch link - show when branch exists and stage is not SHIP */}
+          {localTicket?.branch &&
+            localTicket.branch.length > 0 &&
+            localTicket.stage !== 'SHIP' &&
+            localTicket.project?.githubOwner &&
+            localTicket.project?.githubRepo && (
+              <div className="border-t-2 border-[#313244]/50 pt-6">
+                <a
+                  href={buildGitHubBranchUrl(
+                    localTicket.project.githubOwner,
+                    localTicket.project.githubRepo,
+                    localTicket.branch
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3
+                    flex items-center justify-center gap-2 rounded-md
+                    transition-colors duration-200
+                    focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:ring-offset-2 focus:ring-offset-[#181825]
+                  "
+                  data-testid="github-branch-link"
+                  aria-label={`View branch ${localTicket.branch} in GitHub`}
+                >
+                  <GitBranch className="w-5 h-5" aria-hidden="true" />
+                  <span>View in GitHub</span>
+                </a>
+              </div>
+            )}
 
           {/* Dates section */}
           <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">

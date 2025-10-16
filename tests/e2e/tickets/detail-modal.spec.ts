@@ -336,3 +336,506 @@ test.describe('Ticket Detail Modal', () => {
     }
   });
 });
+
+/**
+ * E2E Tests for Branch Link in Ticket Detail Modal
+ * Feature: 033-link-to-branch
+ *
+ * User Story 1: View Branch in GitHub
+ * User Story 2: Link Visibility Based on Branch State
+ * User Story 3: Hide Link for Shipped Tickets
+ */
+test.describe('Branch Link in Ticket Detail Modal', () => {
+  const BASE_URL = 'http://localhost:3000';
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    // Clean database before each test
+    await cleanupDatabase();
+
+    // Create test user
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update project 1 with GitHub configuration
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        githubOwner: 'testorg',
+        githubRepo: 'testrepo',
+        userId: testUser.id,
+      },
+    });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * T006: User Story 1 - displays branch link when branch exists and stage is not SHIP
+   */
+  test('displays branch link when branch exists and stage is not SHIP', async ({ page, request }) => {
+    // Create ticket with branch in BUILD stage
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket with Branch',
+        description: 'Test ticket with branch for branch link feature',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket to BUILD stage with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'BUILD',
+        branch: '033-test-branch',
+      },
+    });
+
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).toBeVisible();
+
+    // Verify link text
+    await expect(branchLink).toContainText('View in GitHub');
+
+    // Verify href attribute
+    await expect(branchLink).toHaveAttribute(
+      'href',
+      'https://github.com/testorg/testrepo/tree/033-test-branch'
+    );
+
+    // Verify security attributes
+    await expect(branchLink).toHaveAttribute('target', '_blank');
+    await expect(branchLink).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  /**
+   * T007: User Story 1 - opens GitHub in new tab when clicked
+   */
+  test('opens GitHub in new tab when clicked', async ({ page, context, request }) => {
+    // Create ticket with branch
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket for New Tab Test',
+        description: 'Test ticket for new tab functionality',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'BUILD',
+        branch: '033-new-tab-test',
+      },
+    });
+
+    // Navigate to board and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+
+    // Listen for new page (tab) opening
+    const [newPage] = await Promise.all([
+      context.waitForEvent('page'),
+      branchLink.click(),
+    ]);
+
+    // Verify new page URL contains GitHub
+    expect(newPage.url()).toContain('github.com');
+    expect(newPage.url()).toContain('/tree/033-new-tab-test');
+
+    // Clean up new page
+    await newPage.close();
+  });
+
+  /**
+   * T008: User Story 1 - constructs correct GitHub URL with owner/repo/branch
+   */
+  test('constructs correct GitHub URL with owner/repo/branch', async ({ page, request }) => {
+    // Create ticket with branch
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] URL Construction Test',
+        description: 'Test URL construction',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'VERIFY',
+        branch: '033-url-test',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+
+    // Verify complete URL structure
+    const href = await branchLink.getAttribute('href');
+    expect(href).toBe('https://github.com/testorg/testrepo/tree/033-url-test');
+  });
+
+  /**
+   * T017: User Story 2 - hides branch link when branch is null
+   */
+  test('hides branch link when branch is null', async ({ page, request }) => {
+    // Create ticket without branch
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket Without Branch',
+        description: 'Test ticket with null branch',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is NOT visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).not.toBeVisible();
+  });
+
+  /**
+   * T018: User Story 2 - hides branch link when branch is empty string
+   */
+  test('hides branch link when branch is empty string', async ({ page, request }) => {
+    // Create ticket with empty branch
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket With Empty Branch',
+        description: 'Test ticket with empty branch string',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with empty branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        branch: '',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is NOT visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).not.toBeVisible();
+  });
+
+  /**
+   * T019: User Story 2 - hides branch link when githubOwner is missing
+   */
+  test('hides branch link when githubOwner is missing', async ({ page, request }) => {
+    // Update project to remove githubOwner
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        githubOwner: '',
+      },
+    });
+
+    // Create ticket with branch
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket Missing Owner',
+        description: 'Test ticket with missing githubOwner',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        branch: '033-no-owner',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is NOT visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).not.toBeVisible();
+  });
+
+  /**
+   * T020: User Story 2 - hides branch link when githubRepo is missing
+   */
+  test('hides branch link when githubRepo is missing', async ({ page, request }) => {
+    // Update project to remove githubRepo
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        githubRepo: '',
+      },
+    });
+
+    // Create ticket with branch
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket Missing Repo',
+        description: 'Test ticket with missing githubRepo',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        branch: '033-no-repo',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is NOT visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).not.toBeVisible();
+  });
+
+  /**
+   * T025: User Story 3 - hides branch link when stage is SHIP
+   */
+  test('hides branch link when stage is SHIP', async ({ page, request }) => {
+    // Create ticket with branch in SHIP stage
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Shipped Ticket',
+        description: 'Test ticket in SHIP stage',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket to SHIP stage with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'SHIP',
+        branch: '033-shipped-branch',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link is NOT visible
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).not.toBeVisible();
+  });
+
+  /**
+   * T026: User Story 3 - shows branch link when stage transitions from SHIP back to VERIFY
+   */
+  test('shows branch link when stage transitions from SHIP back to VERIFY', async ({ page, request }) => {
+    // Create ticket with branch in VERIFY stage (rollback scenario)
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Rolled Back Ticket',
+        description: 'Test ticket rolled back from SHIP',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket to VERIFY stage with branch
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'VERIFY',
+        branch: '033-rollback-branch',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify branch link IS visible (not SHIP stage)
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).toBeVisible();
+  });
+
+  /**
+   * T029: Edge Case - encodes branch names with spaces
+   */
+  test('encodes branch names with spaces', async ({ page, request }) => {
+    // Create ticket with branch containing spaces
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Branch With Spaces',
+        description: 'Test URL encoding for spaces',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch containing spaces
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'BUILD',
+        branch: 'feature branch name',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+
+    // Verify URL encoding (spaces become %20)
+    const href = await branchLink.getAttribute('href');
+    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%20branch%20name');
+  });
+
+  /**
+   * T030: Edge Case - encodes branch names with slashes
+   */
+  test('encodes branch names with slashes', async ({ page, request }) => {
+    // Create ticket with branch containing slashes
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Branch With Slashes',
+        description: 'Test URL encoding for slashes',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch containing slashes
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'BUILD',
+        branch: 'feature/login',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+
+    // Verify URL encoding (slashes become %2F)
+    const href = await branchLink.getAttribute('href');
+    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%2Flogin');
+  });
+
+  /**
+   * T031: Edge Case - encodes branch names with special characters
+   */
+  test('encodes branch names with special characters', async ({ page, request }) => {
+    // Create ticket with branch containing multiple special characters
+    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Branch With Special Chars',
+        description: 'Test URL encoding for special characters',
+      },
+    });
+
+    const ticket = await response.json();
+
+    // Update ticket with branch containing special characters
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        stage: 'BUILD',
+        branch: 'feature/login page#2',
+      },
+    });
+
+    // Navigate and open modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    const branchLink = dialog.locator('[data-testid="github-branch-link"]');
+
+    // Verify URL encoding (all special chars encoded)
+    const href = await branchLink.getAttribute('href');
+    expect(href).toBe('https://github.com/testorg/testrepo/tree/feature%2Flogin%20page%232');
+  });
+});
