@@ -1,5 +1,7 @@
-import { defineConfig } from '@prisma/client';
+import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
-  seed: 'tsx prisma/seed.ts',
+  migrations: {
+    seed: 'tsx prisma/seed.ts',
+  },
 });
