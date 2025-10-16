@@ -70,23 +70,27 @@ interface TicketDetailModalProps {
 const stageBadgeConfig: Record<string, { label: string; className: string }> = {
   INBOX: {
     label: 'Inbox',
-    className: 'bg-zinc-600 text-zinc-50 border-zinc-500',
+    className: 'bg-[#6c7086] text-zinc-50 border-[#6c7086]',
+  },
+  SPECIFY: {
+    label: 'Specify',
+    className: 'bg-[#b4befe] text-zinc-900 border-[#b4befe]',
   },
   PLAN: {
     label: 'Plan',
-    className: 'bg-blue-600 text-blue-50 border-blue-500',
+    className: 'bg-[#89b4fa] text-zinc-900 border-[#89b4fa]',
   },
   BUILD: {
     label: 'Build',
-    className: 'bg-green-600 text-green-50 border-green-500',
+    className: 'bg-[#f9cb98] text-zinc-900 border-[#f9cb98]',
   },
   VERIFY: {
     label: 'Verify',
-    className: 'bg-orange-600 text-orange-50 border-orange-500',
+    className: 'bg-[#f2cdcd] text-zinc-900 border-[#f2cdcd]',
   },
   SHIP: {
     label: 'Ship',
-    className: 'bg-purple-600 text-purple-50 border-purple-500',
+    className: 'bg-[#a6e3a1] text-zinc-900 border-[#a6e3a1]',
   },
 };
 
@@ -617,7 +621,7 @@ export function TicketDetailModal({
           {/* Compact metadata row - badges and branch link */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <Badge
-              className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium`}
+              className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium pointer-events-none`}
               data-testid="stage-badge"
             >
               {stageBadge.label}

@@ -295,13 +295,14 @@ test.describe('Ticket Detail Modal', () => {
     await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
-    // Stage color mapping (from contract)
+    // Stage color mapping (Catppuccin theme from stage-column.tsx)
     const stageColors = {
-      'INBOX': 'bg-zinc-600',
-      'PLAN': 'bg-blue-600',
-      'BUILD': 'bg-green-600',
-      'VERIFY': 'bg-orange-600',
-      'SHIP': 'bg-purple-600',
+      'INBOX': 'bg-[#6c7086]',
+      'SPECIFY': 'bg-[#b4befe]',
+      'PLAN': 'bg-[#89b4fa]',
+      'BUILD': 'bg-[#f9cb98]',
+      'VERIFY': 'bg-[#f2cdcd]',
+      'SHIP': 'bg-[#a6e3a1]',
     };
 
     // Test the tickets we created (INBOX and PLAN)
