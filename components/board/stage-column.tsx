@@ -168,8 +168,8 @@ export const StageColumn = React.memo(
         </div>
 
         {/* Tickets Scroll Area */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-3 px-4 pb-5 pt-3">
+        <ScrollArea className="flex-1 overscroll-none">
+          <div className="space-y-3 px-4 pb-5 pt-3 touch-pan-y">
             {/* New Ticket Button - Only in INBOX */}
             {showNewTicketButton && (
               <NewTicketButton stage={stage} projectId={projectId} />

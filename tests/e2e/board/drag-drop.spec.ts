@@ -134,7 +134,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * Helper: Perform drag-and-drop with @dnd-kit compatibility
-   * Uses mouse events instead of Playwright's dragTo
+   * Uses mouse events (works for both mobile and desktop viewports)
    */
   const dragTicketToColumn = async (page: Page, ticketId: number, targetStage: string) => {
     const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
@@ -144,6 +144,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const targetBox = await targetColumn.boundingBox();
 
     if (ticketBox && targetBox) {
+      // Use mouse events for @dnd-kit compatibility (works on mobile viewports too)
       await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
       await page.mouse.down();
       await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });

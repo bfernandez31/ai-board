@@ -60,7 +60,7 @@ export const TicketCard = React.memo(
         data-draggable={isDraggable ? 'true' : 'false'}
         onClick={handleClick}
         className={`
-        transition-opacity
+        transition-opacity touch-none
         ${isDragging ? 'opacity-30' : 'opacity-100'}
         ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
       `}

@@ -21,25 +21,25 @@ export const DragOverlay = ({ activeTicket }: DragOverlayProps) => {
   return (
     <DndKitDragOverlay>
       {activeTicket ? (
-        <div className="opacity-80 cursor-grabbing rotate-3 scale-105 transition-transform">
-          <Card className="bg-zinc-900 border-zinc-600 p-4 shadow-2xl">
+        <div className="opacity-90 cursor-grabbing rotate-2 scale-110 transition-transform touch-none">
+          <Card className="bg-[#181825] border-[#89b4fa] border-2 p-4 shadow-2xl">
             {/* Header: ID and Version */}
             <div className="flex items-start justify-between mb-3">
-              <span className="text-xs text-zinc-400 font-mono font-semibold">
+              <span className="text-xs text-[#a6adc8] font-mono font-semibold">
                 #{activeTicket.id}
               </span>
-              <span className="text-xs text-zinc-500 font-medium">
+              <span className="text-xs text-[#a6adc8] font-medium">
                 v{activeTicket.version}
               </span>
             </div>
 
             {/* Title - truncated at 2 lines */}
-            <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-zinc-100 break-words">
+            <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-[#cdd6f4] break-words">
               {activeTicket.title}
             </h3>
 
             {/* Stage */}
-            <div className="text-xs text-zinc-400 font-medium">
+            <div className="text-xs text-[#89b4fa] font-medium">
               Stage: {activeTicket.stage}
             </div>
           </Card>

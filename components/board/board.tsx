@@ -99,7 +99,7 @@ function BoardContent({
     useSensor(TouchSensor, {
       activationConstraint: {
         delay: 250, // Long-press duration
-        tolerance: 5, // Movement tolerance during delay
+        tolerance: 8, // Increased movement tolerance during delay for mobile
       },
     })
   );
