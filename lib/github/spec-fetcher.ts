@@ -38,7 +38,8 @@ export interface FetchSpecParams {
 export async function fetchSpecContent(params: FetchSpecParams): Promise<string> {
   const githubToken = process.env.GITHUB_TOKEN;
 
-  const isTestEnvironment = process.env.NODE_ENV === 'test';
+  // Use custom TEST_MODE variable since Next.js always runs in development mode with npm run dev
+  const isTestEnvironment = process.env.TEST_MODE === 'true';
 
   if (isTestEnvironment) {
     // Return mock content for E2E tests

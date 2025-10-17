@@ -44,14 +44,14 @@ const config = defineConfig({
     },
   ],
   webServer: {
-    command: 'NODE_ENV=test npm run dev',
+    command: 'TEST_MODE=true npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI, // Reuse in dev (UI mode), restart in CI
     timeout: 120000, // 2 minutes for server startup
     stdout: 'pipe', // Show server output
     stderr: 'pipe',
     env: {
-      NODE_ENV: 'test',
+      TEST_MODE: 'true', // Custom env var for test mode (NODE_ENV is always 'development' with npm run dev)
     },
   },
 });

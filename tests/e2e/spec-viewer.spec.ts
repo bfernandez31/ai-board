@@ -463,11 +463,8 @@ test.describe('Spec Viewer - Modal Interactions', () => {
     const closeButton = specModal.locator('button').last(); // Last button in dialog is typically close
     await closeButton.click();
 
-    // Wait for modal to close animation
-    await page.waitForTimeout(500);
-
-    // Assert spec modal closed (check data-state attribute changes to closed)
-    await expect(specModal).toHaveAttribute('data-state', 'closed');
+    // Assert spec modal closed (element removed from DOM)
+    await expect(specModal).not.toBeVisible();
   });
 
   // T015: Modal closes with ESC key
@@ -491,11 +488,8 @@ test.describe('Spec Viewer - Modal Interactions', () => {
     // Press ESC
     await page.keyboard.press('Escape');
 
-    // Wait for modal to close animation
-    await page.waitForTimeout(500);
-
-    // Assert spec modal closed (check data-state attribute changes to closed)
-    await expect(specModal).toHaveAttribute('data-state', 'closed');
+    // Assert spec modal closed (element removed from DOM)
+    await expect(specModal).not.toBeVisible();
   });
 
   // T016: Scrollable content for large specs
