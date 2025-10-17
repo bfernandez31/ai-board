@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/layout/header';
 import { SessionProvider } from '@/components/auth/session-provider';
+import { QueryProvider } from '@/app/providers/query-provider';
 
 export const metadata: Metadata = {
   title: 'AI Board',
@@ -17,11 +18,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark overflow-hidden">
       <body className="bg-[#1e1e2e] text-foreground antialiased overflow-hidden">
-        <SessionProvider>
-          <Header />
-          {children}
-          <Toaster />
-        </SessionProvider>
+        <QueryProvider>
+          <SessionProvider>
+            <Header />
+            {children}
+            <Toaster />
+          </SessionProvider>
+        </QueryProvider>
       </body>
     </html>
   );

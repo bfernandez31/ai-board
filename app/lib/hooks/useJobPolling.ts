@@ -1,34 +1,26 @@
 /**
- * useJobPolling React Hook
+ * useJobPolling React Hook (TanStack Query implementation)
  *
  * Custom hook for polling job status updates at 2-second intervals.
- * Implements client-side filtering of terminal jobs and auto-stop when all jobs complete.
+ * Migrated to TanStack Query for better caching and deduplication.
  *
  * Features:
  * - 2-second polling interval (aggressive for real-time feel)
  * - Terminal state tracking (COMPLETED, FAILED, CANCELLED)
  * - Auto-stop when all jobs terminal
- * - Fixed retry interval (no exponential backoff)
+ * - Automatic retry logic via TanStack Query
  * - Automatic cleanup on unmount
+ * - Request deduplication across components
  */
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 
 /**
- * Polling state interface
- */
-export interface PollingState {
-  isPolling: boolean;
-  lastPollTime: number | null;
-  errorCount: number;
-  terminalJobIds: Set<number>;
-}
-
-/**
- * Hook return type
+ * Hook return type (matches previous interface for backward compatibility)
  */
 export interface UseJobPollingReturn {
   jobs: JobStatusDto[];
@@ -44,10 +36,11 @@ export interface UseJobPollingReturn {
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
 
 /**
- * Check if a job status is terminal
+ * Check if all jobs have reached terminal status
  */
-function isTerminalStatus(status: string): boolean {
-  return TERMINAL_STATUSES.has(status);
+function areAllJobsTerminal(jobs: JobStatusDto[]): boolean {
+  if (jobs.length === 0) return false;
+  return jobs.every(job => TERMINAL_STATUSES.has(job.status));
 }
 
 /**
@@ -61,28 +54,9 @@ export function useJobPolling(
   projectId: number,
   pollingInterval: number = 2000
 ): UseJobPollingReturn {
-  // State
-  const [jobs, setJobs] = useState<JobStatusDto[]>([]);
-  const [isPolling, setIsPolling] = useState(true);
-  const [lastPollTime, setLastPollTime] = useState<number | null>(null);
-  const [errorCount, setErrorCount] = useState(0);
-  const [error, setError] = useState<Error | null>(null);
-  const [terminalJobIds, setTerminalJobIds] = useState<Set<number>>(new Set());
-
-  // Refs to avoid stale closures
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const terminalJobIdsRef = useRef<Set<number>>(new Set());
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    terminalJobIdsRef.current = terminalJobIds;
-  }, [terminalJobIds]);
-
-  /**
-   * Fetch job statuses from API
-   */
-  const pollJobs = useCallback(async () => {
-    try {
+  const { data, error, isFetching, dataUpdatedAt, failureCount } = useQuery({
+    queryKey: queryKeys.projects.jobsStatus(projectId),
+    queryFn: async () => {
       const response = await fetch(`/api/projects/${projectId}/jobs/status`, {
         method: 'GET',
         headers: {
@@ -96,61 +70,39 @@ export function useJobPolling(
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data: { jobs: JobStatusDto[] } = await response.json();
+      const result: { jobs: JobStatusDto[] } = await response.json();
+      return result.jobs;
+    },
+    // Always fresh data for real-time polling
+    staleTime: 0,
+    // Keep in cache for 5 minutes after unmount
+    gcTime: 5 * 60 * 1000,
+    // Conditional polling: stop when all jobs terminal, otherwise poll at interval
+    refetchInterval: (query) => {
+      const jobs = query.state.data || [];
+      const allTerminal = areAllJobsTerminal(jobs);
+      // Return false to stop polling, or interval to continue
+      return allTerminal ? false : pollingInterval;
+    },
+    // Continue polling even when tab is in background
+    refetchIntervalInBackground: true,
+    // Enable query by default
+    enabled: true,
+  });
 
-      // Update terminal job IDs
-      const newTerminalIds = new Set(terminalJobIdsRef.current);
-      data.jobs.forEach(job => {
-        if (isTerminalStatus(job.status)) {
-          newTerminalIds.add(job.id);
-        }
-      });
-      setTerminalJobIds(newTerminalIds);
-
-      // Check if all jobs are terminal (but keep polling to detect new jobs)
-      const allJobIds = new Set(data.jobs.map(j => j.id));
-      const allTerminal = data.jobs.length > 0 && allJobIds.size === newTerminalIds.size;
-
-      // Update polling state for UI feedback
-      setIsPolling(!allTerminal);
-
-      // Update state
-      setJobs(data.jobs);
-      setLastPollTime(Date.now());
-      setErrorCount(0); // Reset error count on success
-      setError(null);
-    } catch (err) {
-      console.error('[useJobPolling] Poll error:', err);
-      setErrorCount(prev => prev + 1);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      // Continue polling on error (fixed interval, no exponential backoff)
-    }
-  }, [projectId]);
-
-  /**
-   * Start polling on mount (never stops, always detecting new jobs)
-   */
-  useEffect(() => {
-    // Initial poll
-    pollJobs();
-
-    // Set up interval (continuous polling)
-    intervalRef.current = setInterval(pollJobs, pollingInterval);
-
-    // Cleanup on unmount
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [pollJobs, pollingInterval]);
+  // Compute polling state for UI feedback
+  const jobs = data || [];
+  const allTerminal = areAllJobsTerminal(jobs);
 
   return {
     jobs,
-    isPolling,
-    lastPollTime,
-    errorCount,
-    error,
+    // isPolling is true when fetching AND not all jobs terminal
+    isPolling: isFetching || !allTerminal,
+    // Last poll time from TanStack Query
+    lastPollTime: dataUpdatedAt || null,
+    // Error count from TanStack Query
+    errorCount: failureCount,
+    // Error from TanStack Query
+    error: error as Error | null,
   };
 }
