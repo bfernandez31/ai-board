@@ -106,7 +106,7 @@ test.describe('Spec Viewer - Button Visibility', () => {
   });
 
   // T004: Button visibility with completed specify job
-  test('shows View Specification button when ticket has branch and completed specify job', async ({ page }) => {
+  test('shows Spec button when ticket has branch and completed specify job', async ({ page }) => {
     // Setup: Create ticket with branch + completed job
     const ticket = await createTestTicket({
       title: '[e2e] Spec Button Visibility',
@@ -126,11 +126,11 @@ test.describe('Spec Viewer - Button Visibility', () => {
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Assert button visible
-    await expect(page.getByRole('button', { name: 'View Specification' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Spec' })).toBeVisible();
   });
 
   // T005: Button hidden when no branch
-  test('hides View Specification button when ticket has no branch', async ({ page }) => {
+  test('hides Spec button when ticket has no branch', async ({ page }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Spec No Branch Ticket',
       branch: null,
@@ -140,7 +140,7 @@ test.describe('Spec Viewer - Button Visibility', () => {
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
-    await expect(page.getByRole('button', { name: 'View Specification' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Spec' })).not.toBeVisible();
   });
 
   // T006: Button hidden when no completed specify job
@@ -161,7 +161,7 @@ test.describe('Spec Viewer - Button Visibility', () => {
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
-    await expect(page.getByRole('button', { name: 'View Specification' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Spec' })).not.toBeVisible();
   });
 
   // T007: Button shown with multiple jobs including completed specify
@@ -180,7 +180,7 @@ test.describe('Spec Viewer - Button Visibility', () => {
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
-    await expect(page.getByRole('button', { name: 'View Specification' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Spec' })).toBeVisible();
   });
 });
 
@@ -233,7 +233,7 @@ test.describe('Spec Viewer - Content Display', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     // Wait for spec viewer modal
     await expect(page.getByRole('dialog').filter({ hasText: 'Specification' })).toBeVisible();
@@ -255,7 +255,7 @@ test.describe('Spec Viewer - Content Display', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     // Wait for modal
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -278,7 +278,7 @@ test.describe('Spec Viewer - Content Display', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -305,7 +305,7 @@ test.describe('Spec Viewer - Content Display', () => {
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Click button and check for loading state (button should be disabled briefly)
-    const viewButton = page.getByRole('button', { name: 'View Specification' });
+    const viewButton = page.getByRole('button', { name: 'Spec' });
     await viewButton.click();
 
     // Modal should appear eventually
@@ -371,7 +371,7 @@ test.describe('Spec Viewer - Error Handling', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     // Assert error message appears in toast (shadcn/ui toast with data-testid)
     await expect(page.locator('[data-testid="toast"]').filter({ hasText: /Specification not available|Error/i })).toBeVisible({ timeout: 5000 });
@@ -398,7 +398,7 @@ test.describe('Spec Viewer - Error Handling', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     // Assert error message appears in toast (shadcn/ui toast with data-testid)
     await expect(page.locator('[data-testid="toast"]').filter({ hasText: /Forbidden|Error/i })).toBeVisible({ timeout: 5000 });
@@ -454,7 +454,7 @@ test.describe('Spec Viewer - Modal Interactions', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     const specModal = page.getByRole('dialog').filter({ hasText: 'Specification' });
     await expect(specModal).toBeVisible();
@@ -483,7 +483,7 @@ test.describe('Spec Viewer - Modal Interactions', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     const specModal = page.getByRole('dialog').filter({ hasText: 'Specification' });
     await expect(specModal).toBeVisible();
@@ -530,7 +530,7 @@ test.describe('Spec Viewer - Modal Interactions', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     const specModal = page.getByRole('dialog').filter({ hasText: 'Specification' });
     await expect(specModal).toBeVisible();
@@ -564,7 +564,7 @@ test.describe('Spec Viewer - Modal Interactions', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("View Specification")');
+    await page.click('button:has-text("Spec")');
 
     const modal = page.getByRole('dialog');
     await expect(modal).toBeVisible();
