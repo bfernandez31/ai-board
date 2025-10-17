@@ -103,6 +103,7 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 **Mandatory Stack**:
 - **Frontend**: Next.js 15 (App Router), React 18, TypeScript, TailwindCSS
 - **UI Components**: shadcn/ui exclusively for primitives
+- **State Management**: TanStack Query v5 (React Query) for server state
 - **Drag & Drop**: @dnd-kit/core and @dnd-kit/sortable
 - **Backend**: Next.js API Routes (App Router conventions)
 - **Database**: PostgreSQL 14+ via Prisma ORM
@@ -118,7 +119,8 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 **Forbidden Dependencies**:
 - No UI libraries besides shadcn/ui and Radix UI (shadcn's foundation)
 - No ORMs besides Prisma
-- No state management libraries (Redux, MobX, etc.)—use React hooks only
+- No state management libraries (Redux, MobX, Zustand, etc.) for client state—use React hooks
+- TanStack Query is the ONLY allowed library for server state management
 
 ## Development Workflow
 
@@ -142,7 +144,8 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - Local state: `useState`
 - Shared state within component tree: `useContext`
 - Complex state logic: `useReducer`
-- Server state: React Server Components or SWR/React Query (when needed)
+- Server state: TanStack Query v5 (React Query) for data fetching, caching, and mutations
+- Optimistic updates required for all mutations (create, update, delete operations)
 
 **Error Handling**:
 - Every API route MUST have try-catch blocks

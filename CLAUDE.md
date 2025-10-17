@@ -13,6 +13,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - PostgreSQL 14+ via Prisma ORM (032-add-workflow-type)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac (033-link-to-branch)
 - PostgreSQL 14+ via Prisma (existing Ticket.branch and Project.githubOwner/githubRepo fields) (033-link-to-branch)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5.90.5 (034-migrate-state-management)
 
 ### Core Stack
 
@@ -33,7 +34,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 ### Data & Validation
 
 - **Validation**: Zod 4.x
-- **Real-time Updates**: Client-side polling
+- **State Management**: TanStack Query v5.90.5 (React Query)
+- **Real-time Updates**: Client-side polling with TanStack Query
 
 ### Testing
 
@@ -69,9 +71,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 034-migrate-state-management: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5.90.5
 - 033-link-to-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac
 - 032-add-workflow-type: Added TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki
-- 031-quick-implementation: Added Quick Implementation workflow for simple tasks
   - Created `.github/workflows/quick-impl.yml` workflow file
   - Created `.claude/commands/quick-impl.md` command for direct implementation
   - Modified `create-new-feature.sh` to support `--mode=quick-impl` parameter
@@ -702,5 +704,20 @@ function BoardComponent({ projectId }: { projectId: number }) {
 - `components/board/board.tsx`: Replaced SSEProvider with useJobPolling hook
 
 **Breaking Changes**: None - polling provides same UX as SSE to end users
+
+## TanStack Query State Management
+
+TanStack Query v5.90.5 is used for server state management with intelligent caching, request deduplication, and optimistic updates.
+
+**Key Files**:
+- Query hooks: `app/lib/hooks/queries/useTickets.ts`
+- Mutation hooks: `app/lib/hooks/mutations/use*.ts`
+- Query keys: `app/lib/query-keys.ts`
+- Test utilities: `tests/helpers/test-query-client.ts`
+
+**Query Pattern**: Use hierarchical query keys from `queryKeys` factory, never hardcode strings.
+**Mutation Pattern**: All mutations must implement optimistic updates with onMutate/onError/onSuccess.
+
+See constitution.md for state management requirements and patterns.
 
 <!-- MANUAL ADDITIONS END -->

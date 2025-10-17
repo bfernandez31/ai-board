@@ -1,0 +1,76 @@
+/**
+ * Centralized query key factory for TanStack Query
+ *
+ * Benefits:
+ * - Type-safe query keys with const assertions
+ * - Hierarchical structure for smart cache invalidation
+ * - Single source of truth for all query keys
+ * - Prevents typos and inconsistencies
+ *
+ * Hierarchy example:
+ * - ['projects'] invalidates ALL project-related queries
+ * - ['projects', 1] invalidates specific project AND its children
+ * - ['projects', 1, 'tickets'] invalidates only tickets for project 1
+ */
+export const queryKeys = {
+  /**
+   * Project-related query keys
+   */
+  projects: {
+    /**
+     * All projects list
+     */
+    all: ['projects'] as const,
+
+    /**
+     * Single project details
+     */
+    detail: (id: number) => ['projects', id] as const,
+
+    /**
+     * All tickets for a project
+     */
+    tickets: (id: number) => ['projects', id, 'tickets'] as const,
+
+    /**
+     * Single ticket within a project
+     */
+    ticket: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId] as const,
+
+    /**
+     * Job status polling for a project
+     */
+    jobsStatus: (id: number) => ['projects', id, 'jobs', 'status'] as const,
+
+    /**
+     * Project settings
+     */
+    settings: (id: number) => ['projects', id, 'settings'] as const,
+  },
+
+  /**
+   * User-related query keys
+   */
+  users: {
+    /**
+     * All users list
+     */
+    all: ['users'] as const,
+
+    /**
+     * Current authenticated user
+     */
+    current: ['users', 'current'] as const,
+
+    /**
+     * Single user details
+     */
+    detail: (id: string) => ['users', id] as const,
+  },
+} as const;
+
+/**
+ * Type helper to extract query key types
+ */
+export type QueryKeys = typeof queryKeys;
