@@ -14,6 +14,14 @@ interface EditDocumentationParams {
 }
 
 /**
+ * Context object for optimistic updates
+ */
+interface MutationContext {
+  previous: unknown;
+  queryKey: readonly unknown[];
+}
+
+/**
  * TanStack Query mutation hook for editing documentation files
  *
  * Features:
@@ -41,7 +49,7 @@ interface EditDocumentationParams {
 export function useEditDocumentation() {
   const queryClient = useQueryClient();
 
-  return useMutation<EditDocumentationResponse, Error, EditDocumentationParams>({
+  return useMutation<EditDocumentationResponse, Error, EditDocumentationParams, MutationContext>({
     mutationFn: async (params: EditDocumentationParams) => {
       const { projectId, ticketId, docType, content, commitMessage } = params;
 

@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
-import { Stage } from '@prisma/client';
+import { getPrismaClient } from '../helpers/db-cleanup';
 
 /**
  * E2E Tests: Documentation Editor Component

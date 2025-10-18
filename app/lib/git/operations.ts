@@ -86,14 +86,23 @@ export async function commitAndPush(options: CommitAndPushOptions): Promise<Comm
     }
 
     // Step 2: Create or update file via GitHub API
-    const { data } = await octokit.repos.createOrUpdateFileContents({
+    const requestParams: {
+      owner: string;
+      repo: string;
+      path: string;
+      message: string;
+      content: string;
+      branch: string;
+      sha?: string;
+      committer: { name: string; email: string };
+      author: { name: string; email: string };
+    } = {
       owner: options.owner,
       repo: options.repo,
       path: options.filePath,
       message: options.commitMessage,
       content: Buffer.from(options.content).toString('base64'), // GitHub API requires base64 encoding
       branch: options.branch,
-      sha, // Required for updates, omit for new files
       committer: {
         name: options.authorName,
         email: options.authorEmail,
@@ -102,7 +111,14 @@ export async function commitAndPush(options: CommitAndPushOptions): Promise<Comm
         name: options.authorName,
         email: options.authorEmail,
       },
-    });
+    };
+
+    // Only include sha if it exists (required for updates)
+    if (sha) {
+      requestParams.sha = sha;
+    }
+
+    const { data } = await octokit.repos.createOrUpdateFileContents(requestParams);
 
     return {
       commitSha: data.commit.sha || '',

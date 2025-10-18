@@ -326,7 +326,304 @@ describe('POST /api/projects/:projectId/docs contract', () => {
 
 ---
 
+## GET /api/projects/:projectId/docs/history
+
+Fetches commit history for a specific documentation file within a ticket's feature branch.
+
+### Request
+
+**Endpoint**: `GET /api/projects/:projectId/docs/history?ticketId={ticketId}&docType={docType}`
+
+**Path Parameters**:
+- `projectId` (integer, required): The project ID owning the ticket
+
+**Query Parameters**:
+- `ticketId` (integer, required): The ticket ID
+- `docType` (string, required): Which document to fetch history for (`spec`, `plan`, or `tasks`)
+
+**Headers**:
+- `Cookie: next-auth.session-token=...` (required, session authentication)
+
+**Example Request**:
+
+```
+GET /api/projects/1/docs/history?ticketId=42&docType=spec
+Cookie: next-auth.session-token=...
+```
+
+### Response
+
+#### Success (200 OK)
+
+```typescript
+{
+  commits: Array<{
+    sha: string;              // Git commit hash (40 chars hex)
+    author: {
+      name: string;           // Commit author name
+      email: string;          // Commit author email
+      date: string;           // ISO 8601 timestamp
+    };
+    message: string;          // Commit message
+    url: string;              // GitHub commit URL
+  }>;
+}
+```
+
+**Example Response**:
+
+```json
+{
+  "commits": [
+    {
+      "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "author": {
+        "name": "Claude",
+        "email": "noreply@anthropic.com",
+        "date": "2025-10-18T14:32:17Z"
+      },
+      "message": "docs: update specification with user scenarios",
+      "url": "https://github.com/owner/repo/commit/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+    },
+    {
+      "sha": "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0a1",
+      "author": {
+        "name": "Test User",
+        "email": "test@e2e.local",
+        "date": "2025-10-18T12:15:30Z"
+      },
+      "message": "docs: initial specification",
+      "url": "https://github.com/owner/repo/commit/b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0a1"
+    }
+  ]
+}
+```
+
+#### Errors
+
+**400 Bad Request** - Invalid query parameters
+
+```json
+{
+  "error": "Validation error: docType must be spec, plan, or tasks",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+**403 Forbidden** - Permission denied
+
+```json
+{
+  "error": "Access denied: project does not belong to authenticated user",
+  "code": "PERMISSION_DENIED"
+}
+```
+
+**404 Not Found** - Resource not found
+
+```json
+{
+  "error": "Branch not found for ticket #42",
+  "code": "BRANCH_NOT_FOUND"
+}
+```
+
+**500 Internal Server Error** - GitHub API failed
+
+```json
+{
+  "error": "Failed to fetch commit history from GitHub",
+  "code": "GITHUB_API_ERROR"
+}
+```
+
+### Validation Rules
+
+#### Request Validation
+
+- `projectId`: Must be a positive integer, must exist in database
+- `ticketId`: Must be a positive integer, must belong to `projectId`
+- `docType`: Must be one of: `"spec"`, `"plan"`, `"tasks"`
+
+#### Authorization
+
+- User must be authenticated (valid session cookie)
+- User must own the project (Project.userId === session.userId)
+- Ticket's `branch` field must not be null
+
+### GitHub API Integration
+
+**GitHub API Endpoint Used**: `octokit.repos.listCommits`
+
+**Parameters**:
+- `owner`: From Project.githubOwner
+- `repo`: From Project.githubRepo
+- `sha`: Ticket's branch name
+- `path`: `specs/{ticketId}-{description}/{docType}.md`
+
+**Rate Limiting**:
+- GitHub API: 5000 requests/hour (authenticated)
+- Application rate limit: 60 requests/minute per user
+
+### Performance Characteristics
+
+**Expected Response Times**:
+- Typical fetch: <500ms
+- Timeout limit: 5 seconds
+
+**Caching Strategy**:
+- Client-side caching via TanStack Query
+- Cache duration: 30 seconds (staleTime)
+- Background refetch on window focus
+
+---
+
+## GET /api/projects/:projectId/docs/diff
+
+Fetches the diff for a specific commit affecting a documentation file.
+
+### Request
+
+**Endpoint**: `GET /api/projects/:projectId/docs/diff?ticketId={ticketId}&docType={docType}&sha={sha}`
+
+**Path Parameters**:
+- `projectId` (integer, required): The project ID owning the ticket
+
+**Query Parameters**:
+- `ticketId` (integer, required): The ticket ID
+- `docType` (string, required): Which document to view diff for (`spec`, `plan`, or `tasks`)
+- `sha` (string, required): Git commit hash (40 chars hex)
+
+**Headers**:
+- `Cookie: next-auth.session-token=...` (required, session authentication)
+
+**Example Request**:
+
+```
+GET /api/projects/1/docs/diff?ticketId=42&docType=spec&sha=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
+Cookie: next-auth.session-token=...
+```
+
+### Response
+
+#### Success (200 OK)
+
+```typescript
+{
+  sha: string;                // Commit hash
+  files: Array<{
+    filename: string;         // File path
+    status: string;           // "added" | "modified" | "removed"
+    additions: number;        // Lines added
+    deletions: number;        // Lines deleted
+    patch?: string;           // Unified diff format (optional, may be missing for binary files)
+  }>;
+}
+```
+
+**Example Response**:
+
+```json
+{
+  "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+  "files": [
+    {
+      "filename": "specs/042-feature-name/spec.md",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 3,
+      "patch": "@@ -10,7 +10,19 @@\n ## Summary\n \n-Original content here\n+Updated content with more details\n+\n+## User Scenarios\n+\n+1. User opens app\n+2. User sees feature\n+3. User interacts\n"
+    }
+  ]
+}
+```
+
+#### Errors
+
+**400 Bad Request** - Invalid query parameters
+
+```json
+{
+  "error": "Validation error: sha must be 40 character hexadecimal string",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+**403 Forbidden** - Permission denied
+
+```json
+{
+  "error": "Access denied: project does not belong to authenticated user",
+  "code": "PERMISSION_DENIED"
+}
+```
+
+**404 Not Found** - Commit not found
+
+```json
+{
+  "error": "Commit not found: a1b2c3...",
+  "code": "COMMIT_NOT_FOUND"
+}
+```
+
+**500 Internal Server Error** - GitHub API failed
+
+```json
+{
+  "error": "Failed to fetch diff from GitHub",
+  "code": "GITHUB_API_ERROR"
+}
+```
+
+### Validation Rules
+
+#### Request Validation
+
+- `projectId`: Must be a positive integer, must exist in database
+- `ticketId`: Must be a positive integer, must belong to `projectId`
+- `docType`: Must be one of: `"spec"`, `"plan"`, `"tasks"`
+- `sha`: Must be 40-character hexadecimal string
+
+#### Authorization
+
+- User must be authenticated (valid session cookie)
+- User must own the project (Project.userId === session.userId)
+- Ticket's `branch` field must not be null
+
+### GitHub API Integration
+
+**GitHub API Endpoint Used**: `octokit.repos.getCommit`
+
+**Parameters**:
+- `owner`: From Project.githubOwner
+- `repo`: From Project.githubRepo
+- `ref`: Commit SHA from query parameter
+
+**Filtering**:
+- Client-side filter to show only files matching the requested `docType`
+- Path pattern: `specs/{ticketId}-{description}/{docType}.md`
+
+### Performance Characteristics
+
+**Expected Response Times**:
+- Typical fetch: <500ms
+- Timeout limit: 5 seconds
+
+**Caching Strategy**:
+- Client-side caching via TanStack Query
+- Cache duration: Infinite (commits are immutable)
+- No background refetch
+
+---
+
 ## Changelog
+
+### Version 1.1.0 (2025-10-18)
+
+- Added GET /api/projects/:projectId/docs/history endpoint
+- Added GET /api/projects/:projectId/docs/diff endpoint
+- Commit history and diff viewing support
 
 ### Version 1.0.0 (2025-10-18)
 

@@ -6,9 +6,7 @@ import { z } from 'zod';
  */
 export const editDocumentationSchema = z.object({
   ticketId: z.number().int().positive('Ticket ID must be a positive integer'),
-  docType: z.enum(['spec', 'plan', 'tasks'], {
-    errorMap: () => ({ message: 'Document type must be spec, plan, or tasks' }),
-  }),
+  docType: z.enum(['spec', 'plan', 'tasks']),
   content: z
     .string()
     .min(1, 'Document content cannot be empty')
@@ -51,3 +49,62 @@ export const editDocumentationErrorSchema = z.object({
 });
 
 export type EditDocumentationError = z.infer<typeof editDocumentationErrorSchema>;
+
+/**
+ * Query parameters schema for GET /api/projects/:projectId/docs/history
+ */
+export const getDocumentationHistorySchema = z.object({
+  ticketId: z.coerce.number().int().positive('Ticket ID must be a positive integer'),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+});
+
+export type GetDocumentationHistoryRequest = z.infer<typeof getDocumentationHistorySchema>;
+
+/**
+ * Response schema for GET /api/projects/:projectId/docs/history
+ */
+export const documentationHistoryResponseSchema = z.object({
+  commits: z.array(
+    z.object({
+      sha: z.string().length(40),
+      author: z.object({
+        name: z.string(),
+        email: z.string().email(),
+        date: z.string().datetime(),
+      }),
+      message: z.string(),
+      url: z.string().url(),
+    })
+  ),
+});
+
+export type DocumentationHistoryResponse = z.infer<typeof documentationHistoryResponseSchema>;
+
+/**
+ * Query parameters schema for GET /api/projects/:projectId/docs/diff
+ */
+export const getDocumentationDiffSchema = z.object({
+  ticketId: z.coerce.number().int().positive('Ticket ID must be a positive integer'),
+  docType: z.enum(['spec', 'plan', 'tasks']),
+  sha: z.string().regex(/^[a-f0-9]{40}$/, 'SHA must be 40 character hexadecimal string'),
+});
+
+export type GetDocumentationDiffRequest = z.infer<typeof getDocumentationDiffSchema>;
+
+/**
+ * Response schema for GET /api/projects/:projectId/docs/diff
+ */
+export const documentationDiffResponseSchema = z.object({
+  sha: z.string().length(40),
+  files: z.array(
+    z.object({
+      filename: z.string(),
+      status: z.enum(['added', 'modified', 'removed']),
+      additions: z.number().int().nonnegative(),
+      deletions: z.number().int().nonnegative(),
+      patch: z.string().optional(),
+    })
+  ),
+});
+
+export type DocumentationDiffResponse = z.infer<typeof documentationDiffResponseSchema>;

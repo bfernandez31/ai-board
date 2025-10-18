@@ -61,14 +61,14 @@ export async function POST(
       console.error('[docs/POST] Request validation failed:', {
         projectId,
         body,
-        errors: parsed.error.errors,
+        issues: parsed.error.issues,
       });
       return NextResponse.json(
         {
           success: false,
           error: 'Validation error',
           code: 'VALIDATION_ERROR',
-          details: parsed.error.errors,
+          details: parsed.error.issues,
         },
         { status: 400 }
       );
