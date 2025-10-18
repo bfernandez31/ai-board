@@ -115,25 +115,23 @@ export default function DocumentationViewer({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-zinc-50">
-              {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
-            </DialogTitle>
-            {/* Edit button - only show if user can edit and not already editing */}
-            {userCanEdit && !isEditing && data && !isLoading && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="ml-4"
-                data-testid="edit-button"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-          </div>
+        <DialogHeader className="flex-row items-center justify-between space-y-0">
+          <DialogTitle className="text-zinc-50">
+            {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
+          </DialogTitle>
+          {/* Edit button - only show if user can edit and not already editing */}
+          {userCanEdit && !isEditing && data && !isLoading && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              className="shrink-0"
+              data-testid="edit-button"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </DialogHeader>
 
         <div className="mt-4">
@@ -276,7 +274,7 @@ export default function DocumentationViewer({
 
           {/* Editor mode - show when editing */}
           {data && isEditing && (
-            <div className="h-[60vh] overflow-auto">
+            <div className="h-[70vh] flex flex-col">
               <DocumentationEditor
                 projectId={projectId}
                 ticketId={ticketId}

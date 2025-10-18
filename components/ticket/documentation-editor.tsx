@@ -110,13 +110,13 @@ export function DocumentationEditor({
   };
 
   return (
-    <div className="space-y-4" data-testid="documentation-editor">
+    <div className="flex flex-col h-full space-y-4" data-testid="documentation-editor">
       {/* Markdown textarea */}
       <Textarea
         name="content"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="min-h-[400px] font-mono text-sm"
+        className="flex-1 min-h-[500px] font-mono text-sm resize-none"
         placeholder={`Enter markdown content for ${docType}.md...`}
         disabled={mutation.isPending}
         data-testid="editor-textarea"
