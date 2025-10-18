@@ -1,21 +1,21 @@
 /**
- * GET /api/projects/[projectId]/tickets/[id]/spec
+ * GET /api/projects/[projectId]/tickets/[id]/plan
  *
- * Retrieves the spec.md file for a ticket from GitHub.
+ * Retrieves the plan.md file for a ticket from GitHub.
  *
  * @param request - Next.js request object
  * @param context - Route context with projectId and ticket id params
  *
- * @returns JSON response with spec content and metadata
+ * @returns JSON response with plan content and metadata
  *
  * @throws 400 - Invalid project or ticket ID
  * @throws 403 - Ticket belongs to different project
- * @throws 404 - Project, ticket, or spec file not found
+ * @throws 404 - Project, ticket, or plan file not found
  * @throws 500 - GitHub API error or internal server error
  *
  * @example
- * GET /api/projects/1/tickets/123/spec
- * Response: { content: "# Spec...", metadata: {...} }
+ * GET /api/projects/1/tickets/123/plan
+ * Response: { content: "# Implementation Plan...", metadata: {...} }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -75,7 +75,7 @@ export async function GET(
       where: { id: ticketId, projectId: projectId },
       include: {
         jobs: {
-          where: { command: 'specify', status: 'COMPLETED' },
+          where: { command: 'plan', status: 'COMPLETED' },
           take: 1,
         },
         project: true,
@@ -116,27 +116,27 @@ export async function GET(
       });
       return NextResponse.json(
         {
-          error: 'Specification not available',
-          code: 'SPEC_NOT_AVAILABLE',
+          error: 'Plan not available',
+          code: 'BRANCH_NOT_ASSIGNED',
           message: 'Ticket does not have a branch assigned',
         },
         { status: 404 }
       );
     }
 
-    // Check if ticket has completed specify job
-    const hasCompletedSpecifyJob = ticket.jobs.length > 0;
-    if (!hasCompletedSpecifyJob) {
-      console.error('Ticket has no completed specify job:', {
+    // Check if ticket has completed plan job
+    const hasCompletedPlanJob = ticket.jobs.length > 0;
+    if (!hasCompletedPlanJob) {
+      console.error('Ticket has no completed plan job:', {
         ticketId,
         projectId,
         branch: ticket.branch,
       });
       return NextResponse.json(
         {
-          error: 'Specification not available',
-          code: 'SPEC_NOT_AVAILABLE',
-          message: 'Ticket does not have a completed "specify" job',
+          error: 'Plan not available',
+          code: 'NOT_AVAILABLE_YET',
+          message: 'Ticket does not have a completed "plan" job',
         },
         { status: 404 }
       );
@@ -145,13 +145,13 @@ export async function GET(
     // Determine branch (SHIP → main, else → feature branch)
     const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
 
-    // Fetch spec content from GitHub
+    // Fetch plan content from GitHub
     try {
       const content = await fetchDocumentContent({
         owner: ticket.project.githubOwner,
         repo: ticket.project.githubRepo,
         branch: branch,
-        docType: 'spec',
+        docType: 'plan',
       });
 
       // Return successful response
@@ -161,9 +161,9 @@ export async function GET(
           ticketId: ticket.id,
           branch: branch,
           projectId: ticket.projectId,
-          docType: 'spec',
-          fileName: 'spec.md',
-          filePath: `specs/${ticket.branch}/spec.md`,
+          docType: 'plan',
+          fileName: 'plan.md',
+          filePath: `specs/${ticket.branch}/plan.md`,
           fetchedAt: new Date().toISOString(),
         },
       });
@@ -192,9 +192,9 @@ export async function GET(
         if (error.message.includes('not found')) {
           return NextResponse.json(
             {
-              error: 'Specification file not found',
+              error: 'Plan file not found',
               code: 'FILE_NOT_FOUND',
-              message: `File does not exist at specs/${ticket.branch}/spec.md`,
+              message: `File does not exist at specs/${ticket.branch}/plan.md`,
             },
             { status: 404 }
           );
@@ -203,7 +203,7 @@ export async function GET(
 
       return NextResponse.json(
         {
-          error: 'Failed to fetch specification',
+          error: 'Failed to fetch plan',
           code: 'GITHUB_API_ERROR',
         },
         { status: 500 }
@@ -211,7 +211,7 @@ export async function GET(
     }
   } catch (error) {
     // Catch-all for unexpected errors
-    console.error('Error fetching specification:', {
+    console.error('Error fetching plan:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
     });

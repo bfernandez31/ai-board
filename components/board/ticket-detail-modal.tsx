@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,8 @@ import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import SpecViewer from './spec-viewer';
+import DocumentationViewer from './documentation-viewer';
+import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy } from '@prisma/client';
 
 /**
@@ -156,6 +158,8 @@ export function TicketDetailModal({
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [specViewerOpen, setSpecViewerOpen] = useState(false);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
+  const [docViewerOpen, setDocViewerOpen] = useState(false);
+  const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
 
   // Update local ticket when a different ticket is selected or version changes
@@ -215,6 +219,19 @@ export function TicketDetailModal({
       (job) => job.command === 'specify' && job.status === 'COMPLETED'
     );
   }, [localTicket?.branch, jobs]);
+
+  // Check if "View Plan" button should be visible
+  const hasCompletedPlanJob = useMemo(() => {
+    if (!localTicket?.branch || jobs.length === 0) return false;
+    return jobs.some(
+      (job) => job.command === 'plan' && job.status === 'COMPLETED'
+    );
+  }, [localTicket?.branch, jobs]);
+
+  // Both plan and tasks buttons have the same visibility logic
+  // (tasks.md is generated at the same time as plan.md by the plan job)
+  const showPlanButton = localTicket?.workflowType === 'FULL' && hasCompletedPlanJob;
+  const showTasksButton = showPlanButton; // Same rule: both docs created by plan job
 
   /**
    * Refresh ticket data from server
@@ -887,15 +904,34 @@ export function TicketDetailModal({
                   <FileText className="w-3.5 h-3.5" />
                   Spec
                 </Button>
-                {/* Placeholder for future buttons */}
-                {/* <Button size="sm" variant="secondary" className="...">
-                  <FileText className="w-3.5 h-3.5" />
-                  Plan
-                </Button>
-                <Button size="sm" variant="secondary" className="...">
-                  <FileText className="w-3.5 h-3.5" />
-                  Tasks
-                </Button> */}
+                {showPlanButton && (
+                  <Button
+                    onClick={() => {
+                      setDocViewerType('plan');
+                      setDocViewerOpen(true);
+                    }}
+                    size="sm"
+                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                    title="View implementation plan"
+                  >
+                    <Settings2 className="w-3.5 h-3.5" />
+                    Plan
+                  </Button>
+                )}
+                {showTasksButton && (
+                  <Button
+                    onClick={() => {
+                      setDocViewerType('tasks');
+                      setDocViewerOpen(true);
+                    }}
+                    size="sm"
+                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                    title="View task breakdown"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    Tasks
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -930,6 +966,18 @@ export function TicketDetailModal({
           ticketTitle={ticket.title}
           open={specViewerOpen}
           onOpenChange={setSpecViewerOpen}
+        />
+      )}
+
+      {/* DocumentationViewer modal - only render when parent dialog is open */}
+      {ticket && open && (
+        <DocumentationViewer
+          ticketId={ticket.id}
+          projectId={projectId}
+          ticketTitle={ticket.title}
+          docType={docViewerType}
+          open={docViewerOpen}
+          onOpenChange={setDocViewerOpen}
         />
       )}
 
