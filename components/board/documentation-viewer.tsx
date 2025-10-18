@@ -115,7 +115,7 @@ export default function DocumentationViewer({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
-        <DialogHeader>
+        <DialogHeader className="pr-12">
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="text-zinc-50 flex-1">
               {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
@@ -126,7 +126,7 @@ export default function DocumentationViewer({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="shrink-0 ml-auto"
+                className="shrink-0"
                 data-testid="edit-button"
               >
                 <Pencil className="h-4 w-4 mr-2" />
