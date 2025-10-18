@@ -21,7 +21,7 @@ import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import SpecViewer from './spec-viewer';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Stage } from '@prisma/client';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -896,7 +896,10 @@ export function TicketDetailModal({
             <div className="border-t-2 border-[#313244]/50 pt-6">
               <div className="flex items-center gap-2 flex-wrap">
                 <Button
-                  onClick={() => setSpecViewerOpen(true)}
+                  onClick={() => {
+                    setDocViewerType('spec');
+                    setDocViewerOpen(true);
+                  }}
                   size="sm"
                   className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                   title="View specification document"
@@ -975,6 +978,7 @@ export function TicketDetailModal({
           ticketId={ticket.id}
           projectId={projectId}
           ticketTitle={ticket.title}
+          ticketStage={ticket.stage as Stage}
           docType={docViewerType}
           open={docViewerOpen}
           onOpenChange={setDocViewerOpen}

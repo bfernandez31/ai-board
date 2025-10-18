@@ -1,0 +1,576 @@
+import { test, expect } from '@playwright/test';
+import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
+import { Stage } from '@prisma/client';
+
+/**
+ * E2E Tests: Documentation Editor Component
+ * Feature: 036-mode-to-update (User Story 1)
+ * Source: specs/036-mode-to-update/tasks.md (T010-T013)
+ *
+ * Tests validate:
+ * - Edit button visibility based on stage and document type (T013)
+ * - Edit mode toggle and editor rendering (T010)
+ * - Save workflow with success feedback (T011)
+ * - Cancel operation with unsaved changes warning (T012)
+ *
+ * NOTE: GitHub API calls are mocked using Playwright route interception
+ * to avoid real API costs and rate limits.
+ */
+
+const prisma = getPrismaClient();
+
+// Helper to create job for ticket
+async function createTestJob(data: {
+  ticketId: number;
+  command: string;
+  status: string;
+}) {
+  return prisma.job.create({
+    data: {
+      ticketId: data.ticketId,
+      projectId: 1,
+      command: data.command,
+      status: data.status as any,
+      completedAt: data.status === 'COMPLETED' ? new Date() : null,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+test.describe('Documentation Editor - Edit Mode Toggle', () => {
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    // Cleanup before each test
+    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
+    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * T010: Edit button appears for spec.md in SPECIFY stage
+   * T013: Permission-based button visibility
+   */
+  test('shows Edit button for spec.md when ticket is in SPECIFY stage', async ({ page }) => {
+    // Setup: Create ticket in SPECIFY stage with branch
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Documentation Editor Test',
+        description: 'Test ticket for edit mode',
+        stage: 'SPECIFY',
+        branch: '036-edit-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed specify job so "View Spec" button appears
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    // Navigate to board
+    await page.goto('/projects/1/board');
+
+    // Click ticket to open detail modal
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+
+    // Click "Spec" button
+    await page.click('button:has-text("Spec")');
+
+    // Wait for documentation viewer modal to open
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should be visible
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).toBeVisible();
+    await expect(editButton).toHaveText(/Edit/);
+  });
+
+  /**
+   * T013: Edit button hidden for plan.md in SPECIFY stage (permission denied)
+   */
+  test('hides Edit button for plan.md when ticket is in SPECIFY stage', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Permission Test',
+        description: 'Test permission denial',
+        stage: 'SPECIFY',
+        branch: '036-permission-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create both jobs so Plan button appears (ticket would have progressed through stages)
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'plan',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Plan")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should NOT be visible (permission denied - plan.md not editable in SPECIFY stage)
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).not.toBeVisible();
+  });
+
+  /**
+   * T010: Clicking Edit button toggles to editor mode
+   */
+  test('toggles to editor mode when Edit button is clicked', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Edit Toggle Test',
+        description: 'Test edit mode toggle',
+        stage: 'SPECIFY',
+        branch: '036-toggle-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Click Edit button
+    await page.click('[data-testid="edit-button"]');
+
+    // Assert: Editor components should be visible
+    await expect(page.locator('textarea[name="content"]')).toBeVisible();
+    await expect(page.locator('button:has-text("Save")')).toBeVisible();
+    await expect(page.locator('button:has-text("Cancel")')).toBeVisible();
+
+    // Assert: Edit button should be hidden in editor mode
+    await expect(page.locator('[data-testid="edit-button"]')).not.toBeVisible();
+  });
+});
+
+test.describe('Documentation Editor - Save Workflow', () => {
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    // Cleanup before each test
+    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
+    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * T011: Save operation with success feedback
+   */
+  test('saves content changes and shows success toast', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Save Test',
+        description: 'Test save workflow',
+        stage: 'SPECIFY',
+        branch: '036-save-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    // Mock GitHub API response to avoid real API calls
+    await page.route('**/api/projects/1/docs', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          commitSha: 'mock-sha-e2e-save',
+          updatedAt: new Date().toISOString(),
+          message: 'spec.md updated successfully',
+        }),
+      });
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Enter edit mode
+    await page.click('[data-testid="edit-button"]');
+    await expect(page.locator('textarea[name="content"]')).toBeVisible();
+
+    // Modify content
+    const textarea = page.locator('textarea[name="content"]');
+    await textarea.fill('# Updated Content\n\nThis is new content for testing save.');
+
+    // Wait for Save button to be enabled, then click
+    const saveButton = page.locator('[data-testid="save-button"]');
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    // Assert: Success toast should appear (use first match to avoid duplicate elements)
+    await expect(page.getByText(/saved successfully/i).first()).toBeVisible();
+
+    // Assert: Should return to viewer mode
+    await expect(textarea).not.toBeVisible();
+    await expect(page.locator('[data-testid="edit-button"]')).toBeVisible();
+  });
+
+  /**
+   * T011: Save operation with error handling
+   */
+  test('shows error toast when save fails', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Save Error Test',
+        description: 'Test save error handling',
+        stage: 'SPECIFY',
+        branch: '036-save-error-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    // Mock GitHub API error response
+    await page.route('**/api/projects/1/docs', (route) => {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: 'GitHub API error',
+          code: 'GITHUB_ERROR',
+        }),
+      });
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    await page.click('[data-testid="edit-button"]');
+    const textarea = page.locator('textarea[name="content"]');
+    await textarea.fill('# New Content');
+
+    // Wait for Save button to be enabled, then click
+    const saveButton = page.locator('[data-testid="save-button"]');
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    // Assert: Error toast should appear (use first match to avoid duplicate elements)
+    await expect(page.getByText(/save failed|GitHub API error/i).first()).toBeVisible();
+
+    // Assert: Should remain in editor mode (not saved)
+    await expect(textarea).toBeVisible();
+  });
+});
+
+test.describe('Documentation Editor - Cancel Workflow', () => {
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    // Cleanup before each test
+    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
+    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * T012: Cancel operation returns to viewer mode without saving
+   */
+  test('cancels edit and returns to viewer mode without saving changes', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Cancel Test',
+        description: 'Test cancel workflow',
+        stage: 'SPECIFY',
+        branch: '036-cancel-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Get original content
+    const originalContent = await page.locator('.prose').textContent();
+
+    // Enter edit mode and modify content
+    await page.click('[data-testid="edit-button"]');
+    const textarea = page.locator('textarea[name="content"]');
+    await textarea.fill('# Modified Content\n\nThis should be discarded.');
+
+    // Setup dialog handler to accept confirmation
+    page.once('dialog', dialog => dialog.accept());
+
+    // Click Cancel button
+    await page.click('[data-testid="cancel-button"]');
+
+    // Assert: Should return to viewer mode
+    await expect(textarea).not.toBeVisible();
+    await expect(page.locator('[data-testid="edit-button"]')).toBeVisible();
+
+    // Assert: Original content should be preserved
+    const currentContent = await page.locator('.prose').textContent();
+    expect(currentContent).toBe(originalContent);
+  });
+
+  /**
+   * T012: Cancel with confirmation dialog when content is dirty
+   */
+  test('shows confirmation dialog when canceling with unsaved changes', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Cancel Confirmation Test',
+        description: 'Test cancel confirmation dialog',
+        stage: 'SPECIFY',
+        branch: '036-cancel-confirm-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    await page.click('[data-testid="edit-button"]');
+    const textarea = page.locator('textarea[name="content"]');
+    await textarea.fill('# Modified Content');
+
+    // Setup dialog handler to accept confirmation
+    page.once('dialog', dialog => dialog.accept());
+
+    // Click Cancel button
+    await page.click('[data-testid="cancel-button"]');
+
+    // Should return to viewer mode after confirmation
+    await expect(textarea).not.toBeVisible();
+    await expect(page.locator('[data-testid="edit-button"]')).toBeVisible();
+  });
+});
+
+test.describe('Documentation Editor - Permission Edge Cases', () => {
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    // Cleanup before each test
+    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
+    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * T013: Edit button visible for plan.md in PLAN stage
+   */
+  test('shows Edit button for plan.md when ticket is in PLAN stage', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] PLAN Stage Test',
+        description: 'Test PLAN stage permissions',
+        stage: 'PLAN',
+        branch: '036-plan-stage-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create both specify and plan jobs (ticket would have progressed through stages)
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'plan',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Plan")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should be visible for plan.md in PLAN stage
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).toBeVisible();
+  });
+
+  /**
+   * T013: Edit button visible for tasks.md in PLAN stage
+   */
+  test('shows Edit button for tasks.md when ticket is in PLAN stage', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] PLAN Stage Tasks Test',
+        description: 'Test PLAN stage tasks permissions',
+        stage: 'PLAN',
+        branch: '036-plan-tasks-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create both specify and plan jobs (ticket would have progressed through stages)
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'plan',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Tasks")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should be visible for tasks.md in PLAN stage
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).toBeVisible();
+  });
+
+  /**
+   * T013: Edit button hidden for spec.md in PLAN stage
+   */
+  test('hides Edit button for spec.md when ticket is in PLAN stage', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] PLAN Stage Spec Test',
+        description: 'Test spec permission in PLAN stage',
+        stage: 'PLAN',
+        branch: '036-plan-spec-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create both specify and plan jobs (ticket would have progressed through stages)
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'plan',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should NOT be visible (spec not editable in PLAN stage)
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).not.toBeVisible();
+  });
+
+  /**
+   * T013: Edit button hidden in BUILD stage (no editing allowed)
+   */
+  test('hides Edit button for all doc types when ticket is in BUILD stage', async ({ page }) => {
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] BUILD Stage Test',
+        description: 'Test BUILD stage permissions',
+        stage: 'BUILD',
+        branch: '036-build-stage-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job so documentation buttons appear
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Spec")');
+    await page.waitForSelector('[role="dialog"]');
+
+    // Assert: Edit button should NOT be visible in BUILD stage
+    const editButton = page.locator('[data-testid="edit-button"]');
+    await expect(editButton).not.toBeVisible();
+  });
+});

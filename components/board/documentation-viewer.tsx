@@ -1,18 +1,24 @@
 'use client';
 
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useDocumentation } from '@/lib/hooks/use-documentation';
+import { canEdit } from '@/components/ticket/edit-permission-guard';
+import { DocumentationEditor } from '@/components/ticket/documentation-editor';
 import type { DocumentType } from '@/lib/validations/documentation';
+import type { Stage } from '@prisma/client';
 
 /**
  * Human-readable labels for documentation types
@@ -32,6 +38,9 @@ interface DocumentationViewerProps {
 
   /** Ticket title for display in modal header */
   ticketTitle: string;
+
+  /** Ticket stage for permission checking */
+  ticketStage: Stage;
 
   /** Document type to display (spec, plan, or tasks) */
   docType: DocumentType;
@@ -58,10 +67,12 @@ export default function DocumentationViewer({
   ticketId,
   projectId,
   ticketTitle,
+  ticketStage,
   docType,
   open,
   onOpenChange,
 }: DocumentationViewerProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
 
   // Fetch documentation using TanStack Query hook
@@ -73,6 +84,9 @@ export default function DocumentationViewer({
     open
   );
 
+  // Check if user can edit this document type based on ticket stage
+  const userCanEdit = canEdit(ticketStage, docType);
+
   // Show error toast when error occurs
   if (error && open) {
     toast({
@@ -82,13 +96,44 @@ export default function DocumentationViewer({
     });
   }
 
+  // Reset edit mode when modal closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setIsEditing(false);
+    }
+    onOpenChange(newOpen);
+  };
+
+  const handleSaveSuccess = () => {
+    toast({
+      title: 'Success',
+      description: `${docType}.md saved successfully`,
+    });
+    setIsEditing(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
         <DialogHeader>
-          <DialogTitle className="text-zinc-50">
-            {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-zinc-50">
+              {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
+            </DialogTitle>
+            {/* Edit button - only show if user can edit and not already editing */}
+            {userCanEdit && !isEditing && data && !isLoading && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="ml-4"
+                data-testid="edit-button"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="mt-4">
@@ -106,7 +151,7 @@ export default function DocumentationViewer({
             </div>
           )}
 
-          {data && (
+          {data && !isEditing && (
             <ScrollArea className="h-[60vh] w-full rounded-md pr-4">
               <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                 <ReactMarkdown
@@ -227,6 +272,20 @@ export default function DocumentationViewer({
                 </ReactMarkdown>
               </div>
             </ScrollArea>
+          )}
+
+          {/* Editor mode - show when editing */}
+          {data && isEditing && (
+            <div className="h-[60vh] overflow-auto">
+              <DocumentationEditor
+                projectId={projectId}
+                ticketId={ticketId}
+                docType={docType}
+                initialContent={data.content}
+                onCancel={() => setIsEditing(false)}
+                onSaveSuccess={handleSaveSuccess}
+              />
+            </div>
           )}
         </div>
       </DialogContent>
