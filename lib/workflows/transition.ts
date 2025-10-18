@@ -251,8 +251,8 @@ export async function handleTicketTransition(
     // Initialize Octokit with GitHub token
     const githubToken = process.env.GITHUB_TOKEN;
 
-    // Skip GitHub API call in test mode (when NODE_ENV is test, token is placeholder, or missing)
-    const isTestMode = process.env.NODE_ENV === 'test' || !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
+    // Skip GitHub API call in test mode (when TEST_MODE is set, NODE_ENV is test, token is placeholder, or missing)
+    const isTestMode = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test' || !githubToken || githubToken.includes('test') || githubToken.includes('placeholder');
 
     if (!isTestMode) {
       try {
