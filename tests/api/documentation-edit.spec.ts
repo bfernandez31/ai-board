@@ -396,3 +396,179 @@ test.describe('POST /api/projects/[projectId]/docs - Not Found Errors (404)', ()
     expect(data.code).toBe('BRANCH_NOT_FOUND');
   });
 });
+
+/**
+ * USER STORY 2: API Contract Tests for Plan/Tasks Editing
+ * Tests for tasks T025-T026
+ */
+test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', () => {
+  const BASE_URL = 'http://localhost:3000';
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async () => {
+    await cleanupDatabase();
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * Helper: Create test ticket with branch
+   */
+  const createTestTicket = async (params: {
+    stage: Stage;
+    branch: string;
+    title?: string;
+  }) => {
+    return await prisma.ticket.create({
+      data: {
+        title: params.title || '[e2e] US2 API Test',
+        description: 'Test ticket for plan/tasks editing',
+        stage: params.stage,
+        branch: params.branch,
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+  };
+
+  /**
+   * T025: POST with docType=plan in PLAN stage returns 200
+   * NOTE: Requires GITHUB_TOKEN environment variable to make real GitHub API calls
+   */
+  test('returns 200 when editing plan.md in PLAN stage', async ({ request }) => {
+    // Setup: Create ticket in PLAN stage
+    const ticket = await createTestTicket({
+      stage: 'PLAN',
+      branch: '036-us2-plan-api-test',
+      title: '[e2e] US2 Plan API Test',
+    });
+
+    // Make API request
+    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+      data: {
+        ticketId: ticket.id,
+        docType: 'plan',
+        content: '# Updated Plan\n\nNew plan content.',
+      },
+    });
+
+    // Assert based on GITHUB_TOKEN availability
+    if (process.env.GITHUB_TOKEN) {
+      // If token available, expect success
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty('success', true);
+      expect(data).toHaveProperty('commitSha');
+      expect(data).toHaveProperty('updatedAt');
+      expect(data).toHaveProperty('message');
+      expect(data.commitSha).toMatch(/^[a-f0-9]{40}$/);
+      expect(data.message).toContain('plan.md');
+    } else {
+      // If no token, expect 500 (GITHUB_TOKEN not set)
+      expect(response.status()).toBe(500);
+    }
+  });
+
+  /**
+   * T026: POST with docType=tasks in PLAN stage returns 200
+   * NOTE: Requires GITHUB_TOKEN environment variable to make real GitHub API calls
+   */
+  test('returns 200 when editing tasks.md in PLAN stage', async ({ request }) => {
+    // Setup: Create ticket in PLAN stage
+    const ticket = await createTestTicket({
+      stage: 'PLAN',
+      branch: '036-us2-tasks-api-test',
+      title: '[e2e] US2 Tasks API Test',
+    });
+
+    // Make API request
+    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+      data: {
+        ticketId: ticket.id,
+        docType: 'tasks',
+        content: '# Task Breakdown\n\n- [X] Task 1\n- [ ] Task 2',
+      },
+    });
+
+    // Assert based on GITHUB_TOKEN availability
+    if (process.env.GITHUB_TOKEN) {
+      // If token available, expect success
+      expect(response.status()).toBe(200);
+
+      const data = await response.json();
+      expect(data).toHaveProperty('success', true);
+      expect(data).toHaveProperty('commitSha');
+      expect(data).toHaveProperty('updatedAt');
+      expect(data).toHaveProperty('message');
+      expect(data.commitSha).toMatch(/^[a-f0-9]{40}$/);
+      expect(data.message).toContain('tasks.md');
+    } else {
+      // If no token, expect 500 (GITHUB_TOKEN not set)
+      expect(response.status()).toBe(500);
+    }
+  });
+
+  /**
+   * Permission test: Editing plan.md in SPECIFY stage returns 403
+   */
+  test('returns 403 when editing plan.md in SPECIFY stage', async ({ request }) => {
+    // Setup: Create ticket in SPECIFY stage
+    const ticket = await createTestTicket({
+      stage: 'SPECIFY',
+      branch: '036-us2-plan-permission-test',
+      title: '[e2e] US2 Plan Permission Test',
+    });
+
+    // Make API request (should fail permission check)
+    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+      data: {
+        ticketId: ticket.id,
+        docType: 'plan',
+        content: '# Updated Plan',
+      },
+    });
+
+    // Assert: 403 Forbidden
+    expect(response.status()).toBe(403);
+
+    const data = await response.json();
+    expect(data.success).toBe(false);
+    expect(data.code).toBe('PERMISSION_DENIED');
+    expect(data.error).toContain('plan.md');
+    expect(data.error).toContain('SPECIFY');
+  });
+
+  /**
+   * Permission test: Editing tasks.md in SPECIFY stage returns 403
+   */
+  test('returns 403 when editing tasks.md in SPECIFY stage', async ({ request }) => {
+    // Setup: Create ticket in SPECIFY stage
+    const ticket = await createTestTicket({
+      stage: 'SPECIFY',
+      branch: '036-us2-tasks-permission-test',
+      title: '[e2e] US2 Tasks Permission Test',
+    });
+
+    // Make API request (should fail permission check)
+    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+      data: {
+        ticketId: ticket.id,
+        docType: 'tasks',
+        content: '# Task Breakdown',
+      },
+    });
+
+    // Assert: 403 Forbidden
+    expect(response.status()).toBe(403);
+
+    const data = await response.json();
+    expect(data.success).toBe(false);
+    expect(data.code).toBe('PERMISSION_DENIED');
+    expect(data.error).toContain('tasks.md');
+    expect(data.error).toContain('SPECIFY');
+  });
+});

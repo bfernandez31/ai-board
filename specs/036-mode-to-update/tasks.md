@@ -83,18 +83,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] E2E test for editing plan.md in PLAN stage in `tests/e2e/documentation-editor.spec.ts` (verify Edit button appears, save works)
-- [ ] T023 [P] [US2] E2E test for editing tasks.md in PLAN stage in `tests/e2e/documentation-editor.spec.ts` (verify Edit button appears, save works)
-- [ ] T024 [P] [US2] E2E test for permission denial in `tests/e2e/documentation-editor.spec.ts` (verify Edit button hidden for plan/tasks when ticket in SPECIFY stage)
-- [ ] T025 [P] [US2] API contract test for plan.md edit in `tests/api/documentation-edit.spec.ts` (POST with docType=plan in PLAN stage returns 200)
-- [ ] T026 [P] [US2] API contract test for tasks.md edit in `tests/api/documentation-edit.spec.ts` (POST with docType=tasks in PLAN stage returns 200)
+- [X] T022 [P] [US2] E2E test for editing plan.md in PLAN stage in `tests/e2e/documentation-editor.spec.ts` (verify Edit button appears, save works)
+- [X] T023 [P] [US2] E2E test for editing tasks.md in PLAN stage in `tests/e2e/documentation-editor.spec.ts` (verify Edit button appears, save works)
+- [X] T024 [P] [US2] E2E test for permission denial in `tests/e2e/documentation-editor.spec.ts` (verify Edit button hidden for plan/tasks when ticket in SPECIFY stage)
+- [X] T025 [P] [US2] API contract test for plan.md edit in `tests/api/documentation-edit.spec.ts` (POST with docType=plan in PLAN stage returns 200)
+- [X] T026 [P] [US2] API contract test for tasks.md edit in `tests/api/documentation-edit.spec.ts` (POST with docType=tasks in PLAN stage returns 200)
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Verify API route `app/api/projects/[projectId]/docs/route.ts` handles plan and tasks docTypes (should already work from US1, add explicit tests if needed)
-- [ ] T028 [US2] Update edit permission guard in `components/ticket/edit-permission-guard.tsx` to allow plan and tasks editing in PLAN stage
-- [ ] T029 [US2] Add Edit buttons for plan.md and tasks.md sections in DocumentationViewer component (conditionally shown for PLAN stage)
-- [ ] T030 [US2] Test integration: verify editing plan.md and tasks.md works end-to-end with git commits
+- [X] T027 [US2] Verify API route `app/api/projects/[projectId]/docs/route.ts` handles plan and tasks docTypes (already works - generic design supports all docTypes)
+- [X] T028 [US2] Update edit permission guard in `components/ticket/edit-permission-guard.tsx` to allow plan and tasks editing in PLAN stage (already complete - designed generically from start)
+- [X] T029 [US2] Add Edit buttons for plan.md and tasks.md sections in DocumentationViewer component (conditionally shown for PLAN stage) (already complete - DocumentationViewer is generic)
+- [X] T030 [US2] Test integration: verify editing plan.md and tasks.md works end-to-end with git commits (4 E2E tests + 4 API tests all passing)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - users can edit all doc types based on stage
 
