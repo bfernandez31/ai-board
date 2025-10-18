@@ -1,4 +1,4 @@
-# Feature Specification: Documentation Edit Mode test
+# Feature Specification: Documentation Edit Mode
 
 **Feature Branch**: `036-mode-to-update`
 **Created**: 2025-10-18
