@@ -1,4 +1,4 @@
-# Tasks: Documentation Edit Mode
+# Tasks: Documentation Edit Mode test
 
 **Input**: Design documents from `/specs/036-mode-to-update/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
