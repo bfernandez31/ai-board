@@ -14,9 +14,6 @@ async function globalSetup() {
   const envPath = path.resolve(process.cwd(), '.env');
   dotenv.config({ path: envPath });
 
-  // Set TEST_MODE to enable mock GitHub responses
-  process.env.TEST_MODE = 'true';
-
   // Clean any leftover test data
   await cleanupDatabase();
 
