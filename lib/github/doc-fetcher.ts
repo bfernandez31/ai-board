@@ -32,8 +32,11 @@ export interface DocumentFetchParams {
   /** GitHub repository name */
   repo: string;
 
-  /** Git branch or commit ref */
+  /** Git branch or commit ref to read from (e.g., 'main' for SHIP tickets, feature branch otherwise) */
   branch: string;
+
+  /** Original ticket branch name (used to construct file path in specs/ directory) */
+  ticketBranch: string;
 
   /** Document type to fetch (spec, plan, or tasks) */
   docType: DocumentType;
@@ -90,7 +93,7 @@ const test = 'example for ${params.docType}';
     const response = await octokit.repos.getContent({
       owner: params.owner,
       repo: params.repo,
-      path: `specs/${params.branch}/${fileName}`,
+      path: `specs/${params.ticketBranch}/${fileName}`,
       ref: params.branch,
     });
 
@@ -106,7 +109,7 @@ const test = 'example for ${params.docType}';
     if (error instanceof Error) {
       if (error.message.includes('Not Found')) {
         const fileName = DocumentTypeFiles[params.docType];
-        throw new Error(`${fileName} not found at specs/${params.branch}/${fileName}`);
+        throw new Error(`${fileName} not found at specs/${params.ticketBranch}/${fileName}`);
       }
       if (error.message.includes('rate limit')) {
         throw new Error('GitHub API rate limit exceeded');

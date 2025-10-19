@@ -152,6 +152,7 @@ export async function GET(
         owner: ticket.project.githubOwner,
         repo: ticket.project.githubRepo,
         branch: branch,
+        ticketBranch: ticket.branch,
         docType: 'tasks',
       });
 
