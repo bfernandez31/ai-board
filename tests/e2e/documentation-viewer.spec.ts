@@ -728,8 +728,8 @@ test.describe('Commit History - User Story 3', () => {
 
     // Open documentation viewer
     await page.goto('/projects/1/board');
-    await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("Specification")');
+    await openTicketModal(page, ticket.id);
+    await page.click('button:has-text("Spec")');
 
     // Verify "View History" button is visible
     const historyButton = page.locator('button:has-text("View History")');
@@ -826,8 +826,8 @@ test.describe('Commit History - User Story 3', () => {
 
     // Open documentation viewer and history
     await page.goto('/projects/1/board');
-    await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.click('button:has-text("Specification")');
+    await openTicketModal(page, ticket.id);
+    await page.click('button:has-text("Spec")');
     await page.click('button:has-text("View History")');
 
     // Click on the commit to view diff
