@@ -16,6 +16,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5.90.5 (034-migrate-state-management)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, @octokit/rest 22.0, shadcn/ui, react-markdown 9.0.1 (035-view-plan-and)
 - PostgreSQL 14+ (Ticket, Job, Project tables) (035-view-plan-and)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5, shadcn/ui, simple-git (for git operations) (036-mode-to-update)
+- PostgreSQL 14+ via Prisma (ticket metadata), Git repository (documentation files) (036-mode-to-update)
 
 ### Core Stack
 
@@ -73,9 +75,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 036-mode-to-update: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5, shadcn/ui, simple-git (for git operations)
 - 035-view-plan-and: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, @octokit/rest 22.0, shadcn/ui, react-markdown 9.0.1
 - 034-migrate-state-management: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5.90.5
-- 033-link-to-branch: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac
   - Created `.github/workflows/quick-impl.yml` workflow file
   - Created `.claude/commands/quick-impl.md` command for direct implementation
   - Modified `create-new-feature.sh` to support `--mode=quick-impl` parameter

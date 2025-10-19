@@ -1,18 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Pencil, History } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useDocumentation } from '@/lib/hooks/use-documentation';
+import { useDocumentationHistory, useDocumentationDiff } from '@/lib/hooks/use-documentation-history';
+import { canEdit } from '@/components/ticket/edit-permission-guard';
+import { DocumentationEditor } from '@/components/ticket/documentation-editor';
+import { CommitHistoryViewer } from '@/components/ticket/commit-history-viewer';
+import { DiffViewer } from '@/components/ticket/diff-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
+import type { Stage } from '@prisma/client';
 
 /**
  * Human-readable labels for documentation types
@@ -32,6 +41,9 @@ interface DocumentationViewerProps {
 
   /** Ticket title for display in modal header */
   ticketTitle: string;
+
+  /** Ticket stage for permission checking */
+  ticketStage: Stage;
 
   /** Document type to display (spec, plan, or tasks) */
   docType: DocumentType;
@@ -58,10 +70,14 @@ export default function DocumentationViewer({
   ticketId,
   projectId,
   ticketTitle,
+  ticketStage,
   docType,
   open,
   onOpenChange,
 }: DocumentationViewerProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Fetch documentation using TanStack Query hook
@@ -73,6 +89,25 @@ export default function DocumentationViewer({
     open
   );
 
+  // Fetch commit history (only when viewing history)
+  const { data: historyData, isLoading: historyLoading, error: historyError } = useDocumentationHistory(
+    projectId,
+    ticketId,
+    docType,
+    isViewingHistory
+  );
+
+  // Fetch diff for selected commit
+  const { data: diffData, isLoading: diffLoading } = useDocumentationDiff(
+    projectId,
+    ticketId,
+    docType,
+    selectedCommitSha
+  );
+
+  // Check if user can edit this document type based on ticket stage
+  const userCanEdit = canEdit(ticketStage, docType);
+
   // Show error toast when error occurs
   if (error && open) {
     toast({
@@ -82,13 +117,78 @@ export default function DocumentationViewer({
     });
   }
 
+  // Reset edit mode and history view when modal closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setIsEditing(false);
+      setIsViewingHistory(false);
+      setSelectedCommitSha(null);
+    }
+    onOpenChange(newOpen);
+  };
+
+  const handleSaveSuccess = () => {
+    toast({
+      title: 'Success',
+      description: `${docType}.md saved successfully`,
+    });
+    setIsEditing(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
-        <DialogHeader>
-          <DialogTitle className="text-zinc-50">
-            {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
-          </DialogTitle>
+        <DialogHeader className="pr-12">
+          <div className="flex items-center justify-between gap-4">
+            <DialogTitle className="text-zinc-50 flex-1">
+              {DocumentTypeLabels[docType]} - Ticket #{ticketId}: {ticketTitle}
+            </DialogTitle>
+
+            {/* Action buttons - only show when not editing or viewing history */}
+            {!isEditing && !isViewingHistory && data && !isLoading && (
+              <div className="flex items-center gap-2 shrink-0">
+                {/* View History button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsViewingHistory(true)}
+                  className="shrink-0"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  View History
+                </Button>
+
+                {/* Edit button - only show if user can edit */}
+                {userCanEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="shrink-0"
+                    data-testid="edit-button"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Back button when viewing history */}
+            {isViewingHistory && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsViewingHistory(false);
+                  setSelectedCommitSha(null);
+                }}
+                className="shrink-0"
+              >
+                Back to Document
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="mt-4">
@@ -106,7 +206,7 @@ export default function DocumentationViewer({
             </div>
           )}
 
-          {data && (
+          {data && !isEditing && !isViewingHistory && (
             <ScrollArea className="h-[60vh] w-full rounded-md pr-4">
               <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                 <ReactMarkdown
@@ -227,6 +327,77 @@ export default function DocumentationViewer({
                 </ReactMarkdown>
               </div>
             </ScrollArea>
+          )}
+
+          {/* Editor mode - show when editing */}
+          {data && isEditing && (
+            <div className="h-[70vh] flex flex-col">
+              <DocumentationEditor
+                projectId={projectId}
+                ticketId={ticketId}
+                docType={docType}
+                initialContent={data.content}
+                onCancel={() => setIsEditing(false)}
+                onSaveSuccess={handleSaveSuccess}
+              />
+            </div>
+          )}
+
+          {/* History view - show when viewing history */}
+          {isViewingHistory && (
+            <div className="h-[70vh] flex flex-col gap-6">
+              {/* Commit history list - fixed height with scroll */}
+              <div className="flex-shrink-0">
+                <h3 className="text-lg font-semibold text-zinc-50 mb-4">Commit History</h3>
+                {historyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-zinc-400">Loading commit history...</div>
+                  </div>
+                ) : historyError ? (
+                  <div className="text-red-400 py-8 text-center">
+                    <p className="font-semibold mb-2">Error loading commit history</p>
+                    <p className="text-sm text-zinc-400">{historyError.message}</p>
+                  </div>
+                ) : historyData?.commits && historyData.commits.length > 0 ? (
+                  <ScrollArea className="h-[25vh]">
+                    <CommitHistoryViewer
+                      commits={historyData.commits}
+                      onCommitSelect={setSelectedCommitSha}
+                      selectedCommitSha={selectedCommitSha}
+                    />
+                  </ScrollArea>
+                ) : (
+                  <div className="text-zinc-400 py-8 text-center">
+                    <p>No commit history available</p>
+                    <p className="text-sm mt-2 text-zinc-500">
+                      This file may not have any commits yet, or the branch may not exist in the repository.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Diff viewer - show when commit selected, scrollable */}
+              {selectedCommitSha && (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <h3 className="text-lg font-semibold text-zinc-50 mb-4 flex-shrink-0">
+                    Changes in Commit {selectedCommitSha.substring(0, 7)}
+                  </h3>
+                  {diffLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-zinc-400">Loading diff...</div>
+                    </div>
+                  ) : diffData ? (
+                    <ScrollArea className="flex-1">
+                      <DiffViewer diff={diffData} />
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-zinc-400 py-8 text-center">
+                      No diff available for this commit
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </DialogContent>

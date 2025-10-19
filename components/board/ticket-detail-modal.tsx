@@ -18,10 +18,9 @@ import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
-import SpecViewer from './spec-viewer';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Stage } from '@prisma/client';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -156,7 +155,6 @@ export function TicketDetailModal({
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
-  const [specViewerOpen, setSpecViewerOpen] = useState(false);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
@@ -182,7 +180,6 @@ export function TicketDetailModal({
   // Reset child dialog states when parent dialog closes
   useEffect(() => {
     if (!open) {
-      setSpecViewerOpen(false);
       setPolicyEditOpen(false);
     }
   }, [open]);
@@ -896,7 +893,10 @@ export function TicketDetailModal({
             <div className="border-t-2 border-[#313244]/50 pt-6">
               <div className="flex items-center gap-2 flex-wrap">
                 <Button
-                  onClick={() => setSpecViewerOpen(true)}
+                  onClick={() => {
+                    setDocViewerType('spec');
+                    setDocViewerOpen(true);
+                  }}
                   size="sm"
                   className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                   title="View specification document"
@@ -958,23 +958,13 @@ export function TicketDetailModal({
         </div>
       </DialogContent>
 
-      {/* SpecViewer modal - only render when parent dialog is open */}
-      {ticket && open && (
-        <SpecViewer
-          ticketId={ticket.id}
-          projectId={projectId}
-          ticketTitle={ticket.title}
-          open={specViewerOpen}
-          onOpenChange={setSpecViewerOpen}
-        />
-      )}
-
       {/* DocumentationViewer modal - only render when parent dialog is open */}
       {ticket && open && (
         <DocumentationViewer
           ticketId={ticket.id}
           projectId={projectId}
           ticketTitle={ticket.title}
+          ticketStage={ticket.stage as Stage}
           docType={docViewerType}
           open={docViewerOpen}
           onOpenChange={setDocViewerOpen}

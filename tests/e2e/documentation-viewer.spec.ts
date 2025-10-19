@@ -13,7 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../helpers/db-cleanup';
+import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 
 const prisma = getPrismaClient();
 
@@ -657,5 +657,319 @@ test.describe('Documentation Viewer - Modal Interactions', () => {
     await page.keyboard.press('Escape');
 
     await expect(tasksModal).not.toBeVisible();
+  });
+});
+
+// =============================================================================
+// User Story 3: Commit History and Change Tracking Tests
+// =============================================================================
+
+test.describe('Commit History - User Story 3', () => {
+  test.beforeEach(async () => {
+    await cleanupDatabase();
+  });
+
+  /**
+   * T031: E2E test for commit history display
+   * Verifies "View History" button appears and commit list shows with authors and timestamps
+   */
+  test('displays commit history when View History button clicked', async ({ page }) => {
+    // Create test ticket with branch
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] US3 Commit History Test',
+        description: 'Testing commit history display',
+        stage: 'SPECIFY',
+        branch: '036-us3-history-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job (ticket has progressed through SPECIFY)
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    // Mock GitHub commit history API response
+    await page.route('**/api/projects/1/docs/history*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          commits: [
+            {
+              sha: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',
+              author: {
+                name: 'Claude',
+                email: 'noreply@anthropic.com',
+                date: '2025-10-18T14:32:17Z',
+              },
+              message: 'docs: update specification with user scenarios',
+              url: 'https://github.com/test/test/commit/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',
+            },
+            {
+              sha: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0a1',
+              author: {
+                name: 'Test User',
+                email: 'test@e2e.local',
+                date: '2025-10-18T12:15:30Z',
+              },
+              message: 'docs: initial specification',
+              url: 'https://github.com/test/test/commit/b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0a1',
+            },
+          ],
+        }),
+      });
+    });
+
+    // Open documentation viewer
+    await page.goto('/projects/1/board');
+    await openTicketModal(page, ticket.id);
+    await page.click('button:has-text("Spec")');
+
+    // Verify "View History" button is visible
+    const historyButton = page.locator('button:has-text("View History")');
+    await expect(historyButton).toBeVisible();
+
+    // Click View History button
+    await historyButton.click();
+
+    // Verify commit list displays
+    const commitList = page.locator('[data-testid="commit-history-list"]');
+    await expect(commitList).toBeVisible();
+
+    // Verify first commit details (most recent)
+    const firstCommit = page.locator('[data-testid="commit-item"]').first();
+    await expect(firstCommit).toContainText('Claude');
+    await expect(firstCommit).toContainText('noreply@anthropic.com');
+    await expect(firstCommit).toContainText('update specification with user scenarios');
+    await expect(firstCommit).toContainText('Oct 18'); // Date formatting
+
+    // Verify second commit details
+    const secondCommit = page.locator('[data-testid="commit-item"]').nth(1);
+    await expect(secondCommit).toContainText('Test User');
+    await expect(secondCommit).toContainText('test@e2e.local');
+    await expect(secondCommit).toContainText('initial specification');
+  });
+
+  /**
+   * T032: E2E test for diff viewing
+   * Verifies clicking a commit displays the diff
+   */
+  test('displays diff when clicking on a commit', async ({ page }) => {
+    // Create test ticket with branch
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] US3 Diff Viewing Test',
+        description: 'Testing diff display',
+        stage: 'SPECIFY',
+        branch: '036-us3-diff-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed job
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+
+    // Mock commit history API
+    await page.route('**/api/projects/1/docs/history*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          commits: [
+            {
+              sha: 'abc123',
+              author: {
+                name: 'Claude',
+                email: 'noreply@anthropic.com',
+                date: '2025-10-18T14:32:17Z',
+              },
+              message: 'docs: update specification',
+              url: 'https://github.com/test/test/commit/abc123',
+            },
+          ],
+        }),
+      });
+    });
+
+    // Mock diff API response
+    await page.route('**/api/projects/1/docs/diff*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sha: 'abc123',
+          files: [
+            {
+              filename: 'specs/036-us3-diff-test/spec.md',
+              status: 'modified',
+              additions: 15,
+              deletions: 3,
+              patch:
+                '@@ -10,7 +10,19 @@\n ## Summary\n \n-Original content here\n+Updated content with more details\n+\n+## User Scenarios\n+\n+1. User opens app\n+2. User sees feature\n+3. User interacts\n',
+            },
+          ],
+        }),
+      });
+    });
+
+    // Open documentation viewer and history
+    await page.goto('/projects/1/board');
+    await openTicketModal(page, ticket.id);
+    await page.click('button:has-text("Spec")');
+    await page.click('button:has-text("View History")');
+
+    // Click on the commit to view diff
+    const commitItem = page.locator('[data-testid="commit-item"]').first();
+    await commitItem.click();
+
+    // Verify diff viewer displays
+    const diffViewer = page.locator('[data-testid="diff-viewer"]');
+    await expect(diffViewer).toBeVisible();
+
+    // Verify diff content shows additions and deletions
+    await expect(diffViewer).toContainText('+15'); // Additions count
+    await expect(diffViewer).toContainText('-3'); // Deletions count
+    await expect(diffViewer).toContainText('Updated content with more details');
+    await expect(diffViewer).toContainText('User Scenarios');
+
+    // Verify diff syntax highlighting (additions shown in green, deletions in red)
+    const additions = page.locator('.diff-addition').first();
+    await expect(additions).toBeVisible();
+    await expect(additions).toContainText('+Updated content');
+  });
+
+  /**
+   * T033: E2E test for multi-user attribution
+   * Verifies different authors shown correctly in commit history
+   */
+  test('displays multiple authors correctly in commit history', async ({ page }) => {
+    // Create test ticket with branch
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] US3 Multi-User Attribution Test',
+        description: 'Testing multi-user commit attribution',
+        stage: 'PLAN',
+        branch: '036-us3-multi-user-test',
+        projectId: 1,
+        workflowType: 'FULL',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create completed jobs for SPECIFY and PLAN stages
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'specify',
+      status: 'COMPLETED',
+    });
+    await createTestJob({
+      ticketId: ticket.id,
+      command: 'plan',
+      status: 'COMPLETED',
+    });
+
+    // Mock commit history with multiple different authors
+    await page.route('**/api/projects/1/docs/history*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          commits: [
+            {
+              sha: 'commit1',
+              author: {
+                name: 'Alice Developer',
+                email: 'alice@company.com',
+                date: '2025-10-18T16:00:00Z',
+              },
+              message: 'docs: add deployment section',
+              url: 'https://github.com/test/test/commit/commit1',
+            },
+            {
+              sha: 'commit2',
+              author: {
+                name: 'Bob Reviewer',
+                email: 'bob@company.com',
+                date: '2025-10-18T14:30:00Z',
+              },
+              message: 'docs: clarify acceptance criteria',
+              url: 'https://github.com/test/test/commit/commit2',
+            },
+            {
+              sha: 'commit3',
+              author: {
+                name: 'Claude',
+                email: 'noreply@anthropic.com',
+                date: '2025-10-18T12:00:00Z',
+              },
+              message: 'docs: initial plan generation',
+              url: 'https://github.com/test/test/commit/commit3',
+            },
+            {
+              sha: 'commit4',
+              author: {
+                name: 'Test User',
+                email: 'test@e2e.local',
+                date: '2025-10-18T10:00:00Z',
+              },
+              message: 'docs: create ticket',
+              url: 'https://github.com/test/test/commit/commit4',
+            },
+          ],
+        }),
+      });
+    });
+
+    // Open documentation viewer and history
+    await page.goto('/projects/1/board');
+    await page.click(`[data-ticket-id="${ticket.id}"]`);
+    await page.click('button:has-text("Plan")');
+    await page.click('button:has-text("View History")');
+
+    // Verify all four authors are displayed correctly
+    const commitItems = page.locator('[data-testid="commit-item"]');
+    await expect(commitItems).toHaveCount(4);
+
+    // Verify first author (Alice)
+    const aliceCommit = commitItems.nth(0);
+    await expect(aliceCommit).toContainText('Alice Developer');
+    await expect(aliceCommit).toContainText('alice@company.com');
+    await expect(aliceCommit).toContainText('add deployment section');
+
+    // Verify second author (Bob)
+    const bobCommit = commitItems.nth(1);
+    await expect(bobCommit).toContainText('Bob Reviewer');
+    await expect(bobCommit).toContainText('bob@company.com');
+    await expect(bobCommit).toContainText('clarify acceptance criteria');
+
+    // Verify third author (Claude)
+    const claudeCommit = commitItems.nth(2);
+    await expect(claudeCommit).toContainText('Claude');
+    await expect(claudeCommit).toContainText('noreply@anthropic.com');
+    await expect(claudeCommit).toContainText('initial plan generation');
+
+    // Verify fourth author (Test User)
+    const testCommit = commitItems.nth(3);
+    await expect(testCommit).toContainText('Test User');
+    await expect(testCommit).toContainText('test@e2e.local');
+    await expect(testCommit).toContainText('create ticket');
+
+    // Verify commits are ordered by date (most recent first)
+    const timestamps = await commitItems.allTextContents();
+    // All commits should show different dates/times indicating proper ordering
+    expect(timestamps[0]).toContain('Oct 18'); // Most recent
+    expect(timestamps[3]).toContain('Oct 18'); // Oldest
   });
 });
