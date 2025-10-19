@@ -6,6 +6,7 @@ import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare } fro
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -632,6 +633,9 @@ export function TicketDetailModal({
       >
         {/* Header with editable title */}
         <DialogHeader className="pb-4">
+          <DialogDescription className="sr-only">
+            View and edit ticket details, including title, description, stage, clarification policy, and documentation.
+          </DialogDescription>
           {/* Compact metadata row - badges and branch link */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <Badge
