@@ -11,6 +11,7 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { StageColumn } from './stage-column';
 import { DragOverlay } from './drag-overlay';
 import { OfflineIndicator } from './offline-indicator';
@@ -25,6 +26,7 @@ import {
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
+import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 
 interface BoardProps {
@@ -51,6 +53,7 @@ function BoardContent({
 }: BoardProps) {
   // Poll for job status updates (replaces SSE)
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
+  const queryClient = useQueryClient();
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
@@ -289,6 +292,11 @@ function BoardContent({
           );
           setTicketsByStage(groupTicketsByStage(finalTickets));
 
+          // Invalidate jobs status to resume polling if new job created
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.projects.jobsStatus(projectId),
+          });
+
           toast({
             title: 'Ticket updated',
             description: `Moved to ${targetStage}`,
@@ -313,7 +321,7 @@ function BoardContent({
         });
       }
     },
-    [allTickets, groupTicketsByStage, isOnline, toast, projectId]
+    [allTickets, groupTicketsByStage, isOnline, toast, projectId, queryClient]
   );
 
   // Handle ticket click to open modal
@@ -461,6 +469,11 @@ function BoardContent({
         );
         setTicketsByStage(groupTicketsByStage(finalTickets));
 
+        // Invalidate jobs status to resume polling (new job created for quick-impl)
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.jobsStatus(projectId),
+        });
+
         toast({
           title: 'Quick implementation started',
           description: `Workflow dispatched for ticket #${ticket.id}`,
@@ -484,7 +497,7 @@ function BoardContent({
         description: 'Could not start workflow. Please check your connection.',
       });
     }
-  }, [pendingTransition, allTickets, groupTicketsByStage, toast, projectId]);
+  }, [pendingTransition, allTickets, groupTicketsByStage, toast, projectId, queryClient]);
 
   // T038: Handle quick-impl cancellation
   const handleQuickImplCancel = useCallback(() => {

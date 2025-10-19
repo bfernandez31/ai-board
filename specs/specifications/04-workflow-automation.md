@@ -457,7 +457,7 @@ The system provides real-time visibility into workflow execution status:
 
 **Update Flow**:
 1. User views project board with active jobs
-2. Client polls for job status updates every N seconds
+2. Client polls for job status updates every 2 seconds
 3. Server returns current job statuses for all project jobs
 4. Client updates UI when status changes detected
 5. Client continues polling while board is visible
@@ -475,10 +475,10 @@ The system provides real-time visibility into workflow execution status:
 ### Requirements
 
 **Polling Configuration**:
-- Configurable polling interval (default: TBD)
+- Configurable polling interval (default: 2 seconds)
 - Start polling when board component mounts
 - Stop polling when board component unmounts
-- Handle visibility changes (optional: pause when tab inactive)
+- Continue polling in background tabs for real-time updates
 
 **API Endpoint**:
 - GET `/api/projects/{projectId}/jobs/status`
@@ -499,10 +499,10 @@ The system provides real-time visibility into workflow execution status:
 - Display error indicator if polling fails
 
 **Optimization**:
-- Terminal state jobs excluded from polling
+- Polling stops when all jobs reach terminal states
+- Polling resumes automatically when new jobs created
 - Batch all job status queries per project
-- Minimal data transfer (only job id and status)
-- Debounce rapid status changes
+- Minimal data transfer (only job id, status, ticketId, updatedAt)
 
 ### Why Polling Instead of SSE?
 
@@ -533,18 +533,22 @@ Authorization: Session cookie
 
 **Poll Response**:
 ```json
-[
-  {
-    "id": 123,
-    "ticketId": 456,
-    "status": "RUNNING"
-  },
-  {
-    "id": 124,
-    "ticketId": 457,
-    "status": "COMPLETED"
-  }
-]
+{
+  "jobs": [
+    {
+      "id": 123,
+      "ticketId": 456,
+      "status": "RUNNING",
+      "updatedAt": "2025-10-19T10:30:00.000Z"
+    },
+    {
+      "id": 124,
+      "ticketId": 457,
+      "status": "COMPLETED",
+      "updatedAt": "2025-10-19T10:35:00.000Z"
+    }
+  ]
+}
 ```
 
 **Client Polling State**:
@@ -552,6 +556,18 @@ Authorization: Session cookie
 - `lastKnownStatuses`: Map<jobId, status>
 - `isPolling`: Boolean flag
 - `errorCount`: Number of consecutive failures
+
+**Polling Behavior**:
+- Default interval: 2 seconds
+- Automatically stops when all jobs reach terminal states (COMPLETED, FAILED, CANCELLED)
+- Automatically resumes when new jobs are created via stage transitions
+- Continues polling in background tabs for real-time updates
+
+**Automatic Polling Resume**:
+- When user transitions a ticket (drag-and-drop or quick-impl), system immediately checks for new jobs
+- If new job detected, polling resumes automatically at 2-second interval
+- No user intervention required to see job status updates
+- Applies to all transition types (normal workflow and quick-impl)
 
 ---
 

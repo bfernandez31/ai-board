@@ -89,6 +89,10 @@ export function useUpdateTicket(projectId: number) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.ticket(projectId, variables.ticketId),
       });
+      // Invalidate jobs status to resume polling if new job created
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.jobsStatus(projectId),
+      });
     },
   });
 }

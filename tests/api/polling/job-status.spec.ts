@@ -349,6 +349,100 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
       expect(job.ticketId).toBeGreaterThan(0);
     });
   });
+
+  test('detects new job created after stage transition (polling resume scenario)', async ({ request }) => {
+    const prisma = getPrismaClient();
+
+    // Initial state: Mark all existing jobs as COMPLETED (terminal state)
+    await prisma.job.updateMany({
+      where: { projectId: TEST_PROJECT_ID },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
+    // Poll 1: Verify all jobs are terminal (polling would stop here)
+    const poll1 = await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
+    expect(poll1.status()).toBe(200);
+    const body1 = await poll1.json();
+    expect(body1.jobs.every((job: any) => job.status === 'COMPLETED')).toBe(true);
+
+    // Simulate drag-and-drop transition: Create new PENDING job
+    const ticket = await prisma.ticket.findFirst({
+      where: { projectId: TEST_PROJECT_ID },
+    });
+    expect(ticket).not.toBeNull();
+
+    const newJob = await prisma.job.create({
+      data: {
+        status: 'PENDING',
+        command: 'specify',
+        ticketId: ticket!.id,
+        projectId: TEST_PROJECT_ID,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Poll 2: Query invalidation would trigger this poll
+    // Should now return the new PENDING job along with completed jobs
+    const poll2 = await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
+    expect(poll2.status()).toBe(200);
+    const body2 = await poll2.json();
+
+    // Verify new job is present
+    const pendingJobs = body2.jobs.filter((job: any) => job.status === 'PENDING');
+    expect(pendingJobs).toHaveLength(1);
+    expect(pendingJobs[0].id).toBe(newJob.id);
+    expect(pendingJobs[0].ticketId).toBe(ticket!.id);
+
+    // Verify polling would resume (at least one non-terminal job exists)
+    const hasNonTerminalJob = body2.jobs.some((job: any) =>
+      ['PENDING', 'RUNNING'].includes(job.status)
+    );
+    expect(hasNonTerminalJob).toBe(true);
+  });
+
+  test('maintains correct job count after transition creates new job', async ({ request }) => {
+    const prisma = getPrismaClient();
+
+    // Count initial jobs
+    const initialPoll = await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
+    expect(initialPoll.status()).toBe(200);
+    const initialBody = await initialPoll.json();
+    const initialCount = initialBody.jobs.length;
+
+    // Create new job (simulating transition)
+    const ticket = await prisma.ticket.findFirst({
+      where: { projectId: TEST_PROJECT_ID },
+    });
+
+    await prisma.job.create({
+      data: {
+        status: 'PENDING',
+        command: 'plan',
+        ticketId: ticket!.id,
+        projectId: TEST_PROJECT_ID,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Poll after job creation
+    const afterPoll = await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
+    expect(afterPoll.status()).toBe(200);
+    const afterBody = await afterPoll.json();
+
+    // Verify job count increased by 1
+    expect(afterBody.jobs).toHaveLength(initialCount + 1);
+
+    // Verify all jobs are valid
+    afterBody.jobs.forEach((job: any) => {
+      expect(job).toHaveProperty('id');
+      expect(job).toHaveProperty('status');
+      expect(job).toHaveProperty('ticketId');
+      expect(job).toHaveProperty('updatedAt');
+    });
+  });
 });
 
 /**
