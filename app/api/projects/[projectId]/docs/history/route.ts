@@ -135,14 +135,18 @@ export async function GET(
 
     const octokit = new Octokit({ auth: githubToken });
 
+    // Determine branch (SHIP → main, else → feature branch)
+    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
+
     // Construct file path for this doc type
     // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)
+    // Path always uses original ticket branch name, even for SHIP tickets
     const filePath = `specs/${ticket.branch}/${validatedDocType}.md`;
 
     console.log('[docs/history/GET] Fetching commit history:', {
       owner: project.githubOwner,
       repo: project.githubRepo,
-      branch: ticket.branch,
+      branch: branch,
       path: filePath,
     });
 
@@ -150,7 +154,7 @@ export async function GET(
     const { data: commits } = await octokit.repos.listCommits({
       owner: project.githubOwner,
       repo: project.githubRepo,
-      sha: ticket.branch,
+      sha: branch,
       path: filePath,
     });
 
