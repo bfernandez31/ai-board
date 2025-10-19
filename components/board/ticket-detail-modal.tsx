@@ -18,7 +18,6 @@ import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
-import SpecViewer from './spec-viewer';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Stage } from '@prisma/client';
@@ -156,7 +155,6 @@ export function TicketDetailModal({
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
-  const [specViewerOpen, setSpecViewerOpen] = useState(false);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
@@ -182,7 +180,6 @@ export function TicketDetailModal({
   // Reset child dialog states when parent dialog closes
   useEffect(() => {
     if (!open) {
-      setSpecViewerOpen(false);
       setPolicyEditOpen(false);
     }
   }, [open]);
@@ -960,17 +957,6 @@ export function TicketDetailModal({
           </div>
         </div>
       </DialogContent>
-
-      {/* SpecViewer modal - only render when parent dialog is open */}
-      {ticket && open && (
-        <SpecViewer
-          ticketId={ticket.id}
-          projectId={projectId}
-          ticketTitle={ticket.title}
-          open={specViewerOpen}
-          onOpenChange={setSpecViewerOpen}
-        />
-      )}
 
       {/* DocumentationViewer modal - only render when parent dialog is open */}
       {ticket && open && (
