@@ -873,12 +873,7 @@ export function TicketDetailModal({
                   />
                 </div>
                 <div
-                  className="
-                    text-base text-[#cdd6f4] leading-relaxed
-                    max-h-96 overflow-y-auto
-                    pr-2
-                    scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e]
-                  "
+                  className="text-base text-[#cdd6f4] leading-relaxed max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e] whitespace-pre-wrap"
                 >
                   {localTicket?.description ||
                     ticket.description ||
