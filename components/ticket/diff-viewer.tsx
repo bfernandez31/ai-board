@@ -65,7 +65,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
             {/* Diff patch */}
             {file.patch ? (
               <div className="bg-zinc-900">
-                <pre className="text-xs font-mono p-4 overflow-x-auto">
+                <pre className="text-xs font-mono p-4 whitespace-pre-wrap break-words">
                   {file.patch.split('\n').map((line, lineIndex) => {
                     let lineClass = 'text-zinc-300'; // Context lines
                     let dataTestId = '';
