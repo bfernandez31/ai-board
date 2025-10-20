@@ -19,6 +19,12 @@ on:
         required: false
         type: string
 
+      attachments:
+        description: 'JSON array of ticket attachments (images for Claude context)'
+        required: false
+        type: string
+        default: '[]'
+
       specifyPayload:
         description: 'JSON payload with featureDescription and clarificationPolicy (overrides ticketTitle/ticketDescription)'
         required: false
@@ -122,6 +128,80 @@ jobs:
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
 
+      - name: Prepare Images for Claude (Specify Command)
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.attachments != '[]' }}
+        run: |
+          set -e
+
+          echo "📸 Preparing images for Claude context..."
+
+          # Create ticket assets directory
+          TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
+          mkdir -p "$TICKET_ASSETS_DIR"
+
+          # Parse attachments JSON
+          echo '${{ inputs.attachments }}' > /tmp/attachments.json
+
+          # Download external images and collect all image paths
+          IMAGE_COUNT=0
+          IMAGE_PATHS=""
+
+          # Process each attachment
+          for row in $(jq -r '.[] | @base64' /tmp/attachments.json); do
+            _jq() {
+              echo "${row}" | base64 --decode | jq -r "${1}"
+            }
+
+            ATTACHMENT_TYPE=$(_jq '.type')
+            ATTACHMENT_URL=$(_jq '.url')
+            ATTACHMENT_FILENAME=$(_jq '.filename')
+
+            if [ "$ATTACHMENT_TYPE" = "external" ]; then
+              echo "  📥 Downloading external image: $ATTACHMENT_URL"
+
+              # Extract file extension from URL or use .png as default
+              EXT="${ATTACHMENT_URL##*.}"
+              if [ "${#EXT}" -gt 5 ]; then
+                EXT="png"
+              fi
+
+              # Download image
+              SAFE_FILENAME=$(echo "$ATTACHMENT_FILENAME" | tr -cd 'a-zA-Z0-9._-')
+              IMAGE_FILE="$TICKET_ASSETS_DIR/${SAFE_FILENAME}.${EXT}"
+
+              if curl -sSL --max-time 30 --retry 3 "$ATTACHMENT_URL" -o "$IMAGE_FILE"; then
+                echo "    ✅ Downloaded: $IMAGE_FILE"
+                IMAGE_COUNT=$((IMAGE_COUNT + 1))
+                IMAGE_PATHS="$IMAGE_PATHS $IMAGE_FILE"
+              else
+                echo "    ⚠️ Failed to download: $ATTACHMENT_URL (continuing...)"
+              fi
+            elif [ "$ATTACHMENT_TYPE" = "uploaded" ]; then
+              # For uploaded images, check if they exist in ticket-assets/temp/
+              TEMP_FILE="ticket-assets/temp/$ATTACHMENT_FILENAME"
+
+              if [ -f "$TEMP_FILE" ]; then
+                echo "  📦 Found uploaded image: $TEMP_FILE"
+
+                # Copy to ticket-specific directory
+                IMAGE_FILE="$TICKET_ASSETS_DIR/$ATTACHMENT_FILENAME"
+                cp "$TEMP_FILE" "$IMAGE_FILE"
+                echo "    ✅ Copied: $IMAGE_FILE"
+
+                IMAGE_COUNT=$((IMAGE_COUNT + 1))
+                IMAGE_PATHS="$IMAGE_PATHS $IMAGE_FILE"
+              else
+                echo "    ⚠️ Uploaded image not found: $TEMP_FILE (continuing...)"
+              fi
+            fi
+          done
+
+          # Store image paths for later use
+          echo "IMAGE_PATHS=$IMAGE_PATHS" >> "$GITHUB_ENV"
+          echo "IMAGE_COUNT=$IMAGE_COUNT" >> "$GITHUB_ENV"
+
+          echo "✅ Prepared $IMAGE_COUNT images for Claude context"
+
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
@@ -134,8 +214,16 @@ jobs:
                 echo "📦 Using JSON payload with clarification policy"
                 payload='${{ inputs.specifyPayload }}'
 
-                # Pass JSON directly to /speckit.specify command
-                claude --dangerously-skip-permissions "/speckit.specify $payload"
+                # Add image paths if available
+                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+                  echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+
+                  # Pass JSON and image paths to /speckit.specify command
+                  claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
+                else
+                  # Pass JSON directly to /speckit.specify command (no images)
+                  claude --dangerously-skip-permissions "/speckit.specify $payload"
+                fi
               else
                 # Legacy format: construct prompt from separate fields
                 echo "📝 Using legacy text format (no policy)"
@@ -144,7 +232,14 @@ jobs:
                 ticket_description="${{ inputs.ticketDescription }}"
 
                 printf -v prompt '/speckit.specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
-                claude --dangerously-skip-permissions "$prompt"
+
+                # Add image paths if available
+                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+                  echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+                  claude --dangerously-skip-permissions "$prompt" $IMAGE_PATHS
+                else
+                  claude --dangerously-skip-permissions "$prompt"
+                fi
               fi
               ;;
             plan)
@@ -246,6 +341,99 @@ jobs:
 
             echo "✅ Changes committed and pushed successfully"
           fi
+
+      - name: Move Images to Feature Branch (Specify Command)
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        run: |
+          set -e
+
+          echo "📦 Moving images to feature branch..."
+
+          # Create spec assets directory
+          SPEC_ASSETS_DIR="specs/${CURRENT_BRANCH}/assets"
+          mkdir -p "$SPEC_ASSETS_DIR"
+
+          # Copy images from ticket-assets to spec assets
+          TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
+
+          if [ -d "$TICKET_ASSETS_DIR" ] && [ "$(ls -A $TICKET_ASSETS_DIR 2>/dev/null)" ]; then
+            cp -r "$TICKET_ASSETS_DIR"/* "$SPEC_ASSETS_DIR/"
+            echo "  ✅ Copied $IMAGE_COUNT images to $SPEC_ASSETS_DIR"
+
+            # Clean up ticket-assets directory from feature branch
+            rm -rf "$TICKET_ASSETS_DIR"
+            echo "  🧹 Cleaned up temporary assets directory"
+
+            # Commit the moved images
+            git add "$SPEC_ASSETS_DIR"
+            git add "$TICKET_ASSETS_DIR" || true  # In case directory is already deleted
+
+            if ! git diff --staged --quiet; then
+              git commit -m "feat(ticket-${{ inputs.ticket_id }}): move images to spec assets
+
+          Moved $IMAGE_COUNT images from ticket-assets to specs/${CURRENT_BRANCH}/assets/
+          Images are now part of the feature spec documentation."
+
+              git push origin "$CURRENT_BRANCH"
+              echo "✅ Images committed to feature branch"
+            fi
+          else
+            echo "ℹ️ No images to move (directory empty or not found)"
+          fi
+
+      - name: Cleanup Temporary Images from Main Branch
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        run: |
+          set -e
+
+          echo "🧹 Cleaning up temporary images from main branch..."
+
+          # Checkout main branch
+          git fetch origin main
+          git checkout main
+
+          # Remove ticket-assets/[ticket-id] and ticket-assets/temp/[uploaded files]
+          TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
+          CHANGES_MADE=false
+
+          if [ -d "$TICKET_ASSETS_DIR" ]; then
+            git rm -rf "$TICKET_ASSETS_DIR"
+            CHANGES_MADE=true
+            echo "  ✅ Removed $TICKET_ASSETS_DIR from main"
+          fi
+
+          # Clean up uploaded files from temp directory
+          # Parse attachments to find uploaded files
+          if [ -f "/tmp/attachments.json" ]; then
+            for row in $(jq -r '.[] | select(.type=="uploaded") | @base64' /tmp/attachments.json); do
+              _jq() {
+                echo "${row}" | base64 --decode | jq -r "${1}"
+              }
+
+              TEMP_FILE="ticket-assets/temp/$(_jq '.filename')"
+
+              if [ -f "$TEMP_FILE" ]; then
+                git rm "$TEMP_FILE"
+                CHANGES_MADE=true
+                echo "  ✅ Removed $TEMP_FILE from main"
+              fi
+            done
+          fi
+
+          # Commit cleanup if changes were made
+          if [ "$CHANGES_MADE" = true ]; then
+            git commit -m "chore(ticket-${{ inputs.ticket_id }}): cleanup temporary image assets
+
+          Removed temporary images that were moved to feature branch ${CURRENT_BRANCH}"
+
+            git push origin main
+            echo "✅ Temporary images cleaned up from main branch"
+          else
+            echo "ℹ️ No temporary images to clean up"
+          fi
+
+          # Switch back to feature branch
+          git checkout "$CURRENT_BRANCH"
 
       - name: Update Documentation
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}

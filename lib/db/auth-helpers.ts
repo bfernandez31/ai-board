@@ -4,8 +4,9 @@ import { prisma } from './client';
 /**
  * Verify that a project belongs to the current user
  * @throws Error if project not found or doesn't belong to user
+ * @returns The project if found and owned by user
  */
-export async function verifyProjectOwnership(projectId: number): Promise<void> {
+export async function verifyProjectOwnership(projectId: number) {
   const userId = await requireAuth();
 
   const project = await prisma.project.findFirst({
@@ -13,11 +14,20 @@ export async function verifyProjectOwnership(projectId: number): Promise<void> {
       id: projectId,
       userId,
     },
+    select: {
+      id: true,
+      name: true,
+      githubOwner: true,
+      githubRepo: true,
+      clarificationPolicy: true,
+    },
   });
 
   if (!project) {
     throw new Error('Project not found');
   }
+
+  return project;
 }
 
 /**

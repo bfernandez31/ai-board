@@ -10,6 +10,27 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Image Context
+
+When invoked by the GitHub Actions workflow, this command may receive image file paths as additional command-line arguments after `$ARGUMENTS`. These images provide visual context from the ticket's attachments field.
+
+**Image Sources**:
+- **External URLs**: Downloaded from HTTPS URLs found in ticket attachments
+- **Uploaded Files**: Copied from `ticket-assets/temp/` directory
+
+**Image Location**: All images are prepared in `ticket-assets/[TICKET_ID]/` before being passed to this command.
+
+**Usage**: When images are present:
+1. Use them to understand visual requirements (mockups, screenshots, diagrams)
+2. Reference them in the specification to clarify UI requirements
+3. Images will be moved to `specs/[BRANCH]/assets/` after spec generation
+4. Include image references in the spec using relative paths: `![Description](./assets/image-name.png)`
+
+**Example invocation with images**:
+```bash
+claude "/speckit.specify {...}" ticket-assets/123/mockup.png ticket-assets/123/diagram.png
+```
+
 ## Outline
 
 The text the user typed after `/speckit.specify` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `$ARGUMENTS` appears literally below. Do not ask the user to repeat it unless they provided an empty command.

@@ -350,6 +350,7 @@ function BoardContent({
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
     workflowType: 'FULL' | 'QUICK';
+    attachments?: import('@prisma/client').Prisma.JsonValue;
     createdAt: string | Date;
     updatedAt: string | Date;
   };
@@ -375,6 +376,8 @@ function BoardContent({
         clarificationPolicy: updatedTicket.clarificationPolicy,
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
+        // Preserve attachments from existing ticket or use empty array
+        attachments: updatedTicket.attachments ?? existingTicket?.attachments ?? [],
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()

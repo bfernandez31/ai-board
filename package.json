@@ -36,6 +36,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "file-type": "^21.0.0",
+    "formidable": "^3.5.4",
     "lucide-react": "^0.544.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.29",
@@ -50,6 +52,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@types/formidable": "^3.4.6",
     "@types/node": "^20.16.11",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
