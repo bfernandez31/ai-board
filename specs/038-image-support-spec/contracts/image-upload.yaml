@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: AI Board - Individual Image Upload API
+  description: API contract for individual image upload endpoint (used for progressive upload during ticket creation)
+  version: 1.0.0
+  contact:
+    name: AI Board Team
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://ai-board.vercel.app
+    description: Production server
+
+paths:
+  /api/uploads/image:
+    post:
+      summary: Upload a single image to GitHub repository
+      description: |
+        Uploads a single image file to GitHub repository for later association with a ticket.
+        This endpoint is used for progressive upload UI patterns where images are uploaded
+        as they are selected, before ticket creation.
+
+        **Use Case**: Optional progressive upload UX (alternative to batch upload during ticket creation)
+
+        **Upload Flow**:
+        1. Client uploads image via multipart/form-data
+        2. Server validates image (MIME type, file signature, size ≤10MB)
+        3. Server commits image to temporary location in GitHub
+        4. Returns GitHub path for later ticket association
+
+        **Note**: This endpoint is optional. The primary upload flow is via POST /api/projects/{projectId}/tickets.
+
+        **Authentication**: Requires valid session cookie (NextAuth)
+
+      operationId: uploadSingleImage
+      tags:
+        - Uploads
+      security:
+        - sessionCookie: []
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: |
+                    Image file to upload.
+                    Supported formats: JPEG, PNG, GIF, WebP, SVG.
+                    Max size: 10MB.
+
+            encoding:
+              image:
+                contentType: image/jpeg, image/png, image/gif, image/webp, image/svg+xml
+
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                  - filename
+                  - mimeType
+                  - sizeBytes
+                  - uploadedAt
+                properties:
+                  url:
+                    type: string
+                    description: Relative GitHub path where image was stored
+                    example: "temp-uploads/user-456/image-1634567890.png"
+
+                  filename:
+                    type: string
+                    description: Original filename
+                    example: "screenshot.png"
+
+                  mimeType:
+                    type: string
+                    description: MIME type of uploaded image
+                    example: "image/png"
+
+                  sizeBytes:
+                    type: integer
+                    description: File size in bytes
+                    example: 2457600
+
+                  uploadedAt:
+                    type: string
+                    format: date-time
+                    description: Upload timestamp (ISO 8601)
+                    example: "2025-10-20T14:30:00.000Z"
+
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                fileTooLarge:
+                  summary: Image file exceeds 10MB limit
+                  value:
+                    error: "Image exceeds 10MB limit"
+                    code: "IMAGE_TOO_LARGE"
+                invalidMimeType:
+                  summary: Unsupported image format
+                  value:
+                    error: "Invalid image file. Supported formats: JPEG, PNG, GIF, WebP, SVG"
+                    code: "INVALID_IMAGE_TYPE"
+                invalidFileSignature:
+                  summary: File signature doesn't match MIME type
+                  value:
+                    error: "Invalid image file. File signature verification failed."
+                    code: "INVALID_FILE_SIGNATURE"
+                noFile:
+                  summary: No file uploaded
+                  value:
+                    error: "No image file provided"
+                    code: "NO_FILE"
+
+        '401':
+          description: Unauthorized - no valid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+                code: "NO_SESSION"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                githubCommitFailed:
+                  summary: GitHub API commit failed
+                  value:
+                    error: "Failed to upload image to repository. Please try again."
+                    code: "GITHUB_COMMIT_FAILED"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Image exceeds 10MB limit"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "IMAGE_TOO_LARGE"
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie

@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  title: AI Board - Ticket Creation with Image Attachments API
+  description: API contract for creating tickets with image attachments (multipart/form-data)
+  version: 1.0.0
+  contact:
+    name: AI Board Team
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://ai-board.vercel.app
+    description: Production server
+
+paths:
+  /api/projects/{projectId}/tickets:
+    post:
+      summary: Create a new ticket with optional image attachments
+      description: |
+        Creates a new ticket in the INBOX stage with optional image attachments.
+        Supports both file uploads (multipart/form-data) and external image URL references
+        extracted from markdown syntax in the description field.
+
+        **Upload Flow**:
+        1. Client uploads up to 5 images via multipart/form-data
+        2. Server validates each image (MIME type, file signature, size ≤10MB)
+        3. Server commits images to GitHub at `ticket-assets/[ticket-id]/[filename]`
+        4. Server extracts image URLs from description markdown (![alt](url))
+        5. Server creates ticket in database with attachments JSON
+        6. Returns created ticket with attachment metadata
+
+        **Authentication**: Requires valid session cookie (NextAuth)
+        **Authorization**: User must own the project
+
+      operationId: createTicketWithImages
+      tags:
+        - Tickets
+      security:
+        - sessionCookie: []
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: ID of the project to create the ticket in
+          schema:
+            type: integer
+            minimum: 1
+          example: 3
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                  description: Ticket title (required)
+                  example: "Add dark mode toggle to settings"
+
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                  description: |
+                    Ticket description (required). Supports markdown syntax.
+                    Image URLs can be embedded using markdown: ![alt text](https://example.com/image.png)
+                  example: |
+                    Implement a dark mode toggle in the settings panel.
+
+                    ![UI mockup](https://figma.com/file/abc123/mockup.png)
+
+                    Users should be able to switch between light and dark themes.
+
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 5
+                  description: |
+                    Uploaded image files (optional, max 5).
+                    Supported formats: JPEG, PNG, GIF, WebP, SVG.
+                    Max size per image: 10MB.
+                  example:
+                    - (binary data for image1.png)
+                    - (binary data for image2.jpg)
+
+            encoding:
+              images:
+                contentType: image/jpeg, image/png, image/gif, image/webp, image/svg+xml
+
+      responses:
+        '201':
+          description: Ticket created successfully with image attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - title
+                  - description
+                  - stage
+                  - projectId
+                  - attachments
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: integer
+                    description: Unique ticket ID
+                    example: 123
+
+                  title:
+                    type: string
+                    description: Ticket title
+                    example: "Add dark mode toggle to settings"
+
+                  description:
+                    type: string
+                    description: Ticket description
+                    example: |
+                      Implement a dark mode toggle in the settings panel.
+
+                      ![UI mockup](https://figma.com/file/abc123/mockup.png)
+
+                      Users should be able to switch between light and dark themes.
+
+                  stage:
+                    type: string
+                    enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                    description: Current ticket stage
+                    example: INBOX
+
+                  projectId:
+                    type: integer
+                    description: Project ID this ticket belongs to
+                    example: 3
+
+                  attachments:
+                    type: array
+                    description: Array of attachment metadata (max 5 items)
+                    maxItems: 5
+                    items:
+                      $ref: '#/components/schemas/TicketAttachment'
+                    example:
+                      - type: uploaded
+                        url: ticket-assets/123/mockup-dashboard.png
+                        filename: mockup-dashboard.png
+                        mimeType: image/png
+                        sizeBytes: 2457600
+                        uploadedAt: "2025-10-20T14:30:00.000Z"
+                      - type: external
+                        url: https://figma.com/file/abc123/mockup.png
+                        filename: UI mockup
+                        mimeType: image/png
+                        sizeBytes: 0
+                        uploadedAt: "2025-10-20T14:30:00.000Z"
+
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Ticket creation timestamp
+                    example: "2025-10-20T14:30:00.000Z"
+
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                    example: "2025-10-20T14:30:00.000Z"
+
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                fileTooLarge:
+                  summary: Image file exceeds 10MB limit
+                  value:
+                    error: "Image exceeds 10MB limit"
+                    code: "IMAGE_TOO_LARGE"
+                tooManyImages:
+                  summary: More than 5 images uploaded
+                  value:
+                    error: "Maximum 5 images per ticket"
+                    code: "TOO_MANY_IMAGES"
+                invalidMimeType:
+                  summary: Unsupported image format
+                  value:
+                    error: "Invalid image file. Supported formats: JPEG, PNG, GIF, WebP, SVG"
+                    code: "INVALID_IMAGE_TYPE"
+                invalidFileSignature:
+                  summary: File signature doesn't match MIME type
+                  value:
+                    error: "Invalid image file. File signature verification failed."
+                    code: "INVALID_FILE_SIGNATURE"
+
+        '401':
+          description: Unauthorized - no valid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+                code: "NO_SESSION"
+
+        '403':
+          description: Forbidden - user does not own the project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Forbidden"
+                code: "NOT_PROJECT_OWNER"
+
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project not found"
+                code: "PROJECT_NOT_FOUND"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                githubCommitFailed:
+                  summary: GitHub API commit failed
+                  value:
+                    error: "Failed to upload images to repository. Please try again."
+                    code: "GITHUB_COMMIT_FAILED"
+                databaseError:
+                  summary: Database operation failed
+                  value:
+                    error: "Failed to create ticket"
+                    code: "DATABASE_ERROR"
+
+components:
+  schemas:
+    TicketAttachment:
+      type: object
+      required:
+        - type
+        - url
+        - filename
+        - mimeType
+        - sizeBytes
+        - uploadedAt
+      properties:
+        type:
+          type: string
+          enum: [uploaded, external]
+          description: |
+            Attachment source type:
+            - `uploaded`: Image file uploaded by user and stored in GitHub
+            - `external`: Image URL extracted from markdown in description
+          example: uploaded
+
+        url:
+          type: string
+          format: uri
+          maxLength: 500
+          description: |
+            For uploaded images: relative GitHub path (e.g., "ticket-assets/123/image.png")
+            For external images: absolute HTTPS URL
+          example: ticket-assets/123/mockup-dashboard.png
+
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Original filename or alt text from markdown
+          example: mockup-dashboard.png
+
+        mimeType:
+          type: string
+          pattern: ^image\/(jpeg|png|gif|webp|svg\+xml)$
+          description: MIME type of the image
+          example: image/png
+
+        sizeBytes:
+          type: integer
+          minimum: 0
+          maximum: 10485760
+          description: |
+            File size in bytes.
+            For uploaded images: actual file size (max 10MB = 10485760 bytes)
+            For external URLs: 0 (unknown until downloaded)
+          example: 2457600
+
+        uploadedAt:
+          type: string
+          format: date-time
+          description: Timestamp when attachment was added to ticket (ISO 8601)
+          example: "2025-10-20T14:30:00.000Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Image exceeds 10MB limit"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "IMAGE_TOO_LARGE"
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
