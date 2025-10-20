@@ -32,6 +32,7 @@ import {
   getPolicyLabel,
   getPolicyDescription,
 } from '@/app/lib/utils/policy-icons';
+import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 
 interface NewTicketModalProps {
   open: boolean;
@@ -66,8 +67,9 @@ export function NewTicketModal({
     title: '',
     description: '',
     clarificationPolicy: undefined, // undefined = use project default
-    attachments: undefined, // For future image upload support
+    attachments: undefined,
   });
+  const [images, setImages] = React.useState<ImageFile[]>([]);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -80,6 +82,7 @@ export function NewTicketModal({
         clarificationPolicy: undefined,
         attachments: undefined,
       });
+      setImages([]);
       setErrors({});
       setIsSubmitting(false);
     }
@@ -133,21 +136,44 @@ export function NewTicketModal({
     setErrors({});
 
     try {
-      // Build request body - only include clarificationPolicy if explicitly set
-      const requestBody: Record<string, unknown> = {
-        title: formData.title,
-        description: formData.description,
-      };
+      let response: Response;
 
-      if (formData.clarificationPolicy !== undefined) {
-        requestBody.clarificationPolicy = formData.clarificationPolicy;
+      // Use multipart/form-data if images are present, otherwise use JSON
+      if (images.length > 0) {
+        const formDataObj = new FormData();
+        formDataObj.append('title', formData.title);
+        formDataObj.append('description', formData.description);
+
+        if (formData.clarificationPolicy !== undefined && formData.clarificationPolicy !== null) {
+          formDataObj.append('clarificationPolicy', String(formData.clarificationPolicy));
+        }
+
+        // Append each image file
+        images.forEach((img) => {
+          formDataObj.append('images', img.file);
+        });
+
+        response = await fetch(`/api/projects/${projectId}/tickets`, {
+          method: 'POST',
+          body: formDataObj,
+        });
+      } else {
+        // Build JSON request body - only include clarificationPolicy if explicitly set
+        const requestBody: Record<string, unknown> = {
+          title: formData.title,
+          description: formData.description,
+        };
+
+        if (formData.clarificationPolicy !== undefined) {
+          requestBody.clarificationPolicy = formData.clarificationPolicy;
+        }
+
+        response = await fetch(`/api/projects/${projectId}/tickets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
       }
-
-      const response = await fetch(`/api/projects/${projectId}/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
 
       if (!response.ok) {
         if (response.status === 400) {
@@ -179,8 +205,12 @@ export function NewTicketModal({
       onTicketCreated?.();
     } catch (error) {
       console.error('Error creating ticket:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       setErrors({
-        submit: 'Network error. Please check your connection and try again.',
+        submit: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your connection and try again.`,
       });
     } finally {
       setIsSubmitting(false);
@@ -194,7 +224,7 @@ export function NewTicketModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Ticket</DialogTitle>
           <DialogDescription>
@@ -290,6 +320,19 @@ export function NewTicketModal({
             <p className="text-xs text-muted-foreground">
               Leave as default to inherit from project settings. Override for
               specific requirements.
+            </p>
+          </div>
+
+          {/* Image Upload Field */}
+          <div className="space-y-2">
+            <Label>Image Attachments (Optional)</Label>
+            <ImageUpload
+              images={images}
+              onImagesChange={setImages}
+              error={errors.attachments || undefined}
+            />
+            <p className="text-xs text-muted-foreground">
+              Upload mockups, screenshots, or diagrams to provide visual context for Claude during specification.
             </p>
           </div>
 

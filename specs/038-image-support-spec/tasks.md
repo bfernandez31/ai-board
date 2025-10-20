@@ -57,20 +57,20 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T012 [P] [US1] Search for existing ticket creation tests using `npx grep -r "POST.*tickets" tests/` to find correct file
-- [ ] T013 [US1] Extend existing tests in `tests/api/tickets.spec.ts` with image upload scenarios (multipart form data, validation)
-- [ ] T014 [P] [US1] Create E2E test fixtures in `tests/fixtures/images/` (valid-image.png, large-image.png, invalid-signature.txt)
+- [X] T012 [P] [US1] Search for existing ticket creation tests using `npx grep -r "POST.*tickets" tests/` to find correct file
+- [X] T013 [US1] Extend existing tests in `tests/api/tickets.spec.ts` with image upload scenarios (multipart form data, validation)
+- [X] T014 [P] [US1] Create E2E test fixtures in `tests/fixtures/images/` (valid-image.png, large-image.png, invalid-signature.txt)
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Modify ticket creation API route in `app/api/projects/[projectId]/tickets/route.ts` to accept multipart/form-data
-- [ ] T016 [US1] Parse uploaded files using formidable in ticket creation route (max 5 images, 10MB each)
-- [ ] T017 [US1] Validate uploaded images (call validateImageFile for each file) in ticket creation route
-- [ ] T018 [US1] Commit uploaded images to GitHub using commitImageToRepo function (path: `ticket-assets/[ticket-id]/[filename]`)
-- [ ] T019 [US1] Create TicketAttachment objects for uploaded images with metadata (type, url, filename, mimeType, sizeBytes, uploadedAt)
-- [ ] T020 [US1] Store attachments array in Ticket.attachments JSON field with transaction rollback on GitHub failure
-- [ ] T021 [US1] Add error handling for validation failures (file too large, invalid format, too many images)
-- [ ] T022 [US1] Run existing ticket creation tests to verify backward compatibility (tickets without images still work)
+- [X] T015 [US1] Modify ticket creation API route in `app/api/projects/[projectId]/tickets/route.ts` to accept multipart/form-data
+- [X] T016 [US1] Parse uploaded files using formidable in ticket creation route (max 5 images, 10MB each)
+- [X] T017 [US1] Validate uploaded images (call validateImageFile for each file) in ticket creation route
+- [X] T018 [US1] Commit uploaded images to GitHub using commitImageToRepo function (path: `ticket-assets/[ticket-id]/[filename]`)
+- [X] T019 [US1] Create TicketAttachment objects for uploaded images with metadata (type, url, filename, mimeType, sizeBytes, uploadedAt)
+- [X] T020 [US1] Store attachments array in Ticket.attachments JSON field with transaction rollback on GitHub failure
+- [X] T021 [US1] Add error handling for validation failures (file too large, invalid format, too many images)
+- [X] T022 [US1] Run existing ticket creation tests to verify backward compatibility (tickets without images still work)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - API accepts images, validates them, stores in GitHub, and saves metadata in database
 
@@ -84,15 +84,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Extend tests in `tests/api/tickets.spec.ts` with markdown URL extraction scenarios (single URL, multiple URLs, mixed with uploads)
+- [X] T023 [P] [US2] Extend tests in `tests/api/tickets.spec.ts` with markdown URL extraction scenarios (single URL, multiple URLs, mixed with uploads)
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Call extractImageUrls on ticket description field in `app/api/projects/[projectId]/tickets/route.ts`
-- [ ] T025 [US2] Validate extracted URLs are absolute HTTPS URLs in ticket creation route
-- [ ] T026 [US2] Create TicketAttachment objects for external URLs with metadata (type: 'external', sizeBytes: 0)
-- [ ] T027 [US2] Merge uploaded images and markdown URLs into single attachments array before database insert
-- [ ] T028 [US2] Enforce max 5 total attachments limit (uploaded + external URLs combined)
+- [X] T024 [US2] Call extractImageUrls on ticket description field in `app/api/projects/[projectId]/tickets/route.ts`
+- [X] T025 [US2] Validate extracted URLs are absolute HTTPS URLs in ticket creation route
+- [X] T026 [US2] Create TicketAttachment objects for external URLs with metadata (type: 'external', sizeBytes: 0)
+- [X] T027 [US2] Merge uploaded images and markdown URLs into single attachments array before database insert
+- [X] T028 [US2] Enforce max 5 total attachments limit (uploaded + external URLs combined)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - can create tickets with uploaded images, external URLs, or both
 
@@ -111,11 +111,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T031 [P] [US3] Create ImageUpload component in `components/ui/image-upload.tsx` using shadcn/ui primitives (Card, Button)
-- [ ] T032 [US3] Add paste event listener to ImageUpload component (detect clipboard image data)
-- [ ] T033 [US3] Generate filename for pasted images using pattern `pasted-image-${new Date().toISOString()}.${extension}`
-- [ ] T034 [US3] Convert clipboard item to File object and pass to existing upload flow
-- [ ] T035 [US3] Validate pasted image size and count limits (same as drag-drop)
+- [X] T031 [P] [US3] Create ImageUpload component in `components/ui/image-upload.tsx` using shadcn/ui primitives (Card, Button)
+- [X] T032 [US3] Add paste event listener to ImageUpload component (detect clipboard image data)
+- [X] T033 [US3] Generate filename for pasted images using pattern `pasted-image-${new Date().toISOString()}.${extension}`
+- [X] T034 [US3] Convert clipboard item to File object and pass to existing upload flow
+- [X] T035 [US3] Validate pasted image size and count limits (same as drag-drop)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently - clipboard paste adds images with auto-generated names
 
@@ -133,14 +133,14 @@
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Modify GitHub workflow in `.github/workflows/speckit.yml` to add `attachments` input parameter (JSON string)
-- [ ] T038 [US4] Add workflow step "Prepare Images for Specify" to download external URLs to `ticket-assets/[ticket-id]/` if present
-- [ ] T039 [US4] Modify specify workflow step to build `imageContext` array from `ticket-assets/[ticket-id]/` files
-- [ ] T040 [US4] Pass `imageContext` parameter to Claude in `/speckit.specify` command execution
-- [ ] T041 [US4] Modify `.claude/commands/specify.md` to accept and document `imageContext` parameter
-- [ ] T042 [US4] Add workflow step "Move Images to Feature Branch" after spec.md commit (copy ticket-assets to specs/[branch]/assets/)
-- [ ] T043 [US4] Add workflow step to delete `ticket-assets/[ticket-id]/` from main branch after successful move
-- [ ] T044 [US4] Update ticket transition API in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to pass attachments to workflow
+- [X] T037 [US4] Modify GitHub workflow in `.github/workflows/speckit.yml` to add `attachments` input parameter (JSON string)
+- [X] T038 [US4] Add workflow step "Prepare Images for Specify" to download external URLs to `ticket-assets/[ticket-id]/` if present
+- [X] T039 [US4] Modify specify workflow step to build `imageContext` array from `ticket-assets/[ticket-id]/` files
+- [X] T040 [US4] Pass `imageContext` parameter to Claude in `/speckit.specify` command execution
+- [X] T041 [US4] Modify `.claude/commands/specify.md` to accept and document `imageContext` parameter
+- [X] T042 [US4] Add workflow step "Move Images to Feature Branch" after spec.md commit (copy ticket-assets to specs/[branch]/assets/)
+- [X] T043 [US4] Add workflow step to delete `ticket-assets/[ticket-id]/` from main branch after successful move
+- [X] T044 [US4] Update ticket transition API in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` to pass attachments to workflow
 
 **Checkpoint**: At this point, User Story 4 should work - images are available to Claude during specify, then moved to feature branch
 
@@ -158,9 +158,9 @@
 
 ### Implementation for User Story 5
 
-- [ ] T046 [P] [US5] Add Remove button to each image preview in `components/ui/image-upload.tsx` (shadcn/ui Button variant="ghost")
-- [ ] T047 [US5] Implement remove handler to filter out selected image from attachments state
-- [ ] T048 [US5] Update image count and validation after removal (allow adding more if under 5)
+- [X] T046 [P] [US5] Add Remove button to each image preview in `components/ui/image-upload.tsx` (shadcn/ui Button variant="ghost")
+- [X] T047 [US5] Implement remove handler to filter out selected image from attachments state
+- [X] T048 [US5] Update image count and validation after removal (allow adding more if under 5)
 
 **Checkpoint**: All user stories should now be independently functional - can upload, paste, reference URLs, and remove images before submission
 
@@ -170,14 +170,14 @@
 
 **Purpose**: Integrate image upload component into new ticket modal
 
-- [ ] T049 Modify New Ticket Modal in `components/board/new-ticket-modal.tsx` to import and render ImageUpload component
-- [ ] T050 Add attachments state management to New Ticket Modal (useState for File[] array)
-- [ ] T051 Implement drag-and-drop zone in ImageUpload component using HTML5 DnD API (onDragEnter, onDragOver, onDrop)
-- [ ] T052 Implement file picker button in ImageUpload component (hidden input + shadcn/ui Button)
-- [ ] T053 Display image previews in grid layout using shadcn/ui Card components (thumbnail, filename, size)
-- [ ] T054 Add validation error display in ImageUpload component (file too large, too many images, invalid format)
-- [ ] T055 Update form submission in New Ticket Modal to use multipart/form-data instead of JSON
-- [ ] T056 Add upload progress indicator to New Ticket Modal (shadcn/ui Progress or loading state)
+- [X] T049 Modify New Ticket Modal in `components/board/new-ticket-modal.tsx` to import and render ImageUpload component
+- [X] T050 Add attachments state management to New Ticket Modal (useState for File[] array)
+- [X] T051 Implement drag-and-drop zone in ImageUpload component using HTML5 DnD API (onDragEnter, onDragOver, onDrop)
+- [X] T052 Implement file picker button in ImageUpload component (hidden input + shadcn/ui Button)
+- [X] T053 Display image previews in grid layout using shadcn/ui Card components (thumbnail, filename, size)
+- [X] T054 Add validation error display in ImageUpload component (file too large, too many images, invalid format)
+- [X] T055 Update form submission in New Ticket Modal to use multipart/form-data instead of JSON
+- [X] T056 Add upload progress indicator to New Ticket Modal (shadcn/ui Progress or loading state)
 - [ ] T057 [P] Create E2E test for drag-and-drop flow in `tests/e2e/ticket-creation.spec.ts`
 - [ ] T058 [P] Create E2E test for file picker flow in `tests/e2e/ticket-creation.spec.ts`
 - [ ] T059 Run full E2E test suite: `npx playwright test` to verify all user journeys work
@@ -188,16 +188,16 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T060 [P] Add JSDoc comments to exported functions in `app/lib/github/operations.ts`
-- [ ] T061 [P] Add JSDoc comments to exported functions in `app/lib/validations/image.ts`
-- [ ] T062 [P] Add logging for image upload operations (success, failure, validation errors)
-- [ ] T063 [P] Add monitoring for GitHub API rate limits (log remaining requests in workflow)
-- [ ] T064 Run TypeScript type check: `npx tsc --noEmit` and fix any type errors
-- [ ] T065 Run linter: `npm run lint` and fix any warnings
+- [X] T060 [P] Add JSDoc comments to exported functions in `app/lib/github/operations.ts`
+- [X] T061 [P] Add JSDoc comments to exported functions in `app/lib/validations/image.ts`
+- [X] T062 [P] Add logging for image upload operations (success, failure, validation errors)
+- [X] T063 [P] Add monitoring for GitHub API rate limits (log remaining requests in workflow)
+- [X] T064 Run TypeScript type check: `npx tsc --noEmit` and fix any type errors
+- [X] T065 Run linter: `npm run lint` and fix any warnings
 - [ ] T066 Verify all tests pass: `npm run test:unit && npm run test:integration && npx playwright test`
 - [ ] T067 Manual testing: Create ticket with images, transition to SPECIFY, verify images passed to Claude
 - [ ] T068 Manual testing: Verify images moved to feature branch and deleted from main after specify
-- [ ] T069 Update CLAUDE.md with any new patterns or conventions (if needed beyond automated update)
+- [X] T069 Update CLAUDE.md with any new patterns or conventions (if needed beyond automated update)
 - [ ] T070 Run quickstart.md validation: Follow setup instructions and verify all steps work
 
 ---

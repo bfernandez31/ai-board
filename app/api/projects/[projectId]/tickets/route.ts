@@ -12,6 +12,8 @@ import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { ZodError } from 'zod';
 import formidable, { Fields, Files } from 'formidable';
 import { promises as fs } from 'fs';
+import { Readable } from 'stream';
+import { prisma } from '@/lib/db/client';
 
 /**
  * GET /api/projects/[projectId]/tickets
@@ -87,38 +89,29 @@ async function parseFormData(request: NextRequest): Promise<{ fields: Fields; fi
 
   // Convert NextRequest to Node.js IncomingMessage-like object
   const buffer = await request.arrayBuffer();
-  const boundary = request.headers.get('content-type')?.match(/boundary=(.+)$/)?.[1];
+
+  const contentType = request.headers.get('content-type');
+
+  const boundary = contentType?.match(/boundary=(.+)$/)?.[1];
 
   if (!boundary) {
     throw new Error('No boundary found in multipart/form-data request');
   }
 
-  // Create a readable stream from the buffer
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(new Uint8Array(buffer));
-      controller.close();
+  // Create a proper Node.js Readable stream
+  const nodeStream = new Readable({
+    read() {
+      // Push the buffer data
+      this.push(Buffer.from(buffer));
+      // Signal end of stream
+      this.push(null);
     },
   });
 
-  // Convert Web ReadableStream to Node.js Readable
-  const nodeStream = {
-    headers: Object.fromEntries(request.headers.entries()),
-    method: request.method,
-    url: request.url,
-    [Symbol.asyncIterator]: async function* () {
-      const reader = stream.getReader();
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          yield Buffer.from(value);
-        }
-      } finally {
-        reader.releaseLock();
-      }
-    },
-  };
+  // Add required properties for formidable
+  (nodeStream as any).headers = Object.fromEntries(request.headers.entries());
+  (nodeStream as any).method = request.method;
+  (nodeStream as any).url = request.url;
 
   return new Promise((resolve, reject) => {
     form.parse(nodeStream as any, (err, fields, files) => {
@@ -231,24 +224,30 @@ export async function POST(
       );
     }
 
-    // Process uploaded images
-    const attachments: TicketAttachment[] = [];
+    // Extract external image URLs from markdown description FIRST (no ticket ID needed)
+    const externalImages = extractImageUrls(result.data.description);
 
-    // 1. Process uploaded files (if any)
+    // Validate total attachment count (uploaded + external)
+    const totalAttachments = uploadedFiles.length + externalImages.length;
+    if (totalAttachments > 5) {
+      return NextResponse.json(
+        {
+          error: 'Maximum 5 images allowed per ticket (uploaded + external URLs)',
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate uploaded files BEFORE creating ticket
+    const validatedFiles: Array<{
+      file: formidable.File;
+      buffer: Buffer;
+      validation: { valid: true; mimeType: string };
+      filename: string;
+    }> = [];
+
     if (uploadedFiles.length > 0) {
-      // Validate max 5 total attachments
-      if (uploadedFiles.length > 5) {
-        return NextResponse.json(
-          {
-            error: 'Maximum 5 images allowed per ticket',
-            code: 'VALIDATION_ERROR',
-          },
-          { status: 400 }
-        );
-      }
-
-      const octokit = createGitHubClient();
-
       for (const file of uploadedFiles) {
         // Read file buffer
         const buffer = await fs.readFile(file.filepath);
@@ -284,15 +283,37 @@ export async function POST(
         const safeFilename = file.originalFilename?.replace(/[^a-zA-Z0-9._-]/g, '_') || `image_${timestamp}`;
         const filename = `${timestamp}_${safeFilename}`;
 
-        // Commit image to GitHub (on main branch for now, will be moved by workflow)
+        validatedFiles.push({
+          file,
+          buffer,
+          validation: validation as { valid: true; mimeType: string },
+          filename,
+        });
+      }
+    }
+
+    // Create ticket WITHOUT attachments first (to get ticket ID)
+    const ticket = await createTicket(projectId, {
+      ...result.data,
+      attachments: undefined, // Will be updated after image upload
+    });
+
+    // Now process uploaded images using ticket ID
+    const attachments: TicketAttachment[] = [];
+
+    if (validatedFiles.length > 0) {
+      const octokit = createGitHubClient();
+
+      for (const { file, buffer, validation, filename } of validatedFiles) {
+        // Commit image to GitHub using ticket ID in path
         try {
-          const result = await commitImageToRepo(octokit, {
+          await commitImageToRepo(octokit, {
             owner: project.githubOwner,
             repo: project.githubRepo,
             branch: 'main',
-            path: `ticket-assets/temp/${filename}`,
+            path: `ticket-assets/${ticket.id}/${filename}`,
             content: buffer,
-            message: `Add image attachment: ${filename}`,
+            message: `Add image attachment for ticket ${ticket.id}: ${filename}`,
             authorName: 'AI Board',
             authorEmail: 'noreply@ai-board.dev',
           });
@@ -300,14 +321,12 @@ export async function POST(
           // Create attachment object
           attachments.push({
             type: 'uploaded',
-            url: `https://raw.githubusercontent.com/${project.githubOwner}/${project.githubRepo}/main/ticket-assets/temp/${filename}`,
+            url: `https://raw.githubusercontent.com/${project.githubOwner}/${project.githubRepo}/main/ticket-assets/${ticket.id}/${filename}`,
             filename,
             mimeType: validation.mimeType || file.mimetype || 'application/octet-stream',
             sizeBytes: file.size,
             uploadedAt: new Date().toISOString(),
           });
-
-          console.log(`Successfully committed image: ${filename}, commit SHA: ${result.commitSha}`);
         } catch (error) {
           // Clean up uploaded files on GitHub commit failure
           for (const f of uploadedFiles) {
@@ -332,15 +351,8 @@ export async function POST(
       }
     }
 
-    // 2. Extract external image URLs from markdown description
-    const externalImages = extractImageUrls(result.data.description);
+    // Add external image URLs to attachments
     for (const { alt, url } of externalImages) {
-      // Validate max 5 total attachments
-      if (attachments.length >= 5) {
-        console.warn('Maximum 5 attachments reached, skipping additional external URLs');
-        break;
-      }
-
       attachments.push({
         type: 'external',
         url,
@@ -363,11 +375,16 @@ export async function POST(
       );
     }
 
-    // Create ticket with attachments (using database transaction)
-    const ticket = await createTicket(projectId, {
-      ...result.data,
-      attachments: attachments.length > 0 ? attachments : undefined,
-    });
+    // Update ticket with attachments if any exist
+    if (attachments.length > 0) {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { attachments: attachments as any },
+      });
+
+      // Update the ticket object to include attachments for response
+      ticket.attachments = attachments as any;
+    }
 
     // Revalidate the project board page
     revalidatePath(`/projects/${projectId}/board`);
