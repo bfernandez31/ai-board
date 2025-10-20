@@ -295,6 +295,11 @@ export async function handleTicketTransition(
             // Pass as JSON string to workflow
             workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
 
+            // Add attachments for image context (if present)
+            if (ticket.attachments) {
+              workflowInputs.attachments = JSON.stringify(ticket.attachments);
+            }
+
             // Keep legacy fields for backward compatibility (deprecated)
             workflowInputs.ticketTitle = ticket.title;
             workflowInputs.ticketDescription = ticket.description;
