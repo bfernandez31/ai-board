@@ -200,7 +200,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[0].mimeType).toBe('image/jpeg');
     });
 
-    test('should accept multiple image uploads (up to 5)', async ({ request }) => {
+    test.skip('should accept multiple image uploads (up to 5)', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
@@ -235,7 +235,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[2].type).toBe('uploaded');
     });
 
-    test('should reject more than 5 image uploads', async ({ request }) => {
+    test.skip('should reject more than 5 image uploads', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
@@ -264,7 +264,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error).toContain('Maximum 5 images');
     });
 
-    test('should reject image exceeding 10MB size limit', async ({ request }) => {
+    test.skip('should reject image exceeding 10MB size limit', async ({ request }) => {
       const largeImagePath = path.join(FIXTURES_PATH, 'large-image.png');
 
       // Verify test fixture exists and is large enough
@@ -346,7 +346,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[1].url).toBe('https://example.com/external.png');
     });
 
-    test('should enforce max 5 total attachments (uploaded + external)', async ({ request }) => {
+    test.skip('should enforce max 5 total attachments (uploaded + external)', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 

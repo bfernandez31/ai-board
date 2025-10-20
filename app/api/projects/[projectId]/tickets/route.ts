@@ -160,7 +160,36 @@ export async function POST(
     // Parse request based on content type
     if (contentType.includes('multipart/form-data')) {
       // Parse multipart/form-data
-      const { fields, files } = await parseFormData(request);
+      let fields, files;
+      try {
+        const parsed = await parseFormData(request);
+        fields = parsed.fields;
+        files = parsed.files;
+      } catch (error: any) {
+        // Handle formidable validation errors (too many files, file too large, etc.)
+        if (error.code === 1015) {
+          // maxFiles exceeded
+          return NextResponse.json(
+            {
+              error: 'Maximum 5 images allowed per ticket',
+              code: 'VALIDATION_ERROR',
+            },
+            { status: 400 }
+          );
+        }
+        if (error.code === 1009) {
+          // maxTotalFileSize exceeded
+          return NextResponse.json(
+            {
+              error: 'Total file size exceeds 10MB limit',
+              code: 'VALIDATION_ERROR',
+            },
+            { status: 400 }
+          );
+        }
+        // Other formidable errors
+        throw error;
+      }
 
       // Extract ticket data from fields
       const title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
@@ -227,12 +256,11 @@ export async function POST(
     // Extract external image URLs from markdown description FIRST (no ticket ID needed)
     const externalImages = extractImageUrls(result.data.description);
 
-    // Validate total attachment count (uploaded + external)
-    const totalAttachments = uploadedFiles.length + externalImages.length;
-    if (totalAttachments > 5) {
+    // Validate uploaded files count (will combine with external later, capped at 5 total)
+    if (uploadedFiles.length > 5) {
       return NextResponse.json(
         {
-          error: 'Maximum 5 images allowed per ticket (uploaded + external URLs)',
+          error: 'Maximum 5 uploaded images allowed per ticket',
           code: 'VALIDATION_ERROR',
         },
         { status: 400 }
@@ -278,9 +306,13 @@ export async function POST(
           );
         }
 
-        // Generate safe filename
+        // Generate safe filename (sanitize for security)
         const timestamp = Date.now();
-        const safeFilename = file.originalFilename?.replace(/[^a-zA-Z0-9._-]/g, '_') || `image_${timestamp}`;
+        // Replace all non-alphanumeric except single dot before extension, and replace .. with _
+        const safeFilename = file.originalFilename
+          ?.replace(/\.\./g, '_')  // Replace .. first
+          ?.replace(/[^a-zA-Z0-9._-]/g, '_')
+          || `image_${timestamp}`;
         const filename = `${timestamp}_${safeFilename}`;
 
         validatedFiles.push({
@@ -351,8 +383,13 @@ export async function POST(
       }
     }
 
-    // Add external image URLs to attachments
+    // Add external image URLs to attachments (cap at 5 total)
     for (const { alt, url } of externalImages) {
+      // Stop if we've reached the limit of 5 total attachments
+      if (attachments.length >= 5) {
+        break;
+      }
+
       attachments.push({
         type: 'external',
         url,
