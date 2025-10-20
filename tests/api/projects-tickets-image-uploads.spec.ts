@@ -9,7 +9,7 @@ import * as path from 'path';
  * Tests image attachment functionality including:
  * - Multipart/form-data parsing
  * - Image validation (MIME type, magic bytes, size)
- * - GitHub storage integration
+ * - GitHub storage integration (mocked in test environment)
  * - External URL extraction from markdown
  * - Attachment limit enforcement
  * - Backward compatibility with JSON requests
@@ -170,7 +170,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       const attachment = body.attachments[0];
       expect(attachment.type).toBe('uploaded');
       expect(attachment.url).toContain('github');
-      expect(attachment.url).toContain('ticket-assets/temp/');
+      expect(attachment.url).toContain(`ticket-assets/${body.id}/`); // Should use ticket ID, not temp/
       expect(attachment.filename).toMatch(/^\d+_valid-image\.png$/);
       expect(attachment.mimeType).toBe('image/png');
       expect(attachment.sizeBytes).toBe(imageBuffer.length);
@@ -574,7 +574,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       // URL should be GitHub raw content URL
       expect(attachment.url).toMatch(/^https:\/\/raw\.githubusercontent\.com\//);
-      expect(attachment.url).toContain('/main/ticket-assets/temp/');
+      expect(attachment.url).toContain(`/main/ticket-assets/${body.id}/`); // Should use ticket ID, not temp/
       expect(attachment.url).toContain(attachment.filename);
     });
   });

@@ -376,14 +376,12 @@ export async function POST(
     }
 
     // Update ticket with attachments if any exist
+    let finalTicket = ticket;
     if (attachments.length > 0) {
-      await prisma.ticket.update({
+      finalTicket = await prisma.ticket.update({
         where: { id: ticket.id },
         data: { attachments: attachments as any },
       });
-
-      // Update the ticket object to include attachments for response
-      ticket.attachments = attachments as any;
     }
 
     // Revalidate the project board page
@@ -392,17 +390,17 @@ export async function POST(
     // Return created ticket with 201 status
     return NextResponse.json(
       {
-        id: ticket.id,
-        title: ticket.title,
-        description: ticket.description,
-        stage: ticket.stage,
-        version: ticket.version,
-        projectId: ticket.projectId,
-        branch: ticket.branch,
-        autoMode: ticket.autoMode,
-        attachments: ticket.attachments,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
+        id: finalTicket.id,
+        title: finalTicket.title,
+        description: finalTicket.description,
+        stage: finalTicket.stage,
+        version: finalTicket.version,
+        projectId: finalTicket.projectId,
+        branch: finalTicket.branch,
+        autoMode: finalTicket.autoMode,
+        attachments: finalTicket.attachments,
+        createdAt: finalTicket.createdAt.toISOString(),
+        updatedAt: finalTicket.updatedAt.toISOString(),
       },
       { status: 201 }
     );
