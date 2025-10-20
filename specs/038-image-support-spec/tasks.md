@@ -22,9 +22,9 @@
 
 **Purpose**: Project initialization and dependency installation
 
-- [ ] T001 Install new dependencies: `npm install formidable file-type && npm install --save-dev @types/formidable`
-- [ ] T002 [P] Create TypeScript interfaces in `app/lib/types/ticket.ts` for TicketAttachment type
-- [ ] T003 [P] Create Zod schemas in `app/lib/schemas/ticket.ts` for TicketAttachmentSchema and TicketAttachmentsArraySchema
+- [X] T001 Install new dependencies: `npm install formidable file-type && npm install --save-dev @types/formidable`
+- [X] T002 [P] Create TypeScript interfaces in `app/lib/types/ticket.ts` for TicketAttachment type
+- [X] T003 [P] Create Zod schemas in `app/lib/schemas/ticket.ts` for TicketAttachmentSchema and TicketAttachmentsArraySchema
 
 ---
 
@@ -34,14 +34,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add Ticket.attachments field to Prisma schema in `prisma/schema.prisma` (Json? @default("[]"))
-- [ ] T005 Generate and apply Prisma migration: `npx prisma migrate dev --name add_ticket_attachments`
-- [ ] T006 [P] Create image validation module in `app/lib/validations/image.ts` with validateImageFile function (MIME + magic bytes)
-- [ ] T007 [P] Create GitHub operations module in `app/lib/github/operations.ts` with commitImageToRepo, moveImagesToFeatureBranch, deleteTicketAssets functions
-- [ ] T008 [P] Create markdown parser module in `app/lib/parsers/markdown.ts` with extractImageUrls function
-- [ ] T009 [P] Write unit tests for Zod schemas in `tests/unit/ticket-attachment-schema.test.ts`
-- [ ] T010 [P] Write unit tests for image validation in `tests/unit/image-validation.test.ts`
-- [ ] T011 [P] Write unit tests for markdown parser in `tests/unit/markdown-parser.test.ts`
+- [X] T004 Add Ticket.attachments field to Prisma schema in `prisma/schema.prisma` (Json? @default("[]"))
+- [X] T005 Generate and apply Prisma migration: `npx prisma migrate dev --name add_ticket_attachments` **⚠️ REQUIRES DATABASE_URL**
+- [X] T006 [P] Create image validation module in `app/lib/validations/image.ts` with validateImageFile function (MIME + magic bytes)
+- [X] T007 [P] Create GitHub operations module in `app/lib/github/operations.ts` with commitImageToRepo, moveImagesToFeatureBranch, deleteTicketAssets functions
+- [X] T008 [P] Create markdown parser module in `app/lib/parsers/markdown.ts` with extractImageUrls function
+- [X] T009 [P] Write unit tests for Zod schemas in `tests/unit/ticket-attachment-schema.test.ts`
+- [X] T010 [P] Write unit tests for image validation in `tests/unit/image-validation.test.ts`
+- [X] T011 [P] Write unit tests for markdown parser in `tests/unit/markdown-parser.test.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

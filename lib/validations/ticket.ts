@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ClarificationPolicy } from '@prisma/client';
+import { TicketAttachment } from '@/app/lib/types/ticket';
 
 /**
  * Project ID validation schema
@@ -57,11 +58,13 @@ export const CreateTicketSchema = z
     title: z.string().optional().default(''),
     description: z.string().optional().default(''),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
+    attachments: z.array(z.custom<TicketAttachment>()).optional(),
   })
   .transform((data) => ({
     title: data.title.trim(),
     description: data.description.trim(),
     clarificationPolicy: data.clarificationPolicy,
+    attachments: data.attachments,
   }))
   .refine((data) => data.title.length > 0, {
     message: 'Title is required',

@@ -25,6 +25,7 @@ export async function getTicketsByStage(
       autoMode: true,
       clarificationPolicy: true,
       workflowType: true,
+      attachments: true,
       createdAt: true,
       updatedAt: true,
       project: {
@@ -60,6 +61,7 @@ export async function getTicketsByStage(
         autoMode: ticket.autoMode,
         clarificationPolicy: ticket.clarificationPolicy,
         workflowType: ticket.workflowType,
+        attachments: ticket.attachments,
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
         project: {
@@ -77,30 +79,33 @@ export async function getTicketsByStage(
 /**
  * Create a new ticket in the INBOX stage for a specific project
  * @param projectId - The project ID to create the ticket in
- * @param input - The ticket data (title, description)
+ * @param input - The ticket data (title, description, attachments)
  */
 export async function createTicket(
   projectId: number,
   input: CreateTicketInput
 ) {
   // Build data object conditionally to satisfy exactOptionalPropertyTypes
+  const baseData = {
+    title: input.title,
+    description: input.description,
+    stage: 'INBOX' as const,
+    projectId: projectId,
+    updatedAt: new Date(),
+  };
+
+  // Add optional fields only if they are defined
+  const dataWithOptionals = {
+    ...baseData,
+    ...(input.clarificationPolicy !== undefined && {
+      clarificationPolicy: input.clarificationPolicy,
+    }),
+    ...(input.attachments !== undefined && {
+      attachments: input.attachments as unknown as import('@prisma/client').Prisma.InputJsonValue,
+    }),
+  };
+
   return await prisma.ticket.create({
-    data:
-      input.clarificationPolicy !== undefined
-        ? {
-            title: input.title,
-            description: input.description,
-            stage: 'INBOX',
-            projectId: projectId,
-            clarificationPolicy: input.clarificationPolicy,
-            updatedAt: new Date(),
-          }
-        : {
-            title: input.title,
-            description: input.description,
-            stage: 'INBOX',
-            projectId: projectId,
-            updatedAt: new Date(),
-          },
+    data: dataWithOptionals,
   });
 }

@@ -86,6 +86,7 @@ model Ticket {
   branch              String?              @db.VarChar(200)
   autoMode            Boolean              @default(false)
   workflowType        WorkflowType         @default(FULL)
+  attachments         Json?                @default("[]")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy?

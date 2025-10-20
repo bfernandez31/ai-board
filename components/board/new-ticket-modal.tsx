@@ -44,6 +44,7 @@ interface FormErrors {
   title?: string;
   description?: string;
   clarificationPolicy?: string;
+  attachments?: string;
   submit?: string;
 }
 
@@ -65,6 +66,7 @@ export function NewTicketModal({
     title: '',
     description: '',
     clarificationPolicy: undefined, // undefined = use project default
+    attachments: undefined, // For future image upload support
   });
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -76,6 +78,7 @@ export function NewTicketModal({
         title: '',
         description: '',
         clarificationPolicy: undefined,
+        attachments: undefined,
       });
       setErrors({});
       setIsSubmitting(false);
