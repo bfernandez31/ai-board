@@ -81,6 +81,9 @@ export function ImageGallery({
   const { data, isLoading, error } = useTicketImages(projectId, ticketId, isExpanded);
   const images = data?.images ?? [];
 
+  // Use actual image count from query data when available, otherwise fallback to prop
+  const actualImageCount = data?.images?.length ?? attachmentCount;
+
   // Upload, delete, and replace mutations
   const uploadMutation = useImageUpload();
   const deleteMutation = useImageDelete();
@@ -198,7 +201,7 @@ export function ImageGallery({
   };
 
   // Don't render section if no images and can't upload
-  if (attachmentCount === 0 && !canEditImages) {
+  if (actualImageCount === 0 && !canEditImages) {
     return null;
   }
 
@@ -210,7 +213,7 @@ export function ImageGallery({
         className="flex items-center gap-2 w-full text-left hover:bg-base/5 rounded-md p-2 -ml-2 transition-colors focus:outline-none focus:ring-2 focus:ring-lavender focus:ring-offset-2 focus:ring-offset-base"
         aria-expanded={isExpanded}
         aria-controls="image-gallery-content"
-        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} image gallery (${attachmentCount} ${attachmentCount === 1 ? 'image' : 'images'})`}
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} image gallery (${actualImageCount} ${actualImageCount === 1 ? 'image' : 'images'})`}
       >
         {isExpanded ? (
           <ChevronUp className="h-4 w-4 text-text/60" aria-hidden="true" />
@@ -220,7 +223,7 @@ export function ImageGallery({
         <ImageIcon className="h-4 w-4 text-text/60" aria-hidden="true" />
         <span className="font-medium text-sm text-text">Images</span>
         <Badge variant="secondary" className="ml-auto" aria-hidden="true">
-          {attachmentCount}
+          {actualImageCount}
         </Badge>
       </button>
 
@@ -236,7 +239,7 @@ export function ImageGallery({
               <ImageUpload
                 images={pendingImages}
                 onImagesChange={setPendingImages}
-                maxImages={5 - attachmentCount} // Limit based on existing attachments
+                maxImages={5 - actualImageCount} // Limit based on existing attachments
                 maxFileSize={10 * 1024 * 1024}
                 allowedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
               />

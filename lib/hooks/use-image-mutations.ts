@@ -87,6 +87,11 @@ export function useImageUpload() {
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
       });
 
+      // Also invalidate main ticket query to update attachment count
+      queryClient.invalidateQueries({
+        queryKey: ['ticket', variables.projectId, variables.ticketId],
+      });
+
       toast({
         title: 'Image uploaded',
         description: 'Image has been added to the ticket',
@@ -146,6 +151,11 @@ export function useImageDelete() {
       // Invalidate ticket images query
       queryClient.invalidateQueries({
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
+      });
+
+      // Also invalidate main ticket query to update attachment count
+      queryClient.invalidateQueries({
+        queryKey: ['ticket', variables.projectId, variables.ticketId],
       });
 
       toast({
@@ -211,6 +221,11 @@ export function useImageReplace() {
       // Invalidate ticket images query
       queryClient.invalidateQueries({
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
+      });
+
+      // Also invalidate main ticket query to update attachment count
+      queryClient.invalidateQueries({
+        queryKey: ['ticket', variables.projectId, variables.ticketId],
       });
 
       toast({

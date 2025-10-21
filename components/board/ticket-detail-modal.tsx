@@ -212,7 +212,8 @@ export function TicketDetailModal({
     };
 
     fetchJobs();
-  }, [ticket, open, projectId]);
+    // Only depend on ticket.id, not entire ticket object to avoid re-fetching when ticket props change
+  }, [ticket?.id, open, projectId]);
 
   // Check if "View Specification" button should be visible
   const hasCompletedSpecifyJob = useMemo(() => {
