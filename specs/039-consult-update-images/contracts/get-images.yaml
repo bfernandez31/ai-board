@@ -1,0 +1,154 @@
+openapi: 3.0.3
+info:
+  title: Get Ticket Images API
+  description: Retrieves image metadata for a ticket without downloading files (lazy loading optimization)
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/images:
+    get:
+      summary: Get ticket image metadata
+      description: Returns metadata for all images attached to a ticket. Images are NOT downloaded - only metadata is returned for lazy loading optimization.
+      operationId: getTicketImages
+      tags:
+        - Images
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID
+          schema:
+            type: integer
+            minimum: 1
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved image metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - images
+                properties:
+                  images:
+                    type: array
+                    description: Array of image metadata objects with index
+                    items:
+                      type: object
+                      required:
+                        - index
+                        - type
+                        - url
+                        - filename
+                        - mimeType
+                        - sizeBytes
+                        - uploadedAt
+                      properties:
+                        index:
+                          type: integer
+                          description: Index of attachment in ticket.attachments array
+                          minimum: 0
+                        type:
+                          type: string
+                          enum:
+                            - uploaded
+                            - external
+                          description: Source type of attachment
+                        url:
+                          type: string
+                          format: uri
+                          description: GitHub URL (uploaded) or external URL (external)
+                        filename:
+                          type: string
+                          maxLength: 255
+                          description: Original filename or alt text
+                        mimeType:
+                          type: string
+                          enum:
+                            - image/jpeg
+                            - image/png
+                            - image/gif
+                            - image/webp
+                          description: MIME type of image
+                        sizeBytes:
+                          type: integer
+                          minimum: 0
+                          maximum: 10485760
+                          description: File size in bytes (0 for external URLs)
+                        uploadedAt:
+                          type: string
+                          format: date-time
+                          description: ISO 8601 timestamp when attachment was created
+              example:
+                images:
+                  - index: 0
+                    type: "uploaded"
+                    url: "https://github.com/owner/repo/blob/main/images/123/screenshot.png"
+                    filename: "screenshot.png"
+                    mimeType: "image/png"
+                    sizeBytes: 245678
+                    uploadedAt: "2025-01-21T14:30:00.000Z"
+                  - index: 1
+                    type: "external"
+                    url: "https://example.com/mockup.jpg"
+                    filename: "mockup.jpg"
+                    mimeType: "image/jpeg"
+                    sizeBytes: 0
+                    uploadedAt: "2025-01-21T15:45:00.000Z"
+        '401':
+          description: Unauthorized - no valid session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        '403':
+          description: Forbidden - user does not have access to this project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Forbidden - project access denied"
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Ticket not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: NextAuth.js session cookie

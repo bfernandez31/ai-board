@@ -3,7 +3,7 @@ import { Stage } from '@prisma/client';
 /**
  * Document type that can be edited
  */
-export type DocType = 'spec' | 'plan' | 'tasks';
+export type DocType = 'spec' | 'plan' | 'tasks' | 'images';
 
 /**
  * Stage-based permission rules for documentation editing
@@ -18,8 +18,8 @@ interface EditPermission {
 }
 
 const EDIT_PERMISSIONS: EditPermission[] = [
-  { stage: 'SPECIFY', allowedDocTypes: ['spec'] },
-  { stage: 'PLAN', allowedDocTypes: ['plan', 'tasks'] },
+  { stage: 'SPECIFY', allowedDocTypes: ['spec', 'images'] },
+  { stage: 'PLAN', allowedDocTypes: ['plan', 'tasks', 'images'] },
 ];
 
 /**
