@@ -32,10 +32,12 @@ test.describe('Image Management Permissions', () => {
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
+        id: 'test-user-id', // Required: User.id is String (not auto-generated)
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
-      } as any,
+        updatedAt: new Date(), // Required: User.updatedAt has no default
+      },
     });
 
     // Create tickets in different stages with existing image
@@ -55,7 +57,8 @@ test.describe('Image Management Permissions', () => {
         stage: 'INBOX',
         projectId: 1,
         attachments: [baseAttachment],
-      } as any,
+        updatedAt: new Date(), // Required: Ticket.updatedAt has no default
+      },
     });
     testTicketInbox = ticketInbox.id;
 
@@ -66,7 +69,8 @@ test.describe('Image Management Permissions', () => {
         stage: 'SPECIFY',
         projectId: 1,
         attachments: [baseAttachment],
-      } as any,
+        updatedAt: new Date(), // Required: Ticket.updatedAt has no default
+      },
     });
     testTicketSpecify = ticketSpecify.id;
 
@@ -77,7 +81,8 @@ test.describe('Image Management Permissions', () => {
         stage: 'PLAN',
         projectId: 1,
         attachments: [baseAttachment],
-      } as any,
+        updatedAt: new Date(), // Required: Ticket.updatedAt has no default
+      },
     });
     testTicketPlan = ticketPlan.id;
 
@@ -88,7 +93,8 @@ test.describe('Image Management Permissions', () => {
         stage: 'BUILD',
         projectId: 1,
         attachments: [baseAttachment],
-      } as any,
+        updatedAt: new Date(), // Required: Ticket.updatedAt has no default
+      },
     });
     testTicketBuild = ticketBuild.id;
   });
