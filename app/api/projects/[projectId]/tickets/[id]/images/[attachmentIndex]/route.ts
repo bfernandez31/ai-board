@@ -359,7 +359,7 @@ export async function PUT(
     }
 
     const octokit = createGitHubClient();
-    const githubPath = `images/${ticketId}/${file.name}`;
+    const githubPath = `ticket-assets/${ticketId}/${file.name}`;
     const oldFilename = existingAttachments[attachmentIndex]?.filename || 'unknown';
 
     await commitImageToRepo(octokit, {

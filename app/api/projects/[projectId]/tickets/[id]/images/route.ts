@@ -264,7 +264,7 @@ export async function POST(
     }
 
     const octokit = createGitHubClient();
-    const githubPath = `images/${ticketId}/${file.name}`;
+    const githubPath = `ticket-assets/${ticketId}/${file.name}`;
 
     await commitImageToRepo(octokit, {
       owner: ticket.project.githubOwner,
