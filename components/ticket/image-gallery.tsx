@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload, Trash2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,6 +20,7 @@ import { ImageLightbox } from './image-lightbox';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 import { canEdit } from '@/components/ticket/edit-permission-guard';
 import type { Stage } from '@prisma/client';
+import { useImageReplace } from '@/lib/hooks/use-image-mutations';
 
 interface ImageGalleryProps {
   /** Project ID for API requests */
@@ -73,14 +74,16 @@ export function ImageGallery({
   const [isUploading, setIsUploading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<number | null>(null);
+  const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   // Lazy load images only when gallery is expanded
   const { data, isLoading, error } = useTicketImages(projectId, ticketId, isExpanded);
   const images = data?.images ?? [];
 
-  // Upload and delete mutations
+  // Upload, delete, and replace mutations
   const uploadMutation = useImageUpload();
   const deleteMutation = useImageDelete();
+  const replaceMutation = useImageReplace();
 
   // Check if user can edit images
   const canEditImages = canEdit(ticketStage, 'images');
@@ -146,6 +149,45 @@ export function ImageGallery({
     } finally {
       setDeleteConfirmOpen(false);
       setImageToDelete(null);
+    }
+  };
+
+  // Handle replace button click
+  const handleReplaceClick = (index: number, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent opening lightbox
+    // Trigger file input for this specific image
+    const fileInput = fileInputRefs.current[index];
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
+  // Handle file selection for replace
+  const handleReplaceFileChange = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await replaceMutation.mutateAsync({
+        projectId,
+        ticketId,
+        attachmentIndex: index,
+        file,
+        version: ticketVersion,
+      });
+
+      // Notify parent to refresh ticket data
+      if (onAttachmentsUpdated) {
+        onAttachmentsUpdated();
+      }
+
+      // Reset file input
+      event.target.value = '';
+    } catch (error) {
+      // Error is already handled by mutation (toast notification)
+      console.error('Failed to replace image:', error);
+      // Reset file input even on error
+      event.target.value = '';
     }
   };
 
@@ -263,16 +305,39 @@ export function ImageGallery({
                       </div>
                     </button>
 
-                    {/* Delete button (only show when user can edit) */}
+                    {/* Action buttons (only show when user can edit) */}
                     {canEditImages && (
-                      <button
-                        onClick={(e) => handleDeleteClick(image.index, e)}
-                        className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        aria-label={`Delete ${image.filename}`}
-                        title="Delete image"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <>
+                        {/* Replace button */}
+                        <button
+                          onClick={(e) => handleReplaceClick(image.index, e)}
+                          className="absolute top-2 left-2 p-1.5 bg-lavender/90 hover:bg-lavender text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          aria-label={`Replace ${image.filename}`}
+                          title="Replace image"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+
+                        {/* Delete button */}
+                        <button
+                          onClick={(e) => handleDeleteClick(image.index, e)}
+                          className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          aria-label={`Delete ${image.filename}`}
+                          title="Delete image"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+
+                        {/* Hidden file input for replace */}
+                        <input
+                          type="file"
+                          ref={(el) => (fileInputRefs.current[image.index] = el)}
+                          onChange={(e) => handleReplaceFileChange(image.index, e)}
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          aria-hidden="true"
+                        />
+                      </>
                     )}
                   </div>
                 ))}
