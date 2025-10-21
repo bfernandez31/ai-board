@@ -22,9 +22,9 @@
 
 **Purpose**: Verify project structure and prepare for landing page development
 
-- [ ] T001 Verify Next.js 15 App Router structure exists (app/, components/, lib/ directories)
-- [ ] T002 [P] Verify all required dependencies installed (shadcn/ui, lucide-react, NextAuth.js, TailwindCSS)
-- [ ] T003 [P] Add smooth scroll CSS to app/globals.css (`html { scroll-behavior: smooth; }`)
+- [X] T001 Verify Next.js 15 App Router structure exists (app/, components/, lib/ directories)
+- [X] T002 [P] Verify all required dependencies installed (shadcn/ui, lucide-react, NextAuth.js, TailwindCSS)
+- [X] T003 [P] Add smooth scroll CSS to app/globals.css (`html { scroll-behavior: smooth; }`)
 
 ---
 
@@ -34,10 +34,10 @@
 
 **⚠️ CRITICAL**: No user story UI work can begin until this phase is complete
 
-- [ ] T004 Search for existing landing/auth tests using grep/glob (per constitution Test Discovery Workflow)
-- [ ] T005 Modify app/page.tsx to check authentication with getServerSession() and conditionally render landing vs redirect to /projects
-- [ ] T006 Create app/landing/page.tsx as Server Component container for marketing sections
-- [ ] T007 Create components/landing/ directory for landing page components
+- [X] T004 Search for existing landing/auth tests using grep/glob (per constitution Test Discovery Workflow)
+- [X] T005 Modify app/page.tsx to check authentication with getServerSession() and conditionally render landing vs redirect to /projects
+- [X] T006 Create app/landing/page.tsx as Server Component container for marketing sections
+- [X] T007 Create components/landing/ directory for landing page components
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -53,14 +53,14 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T008 [P] [US4] E2E test: authenticated user visits `/` and redirects to `/projects` in tests/e2e/landing-page.spec.ts
-- [ ] T009 [P] [US4] E2E test: authenticated user sees application header variant (not marketing header) in tests/e2e/landing-page.spec.ts
+- [X] T008 [P] [US4] E2E test: authenticated user visits `/` and redirects to `/projects` in tests/e2e/landing-page.spec.ts
+- [X] T009 [P] [US4] E2E test: authenticated user sees application header variant (not marketing header) in tests/e2e/landing-page.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T010 [US4] Update components/layout/header.tsx to add marketing variant logic (check pathname === '/' && !session)
-- [ ] T011 [US4] Add navigation links (Features, Workflow) to marketing header variant in components/layout/header.tsx
-- [ ] T012 [US4] Replace UserMenu with "Sign In" button in marketing header variant in components/layout/header.tsx
+- [X] T010 [US4] Update components/layout/header.tsx to add marketing variant logic (check pathname === '/' && !session)
+- [X] T011 [US4] Add navigation links (Features, Workflow) to marketing header variant in components/layout/header.tsx
+- [X] T012 [US4] Replace UserMenu with "Sign In" button in marketing header variant in components/layout/header.tsx
 
 **Checkpoint**: Authenticated users now properly redirected, header shows correct variant
 
@@ -76,33 +76,33 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [P] [US1] E2E test: unauthenticated visitor sees hero section with headline and CTAs in tests/e2e/landing-page.spec.ts
-- [ ] T014 [P] [US1] E2E test: unauthenticated visitor sees 6 feature cards in grid layout in tests/e2e/landing-page.spec.ts
-- [ ] T015 [P] [US1] E2E test: unauthenticated visitor sees workflow timeline with 5 stages in tests/e2e/landing-page.spec.ts
-- [ ] T016 [P] [US1] E2E test: unauthenticated visitor sees final CTA section at bottom in tests/e2e/landing-page.spec.ts
+- [X] T013 [P] [US1] E2E test: unauthenticated visitor sees hero section with headline and CTAs in tests/e2e/landing-page.spec.ts
+- [X] T014 [P] [US1] E2E test: unauthenticated visitor sees 6 feature cards in grid layout in tests/e2e/landing-page.spec.ts
+- [X] T015 [P] [US1] E2E test: unauthenticated visitor sees workflow timeline with 5 stages in tests/e2e/landing-page.spec.ts
+- [X] T016 [P] [US1] E2E test: unauthenticated visitor sees final CTA section at bottom in tests/e2e/landing-page.spec.ts
 
 ### Implementation for User Story 1
 
 **Hero Section**:
-- [ ] T017 [P] [US1] Create components/landing/hero-section.tsx with gradient title, subheadline, CTA buttons (use shadcn/ui Button)
-- [ ] T018 [P] [US1] Add hero screenshot Next.js Image component with placeholder in components/landing/hero-section.tsx
-- [ ] T019 [P] [US1] Create placeholder image public/landing/hero-screenshot.png (can be replaced later)
+- [X] T017 [P] [US1] Create components/landing/hero-section.tsx with gradient title, subheadline, CTA buttons (use shadcn/ui Button)
+- [X] T018 [P] [US1] Add hero screenshot Next.js Image component with placeholder in components/landing/hero-section.tsx
+- [X] T019 [P] [US1] Create placeholder image public/landing/hero-screenshot.png (can be replaced later)
 
 **Features Grid**:
-- [ ] T020 [P] [US1] Create components/landing/feature-card.tsx reusable component with FeatureCardProps interface (icon: LucideIcon, iconColor, title, description)
-- [ ] T021 [US1] Create components/landing/features-grid.tsx with 6 feature cards using Sparkles, LayoutGrid, Github, Zap, Image, RefreshCw icons from lucide-react
-- [ ] T022 [US1] Apply Catppuccin Mocha accent colors to feature icons (violet, blue, green, yellow, pink, cyan) in components/landing/features-grid.tsx
+- [X] T020 [P] [US1] Create components/landing/feature-card.tsx reusable component with FeatureCardProps interface (icon: LucideIcon, iconColor, title, description)
+- [X] T021 [US1] Create components/landing/features-grid.tsx with 6 feature cards using Sparkles, LayoutGrid, Github, Zap, Image, RefreshCw icons from lucide-react
+- [X] T022 [US1] Apply Catppuccin Mocha accent colors to feature icons (violet, blue, green, yellow, pink, cyan) in components/landing/features-grid.tsx
 
 **Workflow Visualization**:
-- [ ] T023 [P] [US1] Create components/landing/workflow-step.tsx with WorkflowStepProps interface (stage: 'INBOX'|'SPECIFY'|'PLAN'|'BUILD'|'VERIFY', title, description, isLast)
-- [ ] T024 [US1] Create components/landing/workflow-section.tsx with flexbox responsive timeline (vertical mobile, horizontal desktop)
-- [ ] T025 [US1] Apply workflow stage colors and visual connectors in components/landing/workflow-section.tsx
+- [X] T023 [P] [US1] Create components/landing/workflow-step.tsx with WorkflowStepProps interface (stage: 'INBOX'|'SPECIFY'|'PLAN'|'BUILD'|'VERIFY', title, description, isLast)
+- [X] T024 [US1] Create components/landing/workflow-section.tsx with flexbox responsive timeline (vertical mobile, horizontal desktop)
+- [X] T025 [US1] Apply workflow stage colors and visual connectors in components/landing/workflow-section.tsx
 
 **Final CTA**:
-- [ ] T026 [P] [US1] Create components/landing/cta-section.tsx with gradient background and "Get Started Free" CTA
+- [X] T026 [P] [US1] Create components/landing/cta-section.tsx with gradient background and "Get Started Free" CTA
 
 **Integration**:
-- [ ] T027 [US1] Integrate all sections into app/landing/page.tsx (Hero, Features, Workflow, Final CTA)
+- [X] T027 [US1] Integrate all sections into app/landing/page.tsx (Hero, Features, Workflow, Final CTA)
 
 **Checkpoint**: User Story 1 complete - unauthenticated visitors can view full landing page
 
@@ -124,10 +124,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Add href="/auth/signin" to primary CTA buttons in components/landing/hero-section.tsx using Next.js Link
-- [ ] T032 [US2] Add href="/auth/signin" (fallback) or demo URL to secondary CTA in components/landing/hero-section.tsx
-- [ ] T033 [US2] Add href="/auth/signin" to final CTA button in components/landing/cta-section.tsx using Next.js Link
-- [ ] T034 [US2] Apply hover effects to CTA buttons (hover:scale-105 transform) in all CTA components
+- [X] T031 [US2] Add href="/auth/signin" to primary CTA buttons in components/landing/hero-section.tsx using Next.js Link
+- [X] T032 [US2] Add href="/auth/signin" (fallback) or demo URL to secondary CTA in components/landing/hero-section.tsx
+- [X] T033 [US2] Add href="/auth/signin" to final CTA button in components/landing/cta-section.tsx using Next.js Link
+- [X] T034 [US2] Apply hover effects to CTA buttons (hover:scale-105 transform) in all CTA components
 
 **Checkpoint**: All CTAs functional - visitors can start sign-up or view demo
 
