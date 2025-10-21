@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload, Trash2, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -74,6 +74,7 @@ export function ImageGallery({
   const [isUploading, setIsUploading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<number | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   // Lazy load images only when gallery is expanded
@@ -191,6 +192,11 @@ export function ImageGallery({
     }
   };
 
+  // Handle broken image (404, CORS, corrupt file)
+  const handleImageError = (index: number) => {
+    setBrokenImages((prev) => new Set(prev).add(index));
+  };
+
   // Don't render section if no images and can't upload
   if (attachmentCount === 0 && !canEditImages) {
     return null;
@@ -201,18 +207,19 @@ export function ImageGallery({
       {/* Collapsible Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 w-full text-left hover:bg-base/5 rounded-md p-2 -ml-2 transition-colors"
+        className="flex items-center gap-2 w-full text-left hover:bg-base/5 rounded-md p-2 -ml-2 transition-colors focus:outline-none focus:ring-2 focus:ring-lavender focus:ring-offset-2 focus:ring-offset-base"
         aria-expanded={isExpanded}
         aria-controls="image-gallery-content"
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} image gallery (${attachmentCount} ${attachmentCount === 1 ? 'image' : 'images'})`}
       >
         {isExpanded ? (
-          <ChevronUp className="h-4 w-4 text-text/60" />
+          <ChevronUp className="h-4 w-4 text-text/60" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-text/60" />
+          <ChevronDown className="h-4 w-4 text-text/60" aria-hidden="true" />
         )}
-        <ImageIcon className="h-4 w-4 text-text/60" />
+        <ImageIcon className="h-4 w-4 text-text/60" aria-hidden="true" />
         <span className="font-medium text-sm text-text">Images</span>
-        <Badge variant="secondary" className="ml-auto">
+        <Badge variant="secondary" className="ml-auto" aria-hidden="true">
           {attachmentCount}
         </Badge>
       </button>
@@ -223,7 +230,9 @@ export function ImageGallery({
           {/* Upload Section (only show when user can edit) */}
           {canEditImages && (
             <div className="border border-surface2 rounded-md p-4 bg-mantle">
-              <h4 className="text-sm font-medium text-text mb-3">Upload New Images</h4>
+              <h4 className="text-sm font-medium text-text mb-3" id="upload-section-heading">
+                Upload New Images
+              </h4>
               <ImageUpload
                 images={pendingImages}
                 onImagesChange={setPendingImages}
@@ -236,20 +245,30 @@ export function ImageGallery({
                   onClick={handleUploadImages}
                   disabled={isUploading}
                   className="mt-3 w-full bg-lavender hover:bg-lavender/90 text-base"
+                  aria-describedby="upload-section-heading"
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
                       Uploading {pendingImages.length} image(s)...
                     </>
                   ) : (
                     <>
-                      <Upload className="h-4 w-4 mr-2" />
+                      <Upload className="h-4 w-4 mr-2" aria-hidden="true" />
                       Upload {pendingImages.length} image(s)
                     </>
                   )}
                 </Button>
               )}
+              {/* Live region for upload status */}
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="sr-only"
+              >
+                {isUploading && `Uploading ${pendingImages.length} images, please wait...`}
+              </div>
             </div>
           )}
 
@@ -287,45 +306,63 @@ export function ImageGallery({
                     <button
                       onClick={() => setSelectedImageIndex(image.index)}
                       className="group relative aspect-square overflow-hidden rounded-md border border-surface2 hover:border-lavender transition-colors bg-mantle w-full"
-                      aria-label={`View ${image.filename}`}
+                      aria-label={`View full-size image: ${image.filename}`}
+                      disabled={brokenImages.has(image.index)}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.url}
-                        alt={image.filename}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
-                      />
+                      {brokenImages.has(image.index) ? (
+                        /* Broken image placeholder */
+                        <div className="flex flex-col items-center justify-center w-full h-full bg-surface0">
+                          <AlertCircle className="h-12 w-12 text-red/60 mb-2" />
+                          <p className="text-xs text-red/80 font-medium">Failed to load</p>
+                          <p className="text-xs text-subtext0 mt-1 px-2 text-center truncate w-full">
+                            {image.filename}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.url}
+                            alt={`Attachment: ${image.filename}`}
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
+                            onError={() => handleImageError(image.index)}
+                            loading="lazy"
+                          />
 
-                      {/* Overlay with filename */}
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-crust/90 to-transparent p-2">
-                        <p className="text-xs text-text truncate">{image.filename}</p>
-                        <p className="text-xs text-subtext0">
-                          {(image.sizeBytes / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
+                          {/* Overlay with filename */}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-crust/90 to-transparent p-2">
+                            <p className="text-xs text-text truncate" title={image.filename}>
+                              {image.filename}
+                            </p>
+                            <p className="text-xs text-subtext0">
+                              {(image.sizeBytes / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </button>
 
-                    {/* Action buttons (only show when user can edit) */}
-                    {canEditImages && (
+                    {/* Action buttons (only show when user can edit and image is valid) */}
+                    {canEditImages && !brokenImages.has(image.index) && (
                       <>
                         {/* Replace button */}
                         <button
                           onClick={(e) => handleReplaceClick(image.index, e)}
-                          className="absolute top-2 left-2 p-1.5 bg-lavender/90 hover:bg-lavender text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute top-2 left-2 p-1.5 bg-lavender/90 hover:bg-lavender text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
                           aria-label={`Replace ${image.filename}`}
                           title="Replace image"
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          <RefreshCw className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         {/* Delete button */}
                         <button
                           onClick={(e) => handleDeleteClick(image.index, e)}
-                          className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
                           aria-label={`Delete ${image.filename}`}
                           title="Delete image"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         {/* Hidden file input for replace */}
@@ -338,6 +375,18 @@ export function ImageGallery({
                           aria-hidden="true"
                         />
                       </>
+                    )}
+
+                    {/* Delete-only button for broken images */}
+                    {canEditImages && brokenImages.has(image.index) && (
+                      <button
+                        onClick={(e) => handleDeleteClick(image.index, e)}
+                        className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
+                        aria-label={`Delete broken image ${image.filename}`}
+                        title="Delete broken image"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
                     )}
                   </div>
                 ))}
