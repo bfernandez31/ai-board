@@ -248,36 +248,29 @@ export async function POST(
       );
     }
 
-    // Convert File to Buffer for GitHub upload
+    // Convert File to Buffer for Cloudinary upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to GitHub
-    const { createGitHubClient } = await import('@/app/lib/github/client');
-    const { commitImageToRepo } = await import('@/app/lib/github/operations');
+    // Upload to Cloudinary
+    const { uploadImageToCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
 
-    if (!ticket.project.githubOwner || !ticket.project.githubRepo) {
+    if (!isCloudinaryConfigured()) {
       return NextResponse.json(
-        { error: 'GitHub repository not configured for project', code: 'CONFIG_ERROR' },
+        { error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', code: 'CONFIG_ERROR' },
         { status: 500 }
       );
     }
 
-    const octokit = createGitHubClient();
-    const githubPath = `ticket-assets/${ticketId}/${file.name}`;
-
-    await commitImageToRepo(octokit, {
-      owner: ticket.project.githubOwner,
-      repo: ticket.project.githubRepo,
-      path: githubPath,
-      content: buffer,
-      message: `Add image ${file.name} to ticket ${ticketId}`,
-      authorName: 'AI Board',
-      authorEmail: 'noreply@ai-board.dev',
+    // Upload to Cloudinary with folder structure: ai-board/tickets/{ticketId}/
+    const cloudinaryResult = await uploadImageToCloudinary(buffer, {
+      folder: `ai-board/tickets/${ticketId}`,
+      filename: file.name.replace(/\.[^/.]+$/, ''), // Remove extension (Cloudinary adds it)
+      resourceType: 'image',
     });
 
-    // Construct GitHub raw URL
-    const downloadUrl = `https://raw.githubusercontent.com/${ticket.project.githubOwner}/${ticket.project.githubRepo}/main/${githubPath}`;
+    // Cloudinary URL is publicly accessible
+    const downloadUrl = cloudinaryResult.url;
 
     // Create new attachment object
     const newAttachment: TicketAttachment = {
@@ -287,6 +280,7 @@ export async function POST(
       mimeType: file.type,
       sizeBytes: file.size,
       uploadedAt: new Date().toISOString(),
+      cloudinaryPublicId: cloudinaryResult.publicId, // Store for deletion
     };
 
     // Append to attachments array

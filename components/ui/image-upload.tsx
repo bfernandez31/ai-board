@@ -217,7 +217,8 @@ export function ImageUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
+          border-2 border-dashed rounded-lg text-center transition-colors
+          ${images.length > 0 ? 'p-4' : 'p-8'}
           ${
             isDragging
               ? 'border-primary bg-primary/10'
@@ -250,16 +251,20 @@ export function ImageUpload({
           disabled={images.length >= maxImages}
         />
 
-        <div className="flex flex-col items-center gap-2">
-          <Upload className="h-10 w-10 text-muted-foreground" />
-          <div className="text-sm font-medium">
-            {isDragging ? 'Drop images here' : 'Drag and drop images here'}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            or click to browse • Max {maxImages} images • {maxFileSize / (1024 * 1024)}MB each
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Tip: You can also paste screenshots (Ctrl+V / Cmd+V)
+        <div className={`flex ${images.length > 0 ? 'flex-row' : 'flex-col'} items-center gap-2`}>
+          <Upload className={`${images.length > 0 ? 'h-5 w-5' : 'h-10 w-10'} text-muted-foreground`} />
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-sm font-medium">
+              {isDragging ? 'Drop images here' : images.length > 0 ? 'Add more images' : 'Drag and drop images here'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              or click to browse • Max {maxImages} images • {maxFileSize / (1024 * 1024)}MB each
+            </div>
+            {images.length === 0 && (
+              <div className="text-xs text-muted-foreground">
+                Tip: You can also paste screenshots (Ctrl+V / Cmd+V)
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -131,6 +131,21 @@ export async function DELETE(
       );
     }
 
+    // Get attachment to delete
+    const attachmentToDelete = existingAttachments[attachmentIndex];
+
+    // Delete from Cloudinary if it has a publicId
+    if (attachmentToDelete?.cloudinaryPublicId) {
+      const { deleteImageFromCloudinary } = await import('@/app/lib/cloudinary/client');
+      try {
+        await deleteImageFromCloudinary(attachmentToDelete.cloudinaryPublicId);
+      } catch (error) {
+        console.error('Failed to delete image from Cloudinary:', error);
+        // Continue with database update even if Cloudinary deletion fails
+        // This prevents orphaned database records
+      }
+    }
+
     // Remove attachment at index
     const updatedAttachments = existingAttachments.filter((_, idx) => idx !== attachmentIndex);
 
@@ -343,37 +358,43 @@ export async function PUT(
       );
     }
 
-    // Convert File to Buffer for GitHub upload
+    // Get old attachment to delete from Cloudinary
+    const oldAttachment = existingAttachments[attachmentIndex];
+
+    // Convert File to Buffer for Cloudinary upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to GitHub
-    const { createGitHubClient } = await import('@/app/lib/github/client');
-    const { commitImageToRepo } = await import('@/app/lib/github/operations');
+    // Upload to Cloudinary
+    const { uploadImageToCloudinary, deleteImageFromCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
 
-    if (!ticket.project.githubOwner || !ticket.project.githubRepo) {
+    if (!isCloudinaryConfigured()) {
       return NextResponse.json(
-        { error: 'GitHub repository not configured for project', code: 'CONFIG_ERROR' },
+        { error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', code: 'CONFIG_ERROR' },
         { status: 500 }
       );
     }
 
-    const octokit = createGitHubClient();
-    const githubPath = `ticket-assets/${ticketId}/${file.name}`;
-    const oldFilename = existingAttachments[attachmentIndex]?.filename || 'unknown';
-
-    await commitImageToRepo(octokit, {
-      owner: ticket.project.githubOwner,
-      repo: ticket.project.githubRepo,
-      path: githubPath,
-      content: buffer,
-      message: `Replace image ${oldFilename} with ${file.name} in ticket ${ticketId}`,
-      authorName: 'AI Board',
-      authorEmail: 'noreply@ai-board.dev',
+    // Upload new image to Cloudinary with folder structure: ai-board/tickets/{ticketId}/
+    const cloudinaryResult = await uploadImageToCloudinary(buffer, {
+      folder: `ai-board/tickets/${ticketId}`,
+      filename: file.name.replace(/\.[^/.]+$/, ''), // Remove extension (Cloudinary adds it)
+      resourceType: 'image',
     });
 
-    // Construct GitHub raw URL
-    const downloadUrl = `https://raw.githubusercontent.com/${ticket.project.githubOwner}/${ticket.project.githubRepo}/main/${githubPath}`;
+    // Delete old image from Cloudinary if it has a publicId
+    if (oldAttachment?.cloudinaryPublicId) {
+      try {
+        await deleteImageFromCloudinary(oldAttachment.cloudinaryPublicId);
+      } catch (error) {
+        console.error('Failed to delete old image from Cloudinary:', error);
+        // Continue with database update even if deletion fails
+        // This prevents blocking the replace operation
+      }
+    }
+
+    // Cloudinary URL is publicly accessible
+    const downloadUrl = cloudinaryResult.url;
 
     // Create new attachment object
     const newAttachment: TicketAttachment = {
@@ -383,6 +404,7 @@ export async function PUT(
       mimeType: file.type,
       sizeBytes: file.size,
       uploadedAt: new Date().toISOString(),
+      cloudinaryPublicId: cloudinaryResult.publicId, // Store for deletion
     };
 
     // Replace attachment at index (preserve array position)

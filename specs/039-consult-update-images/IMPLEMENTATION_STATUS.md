@@ -2,7 +2,83 @@
 
 **Feature Branch**: `039-consult-update-images`
 **Last Updated**: 2025-01-21
-**Status**: ✅ COMPLETE - All phases implemented
+**Status**: ✅ COMPLETE - All phases implemented + Cloudinary migration
+
+## Migration to Cloudinary (2025-01-21)
+
+### ✅ Storage Migration: GitHub → Cloudinary CDN
+
+**Reason for Migration**:
+- **Private Repository**: Original implementation used GitHub storage with raw.githubusercontent.com URLs
+- **Authentication Issue**: `<img>` tags cannot provide GitHub authentication tokens for private repos
+- **404 Errors**: All images returned 404 in UI due to lack of authentication
+- **Claude Workflow**: Images needed for AI specification generation in GitHub Actions
+
+**Solution**: Migrate to Cloudinary CDN
+- **Public URLs**: Cloudinary provides public HTTPS URLs without authentication
+- **CDN Performance**: Global CDN for fast image delivery
+- **Claude Integration**: Images accessible in GitHub Actions via public URLs
+- **Free Tier**: 25GB storage + 25GB bandwidth/month
+- **Folder Structure**: `ai-board/tickets/{ticketId}/` organization
+
+**Implementation Changes**:
+
+✅ **Created `app/lib/cloudinary/client.ts`**:
+- `uploadImageToCloudinary(buffer, options)`: Upload with folder structure
+- `deleteImageFromCloudinary(publicId)`: Cleanup on delete/replace
+- `isCloudinaryConfigured()`: Environment validation
+- Cloudinary SDK v2 integration
+
+✅ **Modified TicketAttachment Interface**:
+```typescript
+{
+  type: 'uploaded' | 'external',
+  url: string,                    // NOW: Cloudinary HTTPS URL
+  filename: string,
+  mimeType: string,
+  sizeBytes: number,
+  uploadedAt: string,
+  cloudinaryPublicId?: string     // NEW: For deletion operations
+}
+```
+
+✅ **Updated API Endpoints**:
+- `POST /api/projects/[projectId]/tickets/[id]/images`: Upload to Cloudinary
+- `PUT /api/projects/[projectId]/tickets/[id]/images/[index]`: Replace via Cloudinary (delete old, upload new)
+- `DELETE /api/projects/[projectId]/tickets/[id]/images/[index]`: Delete from Cloudinary + database
+
+✅ **Environment Configuration**:
+```bash
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+```
+
+✅ **Error Handling**:
+- Configuration validation: Returns 500 if Cloudinary not configured
+- Fail-safe deletion: Database updates proceed even if Cloudinary delete fails
+- Replace operation: Upload new before deleting old (prevents data loss)
+
+✅ **Documentation Updated**:
+- Updated `specs/specifications/02-ticket-management.md` with Image Attachments section
+- Updated `specs/specifications/01-foundation.md` with Cloudinary in tech stack
+- Reflects Cloudinary storage architecture and Claude workflow integration
+
+**Files Modified**:
+- `app/api/projects/[projectId]/tickets/[id]/images/route.ts` (POST endpoint)
+- `app/api/projects/[projectId]/tickets/[id]/images/[attachmentIndex]/route.ts` (PUT + DELETE endpoints)
+- `app/lib/types/ticket.ts` (added cloudinaryPublicId field)
+- `.env.example` (added Cloudinary environment variables)
+- `specs/specifications/02-ticket-management.md` (comprehensive image documentation)
+- `specs/specifications/01-foundation.md` (tech stack update)
+
+**Files Created**:
+- `app/lib/cloudinary/client.ts` (Cloudinary SDK wrapper)
+
+**Breaking Changes**: None
+- Existing tickets with GitHub URLs will continue to work (backward compatible)
+- New uploads use Cloudinary
+- Old GitHub images can be manually migrated if needed
 
 ## Completed Phases
 
@@ -230,11 +306,12 @@
 **Design Decisions**:
 - Lazy loading: Metadata loaded immediately, images only when gallery expanded
 - Permission model: Images editable in SPECIFY/PLAN stages (same as spec docs)
-- Storage: GitHub `ticket-assets/{ticketId}/` directory (existing pattern)
+- Storage: ~~GitHub `ticket-assets/{ticketId}/`~~ → **Cloudinary CDN `ai-board/tickets/{ticketId}/`** (migrated 2025-01-21)
 - Concurrency: Reuse `ticket.version` field (no new mechanisms)
 - Lightbox: Custom using shadcn/ui Dialog (no dependencies)
 - Component reuse: Used existing `ImageUpload` component from ticket creation
 - Broken image handling: Client-side error detection with graceful degradation
+- **Claude Workflow Integration**: Images accessible via public Cloudinary URLs in GitHub Actions
 
 **Performance Targets Met**:
 ✅ Modal load: <1s (exceeded 2s target - metadata only, no image downloads)
@@ -249,7 +326,8 @@
 - TanStack Query v5.90.5
 - shadcn/ui components
 - Zod 4.x validation
-- @octokit/rest for GitHub API
+- Cloudinary SDK v2 (image CDN)
+- ~~@octokit/rest for GitHub API~~ (replaced by Cloudinary)
 
 **Accessibility Features**:
 - ARIA attributes (expanded, controls, label, hidden, live, describedby)
@@ -265,7 +343,8 @@
 - Supported formats: JPEG, PNG, GIF, WebP only
 - Max 5 images per ticket (enforced in UI and backend)
 - Sequential uploads to avoid version conflicts (not parallel)
-- GitHub storage only (no alternative backends)
+- ~~GitHub storage only~~ → **Cloudinary CDN storage** (migrated 2025-01-21)
+- Requires Cloudinary account and API credentials
 
 ## How to Use
 
@@ -332,10 +411,10 @@
 - Drag-and-drop reordering of images
 - Batch delete (select multiple images)
 - Image cropping/rotation before upload
-- Alternative storage backends (S3, Cloudinary)
+- ~~Alternative storage backends (S3, Cloudinary)~~ → **✅ Cloudinary implemented (2025-01-21)**
 - Video attachment support
 - PDF/document attachment support
-- Image optimization (WebP conversion, thumbnails)
+- Image optimization (WebP conversion, thumbnails via Cloudinary transformations)
 
 ## Component Reuse Strategy
 

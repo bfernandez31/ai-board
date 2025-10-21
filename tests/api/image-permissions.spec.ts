@@ -28,14 +28,14 @@ test.describe('Image Management Permissions', () => {
     await cleanupDatabase();
 
     // Create test user
-    const testUser = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
       update: {},
       create: {
         email: 'test@e2e.local',
         name: 'E2E Test User',
         emailVerified: new Date(),
-      },
+      } as any,
     });
 
     // Create tickets in different stages with existing image
@@ -55,7 +55,7 @@ test.describe('Image Management Permissions', () => {
         stage: 'INBOX',
         projectId: 1,
         attachments: [baseAttachment],
-      },
+      } as any,
     });
     testTicketInbox = ticketInbox.id;
 
@@ -66,7 +66,7 @@ test.describe('Image Management Permissions', () => {
         stage: 'SPECIFY',
         projectId: 1,
         attachments: [baseAttachment],
-      },
+      } as any,
     });
     testTicketSpecify = ticketSpecify.id;
 
@@ -77,7 +77,7 @@ test.describe('Image Management Permissions', () => {
         stage: 'PLAN',
         projectId: 1,
         attachments: [baseAttachment],
-      },
+      } as any,
     });
     testTicketPlan = ticketPlan.id;
 
@@ -88,7 +88,7 @@ test.describe('Image Management Permissions', () => {
         stage: 'BUILD',
         projectId: 1,
         attachments: [baseAttachment],
-      },
+      } as any,
     });
     testTicketBuild = ticketBuild.id;
   });

@@ -301,14 +301,14 @@ export function ImageGallery({
 
           {/* Image Grid */}
           {!isLoading && !error && images.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-text mb-3">Attached Images</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-text">Attached Images</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2">
                 {images.map((image) => (
-                  <div key={image.index} className="relative">
+                  <div key={image.index} className="group relative">
                     <button
                       onClick={() => setSelectedImageIndex(image.index)}
-                      className="group relative aspect-square overflow-hidden rounded-md border border-surface2 hover:border-lavender transition-colors bg-mantle w-full"
+                      className="relative aspect-square overflow-hidden rounded-md border border-surface2 hover:border-lavender transition-colors bg-mantle w-full"
                       aria-label={`View full-size image: ${image.filename}`}
                       disabled={brokenImages.has(image.index)}
                     >
@@ -327,7 +327,7 @@ export function ImageGallery({
                           <img
                             src={image.url}
                             alt={`Attachment: ${image.filename}`}
-                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
+                            className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
                             onError={() => handleImageError(image.index)}
                             loading="lazy"
                           />
@@ -351,21 +351,21 @@ export function ImageGallery({
                         {/* Replace button */}
                         <button
                           onClick={(e) => handleReplaceClick(image.index, e)}
-                          className="absolute top-2 left-2 p-1.5 bg-lavender/90 hover:bg-lavender text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
+                          className="absolute top-2 left-2 p-1.5 bg-lavender/90 hover:bg-lavender text-white rounded-md opacity-80 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
                           aria-label={`Replace ${image.filename}`}
                           title="Replace image"
                         >
-                          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
 
                         {/* Delete button */}
                         <button
                           onClick={(e) => handleDeleteClick(image.index, e)}
-                          className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
+                          className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-80 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
                           aria-label={`Delete ${image.filename}`}
                           title="Delete image"
                         >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
 
                         {/* Hidden file input for replace */}
@@ -386,11 +386,11 @@ export function ImageGallery({
                     {canEditImages && brokenImages.has(image.index) && (
                       <button
                         onClick={(e) => handleDeleteClick(image.index, e)}
-                        className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
+                        className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-80 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white transition-opacity z-10"
                         aria-label={`Delete broken image ${image.filename}`}
                         title="Delete broken image"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
                     )}
                   </div>

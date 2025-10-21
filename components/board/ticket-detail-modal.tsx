@@ -777,7 +777,7 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Modal body content */}
-        <div className="space-y-8">
+        <div className="space-y-8 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
 
           {/* Description section with inline editing */}
           <div className="group">
