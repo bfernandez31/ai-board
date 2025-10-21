@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 
@@ -17,8 +18,16 @@ interface ProjectInfo {
 
 export function Header() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+
+  // Determine if we should show marketing variant
+  // Show marketing variant on landing page (/) when user is NOT authenticated
+  // Include loading state to avoid layout shift - better to show marketing variant
+  // during loading than empty header
+  const isLandingPage = pathname === '/';
+  const isMarketingVariant = isLandingPage && status !== 'authenticated';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,12 +86,13 @@ export function Header() {
       <div className="flex h-16 items-center px-6">
         {/* Left: Logo + Title */}
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/logo.svg"
             alt="AI-BOARD Logo"
             width={32}
             height={32}
-            priority
+            className="w-8 h-8"
           />
           <span className="text-xl font-bold">AI-BOARD</span>
         </Link>
@@ -109,10 +119,29 @@ export function Header() {
 
         {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">
-          {/* User menu (visible on md and above) */}
-          <div className="hidden md:flex items-center gap-3">
-            <UserMenu />
-          </div>
+          {/* Marketing variant: Show navigation links + Sign In button */}
+          {isMarketingVariant && (
+            <div className="hidden md:flex items-center gap-3">
+              <Link href="#features" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors">
+                Features
+              </Link>
+              <Link href="#workflow" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors">
+                Workflow
+              </Link>
+              <Link href="/auth/signin">
+                <Button variant="default">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* Application variant: Show User Menu */}
+          {!isMarketingVariant && (
+            <div className="hidden md:flex items-center gap-3">
+              <UserMenu />
+            </div>
+          )}
 
           {/* Mobile menu (visible below md breakpoint) */}
           <MobileMenu />

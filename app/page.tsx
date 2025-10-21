@@ -1,9 +1,20 @@
 import { redirect } from 'next/navigation';
+import { getCurrentUserOrNull } from '@/lib/db/users';
+import LandingPage from './landing/page';
 
 /**
  * Root Page
- * Redirects to the projects list page
+ * - Authenticated users: redirected to /projects
+ * - Unauthenticated users: shown marketing landing page
  */
-export default function Home() {
-  redirect('/projects');
+export default async function Home() {
+  const user = await getCurrentUserOrNull();
+
+  if (user) {
+    // User is authenticated → redirect to projects
+    redirect('/projects');
+  }
+
+  // User is not authenticated → show landing page
+  return <LandingPage />;
 }

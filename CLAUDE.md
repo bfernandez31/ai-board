@@ -6,6 +6,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui, TanStack Query v5.90.5, @octokit/rest 22.0, react-markdown 9.0.1, @dnd-kit, lucide-react, Cloudinary SDK
 - PostgreSQL 14+ (User, Project, Ticket, Job tables with clarification policies, workflow types, image attachments)
 - Cloudinary CDN (image storage and delivery)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18 (040-landing-page-marketing)
+- N/A (static page, no data persistence) (040-landing-page-marketing)
 
 ### Core Stack
 
@@ -64,6 +66,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 040-landing-page-marketing: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18
 - 039-consult-update-images: Migrated image storage from GitHub to Cloudinary CDN
   - Replaced GitHub raw URLs with Cloudinary public HTTPS URLs
   - Updated all image endpoints (POST, PUT, DELETE) to use Cloudinary

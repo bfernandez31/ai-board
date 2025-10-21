@@ -7,6 +7,7 @@ export default auth((req) => {
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
   const isWorkflowApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/status$/) !== null
+  const isLandingPage = req.nextUrl.pathname === '/'
 
   // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
   const hasTestHeader = req.headers.get('x-test-user-id') !== null
@@ -19,8 +20,8 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // Allow auth pages, public APIs, and workflow APIs (use Bearer token auth)
-  if (isAuthPage || isPublicApi || isAuthApi || isWorkflowApi) {
+  // Allow public pages, auth pages, public APIs, and workflow APIs
+  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi) {
     return NextResponse.next()
   }
 
@@ -36,6 +37,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    '/((?!api/health|api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/health|api/auth|_next/static|_next/image|favicon.ico|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.webp).*)',
   ]
 }
