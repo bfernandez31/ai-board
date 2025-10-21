@@ -77,9 +77,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 039-consult-update-images: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
 - 038-image-support-spec: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, @octokit/rest 22.0, shadcn/ui
 - 036-mode-to-update: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5, shadcn/ui, simple-git (for git operations)
-- 035-view-plan-and: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, @octokit/rest 22.0, shadcn/ui, react-markdown 9.0.1
   - Created `.github/workflows/quick-impl.yml` workflow file
   - Created `.claude/commands/quick-impl.md` command for direct implementation
   - Modified `create-new-feature.sh` to support `--mode=quick-impl` parameter

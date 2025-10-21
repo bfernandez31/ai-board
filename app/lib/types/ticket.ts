@@ -10,7 +10,7 @@ export interface TicketAttachment {
   /** Attachment source type */
   type: 'uploaded' | 'external';
 
-  /** GitHub path (for uploaded) or external URL (for external) */
+  /** Cloudinary URL (for uploaded) or external URL (for external) */
   url: string;
 
   /** Original filename or alt text from markdown */
@@ -24,6 +24,9 @@ export interface TicketAttachment {
 
   /** ISO 8601 timestamp when attachment was created */
   uploadedAt: string;
+
+  /** Cloudinary public ID (for uploaded images only, used for deletion) */
+  cloudinaryPublicId?: string;
 }
 
 /**

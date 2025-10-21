@@ -224,8 +224,16 @@ The system provides a modal form for creating tickets:
 - React 18
 - TailwindCSS 3.x for styling
 - Dark theme (zinc palette)
+- Cloudinary CDN for image storage and delivery
 
 **Development**:
 - Hot module reloading
 - ESLint and TypeScript for code quality
 - Build process for production deployment
+
+**External Services**:
+- Cloudinary (image CDN)
+  - Free tier: 25GB storage, 25GB bandwidth/month
+  - Public HTTPS URLs for fast global delivery
+  - Integration: Node.js SDK v2
+  - Environment: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET

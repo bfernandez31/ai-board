@@ -373,6 +373,153 @@ The system tracks and displays the workflow path used for each ticket:
 
 ---
 
+## Image Attachments
+
+**Purpose**: Users need to attach visual context (screenshots, diagrams, UI mockups) to tickets for clearer specification and implementation. Image attachments enable visual documentation that complements text descriptions, particularly useful for UI bugs, design references, and architectural diagrams.
+
+### What It Does
+
+The system enables uploading, viewing, replacing, and deleting image attachments on tickets:
+
+**Image Gallery**:
+- **Badge Indicator**: Image count badge displays on ticket cards when attachments exist
+- **Gallery Access**: Click image badge to open full image gallery modal
+- **Lightbox Viewer**: Click any image to view full-size with navigation controls
+- **Maximum Capacity**: Up to 5 images per ticket
+
+**Upload Operations**:
+- **File Selection**: Click upload button or drag-and-drop images
+- **Supported Formats**: JPEG, PNG, GIF, WebP
+- **Size Limit**: 10MB maximum per image
+- **Storage**: Cloudinary CDN for fast, public access
+- **Progress Feedback**: Upload progress indicator with loading states
+
+**Management Operations**:
+- **Replace Image**: Click replace icon → select new image → overwrites at same position
+- **Delete Image**: Click delete icon → confirmation → removes from attachments
+- **Reorder**: Images maintain upload order, indexed 0-4
+
+**Access Control**:
+- **Editable Stages**: SPECIFY and PLAN stages only
+- **Read-Only Stages**: INBOX, BUILD, VERIFY, SHIP (view-only)
+- **Permission Guards**: UI controls disabled and API endpoints enforce stage restrictions
+
+**Cloudinary Integration**:
+- **Public URLs**: Images accessible via HTTPS URLs without authentication
+- **CDN Performance**: Global CDN for fast image loading
+- **Folder Structure**: `ai-board/tickets/{ticketId}/` organization
+- **Deletion Management**: Cloudinary publicId stored for cleanup operations
+- **Free Tier**: 25GB storage, 25GB bandwidth/month included
+
+**Claude Workflow Integration**:
+- **Specification Generation**: Images included in Claude prompts during spec/plan workflows
+- **Public Access**: Claude can access images via Cloudinary URLs in GitHub Actions
+- **No Repository Storage**: Images stored externally, keeping repository lightweight
+- **Prompt Context**: Visual context enhances AI-generated specifications and plans
+
+### Requirements
+
+**Upload**:
+- Max 5 images per ticket
+- Supported formats: JPEG, PNG, GIF, WebP
+- Max 10MB per file
+- Cloudinary CDN storage with public URLs
+- Upload progress indicator
+- Success/error notifications
+- Automatic attachment count update
+
+**Gallery Display**:
+- Image count badge on ticket cards
+- Grid layout with thumbnails
+- Click to open lightbox viewer
+- Navigation controls (prev/next)
+- Responsive sizing (mobile/desktop)
+- Loading states for async operations
+
+**Replace**:
+- Replace icon on each image thumbnail
+- File selection dialog
+- Same validation as upload (format, size)
+- Overwrites at same array position
+- Deletes old image from Cloudinary
+- Uploads new image to Cloudinary
+- Preserves gallery position
+
+**Delete**:
+- Delete icon on each image thumbnail
+- Confirmation dialog (prevent accidental deletion)
+- Removes from attachments array
+- Deletes image from Cloudinary
+- Updates attachment count immediately
+
+**Permission Control**:
+- **SPECIFY Stage**: Full CRUD operations (upload, replace, delete)
+- **PLAN Stage**: Full CRUD operations (upload, replace, delete)
+- **Other Stages**: Read-only access (view only)
+- UI controls disabled in read-only modes
+- API returns 403 Forbidden for unauthorized operations
+
+**Concurrent Editing**:
+- Version-based conflict detection (same as title/description)
+- Optimistic updates with rollback on conflict
+- Error message prompts refresh on version mismatch
+- Lost update protection
+
+**Cloudinary Operations**:
+- Upload: Buffer → Cloudinary → Public URL
+- Delete: Cloudinary publicId → destroy operation
+- Replace: Upload new → delete old (fail-safe order)
+- Configuration validation: Requires CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+- Error handling: Continue database operations even if Cloudinary delete fails (prevents orphaned records)
+
+### Data Model
+
+**TicketAttachment Interface**:
+```typescript
+{
+  type: 'uploaded' | 'external',
+  url: string,                    // Cloudinary HTTPS URL (uploaded) or external URL
+  filename: string,               // Original filename or alt text
+  mimeType: string,               // e.g., "image/png"
+  sizeBytes: number,              // File size in bytes
+  uploadedAt: string,             // ISO 8601 timestamp
+  cloudinaryPublicId?: string     // Cloudinary ID for deletion (uploaded only)
+}
+```
+
+**Ticket Field**:
+- `attachments`: JSON array of TicketAttachment objects (nullable, defaults to empty array)
+- Stored in PostgreSQL JSONB column for querying capabilities
+- Maximum 5 attachments enforced at API level
+
+**Cloudinary Folder Structure**:
+- Pattern: `ai-board/tickets/{ticketId}/{filename}`
+- Example: `ai-board/tickets/915/screenshot-bug.png`
+- Unique filenames: Cloudinary auto-generates unique names on conflict
+- Organization: All ticket images grouped by ticket ID
+
+**API Endpoints**:
+- `GET /api/projects/{projectId}/tickets/{id}/images`: Fetch attachments metadata
+- `POST /api/projects/{projectId}/tickets/{id}/images`: Upload new image
+- `PUT /api/projects/{projectId}/tickets/{id}/images/{index}`: Replace image at index
+- `DELETE /api/projects/{projectId}/tickets/{id}/images/{index}`: Delete image at index
+
+**Validation Rules**:
+- Max 5 attachments per ticket
+- Supported MIME types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+- Max file size: 10MB (10485760 bytes)
+- Stage restrictions: SPECIFY and PLAN only for CRUD operations
+- Version control: Required for all mutating operations (POST, PUT, DELETE)
+
+**Environment Configuration**:
+```bash
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+```
+
+---
+
 ## Current State Summary
 
 ### Available Features
@@ -410,6 +557,18 @@ The system tracks and displays the workflow path used for each ticket:
 - ✅ Atomic transaction with Job creation
 - ✅ Immutable after initial setting
 
+**Image Attachments**:
+- ✅ Upload images (max 5 per ticket, 10MB each)
+- ✅ Supported formats: JPEG, PNG, GIF, WebP
+- ✅ Cloudinary CDN storage with public URLs
+- ✅ Image gallery with lightbox viewer
+- ✅ Replace and delete operations
+- ✅ Stage-based access control (SPECIFY/PLAN editable)
+- ✅ Image count badge on ticket cards
+- ✅ Version-based concurrent edit protection
+- ✅ Claude workflow integration (images accessible in prompts)
+- ✅ Automatic Cloudinary cleanup on delete/replace
+
 ### User Workflows
 
 **Moving a Ticket**:
@@ -434,6 +593,16 @@ The system tracks and displays the workflow path used for each ticket:
 5. User saves (Enter/click-outside for title, save button for description)
 6. Changes save immediately with visual confirmation
 7. Board updates to reflect changes
+
+**Managing Ticket Images**:
+1. User clicks ticket to open detail modal
+2. User views image count badge on ticket card (if images exist)
+3. User clicks image badge or opens image gallery tab in modal
+4. **Upload**: User clicks upload button → selects image → uploads to Cloudinary → image appears in gallery
+5. **Replace**: User clicks replace icon → selects new image → old deleted from Cloudinary → new uploaded → replaces at same position
+6. **Delete**: User clicks delete icon → confirms deletion → image removed from gallery and Cloudinary
+7. **View**: User clicks image thumbnail → lightbox opens → navigates with prev/next controls
+8. Gallery updates immediately with visual confirmation
 
 ### Business Rules
 
@@ -472,6 +641,17 @@ The system tracks and displays the workflow path used for each ticket:
 - Badge persists through all stage transitions (BUILD → VERIFY → SHIP)
 - Atomic transaction with Job creation ensures data consistency
 
+**Image Attachments** (added 2025-01-21):
+- Maximum 5 images per ticket (10MB each)
+- Supported formats: JPEG, PNG, GIF, WebP only
+- Editable only in SPECIFY and PLAN stages
+- Read-only in all other stages (INBOX, BUILD, VERIFY, SHIP)
+- Cloudinary CDN storage with public HTTPS URLs
+- Images accessible to Claude in GitHub Actions workflows via public URLs
+- Automatic cleanup: Cloudinary images deleted when replaced or removed
+- Version-based conflict detection prevents concurrent edit conflicts
+- Fail-safe deletion: Database updates proceed even if Cloudinary delete fails
+
 ### Technical Details
 
 **Drag-and-Drop**:
@@ -489,3 +669,13 @@ The system tracks and displays the workflow path used for each ticket:
 - Zod schemas
 - Real-time validation
 - Client and server validation
+
+**Image Attachments**:
+- Cloudinary SDK v2 (official Node.js SDK)
+- TanStack Query v5 for image data fetching and mutation
+- React hooks: useTicketImages, useUploadImage, useReplaceImage, useDeleteImage
+- Components: ImageGallery (shadcn/ui Dialog + Badge components)
+- Storage: Cloudinary CDN with folder structure `ai-board/tickets/{ticketId}/`
+- API: RESTful endpoints with multipart/form-data for file uploads
+- Validation: Zod schemas for file type, size, and stage permissions
+- Concurrency: Version field included in all mutating operations

@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Replace Ticket Image API
+  description: Replaces existing image with new file at same index in attachments array
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/images/{attachmentIndex}:
+    put:
+      summary: Replace existing image
+      description: |
+        Replaces image at specified index with new file. Uploads new file to GitHub,
+        updates metadata in ticket.attachments array. Position in array is preserved.
+        Uses optimistic concurrency control via version field.
+      operationId: replaceTicketImage
+      tags:
+        - Images
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: attachmentIndex
+          in: path
+          required: true
+          description: Index of attachment to replace in ticket.attachments array
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 99
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - version
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: New image file to upload
+                version:
+                  type: integer
+                  minimum: 1
+                  description: Current ticket version for concurrency control
+            encoding:
+              file:
+                contentType: image/jpeg, image/png, image/gif, image/webp
+      responses:
+        '200':
+          description: Image replaced successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - attachments
+                  - version
+                properties:
+                  attachments:
+                    type: array
+                    description: Updated attachments array with replaced image
+                    items:
+                      $ref: '#/components/schemas/TicketAttachment'
+                  version:
+                    type: integer
+                    description: New ticket version after update
+              example:
+                attachments:
+                  - type: "uploaded"
+                    url: "https://github.com/owner/repo/blob/main/images/123/new-screenshot.png"
+                    filename: "new-screenshot.png"
+                    mimeType: "image/png"
+                    sizeBytes: 300000
+                    uploadedAt: "2025-01-21T17:00:00.000Z"
+                  - type: "uploaded"
+                    url: "https://github.com/owner/repo/blob/main/images/123/mockup.jpg"
+                    filename: "mockup.jpg"
+                    mimeType: "image/jpeg"
+                    sizeBytes: 512000
+                    uploadedAt: "2025-01-21T15:30:00.000Z"
+                version: 8
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        message:
+                          type: string
+              examples:
+                invalidFileType:
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - field: "file"
+                        message: "File type must be one of: image/jpeg, image/png, image/gif, image/webp"
+                fileTooLarge:
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - field: "file"
+                        message: "File size must be less than 10MB"
+                invalidIndex:
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - field: "attachmentIndex"
+                        message: "Attachment index out of range"
+        '401':
+          description: Unauthorized - no valid session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        '403':
+          description: Forbidden - cannot edit images in current stage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Forbidden - cannot edit images in BUILD stage"
+        '404':
+          description: Ticket or image not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                ticketNotFound:
+                  value:
+                    error: "Ticket not found"
+                imageNotFound:
+                  value:
+                    error: "Image not found at index 5"
+        '409':
+          description: Conflict - ticket was modified by another user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Conflict - ticket was modified by another user"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+components:
+  schemas:
+    TicketAttachment:
+      type: object
+      required:
+        - type
+        - url
+        - filename
+        - mimeType
+        - sizeBytes
+        - uploadedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - uploaded
+            - external
+          description: Source type of attachment
+        url:
+          type: string
+          format: uri
+          description: GitHub URL (uploaded) or external URL (external)
+        filename:
+          type: string
+          maxLength: 255
+          description: Original filename or alt text
+        mimeType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/gif
+            - image/webp
+          description: MIME type of image
+        sizeBytes:
+          type: integer
+          minimum: 0
+          maximum: 10485760
+          description: File size in bytes (0 for external URLs)
+        uploadedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when attachment was created
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: NextAuth.js session cookie

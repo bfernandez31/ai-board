@@ -5,8 +5,6 @@ import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
 import { validateImageFile } from '@/app/lib/validations/image';
-import { commitImageToRepo } from '@/app/lib/github/operations';
-import { createGitHubClient } from '@/app/lib/github/client';
 import { extractImageUrls } from '@/app/lib/parsers/markdown';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { ZodError } from 'zod';
@@ -151,7 +149,7 @@ export async function POST(
     const projectId = parseInt(projectIdString, 10);
 
     // Verify project ownership (throws if unauthorized or not found)
-    const project = await verifyProjectOwnership(projectId);
+    await verifyProjectOwnership(projectId);
 
     const contentType = request.headers.get('content-type') || '';
     let ticketData: { title: string; description: string; clarificationPolicy?: string };
@@ -334,33 +332,41 @@ export async function POST(
     const attachments: TicketAttachment[] = [];
 
     if (validatedFiles.length > 0) {
-      const octokit = createGitHubClient();
+      const { uploadImageToCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
+
+      if (!isCloudinaryConfigured()) {
+        // Clean up uploaded files
+        for (const file of uploadedFiles) {
+          try {
+            await fs.unlink(file.filepath);
+          } catch (error) {
+            console.error('Error cleaning up temporary file:', error);
+          }
+        }
+        throw new Error('Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+      }
 
       for (const { file, buffer, validation, filename } of validatedFiles) {
-        // Commit image to GitHub using ticket ID in path
+        // Upload image to Cloudinary using ticket ID in folder path
         try {
-          await commitImageToRepo(octokit, {
-            owner: project.githubOwner,
-            repo: project.githubRepo,
-            branch: 'main',
-            path: `ticket-assets/${ticket.id}/${filename}`,
-            content: buffer,
-            message: `Add image attachment for ticket ${ticket.id}: ${filename}`,
-            authorName: 'AI Board',
-            authorEmail: 'noreply@ai-board.dev',
+          const cloudinaryResult = await uploadImageToCloudinary(buffer, {
+            folder: `ai-board/tickets/${ticket.id}`,
+            filename: filename.replace(/\.[^/.]+$/, ''), // Remove extension (Cloudinary adds it)
+            resourceType: 'image',
           });
 
           // Create attachment object
           attachments.push({
             type: 'uploaded',
-            url: `https://raw.githubusercontent.com/${project.githubOwner}/${project.githubRepo}/main/ticket-assets/${ticket.id}/${filename}`,
+            url: cloudinaryResult.url,
             filename,
             mimeType: validation.mimeType || file.mimetype || 'application/octet-stream',
             sizeBytes: file.size,
             uploadedAt: new Date().toISOString(),
+            cloudinaryPublicId: cloudinaryResult.publicId,
           });
         } catch (error) {
-          // Clean up uploaded files on GitHub commit failure
+          // Clean up uploaded files on Cloudinary upload failure
           for (const f of uploadedFiles) {
             try {
               await fs.unlink(f.filepath);
@@ -369,7 +375,7 @@ export async function POST(
             }
           }
 
-          throw new Error(`Failed to commit image to GitHub: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw new Error(`Failed to upload image to Cloudinary: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 

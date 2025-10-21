@@ -28,6 +28,24 @@ import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
+import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
+
+/**
+ * Convert TicketWithVersion to TicketDetailModal-compatible format
+ * Handles JsonValue attachments conversion
+ */
+function convertTicketForModal(ticket: TicketWithVersion | null) {
+  if (!ticket) return null;
+
+  const attachments = isTicketAttachmentArray(ticket.attachments)
+    ? ticket.attachments
+    : null;
+
+  return {
+    ...ticket,
+    attachments,
+  };
+}
 
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
@@ -350,7 +368,7 @@ function BoardContent({
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
     workflowType: 'FULL' | 'QUICK';
-    attachments?: import('@prisma/client').Prisma.JsonValue;
+    attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
     createdAt: string | Date;
     updatedAt: string | Date;
   };
@@ -377,7 +395,7 @@ function BoardContent({
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         // Preserve attachments from existing ticket or use empty array
-        attachments: updatedTicket.attachments ?? existingTicket?.attachments ?? [],
+        attachments: (updatedTicket.attachments ?? existingTicket?.attachments ?? []) as import('@prisma/client').Prisma.JsonValue,
         createdAt:
           updatedTicket.createdAt instanceof Date
             ? updatedTicket.createdAt.toISOString()
@@ -592,7 +610,7 @@ function BoardContent({
 
       {/* Ticket Detail Modal */}
       <TicketDetailModal
-        ticket={selectedTicket}
+        ticket={convertTicketForModal(selectedTicket)}
         open={isModalOpen}
         onOpenChange={handleModalClose}
         onUpdate={handleTicketUpdate}
