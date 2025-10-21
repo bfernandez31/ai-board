@@ -123,11 +123,11 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     await expect(workflowSteps).toHaveCount(5);
 
     // And: Stage names are visible (INBOX, SPECIFY, PLAN, BUILD, VERIFY)
-    await expect(page.getByText('INBOX')).toBeVisible();
-    await expect(page.getByText('SPECIFY')).toBeVisible();
-    await expect(page.getByText('PLAN')).toBeVisible();
-    await expect(page.getByText('BUILD')).toBeVisible();
-    await expect(page.getByText('VERIFY')).toBeVisible();
+    await expect(workflowSection.getByText('INBOX', { exact: true })).toBeVisible();
+    await expect(workflowSection.getByText('SPECIFY', { exact: true })).toBeVisible();
+    await expect(workflowSection.getByText('PLAN', { exact: true })).toBeVisible();
+    await expect(workflowSection.getByText('BUILD', { exact: true })).toBeVisible();
+    await expect(workflowSection.getByText('VERIFY', { exact: true })).toBeVisible();
 
     await context.close();
   });
