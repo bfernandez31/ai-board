@@ -245,3 +245,58 @@
 7. Press ESC or click outside to close
 
 **Note**: Upload/delete/replace functionality not yet available (Phases 4-6 pending).
+
+## Component Reuse Strategy (Updated)
+
+**Important Realization**: The codebase already has a robust `ImageUpload` component!
+
+### Existing Components
+
+**`components/ui/image-upload.tsx`** (EXISTING):
+- Drag-and-drop file upload
+- File picker button  
+- Clipboard paste support
+- Image previews with remove buttons
+- Validation (size, type, count)
+- Used in ticket creation flow
+
+**`components/ticket/image-gallery.tsx`** (NEW - Phase 3):
+- Displays persisted images from database
+- Lazy loading pattern
+- Grid layout with thumbnails
+- Opens lightbox on click
+
+### Reuse Plan for Phase 4 (Add Images)
+
+Instead of creating `components/ticket/image-upload-button.tsx` from scratch:
+
+**Option 1: Reuse ImageUpload directly** ✅ RECOMMENDED
+- Use existing `ImageUpload` component inside ImageGallery
+- Show upload area when user has edit permissions
+- After upload completes → images persist to database → refresh gallery
+- Maintains consistency with ticket creation UX
+
+**Option 2: Extract shared upload logic**
+- Create shared `useImageUpload` hook
+- Both ImageUpload and new upload button use same logic
+- More DRY but adds complexity
+
+**Recommended Implementation**:
+```tsx
+// In ImageGallery component
+{canEdit(ticketStage, 'images') && (
+  <div className="mb-4">
+    <ImageUpload
+      images={localPendingImages}
+      onImagesChange={handleLocalImagesChange}
+      maxImages={5}
+      maxFileSize={10 * 1024 * 1024}
+    />
+    <Button onClick={handleUploadToServer}>
+      Upload Images
+    </Button>
+  </div>
+)}
+```
+
+This reuses proven upload UI while adding persistence logic for existing tickets.
