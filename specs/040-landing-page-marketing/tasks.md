@@ -169,17 +169,17 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T043 [P] [US5] E2E test: mobile viewport (< 768px) shows hero title scaled to text-6xl in tests/e2e/landing-page.spec.ts
-- [ ] T044 [P] [US5] E2E test: mobile viewport shows features grid in single column in tests/e2e/landing-page.spec.ts
-- [ ] T045 [P] [US5] E2E test: mobile viewport shows workflow timeline vertically in tests/e2e/landing-page.spec.ts
-- [ ] T046 [P] [US5] E2E test: mobile viewport CTA buttons meet 44x44px touch target size in tests/e2e/landing-page.spec.ts
+- [X] T043 [P] [US5] E2E test: mobile viewport (< 768px) shows hero title scaled to text-6xl in tests/e2e/landing-page.spec.ts
+- [X] T044 [P] [US5] E2E test: mobile viewport shows features grid in single column in tests/e2e/landing-page.spec.ts
+- [X] T045 [P] [US5] E2E test: mobile viewport shows workflow timeline vertically in tests/e2e/landing-page.spec.ts
+- [X] T046 [P] [US5] E2E test: mobile viewport CTA buttons meet 44x44px touch target size in tests/e2e/landing-page.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T047 [US5] Apply responsive font sizing to hero title (text-6xl md:text-7xl lg:text-8xl) in components/landing/hero-section.tsx
-- [ ] T048 [US5] Apply responsive grid to features (grid-cols-1 md:grid-cols-2 lg:grid-cols-3) in components/landing/features-grid.tsx
-- [ ] T049 [US5] Apply responsive flex direction to workflow (flex-col md:flex-row) in components/landing/workflow-section.tsx
-- [ ] T050 [US5] Apply responsive padding to all sections (py-16 md:py-24 lg:py-32) across all landing page components
+- [X] T047 [US5] Apply responsive font sizing to hero title (text-6xl md:text-7xl lg:text-8xl) in components/landing/hero-section.tsx
+- [X] T048 [US5] Apply responsive grid to features (grid-cols-1 md:grid-cols-2 lg:grid-cols-3) in components/landing/features-grid.tsx
+- [X] T049 [US5] Apply responsive flex direction to workflow (flex-col md:flex-row) in components/landing/workflow-section.tsx
+- [X] T050 [US5] Apply responsive padding to all sections (py-16 md:py-24 lg:py-32) across all landing page components
 - [ ] T051 [US5] Test landing page at mobile (375px), tablet (768px), desktop (1440px) viewports manually
 
 **Checkpoint**: Landing page fully responsive across all device sizes
@@ -316,13 +316,13 @@ With 2 developers:
 **User Story 1 (P1)**: 15 tasks (4 tests + 11 implementation) ✅
 **User Story 2 (P1)**: 7 tasks (3 tests + 4 implementation) - 4/7 ✅
 **User Story 3 (P2)**: 8 tasks (3 tests + 5 implementation) ✅
-**User Story 5 (P2)**: 9 tasks (4 tests + 5 implementation) - 0/9 ⏳
+**User Story 5 (P2)**: 9 tasks (4 tests + 5 implementation) - 8/9 ✅
 **Polish**: 9 tasks - 0/9 ⏳
 
-**Completed**: 39/60 tasks (65%)
-**Remaining**: 21 tasks (3 MVP tests + 18 post-MVP)
+**Completed**: 47/60 tasks (78%)
+**Remaining**: 13 tasks (3 MVP tests + 1 manual test + 9 polish)
 **MVP Progress**: 31/34 tasks (91%) - Missing 3 CTA click tests
-**Post-MVP Progress**: 8/26 tasks (31%) - US3 complete, US5 + Polish remaining
+**Post-MVP Progress**: 16/26 tasks (62%) - US3 ✅, US5 nearly complete (1 manual test), Polish remaining
 
 ---
 

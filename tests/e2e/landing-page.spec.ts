@@ -230,3 +230,119 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
     await context.close();
   });
 });
+
+test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () => {
+  test.beforeEach(async () => {
+    await cleanupDatabase();
+  });
+
+  test('T043: mobile viewport (< 768px) shows hero title scaled to text-6xl', async ({ browser }) => {
+    // Given: User is NOT authenticated
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+      viewport: { width: 375, height: 667 }, // iPhone SE dimensions
+    });
+    const page = await context.newPage();
+
+    // When: User visits landing page on mobile
+    await page.goto('/');
+
+    // Then: Hero title is visible with mobile font size
+    const heroTitle = page.getByRole('heading', { name: /build better software/i });
+    await expect(heroTitle).toBeVisible();
+
+    // And: Title has responsive font class (text-6xl on mobile)
+    const titleClasses = await heroTitle.evaluate((el) => el.className);
+    expect(titleClasses).toContain('text-6xl');
+
+    await context.close();
+  });
+
+  test('T044: mobile viewport shows features grid in single column', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+      viewport: { width: 375, height: 667 },
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Then: Features section is visible
+    const featuresSection = page.locator('#features');
+    await expect(featuresSection).toBeVisible();
+
+    // And: Grid container has single column class on mobile
+    const gridContainer = featuresSection.locator('.grid');
+    const gridClasses = await gridContainer.evaluate((el) => el.className);
+    expect(gridClasses).toContain('grid-cols-1');
+
+    // And: All 6 feature cards are visible
+    const featureCards = page.locator('[data-testid="feature-card"]');
+    await expect(featureCards).toHaveCount(6);
+
+    await context.close();
+  });
+
+  test('T045: mobile viewport shows workflow timeline vertically', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+      viewport: { width: 375, height: 667 },
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Then: Workflow section is visible
+    const workflowSection = page.locator('#workflow');
+    await expect(workflowSection).toBeVisible();
+
+    // And: Workflow container uses flex-col (vertical layout)
+    const workflowContainer = workflowSection.locator('.flex.flex-col.gap-8').first();
+    const flexClasses = await workflowContainer.evaluate((el) => el.className);
+    expect(flexClasses).toContain('flex-col');
+
+    // And: All 5 workflow steps are visible
+    const workflowSteps = page.locator('[data-testid="workflow-step"]');
+    await expect(workflowSteps).toHaveCount(5);
+
+    await context.close();
+  });
+
+  test('T046: mobile viewport CTA buttons meet 44x44px touch target size', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+      viewport: { width: 375, height: 667 },
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Then: Primary CTA button meets touch target size
+    const primaryCTA = page.getByRole('link', { name: /get started free/i }).first();
+    await expect(primaryCTA).toBeVisible();
+
+    const primaryBounds = await primaryCTA.boundingBox();
+    expect(primaryBounds).not.toBeNull();
+    if (primaryBounds) {
+      expect(primaryBounds.height).toBeGreaterThanOrEqual(44);
+      expect(primaryBounds.width).toBeGreaterThanOrEqual(44);
+    }
+
+    // And: Secondary CTA button meets touch target size
+    const secondaryCTA = page.getByRole('link', { name: /view demo/i });
+    await expect(secondaryCTA).toBeVisible();
+
+    const secondaryBounds = await secondaryCTA.boundingBox();
+    expect(secondaryBounds).not.toBeNull();
+    if (secondaryBounds) {
+      expect(secondaryBounds.height).toBeGreaterThanOrEqual(44);
+      expect(secondaryBounds.width).toBeGreaterThanOrEqual(44);
+    }
+
+    await context.close();
+  });
+});
