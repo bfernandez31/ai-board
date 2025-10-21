@@ -1,11 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImageIcon, Loader2, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useTicketImages } from '@/lib/hooks/use-ticket-images';
-import { useImageUpload } from '@/lib/hooks/use-image-mutations';
+import { useImageUpload, useImageDelete } from '@/lib/hooks/use-image-mutations';
 import { ImageLightbox } from './image-lightbox';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 import { canEdit } from '@/components/ticket/edit-permission-guard';
@@ -61,13 +71,16 @@ export function ImageGallery({
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [pendingImages, setPendingImages] = useState<ImageFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<number | null>(null);
 
   // Lazy load images only when gallery is expanded
   const { data, isLoading, error } = useTicketImages(projectId, ticketId, isExpanded);
   const images = data?.images ?? [];
 
-  // Upload mutation
+  // Upload and delete mutations
   const uploadMutation = useImageUpload();
+  const deleteMutation = useImageDelete();
 
   // Check if user can edit images
   const canEditImages = canEdit(ticketStage, 'images');
@@ -101,6 +114,38 @@ export function ImageGallery({
       console.error('Failed to upload images:', error);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDeleteClick = (index: number, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent opening lightbox
+    setImageToDelete(index);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
+    if (imageToDelete === null) return;
+
+    try {
+      await deleteMutation.mutateAsync({
+        projectId,
+        ticketId,
+        attachmentIndex: imageToDelete,
+        version: ticketVersion,
+      });
+
+      // Notify parent to refresh ticket data
+      if (onAttachmentsUpdated) {
+        onAttachmentsUpdated();
+      }
+    } catch (error) {
+      // Error is already handled by mutation (toast notification)
+      console.error('Failed to delete image:', error);
+    } finally {
+      setDeleteConfirmOpen(false);
+      setImageToDelete(null);
     }
   };
 
@@ -196,27 +241,40 @@ export function ImageGallery({
               <h4 className="text-sm font-medium text-text mb-3">Attached Images</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {images.map((image) => (
-                  <button
-                    key={image.index}
-                    onClick={() => setSelectedImageIndex(image.index)}
-                    className="group relative aspect-square overflow-hidden rounded-md border border-surface2 hover:border-lavender transition-colors bg-mantle"
-                    aria-label={`View ${image.filename}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={image.url}
-                      alt={image.filename}
-                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
-                    />
+                  <div key={image.index} className="relative">
+                    <button
+                      onClick={() => setSelectedImageIndex(image.index)}
+                      className="group relative aspect-square overflow-hidden rounded-md border border-surface2 hover:border-lavender transition-colors bg-mantle w-full"
+                      aria-label={`View ${image.filename}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
+                      />
 
-                    {/* Overlay with filename */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-crust/90 to-transparent p-2">
-                      <p className="text-xs text-text truncate">{image.filename}</p>
-                      <p className="text-xs text-subtext0">
-                        {(image.sizeBytes / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  </button>
+                      {/* Overlay with filename */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-crust/90 to-transparent p-2">
+                        <p className="text-xs text-text truncate">{image.filename}</p>
+                        <p className="text-xs text-subtext0">
+                          {(image.sizeBytes / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Delete button (only show when user can edit) */}
+                    {canEditImages && (
+                      <button
+                        onClick={(e) => handleDeleteClick(image.index, e)}
+                        className="absolute top-2 right-2 p-1.5 bg-red/90 hover:bg-red text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        aria-label={`Delete ${image.filename}`}
+                        title="Delete image"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -233,6 +291,35 @@ export function ImageGallery({
           if (!open) setSelectedImageIndex(null);
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Image?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this image from the ticket. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setImageToDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red hover:bg-red/90 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
