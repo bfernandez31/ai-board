@@ -897,6 +897,7 @@ export function TicketDetailModal({
               projectId={projectId}
               ticketId={localTicket?.id || ticket.id}
               ticketStage={localTicket?.stage as Stage || ticket.stage as Stage}
+              ticketVersion={localTicket?.version || ticket.version}
               attachmentCount={
                 (localTicket?.attachments && isTicketAttachmentArray(localTicket.attachments)
                   ? localTicket.attachments.length
@@ -904,6 +905,7 @@ export function TicketDetailModal({
                   ? ticket.attachments.length
                   : 0)
               }
+              onAttachmentsUpdated={refreshTicketFromServer}
             />
           </div>
 
