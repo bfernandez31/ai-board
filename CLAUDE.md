@@ -3,23 +3,9 @@
 Auto-generated from all feature plans. Last updated: 2025-10-12
 
 ## Active Technologies
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x (028-519-replace-sse)
-- PostgreSQL 14+ (Job status tracking, existing schema) (028-519-replace-sse)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui (029-999-auto-clarification)
-- PostgreSQL 14+ (enum ClarificationPolicy, Project.clarificationPolicy NOT NULL default AUTO, Ticket.clarificationPolicy NULLABLE) (029-999-auto-clarification)
-- TypeScript 5.6 (strict mode) + Next.js 15 (App Router), Prisma 6.x, Zod 4.x, @octokit/rest 22.0 (030-should-not-be)
-- PostgreSQL 14+ (existing Job, Ticket tables with indexed queries) (030-should-not-be)
-- TypeScript 5.6 (strict mode) + Next.js 15 (App Router), React 18, Prisma 6.x, shadcn/ui, @dnd-ki (032-add-workflow-type)
-- PostgreSQL 14+ via Prisma ORM (032-add-workflow-type)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, shadcn/ui, lucide-reac (033-link-to-branch)
-- PostgreSQL 14+ via Prisma (existing Ticket.branch and Project.githubOwner/githubRepo fields) (033-link-to-branch)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5.90.5 (034-migrate-state-management)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, @octokit/rest 22.0, shadcn/ui, react-markdown 9.0.1 (035-view-plan-and)
-- PostgreSQL 14+ (Ticket, Job, Project tables) (035-view-plan-and)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5, shadcn/ui, simple-git (for git operations) (036-mode-to-update)
-- PostgreSQL 14+ via Prisma (ticket metadata), Git repository (documentation files) (036-mode-to-update)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, @octokit/rest 22.0, shadcn/ui (038-image-support-spec)
-- PostgreSQL 14+ (Ticket.attachments JSON field), GitHub repository (image files) (038-image-support-spec)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui, TanStack Query v5.90.5, @octokit/rest 22.0, react-markdown 9.0.1, @dnd-kit, lucide-react, Cloudinary SDK
+- PostgreSQL 14+ (User, Project, Ticket, Job tables with clarification policies, workflow types, image attachments)
+- Cloudinary CDN (image storage and delivery)
 
 ### Core Stack
 
@@ -52,6 +38,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - **GitHub API**: @octokit/rest ^22.0.0
 - **Markdown**: react-markdown ^9.0.1, react-syntax-highlighter ^15.5.0
 - **CI/CD**: GitHub Actions (YAML 2.0, Bash 5.x)
+- **Image CDN**: Cloudinary SDK (image storage and delivery)
 
 ### Authentication
 
@@ -77,18 +64,13 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
-- 039-consult-update-images: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS
-- 038-image-support-spec: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, @octokit/rest 22.0, shadcn/ui
-- 036-mode-to-update: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, TanStack Query v5, shadcn/ui, simple-git (for git operations)
-  - Created `.github/workflows/quick-impl.yml` workflow file
-  - Created `.claude/commands/quick-impl.md` command for direct implementation
-  - Modified `create-new-feature.sh` to support `--mode=quick-impl` parameter
-  - Enabled INBOX → BUILD direct transition (bypassing SPECIFY and PLAN)
-  - Added color-coded visual feedback (blue for SPECIFY, green for BUILD)
-  - Added mandatory confirmation modal for quick-impl transitions
-  - Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x
-  - Implemented 2-second polling interval with terminal state optimization
-  - Added `projectId` field to Job model for efficient querying
+- 039-consult-update-images: Migrated image storage from GitHub to Cloudinary CDN
+  - Replaced GitHub raw URLs with Cloudinary public HTTPS URLs
+  - Updated all image endpoints (POST, PUT, DELETE) to use Cloudinary
+  - Added cloudinaryPublicId field to TicketAttachment interface
+  - Fixed modal overflow with scrollable content
+  - Improved delete button visibility and drag-and-drop UX
+  - Removed old ticket-assets/ and images/ directories
 
 
 <!-- MANUAL ADDITIONS START -->
