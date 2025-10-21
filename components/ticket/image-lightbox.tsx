@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import {
   Dialog,
@@ -55,6 +55,17 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('fit');
 
+  // Navigation functions (stable references via useCallback)
+  const handlePrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+    setZoomLevel('fit'); // Reset zoom on navigation
+  }, [images.length]);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+    setZoomLevel('fit'); // Reset zoom on navigation
+  }, [images.length]);
+
   // Reset zoom level when opening lightbox
   useEffect(() => {
     if (open) {
@@ -77,17 +88,7 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, currentIndex, images.length]);
-
-  const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-    setZoomLevel('fit'); // Reset zoom on navigation
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-    setZoomLevel('fit'); // Reset zoom on navigation
-  };
+  }, [open, handlePrevious, handleNext]);
 
   const currentImage = images[currentIndex];
 
