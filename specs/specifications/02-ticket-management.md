@@ -400,8 +400,8 @@ The system enables uploading, viewing, replacing, and deleting image attachments
 - **Reorder**: Images maintain upload order, indexed 0-4
 
 **Access Control**:
-- **Editable Stages**: SPECIFY and PLAN stages only
-- **Read-Only Stages**: INBOX, BUILD, VERIFY, SHIP (view-only)
+- **Editable Stages**: INBOX stage only (attach mockups/screenshots before specification)
+- **Read-Only Stages**: SPECIFY, PLAN, BUILD, VERIFY, SHIP (view-only)
 - **Permission Guards**: UI controls disabled and API endpoints enforce stage restrictions
 
 **Cloudinary Integration**:
@@ -508,7 +508,7 @@ The system enables uploading, viewing, replacing, and deleting image attachments
 - Max 5 attachments per ticket
 - Supported MIME types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
 - Max file size: 10MB (10485760 bytes)
-- Stage restrictions: SPECIFY and PLAN only for CRUD operations
+- Stage restrictions: INBOX only for CRUD operations (upload, replace, delete)
 - Version control: Required for all mutating operations (POST, PUT, DELETE)
 
 **Environment Configuration**:

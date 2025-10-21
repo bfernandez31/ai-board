@@ -102,7 +102,7 @@ test.describe('Image Management Permissions', () => {
   test.describe('POST /api/projects/[projectId]/tickets/[id]/images (Upload)', () => {
     test('allows upload in INBOX stage', async ({ request }) => {
       // Create test image file
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       // Create FormData
@@ -132,7 +132,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies upload in SPECIFY stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.post(
@@ -156,7 +156,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies upload in PLAN stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.post(
@@ -180,7 +180,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies upload in BUILD stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.post(
@@ -264,7 +264,7 @@ test.describe('Image Management Permissions', () => {
 
   test.describe('PUT /api/projects/[projectId]/tickets/[id]/images/[attachmentIndex] (Replace)', () => {
     test('allows replace in INBOX stage', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.put(
@@ -289,7 +289,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies replace in SPECIFY stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.put(
@@ -313,7 +313,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies replace in PLAN stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.put(
@@ -337,7 +337,7 @@ test.describe('Image Management Permissions', () => {
     });
 
     test('denies replace in BUILD stage (403)', async ({ request }) => {
-      const imagePath = path.join(FIXTURES_PATH, 'test-image.png');
+      const imagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(imagePath);
 
       const response = await request.put(

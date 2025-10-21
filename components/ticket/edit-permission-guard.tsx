@@ -11,7 +11,7 @@ export type DocType = 'spec' | 'plan' | 'tasks' | 'images';
  * - INBOX stage: Only images can be edited (attach screenshots/mockups before specification)
  * - SPECIFY stage: Only spec.md can be edited
  * - PLAN stage: Only plan.md and tasks.md can be edited
- * - Other stages: No editing allowed
+ * - Other stages (BUILD, VERIFY, SHIP): No editing allowed
  */
 interface EditPermission {
   stage: Stage;
