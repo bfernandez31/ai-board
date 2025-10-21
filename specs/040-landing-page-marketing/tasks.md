@@ -190,14 +190,14 @@
 
 **Purpose**: Accessibility, performance optimization, final validation
 
-- [ ] T052 [P] Run Lighthouse audit on landing page (target: Performance > 90, Accessibility > 95)
-- [ ] T053 [P] Verify WCAG AA compliance: keyboard navigation works (Tab through CTAs), screen reader announces content
-- [ ] T054 [P] Verify focus indicators visible on all interactive elements (buttons, links)
-- [ ] T055 [P] Add alt text to hero screenshot image in components/landing/hero-section.tsx
-- [ ] T056 [P] Test landing page with JavaScript disabled (should render with Server Components)
+- [X] T052 [P] Run Lighthouse audit on landing page (target: Performance > 90, Accessibility > 95)
+- [X] T053 [P] Verify WCAG AA compliance: keyboard navigation works (Tab through CTAs), screen reader announces content
+- [X] T054 [P] Verify focus indicators visible on all interactive elements (buttons, links)
+- [X] T055 [P] Add alt text to hero screenshot image in components/landing/hero-section.tsx
+- [X] T056 [P] Test landing page with JavaScript disabled (should render with Server Components)
 - [ ] T057 [P] Capture real kanban board screenshot and replace placeholder in public/landing/hero-screenshot.png (convert to WebP)
-- [ ] T058 [P] Verify Cumulative Layout Shift (CLS) < 0.1 (no layout jumping during load)
-- [ ] T059 [P] Verify First Contentful Paint (FCP) < 1.5s
+- [X] T058 [P] Verify Cumulative Layout Shift (CLS) < 0.1 (no layout jumping during load)
+- [X] T059 [P] Verify First Contentful Paint (FCP) < 1.5s
 - [ ] T060 Run quickstart.md validation: local dev setup, test landing page logged out/in, verify all scenarios
 
 ---
@@ -317,12 +317,12 @@ With 2 developers:
 **User Story 2 (P1)**: 7 tasks (3 tests + 4 implementation) - 4/7 ✅
 **User Story 3 (P2)**: 8 tasks (3 tests + 5 implementation) ✅
 **User Story 5 (P2)**: 9 tasks (4 tests + 5 implementation) - 8/9 ✅
-**Polish**: 9 tasks - 0/9 ⏳
+**Polish (P2)**: 9 tasks - 7/9 ✅
 
-**Completed**: 47/60 tasks (78%)
-**Remaining**: 13 tasks (3 MVP tests + 1 manual test + 9 polish)
-**MVP Progress**: 31/34 tasks (91%) - Missing 3 CTA click tests
-**Post-MVP Progress**: 16/26 tasks (62%) - US3 ✅, US5 nearly complete (1 manual test), Polish remaining
+**Completed**: 54/60 tasks (90%)
+**Remaining**: 6 tasks (3 MVP tests + 2 manual validation tasks + 1 screenshot)
+**MVP Progress**: 31/34 tasks (91%) - Missing 3 CTA click tests (T028-T030)
+**Post-MVP Progress**: 23/26 tasks (88%) - US3 ✅, US5 ✅ (8/9), Polish ✅ (7/9)
 
 ---
 

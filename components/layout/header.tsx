@@ -122,10 +122,10 @@ export function Header() {
           {/* Marketing variant: Show navigation links + Sign In button */}
           {isMarketingVariant && (
             <div className="hidden md:flex items-center gap-3">
-              <Link href="#features" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors">
+              <Link href="#features" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
                 Features
               </Link>
-              <Link href="#workflow" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors">
+              <Link href="#workflow" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
                 Workflow
               </Link>
               <Link href="/auth/signin">

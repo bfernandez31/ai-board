@@ -346,3 +346,96 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
     await context.close();
   });
 });
+
+test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
+  test.beforeEach(async () => {
+    await cleanupDatabase();
+  });
+
+  test('T053: keyboard navigation works through all CTAs and links', async ({ browser }) => {
+    // Given: User is NOT authenticated
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Then: Can focus on Features link
+    const featuresLink = page.getByRole('link', { name: /features/i }).first();
+    await featuresLink.focus();
+    await expect(featuresLink).toBeFocused();
+
+    // And: Can navigate to Workflow link via Tab
+    await page.keyboard.press('Tab');
+    const workflowLink = page.getByRole('link', { name: /workflow/i }).first();
+    await expect(workflowLink).toBeFocused();
+
+    // And: Can navigate to Sign In button via Tab
+    await page.keyboard.press('Tab');
+    const signInButton = page.getByRole('link', { name: /sign in/i }).first();
+    await expect(signInButton).toBeFocused();
+
+    // And: All interactive elements are keyboard accessible
+    const primaryCTA = page.getByRole('link', { name: /get started free/i }).first();
+    await primaryCTA.focus();
+    await expect(primaryCTA).toBeFocused();
+
+    await context.close();
+  });
+
+  test('T054: focus indicators visible on interactive elements', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Then: Navigation links have focus-visible classes
+    const featuresLink = page.getByRole('link', { name: /features/i }).first();
+    const linkClasses = await featuresLink.evaluate((el) => el.className);
+    expect(linkClasses).toContain('focus-visible:ring-2');
+
+    // And: CTA buttons have focus-visible classes
+    const primaryCTA = page.getByRole('link', { name: /get started free/i }).first();
+    const buttonElement = primaryCTA.locator('button');
+    const buttonClasses = await buttonElement.evaluate((el) => el.className);
+    expect(buttonClasses).toContain('focus-visible:ring-2');
+
+    await context.close();
+  });
+
+  test('T056: landing page renders with JavaScript disabled', async ({ browser }) => {
+    // Given: Browser with JavaScript disabled
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+      javaScriptEnabled: false,
+    });
+    const page = await context.newPage();
+
+    // When: User visits landing page
+    await page.goto('/');
+
+    // Then: Hero section is visible (Server Component rendering)
+    const heroTitle = page.getByRole('heading', { name: /build better software/i });
+    await expect(heroTitle).toBeVisible();
+
+    // And: Features section is visible
+    const featuresSection = page.locator('#features');
+    await expect(featuresSection).toBeVisible();
+
+    // And: Workflow section is visible
+    const workflowSection = page.locator('#workflow');
+    await expect(workflowSection).toBeVisible();
+
+    // And: CTA buttons are visible
+    const primaryCTA = page.getByRole('link', { name: /get started free/i }).first();
+    await expect(primaryCTA).toBeVisible();
+
+    await context.close();
+  });
+});
