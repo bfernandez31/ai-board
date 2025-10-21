@@ -1,74 +1,62 @@
 /**
- * Script to create test image fixtures
- * Run with: node tests/fixtures/images/create-fixtures.js
+ * Script to create real test image fixtures using sharp
+ * Run with: node tests/fixtures/images/create-real-fixtures.js
  */
 
+const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-// Create a valid PNG image (1x1 pixel, ~500 bytes)
-function createValidPNG() {
-  const png = Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
-    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1 dimensions
-    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-    0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, // IDAT chunk
-    0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
-    0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xdd, 0x8d,
-    0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, // IEND chunk
-    0x44, 0xae, 0x42, 0x60, 0x82
-  ]);
+async function createFixtures() {
+  const fixturesDir = __dirname;
 
-  return png;
+  // Create a real PNG image (10x10 pixel red square)
+  await sharp({
+    create: {
+      width: 10,
+      height: 10,
+      channels: 3,
+      background: { r: 255, g: 0, b: 0 }
+    }
+  })
+    .png()
+    .toFile(path.join(fixturesDir, 'valid-image.png'));
+  console.log('✓ Created valid-image.png');
+
+  // Create a real JPEG image (10x10 pixel blue square)
+  await sharp({
+    create: {
+      width: 10,
+      height: 10,
+      channels: 3,
+      background: { r: 0, g: 0, b: 255 }
+    }
+  })
+    .jpeg({ quality: 90 })
+    .toFile(path.join(fixturesDir, 'valid-jpeg.jpg'));
+  console.log('✓ Created valid-jpeg.jpg');
+
+  // Create a large PNG (exceeds 10MB limit) - 3000x3000 pixel image
+  await sharp({
+    create: {
+      width: 3000,
+      height: 3000,
+      channels: 4,
+      background: { r: 0, g: 255, b: 0, alpha: 1 }
+    }
+  })
+    .png({ compressionLevel: 0 }) // No compression to make it larger
+    .toFile(path.join(fixturesDir, 'large-image.png'));
+  console.log('✓ Created large-image.png (exceeds 10MB limit)');
+
+  // Create an invalid file (text content with .png extension)
+  fs.writeFileSync(
+    path.join(fixturesDir, 'invalid-signature.txt'),
+    'This is a text file, not an image. Testing signature validation.'
+  );
+  console.log('✓ Created invalid-signature.txt');
+
+  console.log('\n✅ All real test fixtures created successfully!');
 }
 
-// Create a valid JPEG image (minimal valid structure)
-function createValidJPEG() {
-  const jpeg = Buffer.from([
-    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, // JPEG SOI + APP0
-    0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
-    0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43, // DQT
-    0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08,
-    0x07, 0x07, 0x07, 0x09, 0x09, 0x08, 0x0a, 0x0c,
-    0x14, 0x0d, 0x0c, 0x0b, 0x0b, 0x0c, 0x19, 0x12,
-    0x13, 0x0f, 0x14, 0x1d, 0x1a, 0x1f, 0x1e, 0x1d,
-    0x1a, 0x1c, 0x1c, 0x20, 0x24, 0x2e, 0x27, 0x20,
-    0x22, 0x2c, 0x23, 0x1c, 0x1c, 0x28, 0x37, 0x29,
-    0x2c, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1f, 0x27,
-    0x39, 0x3d, 0x38, 0x32, 0x3c, 0x2e, 0x33, 0x34,
-    0x32, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01, // SOF0
-    0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xd9  // EOI
-  ]);
-
-  return jpeg;
-}
-
-// Create a large PNG (exceeds 10MB limit)
-function createLargePNG() {
-  const header = createValidPNG();
-  const padding = Buffer.alloc(11 * 1024 * 1024); // 11MB
-  return Buffer.concat([header, padding]);
-}
-
-// Create an invalid file (text content with .png extension)
-function createInvalidSignature() {
-  return Buffer.from('This is a text file, not an image. Testing signature validation.');
-}
-
-// Write fixtures to disk
-const fixturesDir = __dirname;
-
-fs.writeFileSync(path.join(fixturesDir, 'valid-image.png'), createValidPNG());
-console.log('✓ Created valid-image.png');
-
-fs.writeFileSync(path.join(fixturesDir, 'valid-jpeg.jpg'), createValidJPEG());
-console.log('✓ Created valid-jpeg.jpg');
-
-fs.writeFileSync(path.join(fixturesDir, 'large-image.png'), createLargePNG());
-console.log('✓ Created large-image.png (exceeds 10MB limit)');
-
-fs.writeFileSync(path.join(fixturesDir, 'invalid-signature.txt'), createInvalidSignature());
-console.log('✓ Created invalid-signature.txt');
-
-console.log('\n✅ All test fixtures created successfully!');
+createFixtures().catch(console.error);
