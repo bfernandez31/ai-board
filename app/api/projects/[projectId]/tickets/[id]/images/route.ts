@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
@@ -265,19 +266,23 @@ export async function POST(
     const octokit = createGitHubClient();
     const githubPath = `images/${ticketId}/${file.name}`;
 
-    const uploadResult = await commitImageToRepo(
-      octokit,
-      ticket.project.githubOwner,
-      ticket.project.githubRepo,
-      githubPath,
-      buffer,
-      `Add image ${file.name} to ticket ${ticketId}`
-    );
+    await commitImageToRepo(octokit, {
+      owner: ticket.project.githubOwner,
+      repo: ticket.project.githubRepo,
+      path: githubPath,
+      content: buffer,
+      message: `Add image ${file.name} to ticket ${ticketId}`,
+      authorName: 'AI Board',
+      authorEmail: 'noreply@ai-board.dev',
+    });
+
+    // Construct GitHub raw URL
+    const downloadUrl = `https://raw.githubusercontent.com/${ticket.project.githubOwner}/${ticket.project.githubRepo}/main/${githubPath}`;
 
     // Create new attachment object
     const newAttachment: TicketAttachment = {
       type: 'uploaded',
-      url: uploadResult.downloadUrl,
+      url: downloadUrl,
       filename: file.name,
       mimeType: file.type,
       sizeBytes: file.size,
@@ -291,7 +296,7 @@ export async function POST(
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: {
-        attachments: updatedAttachments,
+        attachments: updatedAttachments as unknown as Prisma.InputJsonValue,
         version: { increment: 1 },
       },
       select: {

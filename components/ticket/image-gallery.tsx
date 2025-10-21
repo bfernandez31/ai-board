@@ -368,7 +368,9 @@ export function ImageGallery({
                         {/* Hidden file input for replace */}
                         <input
                           type="file"
-                          ref={(el) => (fileInputRefs.current[image.index] = el)}
+                          ref={(el) => {
+                            fileInputRefs.current[image.index] = el;
+                          }}
                           onChange={(e) => handleReplaceFileChange(image.index, e)}
                           accept="image/jpeg,image/png,image/gif,image/webp"
                           className="hidden"

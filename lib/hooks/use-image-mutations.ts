@@ -81,7 +81,7 @@ export function useImageUpload() {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate ticket images query to refetch with new image
       queryClient.invalidateQueries({
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
@@ -142,7 +142,7 @@ export function useImageDelete() {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate ticket images query
       queryClient.invalidateQueries({
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
@@ -207,7 +207,7 @@ export function useImageReplace() {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate ticket images query
       queryClient.invalidateQueries({
         queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],

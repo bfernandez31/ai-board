@@ -8,6 +8,7 @@ export type DocType = 'spec' | 'plan' | 'tasks' | 'images';
 /**
  * Stage-based permission rules for documentation editing
  *
+ * - INBOX stage: Only images can be edited (attach screenshots/mockups before specification)
  * - SPECIFY stage: Only spec.md can be edited
  * - PLAN stage: Only plan.md and tasks.md can be edited
  * - Other stages: No editing allowed
@@ -18,8 +19,9 @@ interface EditPermission {
 }
 
 const EDIT_PERMISSIONS: EditPermission[] = [
-  { stage: 'SPECIFY', allowedDocTypes: ['spec', 'images'] },
-  { stage: 'PLAN', allowedDocTypes: ['plan', 'tasks', 'images'] },
+  { stage: 'INBOX', allowedDocTypes: ['images'] },
+  { stage: 'SPECIFY', allowedDocTypes: ['spec'] },
+  { stage: 'PLAN', allowedDocTypes: ['plan', 'tasks'] },
 ];
 
 /**

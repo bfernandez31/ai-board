@@ -19,6 +19,7 @@ try {
 
 const config = defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.ts', // Only run .spec.ts files (exclude .test.ts unit tests)
   fullyParallel: false, // Disabled to prevent race conditions with database
   forbidOnly: !!process.env.CI,
   retries: 0, // No retries for faster feedback during auth setup
