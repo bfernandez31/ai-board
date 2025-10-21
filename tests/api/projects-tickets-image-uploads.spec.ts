@@ -9,7 +9,7 @@ import * as path from 'path';
  * Tests image attachment functionality including:
  * - Multipart/form-data parsing
  * - Image validation (MIME type, magic bytes, size)
- * - GitHub storage integration (mocked in test environment)
+ * - Cloudinary CDN storage integration
  * - External URL extraction from markdown
  * - Attachment limit enforcement
  * - Backward compatibility with JSON requests
@@ -169,8 +169,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       const attachment = body.attachments[0];
       expect(attachment.type).toBe('uploaded');
-      expect(attachment.url).toContain('github');
-      expect(attachment.url).toContain(`ticket-assets/${body.id}/`); // Should use ticket ID, not temp/
+      expect(attachment.url).toContain('cloudinary');
+      expect(attachment.url).toContain('res.cloudinary.com');
       expect(attachment.filename).toMatch(/^\d+_valid-image\.png$/);
       expect(attachment.mimeType).toBe('image/png');
       expect(attachment.sizeBytes).toBe(imageBuffer.length);
@@ -514,7 +514,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
     });
   });
 
-  test.describe('GitHub Integration', () => {
+  test.describe('Cloudinary Integration', () => {
     test('should store image with timestamp-prefixed filename', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
@@ -551,14 +551,14 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       }
     });
 
-    test('should generate GitHub raw URL for uploaded images', async ({ request }) => {
+    test('should generate Cloudinary URL for uploaded images', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
       const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
         multipart: {
-          title: '[e2e] GitHub URL verification',
-          description: 'Checking GitHub raw URL format',
+          title: '[e2e] Cloudinary URL verification',
+          description: 'Checking Cloudinary URL format',
           images: {
             name: 'test.png',
             mimeType: 'image/png',
@@ -572,10 +572,12 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       const attachment = body.attachments[0];
 
-      // URL should be GitHub raw content URL
-      expect(attachment.url).toMatch(/^https:\/\/raw\.githubusercontent\.com\//);
-      expect(attachment.url).toContain(`/main/ticket-assets/${body.id}/`); // Should use ticket ID, not temp/
-      expect(attachment.url).toContain(attachment.filename);
+      // URL should be Cloudinary CDN URL
+      expect(attachment.url).toMatch(/^https:\/\/res\.cloudinary\.com\//);
+      expect(attachment.url).toContain('ai-board/tickets/');
+      expect(attachment.url).toContain(`tickets/${body.id}/`);
+      expect(attachment).toHaveProperty('cloudinaryPublicId');
+      expect(attachment.cloudinaryPublicId).toContain(`ai-board/tickets/${body.id}/`);
     });
   });
 });
