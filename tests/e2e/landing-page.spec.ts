@@ -152,3 +152,81 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     await context.close();
   });
 });
+
+test.describe('Landing Page - User Story 3: Section Navigation', () => {
+  test.beforeEach(async () => {
+    await cleanupDatabase();
+  });
+
+  test('T035: clicking "Features" link scrolls to features section', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Click Features link in header
+    const featuresLink = page.getByRole('link', { name: /features/i }).first();
+    await featuresLink.click();
+
+    // Wait for scroll to complete
+    await page.waitForTimeout(500);
+
+    // Verify features section is in viewport
+    const featuresSection = page.locator('#features');
+    await expect(featuresSection).toBeInViewport();
+
+    await context.close();
+  });
+
+  test('T036: clicking "Workflow" link scrolls to workflow section', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Click Workflow link in header
+    const workflowLink = page.getByRole('link', { name: /workflow/i }).first();
+    await workflowLink.click();
+
+    // Wait for scroll to complete
+    await page.waitForTimeout(500);
+
+    // Verify workflow section is in viewport
+    const workflowSection = page.locator('#workflow');
+    await expect(workflowSection).toBeInViewport();
+
+    await context.close();
+  });
+
+  test('T037: hovering over navigation links shows color transition', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: undefined,
+      extraHTTPHeaders: {},
+    });
+    const page = await context.newPage();
+
+    await page.goto('/');
+
+    // Get Features link
+    const featuresLink = page.getByRole('link', { name: /features/i }).first();
+
+    // Hover over link
+    await featuresLink.hover();
+
+    // Verify link has transition classes
+    const hasTransition = await featuresLink.evaluate((el) => {
+      const classes = el.className;
+      return classes.includes('transition');
+    });
+
+    expect(hasTransition).toBe(true);
+
+    await context.close();
+  });
+});

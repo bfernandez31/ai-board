@@ -143,17 +143,17 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T035 [P] [US3] E2E test: clicking "Features" link scrolls to features section in tests/e2e/landing-page.spec.ts
-- [ ] T036 [P] [US3] E2E test: clicking "Workflow" link scrolls to workflow section in tests/e2e/landing-page.spec.ts
-- [ ] T037 [P] [US3] E2E test: hovering over navigation links shows color transition in tests/e2e/landing-page.spec.ts
+- [X] T035 [P] [US3] E2E test: clicking "Features" link scrolls to features section in tests/e2e/landing-page.spec.ts
+- [X] T036 [P] [US3] E2E test: clicking "Workflow" link scrolls to workflow section in tests/e2e/landing-page.spec.ts
+- [X] T037 [P] [US3] E2E test: hovering over navigation links shows color transition in tests/e2e/landing-page.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] Add id="features" to features grid section in components/landing/features-grid.tsx
-- [ ] T039 [US3] Add id="workflow" to workflow section in components/landing/workflow-section.tsx
-- [ ] T040 [US3] Update header navigation links to use anchor hrefs (#features, #workflow) in components/layout/header.tsx
-- [ ] T041 [US3] (Optional) Create lib/hooks/use-scroll-to-section.ts if JS scroll behavior needed for offset adjustment
-- [ ] T042 [US3] Apply hover transition styles to navigation links (transition-colors duration-200) in components/layout/header.tsx
+- [X] T038 [US3] Add id="features" to features grid section in components/landing/features-grid.tsx
+- [X] T039 [US3] Add id="workflow" to workflow section in components/landing/workflow-section.tsx
+- [X] T040 [US3] Update header navigation links to use anchor hrefs (#features, #workflow) in components/layout/header.tsx
+- [X] T041 [US3] (Optional) Create lib/hooks/use-scroll-to-section.ts if JS scroll behavior needed for offset adjustment
+- [X] T042 [US3] Apply hover transition styles to navigation links (transition-colors duration-200) in components/layout/header.tsx
 
 **Checkpoint**: Navigation links functional - visitors can jump to specific sections
 
@@ -276,10 +276,11 @@ Task T027: "Integrate all sections" (depends on all above)
 3. Complete Phase 3: User Story 4 (auth redirect) ✅
 4. Complete Phase 4: User Story 1 (landing page content) ✅
 5. Complete Phase 5: User Story 2 (CTAs functional) ✅
-6. **STOP and VALIDATE**: Test MVP independently (US4, US1, US2 complete)
-7. Deploy/demo if ready
+6. Complete Phase 6: User Story 3 (section navigation) ✅
+7. **NEXT**: Phase 7: User Story 5 (responsive mobile)
 
 **MVP Scope**: US4 + US1 + US2 = Authenticated redirect + Full landing page + Functional CTAs
+**P2 Features (Post-MVP)**: US3 (navigation) ✅ + US5 (responsive) = Enhanced UX
 
 ### Incremental Delivery
 
@@ -309,18 +310,19 @@ With 2 developers:
 ## Task Summary
 
 **Total Tasks**: 60
-**Setup**: 3 tasks
-**Foundational**: 4 tasks
-**User Story 4 (P1)**: 5 tasks (2 tests + 3 implementation)
-**User Story 1 (P1)**: 15 tasks (4 tests + 11 implementation)
-**User Story 2 (P1)**: 7 tasks (3 tests + 4 implementation)
-**User Story 3 (P2)**: 8 tasks (3 tests + 5 implementation)
-**User Story 5 (P2)**: 9 tasks (4 tests + 5 implementation)
-**Polish**: 9 tasks
+**Setup**: 3 tasks ✅
+**Foundational**: 4 tasks ✅
+**User Story 4 (P1)**: 5 tasks (2 tests + 3 implementation) ✅
+**User Story 1 (P1)**: 15 tasks (4 tests + 11 implementation) ✅
+**User Story 2 (P1)**: 7 tasks (3 tests + 4 implementation) - 4/7 ✅
+**User Story 3 (P2)**: 8 tasks (3 tests + 5 implementation) ✅
+**User Story 5 (P2)**: 9 tasks (4 tests + 5 implementation) - 0/9 ⏳
+**Polish**: 9 tasks - 0/9 ⏳
 
-**Parallel Opportunities**: 28 tasks marked [P] can run in parallel
-**MVP Scope**: Phases 1-5 (US4+US1+US2) = 34 tasks
-**Full Feature**: All phases = 60 tasks
+**Completed**: 39/60 tasks (65%)
+**Remaining**: 21 tasks (3 MVP tests + 18 post-MVP)
+**MVP Progress**: 31/34 tasks (91%) - Missing 3 CTA click tests
+**Post-MVP Progress**: 8/26 tasks (31%) - US3 complete, US5 + Polish remaining
 
 ---
 
