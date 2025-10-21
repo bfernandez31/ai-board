@@ -58,6 +58,18 @@ export async function POST(
     const parsed = editDocumentationSchema.safeParse(body);
 
     if (!parsed.success) {
+      const flattened = parsed.error.flatten();
+
+      // Create a descriptive error message from field errors
+      const fieldErrorMessages = Object.entries(flattened.fieldErrors)
+        .map(
+          ([field, errors]) =>
+            `${field}: ${(errors as string[] | undefined)?.join(', ') || 'error'}`
+        )
+        .join('; ');
+
+      const errorMessage = fieldErrorMessages || 'Validation error';
+
       console.error('[docs/POST] Request validation failed:', {
         projectId,
         body,
@@ -66,9 +78,12 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: 'Validation error',
+          error: errorMessage,
           code: 'VALIDATION_ERROR',
-          details: parsed.error.issues,
+          details: {
+            fieldErrors: flattened.fieldErrors,
+            formErrors: flattened.formErrors,
+          },
         },
         { status: 400 }
       );
