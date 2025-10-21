@@ -3,6 +3,9 @@
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
 import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare } from 'lucide-react';
+import { ImageGallery } from '@/components/ticket/image-gallery';
+import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
+import type { TicketAttachment } from '@/app/lib/types/ticket';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +40,7 @@ interface TicketData {
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
   workflowType: 'FULL' | 'QUICK';
+  attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   project?: {
@@ -885,6 +889,22 @@ export function TicketDetailModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Images section with lazy loading */}
+          <div className="border-t-2 border-[#313244]/50 pt-6">
+            <ImageGallery
+              projectId={projectId}
+              ticketId={localTicket?.id || ticket.id}
+              ticketStage={localTicket?.stage as Stage || ticket.stage as Stage}
+              attachmentCount={
+                (localTicket?.attachments && isTicketAttachmentArray(localTicket.attachments)
+                  ? localTicket.attachments.length
+                  : ticket.attachments && isTicketAttachmentArray(ticket.attachments)
+                  ? ticket.attachments.length
+                  : 0)
+              }
+            />
           </div>
 
           {/* Action buttons section - compact horizontal layout */}

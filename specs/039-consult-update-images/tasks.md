@@ -92,30 +92,30 @@ Phase 7: Polish & Cross-Cutting
 
 ### Backend: GET Images Endpoint
 
-- [ ] T009 [US1] Create GET endpoint route file `app/api/projects/[projectId]/tickets/[id]/images/route.ts`
-- [ ] T010 [US1] Implement GET handler to fetch ticket attachments from database in `app/api/projects/[projectId]/tickets/[id]/images/route.ts`
-- [ ] T011 [US1] Add authentication and project ownership validation to GET handler
-- [ ] T012 [US1] Transform attachments array to include index field in GET response
+- [X] T009 [US1] Create GET endpoint route file `app/api/projects/[projectId]/tickets/[id]/images/route.ts`
+- [X] T010 [US1] Implement GET handler to fetch ticket attachments from database in `app/api/projects/[projectId]/tickets/[id]/images/route.ts`
+- [X] T011 [US1] Add authentication and project ownership validation to GET handler
+- [X] T012 [US1] Transform attachments array to include index field in GET response
 
 ### Frontend: Query Hook
 
-- [ ] T013 [P] [US1] Create TanStack Query hook `useTicketImages` in `lib/hooks/use-ticket-images.ts`
-- [ ] T014 [P] [US1] Configure query with lazy loading (enabled=isExpanded, staleTime=5min, cacheTime=30min)
+- [X] T013 [P] [US1] Create TanStack Query hook `useTicketImages` in `lib/hooks/use-ticket-images.ts`
+- [X] T014 [P] [US1] Configure query with lazy loading (enabled=isExpanded, staleTime=5min, cacheTime=30min)
 
 ### Frontend: Image Gallery Component
 
-- [ ] T015 [P] [US1] Create ImageGallery component file `components/ticket/image-gallery.tsx`
-- [ ] T016 [US1] Implement collapsible section with image count badge in ImageGallery
-- [ ] T017 [US1] Implement grid layout for image thumbnails when expanded
-- [ ] T018 [US1] Add loading state and empty state handling to ImageGallery
-- [ ] T019 [US1] Integrate ImageGallery into TicketDetailModal after description section in `components/board/ticket-detail-modal.tsx`
+- [X] T015 [P] [US1] Create ImageGallery component file `components/ticket/image-gallery.tsx`
+- [X] T016 [US1] Implement collapsible section with image count badge in ImageGallery
+- [X] T017 [US1] Implement grid layout for image thumbnails when expanded
+- [X] T018 [US1] Add loading state and empty state handling to ImageGallery
+- [X] T019 [US1] Integrate ImageGallery into TicketDetailModal after description section in `components/board/ticket-detail-modal.tsx`
 
 ### Frontend: Image Lightbox Component
 
-- [ ] T020 [P] [US1] Create ImageLightbox component using shadcn/ui Dialog in `components/ticket/image-lightbox.tsx`
-- [ ] T021 [US1] Implement full-size image display with zoom controls (Fit, 100%, 200%)
-- [ ] T022 [US1] Add previous/next navigation buttons with keyboard shortcuts (arrow keys)
-- [ ] T023 [US1] Wire lightbox to ImageGallery thumbnail clicks
+- [X] T020 [P] [US1] Create ImageLightbox component using shadcn/ui Dialog in `components/ticket/image-lightbox.tsx`
+- [X] T021 [US1] Implement full-size image display with zoom controls (Fit, 100%, 200%)
+- [X] T022 [US1] Add previous/next navigation buttons with keyboard shortcuts (arrow keys)
+- [X] T023 [US1] Wire lightbox to ImageGallery thumbnail clicks
 
 ### Testing (US1)
 
