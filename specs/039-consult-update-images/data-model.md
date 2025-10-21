@@ -365,7 +365,7 @@ sequenceDiagram
         Hook-->>UI: Show error toast
     else Version valid
         DB-->>API: Version matches
-        API->>GH: Upload file to images/{ticketId}/
+        API->>GH: Upload file to ticket-assets/{ticketId}/
         GH-->>API: File URL
         API->>DB: Append to attachments[], increment version
         DB-->>API: Updated ticket
@@ -412,7 +412,7 @@ User (via session)
   └── has access to → Project
                         └── contains → Ticket
                                        └── has → Ticket.attachments (TicketAttachment[])
-                                                 └── references → GitHub file (images/{ticketId}/*)
+                                                 └── references → GitHub file (ticket-assets/{ticketId}/*)
 ```
 
 **No foreign key constraints** - attachments stored as denormalized JSON array for simplicity.

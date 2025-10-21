@@ -9,7 +9,7 @@ paths:
     post:
       summary: Upload new image to ticket
       description: |
-        Uploads image file to GitHub repository (`images/{ticketId}/` directory) and appends
+        Uploads image file to GitHub repository (`ticket-assets/{ticketId}/` directory) and appends
         metadata to ticket.attachments array. Uses optimistic concurrency control via version field.
       operationId: uploadTicketImage
       tags:

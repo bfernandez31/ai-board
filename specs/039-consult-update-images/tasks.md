@@ -147,7 +147,7 @@ Phase 7: Polish & Cross-Cutting
 - [ ] T027 [US2] Implement multipart/form-data parsing for file upload in POST handler
 - [ ] T028 [US2] Add file validation (type, size) using Zod schema from T005
 - [ ] T029 [US2] Add permission check using `canEdit(stage, 'images')` in POST handler
-- [ ] T030 [US2] Implement GitHub file upload to `images/{ticketId}/` using @octokit/rest
+- [ ] T030 [US2] Implement GitHub file upload to `ticket-assets/{ticketId}/` using @octokit/rest
 - [ ] T031 [US2] Update ticket attachments array and increment version in database
 - [ ] T032 [US2] Add optimistic concurrency control (version validation, 409 on mismatch)
 

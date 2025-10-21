@@ -23,7 +23,7 @@ Enable users to view, add, remove, and replace images in ticket details through 
 
 **Storage**:
 - Metadata: PostgreSQL 14+ (`Ticket.attachments` JSON field via Prisma 6.x)
-- Files: GitHub repository (`images/{ticketId}/` directory pattern)
+- Files: GitHub repository (`ticket-assets/{ticketId}/` directory pattern)
 
 **Testing**: Playwright E2E tests with existing test infrastructure
 
@@ -205,7 +205,7 @@ tests/
 
 4. **Image Storage Location**
    - **Question**: Where to store image files in GitHub repository?
-   - **Decision**: `images/{ticketId}/` directory pattern (existing pattern from ticket creation)
+   - **Decision**: `ticket-assets/{ticketId}/` directory pattern (existing pattern from ticket creation)
    - **Rationale**: Already implemented in ticket creation flow, consistent file organization
    - **Alternatives Considered**:
      - Flat `/images/` directory - rejected due to poor organization at scale

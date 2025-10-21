@@ -136,7 +136,7 @@ When updating visual assets with newer versions (revised mockup, better screensh
 - **FR-006**: Users MUST be able to remove existing images from tickets when edit permissions allow
 - **FR-007**: System MUST validate uploaded image files (type, size, format) and reject invalid files with clear error messages
 - **FR-008**: System MUST persist image metadata in `Ticket.attachments` JSON field following existing `TicketAttachment` schema
-- **FR-009**: System MUST store uploaded image files in GitHub repository following existing storage pattern (`images/{ticketId}/`)
+- **FR-009**: System MUST store uploaded image files in GitHub repository following existing storage pattern (`ticket-assets/{ticketId}/`)
 - **FR-010**: System MUST display loading states during image operations (upload, delete, load)
 - **FR-011**: System MUST provide image viewer/lightbox for full-size image viewing with zoom controls
 - **FR-012**: System MUST handle image operation errors gracefully (network failures, storage errors, validation errors) with user-friendly messages

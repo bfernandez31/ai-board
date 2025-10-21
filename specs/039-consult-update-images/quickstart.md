@@ -28,7 +28,7 @@ This guide provides a quick reference for implementing and using the image manag
   - See: `contracts/get-images.yaml`
 
 - [ ] **POST /api/projects/:projectId/tickets/:id/images**
-  - Upload image to GitHub `images/{ticketId}/`
+  - Upload image to GitHub `ticket-assets/{ticketId}/`
   - Append metadata to attachments array
   - Permission check: `canEdit(stage, 'images')`
   - See: `contracts/upload-image.yaml`

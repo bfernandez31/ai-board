@@ -77,7 +77,7 @@
 - Multipart/form-data parsing for file uploads
 - File validation using imageFileSchema
 - Permission check: `canEdit(stage, 'images')`
-- GitHub file upload to `images/{ticketId}/` using @octokit/rest
+- GitHub file upload to `ticket-assets/{ticketId}/` using @octokit/rest
 - Update ticket attachments array + increment version
 - Optimistic concurrency control (409 on version mismatch)
 
@@ -230,7 +230,7 @@
 **Design Decisions**:
 - Lazy loading: Metadata loaded immediately, images only when gallery expanded
 - Permission model: Images editable in SPECIFY/PLAN stages (same as spec docs)
-- Storage: GitHub `images/{ticketId}/` directory (existing pattern)
+- Storage: GitHub `ticket-assets/{ticketId}/` directory (existing pattern)
 - Concurrency: Reuse `ticket.version` field (no new mechanisms)
 - Lightbox: Custom using shadcn/ui Dialog (no dependencies)
 - Component reuse: Used existing `ImageUpload` component from ticket creation

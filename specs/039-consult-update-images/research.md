@@ -137,13 +137,13 @@ How do spec document editing permissions map to image editing permissions?
 Where should uploaded image files be stored in the GitHub repository?
 
 ### Decision
-**Use existing `images/{ticketId}/` directory pattern**
+**Use existing `ticket-assets/{ticketId}/` directory pattern**
 
 ### Rationale
 - Pattern already implemented in ticket creation flow (see `app/api/projects/[projectId]/tickets/route.ts`)
 - GitHub repository already configured for image storage
 - Consistent file organization: all images for a ticket in one directory
-- Easy cleanup: delete entire `images/{ticketId}/` directory when ticket deleted
+- Easy cleanup: delete entire `ticket-assets/{ticketId}/` directory when ticket deleted
 - Supports both uploaded images and external URL references (existing `TicketAttachment` schema)
 
 ### Directory Structure Example
@@ -180,7 +180,7 @@ ai-board-repo/
 
 ### Implementation Recommendations
 - Store GitHub file path in `TicketAttachment.url` field
-- Format: `https://github.com/{owner}/{repo}/blob/{branch}/images/{ticketId}/{filename}`
+- Format: `https://github.com/{owner}/{repo}/blob/{branch}/ticket-assets/{ticketId}/{filename}`
 - Use `@octokit/rest` library for GitHub API interactions (already in dependencies)
 - Implement file cleanup strategy (delete images when ticket deleted - out of scope for this feature)
 
@@ -352,7 +352,7 @@ Should we build a custom image lightbox or use an existing library?
 | Lazy Loading | Two-phase: metadata immediate, images on-demand | Bandwidth optimization, user request |
 | Upload Flow | Immediate upload with optimistic UI | Consistent with existing flow, instant feedback |
 | Permissions | SPECIFY and PLAN stages only | Parity with spec document editing |
-| Storage | GitHub `images/{ticketId}/` | Existing pattern, consistent organization |
+| Storage | GitHub `ticket-assets/{ticketId}/` | Existing pattern, consistent organization |
 | Concurrency | Reuse `ticket.version` field | Proven pattern, no new mechanisms |
 | Lightbox | Custom using shadcn/ui Dialog | No dependencies, full control, consistent UX |
 | File Size Limit | 10MB max | Reasonable for mockups/screenshots |
