@@ -94,6 +94,51 @@ export async function deleteImageFromCloudinary(
 }
 
 /**
+ * Delete all images in a Cloudinary folder
+ *
+ * @param folderPrefix - Folder prefix to delete (e.g., 'ai-board/tickets')
+ * @returns Deletion result
+ */
+export async function deleteCloudinaryFolder(
+  folderPrefix: string
+): Promise<{ deleted: number; errors: string[] }> {
+  try {
+    // List all resources in the folder
+    const result = await cloudinary.api.resources({
+      type: 'upload',
+      prefix: folderPrefix,
+      max_results: 500, // Cloudinary API limit
+    });
+
+    const errors: string[] = [];
+    let deleted = 0;
+
+    // Delete each resource
+    for (const resource of result.resources || []) {
+      try {
+        await cloudinary.uploader.destroy(resource.public_id);
+        deleted++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        errors.push(`Failed to delete ${resource.public_id}: ${errorMessage}`);
+      }
+    }
+
+    // Delete the folder itself (if empty)
+    try {
+      await cloudinary.api.delete_folder(folderPrefix);
+    } catch (error) {
+      // Ignore folder deletion errors (folder might not be empty or might not exist)
+    }
+
+    return { deleted, errors };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to delete Cloudinary folder: ${errorMessage}`);
+  }
+}
+
+/**
  * Check if Cloudinary is configured
  */
 export function isCloudinaryConfigured(): boolean {

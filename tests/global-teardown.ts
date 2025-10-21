@@ -1,4 +1,4 @@
-import { disconnectPrisma } from './helpers/db-cleanup';
+import { disconnectPrisma, cleanupCloudinaryImages } from './helpers/db-cleanup';
 
 /**
  * Global teardown for Playwright tests
@@ -6,6 +6,9 @@ import { disconnectPrisma } from './helpers/db-cleanup';
  */
 async function globalTeardown() {
   console.log('\n🧹 Running global test teardown...');
+
+  // Clean up Cloudinary test images
+  await cleanupCloudinaryImages();
 
   // Disconnect Prisma client
   await disconnectPrisma();
