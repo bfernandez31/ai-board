@@ -19,14 +19,17 @@
 
 ---
 
-- **Decision**: Edit permissions alignment - use same rules as spec document editing
-- **Policy Applied**: PRAGMATIC (user request for feature parity)
-- **Confidence**: High (0.9) - User explicitly requested same permission model
+- **Decision**: Edit permissions for images - INBOX stage only (updated based on user feedback)
+- **Policy Applied**: PRAGMATIC (user clarification after initial implementation)
+- **Confidence**: High (0.95) - User explicitly confirmed INBOX-only editing
 - **Fallback Triggered?**: No - Clear user requirement
+- **Rationale**: Images serve as early context (screenshots, mockups) to inform specification creation. Once ticket moves to SPECIFY stage, images should be locked to maintain specification integrity and prevent confusion.
 - **Trade-offs**:
-  1. **Consistency**: Reusing existing permission logic simplifies mental model
-  2. **Flexibility**: May need refinement if image editing needs differ from spec editing (e.g., replacing images during BUILD stage)
-- **Reviewer Notes**: Confirm existing spec editing permissions are well-understood and documented. If spec permissions are stage-based, ensure this is the intended model for images.
+  1. **Workflow Alignment**: Images attached early help spec writers understand requirements
+  2. **Immutability**: Once specification starts, images become reference material (read-only)
+  3. **Simplicity**: Clear boundary - INBOX for preparation, subsequent stages for execution
+- **Implementation**: Permission guard allows 'images' editing only in INBOX stage. All API endpoints (POST/DELETE/PUT) validate via canEdit() function.
+- **Reviewer Notes**: This differs from spec/plan document permissions (SPECIFY/PLAN stages). Images have their own permission model based on workflow phase.
 
 ---
 
@@ -69,8 +72,8 @@ When clarifying requirements or documenting implementation progress, users need 
 
 **Acceptance Scenarios**:
 
-1. **Given** user has edit permissions for the ticket, **When** user opens ticket details, **Then** user sees "Add Image" button in images section
-2. **Given** user lacks edit permissions (wrong stage/workflow state), **When** user opens ticket details, **Then** "Add Image" button is disabled or hidden
+1. **Given** ticket is in INBOX stage, **When** user opens ticket details, **Then** user sees "Add Image" button in images section
+2. **Given** ticket is in SPECIFY, PLAN, BUILD, VERIFY, or SHIP stage, **When** user opens ticket details, **Then** "Add Image" button is hidden and images are read-only
 3. **Given** user clicks "Add Image", **When** file picker opens, **Then** only image file types are selectable (jpg, png, gif, webp)
 4. **Given** user selects valid image file, **When** upload completes, **Then** new image appears in gallery immediately with upload confirmation
 5. **Given** upload fails (network error, file too large), **When** error occurs, **Then** user sees clear error message with retry option
@@ -87,7 +90,7 @@ When images become outdated or irrelevant (superseded mockups, incorrect screens
 
 **Acceptance Scenarios**:
 
-1. **Given** user has edit permissions, **When** hovering over image thumbnail, **Then** delete icon/button appears
+1. **Given** ticket is in INBOX stage, **When** hovering over image thumbnail, **Then** delete icon/button appears
 2. **Given** user clicks delete, **When** confirmation dialog appears, **Then** user can confirm or cancel deletion
 3. **Given** user confirms deletion, **When** operation completes, **Then** image is removed from gallery immediately with success notification
 4. **Given** deletion fails (network error, file in use), **When** error occurs, **Then** user sees error message and image remains visible
@@ -104,7 +107,7 @@ When updating visual assets with newer versions (revised mockup, better screensh
 
 **Acceptance Scenarios**:
 
-1. **Given** user has edit permissions, **When** hovering over image, **Then** "Replace" button appears alongside delete button
+1. **Given** ticket is in INBOX stage, **When** hovering over image, **Then** "Replace" button appears alongside delete button
 2. **Given** user clicks "Replace", **When** file picker opens, **Then** selected file replaces existing image at same position in gallery
 3. **Given** replacement succeeds, **When** operation completes, **Then** new image appears with same metadata context (upload timestamp updates, filename may change)
 
@@ -128,7 +131,7 @@ When updating visual assets with newer versions (revised mockup, better screensh
 - **FR-001**: System MUST display image count badge or visual indicator in ticket details when ticket has attached images
 - **FR-002**: System MUST implement lazy loading for images (images load only when user requests viewing them, not on ticket details open)
 - **FR-003**: System MUST display all attached images with metadata (filename, file size, upload date, MIME type)
-- **FR-004**: System MUST enforce same edit permissions for image management as spec document editing (stage-based or workflow-based permissions)
+- **FR-004**: System MUST enforce INBOX-only edit permissions for image management (images can only be added/deleted/replaced in INBOX stage, read-only in all other stages)
 - **FR-005**: Users MUST be able to add new images to tickets when edit permissions allow
 - **FR-006**: Users MUST be able to remove existing images from tickets when edit permissions allow
 - **FR-007**: System MUST validate uploaded image files (type, size, format) and reject invalid files with clear error messages
@@ -165,7 +168,7 @@ When updating visual assets with newer versions (revised mockup, better screensh
 - **SC-002**: Ticket detail modal initial load time remains under 2 seconds even with 10+ attached images (lazy loading prevents bandwidth bloat)
 - **SC-003**: Image upload completes within 5 seconds for files up to 5MB on standard broadband connection (3G fallback: 15 seconds)
 - **SC-004**: 95% of image operations (add, remove, replace) succeed on first attempt without errors or retries
-- **SC-005**: Image management permissions match spec document permissions with 100% consistency (no permission drift)
+- **SC-005**: Image management permissions enforce INBOX-only editing with 100% consistency (no permission bypass in other stages)
 - **SC-006**: Users can successfully upload images in all supported formats (JPEG, PNG, GIF, WebP) without errors
 - **SC-007**: Page bandwidth usage reduces by 60% compared to auto-loading all images (measured for tickets with 5+ images)
 - **SC-008**: Zero permission bypass incidents - users cannot modify images when edit permissions are denied
