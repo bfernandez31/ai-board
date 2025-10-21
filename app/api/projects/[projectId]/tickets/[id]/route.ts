@@ -93,6 +93,7 @@ export async function GET(
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
       workflowType: ticket.workflowType,
+      attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
       project: {
