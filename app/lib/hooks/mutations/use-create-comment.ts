@@ -58,7 +58,7 @@ export function useCreateComment({
       );
 
       // Optimistically update cache with temporary comment
-      queryClient.setQueryData<{ comments: ListCommentsResponse; currentUserId: string }>(
+      queryClient.setQueryData<ListCommentsResponse & { currentUserId: string }>(
         queryKeys.comments.list(ticketId),
         (old) => {
           if (!old) return old;
@@ -81,10 +81,8 @@ export function useCreateComment({
 
           // Add to top (newest first)
           return {
-            comments: {
-              comments: [optimisticComment, ...old.comments.comments],
-              mentionedUsers: old.comments.mentionedUsers, // Preserve mentioned users
-            },
+            comments: [optimisticComment, ...old.comments],
+            mentionedUsers: old.mentionedUsers, // Preserve mentioned users
             currentUserId: old.currentUserId,
           };
         }

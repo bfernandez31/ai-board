@@ -52,15 +52,13 @@ export function useDeleteComment({
       );
 
       // Optimistically remove comment from cache
-      queryClient.setQueryData<{ comments: ListCommentsResponse; currentUserId: string }>(
+      queryClient.setQueryData<ListCommentsResponse & { currentUserId: string }>(
         queryKeys.comments.list(ticketId),
         (old) => {
           if (!old) return old;
           return {
-            comments: {
-              comments: old.comments.comments.filter((comment) => comment.id !== commentId),
-              mentionedUsers: old.comments.mentionedUsers, // Preserve mentioned users
-            },
+            comments: old.comments.filter((comment) => comment.id !== commentId),
+            mentionedUsers: old.mentionedUsers, // Preserve mentioned users
             currentUserId: old.currentUserId,
           };
         }
