@@ -114,24 +114,50 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 
 ## Ticket Detail Viewer
 
-**Purpose**: Users need to see complete ticket information including full title, description, dates, and stage. The detail modal provides a focused view without navigating away from the board.
+**Purpose**: Users need to see complete ticket information including full title, description, dates, stage, comments, and file attachments. The detail modal provides a focused view organized in tabs without navigating away from the board.
 
 ### What It Does
 
-The system displays full ticket details in a modal dialog:
+The system displays full ticket details in a tabbed modal dialog:
 
 **Opening Detail View**:
 - Click any ticket card
-- Modal opens with full details
+- Modal opens with tabbed interface
 
-**Information Displayed**:
-- **Title**: Full title (not truncated)
-- **Description**: Complete description text
+**Tab Navigation**:
+- **Details Tab** (default): Ticket information, description, metadata, action buttons
+- **Comments Tab**: Comment thread, comment form, real-time updates
+- **Files Tab**: Image gallery with upload/management functionality
+- **Tab Headers**: Display with visual active indicator and comment count badge
+- **Keyboard Navigation**:
+  - Arrow keys (left/right): Navigate between tabs
+  - Cmd/Ctrl+1: Details tab
+  - Cmd/Ctrl+2: Comments tab
+  - Cmd/Ctrl+3: Files tab
+- **Mobile**: Horizontally scrollable tabs when exceeding viewport width
+
+**Details Tab Content**:
+- **Title**: Full title (editable)
+- **Description**: Complete description text (editable)
 - **Stage**: Current stage as visual indicator
-- **Created**: Creation date
-- **Updated**: Last modification date
+- **Metadata**: Badges (workflow type, model, clarification policy), branch link
+- **Action Buttons**: View Spec, View Plan, View Tasks (when applicable)
+- **Dates**: Created and last updated timestamps
 - **Typography**: Clear hierarchy and readability
-- **Dark Theme**: Consistent with application styling
+
+**Comments Tab Content**:
+- **Comment List**: All comments in reverse chronological order (newest first)
+- **Comment Form**: Textarea with character counter, submit button
+- **Author Information**: Name, avatar (or initials), relative timestamp
+- **Markdown Rendering**: Bold, italic, links, code blocks, lists, headings
+- **Empty State**: "No comments yet. Be the first to comment!" message
+- **Real-Time Updates**: Polling every 10 seconds for new comments
+
+**Files Tab Content**:
+- **Image Gallery**: Existing ImageGallery component with all functionality preserved
+- **Upload Operations**: Drag-and-drop or file selection
+- **Management**: Replace, delete, reorder images
+- **Access Control**: Stage-based permissions (editable in INBOX only)
 
 **Modal Controls**:
 - **Close Button**: X button in corner
@@ -140,17 +166,50 @@ The system displays full ticket details in a modal dialog:
 - **Responsive**:
   - Mobile: Full-screen modal
   - Desktop/Tablet: Centered with appropriate sizing
+- **Dark Theme**: Consistent with application styling
 
 ### Requirements
 
 **Modal Display**:
 - Opens when clicking any ticket card
-- Displays title prominently
-- Shows full description text
-- Shows current stage indicator
-- Shows creation and update dates
+- Displays tabbed interface with Details, Comments, Files tabs
+- Details tab active by default
+- Tab headers show visual active indicator
+- Comments tab header displays count badge (e.g., "Comments (5)")
 - Clear typography and visual hierarchy
 - Dark theme styling
+
+**Tab Navigation**:
+- Click tab headers to switch tabs
+- Arrow keys (left/right) navigate between tabs
+- Keyboard shortcuts: Cmd/Ctrl+[1-3] for quick access
+- Active tab visually highlighted (border, background color)
+- Mobile: Horizontal scrolling for tab headers
+
+**Details Tab**:
+- Displays title prominently (editable)
+- Shows full description text (editable)
+- Shows current stage indicator
+- Shows metadata (badges, branch link)
+- Shows action buttons (View Spec/Plan/Tasks)
+- Shows creation and update dates
+
+**Comments Tab**:
+- Displays all comments in reverse chronological order
+- Shows author name, avatar/initials, relative timestamp
+- Renders markdown content with HTML escaping
+- Comment form with textarea and submit button
+- Character counter (1-2000 characters)
+- Auto-focus textarea on first Comments tab open
+- Submit on Cmd/Ctrl+Enter or click Submit button
+- Delete button on user's own comments
+- Real-time updates via polling (10-second interval)
+- Empty state message when no comments
+
+**Files Tab**:
+- Displays existing ImageGallery component
+- Preserves all image upload, view, delete functionality
+- Maintains lazy loading behavior
 
 **Modal Dismissal**:
 - Close button
@@ -160,6 +219,7 @@ The system displays full ticket details in a modal dialog:
 **Responsive**:
 - Full-screen on mobile devices
 - Centered with responsive sizing on desktop/tablet
+- Horizontally scrollable tabs on mobile
 
 ### Data Model
 
@@ -171,6 +231,160 @@ The system displays full ticket details in a modal dialog:
 - `clarificationPolicy`: Optional policy override (enum: AUTO/CONSERVATIVE/PRAGMATIC/INTERACTIVE, NULLABLE)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
+- `comments`: Array of Comment objects (related via foreign key)
+- `attachments`: Array of image attachments (JSON field)
+
+---
+
+## Ticket Comments
+
+**Purpose**: Users need to discuss tickets, document decisions, ask questions, and provide updates to collaborators. The comment system enables asynchronous collaboration directly within tickets, supporting markdown-formatted messages with real-time updates.
+
+### What It Does
+
+The system provides a threaded comment system within each ticket:
+
+**Comment Display**:
+- **Reverse Chronological Order**: Newest comments appear first
+- **Author Information**:
+  - Name displayed prominently
+  - Avatar image or initials fallback (first letter of name)
+  - Relative timestamp (e.g., "2 hours ago")
+- **Markdown Rendering**:
+  - Bold, italic, links, code blocks
+  - Lists (ordered, unordered)
+  - Headings (h1-h6)
+  - HTML escaping enabled for security (XSS prevention)
+- **Empty State**: "No comments yet. Be the first to comment!" when no comments exist
+
+**Comment Creation**:
+- **Form Location**: Bottom of Comments tab
+- **Textarea Input**:
+  - Auto-focus on first Comments tab open
+  - Character counter displaying current/max (e.g., "250 / 2000")
+  - Minimum 1 character, maximum 2000 characters
+- **Submit Methods**:
+  - Click Submit button
+  - Press Cmd/Ctrl+Enter keyboard shortcut
+- **Validation**:
+  - Submit button disabled when content empty or exceeds 2000 characters
+  - Character counter shows overflow (red) when limit exceeded
+- **Optimistic Updates**:
+  - Comment appears immediately after submission
+  - Loading state shown during save ("Submitting...")
+  - Rollback if save fails with error message
+- **Form Clearing**: Form clears automatically after successful submission
+
+**Comment Deletion**:
+- **Authorization**: Only comment authors can delete their own comments
+- **Delete Button**: Trash icon appears on hover for user's own comments
+- **Confirmation**: User confirms deletion before removal
+- **Optimistic Updates**:
+  - Comment removed immediately from list
+  - Rollback if deletion fails with error notification
+
+**Real-Time Updates**:
+- **Polling Mechanism**: Client polls for new comments every 10 seconds
+- **Automatic Updates**: New comments from other users appear automatically
+- **Comment Count Badge**: Updates in real-time on tab header
+- **Deduplication**: Optimistically added comments filtered from polling results
+- **Lifecycle**:
+  - Polling starts when Comments tab opened
+  - Polling continues while modal open
+  - Polling stops when modal closed
+
+**Security & Validation**:
+- **Content Validation**: 1-2000 characters enforced server-side (Zod schema)
+- **HTML Escaping**: react-markdown default escaping prevents XSS attacks
+- **Authorization**:
+  - Only project owners can view/create/delete comments
+  - Only comment authors can delete their own comments
+  - API returns 403 Forbidden for unauthorized operations
+
+### Requirements
+
+**Display**:
+- Comments displayed in reverse chronological order (newest first)
+- Shows author name, avatar/initials, relative timestamp per comment
+- Markdown rendering with XSS protection (HTML escaping)
+- Empty state message when no comments exist
+- Smooth scrolling for long comment lists
+
+**Comment Form**:
+- Textarea with character counter (current/max)
+- Auto-focus on first tab open
+- Submit button and Cmd/Ctrl+Enter shortcut
+- Character limit: 1-2000 characters
+- Disabled submit when invalid (empty or over limit)
+- Loading state during submission ("Submitting..." button text)
+- Form clears after successful submission
+
+**Creation**:
+- Optimistic UI update (instant display)
+- Database save in background
+- Rollback on error with notification
+- Success feedback (visual confirmation)
+
+**Deletion**:
+- Delete button (trash icon) on user's own comments only
+- Confirmation dialog to prevent accidental deletion
+- Optimistic removal from list
+- Rollback on error with notification
+- Comment count updates automatically
+
+**Real-Time Updates**:
+- Poll every 10 seconds when Comments tab open
+- Automatically display new comments from other users
+- Update comment count badge in tab header
+- Filter out optimistically added comments (prevent duplicates)
+- Stop polling when modal closes
+
+**Authorization**:
+- Project ownership required for all comment operations
+- Only comment authors can delete their own comments
+- API returns 403 Forbidden for unauthorized attempts
+- Server-side validation with Zod schemas
+
+**Performance**:
+- Comment creation: <2 seconds (including network latency)
+- Comment deletion: <2 seconds with optimistic update
+- Polling updates: Within 10 seconds of creation by another user
+- List rendering: <500ms for 100 comments (no perceivable lag)
+
+### Data Model
+
+**Comment Entity**:
+- `id`: Integer (auto-increment primary key)
+- `ticketId`: Foreign key to Ticket (cascade delete)
+- `userId`: Foreign key to User (cascade delete)
+- `content`: String (1-2000 characters, markdown-formatted)
+- `createdAt`: Timestamp (creation time)
+- `updatedAt`: Timestamp (last modification time)
+
+**Relationships**:
+- Belongs to Ticket (one-to-many: ticket has many comments)
+- Belongs to User (one-to-many: user has many comments)
+
+**Indexes**:
+- `(ticketId, createdAt)`: Efficient query sorting and pagination
+- `(userId)`: Author filtering and authorization checks
+
+**Validation Rules**:
+- Content: 1-2000 characters (inclusive)
+- No empty or whitespace-only content
+- Markdown formatting supported (no HTML injection)
+- Allowed characters: All printable UTF-8 characters
+
+**API Endpoints**:
+- `GET /api/projects/{projectId}/tickets/{id}/comments`: Fetch all comments for ticket
+- `POST /api/projects/{projectId}/tickets/{id}/comments`: Create new comment
+- `DELETE /api/projects/{projectId}/tickets/{id}/comments/{commentId}`: Delete comment (author only)
+
+**Real-Time Mechanism**:
+- Client-side polling (10-second interval)
+- TanStack Query for data fetching and caching
+- Optimistic updates with rollback on error
+- Deduplication via comment ID comparison
 
 ---
 
@@ -534,11 +748,29 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - ✅ Concurrent update protection
 
 **Detail Viewer**:
-- ✅ Full ticket information display
+- ✅ Tabbed modal interface (Details, Comments, Files)
+- ✅ Tab navigation with keyboard shortcuts
+- ✅ Details tab: Full ticket information with editing
+- ✅ Comments tab: Threaded comments with real-time updates
+- ✅ Files tab: Image gallery with management
+- ✅ Comment count badge on tab header
 - ✅ Clear typography and hierarchy
 - ✅ Multiple modal dismissal methods
 - ✅ Responsive (full-screen mobile, centered desktop)
 - ✅ Dark theme styling
+
+**Ticket Comments**:
+- ✅ Create comments (1-2000 characters)
+- ✅ Markdown rendering with HTML escaping
+- ✅ Author information (name, avatar/initials, timestamp)
+- ✅ Reverse chronological order (newest first)
+- ✅ Delete own comments with confirmation
+- ✅ Real-time updates via polling (10-second interval)
+- ✅ Comment count badge updates automatically
+- ✅ Character counter with overflow indication
+- ✅ Cmd/Ctrl+Enter submit shortcut
+- ✅ Optimistic updates with rollback
+- ✅ Authorization enforcement (project owners, author-only deletion)
 
 **Inline Editing**:
 - ✅ Click-to-edit title and description
@@ -581,18 +813,50 @@ CLOUDINARY_API_SECRET="your-api-secret"
 
 **Viewing Ticket Details**:
 1. User clicks ticket card
-2. Modal opens with full details
-3. User reviews title, description, dates, stage
-4. User closes modal (button/ESC/click-outside)
+2. Modal opens with tabbed interface (Details tab active)
+3. User reviews title, description, dates, stage in Details tab
+4. User can switch to Comments or Files tabs
+5. User closes modal (button/ESC/click-outside)
 
 **Editing a Ticket**:
 1. User clicks ticket to open detail modal
-2. User clicks title or description to edit
+2. User clicks title or description to edit in Details tab
 3. Field becomes editable with focus
 4. User makes changes
 5. User saves (Enter/click-outside for title, save button for description)
 6. Changes save immediately with visual confirmation
 7. Board updates to reflect changes
+
+**Adding a Comment**:
+1. User opens ticket detail modal
+2. User navigates to Comments tab (click or Cmd/Ctrl+2)
+3. Textarea auto-focuses on first visit
+4. User types comment (markdown supported)
+5. Character counter displays current/max (e.g., "150 / 2000")
+6. User submits (click Submit or press Cmd/Ctrl+Enter)
+7. Comment appears immediately at top of list (optimistic)
+8. Form clears automatically
+9. Comment count badge updates on tab header
+
+**Viewing Comments**:
+1. User opens ticket detail modal
+2. User sees comment count badge on Comments tab header (e.g., "Comments (5)")
+3. User navigates to Comments tab
+4. Comments display in reverse chronological order (newest first)
+5. Each comment shows author name, avatar/initials, timestamp
+6. Markdown content renders with formatting (bold, links, code blocks)
+7. User scrolls through comment list
+8. New comments from other users appear automatically within 10 seconds
+
+**Deleting a Comment**:
+1. User hovers over their own comment
+2. Delete button (trash icon) appears
+3. User clicks delete button
+4. Confirmation dialog appears
+5. User confirms deletion
+6. Comment removed immediately from list (optimistic)
+7. Comment count badge decrements automatically
+8. If deletion fails, comment reappears with error notification
 
 **Managing Ticket Images**:
 1. User clicks ticket to open detail modal
@@ -652,6 +916,17 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Version-based conflict detection prevents concurrent edit conflicts
 - Fail-safe deletion: Database updates proceed even if Cloudinary delete fails
 
+**Ticket Comments** (added 2025-01-22):
+- Content length: 1-2000 characters (enforced server-side)
+- Markdown supported: Bold, italic, links, code blocks, lists, headings
+- HTML escaping: react-markdown prevents XSS attacks (default escaping enabled)
+- Authorization: Project owners can view/create, only authors can delete own comments
+- Real-time updates: 10-second polling interval, automatic display of new comments
+- Cascade delete: All comments deleted when ticket deleted (foreign key constraint)
+- Comment ordering: Reverse chronological (newest first) via `createdAt DESC`
+- Optimistic updates: Immediate UI changes with rollback on failure
+- Performance: <2s for create/delete operations, <500ms for 100 comments rendering
+
 ### Technical Details
 
 **Drag-and-Drop**:
@@ -669,6 +944,26 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Zod schemas
 - Real-time validation
 - Client and server validation
+
+**Tabbed Modal Interface**:
+- shadcn/ui Tabs component (Radix UI primitives)
+- Three tabs: Details, Comments, Files
+- Keyboard navigation: Arrow keys + Cmd/Ctrl+[1-3] shortcuts
+- Comment count badge on Comments tab header
+- Responsive: Horizontally scrollable on mobile
+
+**Ticket Comments**:
+- Database: PostgreSQL Comment table with foreign keys to Ticket and User
+- Indexes: Composite (ticketId, createdAt) for sorting, (userId) for author filtering
+- Cascade delete: ON DELETE CASCADE for both ticketId and userId
+- Markdown: react-markdown v9.0.1 with HTML escaping
+- Date formatting: date-fns for relative timestamps (e.g., "2 hours ago")
+- TanStack Query v5 for data fetching, mutations, and polling
+- React hooks: useComments, useCreateComment, useDeleteComment
+- API: RESTful endpoints (GET, POST, DELETE)
+- Validation: Zod schemas for content length (1-2000 characters)
+- Authorization: Session-based (NextAuth.js), project ownership + author validation
+- Real-time: Client-side polling (10-second interval) with deduplication
 
 **Image Attachments**:
 - Cloudinary SDK v2 (official Node.js SDK)
