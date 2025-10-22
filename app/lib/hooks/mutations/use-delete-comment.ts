@@ -57,8 +57,11 @@ export function useDeleteComment({
         (old) => {
           if (!old) return old;
           return {
-            ...old,
-            comments: old.comments.filter((comment) => comment.id !== commentId),
+            comments: {
+              comments: old.comments.comments.filter((comment) => comment.id !== commentId),
+              mentionedUsers: old.comments.mentionedUsers, // Preserve mentioned users
+            },
+            currentUserId: old.currentUserId,
           };
         }
       );

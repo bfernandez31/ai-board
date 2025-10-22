@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { createCommentSchema } from '@/app/lib/schemas/comment-validation';
 import { requireAuth } from '@/lib/db/users';
+import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
 
 /**
  * Schema for route parameters
@@ -76,7 +77,9 @@ export async function GET(
       include: {
         user: {
           select: {
+            id: true,
             name: true,
+            email: true,
             image: true,
           },
         },
@@ -84,19 +87,45 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     });
 
-    // Transform to API response format
-    const response = comments.map((comment) => ({
-      id: comment.id,
-      ticketId: comment.ticketId,
-      userId: comment.userId,
-      content: comment.content,
-      createdAt: comment.createdAt.toISOString(),
-      updatedAt: comment.updatedAt.toISOString(),
-      user: {
-        name: comment.user.name,
-        image: comment.user.image,
+    // Extract all mentioned user IDs from all comments
+    const allMentionedUserIds = comments.flatMap((comment) =>
+      extractMentionUserIds(comment.content)
+    );
+    const uniqueUserIds = Array.from(new Set(allMentionedUserIds));
+
+    // Fetch mentioned users (LEFT JOIN behavior for deleted users)
+    const mentionedUsers = await prisma.user.findMany({
+      where: { id: { in: uniqueUserIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
-    }));
+    });
+
+    // Create user map for client-side mention resolution
+    const mentionedUsersMap = Object.fromEntries(
+      mentionedUsers.map((user) => [user.id, user])
+    );
+
+    // Transform to API response format
+    const response = {
+      comments: comments.map((comment) => ({
+        id: comment.id,
+        ticketId: comment.ticketId,
+        userId: comment.userId,
+        content: comment.content,
+        createdAt: comment.createdAt.toISOString(),
+        updatedAt: comment.updatedAt.toISOString(),
+        user: {
+          id: comment.user.id,
+          name: comment.user.name,
+          email: comment.user.email,
+          image: comment.user.image,
+        },
+      })),
+      mentionedUsers: mentionedUsersMap,
+    };
 
     // Return response with currentUserId in header for frontend ownership checks
     return NextResponse.json(response, {
@@ -198,6 +227,32 @@ export async function POST(
     }
 
     const { content } = validationResult.data;
+
+    // Validate mentioned users (if any mentions exist)
+    const mentionedUserIds = extractMentionUserIds(content);
+
+    if (mentionedUserIds.length > 0) {
+      // Verify all mentioned users are project members (currently only owner)
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { userId: true },
+      });
+
+      const invalidUserIds = mentionedUserIds.filter(
+        (userId) => userId !== project!.userId
+      );
+
+      if (invalidUserIds.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Mentioned user is not a member of this project',
+            code: 'INVALID_MENTION_USER',
+            details: { invalidUserIds },
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Create comment
     const comment = await prisma.comment.create({

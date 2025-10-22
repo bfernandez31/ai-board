@@ -25,7 +25,7 @@ export function useComments({
 }: UseCommentsOptions) {
   return useQuery({
     queryKey: queryKeys.comments.list(ticketId),
-    queryFn: async (): Promise<{ comments: ListCommentsResponse; currentUserId: string }> => {
+    queryFn: async (): Promise<ListCommentsResponse & { currentUserId: string }> => {
       const response = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/comments`
       );
@@ -35,10 +35,10 @@ export function useComments({
         throw new Error(error.error || 'Failed to fetch comments');
       }
 
-      const comments = await response.json();
+      const data: ListCommentsResponse = await response.json();
       const currentUserId = response.headers.get('X-Current-User-Id') || '';
 
-      return { comments, currentUserId };
+      return { ...data, currentUserId };
     },
     enabled,
     refetchInterval,

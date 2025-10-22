@@ -73,13 +73,14 @@ export function CommentList({ projectId, ticketId, isActive = true }: CommentLis
   }
 
   const comments = data?.comments || [];
+  const mentionedUsers = data?.mentionedUsers || {};
   const isEmpty = comments.length === 0;
 
   // Get current user ID from API response header (works in both production and test mode)
   const currentUserId = data?.currentUserId || '';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="comment-list">
       <CommentForm projectId={projectId} ticketId={ticketId} />
 
       <div className="border-t border-surface0 pt-4">
@@ -94,6 +95,7 @@ export function CommentList({ projectId, ticketId, isActive = true }: CommentLis
                 key={comment.id}
                 comment={comment}
                 currentUserId={currentUserId}
+                mentionedUsers={mentionedUsers}
                 onDelete={handleDelete}
               />
             ))}

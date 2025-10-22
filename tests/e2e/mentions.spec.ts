@@ -1,0 +1,439 @@
+/**
+ * E2E Tests: User Mentions in Comments
+ *
+ * Test all user stories for mention functionality:
+ * - US1: Basic autocomplete (type @, see users, filter, select)
+ * - US2: Keyboard navigation (arrow keys, Enter, Escape)
+ * - US3: Multiple mentions in one comment
+ * - US4: Persistence and deleted user handling
+ */
+
+import { test, expect } from '@playwright/test';
+import { prisma } from '@/lib/db/client';
+
+const TEST_USER_EMAIL = 'test@e2e.local';
+const TEST_PROJECT_ID = 1;
+const TEST_TICKET_ID = 1;
+
+/**
+ * Setup: Create test user, project, and ticket before each test
+ */
+test.beforeEach(async ({ page }) => {
+  // Create test user
+  const testUser = await prisma.user.upsert({
+    where: { email: TEST_USER_EMAIL },
+    update: {},
+    create: {
+      id: 'test-user-id',
+      email: TEST_USER_EMAIL,
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+    },
+  });
+
+  // Ensure test project exists
+  await prisma.project.upsert({
+    where: { id: TEST_PROJECT_ID },
+    update: { userId: testUser.id },
+    create: {
+      id: TEST_PROJECT_ID,
+      name: '[e2e] Test Project',
+      description: 'Test project for E2E tests',
+      githubOwner: 'test',
+      githubRepo: 'test',
+      userId: testUser.id,
+    },
+  });
+
+  // Ensure test ticket exists
+  await prisma.ticket.upsert({
+    where: { id: TEST_TICKET_ID },
+    update: { projectId: TEST_PROJECT_ID },
+    create: {
+      id: TEST_TICKET_ID,
+      title: '[e2e] Test Ticket for Mentions',
+      description: 'Ticket for testing mention functionality',
+      stage: 'INBOX',
+      projectId: TEST_PROJECT_ID,
+    },
+  });
+
+  // Clean up existing comments
+  await prisma.comment.deleteMany({
+    where: { ticketId: TEST_TICKET_ID },
+  });
+
+  // Navigate to ticket detail page
+  await page.goto(`http://localhost:3000/projects/${TEST_PROJECT_ID}/tickets/${TEST_TICKET_ID}`);
+});
+
+/**
+ * Cleanup: Remove test data after each test
+ */
+test.afterEach(async () => {
+  await prisma.comment.deleteMany({
+    where: { ticketId: TEST_TICKET_ID },
+  });
+});
+
+/**
+ * ======================
+ * User Story 1: Basic Mention Autocomplete
+ * ======================
+ */
+
+test.describe('US1: Basic Mention Autocomplete', () => {
+  test('[US1] T011: Typing @ opens autocomplete dropdown', async ({ page }) => {
+    // Find comment input field
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await expect(commentInput).toBeVisible();
+
+    // Type @ to trigger autocomplete
+    await commentInput.fill('@');
+
+    // Verify autocomplete dropdown is visible
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Verify dropdown contains at least one user
+    const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
+    await expect(userItems).toHaveCount(1); // At least test user
+  });
+
+  test('[US1] T012: Typing letters after @ filters user list', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Get initial user count
+    const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
+    const initialCount = await userItems.count();
+
+    // Type partial name "e2e" (matches "E2E Test User")
+    await commentInput.fill('@e2e');
+
+    // Verify filtering works (user still visible)
+    await expect(userItems).toHaveCount(initialCount); // Should still show test user
+
+    // Type non-matching text
+    await commentInput.fill('@nonexistentuser');
+
+    // Verify no users shown
+    await expect(userItems).toHaveCount(0);
+  });
+
+  test('[US1] T013: Clicking user in dropdown inserts mention', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    // Wait for autocomplete
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Click first user in list
+    const firstUser = autocomplete.locator('[data-testid="mention-user-item"]').first();
+    await firstUser.click();
+
+    // Verify mention markup is inserted
+    const inputValue = await commentInput.inputValue();
+    expect(inputValue).toMatch(/@\[.+:.+\]/); // Format: @[userId:displayName]
+
+    // Verify autocomplete closes
+    await expect(autocomplete).not.toBeVisible();
+  });
+
+  test('[US1] T014: Submitted comment with mention is saved and displayed with formatting', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+
+    // Insert mention
+    await commentInput.fill('@');
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    const firstUser = autocomplete.locator('[data-testid="mention-user-item"]').first();
+    await firstUser.click();
+
+    // Add text after mention
+    await commentInput.press('End');
+    await commentInput.type(' can you review?');
+
+    // Submit comment
+    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    await submitButton.click();
+
+    // Wait for comment to appear in list
+    const commentList = page.locator('[data-testid="comment-list"]');
+    const newComment = commentList.locator('[data-testid="comment-item"]').last();
+    await expect(newComment).toBeVisible();
+
+    // Verify mention is displayed with formatting (not raw markup)
+    await expect(newComment).toContainText('E2E Test User'); // User name visible
+    await expect(newComment).not.toContainText('@['); // Raw markup NOT visible
+
+    // Verify mention chip/badge exists
+    const mentionChip = newComment.locator('[data-testid="mention-chip"]');
+    await expect(mentionChip).toBeVisible();
+  });
+});
+
+/**
+ * ======================
+ * User Story 2: Keyboard Navigation
+ * ======================
+ */
+
+test.describe('US2: Keyboard Navigation', () => {
+  test('[US2] T024: Arrow Down key highlights next user', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Initially no user highlighted (or first one)
+    const highlightedUser = autocomplete.locator('[data-selected="true"]');
+
+    // Press Arrow Down
+    await commentInput.press('ArrowDown');
+
+    // Verify user is highlighted
+    await expect(highlightedUser).toBeVisible();
+  });
+
+  test('[US2] T025: Arrow Up key highlights previous user', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Press Arrow Down twice
+    await commentInput.press('ArrowDown');
+    await commentInput.press('ArrowDown');
+
+    // Press Arrow Up
+    await commentInput.press('ArrowUp');
+
+    // Verify highlight moved up (test implementation will track selected index)
+    const highlightedUser = autocomplete.locator('[data-selected="true"]');
+    await expect(highlightedUser).toBeVisible();
+  });
+
+  test('[US2] T026: Enter key selects highlighted user', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Highlight user with Arrow Down
+    await commentInput.press('ArrowDown');
+
+    // Press Enter to select
+    await commentInput.press('Enter');
+
+    // Verify mention is inserted
+    const inputValue = await commentInput.inputValue();
+    expect(inputValue).toMatch(/@\[.+:.+\]/);
+
+    // Verify autocomplete closes
+    await expect(autocomplete).not.toBeVisible();
+  });
+
+  test('[US2] T027: Escape key closes dropdown without inserting mention', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Press Escape
+    await commentInput.press('Escape');
+
+    // Verify autocomplete closes
+    await expect(autocomplete).not.toBeVisible();
+
+    // Verify no mention inserted (just @ remains)
+    const inputValue = await commentInput.inputValue();
+    expect(inputValue).toBe('@');
+  });
+});
+
+/**
+ * ======================
+ * User Story 3: Multiple Mentions
+ * ======================
+ */
+
+test.describe('US3: Multiple Mentions', () => {
+  test('[US3] T033: Typing @ after existing mention opens new autocomplete', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+
+    // Insert first mention
+    await commentInput.fill('@');
+    let autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+
+    // Type text after first mention
+    await commentInput.press('End');
+    await commentInput.type(' and ');
+
+    // Type @ again
+    await commentInput.type('@');
+
+    // Verify autocomplete opens again
+    await expect(autocomplete).toBeVisible();
+  });
+
+  test('[US3] T034: Submitting comment with multiple mentions saves all mentions', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+
+    // Insert first mention
+    await commentInput.fill('@');
+    let autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+
+    // Add text and second mention
+    await commentInput.press('End');
+    await commentInput.type(' and @');
+    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+
+    // Submit comment
+    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    await submitButton.click();
+
+    // Verify comment appears
+    const newComment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
+    await expect(newComment).toBeVisible();
+
+    // Verify both mentions are displayed
+    const mentionChips = newComment.locator('[data-testid="mention-chip"]');
+    await expect(mentionChips).toHaveCount(2);
+  });
+
+  test('[US3] T035: Viewing comment with multiple mentions displays all mentions formatted', async ({ page }) => {
+    // Create comment with multiple mentions via API
+    const testUser = await prisma.user.findUnique({
+      where: { email: TEST_USER_EMAIL },
+    });
+
+    await prisma.comment.create({
+      data: {
+        ticketId: TEST_TICKET_ID,
+        userId: testUser!.id,
+        content: `Hey @[${testUser!.id}:E2E User] and @[${testUser!.id}:Test User], check this!`,
+      },
+    });
+
+    // Reload page
+    await page.reload();
+
+    // Verify both mentions are displayed
+    const comment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
+    const mentionChips = comment.locator('[data-testid="mention-chip"]');
+    await expect(mentionChips).toHaveCount(2);
+  });
+});
+
+/**
+ * ======================
+ * User Story 4: Persistence and Edge Cases
+ * ======================
+ */
+
+test.describe('US4: Mention Persistence and Display', () => {
+  test('[US4] T040: Mentions remain formatted after page reload', async ({ page }) => {
+    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+
+    // Create comment with mention
+    await commentInput.fill('@');
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+
+    await commentInput.press('End');
+    await commentInput.type(' check this');
+
+    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    await submitButton.click();
+
+    // Wait for comment to appear
+    const newComment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
+    await expect(newComment).toBeVisible();
+
+    // Reload page
+    await page.reload();
+
+    // Verify mention still formatted
+    const mentionChip = page.locator('[data-testid="comment-list"] [data-testid="mention-chip"]').last();
+    await expect(mentionChip).toBeVisible();
+    await expect(mentionChip).toContainText('E2E Test User');
+  });
+
+  test('[US4] T041: Hovering over mention shows user details tooltip', async ({ page }) => {
+    // Create comment with mention via API
+    const testUser = await prisma.user.findUnique({
+      where: { email: TEST_USER_EMAIL },
+    });
+
+    await prisma.comment.create({
+      data: {
+        ticketId: TEST_TICKET_ID,
+        userId: testUser!.id,
+        content: `Hey @[${testUser!.id}:E2E Test User], check this!`,
+      },
+    });
+
+    await page.reload();
+
+    // Hover over mention
+    const mentionChip = page.locator('[data-testid="mention-chip"]').first();
+    await mentionChip.hover();
+
+    // Verify tooltip shows user details
+    const tooltip = page.locator('[role="tooltip"]');
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText(TEST_USER_EMAIL); // Email shown in tooltip
+  });
+
+  test('[US4] T042: Deleted user mention displays "[Removed User]"', async ({ page }) => {
+    // Create another user
+    const tempUser = await prisma.user.create({
+      data: {
+        email: 'temp-deleted@e2e.local',
+        name: 'Temp User',
+        emailVerified: new Date(),
+      },
+    });
+
+    // Create comment mentioning temp user
+    const testUser = await prisma.user.findUnique({
+      where: { email: TEST_USER_EMAIL },
+    });
+
+    await prisma.comment.create({
+      data: {
+        ticketId: TEST_TICKET_ID,
+        userId: testUser!.id,
+        content: `Hey @[${tempUser.id}:Temp User], check this!`,
+      },
+    });
+
+    // Delete the temp user
+    await prisma.user.delete({
+      where: { id: tempUser.id },
+    });
+
+    // Reload page
+    await page.reload();
+
+    // Verify mention shows "[Removed User]"
+    const comment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
+    await expect(comment).toContainText('[Removed User]');
+
+    // Verify raw markup is NOT visible
+    await expect(comment).not.toContainText('@[');
+  });
+});

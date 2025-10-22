@@ -3,6 +3,8 @@
  * Generated from Prisma schema and API contracts
  */
 
+import { User } from './mention';
+
 /**
  * Comment with user information
  * Used in API responses (GET, POST) and frontend display
@@ -15,7 +17,9 @@ export interface CommentWithUser {
   createdAt: string; // ISO 8601 datetime
   updatedAt: string; // ISO 8601 datetime
   user: {
+    id: string;
     name: string | null;
+    email: string;
     image: string | null;
   };
 }
@@ -36,6 +40,9 @@ export type CreateCommentResponse = CommentWithUser;
 
 /**
  * Response from listing comments
- * Array of comments with user information
+ * Array of comments with user information and mentioned users map
  */
-export type ListCommentsResponse = CommentWithUser[];
+export interface ListCommentsResponse {
+  comments: CommentWithUser[];
+  mentionedUsers: Record<string, User>;
+}

@@ -1,6 +1,6 @@
 /**
  * CommentItem component
- * Displays a single comment with author info, content, and delete button
+ * Displays a single comment with author info, content with mentions, and delete button
  */
 
 'use client';
@@ -8,9 +8,9 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import { Avatar } from './avatar';
 import { Button } from '@/components/ui/button';
+import { MentionDisplay } from './mention-display';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,14 +22,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { CommentWithUser } from '@/app/lib/types/comment';
+import type { User } from '@/app/lib/types/mention';
 
 interface CommentItemProps {
   comment: CommentWithUser;
   currentUserId: string;
+  mentionedUsers: Record<string, User>;
   onDelete: (commentId: number) => void;
 }
 
-export function CommentItem({ comment, currentUserId, onDelete }: CommentItemProps) {
+export function CommentItem({ comment, currentUserId, mentionedUsers, onDelete }: CommentItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -47,6 +49,7 @@ export function CommentItem({ comment, currentUserId, onDelete }: CommentItemPro
   return (
     <>
       <div
+        data-testid="comment-item"
         className="group flex gap-3 py-3"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -71,12 +74,7 @@ export function CommentItem({ comment, currentUserId, onDelete }: CommentItemPro
           </div>
 
           <div className="prose prose-sm prose-invert max-w-none">
-            <ReactMarkdown
-              disallowedElements={['script', 'iframe', 'embed', 'object']}
-              unwrapDisallowed
-            >
-              {comment.content}
-            </ReactMarkdown>
+            <MentionDisplay content={comment.content} mentionedUsers={mentionedUsers} />
           </div>
         </div>
       </div>

@@ -1,15 +1,16 @@
 /**
  * CommentForm component
- * Form for creating new comments with validation and keyboard shortcuts
+ * Form for creating new comments with validation, keyboard shortcuts, and user mentions
  */
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useCreateComment } from '@/app/lib/hooks/mutations/use-create-comment';
+import { useProjectMembers } from '@/app/lib/hooks/queries/useProjectMembers';
 import { useToast } from '@/hooks/use-toast';
+import { MentionInput } from './mention-input';
 
 interface CommentFormProps {
   projectId: number;
@@ -20,8 +21,11 @@ const MAX_LENGTH = 2000;
 
 export function CommentForm({ projectId, ticketId }: CommentFormProps) {
   const [content, setContent] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+
+  // Fetch project members for mention autocomplete
+  const { data: membersData, isLoading: isMembersLoading } = useProjectMembers(projectId);
+  const projectMembers = membersData?.members || [];
 
   const { mutate: createComment, isPending } = useCreateComment({
     projectId,
@@ -41,11 +45,6 @@ export function CommentForm({ projectId, ticketId }: CommentFormProps) {
       });
     },
   });
-
-  // Auto-focus on mount
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
 
   // Keyboard shortcut: Cmd/Ctrl+Enter to submit
   useEffect(() => {
@@ -76,13 +75,13 @@ export function CommentForm({ projectId, ticketId }: CommentFormProps) {
 
   return (
     <div className="space-y-2">
-      <Textarea
-        ref={textareaRef}
+      <MentionInput
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Write a comment... (Markdown supported)"
+        onChange={setContent}
+        projectMembers={projectMembers}
+        placeholder="Write a comment... (@ to mention, Markdown supported)"
         className="min-h-[100px] resize-none"
-        disabled={isPending}
+        disabled={isPending || isMembersLoading}
       />
 
       <div className="flex items-center justify-between">
