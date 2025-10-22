@@ -430,3 +430,226 @@ const testUser = await prisma.user.upsert({
 - More complex test setup
 - Every project must have owner
 - Migration required for existing data
+
+---
+
+## Sign-In Page (Feature 041)
+
+**Purpose**: Provide users with a visually consistent and accessible sign-in experience that supports multiple OAuth providers while clearly communicating which authentication methods are currently available.
+
+### What It Does
+
+The sign-in page provides a user-facing authentication interface:
+
+**Visual Design**:
+- Dark background matching site theme (#1e1e2e)
+- Centered authentication card with violet border (#8B5CF6)
+- Application header with logo and branding
+- Responsive layout for mobile, tablet, and desktop
+- Accessibility-compliant design (WCAG 2.1 AA)
+
+**OAuth Provider Display**:
+- GitHub: Active OAuth provider (clickable, functional)
+- GitLab: Disabled state with "Coming soon" indication
+- BitBucket: Disabled state with "Coming soon" indication
+- Provider-specific icons and branding colors
+- Clear visual distinction between enabled and disabled states
+
+**Authentication Flow**:
+- Unauthenticated users see sign-in card with provider options
+- Authenticated users automatically redirected to dashboard
+- OAuth flow preserves callbackUrl for return navigation
+- Loading indicators during authentication process
+- User-friendly error messages for authentication failures
+
+**Navigation and Redirects**:
+- After successful auth: redirect to original destination (callbackUrl)
+- Default redirect: projects dashboard (/projects)
+- Authenticated user accessing /auth/signin: redirect to dashboard
+- Failed OAuth: user remains on sign-in page with error message
+
+### Requirements
+
+**Visual Consistency**:
+- Header component displayed on sign-in page (matches other pages)
+- Background color matches site theme (#1e1e2e)
+- Authentication card uses violet border (#8B5CF6)
+- Typography and spacing consistent with design system
+- Responsive breakpoints match other pages
+
+**OAuth Provider Requirements**:
+- GitHub OAuth button: Enabled, functional, initiates OAuth flow
+- GitLab OAuth button: Disabled, non-interactive, shows "Coming soon" tooltip
+- BitBucket OAuth button: Disabled, non-interactive, shows "Coming soon" tooltip
+- Provider icons displayed with appropriate branding
+- Disabled buttons show visual feedback (grayed, opacity reduced, cursor not-allowed)
+
+**User Experience**:
+- Page loads in under 2 seconds on standard connection
+- OAuth flow completes in under 10 seconds (excluding external authorization)
+- Loading spinner shown during authentication process
+- Error messages are actionable and user-friendly
+- Keyboard navigation fully supported
+- Screen reader compatible (ARIA labels, semantic HTML)
+
+**Authentication Security**:
+- CallbackUrl validated against allowed patterns (internal routes only)
+- Malicious callback URLs rejected with redirect to default (/projects)
+- OAuth state parameter validated for CSRF protection
+- Session cookies set with secure flags
+
+**Edge Cases**:
+- Failed OAuth: Error message with retry option
+- Cancelled OAuth: Return to sign-in with "Authentication cancelled" message
+- Network failure: Connection error message with retry option
+- Invalid callback URL: Redirect to default destination
+- Already authenticated: Immediate redirect to dashboard (<500ms)
+
+### Data Model
+
+**OAuth Provider Configuration** (Frontend):
+```typescript
+{
+  id: 'github' | 'gitlab' | 'bitbucket',
+  name: string,
+  icon: LucideIcon,
+  enabled: boolean,
+  signInHandler: () => Promise<void>
+}
+```
+
+**Authentication Flow**:
+1. User clicks enabled OAuth provider (GitHub)
+2. NextAuth.js signIn() called with provider ID and callbackUrl
+3. User redirected to OAuth provider (GitHub)
+4. User authorizes application
+5. OAuth provider redirects back with authorization code
+6. NextAuth.js exchanges code for tokens
+7. User session created in database
+8. User redirected to callbackUrl or default (/projects)
+
+**Error States**:
+- OAuth authorization failed: User sees error, remains on sign-in page
+- Network error: Connection error message displayed
+- Invalid callback: Redirect to default with warning
+- Rate limited: Error message with retry guidance
+
+### User Workflows
+
+**New User Sign-In Flow**:
+1. User navigates to /auth/signin
+2. Page loads with header and OAuth provider card
+3. User clicks "Sign in with GitHub"
+4. Redirected to GitHub authorization page
+5. User authorizes AI-BOARD application
+6. Redirected back to AI-BOARD
+7. Session created, user record created if new
+8. Redirected to projects dashboard
+
+**Returning User with Protected Page**:
+1. Unauthenticated user visits /projects/1/board
+2. Middleware redirects to /auth/signin?callbackUrl=/projects/1/board
+3. User signs in with GitHub
+4. After successful auth, redirected to /projects/1/board
+5. User continues from where they left off
+
+**Already Authenticated User**:
+1. Authenticated user navigates to /auth/signin
+2. Middleware detects existing session
+3. User immediately redirected to /projects
+4. No sign-in UI shown
+
+**Failed Authentication**:
+1. User clicks "Sign in with GitHub"
+2. OAuth flow initiated
+3. User cancels or error occurs
+4. User returned to /auth/signin
+5. Error message displayed: "Authentication failed. Please try again."
+6. User can retry authentication
+
+### Business Rules
+
+**Provider Availability**:
+- Only GitHub OAuth enabled in initial release
+- GitLab and BitBucket shown as disabled (roadmap visibility)
+- Future provider activation requires only configuration change
+- No structural changes needed to add new providers
+
+**Redirect Logic**:
+- CallbackUrl must be internal route (validated)
+- Default redirect: /projects
+- Authenticated users cannot access /auth/signin
+- Failed auth: user stays on /auth/signin
+
+**Accessibility Requirements**:
+- WCAG 2.1 AA compliance mandatory
+- Keyboard navigation: Tab, Enter, Space supported
+- Focus indicators clearly visible
+- ARIA labels for all interactive elements
+- Color contrast ratios meet standards (4.5:1 minimum)
+
+**Performance Requirements**:
+- Initial page load: <2 seconds (standard broadband)
+- Time to interactive: <3 seconds
+- OAuth redirect: <500ms after authorization callback
+- Dashboard redirect for authenticated users: <500ms
+
+### Technical Details
+
+**Implementation Files**:
+- Sign-in page: `/app/auth/signin/page.tsx` (Next.js App Router)
+- OAuth configuration: NextAuth.js configuration file
+- Provider components: shadcn/ui Button components
+- Icons: lucide-react (GitHub, GitLab, BitBucket icons)
+
+**NextAuth.js Configuration**:
+- Providers: GitHub OAuth configured
+- Callbacks: Session, JWT, redirect callbacks
+- Pages: Custom sign-in page (`/auth/signin`)
+- Session strategy: Database sessions (PostgreSQL)
+
+**Styling**:
+- TailwindCSS utility classes
+- Dark theme colors from design system
+- Responsive breakpoints: mobile (sm), tablet (md), desktop (lg)
+- Component variants: enabled, disabled states
+
+**Testing Requirements**:
+- E2E test: Successful GitHub OAuth flow
+- E2E test: Authenticated user redirect
+- E2E test: CallbackUrl preservation
+- E2E test: Disabled provider buttons non-interactive
+- Visual regression test: UI matches design system
+- Accessibility audit: WCAG 2.1 AA compliance
+
+**Browser Compatibility**:
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Mobile Safari (iOS 14+)
+- Mobile Chrome (Android 10+)
+
+### Success Metrics
+
+**User Experience**:
+- 95% of users complete authentication on first attempt
+- Average authentication time: <10 seconds (excluding external OAuth)
+- Page load time: <2 seconds (p95)
+- Authenticated user redirect: <500ms (p95)
+
+**Accessibility**:
+- WCAG 2.1 AA compliance: 100%
+- Keyboard navigation coverage: 100% of interactive elements
+- Screen reader compatibility: All content accessible
+- Color contrast: All text meets 4.5:1 minimum ratio
+
+**Design Consistency**:
+- Visual audit: 100% compliance with design system
+- Cross-browser rendering: Identical across 5 major browsers
+- Responsive design: No layout issues on mobile/tablet/desktop
+
+**Error Handling**:
+- Zero confusion about disabled providers (clear messaging)
+- Error messages actionable in 100% of failure cases
+- No user-reported issues with callback URL handling
