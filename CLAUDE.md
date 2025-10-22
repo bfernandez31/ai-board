@@ -8,6 +8,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-12
 - Cloudinary CDN (image storage and delivery)
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18 (040-landing-page-marketing)
 - N/A (static page, no data persistence) (040-landing-page-marketing)
+- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, NextAuth.js v5, shadcn/ui, TailwindCSS 3.4, lucide-reac (041-sign-in-page)
+- N/A (no data persistence for this feature - UI redesign only) (041-sign-in-page)
 
 ### Core Stack
 
@@ -66,6 +68,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
 ## Recent Changes
+- 041-sign-in-page: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, NextAuth.js v5, shadcn/ui, TailwindCSS 3.4, lucide-reac
 - 040-landing-page-marketing: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18
 - 039-consult-update-images: Migrated image storage from GitHub to Cloudinary CDN
   - Replaced GitHub raw URLs with Cloudinary public HTTPS URLs
