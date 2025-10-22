@@ -26,9 +26,9 @@ description: "Task list for sign-in page redesign implementation"
 
 **Purpose**: Project initialization and dependency installation
 
-- [ ] T001 Install react-icons dependency per research.md: `npm install react-icons`
-- [ ] T002 [P] Search for existing auth/signin tests per constitution TDD principle: `Grep` or `Glob` tools in tests/ directory
-- [ ] T003 Verify development environment setup: `npm run dev` and navigate to http://localhost:3000
+- [X] T001 Install react-icons dependency per research.md: `npm install react-icons`
+- [X] T002 [P] Search for existing auth/signin tests per constitution TDD principle: `Grep` or `Glob` tools in tests/ directory
+- [X] T003 Verify development environment setup: `npm run dev` and navigate to http://localhost:3000
 
 ---
 
@@ -52,21 +52,21 @@ description: "Task list for sign-in page redesign implementation"
 
 **NOTE: Write these tests FIRST per constitution TDD principle, ensure they FAIL before implementation**
 
-- [ ] T004 [P] [US1] Create E2E test file tests/e2e/auth-signin.spec.ts if not exists (check T002 search results)
-- [ ] T005 [P] [US1] Write test: "GitHub button redirects to OAuth" in tests/e2e/auth-signin.spec.ts
-- [ ] T006 [P] [US1] Write test: "Successful OAuth lands on /projects" in tests/e2e/auth-signin.spec.ts
-- [ ] T007 [P] [US1] Write test: "callbackUrl preserved through OAuth flow" in tests/e2e/auth-signin.spec.ts
-- [ ] T008 [P] [US1] Write test: "Authenticated user auto-redirected from /auth/signin" in tests/e2e/auth-signin.spec.ts
-- [ ] T009 [US1] Run tests: `npm run test:e2e` - verify ALL tests FAIL (Red phase)
+- [X] T004 [P] [US1] Create E2E test file tests/e2e/auth-signin.spec.ts if not exists (check T002 search results)
+- [X] T005 [P] [US1] Write test: "GitHub button redirects to OAuth" in tests/e2e/auth-signin.spec.ts
+- [X] T006 [P] [US1] Write test: "Successful OAuth lands on /projects" in tests/e2e/auth-signin.spec.ts
+- [X] T007 [P] [US1] Write test: "callbackUrl preserved through OAuth flow" in tests/e2e/auth-signin.spec.ts
+- [X] T008 [P] [US1] Write test: "Authenticated user auto-redirected from /auth/signin" in tests/e2e/auth-signin.spec.ts
+- [X] T009 [US1] Run tests: `npm run test:e2e` - verify ALL tests FAIL (Red phase)
 
 ### Implementation for User Story 1
 
 **Implementation Order**: Tests fail → Implement → Tests pass (TDD Green phase)
 
-- [ ] T010 [US1] Verify existing GitHub OAuth configuration in lib/auth.ts (no changes needed per contracts/README.md)
-- [ ] T011 [US1] Verify existing NextAuth.js signIn server action (no changes needed per contracts/README.md)
-- [ ] T012 [US1] Update app/auth/signin/page.tsx: Maintain existing GitHub OAuth button (already functional per current implementation)
-- [ ] T013 [US1] Run tests: `npm run test:e2e` - verify GitHub OAuth tests PASS (Green phase for US1)
+- [X] T010 [US1] Verify existing GitHub OAuth configuration in lib/auth.ts (no changes needed per contracts/README.md)
+- [X] T011 [US1] Verify existing NextAuth.js signIn server action (no changes needed per contracts/README.md)
+- [X] T012 [US1] Update app/auth/signin/page.tsx: Maintain existing GitHub OAuth button (already functional per current implementation)
+- [X] T013 [US1] Run tests: `npm run test:e2e` - verify GitHub OAuth tests PASS (Green phase for US1)
 
 **Checkpoint**: User Story 1 should be fully functional - GitHub OAuth flow works end-to-end
 
@@ -80,20 +80,20 @@ description: "Task list for sign-in page redesign implementation"
 
 ### Tests for User Story 2 (TDD - Write FIRST, Verify FAIL)
 
-- [ ] T014 [P] [US2] Write test: "Header visible on sign-in page" in tests/e2e/auth-signin.spec.ts
-- [ ] T015 [P] [US2] Write test: "Dark theme background (#1e1e2e)" in tests/e2e/auth-signin.spec.ts
-- [ ] T016 [P] [US2] Write test: "Card has violet border (#8B5CF6)" in tests/e2e/auth-signin.spec.ts
-- [ ] T017 [P] [US2] Write test: "Responsive layout on mobile viewport" in tests/e2e/auth-signin.spec.ts
-- [ ] T018 [US2] Run tests: `npm run test:e2e` - verify US2 tests FAIL (Red phase)
+- [X] T014 [P] [US2] Write test: "Header visible on sign-in page" in tests/e2e/auth-signin.spec.ts
+- [X] T015 [P] [US2] Write test: "Dark theme background (#1e1e2e)" in tests/e2e/auth-signin.spec.ts
+- [X] T016 [P] [US2] Write test: "Card has violet border (#8B5CF6)" in tests/e2e/auth-signin.spec.ts
+- [X] T017 [P] [US2] Write test: "Responsive layout on mobile viewport" in tests/e2e/auth-signin.spec.ts
+- [X] T018 [US2] Run tests: `npm run test:e2e` - verify US2 tests FAIL (Red phase)
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Update app/auth/layout.tsx: Replace `bg-gray-50` with `bg-[#1e1e2e]` per research.md decision #4
-- [ ] T020 [P] [US2] Update components/layout/header.tsx: Modify line 76-78 condition to `if (pathname?.startsWith('/auth') && pathname !== '/auth/signin')` per research.md decision #1
-- [ ] T021 [US2] Update app/auth/signin/page.tsx: Add Card border `border-[#8B5CF6] border-2` per research.md decision #4
-- [ ] T022 [US2] Update app/auth/signin/page.tsx: Make card responsive `w-full max-w-md` + add parent `px-4` per research.md decision #6
-- [ ] T023 [US2] Update app/auth/signin/page.tsx: Use Catppuccin theme text colors `text-[hsl(var(--ctp-subtext-0))]` for CardDescription per research.md decision #4
-- [ ] T024 [US2] Run tests: `npm run test:e2e` - verify US2 tests PASS (Green phase)
+- [X] T019 [P] [US2] Update app/auth/layout.tsx: Replace `bg-gray-50` with `bg-[#1e1e2e]` per research.md decision #4
+- [X] T020 [P] [US2] Update components/layout/header.tsx: Modify line 76-78 condition to `if (pathname?.startsWith('/auth') && pathname !== '/auth/signin')` per research.md decision #1
+- [X] T021 [US2] Update app/auth/signin/page.tsx: Add Card border `border-[#8B5CF6] border-2` per research.md decision #4
+- [X] T022 [US2] Update app/auth/signin/page.tsx: Make card responsive `w-full max-w-md` + add parent `px-4` per research.md decision #6
+- [X] T023 [US2] Update app/auth/signin/page.tsx: Use Catppuccin theme text colors `text-[hsl(var(--ctp-subtext-0))]` for CardDescription per research.md decision #4
+- [X] T024 [US2] Run tests: `npm run test:e2e` - verify US2 tests PASS (Green phase)
 
 **Checkpoint**: User Stories 1 AND 2 should both work - GitHub OAuth functional + visual theme matches site
 
@@ -107,20 +107,20 @@ description: "Task list for sign-in page redesign implementation"
 
 ### Tests for User Story 3 (TDD - Write FIRST, Verify FAIL)
 
-- [ ] T025 [P] [US3] Write test: "Three OAuth provider buttons displayed" in tests/e2e/auth-signin.spec.ts
-- [ ] T026 [P] [US3] Write test: "GitHub button enabled, GitLab/BitBucket disabled" in tests/e2e/auth-signin.spec.ts
-- [ ] T027 [P] [US3] Write test: "Coming soon text for disabled providers" in tests/e2e/auth-signin.spec.ts
-- [ ] T028 [P] [US3] Write test: "GitHub button has proper icon and spacing" in tests/e2e/auth-signin.spec.ts
-- [ ] T029 [US3] Run tests: `npm run test:e2e` - verify US3 tests FAIL (Red phase)
+- [X] T025 [P] [US3] Write test: "Three OAuth provider buttons displayed" in tests/e2e/auth-signin.spec.ts
+- [X] T026 [P] [US3] Write test: "GitHub button enabled, GitLab/BitBucket disabled" in tests/e2e/auth-signin.spec.ts
+- [X] T027 [P] [US3] Write test: "Coming soon text for disabled providers" in tests/e2e/auth-signin.spec.ts
+- [X] T028 [P] [US3] Write test: "GitHub button has proper icon and spacing" in tests/e2e/auth-signin.spec.ts
+- [X] T029 [US3] Run tests: `npm run test:e2e` - verify US3 tests FAIL (Red phase)
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Update app/auth/signin/page.tsx: Import `SiGitlab, SiBitbucket` from 'react-icons/si' per research.md decision #3
-- [ ] T031 [US3] Update app/auth/signin/page.tsx: Wrap existing GitHub button in CardContent with `space-y-4` className
-- [ ] T032 [US3] Update app/auth/signin/page.tsx: Add GitLab button with `variant="outline" disabled` + "Coming soon" text per research.md decision #2
-- [ ] T033 [US3] Update app/auth/signin/page.tsx: Add BitBucket button with `variant="outline" disabled` + "Coming soon" text per research.md decision #2
-- [ ] T034 [US3] Update app/auth/signin/page.tsx: Apply `opacity-50 cursor-not-allowed` to disabled buttons per research.md decision #2
-- [ ] T035 [US3] Run tests: `npm run test:e2e` - verify ALL tests PASS (Green phase for all user stories)
+- [X] T030 [US3] Update app/auth/signin/page.tsx: Import `SiGitlab, SiBitbucket` from 'react-icons/si' per research.md decision #3
+- [X] T031 [US3] Update app/auth/signin/page.tsx: Wrap existing GitHub button in CardContent with `space-y-4` className
+- [X] T032 [US3] Update app/auth/signin/page.tsx: Add GitLab button with `variant="outline" disabled` + "Coming soon" text per research.md decision #2
+- [X] T033 [US3] Update app/auth/signin/page.tsx: Add BitBucket button with `variant="outline" disabled` + "Coming soon" text per research.md decision #2
+- [X] T034 [US3] Update app/auth/signin/page.tsx: Apply `opacity-50 cursor-not-allowed` to disabled buttons per research.md decision #2
+- [X] T035 [US3] Run tests: `npm run test:e2e` - verify ALL tests PASS (Green phase for all user stories)
 
 **Checkpoint**: All user stories complete - Full sign-in page redesign functional with visual consistency and three OAuth providers
 
@@ -130,8 +130,8 @@ description: "Task list for sign-in page redesign implementation"
 
 **Purpose**: Improvements that affect multiple user stories and final validation
 
-- [ ] T036 [P] Run TypeScript type check: `npm run type-check` - verify no type errors
-- [ ] T037 [P] Run ESLint: `npm run lint` - verify no linting errors
+- [X] T036 [P] Run TypeScript type check: `npm run type-check` - verify no type errors
+- [X] T037 [P] Run ESLint: `npm run lint` - verify no linting errors
 - [ ] T038 [P] Run Prettier: `npm run format` - auto-fix formatting issues
 - [ ] T039 Manual accessibility audit: Lighthouse on /auth/signin - verify WCAG 2.1 AA compliance (target ≥95 accessibility score)
 - [ ] T040 [P] Manual cross-browser testing: Chrome, Firefox, Safari, Edge - verify visual consistency per quickstart.md checklist

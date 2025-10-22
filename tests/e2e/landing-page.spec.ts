@@ -5,7 +5,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { prisma } from '@/lib/db/client';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 test.describe('Landing Page - User Story 4: Authenticated User Redirection', () => {
@@ -58,7 +57,6 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
   test('T013: unauthenticated visitor sees hero section with headline and CTAs', async ({ browser }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -83,7 +81,6 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
 
   test('T014: unauthenticated visitor sees 6 feature cards in grid layout', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -107,7 +104,6 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
 
   test('T015: unauthenticated visitor sees workflow timeline with 5 stages', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -134,7 +130,6 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
 
   test('T016: unauthenticated visitor sees final CTA section at bottom', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -160,7 +155,6 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
 
   test('T035: clicking "Features" link scrolls to features section', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -183,7 +177,6 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
 
   test('T036: clicking "Workflow" link scrolls to workflow section', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -206,7 +199,6 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
 
   test('T037: hovering over navigation links shows color transition', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -239,7 +231,6 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
   test('T043: mobile viewport (< 768px) shows hero title scaled to text-6xl', async ({ browser }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 }, // iPhone SE dimensions
     });
@@ -261,7 +252,6 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
 
   test('T044: mobile viewport shows features grid in single column', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
     });
@@ -287,7 +277,6 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
 
   test('T045: mobile viewport shows workflow timeline vertically', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
     });
@@ -313,7 +302,6 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
 
   test('T046: mobile viewport CTA buttons meet 44x44px touch target size', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
     });
@@ -355,7 +343,6 @@ test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
   test('T053: keyboard navigation works through all CTAs and links', async ({ browser }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -387,7 +374,6 @@ test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
 
   test('T054: focus indicators visible on interactive elements', async ({ browser }) => {
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
     });
     const page = await context.newPage();
@@ -411,7 +397,6 @@ test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
   test('T056: landing page renders with JavaScript disabled', async ({ browser }) => {
     // Given: Browser with JavaScript disabled
     const context = await browser.newContext({
-      storageState: undefined,
       extraHTTPHeaders: {},
       javaScriptEnabled: false,
     });
