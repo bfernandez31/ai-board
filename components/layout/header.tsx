@@ -18,7 +18,7 @@ interface ProjectInfo {
 
 export function Header() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
 
