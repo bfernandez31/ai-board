@@ -64,11 +64,25 @@
   4. Better for users who change names (no stale references in old comments)
 - **Reviewer Notes**: Mentions automatically reflect the user's current name. When viewing old comments, users will see the mentioned person's current name, not the name they had when the mention was created. This requires storing user ID references rather than text snapshots.
 
+## MVP Scope & Limitations
+
+**Current Implementation (MVP)**:
+- User mentions support **single-user projects only** (only the project owner can be mentioned)
+- The autocomplete dropdown shows only the project owner
+- Comment storage and display fully support the mention markup format
+
+**Future Enhancement**:
+- Add Project-User join table to support multi-user team collaboration
+- Autocomplete will show all project members once team features are implemented
+- No code changes needed for mention parsing/display - already supports multiple users
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Basic User Mention Autocomplete (Priority: P1)
 
 A project member writes a comment mentioning another team member to draw their attention to a specific ticket discussion.
+
+**MVP Note**: Currently shows only the project owner in the autocomplete dropdown.
 
 **Why this priority**: Core functionality that enables the mention feature - without autocomplete, users cannot effectively tag others. This is the MVP that delivers immediate value.
 
