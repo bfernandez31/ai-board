@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark overflow-hidden">
-      <body className="bg-[#1e1e2e] text-foreground antialiased overflow-hidden">
+    <html lang="en" className="dark">
+      <body className="bg-[#1e1e2e] text-foreground antialiased">
         <QueryProvider>
           <SessionProvider>
             <Header />

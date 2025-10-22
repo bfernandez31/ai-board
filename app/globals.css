@@ -70,6 +70,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Offset for sticky header (h-16 = 4rem) when using anchor links */
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
 }
 
 /* Job Status Indicator Animations */

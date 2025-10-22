@@ -32,6 +32,18 @@ export async function getCurrentUser() {
 }
 
 /**
+ * Get the current authenticated user without throwing
+ * @returns User object if authenticated, null otherwise
+ */
+export async function getCurrentUserOrNull() {
+  try {
+    return await getCurrentUser()
+  } catch {
+    return null
+  }
+}
+
+/**
  * Require authentication and return userId
  * @throws Error if user is not authenticated
  */
