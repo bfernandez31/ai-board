@@ -80,8 +80,9 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
-    // Wait for modal to open
+    // Wait for modal to open and Details tab to be active
     await page.waitForSelector('[role="dialog"]');
+    await page.waitForSelector('[role="tab"][data-state="active"]:has-text("Details")');
 
     // Click "Spec" button (in Details tab)
     await page.click('button:has-text("Spec")');
@@ -125,10 +126,6 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Plan")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -162,10 +159,6 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -234,10 +227,6 @@ test.describe('Documentation Editor - Save Workflow', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -300,10 +289,6 @@ test.describe('Documentation Editor - Save Workflow', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -362,10 +347,6 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -417,10 +398,6 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -483,10 +460,6 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Plan")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -525,10 +498,6 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Tasks")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -567,10 +536,6 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -604,10 +569,6 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -682,10 +643,6 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Navigate and open plan.md viewer
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Plan")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -764,10 +721,6 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Navigate and open tasks.md viewer
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Tasks")');
     await page.waitForSelector('[role="dialog"]');
 
@@ -868,10 +821,6 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
 
     await page.goto('/projects/1/board');
     await page.click(`[data-ticket-id="${ticket.id}"]`);
-
-    // Wait for modal to open
-    await page.waitForSelector('[role="dialog"]');
-
     await page.click('button:has-text("Spec")');
     await page.waitForSelector('[role="dialog"]');
 

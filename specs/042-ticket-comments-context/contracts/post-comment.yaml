@@ -1,0 +1,271 @@
+openapi: 3.0.3
+info:
+  title: Create Comment API
+  description: Create a new comment on a ticket with markdown support
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comments:
+    post:
+      summary: Create a new comment
+      description: |
+        Creates a new comment on the specified ticket.
+        Requires project ownership for authorization.
+        Content must be 1-2000 characters.
+      operationId: createComment
+      tags:
+        - Comments
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Unique project identifier
+          schema:
+            type: integer
+            example: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Unique ticket identifier
+          schema:
+            type: integer
+            example: 42
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+            examples:
+              simple:
+                summary: Simple plain text comment
+                value:
+                  content: "This looks good to me!"
+              markdown:
+                summary: Comment with markdown formatting
+                value:
+                  content: "This is **bold** and *italic* text with a [link](https://example.com)"
+              codeBlock:
+                summary: Comment with code block
+                value:
+                  content: |
+                    Here's a fix:
+                    ```typescript
+                    const sum = (a: number, b: number) => a + b;
+                    ```
+      responses:
+        '201':
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentWithUser'
+              example:
+                id: 124
+                ticketId: 42
+                userId: "user_abc123"
+                content: "This looks good to me!"
+                createdAt: "2025-01-22T11:45:00.000Z"
+                updatedAt: "2025-01-22T11:45:00.000Z"
+                user:
+                  name: "John Doe"
+                  image: "https://example.com/avatar.jpg"
+        '400':
+          description: Bad Request - Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                emptyContent:
+                  summary: Empty content
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "too_small"
+                        minimum: 1
+                        path: ["content"]
+                        message: "Content must be at least 1 character"
+                tooLong:
+                  summary: Content exceeds 2000 characters
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "too_big"
+                        maximum: 2000
+                        path: ["content"]
+                        message: "Content must be at most 2000 characters"
+                missingContent:
+                  summary: Missing content field
+                  value:
+                    error: "Validation failed"
+                    issues:
+                      - code: "invalid_type"
+                        expected: "string"
+                        received: "undefined"
+                        path: ["content"]
+                        message: "Required"
+        '401':
+          description: Unauthorized - User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized: Please sign in"
+        '403':
+          description: Forbidden - User does not own the project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have access to this project"
+        '404':
+          description: Not Found - Project or ticket does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+      security:
+        - sessionCookie: []
+
+components:
+  schemas:
+    CreateCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: Comment text (markdown-formatted)
+          minLength: 1
+          maxLength: 2000
+          example: "This looks good to me!"
+
+    CommentWithUser:
+      type: object
+      required:
+        - id
+        - ticketId
+        - userId
+        - content
+        - createdAt
+        - updatedAt
+        - user
+      properties:
+        id:
+          type: integer
+          description: Unique comment identifier
+          example: 124
+        ticketId:
+          type: integer
+          description: Associated ticket ID
+          example: 42
+        userId:
+          type: string
+          description: Comment author user ID
+          example: "user_abc123"
+        content:
+          type: string
+          description: Comment text (markdown-formatted)
+          minLength: 1
+          maxLength: 2000
+          example: "This looks good to me!"
+        createdAt:
+          type: string
+          format: date-time
+          description: Comment creation timestamp (ISO 8601)
+          example: "2025-01-22T11:45:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO 8601)
+          example: "2025-01-22T11:45:00.000Z"
+        user:
+          type: object
+          required:
+            - name
+            - image
+          properties:
+            name:
+              type: string
+              nullable: true
+              description: Author display name
+              example: "John Doe"
+            image:
+              type: string
+              nullable: true
+              description: Author avatar URL
+              example: "https://example.com/avatar.jpg"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Forbidden: You do not have access to this project"
+
+    ValidationError:
+      type: object
+      required:
+        - error
+        - issues
+      properties:
+        error:
+          type: string
+          description: Error summary
+          example: "Validation failed"
+        issues:
+          type: array
+          description: Detailed validation errors from Zod
+          items:
+            type: object
+            required:
+              - code
+              - path
+              - message
+            properties:
+              code:
+                type: string
+                description: Zod error code
+                example: "too_big"
+              path:
+                type: array
+                description: Path to the invalid field
+                items:
+                  type: string
+                example: ["content"]
+              message:
+                type: string
+                description: Human-readable error message
+                example: "Content must be at most 2000 characters"
+              minimum:
+                type: integer
+                description: Minimum value (for too_small errors)
+                example: 1
+              maximum:
+                type: integer
+                description: Maximum value (for too_big errors)
+                example: 2000
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie

@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: List Comments API
+  description: Retrieve all comments for a specific ticket with author information
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comments:
+    get:
+      summary: List all comments for a ticket
+      description: |
+        Returns all comments for the specified ticket in reverse chronological order (newest first).
+        Requires project ownership for authorization.
+      operationId: listComments
+      tags:
+        - Comments
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Unique project identifier
+          schema:
+            type: integer
+            example: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Unique ticket identifier
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '200':
+          description: Successfully retrieved comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentWithUser'
+              examples:
+                withComments:
+                  summary: Ticket with 2 comments
+                  value:
+                    - id: 123
+                      ticketId: 42
+                      userId: "user_abc123"
+                      content: "This is a **comment** with markdown"
+                      createdAt: "2025-01-22T10:30:00.000Z"
+                      updatedAt: "2025-01-22T10:30:00.000Z"
+                      user:
+                        name: "John Doe"
+                        image: "https://example.com/avatar.jpg"
+                    - id: 122
+                      ticketId: 42
+                      userId: "user_def456"
+                      content: "First comment on this ticket"
+                      createdAt: "2025-01-22T09:15:00.000Z"
+                      updatedAt: "2025-01-22T09:15:00.000Z"
+                      user:
+                        name: "Jane Smith"
+                        image: null
+                emptyList:
+                  summary: Ticket with no comments
+                  value: []
+        '401':
+          description: Unauthorized - User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized: Please sign in"
+        '403':
+          description: Forbidden - User does not own the project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have access to this project"
+        '404':
+          description: Not Found - Project or ticket does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+      security:
+        - sessionCookie: []
+
+components:
+  schemas:
+    CommentWithUser:
+      type: object
+      required:
+        - id
+        - ticketId
+        - userId
+        - content
+        - createdAt
+        - updatedAt
+        - user
+      properties:
+        id:
+          type: integer
+          description: Unique comment identifier
+          example: 123
+        ticketId:
+          type: integer
+          description: Associated ticket ID
+          example: 42
+        userId:
+          type: string
+          description: Comment author user ID
+          example: "user_abc123"
+        content:
+          type: string
+          description: Comment text (markdown-formatted)
+          minLength: 1
+          maxLength: 2000
+          example: "This is a **comment** with markdown"
+        createdAt:
+          type: string
+          format: date-time
+          description: Comment creation timestamp (ISO 8601)
+          example: "2025-01-22T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO 8601)
+          example: "2025-01-22T10:30:00.000Z"
+        user:
+          type: object
+          required:
+            - name
+            - image
+          properties:
+            name:
+              type: string
+              nullable: true
+              description: Author display name
+              example: "John Doe"
+            image:
+              type: string
+              nullable: true
+              description: Author avatar URL
+              example: "https://example.com/avatar.jpg"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Forbidden: You do not have access to this project"
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie

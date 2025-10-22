@@ -62,6 +62,16 @@ export const queryKeys = {
   },
 
   /**
+   * Comment-related query keys
+   */
+  comments: {
+    /**
+     * All comments for a specific ticket
+     */
+    list: (ticketId: number) => ['comments', ticketId] as const,
+  },
+
+  /**
    * User-related query keys
    */
   users: {
