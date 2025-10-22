@@ -64,25 +64,25 @@
   4. Better for users who change names (no stale references in old comments)
 - **Reviewer Notes**: Mentions automatically reflect the user's current name. When viewing old comments, users will see the mentioned person's current name, not the name they had when the mention was created. This requires storing user ID references rather than text snapshots.
 
-## MVP Scope & Limitations
+## Multi-User Project Support
 
-**Current Implementation (MVP)**:
-- User mentions support **single-user projects only** (only the project owner can be mentioned)
-- The autocomplete dropdown shows only the project owner
-- Comment storage and display fully support the mention markup format
+**Current Implementation**:
+- User mentions support **multi-user projects** via ProjectMember join table
+- The autocomplete dropdown shows all project members (owner + members)
+- Comment storage and display fully support multiple user mentions
+- Role-based membership (owner vs member) for future permission features
 
-**Future Enhancement**:
-- Add Project-User join table to support multi-user team collaboration
-- Autocomplete will show all project members once team features are implemented
-- No code changes needed for mention parsing/display - already supports multiple users
+**Database Model**:
+- **ProjectMember** table: many-to-many relationship between Project and User
+- Fields: id, projectId, userId, role (owner/member), createdAt
+- Unique constraint on (projectId, userId) to prevent duplicate memberships
+- Cascade delete: removing a project or user removes associated memberships
 
 ## User Scenarios & Testing
 
 ### User Story 1 - Basic User Mention Autocomplete (Priority: P1)
 
 A project member writes a comment mentioning another team member to draw their attention to a specific ticket discussion.
-
-**MVP Note**: Currently shows only the project owner in the autocomplete dropdown.
 
 **Why this priority**: Core functionality that enables the mention feature - without autocomplete, users cannot effectively tag others. This is the MVP that delivers immediate value.
 
