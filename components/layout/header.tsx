@@ -27,6 +27,7 @@ export function Header() {
   // Include loading state to avoid layout shift - better to show marketing variant
   // during loading than empty header
   const isLandingPage = pathname === '/';
+  const isSignInPage = pathname === '/auth/signin';
   const isMarketingVariant = isLandingPage && status !== 'authenticated';
 
   useEffect(() => {
@@ -72,8 +73,8 @@ export function Header() {
     }
   }, [pathname]);
 
-  // Don't render header on auth pages
-  if (pathname?.startsWith('/auth')) {
+  // Don't render header on auth pages except /auth/signin
+  if (pathname?.startsWith('/auth') && pathname !== '/auth/signin') {
     return null;
   }
 
@@ -136,8 +137,15 @@ export function Header() {
             </div>
           )}
 
+          {/* Sign-in page: Show nothing (just logo) */}
+          {isSignInPage && (
+            <div className="hidden md:flex items-center gap-3">
+              {/* Empty - just show logo */}
+            </div>
+          )}
+
           {/* Application variant: Show User Menu */}
-          {!isMarketingVariant && (
+          {!isMarketingVariant && !isSignInPage && (
             <div className="hidden md:flex items-center gap-3">
               <UserMenu />
             </div>

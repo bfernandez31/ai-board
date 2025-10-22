@@ -3,11 +3,10 @@
 Auto-generated from all feature plans. Last updated: 2025-10-12
 
 ## Active Technologies
+
 - TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui, TanStack Query v5.90.5, @octokit/rest 22.0, react-markdown 9.0.1, @dnd-kit, lucide-react, Cloudinary SDK
 - PostgreSQL 14+ (User, Project, Ticket, Job tables with clarification policies, workflow types, image attachments)
 - Cloudinary CDN (image storage and delivery)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18 (040-landing-page-marketing)
-- N/A (static page, no data persistence) (040-landing-page-marketing)
 
 ### Core Stack
 
@@ -65,17 +64,6 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 
 TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 
-## Recent Changes
-- 040-landing-page-marketing: Added TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS, Next.js 15 (App Router), React 18
-- 039-consult-update-images: Migrated image storage from GitHub to Cloudinary CDN
-  - Replaced GitHub raw URLs with Cloudinary public HTTPS URLs
-  - Updated all image endpoints (POST, PUT, DELETE) to use Cloudinary
-  - Added cloudinaryPublicId field to TicketAttachment interface
-  - Fixed modal overflow with scrollable content
-  - Improved delete button visibility and drag-and-drop UX
-  - Removed old ticket-assets/ and images/ directories
-
-
 <!-- MANUAL ADDITIONS START -->
 
 ## Quick Implementation Workflow
@@ -85,12 +73,14 @@ TypeScript 5.x (strict mode), Node.js 22.20.0 LTS: Follow standard conventions
 The Quick Implementation workflow allows tickets to transition directly from **INBOX → BUILD**, bypassing the SPECIFY and PLAN stages. This is designed for simple tasks where formal specification and planning are unnecessary overhead.
 
 **Use quick-impl for**:
+
 - Bug fixes (typos, minor logic corrections)
 - UI tweaks (button colors, spacing adjustments, text changes)
 - Simple refactoring (renaming, file organization)
 - Documentation updates
 
 **Use full workflow (INBOX → SPECIFY → PLAN → BUILD) for**:
+
 - Complex features requiring architecture design
 - Changes affecting multiple modules
 - New APIs or database schema changes
@@ -98,18 +88,18 @@ The Quick Implementation workflow allows tickets to transition directly from **I
 
 ### Workflow Comparison
 
-| Aspect | Normal Workflow | Quick Implementation |
-|--------|-----------------|----------------------|
-| **Stages** | INBOX → SPECIFY → PLAN → BUILD | INBOX → BUILD |
-| **Documentation** | Full specification (spec.md, plan.md, tasks.md) | Minimal spec (title + description only) |
-| **Command** | `/speckit.specify` → `/speckit.plan` → `/speckit.implement` | `/quick-impl` |
-| **Workflow File** | `.github/workflows/speckit.yml` | `.github/workflows/quick-impl.yml` |
-| **Job Command** | `specify`, `plan`, `implement` | `quick-impl` |
-| **Branch Creation** | `create-new-feature.sh` (full template) | `create-new-feature.sh --mode=quick-impl` (minimal template) |
-| **Visual Feedback** | Blue border on SPECIFY column | Green border on BUILD column |
-| **Confirmation** | No modal (normal progression) | Mandatory warning modal |
-| **Typical Time** | 15-30 minutes (full cycle) | 5-10 minutes |
-| **Best For** | Complex features, architectural changes | Simple fixes, minor improvements |
+| Aspect              | Normal Workflow                                             | Quick Implementation                                         |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| **Stages**          | INBOX → SPECIFY → PLAN → BUILD                              | INBOX → BUILD                                                |
+| **Documentation**   | Full specification (spec.md, plan.md, tasks.md)             | Minimal spec (title + description only)                      |
+| **Command**         | `/speckit.specify` → `/speckit.plan` → `/speckit.implement` | `/quick-impl`                                                |
+| **Workflow File**   | `.github/workflows/speckit.yml`                             | `.github/workflows/quick-impl.yml`                           |
+| **Job Command**     | `specify`, `plan`, `implement`                              | `quick-impl`                                                 |
+| **Branch Creation** | `create-new-feature.sh` (full template)                     | `create-new-feature.sh --mode=quick-impl` (minimal template) |
+| **Visual Feedback** | Blue border on SPECIFY column                               | Green border on BUILD column                                 |
+| **Confirmation**    | No modal (normal progression)                               | Mandatory warning modal                                      |
+| **Typical Time**    | 15-30 minutes (full cycle)                                  | 5-10 minutes                                                 |
+| **Best For**        | Complex features, architectural changes                     | Simple fixes, minor improvements                             |
 
 ### Usage Instructions
 
@@ -137,17 +127,20 @@ During drag operations from INBOX column:
 ### Technical Implementation
 
 **API Detection**:
+
 ```typescript
 const isQuickImpl = currentStage === Stage.INBOX && targetStage === Stage.BUILD;
 ```
 
 **Workflow Dispatch**:
+
 - Workflow: `.github/workflows/quick-impl.yml`
 - Inputs: `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
 - Command: `/quick-impl` (simplified implementation without full spec-kit)
 - Branch: Created via `create-new-feature.sh --mode=quick-impl`
 
 **Job Validation**:
+
 - Quick-impl skips job completion validation (no prior job exists for INBOX tickets)
 - Job created with `command="quick-impl"` for tracking
 - Normal workflow job validation still applies for SPECIFY → PLAN → BUILD
@@ -177,12 +170,14 @@ The application uses **NextAuth.js** for authentication with a user-project owne
 ### User-Project Relationship
 
 **Database Schema**:
+
 - `Project.userId` → `User.id` (required, NOT NULL)
 - One user can have many projects
 - Projects cannot exist without an owner
 - Index on `userId` for query performance
 
 **Authorization Flow**:
+
 1. Extract user ID from NextAuth session
 2. Filter project queries by `userId`
 3. Validate project ownership before operations
@@ -219,12 +214,12 @@ const testUser = await prisma.user.upsert({
 await prisma.project.upsert({
   where: { id: 1 },
   update: {
-    userId: testUser.id,  // ← Required in update branch
+    userId: testUser.id, // ← Required in update branch
   },
   create: {
     id: 1,
     name: '[e2e] Test Project',
-    userId: testUser.id,  // ← Required in create branch
+    userId: testUser.id, // ← Required in create branch
     // ... other fields
   },
 });
@@ -240,12 +235,14 @@ await prisma.project.upsert({
 **Global Test Setup**:
 
 The `tests/global-setup.ts` file:
+
 1. Cleans database
-2. Creates test user ('test@e2e.local')
+2. Creates test user ('<test@e2e.local>')
 3. Creates test projects (1, 2) with correct userId
 4. Configures Playwright with auth context
 
 **Implementation Locations**:
+
 - `tests/global-setup.ts`: Initial test user creation
 - `tests/helpers/db-setup.ts`: Helper functions with user creation
 - `tests/api/*.spec.ts`: API tests with inline user creation
@@ -296,10 +293,12 @@ The User model manages authentication and project ownership:
 - **`updatedAt`** (DateTime): Last modification timestamp
 
 **Relationships**:
+
 - User → Projects (one-to-many)
 - Every project must have a userId (required foreign key)
 
 **Test User**:
+
 - Email: `test@e2e.local`
 - Created in global test setup
 - Used across all E2E and API tests
@@ -320,6 +319,7 @@ The Project model now includes user ownership and clarification policies:
   - Tickets inherit this policy unless overridden
 
 **Authorization**:
+
 - Projects filtered by userId from session
 - Cross-user access returns 403 Forbidden
 - Project queries always include userId validation
@@ -607,6 +607,7 @@ This ensures Job creation succeeds without foreign key constraint violations whi
 The application uses **client-side polling** instead of Server-Sent Events (SSE) for real-time job status updates:
 
 **Why Polling?**:
+
 - Vercel serverless functions don't support long-lived SSE connections
 - Polling provides predictable, reliable updates without connection management complexity
 - 2-second interval provides real-time feel while minimizing server load
@@ -632,6 +633,7 @@ The application uses **client-side polling** instead of Server-Sent Events (SSE)
 **Location**: `app/lib/hooks/useJobPolling.ts`
 
 **Features**:
+
 - 2-second polling interval (configurable)
 - Terminal state tracking (COMPLETED, FAILED, CANCELLED)
 - Auto-stop when all jobs terminal
@@ -639,6 +641,7 @@ The application uses **client-side polling** instead of Server-Sent Events (SSE)
 - Automatic cleanup on unmount
 
 **Usage**:
+
 ```typescript
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 
@@ -651,6 +654,7 @@ function BoardComponent({ projectId }: { projectId: number }) {
 ```
 
 **Terminal State Optimization**:
+
 - Client tracks job IDs that reached terminal states
 - Polling stops automatically when all jobs are COMPLETED/FAILED/CANCELLED
 - Reduces unnecessary API calls and server load
@@ -658,11 +662,13 @@ function BoardComponent({ projectId }: { projectId: number }) {
 ### Data Model Updates
 
 **Job Model** (`prisma/schema.prisma`):
+
 - Added `projectId` field for direct project filtering
 - Added index on `projectId` for efficient polling queries
 - Migration: `20251014112141_add_job_project_id`
 
 **Why projectId on Job?**:
+
 - Enables single-query job fetching without joins
 - Improves API performance (<100ms p95 requirement)
 - Simplifies polling logic
@@ -670,27 +676,32 @@ function BoardComponent({ projectId }: { projectId: number }) {
 ### Implementation Files
 
 **Backend**:
+
 - API endpoint: `app/api/projects/[projectId]/jobs/status/route.ts`
 - Zod schemas: `app/lib/schemas/job-polling.ts`
 - Database migration: `prisma/migrations/20251014112141_add_job_project_id/`
 
 **Frontend**:
+
 - Polling hook: `app/lib/hooks/useJobPolling.ts`
 - Board component: `components/board/board.tsx` (uses hook)
 
 **Tests**:
+
 - Contract tests: `tests/api/polling/job-status.spec.ts`
 - Unit tests: `tests/unit/useJobPolling.test.ts`
 
 ### Migration from SSE
 
 **Removed Files**:
+
 - `app/api/sse/route.ts` (SSE API endpoint)
 - `components/board/sse-provider.tsx` (SSE React context)
 - `tests/e2e/real-time/sse-connection.spec.ts` (SSE-specific tests)
 - `tests/e2e/real-time/sse-job-broadcast.spec.ts` (SSE-specific tests)
 
 **Updated Files**:
+
 - `app/api/jobs/[id]/status/route.ts`: Removed SSE broadcast logic
 - `components/board/board.tsx`: Replaced SSEProvider with useJobPolling hook
 
@@ -701,6 +712,7 @@ function BoardComponent({ projectId }: { projectId: number }) {
 TanStack Query v5.90.5 is used for server state management with intelligent caching, request deduplication, and optimistic updates.
 
 **Key Files**:
+
 - Query hooks: `app/lib/hooks/queries/useTickets.ts`
 - Mutation hooks: `app/lib/hooks/mutations/use*.ts`
 - Query keys: `app/lib/query-keys.ts`
