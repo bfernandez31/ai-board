@@ -13,6 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +31,8 @@ import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Stage } from '@prisma/client';
+import { CommentList } from '@/components/comments/comment-list';
+import { useComments } from '@/app/lib/hooks/queries/use-comments';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -164,6 +172,15 @@ export function TicketDetailModal({
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>('details');
+
+  // Fetch comment count for badge
+  const { data: comments } = useComments({
+    projectId,
+    ticketId: ticket?.id || 0,
+    enabled: open && !!ticket,
+    refetchInterval: false, // Don't poll when just showing count
+  });
 
   // Update local ticket when a different ticket is selected or version changes
   useEffect(() => {
@@ -186,6 +203,7 @@ export function TicketDetailModal({
   useEffect(() => {
     if (!open) {
       setPolicyEditOpen(false);
+      setActiveTab('details'); // Reset to details tab when modal closes
     }
   }, [open]);
 
@@ -213,7 +231,34 @@ export function TicketDetailModal({
 
     fetchJobs();
     // Only depend on ticket.id, not entire ticket object to avoid re-fetching when ticket props change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket?.id, open, projectId]);
+
+  // Keyboard shortcuts for tab navigation
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+1 or Ctrl+1 for Details tab
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault();
+        setActiveTab('details');
+      }
+      // Cmd+2 or Ctrl+2 for Comments tab
+      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+        e.preventDefault();
+        setActiveTab('comments');
+      }
+      // Cmd+3 or Ctrl+3 for Files tab
+      if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+        e.preventDefault();
+        setActiveTab('files');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open]);
 
   // Check if "View Specification" button should be visible
   const hasCompletedSpecifyJob = useMemo(() => {
@@ -342,8 +387,9 @@ export function TicketDetailModal({
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve project field (API doesn't return it)
+        // Preserve fields that API doesn't return on updates
         project: localTicket.project,
+        attachments: localTicket.attachments,
       };
 
       // Update local ticket with all fields including new version
@@ -446,8 +492,9 @@ export function TicketDetailModal({
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve project field (API doesn't return it)
+        // Preserve fields that API doesn't return on updates
         project: localTicket.project,
+        attachments: localTicket.attachments,
       };
 
       // Update local ticket with all fields including new version
@@ -562,8 +609,9 @@ export function TicketDetailModal({
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve project field (API doesn't return it)
+        // Preserve fields that API doesn't return on updates
         project: localTicket.project,
+        attachments: localTicket.attachments,
       };
 
       // Update local ticket with all fields including new version
@@ -776,11 +824,34 @@ export function TicketDetailModal({
           </div>
         </DialogHeader>
 
-        {/* Modal body content */}
-        <div className="space-y-8 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
+        {/* Tabs for organizing modal content */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files')} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="details" className="text-sm">
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="comments" className="text-sm relative">
+              Comments
+              {comments?.comments && comments.comments.length > 0 && (
+                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                  {comments.comments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="files" className="text-sm relative">
+              Files
+              {localTicket?.attachments && isTicketAttachmentArray(localTicket.attachments) && localTicket.attachments.length > 0 && (
+                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                  {localTicket.attachments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Description section with inline editing */}
-          <div className="group">
+          {/* Details Tab */}
+          <TabsContent value="details" className="space-y-8 overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+            {/* Description section with inline editing */}
+            <div className="group">
             <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
               Description
             </h3>
@@ -892,8 +963,86 @@ export function TicketDetailModal({
             )}
           </div>
 
-          {/* Images section with lazy loading */}
-          <div className="border-t-2 border-[#313244]/50 pt-6">
+            {/* Action buttons section - compact horizontal layout */}
+            {hasCompletedSpecifyJob && (
+              <div className="border-t-2 border-[#313244]/50 pt-6">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={() => {
+                      setDocViewerType('spec');
+                      setDocViewerOpen(true);
+                    }}
+                    size="sm"
+                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                    title="View specification document"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Spec
+                  </Button>
+                  {showPlanButton && (
+                    <Button
+                      onClick={() => {
+                        setDocViewerType('plan');
+                        setDocViewerOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                      title="View implementation plan"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                      Plan
+                    </Button>
+                  )}
+                  {showTasksButton && (
+                    <Button
+                      onClick={() => {
+                        setDocViewerType('tasks');
+                        setDocViewerOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                      title="View task breakdown"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5" />
+                      Tasks
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Dates section */}
+            <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-[#a6adc8] font-medium">
+                  Created:
+                </span>
+                <span className="text-sm text-[#cdd6f4] font-mono">
+                  {formatTicketDate(ticket.createdAt)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-[#a6adc8] font-medium">
+                  Last Updated:
+                </span>
+                <span className="text-sm text-[#cdd6f4] font-mono">
+                  {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
+                </span>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Comments Tab */}
+          <TabsContent value="comments" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+            <CommentList
+              projectId={projectId}
+              ticketId={ticket.id}
+              isActive={activeTab === 'comments'}
+            />
+          </TabsContent>
+
+          {/* Files Tab */}
+          <TabsContent value="files" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
             <ImageGallery
               projectId={projectId}
               ticketId={localTicket?.id || ticket.id}
@@ -908,76 +1057,8 @@ export function TicketDetailModal({
               }
               onAttachmentsUpdated={refreshTicketFromServer}
             />
-          </div>
-
-          {/* Action buttons section - compact horizontal layout */}
-          {hasCompletedSpecifyJob && (
-            <div className="border-t-2 border-[#313244]/50 pt-6">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  onClick={() => {
-                    setDocViewerType('spec');
-                    setDocViewerOpen(true);
-                  }}
-                  size="sm"
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                  title="View specification document"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Spec
-                </Button>
-                {showPlanButton && (
-                  <Button
-                    onClick={() => {
-                      setDocViewerType('plan');
-                      setDocViewerOpen(true);
-                    }}
-                    size="sm"
-                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                    title="View implementation plan"
-                  >
-                    <Settings2 className="w-3.5 h-3.5" />
-                    Plan
-                  </Button>
-                )}
-                {showTasksButton && (
-                  <Button
-                    onClick={() => {
-                      setDocViewerType('tasks');
-                      setDocViewerOpen(true);
-                    }}
-                    size="sm"
-                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                    title="View task breakdown"
-                  >
-                    <CheckSquare className="w-3.5 h-3.5" />
-                    Tasks
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Dates section */}
-          <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-[#a6adc8] font-medium">
-                Created:
-              </span>
-              <span className="text-sm text-[#cdd6f4] font-mono">
-                {formatTicketDate(ticket.createdAt)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-[#a6adc8] font-medium">
-                Last Updated:
-              </span>
-              <span className="text-sm text-[#cdd6f4] font-mono">
-                {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
-              </span>
-            </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
 
       {/* DocumentationViewer modal - only render when parent dialog is open */}

@@ -68,7 +68,7 @@ export function ImageGallery({
   attachmentCount,
   onAttachmentsUpdated,
 }: ImageGalleryProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [pendingImages, setPendingImages] = useState<ImageFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);

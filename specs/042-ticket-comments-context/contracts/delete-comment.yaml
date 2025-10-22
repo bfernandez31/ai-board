@@ -1,0 +1,109 @@
+openapi: 3.0.3
+info:
+  title: Delete Comment API
+  description: Delete a comment with authorship validation
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comments/{commentId}:
+    delete:
+      summary: Delete a comment
+      description: |
+        Deletes the specified comment.
+        Requires both project ownership AND comment authorship.
+        Only the comment author can delete their own comments.
+      operationId: deleteComment
+      tags:
+        - Comments
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Unique project identifier
+          schema:
+            type: integer
+            example: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Unique ticket identifier
+          schema:
+            type: integer
+            example: 42
+        - name: commentId
+          in: path
+          required: true
+          description: Unique comment identifier
+          schema:
+            type: integer
+            example: 123
+      responses:
+        '204':
+          description: Comment deleted successfully (no content)
+        '401':
+          description: Unauthorized - User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized: Please sign in"
+        '403':
+          description: Forbidden - User does not own the project or comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                projectOwnership:
+                  summary: User does not own the project
+                  value:
+                    error: "Forbidden: You do not have access to this project"
+                commentAuthorship:
+                  summary: User does not own the comment
+                  value:
+                    error: "Forbidden: You can only delete your own comments"
+        '404':
+          description: Not Found - Project, ticket, or comment does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                commentNotFound:
+                  summary: Comment does not exist
+                  value:
+                    error: "Comment not found"
+                ticketNotFound:
+                  summary: Ticket does not exist
+                  value:
+                    error: "Ticket not found"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+      security:
+        - sessionCookie: []
+
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Forbidden: You can only delete your own comments"
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie

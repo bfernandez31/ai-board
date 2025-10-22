@@ -90,6 +90,7 @@ model Ticket {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy?
+  comments            Comment[]
   jobs                Job[]
   project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -108,10 +109,26 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime
   accounts      Account[]
+  comments      Comment[]
   projects      Project[]
   sessions      Session[]
 
   @@index([email])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  userId    String
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
 }
 
 model VerificationToken {

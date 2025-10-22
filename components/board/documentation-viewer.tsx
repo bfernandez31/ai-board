@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -108,14 +108,16 @@ export default function DocumentationViewer({
   // Check if user can edit this document type based on ticket stage
   const userCanEdit = canEdit(ticketStage, docType);
 
-  // Show error toast when error occurs
-  if (error && open) {
-    toast({
-      variant: 'destructive',
-      title: 'Error',
-      description: error.message || 'Failed to fetch documentation',
-    });
-  }
+  // Show error toast when error occurs (in useEffect to avoid state update during render)
+  useEffect(() => {
+    if (error && open) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to fetch documentation',
+      });
+    }
+  }, [error, open, toast]);
 
   // Reset edit mode and history view when modal closes
   const handleOpenChange = (newOpen: boolean) => {
