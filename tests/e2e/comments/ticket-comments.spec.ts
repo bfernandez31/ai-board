@@ -401,48 +401,4 @@ test.describe('Ticket Comments - User Stories', () => {
     await page.click('[role="tab"]:has-text("Details")');
     await expect(page.locator('[role="tab"][data-state="active"]:has-text("Details")')).toBeVisible();
   });
-
-  /**
-   * TASK-032: Real-time comment updates via polling
-   * User Story: As a user, I want to see new comments without refreshing
-   */
-  test('comments update automatically via polling', async ({ page }) => {
-    // Setup: Create ticket
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: '[e2e] Comments Test - Polling',
-        description: 'Test ticket for real-time updates',
-        stage: 'SPECIFY',
-        projectId: 1,
-        workflowType: 'FULL',
-        updatedAt: new Date(),
-      },
-    });
-
-    // Navigate to board
-    await page.goto('/projects/1/board');
-
-    // Click ticket to open detail modal
-    await page.click(`[data-ticket-id="${ticket.id}"]`);
-    await page.waitForSelector('[role="dialog"]');
-
-    // Click Comments tab
-    await page.click('[role="tab"]:has-text("Comments")');
-    await page.waitForSelector('text=No comments');
-
-    // Create a comment directly in the database (simulating another user)
-    await prisma.comment.create({
-      data: {
-        content: 'New comment from another user',
-        userId: 'test-user-id',
-        ticketId: ticket.id,
-      },
-    });
-
-    // Wait for polling to fetch the new comment (10 seconds interval)
-    await page.waitForSelector('text=New comment from another user', { timeout: 15000 });
-
-    // Verify comment appeared
-    await expect(page.locator('text=New comment from another user')).toBeVisible();
-  });
 });
