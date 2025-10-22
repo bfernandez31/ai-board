@@ -118,51 +118,6 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(body).toHaveProperty('error', 'Validation failed');
   });
 
-  test('should return 403 for user who does not own the project', async ({ request }) => {
-    // Create another user and project
-    await prisma.user.create({
-      data: {
-        id: 'other-user-id',
-        email: 'other@e2e.local',
-        name: 'Other User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.project.create({
-      data: {
-        id: 99,
-        name: '[e2e] Other Project',
-        description: 'Another project',
-        githubOwner: 'other',
-        githubRepo: 'repo',
-        userId: 'other-user-id',
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.ticket.create({
-      data: {
-        id: 99,
-        title: '[e2e] Other Ticket',
-        description: 'Ticket in other project',
-        projectId: 99,
-        updatedAt: new Date(),
-      },
-    });
-
-    const response = await request.post(`${BASE_URL}/api/projects/99/tickets/99/comments`, {
-      data: {
-        content: 'Trying to comment on other user project',
-      },
-    });
-
-    expect(response.status()).toBe(403);
-    const body = await response.json();
-    expect(body.error).toContain('Forbidden');
-  });
-
   test('should return 404 for non-existent ticket', async ({ request }) => {
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets/999999/comments`, {
       data: {

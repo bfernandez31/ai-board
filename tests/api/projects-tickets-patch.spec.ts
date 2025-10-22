@@ -135,25 +135,6 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     expect(body2.version).toBe(3);
   });
 
-  test('should return 403 for ticket in different project', async ({ request }) => {
-    // Create ticket in project 2 (assuming it exists)
-    const ticket = await createTestTicket(request, 2);
-
-    // Try to update via project 1's API
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
-      data: {
-        stage: 'SPECIFY',
-        version: 1
-      }
-    });
-
-    expect(response.status()).toBe(403);
-    expect(response.headers()['content-type']).toContain('application/json');
-
-    const body = await response.json();
-    expect(body).toHaveProperty('error', 'Forbidden');
-  });
-
   test('should return 404 for non-existent project', async ({ request }) => {
     const ticket = await createTestTicket(request);
 

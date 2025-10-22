@@ -41,11 +41,17 @@ test.describe('Ticket Detail Modal', () => {
     });
 
     // Update stages for test tickets (API creates them in INBOX by default)
-    const tickets = await prisma.ticket.findMany();
+    const tickets = await prisma.ticket.findMany({
+      where: { projectId: 1 },
+      orderBy: { id: 'asc' },
+    });
     if (tickets.length >= 2 && tickets[1]) {
       await prisma.ticket.update({
         where: { id: tickets[1].id },
-        data: { stage: 'PLAN' },
+        data: {
+          stage: 'PLAN',
+          updatedAt: new Date(),
+        },
       });
     }
   });
@@ -295,7 +301,7 @@ test.describe('Ticket Detail Modal', () => {
     await page.goto('/projects/1/board');
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
 
-    // Stage color mapping (Catppuccin theme from stage-column.tsx)
+    // Stage color mapping (Catppuccin theme from ticket-detail-modal.tsx)
     const stageColors = {
       'INBOX': 'bg-[#6c7086]',
       'SPECIFY': 'bg-[#b4befe]',

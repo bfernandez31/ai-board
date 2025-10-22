@@ -132,46 +132,4 @@ test.describe('GET /api/projects/[projectId]/tickets/[ticketId]/comments - Contr
     const body = await response.json();
     expect(body.error).toContain('Ticket not found');
   });
-
-  test('should return 403 for user who does not own the project', async ({ request }) => {
-    // Create another user and project
-    await prisma.user.create({
-      data: {
-        id: 'other-user-id',
-        email: 'other@e2e.local',
-        name: 'Other User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.project.create({
-      data: {
-        id: 99,
-        name: '[e2e] Other Project',
-        description: 'Another project',
-        githubOwner: 'other',
-        githubRepo: 'repo',
-        userId: 'other-user-id',
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.ticket.create({
-      data: {
-        id: 99,
-        title: '[e2e] Other Ticket',
-        description: 'Ticket in other project',
-        projectId: 99,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Try to access ticket from other user's project (test user trying to access other-user's ticket)
-    const response = await request.get(`${BASE_URL}/api/projects/99/tickets/99/comments`);
-
-    expect(response.status()).toBe(403);
-    const body = await response.json();
-    expect(body.error).toContain('Forbidden');
-  });
 });

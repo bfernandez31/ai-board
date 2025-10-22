@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { deleteCloudinaryFolder, isCloudinaryConfigured } from '@/app/lib/cloudinary/client';
 
 /**
  * Database cleanup utility for E2E tests
@@ -105,7 +104,7 @@ export async function ensureTestFixtures(): Promise<string> {
 
 /**
  * Clean test data (called before each test)
- * Fast operation - deletes tickets, resets project policies, and cleans Cloudinary images
+ * Fast operation - deletes tickets and resets project policies
  */
 export async function cleanupDatabase(): Promise<void> {
   const client = getPrismaClient();
@@ -167,12 +166,6 @@ export async function cleanupDatabase(): Promise<void> {
         clarificationPolicy: 'AUTO',
       },
     });
-
-    // Clean up Cloudinary test images (non-blocking)
-    cleanupCloudinaryImages().catch(() => {
-      // Silently ignore Cloudinary cleanup errors during beforeEach
-      // Full cleanup will be attempted in global teardown
-    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const reachable =
@@ -187,31 +180,6 @@ export async function cleanupDatabase(): Promise<void> {
 
     console.error('✗ Database cleanup failed:', error);
     throw error;
-  }
-}
-
-/**
- * Clean up Cloudinary test images
- * Deletes all images in the ai-board/tickets folder
- */
-export async function cleanupCloudinaryImages(): Promise<void> {
-  // Skip if Cloudinary is not configured (e.g., CI without credentials)
-  if (!isCloudinaryConfigured()) {
-    console.warn('⚠️ Skipping Cloudinary cleanup: not configured');
-    return;
-  }
-
-  try {
-    const result = await deleteCloudinaryFolder('ai-board/tickets');
-    if (result.deleted > 0) {
-      console.log(`✓ Deleted ${result.deleted} Cloudinary test images`);
-    }
-    if (result.errors.length > 0) {
-      console.warn('⚠️ Cloudinary cleanup errors:', result.errors);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn('⚠️ Cloudinary cleanup failed:', message);
   }
 }
 
