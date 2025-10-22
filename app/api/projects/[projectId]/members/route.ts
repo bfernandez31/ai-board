@@ -59,34 +59,29 @@ export async function GET(
     // 2. Authorization: Verify project ownership (also validates authentication)
     await verifyProjectOwnership(projectIdNumber);
 
-    // 3. Fetch project members
-    // Note: For MVP, only the project owner is a member
-    // Future: Add Project-User join table for team collaboration
-    const project = await prisma.project.findUnique({
-      where: { id: projectIdNumber },
-      select: { userId: true },
-    });
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
-    }
-
-    const members = await prisma.user.findMany({
+    // 3. Fetch project members from ProjectMember join table
+    const projectMembers = await prisma.projectMember.findMany({
       where: {
-        id: project.userId,
+        projectId: projectIdNumber,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
       orderBy: {
-        name: 'asc',
+        user: {
+          name: 'asc',
+        },
       },
     });
+
+    // Extract users from ProjectMember records
+    const members = projectMembers.map(pm => pm.user);
 
     // 4. Return response
     const response: GetProjectMembersResponse = {

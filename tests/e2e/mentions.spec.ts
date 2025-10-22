@@ -19,7 +19,7 @@ const TEST_TICKET_ID = 1;
  * Setup: Create test user, project, and ticket before each test
  */
 test.beforeEach(async ({ page }) => {
-  // Create test user
+  // Create test user (project owner)
   const testUser = await prisma.user.upsert({
     where: { email: TEST_USER_EMAIL },
     update: {},
@@ -27,6 +27,29 @@ test.beforeEach(async ({ page }) => {
       id: 'test-user-id',
       email: TEST_USER_EMAIL,
       name: 'E2E Test User',
+      emailVerified: new Date(),
+    },
+  });
+
+  // Create additional test users for multi-user mentions
+  const user2 = await prisma.user.upsert({
+    where: { email: 'alice@test.com' },
+    update: {},
+    create: {
+      id: 'user-alice',
+      email: 'alice@test.com',
+      name: 'Alice Smith',
+      emailVerified: new Date(),
+    },
+  });
+
+  const user3 = await prisma.user.upsert({
+    where: { email: 'bob@test.com' },
+    update: {},
+    create: {
+      id: 'user-bob',
+      email: 'bob@test.com',
+      name: 'Bob Johnson',
       emailVerified: new Date(),
     },
   });
@@ -42,6 +65,52 @@ test.beforeEach(async ({ page }) => {
       githubOwner: 'test',
       githubRepo: 'test',
       userId: testUser.id,
+    },
+  });
+
+  // Add project members
+  await prisma.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId: TEST_PROJECT_ID,
+        userId: testUser.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId: TEST_PROJECT_ID,
+      userId: testUser.id,
+      role: 'owner',
+    },
+  });
+
+  await prisma.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId: TEST_PROJECT_ID,
+        userId: user2.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId: TEST_PROJECT_ID,
+      userId: user2.id,
+      role: 'member',
+    },
+  });
+
+  await prisma.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId: TEST_PROJECT_ID,
+        userId: user3.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId: TEST_PROJECT_ID,
+      userId: user3.id,
+      role: 'member',
     },
   });
 
@@ -95,9 +164,9 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    // Verify dropdown contains at least one user
+    // Verify dropdown contains all 3 project members
     const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
-    await expect(userItems).toHaveCount(1); // At least test user
+    await expect(userItems).toHaveCount(3); // E2E Test User, Alice Smith, Bob Johnson
   });
 
   test('[US1] T012: Typing letters after @ filters user list', async ({ page }) => {
@@ -107,15 +176,16 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    // Get initial user count
+    // Get initial user count (should be 3)
     const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
-    const initialCount = await userItems.count();
+    await expect(userItems).toHaveCount(3);
 
-    // Type partial name "e2e" (matches "E2E Test User")
-    await commentInput.fill('@e2e');
+    // Type partial name "ali" (matches "Alice Smith")
+    await commentInput.fill('@ali');
 
-    // Verify filtering works (user still visible)
-    await expect(userItems).toHaveCount(initialCount); // Should still show test user
+    // Verify filtering works - only Alice should be shown
+    await expect(userItems).toHaveCount(1);
+    await expect(userItems.first()).toContainText('Alice');
 
     // Type non-matching text
     await commentInput.fill('@nonexistentuser');
