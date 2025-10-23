@@ -26,6 +26,7 @@ interface MentionInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onAutocompleteOpenChange?: (isOpen: boolean) => void;
 }
 
 export function MentionInput({
@@ -35,6 +36,7 @@ export function MentionInput({
   placeholder = 'Add a comment...',
   className,
   disabled = false,
+  onAutocompleteOpenChange,
 }: MentionInputProps) {
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +44,35 @@ export function MentionInput({
   const [atSymbolPosition, setAtSymbolPosition] = useState<number | null>(null);
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Notify parent when autocomplete opens/closes
+   */
+  useEffect(() => {
+    onAutocompleteOpenChange?.(isAutocompleteOpen);
+  }, [isAutocompleteOpen, onAutocompleteOpenChange]);
+
+  /**
+   * Intercept Escape key at document level to prevent Dialog from closing
+   * when autocomplete is open
+   */
+  useEffect(() => {
+    const handleEscapeCapture = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAutocompleteOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        setIsAutocompleteOpen(false);
+      }
+    };
+
+    // Use capture phase to intercept before Dialog's listener
+    document.addEventListener('keydown', handleEscapeCapture as any, { capture: true });
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeCapture as any, { capture: true });
+    };
+  }, [isAutocompleteOpen]);
 
   /**
    * Filter users based on search query (case-insensitive substring match)
@@ -204,6 +235,8 @@ export function MentionInput({
 
       case 'Escape':
         e.preventDefault();
+        e.stopPropagation(); // Prevent modal from closing
+        e.nativeEvent.stopImmediatePropagation(); // Stop at native event level
         setIsAutocompleteOpen(false);
         break;
     }

@@ -77,6 +77,7 @@ test.beforeEach(async ({ page }) => {
       githubOwner: 'test',
       githubRepo: 'test',
       userId: testUser.id,
+      updatedAt: new Date(),
     },
   });
 
@@ -136,6 +137,7 @@ test.beforeEach(async ({ page }) => {
       description: 'Ticket for testing mention functionality',
       stage: 'INBOX',
       projectId: TEST_PROJECT_ID,
+      updatedAt: new Date(),
     },
   });
 
@@ -144,8 +146,16 @@ test.beforeEach(async ({ page }) => {
     where: { ticketId: TEST_TICKET_ID },
   });
 
-  // Navigate to ticket detail page
-  await page.goto(`http://localhost:3000/projects/${TEST_PROJECT_ID}/tickets/${TEST_TICKET_ID}`);
+  // Navigate to board and open ticket modal
+  await page.goto(`/projects/${TEST_PROJECT_ID}/board`);
+
+  // Click ticket to open detail modal
+  await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+  await page.waitForSelector('[role="dialog"]');
+
+  // Click Comments tab and wait for tab content to be visible
+  await page.click('[role="tab"]:has-text("Comments")');
+  await page.waitForSelector('[role="tabpanel"]:visible');
 });
 
 /**
@@ -166,7 +176,7 @@ test.afterEach(async () => {
 test.describe('US1: Basic Mention Autocomplete', () => {
   test('[US1] T011: Typing @ opens autocomplete dropdown', async ({ page }) => {
     // Find comment input field
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await expect(commentInput).toBeVisible();
 
     // Type @ to trigger autocomplete
@@ -182,7 +192,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
   });
 
   test('[US1] T012: Typing letters after @ filters user list', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
@@ -207,7 +217,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
   });
 
   test('[US1] T013: Clicking user in dropdown inserts mention', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     // Wait for autocomplete
@@ -227,7 +237,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
   });
 
   test('[US1] T014: Submitted comment with mention is saved and displayed with formatting', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert mention
     await commentInput.fill('@');
@@ -242,7 +252,9 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     await commentInput.type(' can you review?');
 
     // Submit comment
-    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    const submitButton = page.getByRole('button', { name: 'Comment', exact: true });
+    await submitButton.waitFor({ state: 'visible' });
+    await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Wait for comment to appear in list
@@ -268,7 +280,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
 
 test.describe('US2: Keyboard Navigation', () => {
   test('[US2] T024: Arrow Down key highlights next user', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
@@ -285,7 +297,7 @@ test.describe('US2: Keyboard Navigation', () => {
   });
 
   test('[US2] T025: Arrow Up key highlights previous user', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
@@ -304,7 +316,7 @@ test.describe('US2: Keyboard Navigation', () => {
   });
 
   test('[US2] T026: Enter key selects highlighted user', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
@@ -325,7 +337,7 @@ test.describe('US2: Keyboard Navigation', () => {
   });
 
   test('[US2] T027: Escape key closes dropdown without inserting mention', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
@@ -351,7 +363,7 @@ test.describe('US2: Keyboard Navigation', () => {
 
 test.describe('US3: Multiple Mentions', () => {
   test('[US3] T033: Typing @ after existing mention opens new autocomplete', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert first mention
     await commentInput.fill('@');
@@ -371,7 +383,7 @@ test.describe('US3: Multiple Mentions', () => {
   });
 
   test('[US3] T034: Submitting comment with multiple mentions saves all mentions', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert first mention
     await commentInput.fill('@');
@@ -384,7 +396,9 @@ test.describe('US3: Multiple Mentions', () => {
     await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
 
     // Submit comment
-    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    const submitButton = page.getByRole('button', { name: 'Comment', exact: true });
+    await submitButton.waitFor({ state: 'visible' });
+    await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Verify comment appears
@@ -410,8 +424,14 @@ test.describe('US3: Multiple Mentions', () => {
       },
     });
 
-    // Reload page
+    // Reload page to verify persistence
     await page.reload();
+
+    // Re-open ticket modal and comments tab after reload
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify both mentions are displayed
     const comment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
@@ -428,7 +448,7 @@ test.describe('US3: Multiple Mentions', () => {
 
 test.describe('US4: Mention Persistence and Display', () => {
   test('[US4] T040: Mentions remain formatted after page reload', async ({ page }) => {
-    const commentInput = page.locator('textarea[placeholder*="comment" i]');
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Create comment with mention
     await commentInput.fill('@');
@@ -438,15 +458,23 @@ test.describe('US4: Mention Persistence and Display', () => {
     await commentInput.press('End');
     await commentInput.type(' check this');
 
-    const submitButton = page.locator('button[type="submit"]', { hasText: /post|submit|add/i });
+    const submitButton = page.getByRole('button', { name: 'Comment', exact: true });
+    await submitButton.waitFor({ state: 'visible' });
+    await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Wait for comment to appear
     const newComment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
     await expect(newComment).toBeVisible();
 
-    // Reload page
+    // Reload page to verify persistence
     await page.reload();
+
+    // Re-open ticket modal and comments tab after reload
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify mention still formatted
     const mentionChip = page.locator('[data-testid="comment-list"] [data-testid="mention-chip"]').last();
@@ -469,6 +497,12 @@ test.describe('US4: Mention Persistence and Display', () => {
     });
 
     await page.reload();
+
+    // Re-open ticket modal and comments tab after reload
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Hover over mention
     const mentionChip = page.locator('[data-testid="mention-chip"]').first();
@@ -510,6 +544,12 @@ test.describe('US4: Mention Persistence and Display', () => {
 
     // Reload page
     await page.reload();
+
+    // Re-open ticket modal and comments tab after reload
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify mention shows "[Removed User]"
     const comment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();

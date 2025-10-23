@@ -233,14 +233,18 @@ export async function POST(
     const mentionedUserIds = extractMentionUserIds(content);
 
     if (mentionedUserIds.length > 0) {
-      // Verify all mentioned users are project members (currently only owner)
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
+      // Verify all mentioned users are project members
+      const projectMembers = await prisma.projectMember.findMany({
+        where: {
+          projectId,
+          userId: { in: mentionedUserIds },
+        },
         select: { userId: true },
       });
 
+      const validUserIds = new Set(projectMembers.map((m) => m.userId));
       const invalidUserIds = mentionedUserIds.filter(
-        (userId) => userId !== project!.userId
+        (userId) => !validUserIds.has(userId)
       );
 
       if (invalidUserIds.length > 0) {

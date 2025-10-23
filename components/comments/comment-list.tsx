@@ -17,9 +17,10 @@ interface CommentListProps {
   projectId: number;
   ticketId: number;
   isActive?: boolean; // Whether the Comments tab is active (for polling control)
+  onAutocompleteOpenChange?: (isOpen: boolean) => void;
 }
 
-export function CommentList({ projectId, ticketId, isActive = true }: CommentListProps) {
+export function CommentList({ projectId, ticketId, isActive = true, onAutocompleteOpenChange }: CommentListProps) {
   const { toast } = useToast();
 
   const {
@@ -81,7 +82,7 @@ export function CommentList({ projectId, ticketId, isActive = true }: CommentLis
 
   return (
     <div className="space-y-4" data-testid="comment-list">
-      <CommentForm projectId={projectId} ticketId={ticketId} />
+      <CommentForm projectId={projectId} ticketId={ticketId} onAutocompleteOpenChange={onAutocompleteOpenChange} />
 
       <div className="border-t border-surface0 pt-4">
         {isEmpty ? (

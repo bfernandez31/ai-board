@@ -15,11 +15,12 @@ import { MentionInput } from './mention-input';
 interface CommentFormProps {
   projectId: number;
   ticketId: number;
+  onAutocompleteOpenChange?: (isOpen: boolean) => void;
 }
 
 const MAX_LENGTH = 2000;
 
-export function CommentForm({ projectId, ticketId }: CommentFormProps) {
+export function CommentForm({ projectId, ticketId, onAutocompleteOpenChange }: CommentFormProps) {
   const [content, setContent] = useState('');
   const { toast } = useToast();
 
@@ -82,6 +83,7 @@ export function CommentForm({ projectId, ticketId }: CommentFormProps) {
         placeholder="Write a comment... (@ to mention, Markdown supported)"
         className="min-h-[100px] resize-none"
         disabled={isPending || isMembersLoading}
+        onAutocompleteOpenChange={onAutocompleteOpenChange}
       />
 
       <div className="flex items-center justify-between">
