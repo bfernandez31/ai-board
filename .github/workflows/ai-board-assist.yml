@@ -54,7 +54,7 @@ jobs:
 
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      SKIP_CLAUDE: ${{ contains(inputs.ticketTitle, '[e2e]') || contains(fromJSON('["build", "verify"]'), inputs.stage) }}
+      SKIP_CLAUDE: ${{ contains(inputs.ticketTitle, '[e2e]') || inputs.stage == 'build' || inputs.stage == 'verify' }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
