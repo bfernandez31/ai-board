@@ -7,6 +7,7 @@ export default auth((req) => {
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
   const isWorkflowApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/status$/) !== null
+  const isAIBoardCommentApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/\d+\/comments\/ai-board$/) !== null
   const isLandingPage = req.nextUrl.pathname === '/'
 
   // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
@@ -21,7 +22,7 @@ export default auth((req) => {
   }
 
   // Allow public pages, auth pages, public APIs, and workflow APIs
-  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi) {
+  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isAIBoardCommentApi) {
     return NextResponse.next()
   }
 
