@@ -92,7 +92,7 @@ jobs:
           fi
 
           # Post skip message as AI-BOARD comment
-          curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
+          curl -L -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{\"content\": \"${MESSAGE}\", \"userId\": \"ai-board-system-user\"}" \
@@ -213,7 +213,7 @@ jobs:
           # Escape special characters for JSON
           MESSAGE_JSON=$(echo "$MESSAGE" | jq -Rs .)
 
-          curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
+          curl -L -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{\"content\": ${MESSAGE_JSON}, \"userId\": \"ai-board-system-user\"}" \
