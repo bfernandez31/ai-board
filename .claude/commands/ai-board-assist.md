@@ -30,7 +30,7 @@ The workflow provides these inputs via environment variables:
 
 ## File Locations
 
-Ticket artifacts are in the `specs/{TICKET_ID}-{slug}/` directory:
+Ticket artifacts are in the `specs/{BRANCH}/` directory:
 
 - **spec.md**: Feature specification (SPECIFY stage)
 - **plan.md**: Implementation plan (PLAN stage)
@@ -43,7 +43,7 @@ Ticket artifacts are in the `specs/{TICKET_ID}-{slug}/` directory:
 **Goal**: Update spec.md based on user request while maintaining specification quality.
 
 **Process**:
-1. Read current specs/{TICKET_ID}-*/spec.md
+1. Read current specs/{BRANCH}/spec.md
 2. Analyze user request from COMMENT
 3. Update spec.md to incorporate the requested changes
 4. Maintain spec quality (clear user stories, acceptance criteria)
@@ -57,8 +57,8 @@ Ticket artifacts are in the `specs/{TICKET_ID}-{slug}/` directory:
 **Goal**: Update plan.md and/or tasks.md while maintaining consistency with spec.md.
 
 **Process**:
-1. Read specs/{TICKET_ID}-*/spec.md (for context)
-2. Read specs/{TICKET_ID}-*/plan.md and tasks.md (if exists)
+1. Read specs/{BRANCH}/spec.md (for context)
+2. Read specs/{BRANCH}/plan.md and tasks.md (if exists)
 3. Analyze user request from COMMENT
 4. Update plan.md and/or tasks.md with requested changes
 5. Verify changes are consistent with spec.md
