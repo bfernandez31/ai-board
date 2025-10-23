@@ -82,10 +82,6 @@ export async function dispatchAIBoardWorkflow(
         project_id: inputs.project_id,
       },
     });
-
-    console.log(
-      `[dispatch-ai-board] Dispatched workflow for ticket ${inputs.ticket_id}, job ${inputs.job_id}`
-    );
   } catch (error) {
     console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);
     throw new Error(

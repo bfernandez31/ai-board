@@ -361,10 +361,6 @@ export async function POST(
           job_id: job.id.toString(),
           project_id: projectId.toString(),
         });
-
-        console.log(
-          `[comments] Dispatched AI-BOARD workflow for ticket ${ticketId}, job ${job.id}`
-        );
       } catch (workflowError) {
         console.error(
           '[comments] Failed to dispatch AI-BOARD workflow:',

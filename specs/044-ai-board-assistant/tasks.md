@@ -135,7 +135,7 @@
 
 - [X] T031 [P] Update CLAUDE.md with AI-BOARD patterns (system user, workflow dispatch, availability validation)
 - [X] T032 [P] Verify quickstart.md testing checklist completeness (already comprehensive)
-- [ ] T033 Code cleanup and remove debug logging (minimal debug logging added)
+- [X] T033 Code cleanup and remove debug logging (removed console.log, kept console.error for production)
 - [X] T034 Security audit: Verify workflow token authentication, validate all inputs, check ProjectMember validation (implemented)
 - [ ] T035 Performance validation: API response <200ms p95, workflow dispatch <500ms, mention validation <100ms (requires testing)
 

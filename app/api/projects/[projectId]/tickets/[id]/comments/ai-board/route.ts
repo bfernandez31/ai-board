@@ -107,10 +107,6 @@ export async function POST(
       },
     });
 
-    console.log(
-      `[ai-board-comment] Created comment ${comment.id} for ticket ${ticketId} by AI-BOARD`
-    );
-
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {
     console.error('[ai-board-comment] Error creating comment:', error);
