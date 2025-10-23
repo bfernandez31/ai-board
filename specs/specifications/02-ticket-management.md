@@ -1078,6 +1078,17 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Authorization: Only project members appear in autocomplete dropdown
 - Performance: <100ms autocomplete filtering response time for up to 100 project members
 
+**AI-BOARD Assistant** (added 2025-10-23):
+- System user: AI-BOARD automatically added as project member when projects created
+- Mention availability: AI-BOARD available for mention in SPECIFY, PLAN, BUILD, VERIFY stages only
+- Availability validation: Grey-out with tooltip when unavailable (invalid stage or job running)
+- Job creation: @ai-board mention creates Job and dispatches GitHub workflow
+- Workflow execution: Claude updates spec.md or plan.md based on user request
+- Response posting: AI-BOARD posts comment with summary of changes via workflow
+- Stage support: SPECIFY and PLAN fully implemented, BUILD/VERIFY return "not implemented" message
+- Test tickets: Workflows skip Claude execution for [e2e] tickets (performance optimization)
+- Concurrency protection: Only one AI-BOARD job allowed per ticket at a time
+
 ### Technical Details
 
 **Drag-and-Drop**:

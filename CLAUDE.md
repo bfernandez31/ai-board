@@ -1,18 +1,6 @@
 # ai-board Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-12
-
-## Active Technologies
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, TanStack Query v5.90.5, shadcn/ui, react-markdown 9.0.1, date-fns (042-ticket-comments-context)
-- PostgreSQL 14+ (Comment table with foreign keys to Ticket and User, cascade delete) (042-ticket-comments-context)
-- PostgreSQL 14+ via Prisma ORM (043-tag-user-comment)
-- **Multi-User Projects**: ProjectMember join table supports team collaboration (043-tag-user-comment)
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, @octokit/rest 22.0, NextAuth.js 5.0-beta.29 (044-ai-board-assistant)
-- PostgreSQL 14+ (User, ProjectMember, Job, Comment tables) (044-ai-board-assistant)
-
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui, TanStack Query v5.90.5, @octokit/rest 22.0, react-markdown 9.0.1, @dnd-kit, lucide-react, Cloudinary SDK
-- PostgreSQL 14+ (User, Project, Ticket, Job tables with clarification policies, workflow types, image attachments)
-- Cloudinary CDN (image storage and delivery)
+Auto-generated from all feature plans. Last updated: 2025-10-23
 
 ### Core Stack
 
