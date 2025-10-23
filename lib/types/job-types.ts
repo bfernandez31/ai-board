@@ -24,3 +24,17 @@ export interface JobTypeConfig {
   bgColor: string; // TailwindCSS class
   ariaLabel: string; // Accessibility label template
 }
+
+/**
+ * DualJobState Interface
+ *
+ * Represents the state of both job types (workflow and AI-BOARD) for a ticket.
+ * Used to pass dual job information from Board to TicketCard components.
+ */
+export interface DualJobState {
+  workflow: Job | null;
+  aiBoard: Job | null;
+}
+
+// Job type imported from Prisma schema
+import type { Job } from '@prisma/client';

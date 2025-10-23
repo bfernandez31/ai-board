@@ -1124,6 +1124,65 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       expect(body.message).toContain('workflow is still running');
       expect(body.details.jobStatus).toBe('RUNNING');
     });
+
+    /**
+     * Dual Job Display: Validate against workflow job only, not AI-BOARD jobs
+     * Feature: 046-dual-job-display
+     * Given: Ticket in SPECIFY with FAILED workflow job AND COMPLETED AI-BOARD job
+     * When: Attempt transition to PLAN
+     * Then: 400 error (validates against workflow job, ignores AI-BOARD job)
+     */
+    test('should block transition when workflow job is FAILED even if AI-BOARD job is COMPLETED', async ({ request }) => {
+      // Arrange
+      const prisma = getPrismaClient();
+      const { ticket } = await setupTestData();
+
+      // Update ticket to SPECIFY stage
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { stage: 'SPECIFY', version: { increment: 1 } },
+      });
+
+      // Create workflow job (FAILED)
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'specify',
+          status: 'FAILED',
+          startedAt: new Date(Date.now() - 10000),
+          completedAt: new Date(Date.now() - 9000),
+          updatedAt: new Date(Date.now() - 10000),
+        },
+      });
+
+      // Create AI-BOARD job (COMPLETED) - should be ignored
+      await prisma.job.create({
+        data: {
+          ticketId: ticket.id,
+          projectId: 1,
+          command: 'comment-specify',
+          status: 'COMPLETED',
+          startedAt: new Date(),
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Act - Transition to PLAN (should validate against workflow job only)
+      const response = await request.post(
+        `/api/projects/1/tickets/${ticket.id}/transition`,
+        { data: { targetStage: 'PLAN' } }
+      );
+
+      // Assert - Should block because workflow job (specify) is FAILED
+      expect(response.status()).toBe(400);
+      const body = await response.json();
+      expect(body.code).toBe('JOB_NOT_COMPLETED');
+      expect(body.message).toContain('workflow failed');
+      expect(body.details.jobStatus).toBe('FAILED');
+      expect(body.details.jobCommand).toBe('specify'); // Validates workflow job, not AI-BOARD
+    });
   });
 
   /**

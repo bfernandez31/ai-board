@@ -29,6 +29,8 @@ import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
+import type { DualJobState } from '@/lib/types/job-types';
+import { getWorkflowJob, getAIBoardJob } from '@/lib/utils/job-filtering';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -50,7 +52,7 @@ function convertTicketForModal(ticket: TicketWithVersion | null) {
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
-  initialJobs?: Map<number, Job>;
+  initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
 }
 
 /**
@@ -151,37 +153,113 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
-  // Get job for a specific ticket (merges initial + polled data)
+  // Get most recent job for a specific ticket (merges initial + polled data)
+  // Used for drag-and-drop validation to check if ticket has active job
   const getTicketJob = useCallback(
     (ticketId: number): Job | null => {
-      // Prioritize real-time polled update
-      const polledJob = polledJobs.find(job => job.ticketId === ticketId);
-      if (polledJob) {
-        // Convert polled job to Job type
-        const baseJob = initialJobs.get(ticketId);
+      const ticketInitialJobs = initialJobs.get(ticketId) || [];
+      const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
+
+      // If we have polled updates, merge them with initial data
+      if (ticketPolledJobs.length > 0) {
+        // Find most recent polled job
+        const mostRecentPolled = ticketPolledJobs.reduce((latest, current) =>
+          new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+        );
+
+        // Find matching initial job by ID
+        const baseJob = ticketInitialJobs.find(j => j.id === mostRecentPolled.id);
         if (baseJob) {
           return {
             ...baseJob,
-            status: polledJob.status,
-            updatedAt: new Date(polledJob.updatedAt),
+            status: mostRecentPolled.status,
+            updatedAt: new Date(mostRecentPolled.updatedAt),
           };
         }
 
         // Create minimal Job object from polled data (for new jobs created during session)
         return {
-          id: polledJob.id,
-          ticketId: polledJob.ticketId,
-          status: polledJob.status,
-          command: '', // Not included in polling response
-          startedAt: new Date(polledJob.updatedAt),
+          id: mostRecentPolled.id,
+          ticketId: mostRecentPolled.ticketId,
+          status: mostRecentPolled.status,
+          command: mostRecentPolled.command,
+          startedAt: new Date(mostRecentPolled.updatedAt),
           completedAt: null,
         } as Job;
       }
 
-      // Fall back to initial job data
-      return initialJobs.get(ticketId) || null;
+      // Fall back to most recent initial job (sorted by startedAt desc in query)
+      return ticketInitialJobs[0] || null;
     },
     [polledJobs, initialJobs]
+  );
+
+  // Get dual job state for a ticket (workflow + AI-BOARD jobs)
+  // T022: Updated to include AI-BOARD job filtering with stage matching
+  const getTicketJobs = useCallback(
+    (ticketId: number): DualJobState => {
+      // Get initial jobs array for this ticket
+      const ticketInitialJobs = initialJobs.get(ticketId) || [];
+
+      // Get all polled jobs for this ticket
+      const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
+
+      // If no jobs at all, return null state
+      if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
+        return { workflow: null, aiBoard: null };
+      }
+
+      // If no polled jobs yet, use initial jobs (first render)
+      if (ticketPolledJobs.length === 0) {
+        const ticket = allTickets.find(t => t.id === ticketId);
+        return {
+          workflow: getWorkflowJob(ticketInitialJobs),
+          aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
+        };
+      }
+
+      // Merge polled status updates with initial job data
+      const fullJobs: Job[] = ticketPolledJobs.map(polledJob => {
+        // Find matching initial job by ID
+        const matchingInitialJob = ticketInitialJobs.find(j => j.id === polledJob.id);
+
+        if (matchingInitialJob) {
+          // Update status from polling but keep other fields from initial
+          return {
+            ...matchingInitialJob,
+            status: polledJob.status,
+            command: polledJob.command, // Update command in case it changed
+            updatedAt: new Date(polledJob.updatedAt),
+          } as Job;
+        }
+
+        // Fallback: create minimal Job object from polled data (for new jobs created during session)
+        return {
+          id: polledJob.id,
+          ticketId: polledJob.ticketId,
+          projectId,
+          status: polledJob.status,
+          command: polledJob.command,
+          startedAt: new Date(polledJob.updatedAt),
+          completedAt: null,
+          branch: null,
+          commitSha: null,
+          logs: null,
+          createdAt: new Date(polledJob.updatedAt),
+          updatedAt: new Date(polledJob.updatedAt),
+        } as Job;
+      });
+
+      // Find the ticket to get current stage for AI-BOARD filtering
+      const ticket = allTickets.find(t => t.id === ticketId);
+
+      // Use filtering functions to get workflow and AI-BOARD jobs
+      return {
+        workflow: getWorkflowJob(fullJobs),
+        aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
+      };
+    },
+    [polledJobs, initialJobs, projectId, allTickets]
   );
 
   // Handle drag start (T020 - Add drag state)
@@ -192,12 +270,13 @@ function BoardContent({
       setIsDragging(true);
       setDragSource(ticket.stage);
 
-      // Check if ticket has a non-completed job
-      const job = getTicketJob(ticket.id);
-      const hasActiveJob = job && job.status !== 'COMPLETED';
-      setDraggedTicketHasJob(!!hasActiveJob);
+      // Check if ticket has a non-completed WORKFLOW job
+      // AI-BOARD jobs don't block transitions, only workflow jobs do
+      const jobs = getTicketJobs(ticket.id);
+      const hasActiveWorkflowJob = jobs.workflow && jobs.workflow.status !== 'COMPLETED';
+      setDraggedTicketHasJob(!!hasActiveWorkflowJob);
     }
-  }, [getTicketJob]);
+  }, [getTicketJobs]);
 
   // Handle drag end with API call
   const handleDragEnd = useCallback(
@@ -598,6 +677,7 @@ function BoardContent({
                 onTicketClick={handleTicketClick}
                 projectId={projectId}
                 getTicketJob={getTicketJob}
+                getTicketJobs={getTicketJobs}
                 dropZoneStyle={getDropZoneStyle(stage)}
                 isBlockedByJob={isDragging && draggedTicketHasJob}
               />

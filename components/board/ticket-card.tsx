@@ -11,7 +11,9 @@ import { classifyJobType } from '@/lib/utils/job-type-classifier';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
-  currentJob?: Job | null;
+  currentJob?: Job | null; // Legacy: kept for backward compatibility
+  workflowJob?: Job | null; // User Story 1: Workflow job display
+  aiBoardJob?: Job | null; // User Story 2: AI-BOARD job display
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
 }
@@ -20,7 +22,7 @@ interface DraggableTicketCardProps {
  * TicketCard Component - Original Design with Drag-and-Drop
  */
 export const TicketCard = React.memo(
-  ({ ticket, currentJob, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
+  ({ ticket, workflowJob, aiBoardJob, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
     const [isMounted, setIsMounted] = useState(false);
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -101,15 +103,30 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
-          {/* Job Status Indicator */}
-          {currentJob && (
-            <div className="border-t border-[#313244] pt-3">
-              <JobStatusIndicator
-                status={currentJob.status}
-                command={currentJob.command}
-                jobType={classifyJobType(currentJob.command)}
-                animated={true}
-              />
+          {/* Job Status Indicators (Dual Job Display) */}
+          {(workflowJob || aiBoardJob) && (
+            <div className="border-t border-[#313244] pt-3 space-y-2">
+              {/* Workflow Job Indicator */}
+              {workflowJob && (
+                <JobStatusIndicator
+                  status={workflowJob.status}
+                  command={workflowJob.command}
+                  jobType={classifyJobType(workflowJob.command)}
+                  stage={ticket.stage}
+                  animated={true}
+                />
+              )}
+
+              {/* AI-BOARD Job Indicator */}
+              {aiBoardJob && (
+                <JobStatusIndicator
+                  status={aiBoardJob.status}
+                  command={aiBoardJob.command}
+                  jobType={classifyJobType(aiBoardJob.command)}
+                  stage={ticket.stage}
+                  animated={true}
+                />
+              )}
             </div>
           )}
         </Card>

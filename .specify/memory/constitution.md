@@ -1,6 +1,34 @@
 <!--
 Sync Impact Report
 ===================
+Version Change: 1.2.0 → 1.3.0
+Rationale: Add hybrid testing strategy (Vitest + Playwright) for optimal speed and coverage
+
+Modified Principles:
+- UPDATED: Principle III - Test-Driven Development (added hybrid testing strategy)
+- UPDATED: Technology Standards - Testing section (added Vitest)
+- UPDATED: Development Workflow - Code Organization (added test directory structure)
+- UPDATED: Development Workflow - Testing Workflow (added unit test commands)
+- UPDATED: AI Agent Implementation Guidelines (added hybrid testing requirements)
+
+Added Rules:
+- Vitest MUST be used for unit tests of pure utility functions (~1ms per test)
+- Playwright MUST be used for integration and E2E tests (~500ms-2s per test)
+- Pure functions (no side effects) MUST use Vitest unit tests
+- Component integration and critical user flows MUST use Playwright tests
+- Test directory structure: /tests/unit (Vitest), /tests/integration (Playwright), /tests/e2e (Playwright)
+
+Templates Requiring Updates:
+✅ CLAUDE.md: Updated with hybrid testing strategy
+✅ vitest.config.ts: Created with TypeScript path alias configuration
+✅ package.json: Added Vitest scripts (test:unit, test:unit:ui, test:unit:watch, test)
+✅ tsconfig.json: Added vitest/globals types
+
+Follow-up TODOs:
+- None (hybrid testing strategy fully documented and configured)
+
+Previous Version History:
+===================
 Version Change: 1.1.0 → 1.2.0
 Rationale: Add clarification guardrails so AUTO never produces low-quality PRAGMATIC outcomes
 
@@ -51,26 +79,36 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 **Rationale**: Shadcn/ui provides accessible, tested, customizable components reducing maintenance burden. Feature folders improve discoverability and reduce cognitive load. Server Components improve performance by default. Explicit Client Component boundaries make hydration intentional.
 
 ### III. Test-Driven Development (NON-NEGOTIABLE)
-Tests must be written BEFORE implementation. Red-Green-Refactor cycle is mandatory for all critical user flows.
+Tests must be written BEFORE implementation. Red-Green-Refactor cycle is mandatory for all critical user flows. Hybrid testing strategy uses Vitest for unit tests and Playwright for integration/E2E tests.
 
 **Non-Negotiable Rules**:
 - **ALWAYS search for existing tests FIRST** before creating new test files
 - Use `Grep` or `Glob` tools to find existing tests for the feature/component/API being modified
 - Update and extend existing test files rather than creating duplicates
-- Critical user flows require Playwright E2E tests before implementation
+- **Hybrid Testing Strategy** (MANDATORY):
+  - **Vitest**: Unit tests for pure utility functions (~1ms per test, fast feedback)
+  - **Playwright**: Integration and E2E tests for component behavior and user flows (~500ms-2s per test)
+  - Pure functions (no side effects) MUST use Vitest unit tests
+  - Component integration and critical user flows MUST use Playwright tests
 - Tests must fail initially (Red), then implementation makes them pass (Green)
-- E2E tests in `/tests/[feature].spec.ts` using Playwright with MCP support
-- Test names describe user actions: `test("user can create board and add card")`
-- No feature is complete without passing tests
+- Unit tests in `/tests/unit/[feature].test.ts` using Vitest with globals enabled
+- Integration tests in `/tests/integration/[feature]/*.spec.ts` using Playwright
+- E2E tests in `/tests/e2e/[feature].spec.ts` using Playwright with MCP support
+- Test names describe behavior: Vitest uses `describe()` and `it()`, Playwright uses `test()`
+- No feature is complete without passing tests (both unit and integration where applicable)
 
 **Test Discovery Workflow** (MANDATORY before writing tests):
 1. **Search by feature**: `npx grep -r "describe.*[feature-name]" tests/`
-2. **Search by file path**: `npx glob "tests/**/*[feature-keyword]*.spec.ts"`
+2. **Search by file path**: `npx glob "tests/**/*[feature-keyword]*.(test|spec).ts"`
 3. **Search by API route**: `npx grep -r "/api/[route-path]" tests/`
 4. **Check test structure**: Read existing test file to understand patterns
 5. **Extend or create**: Add tests to existing file OR create new file if truly needed
 
-**Rationale**: TDD ensures requirements are testable, catches integration issues early, and provides regression protection. Writing tests first forces clear thinking about user value before implementation details. Searching for existing tests prevents duplication, maintains consistency, and leverages established test patterns. Playwright with MCP integration enables reliable cross-browser testing.
+**Test Selection Guidelines**:
+- Use **Vitest** when: Testing pure functions (filtering, transformation, validation), no DOM or browser interaction needed, isolated business logic
+- Use **Playwright** when: Testing component rendering, user interactions, API integration, cross-browser compatibility, critical user flows
+
+**Rationale**: Hybrid testing provides optimal balance of speed and coverage. Vitest enables instant feedback (~1ms per test) for pure functions during development. Playwright ensures component integration and user workflows function correctly across browsers. TDD ensures requirements are testable and catches integration issues early. Searching for existing tests prevents duplication and maintains consistency.
 
 ### IV. Security-First Design
 Security is not an afterthought. Input validation, secure database queries, and secret management are required at every layer.
@@ -110,7 +148,7 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - **AI Integration**: Anthropic Claude API (Sonnet 4.5)
 - **GitHub Integration**: GitHub CLI (`gh` command) for repository operations
 - **Spec-kit**: GitHub spec-kit for specification-driven workflows
-- **Testing**: Playwright with MCP support
+- **Testing**: Vitest (unit tests for utilities), Playwright (integration and E2E tests with MCP support)
 - **Hosting**: Vercel (optimized for Next.js)
 
 **Future Additions** (not yet implemented):
@@ -130,7 +168,9 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - `/components`: Reusable React components (feature-based folders)
 - `/lib`: Shared utilities and helper functions
 - `/prisma`: Database schema and migrations
-- `/tests`: Playwright E2E tests
+- `/tests/unit`: Vitest unit tests for utility functions
+- `/tests/integration`: Playwright integration tests for component behavior
+- `/tests/e2e`: Playwright E2E tests for critical user flows
 - `/public`: Static assets
 
 **Code Quality Standards**:
@@ -167,11 +207,14 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - Use `prisma studio` for local database inspection
 
 **Testing Workflow**:
-- Write E2E test for critical user flow
-- Verify test fails (Red)
-- Implement feature to make test pass (Green)
-- Refactor if needed while keeping test green
-- Run `npx playwright test` before pushing
+- Write unit tests (Vitest) for pure utility functions
+- Write integration/E2E tests (Playwright) for component behavior and critical user flows
+- Verify tests fail (Red)
+- Implement feature to make tests pass (Green)
+- Refactor if needed while keeping tests green
+- Run `npm run test:unit` for unit tests (fast feedback)
+- Run `npm run test:e2e` for integration/E2E tests before pushing
+- Run `npm test` to execute full test suite (unit + integration + E2E)
 
 **AI Agent Implementation Guidelines**:
 When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
@@ -181,10 +224,13 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 4. Follow existing code patterns (review similar components/routes)
 5. Use shadcn/ui components (never create UI primitives from scratch)
 6. Match existing folder structure conventions
-7. Write Playwright tests for critical paths before implementation (following Test Discovery Workflow)
+7. **Write tests following hybrid strategy** (following Test Discovery Workflow):
+   - Vitest unit tests for pure utility functions (`tests/unit/[feature].test.ts`)
+   - Playwright integration tests for component behavior (`tests/integration/[feature]/*.spec.ts`)
+   - Playwright E2E tests for critical user flows (`tests/e2e/[feature].spec.ts`)
 8. Add TypeScript types explicitly (no implicit `any`)
 9. Handle errors gracefully with try-catch and user-friendly messages
-10. Verify all tests pass before considering feature complete
+10. Verify all tests pass (both unit and integration/E2E) before considering feature complete
 
 **Test File Management**:
 - Before creating `tests/[new-feature].spec.ts`, search for existing test files that cover the same area
@@ -231,4 +277,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.2.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-10-14
+**Version**: 1.3.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-10-23
