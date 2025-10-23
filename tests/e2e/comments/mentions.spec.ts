@@ -66,8 +66,7 @@ test.beforeEach(async ({ page }) => {
     },
   });
 
-  // Create AI-BOARD user (but don't add as project member yet)
-  // Will be added as member only in US5 tests
+  // Create AI-BOARD user (system user, always present)
   await prisma.user.upsert({
     where: { email: 'ai-board@system.local' },
     update: {},
@@ -141,6 +140,22 @@ test.beforeEach(async ({ page }) => {
     },
   });
 
+  // Add AI-BOARD as project member (simulating auto-membership from User Story 3)
+  await prisma.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId: TEST_PROJECT_ID,
+        userId: 'ai-board-system-user',
+      },
+    },
+    update: {},
+    create: {
+      projectId: TEST_PROJECT_ID,
+      userId: 'ai-board-system-user',
+      role: 'member',
+    },
+  });
+
   // Ensure test ticket exists
   await prisma.ticket.upsert({
     where: { id: TEST_TICKET_ID },
@@ -200,9 +215,9 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    // Verify dropdown contains all 3 project members
+    // Verify dropdown contains all 4 project members (including AI-BOARD)
     const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
-    await expect(userItems).toHaveCount(3); // E2E Test User, Alice Smith, Bob Johnson
+    await expect(userItems).toHaveCount(4); // E2E Test User, Alice Smith, Bob Johnson, AI-BOARD Assistant
   });
 
   test('[US1] T012: Typing letters after @ filters user list', async ({ page }) => {
@@ -212,9 +227,9 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    // Get initial user count (should be 3)
+    // Get initial user count (should be 4 including AI-BOARD auto-added)
     const userItems = autocomplete.locator('[data-testid="mention-user-item"]');
-    await expect(userItems).toHaveCount(3);
+    await expect(userItems).toHaveCount(4);
 
     // Type partial name "ali" (matches "Alice Smith")
     await commentInput.fill('@ali');
@@ -583,23 +598,8 @@ test.describe('US4: Mention Persistence and Display', () => {
  */
 
 test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
-  test.beforeEach(async () => {
-    // Add AI-BOARD as project member (user already created in global beforeEach)
-    await prisma.projectMember.upsert({
-      where: {
-        projectId_userId: {
-          projectId: TEST_PROJECT_ID,
-          userId: 'ai-board-system-user',
-        },
-      },
-      update: {},
-      create: {
-        projectId: TEST_PROJECT_ID,
-        userId: 'ai-board-system-user',
-        role: 'member',
-      },
-    });
-  });
+  // NOTE: AI-BOARD is automatically added as project member when project is created (User Story 3)
+  // No additional beforeEach needed - AI-BOARD is already a member from global beforeEach
 
   test('[US5] T045: AI-BOARD should be greyed out in INBOX stage', async ({ page }) => {
     // Ensure ticket is in INBOX stage
