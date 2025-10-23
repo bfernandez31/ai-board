@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Generated files
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files
+.env*
+
+# Misc
+.DS_Store

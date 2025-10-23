@@ -1,16 +1,6 @@
 # ai-board Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-12
-
-## Active Technologies
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, TanStack Query v5.90.5, shadcn/ui, react-markdown 9.0.1, date-fns (042-ticket-comments-context)
-- PostgreSQL 14+ (Comment table with foreign keys to Ticket and User, cascade delete) (042-ticket-comments-context)
-- PostgreSQL 14+ via Prisma ORM (043-tag-user-comment)
-- **Multi-User Projects**: ProjectMember join table supports team collaboration (043-tag-user-comment)
-
-- TypeScript 5.6 (strict mode), Node.js 22.20.0 LTS + Next.js 15 (App Router), React 18, Prisma 6.x, Zod 4.x, shadcn/ui, TanStack Query v5.90.5, @octokit/rest 22.0, react-markdown 9.0.1, @dnd-kit, lucide-react, Cloudinary SDK
-- PostgreSQL 14+ (User, Project, Ticket, Job tables with clarification policies, workflow types, image attachments)
-- Cloudinary CDN (image storage and delivery)
+Auto-generated from all feature plans. Last updated: 2025-10-23
 
 ### Core Stack
 
@@ -480,6 +470,79 @@ RUNNING → CANCELLED (workflow cancelled)
 - State machine logic: `app/lib/job-state-machine.ts`
 - Validation: `canTransition(from, to)` function
 - Error: `InvalidTransitionError` class
+
+### AI-BOARD System User
+
+The AI-BOARD system user enables collaborative ticket assistance through comment mentions:
+
+- **User ID**: `ai-board-system-user` (fixed identifier)
+- **Email**: `ai-board@system.local` (unique constraint)
+- **Purpose**: System user for AI-powered ticket collaboration
+- **Creation**: Via seed script (`prisma/seed.ts`)
+- **Retrieval**: `getAIBoardUserId()` with in-memory caching (`app/lib/db/ai-board-user.ts`)
+
+**Auto-Membership Pattern**:
+- Automatically added as ProjectMember when projects are created
+- Role: "member" (not admin/owner)
+- Transactional integrity: Project + AI-BOARD membership created atomically
+
+**Mention Detection**:
+```typescript
+// In POST /api/projects/:projectId/tickets/:id/comments
+const aiBoardUserId = await getAIBoardUserId();
+const mentionedUserIds = extractMentionUserIds(content);
+const aiBoardMentioned = mentionedUserIds.includes(aiBoardUserId);
+
+if (aiBoardMentioned) {
+  // Check availability, create Job, dispatch workflow
+}
+```
+
+**Availability Validation**:
+- Valid stages: SPECIFY, PLAN, BUILD, VERIFY (not INBOX, SHIP)
+- No running jobs: Check for PENDING/RUNNING status
+- Function: `checkAIBoardAvailability(ticketId)` (`app/lib/utils/ai-board-availability.ts`)
+
+**Workflow Dispatch**:
+- Workflow: `.github/workflows/ai-board-assist.yml`
+- Trigger: `@ai-board` mention in ticket comments
+- Claude Command: `.claude/commands/ai-board-assist.md`
+- Dispatcher: `dispatchAIBoardWorkflow()` (`app/lib/workflows/dispatch-ai-board.ts`)
+- Authentication: GitHub `WORKFLOW_API_TOKEN` secret
+
+**Job Creation Pattern**:
+```typescript
+// Create Job with concurrency protection
+const job = await prisma.$transaction(async (tx) => {
+  // Check no running jobs (race condition protection)
+  const existing = await tx.job.findFirst({
+    where: { ticketId, status: { in: ['PENDING', 'RUNNING'] } },
+  });
+
+  if (existing) throw new Error('AI-BOARD already processing');
+
+  return await tx.job.create({
+    data: {
+      ticketId,
+      projectId,
+      command: `comment-${stage}`, // e.g., "comment-specify"
+      status: 'PENDING',
+      branch: ticket.branch,
+    },
+  });
+});
+```
+
+**AI-BOARD Comment Endpoint**:
+- Endpoint: `POST /api/projects/:projectId/tickets/:id/comments/ai-board`
+- Authentication: Workflow token (Bearer auth)
+- Usage: GitHub workflow posts AI-BOARD responses
+- Validation: Workflow token + AI-BOARD user ID verification
+
+**Skip Scenarios**:
+- [e2e] test tickets: Skip Claude execution, post skip message
+- BUILD/VERIFY stages: Not implemented, post "not implemented" message
+- Both complete workflow successfully (status: COMPLETED)
 
 ## Validation Rules
 

@@ -25,6 +25,21 @@ async function main() {
     },
   });
 
+  // Create AI-BOARD system user
+  const aiBoardUser = await prisma.user.upsert({
+    where: { email: 'ai-board@system.local' },
+    update: {},
+    create: {
+      id: 'ai-board-system-user',
+      email: 'ai-board@system.local',
+      name: 'AI-BOARD Assistant',
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  console.log('Created/verified AI-BOARD user:', aiBoardUser);
+
   // Check if default project already exists
   let project = await prisma.project.findUnique({
     where: {

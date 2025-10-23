@@ -1,0 +1,237 @@
+name: AI-BOARD Assist Workflow
+# Triggered when users mention @ai-board in ticket comments
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket_id:
+        description: 'Ticket ID'
+        required: true
+        type: string
+
+      ticketTitle:
+        description: 'Ticket title'
+        required: true
+        type: string
+
+      stage:
+        description: 'Current ticket stage (specify, plan, build, verify)'
+        required: true
+        type: string
+
+      branch:
+        description: 'Git branch name for this ticket'
+        required: true
+        type: string
+
+      user:
+        description: 'Username who mentioned AI-BOARD (for response)'
+        required: true
+        type: string
+
+      comment:
+        description: 'Comment content with user request'
+        required: true
+        type: string
+
+      job_id:
+        description: 'Job ID for status tracking'
+        required: true
+        type: string
+
+      project_id:
+        description: 'Project ID'
+        required: true
+        type: string
+
+jobs:
+  ai-board-assist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SKIP_CLAUDE: ${{ contains(inputs.ticketTitle, '[e2e]') || contains(fromJSON('["build", "verify"]'), inputs.stage) }}
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+
+    steps:
+      - name: Debug Inputs
+        run: |
+          echo "🔍 Debug workflow inputs:"
+          echo "  ticket_id: ${{ inputs.ticket_id }}"
+          echo "  job_id: ${{ inputs.job_id }}"
+          echo "  stage: ${{ inputs.stage }}"
+          echo "  user: ${{ inputs.user }}"
+          echo "  ticketTitle: ${{ inputs.ticketTitle }}"
+          echo "  SKIP_CLAUDE: ${{ env.SKIP_CLAUDE }}"
+
+      - name: Update Job Status - Running
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "RUNNING"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
+
+      - name: Handle Skip Scenarios
+        if: ${{ env.SKIP_CLAUDE == 'true' }}
+        run: |
+          echo "ℹ️ Skipping Claude execution"
+
+          # Determine skip message
+          if [[ "${{ inputs.ticketTitle }}" == *"[e2e]"* ]]; then
+            MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
+            echo "📝 Skip reason: E2E test ticket"
+          else
+            MESSAGE="@${{ inputs.user }} This feature is not yet implemented for ${{ inputs.stage }} stage."
+            echo "📝 Skip reason: BUILD/VERIFY stage not implemented"
+          fi
+
+          # Post skip message as AI-BOARD comment
+          curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{\"content\": \"${MESSAGE}\", \"userId\": \"ai-board-system-user\"}" \
+            -f -s -S || echo "⚠️ Failed to post skip message"
+
+          # Update job status to COMPLETED (skipped workflows are still "successful")
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status"
+
+          # Exit successfully (skip is not a failure)
+          exit 0
+
+      - name: Checkout repository
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      - name: Install Claude Code CLI
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude CLI
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure Git
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: |
+          git config --global user.name "ai-board[bot]"
+          git config --global user.email "bot@ai-board.app"
+
+      - name: Execute AI-BOARD Command
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        id: claude
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          TICKET_TITLE: ${{ inputs.ticketTitle }}
+          STAGE: ${{ inputs.stage }}
+          BRANCH: ${{ inputs.branch }}
+          USER: ${{ inputs.user }}
+          COMMENT: ${{ inputs.comment }}
+          PROJECT_ID: ${{ inputs.project_id }}
+        run: |
+          echo "🤖 Executing AI-BOARD assist command..."
+
+          # Execute Claude CLI command and capture output
+          OUTPUT=$(claude /ai-board-assist 2>&1 || true)
+          echo "$OUTPUT"
+
+          # Extract JSON response from stdout (last valid JSON object)
+          JSON_OUTPUT=$(echo "$OUTPUT" | jq -s '.[-1]' 2>/dev/null || echo '{"status":"error","message":"Failed to parse Claude output","filesModified":[]}')
+          echo "json_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$JSON_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Parse Claude Response
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        id: parse
+        run: |
+          STATUS=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.status')
+          MESSAGE=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.message')
+          FILES=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.filesModified | join(",")')
+
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+          echo "📊 Claude Response:"
+          echo "  Status: $STATUS"
+          echo "  Files: $FILES"
+
+      - name: Commit and Push Changes
+        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' && steps.parse.outputs.files != '' }}
+        run: |
+          echo "💾 Committing modified files..."
+
+          # Add modified files
+          git add specs/${{ inputs.ticket_id }}-*/ || true
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes to commit"
+          else
+            git commit -m "AI-BOARD: Update ticket artifacts per user request
+
+Ticket: ${{ inputs.ticket_id }}
+Stage: ${{ inputs.stage }}
+Requester: @${{ inputs.user }}
+Modified: ${{ steps.parse.outputs.files }}
+
+Generated by AI-BOARD Assistant workflow"
+
+            git push origin ${{ inputs.branch }}
+            echo "✅ Changes pushed to branch"
+          fi
+
+      - name: Post AI-BOARD Response Comment
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: |
+          echo "💬 Posting AI-BOARD response comment..."
+
+          MESSAGE='${{ steps.parse.outputs.message }}'
+
+          # Escape special characters for JSON
+          MESSAGE_JSON=$(echo "$MESSAGE" | jq -Rs .)
+
+          curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{\"content\": ${MESSAGE_JSON}, \"userId\": \"ai-board-system-user\"}" \
+            -f -s -S || echo "⚠️ Failed to post AI-BOARD comment"
+
+      - name: Update Job Status - Success
+        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status"
+
+      - name: Update Job Status - Failure
+        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "FAILED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status"

@@ -9,6 +9,7 @@
  * - Mouse selection
  * - Mention insertion at cursor position
  * - Multiple mentions support
+ * - AI-BOARD availability status and tooltips
  */
 
 'use client';
@@ -18,11 +19,13 @@ import { ProjectMember } from '@/app/lib/types/mention';
 import { formatMention } from '@/app/lib/utils/mention-parser';
 import { UserAutocomplete } from './user-autocomplete';
 import { Textarea } from '@/components/ui/textarea';
+import { useAIBoardAvailability } from '@/app/hooks/use-ai-board-availability';
 
 interface MentionInputProps {
   value: string;
   onChange: (value: string) => void;
   projectMembers: ProjectMember[];
+  ticketId?: number;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -33,6 +36,7 @@ export function MentionInput({
   value,
   onChange,
   projectMembers,
+  ticketId,
   placeholder = 'Add a comment...',
   className,
   disabled = false,
@@ -44,6 +48,18 @@ export function MentionInput({
   const [atSymbolPosition, setAtSymbolPosition] = useState<number | null>(null);
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Find AI-BOARD user ID
+  const aiBoardUser = useMemo(
+    () => projectMembers.find((m) => m.email === 'ai-board@system.local'),
+    [projectMembers]
+  );
+
+  // Check AI-BOARD availability
+  const { data: availability } = useAIBoardAvailability(
+    ticketId,
+    Boolean(ticketId && aiBoardUser)
+  );
 
   /**
    * Notify parent when autocomplete opens/closes
@@ -354,6 +370,11 @@ export function MentionInput({
             users={filteredUsers}
             onSelect={handleSelectUser}
             selectedIndex={selectedIndex}
+            {...(aiBoardUser && {
+              aiBoardUserId: aiBoardUser.id,
+              aiBoardAvailable: availability?.available ?? false,
+              aiBoardUnavailableReason: availability?.reason ?? 'Checking availability...',
+            })}
           />
         </div>
       )}

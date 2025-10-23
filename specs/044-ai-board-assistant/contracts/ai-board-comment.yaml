@@ -1,0 +1,225 @@
+openapi: 3.0.3
+info:
+  title: AI-BOARD Comment API
+  description: Workflow-authenticated endpoint for creating AI-BOARD response comments
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{id}/comments/ai-board:
+    post:
+      summary: Create AI-BOARD comment
+      description: |
+        Creates a comment authored by AI-BOARD user. This endpoint is exclusively
+        for GitHub workflow usage and requires workflow token authentication.
+
+        **Authentication**: Bearer token (WORKFLOW_API_TOKEN secret)
+        **Authorization**: Only GitHub Actions workflows can call this endpoint
+
+        **Use Case**: After Claude CLI executes and modifies ticket artifacts,
+        the workflow posts a response comment mentioning the original requester.
+
+      operationId: createAIBoardComment
+      tags:
+        - AI-BOARD
+        - Comments
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Project ID containing the ticket
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Ticket ID to comment on
+
+      security:
+        - WorkflowToken: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  description: |
+                    Comment content with mention of original requester.
+                    Format: "@[userId:displayName] {response message}"
+                  example: "@[user-123:John Doe] Updated specification:\n- Added error handling section\n- Clarified timeout behavior"
+
+                userId:
+                  type: string
+                  description: AI-BOARD user ID (must match system user)
+                  example: "ai-board-system-user"
+
+      responses:
+        '201':
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_content:
+                  value:
+                    error: "Validation failed"
+                    code: "VALIDATION_ERROR"
+                    details:
+                      issues:
+                        - path: ["content"]
+                          message: "Content exceeds 2000 characters"
+
+                invalid_mention:
+                  value:
+                    error: "Mentioned user is not a member of this project"
+                    code: "INVALID_MENTION_USER"
+                    details:
+                      invalidUserIds: ["user-999"]
+
+                invalid_user:
+                  value:
+                    error: "User ID does not match AI-BOARD system user"
+                    code: "INVALID_USER_ID"
+
+        '401':
+          description: Authentication failed (missing or invalid workflow token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized: Invalid workflow token"
+                code: "AUTH_ERROR"
+
+        '403':
+          description: Forbidden (valid token but not from workflow context)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: This endpoint is only accessible from GitHub workflows"
+                code: "FORBIDDEN"
+
+        '404':
+          description: Project or ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                project_not_found:
+                  value:
+                    error: "Project not found"
+                    code: "NOT_FOUND"
+
+                ticket_not_found:
+                  value:
+                    error: "Ticket not found"
+                    code: "NOT_FOUND"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+                code: "INTERNAL_ERROR"
+
+components:
+  securitySchemes:
+    WorkflowToken:
+      type: http
+      scheme: bearer
+      description: GitHub workflow token (WORKFLOW_API_TOKEN secret)
+
+  schemas:
+    Comment:
+      type: object
+      required:
+        - id
+        - ticketId
+        - userId
+        - content
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          description: Comment ID
+          example: 42
+
+        ticketId:
+          type: integer
+          description: Ticket ID this comment belongs to
+          example: 123
+
+        userId:
+          type: string
+          description: User ID of comment author (AI-BOARD)
+          example: "ai-board-system-user"
+
+        content:
+          type: string
+          maxLength: 2000
+          description: Comment content with mentions
+          example: "@[user-123:John Doe] Updated specification:\n- Added error handling section"
+
+        createdAt:
+          type: string
+          format: date-time
+          description: Comment creation timestamp (ISO 8601)
+          example: "2025-10-23T14:30:00.000Z"
+
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO 8601)
+          example: "2025-10-23T14:30:00.000Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Validation failed"
+
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+
+        details:
+          type: object
+          description: Additional error context
+          additionalProperties: true
+
+security:
+  - WorkflowToken: []

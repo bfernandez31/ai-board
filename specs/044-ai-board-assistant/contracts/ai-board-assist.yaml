@@ -1,0 +1,154 @@
+openapi: 3.0.3
+info:
+  title: AI-BOARD Workflow Dispatch Contract
+  description: GitHub workflow dispatch inputs and behavior specification
+  version: 1.0.0
+
+paths:
+  /github/workflows/ai-board-assist.yml:
+    post:
+      summary: Dispatch AI-BOARD assistance workflow
+      description: |
+        Triggers GitHub Actions workflow to execute Claude CLI command based on
+        comment request, update ticket artifacts, and post response comment.
+
+        **Trigger**: Dispatched by POST /api/projects/:projectId/tickets/:id/comments
+        when @ai-board mention is detected and availability rules pass.
+
+        **Execution Flow**:
+        1. Validate inputs (skip [e2e], skip BUILD/VERIFY)
+        2. Update job status to RUNNING
+        3. Checkout ticket branch
+        4. Execute Claude CLI command
+        5. Parse JSON response
+        6. Commit and push changes (if files modified)
+        7. Post AI-BOARD comment
+        8. Update job status to COMPLETED/FAILED
+
+      operationId: dispatchAIBoardWorkflow
+      tags:
+        - GitHub Workflows
+        - AI-BOARD
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDispatchInputs'
+
+      responses:
+        '204':
+          description: Workflow dispatched successfully (asynchronous execution)
+
+        '400':
+          description: Invalid workflow inputs
+
+        '401':
+          description: GitHub authentication failed
+
+components:
+  schemas:
+    WorkflowDispatchInputs:
+      type: object
+      required:
+        - ticket_id
+        - ticket_title
+        - stage
+        - branch
+        - user
+        - comment
+        - job_id
+        - project_id
+      properties:
+        ticket_id:
+          type: integer
+          description: Ticket ID for context
+          example: 123
+
+        ticket_title:
+          type: string
+          description: Ticket title (used for [e2e] detection)
+          example: "[e2e] Test Ticket"
+
+        stage:
+          type: string
+          enum: [specify, plan, build, verify]
+          description: Current ticket stage (lowercase)
+          example: "specify"
+
+        branch:
+          type: string
+          description: Git branch to checkout
+          example: "044-ai-board-assistant"
+
+        user:
+          type: string
+          description: Comment author username (for @mention in response)
+          example: "johndoe"
+
+        comment:
+          type: string
+          maxLength: 2000
+          description: Full comment text with user request
+          example: "@ai-board please add error handling for network timeouts"
+
+        job_id:
+          type: integer
+          description: Job ID for status tracking
+          example: 456
+
+        project_id:
+          type: integer
+          description: Project ID for API calls
+          example: 3
+
+    ClaudeCommandOutput:
+      type: object
+      required:
+        - status
+        - message
+        - filesModified
+      properties:
+        status:
+          type: string
+          enum: [success, out-of-context, not-implemented, error]
+          description: Command execution status
+          example: "success"
+
+        message:
+          type: string
+          description: AI response message (markdown supported)
+          example: "Updated specification:\n- Added error handling section\n- Clarified timeout behavior"
+
+        filesModified:
+          type: array
+          items:
+            type: string
+          description: Array of modified file paths (relative to repo root)
+          example: ["specs/044-ai-board-assistant/spec.md"]
+
+  examples:
+    SpecifyStageSuccess:
+      value:
+        status: "success"
+        message: "Updated specification:\n- Added error handling for network timeouts\n- Clarified retry behavior"
+        filesModified: ["specs/044-ai-board-assistant/spec.md"]
+
+    OutOfContext:
+      value:
+        status: "out-of-context"
+        message: "Your request is out of context. Please focus on updating the specification for this feature."
+        filesModified: []
+
+    NotImplemented:
+      value:
+        status: "not-implemented"
+        message: "This feature is not yet implemented for BUILD stage."
+        filesModified: []
+
+    ParseError:
+      value:
+        status: "error"
+        message: "Failed to parse Claude output"
+        filesModified: []

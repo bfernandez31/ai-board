@@ -119,6 +119,41 @@ export async function cleanupDatabase(): Promise<void> {
       },
     });
 
+    // Delete all ProjectMembers from test projects 1 and 2
+    // Will be recreated in test beforeEach hooks
+    await client.projectMember.deleteMany({
+      where: {
+        projectId: {
+          in: [1, 2],
+        },
+      },
+    });
+
+    // Delete test users created by API tests (like "Other User")
+    // Keep core test users that E2E tests recreate in global beforeEach
+    const preservedUserIds = [
+      'test-user-id', // E2E Test User (global beforeEach)
+      'user-alice', // Alice Smith (global beforeEach)
+      'user-bob', // Bob Johnson (global beforeEach)
+      'ai-board-system-user', // AI-BOARD system user (always present)
+    ];
+    await client.user.deleteMany({
+      where: {
+        AND: [
+          {
+            id: {
+              notIn: preservedUserIds,
+            },
+          },
+          {
+            email: {
+              contains: '@test.com', // Only delete test users
+            },
+          },
+        ],
+      },
+    });
+
     // Delete [e2e] tickets from projects 4+
     await client.ticket.deleteMany({
       where: {
