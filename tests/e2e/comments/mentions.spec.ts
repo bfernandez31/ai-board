@@ -518,9 +518,11 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Create another user
     const tempUser = await prisma.user.create({
       data: {
+        id: 'temp-user-deleted',
         email: 'temp-deleted@e2e.local',
         name: 'Temp User',
         emailVerified: new Date(),
+        updatedAt: new Date(),
       },
     });
 
