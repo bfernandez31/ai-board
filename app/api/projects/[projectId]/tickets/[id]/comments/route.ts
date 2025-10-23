@@ -125,9 +125,10 @@ export async function GET(
         },
       })),
       mentionedUsers: mentionedUsersMap,
+      currentUserId, // Include in body for TanStack Query cache
     };
 
-    // Return response with currentUserId in header for frontend ownership checks
+    // Return response with currentUserId in both body and header
     return NextResponse.json(response, {
       headers: {
         'X-Current-User-Id': currentUserId,
