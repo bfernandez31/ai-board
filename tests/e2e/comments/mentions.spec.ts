@@ -479,7 +479,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Verify mention still formatted
     const mentionChip = page.locator('[data-testid="comment-list"] [data-testid="mention-chip"]').last();
     await expect(mentionChip).toBeVisible();
-    await expect(mentionChip).toContainText('E2E Test User');
+    await expect(mentionChip).toContainText('Alice Smith');
   });
 
   test('[US4] T041: Hovering over mention shows user details tooltip', async ({ page }) => {
