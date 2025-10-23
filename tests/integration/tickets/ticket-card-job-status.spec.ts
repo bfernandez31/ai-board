@@ -247,4 +247,94 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
     await prisma.ticket.deleteMany({ where: { id: { in: ticketIds } } });
   });
+
+  /**
+   * T011: Integration test for workflow job visual indicator
+   */
+  test('should display workflow icon for specify command', async ({ page }) => {
+    // Create ticket with workflow job
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Test workflow job type',
+        description: 'Testing workflow job type visual indicator',
+        stage: 'SPECIFY',
+        projectId: 1,
+        updatedAt: new Date(),
+      },
+    });
+
+    const job = await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: 1,
+        command: 'specify',
+        status: 'RUNNING',
+        branch: '045-test-branch',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Load board page
+    await page.goto('http://localhost:3000/projects/1/board');
+
+    // Find ticket card
+    const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible();
+
+    // Verify job type indicator exists
+    const jobTypeIndicator = ticketCard.locator('[data-testid="job-type-indicator"]');
+    await expect(jobTypeIndicator).toBeVisible();
+
+    // Verify job type indicator contains "Workflow" label
+    await expect(jobTypeIndicator).toContainText('Workflow');
+
+    // Clean up
+    await prisma.job.delete({ where: { id: job.id } });
+    await prisma.ticket.delete({ where: { id: ticket.id } });
+  });
+
+  /**
+   * T012: Integration test for AI-BOARD job visual indicator
+   */
+  test('should display AI-BOARD icon for comment-specify command', async ({ page }) => {
+    // Create ticket with AI-BOARD job
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: '[e2e] Test AI-BOARD job type',
+        description: 'Testing AI-BOARD job type visual indicator',
+        stage: 'SPECIFY',
+        projectId: 1,
+        updatedAt: new Date(),
+      },
+    });
+
+    const job = await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId: 1,
+        command: 'comment-specify',
+        status: 'RUNNING',
+        branch: '045-test-branch',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Load board page
+    await page.goto('http://localhost:3000/projects/1/board');
+
+    // Find ticket card
+    const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible();
+
+    // Verify job type indicator exists
+    const jobTypeIndicator = ticketCard.locator('[data-testid="job-type-indicator"]');
+    await expect(jobTypeIndicator).toBeVisible();
+
+    // Verify job type indicator contains "AI-BOARD" label
+    await expect(jobTypeIndicator).toContainText('AI-BOARD');
+
+    // Clean up
+    await prisma.job.delete({ where: { id: job.id } });
+    await prisma.ticket.delete({ where: { id: ticket.id } });
+  });
 });
