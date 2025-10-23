@@ -4,7 +4,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { CreateCommentRequest, CreateCommentResponse, ListCommentsResponse } from '@/app/lib/types/comment';
+import type { CreateCommentRequest, CreateCommentResponse, ListCommentsResponse, CommentWithUser } from '@/app/lib/types/comment';
 
 interface UseCreateCommentOptions {
   projectId: number;
@@ -58,13 +58,13 @@ export function useCreateComment({
       );
 
       // Optimistically update cache with temporary comment
-      queryClient.setQueryData<{ comments: ListCommentsResponse; currentUserId: string }>(
+      queryClient.setQueryData<ListCommentsResponse & { currentUserId: string }>(
         queryKeys.comments.list(ticketId),
         (old) => {
           if (!old) return old;
 
           // Create optimistic comment with temporary ID
-          const optimisticComment: CreateCommentResponse = {
+          const optimisticComment: CommentWithUser = {
             id: Date.now(), // Temporary ID
             ticketId,
             userId: 'current-user', // Will be replaced with real data
@@ -72,15 +72,18 @@ export function useCreateComment({
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             user: {
+              id: 'current-user',
               name: 'You', // Placeholder
+              email: '',
               image: null,
             },
           };
 
           // Add to top (newest first)
           return {
-            ...old,
             comments: [optimisticComment, ...old.comments],
+            mentionedUsers: old.mentionedUsers, // Preserve mentioned users
+            currentUserId: old.currentUserId,
           };
         }
       );

@@ -60,9 +60,24 @@ model Project {
   clarificationPolicy ClarificationPolicy @default(AUTO)
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
+  members             ProjectMember[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
+  @@index([userId])
+}
+
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    String
+  role      String   @default("member") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
   @@index([userId])
 }
 
@@ -103,15 +118,16 @@ model Ticket {
 model User {
   id            String    @id
   name          String?
-  email         String    @unique
+  email         String          @unique
   emailVerified DateTime?
   image         String?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime        @default(now())
   updatedAt     DateTime
   accounts      Account[]
   comments      Comment[]
   projects      Project[]
   sessions      Session[]
+  memberships   ProjectMember[]
 
   @@index([email])
 }

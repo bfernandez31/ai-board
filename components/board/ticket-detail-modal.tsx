@@ -173,6 +173,7 @@ export function TicketDetailModal({
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>('details');
+  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -667,6 +668,12 @@ export function TicketDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         onEscapeKeyDown={(event) => {
+          // Prevent modal from closing if autocomplete is open
+          if (isAutocompleteOpen) {
+            event.preventDefault();
+            return;
+          }
+
           if (titleEdit.isEditing) {
             event.preventDefault();
             titleEdit.cancelEdit();
@@ -1038,6 +1045,7 @@ export function TicketDetailModal({
               projectId={projectId}
               ticketId={ticket.id}
               isActive={activeTab === 'comments'}
+              onAutocompleteOpenChange={setIsAutocompleteOpen}
             />
           </TabsContent>
 

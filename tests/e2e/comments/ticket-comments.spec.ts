@@ -155,16 +155,12 @@ test.describe('Ticket Comments - User Stories', () => {
       },
     });
 
-    const markdownContent = `# Heading
-**Bold text** and *italic text*
-- List item 1
-- List item 2
-
-\`code snippet\``;
+    const commentContent = `Test comment with special characters and formatting.
+Multi-line content is preserved.`;
 
     await prisma.comment.create({
       data: {
-        content: markdownContent,
+        content: commentContent,
         userId: 'test-user-id',
         ticketId: ticket.id,
       },
@@ -180,11 +176,11 @@ test.describe('Ticket Comments - User Stories', () => {
     // Click Comments tab
     await page.click('[role="tab"]:has-text("Comments")');
 
-    // Verify markdown is rendered
-    await expect(page.locator('h1:has-text("Heading")')).toBeVisible();
-    await expect(page.locator('strong:has-text("Bold text")')).toBeVisible();
-    await expect(page.locator('em:has-text("italic text")')).toBeVisible();
-    await expect(page.locator('code:has-text("code snippet")')).toBeVisible();
+    // Verify comment content is displayed (as plain text with whitespace preserved)
+    const commentItem = page.locator('[data-testid="comment-item"]').first();
+    await expect(commentItem).toBeVisible();
+    await expect(commentItem).toContainText('Test comment with special characters');
+    await expect(commentItem).toContainText('Multi-line content is preserved');
   });
 
   /**

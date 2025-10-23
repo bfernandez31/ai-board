@@ -47,8 +47,11 @@ test.describe('GET /api/projects/[projectId]/tickets/[ticketId]/comments - Contr
     expect(response.headers()['content-type']).toContain('application/json');
 
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBe(0);
+    expect(body).toHaveProperty('comments');
+    expect(body).toHaveProperty('mentionedUsers');
+    expect(body).toHaveProperty('currentUserId');
+    expect(Array.isArray(body.comments)).toBe(true);
+    expect(body.comments.length).toBe(0);
   });
 
   test('should return 200 with array of comments in reverse chronological order', async ({ request }) => {
@@ -81,11 +84,11 @@ test.describe('GET /api/projects/[projectId]/tickets/[ticketId]/comments - Contr
     expect(response.status()).toBe(200);
     const body = await response.json();
 
-    expect(body.length).toBe(3);
+    expect(body.comments.length).toBe(3);
     // Newest first (reverse chronological)
-    expect(body[0].content).toBe('Third comment');
-    expect(body[1].content).toBe('Second comment');
-    expect(body[2].content).toBe('First comment');
+    expect(body.comments[0].content).toBe('Third comment');
+    expect(body.comments[1].content).toBe('Second comment');
+    expect(body.comments[2].content).toBe('First comment');
   });
 
   test('should include user data (name, image) in response', async ({ request }) => {
@@ -102,11 +105,11 @@ test.describe('GET /api/projects/[projectId]/tickets/[ticketId]/comments - Contr
     expect(response.status()).toBe(200);
     const body = await response.json();
 
-    expect(body.length).toBe(1);
-    expect(body[0]).toHaveProperty('user');
-    expect(body[0].user).toHaveProperty('name');
-    expect(body[0].user).toHaveProperty('image');
-    expect(body[0].user.name).toBe('E2E Test User');
+    expect(body.comments.length).toBe(1);
+    expect(body.comments[0]).toHaveProperty('user');
+    expect(body.comments[0].user).toHaveProperty('name');
+    expect(body.comments[0].user).toHaveProperty('image');
+    expect(body.comments[0].user.name).toBe('E2E Test User');
   });
 
   test('should return 400 for invalid project ID', async ({ request }) => {

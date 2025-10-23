@@ -59,6 +59,11 @@ export const queryKeys = {
      */
     documentationHistory: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks') =>
       ['projects', projectId, 'tickets', ticketId, 'documentation', docType, 'history'] as const,
+
+    /**
+     * Project members for autocomplete dropdown
+     */
+    members: (id: number) => ['projects', id, 'members'] as const,
   },
 
   /**
