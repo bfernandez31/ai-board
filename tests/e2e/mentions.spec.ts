@@ -22,35 +22,47 @@ test.beforeEach(async ({ page }) => {
   // Create test user (project owner)
   const testUser = await prisma.user.upsert({
     where: { email: TEST_USER_EMAIL },
-    update: {},
+    update: {
+      id: 'test-user-id',
+      name: 'E2E Test User',
+    },
     create: {
       id: 'test-user-id',
       email: TEST_USER_EMAIL,
       name: 'E2E Test User',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
   // Create additional test users for multi-user mentions
   const user2 = await prisma.user.upsert({
     where: { email: 'alice@test.com' },
-    update: {},
+    update: {
+      id: 'user-alice',
+      name: 'Alice Smith',
+    },
     create: {
       id: 'user-alice',
       email: 'alice@test.com',
       name: 'Alice Smith',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
   const user3 = await prisma.user.upsert({
     where: { email: 'bob@test.com' },
-    update: {},
+    update: {
+      id: 'user-bob',
+      name: 'Bob Johnson',
+    },
     create: {
       id: 'user-bob',
       email: 'bob@test.com',
       name: 'Bob Johnson',
       emailVerified: new Date(),
+      updatedAt: new Date(),
     },
   });
 
