@@ -141,6 +141,49 @@
 
 ---
 
+## Phase 9: Testing (Added Post-Implementation)
+
+**Purpose**: Comprehensive test coverage for AI-BOARD Assistant feature
+
+**Note**: Tests were added after implementation to validate functionality
+
+### API Tests (21 tests)
+
+**Availability Endpoint** (`tests/api/ai-board/availability.spec.ts` - 12 tests):
+- [X] T036 Test availability returns false for INBOX stage
+- [X] T037 Test availability returns true for SPECIFY stage with no jobs
+- [X] T038 Test availability returns true for PLAN, BUILD, VERIFY stages
+- [X] T039 Test availability returns false for SHIP stage
+- [X] T040 Test availability returns false when job is PENDING
+- [X] T041 Test availability returns false when job is RUNNING
+- [X] T042 Test availability returns true when job is COMPLETED
+- [X] T043 Test 404 for non-existent ticket
+- [X] T044 Test 400 for invalid ticket ID
+
+**Mention Detection** (`tests/api/ai-board/mention-detection.spec.ts` - 9 tests):
+- [X] T045 Test Job creation when @ai-board mentioned in valid stage
+- [X] T046 Test 400 error when @ai-board mentioned in INBOX stage
+- [X] T047 Test 400 error when job already RUNNING
+- [X] T048 Test comment creation without AI-BOARD mention (no Job)
+- [X] T049 Test Job creation for PLAN stage mention
+- [X] T050 Test Job creation for BUILD stage mention
+- [X] T051 Test Job creation for VERIFY stage mention
+- [X] T052 Test mention with multiple users in same comment
+
+### E2E Tests (6 tests)
+
+**UI Visual Feedback** (`tests/e2e/comments/mentions.spec.ts` - User Story 5):
+- [X] T053 Test AI-BOARD greyed out in INBOX stage (opacity-50, cursor-not-allowed)
+- [X] T054 Test tooltip shows unavailability reason on hover
+- [X] T055 Test AI-BOARD NOT greyed out in SPECIFY stage
+- [X] T056 Test AI-BOARD greyed out when job is RUNNING
+- [X] T057 Test clicking greyed-out AI-BOARD does not insert mention
+- [X] T058 Test selected item uses primary color for distinction
+
+**Checkpoint**: All tests passing - Feature fully validated
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -254,15 +297,16 @@ Phase 1 (Setup) ──> Phase 2 (Foundational) ──┬──> Phase 3 (US3: Au
 - Each user story should be independently completable and testable
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
-- **Tests NOT included**: Specification does not request TDD approach
+- **Tests**: Added post-implementation (Phase 9) - 27 tests covering API and E2E scenarios
 - Research.md decisions inform implementation (workflow token auth, user ID caching, mention detection, job locking, JSON parsing)
 - All contracts in `/contracts/` define API behavior and validation rules
 
 ## Summary
 
-**Total Tasks**: 35 tasks across 8 phases
+**Total Tasks**: 58 tasks across 9 phases (35 implementation + 23 tests)
 **User Stories**: 4 stories (P3, P1, P2, P4 in implementation order)
 **Parallel Opportunities**: 7 tasks can run in parallel (marked with [P])
 **MVP Scope**: User Story 3 (auto-membership) + User Story 1 (SPECIFY workflow)
 **Critical Blocking Phase**: Phase 2 (Foundational) must complete before any user story
 **Independent Stories**: US3 and US1 are independently testable after Foundational
+**Test Coverage**: 27 tests (12 availability, 9 mention detection, 6 E2E UI)
