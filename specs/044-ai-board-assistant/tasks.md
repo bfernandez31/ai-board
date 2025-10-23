@@ -26,11 +26,11 @@
 
 **Purpose**: AI-BOARD user creation and core utilities
 
-- [ ] T001 Create AI-BOARD user in prisma/seed.ts (upsert with email 'ai-board@system.local')
-- [ ] T002 Run seed script to create AI-BOARD user in database
-- [ ] T003 [P] Create getAIBoardUserId() utility with in-memory caching in app/lib/db/ai-board-user.ts
-- [ ] T004 [P] Create verifyWorkflowToken() authentication utility in app/lib/auth/workflow-auth.ts
-- [ ] T005 [P] Create checkAIBoardAvailability() validation utility in app/lib/utils/ai-board-availability.ts
+- [X] T001 Create AI-BOARD user in prisma/seed.ts (upsert with email 'ai-board@system.local')
+- [X] T002 Run seed script to create AI-BOARD user in database
+- [X] T003 [P] Create getAIBoardUserId() utility with in-memory caching in app/lib/db/ai-board-user.ts
+- [X] T004 [P] Create verifyWorkflowToken() authentication utility in app/lib/auth/workflow-auth.ts
+- [X] T005 [P] Create checkAIBoardAvailability() validation utility in app/lib/utils/ai-board-availability.ts
 
 ---
 
@@ -40,11 +40,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create GitHub workflow dispatch utility in app/lib/workflows/dispatch-ai-board.ts
-- [ ] T007 Create Zod schemas for AI-BOARD comment endpoint in app/lib/schemas/ai-board-comment.ts
-- [ ] T008 Create AI-BOARD comment creation endpoint POST /api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T009 Create Claude slash command /ai-board-assist in .claude/commands/ai-board-assist.md
-- [ ] T010 Create GitHub workflow .github/workflows/ai-board-assist.yml with skip logic ([e2e], BUILD/VERIFY stages)
+- [X] T006 Create GitHub workflow dispatch utility in app/lib/workflows/dispatch-ai-board.ts
+- [X] T007 Create Zod schemas for AI-BOARD comment endpoint in app/lib/schemas/ai-board-comment.ts
+- [X] T008 Create AI-BOARD comment creation endpoint POST /api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [X] T009 Create Claude slash command /ai-board-assist in .claude/commands/ai-board-assist.md
+- [X] T010 Create GitHub workflow .github/workflows/ai-board-assist.yml with skip logic ([e2e], BUILD/VERIFY stages)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -58,7 +58,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Modify POST /api/projects endpoint to add AI-BOARD auto-membership in Prisma transaction in app/api/projects/route.ts
+- [X] T011 [US3] Modify POST /api/projects endpoint to add AI-BOARD auto-membership in Prisma transaction in lib/db/projects.ts (createProject function)
 
 **Checkpoint**: At this point, User Story 3 should be fully functional and testable independently (new projects automatically have AI-BOARD membership)
 
@@ -72,15 +72,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Modify POST /api/projects/[projectId]/tickets/[id]/comments/route.ts to detect @ai-board mention using extractMentionUserIds()
-- [ ] T013 [US1] Add AI-BOARD availability validation (stage check, running job check) in POST comments endpoint
-- [ ] T014 [US1] Add Job record creation with command "comment-{stage}" in Prisma transaction when @ai-board mentioned
-- [ ] T015 [US1] Add workflow dispatch call using dispatch-ai-board.ts utility after Job creation
-- [ ] T016 [US1] Implement SPECIFY stage logic in .claude/commands/ai-board-assist.md (validate request context, update spec.md, return JSON response)
-- [ ] T017 [US1] Add JSON parsing and error handling in .github/workflows/ai-board-assist.yml using jq utility
-- [ ] T018 [US1] Add Git commit and push logic for modified files in workflow
-- [ ] T019 [US1] Add AI-BOARD comment posting via POST /api/.../comments/ai-board endpoint in workflow
-- [ ] T020 [US1] Add job status update to COMPLETED/FAILED in workflow using PATCH /api/jobs/:id/status
+- [X] T012 [US1] Modify POST /api/projects/[projectId]/tickets/[id]/comments/route.ts to detect @ai-board mention using extractMentionUserIds()
+- [X] T013 [US1] Add AI-BOARD availability validation (stage check, running job check) in POST comments endpoint
+- [X] T014 [US1] Add Job record creation with command "comment-{stage}" in Prisma transaction when @ai-board mentioned
+- [X] T015 [US1] Add workflow dispatch call using dispatch-ai-board.ts utility after Job creation
+- [X] T016 [US1] Implement SPECIFY stage logic in .claude/commands/ai-board-assist.md (validate request context, update spec.md, return JSON response)
+- [X] T017 [US1] Add JSON parsing and error handling in .github/workflows/ai-board-assist.yml using jq utility
+- [X] T018 [US1] Add Git commit and push logic for modified files in workflow
+- [X] T019 [US1] Add AI-BOARD comment posting via POST /api/.../comments/ai-board endpoint in workflow
+- [X] T020 [US1] Add job status update to COMPLETED/FAILED in workflow using PATCH /api/jobs/:id/status
 
 **Checkpoint**: At this point, User Story 1 should be fully functional (SPECIFY stage workflow works end-to-end)
 
@@ -94,9 +94,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement PLAN stage logic in .claude/commands/ai-board-assist.md (validate request context, update plan.md/tasks.md, maintain consistency with spec.md, return JSON response)
-- [ ] T022 [US2] Add multi-file commit logic in .github/workflows/ai-board-assist.yml for planning artifact updates
-- [ ] T023 [US2] Verify atomic commit behavior when multiple files modified (spec.md, plan.md, tasks.md)
+- [X] T021 [US2] Implement PLAN stage logic in .claude/commands/ai-board-assist.md (validate request context, update plan.md/tasks.md, maintain consistency with spec.md, return JSON response)
+- [X] T022 [US2] Add multi-file commit logic in .github/workflows/ai-board-assist.yml for planning artifact updates
+- [X] T023 [US2] Verify atomic commit behavior when multiple files modified (spec.md, plan.md, tasks.md)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently (SPECIFY and PLAN workflows functional)
 
@@ -110,10 +110,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Verify [e2e] skip logic in .github/workflows/ai-board-assist.yml (check SKIP_CLAUDE env var)
-- [ ] T025 [US4] Verify BUILD/VERIFY skip logic in workflow (post "not implemented" message)
-- [ ] T026 [US4] Verify skip message posting via POST /api/.../comments/ai-board endpoint
-- [ ] T027 [US4] Verify job status update to COMPLETED for skipped workflows
+- [X] T024 [US4] Verify [e2e] skip logic in .github/workflows/ai-board-assist.yml (check SKIP_CLAUDE env var)
+- [X] T025 [US4] Verify BUILD/VERIFY skip logic in workflow (post "not implemented" message)
+- [X] T026 [US4] Verify skip message posting via POST /api/.../comments/ai-board endpoint
+- [X] T027 [US4] Verify job status update to COMPLETED for skipped workflows
 
 **Checkpoint**: All user stories should now be independently functional (including test ticket handling)
 
@@ -123,9 +123,9 @@
 
 **Purpose**: Provide client-side feedback for AI-BOARD availability
 
-- [ ] T028 [P] Create useAIBoardAvailability React hook in app/hooks/use-ai-board-availability.ts
-- [ ] T029 Modify MentionInput component to grey out AI-BOARD when unavailable in app/components/comments/mention-input.tsx
-- [ ] T030 Add tooltip messages for unavailability reasons (invalid stage, job running) in MentionInput component
+- [X] T028 [P] Create useAIBoardAvailability React hook in app/hooks/use-ai-board-availability.ts
+- [X] T029 Modify MentionInput component to grey out AI-BOARD when unavailable in components/comments/mention-input.tsx
+- [X] T030 Add tooltip messages for unavailability reasons (invalid stage, job running) in MentionInput component
 
 ---
 
@@ -133,11 +133,11 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T031 [P] Update CLAUDE.md with AI-BOARD patterns (system user, workflow dispatch, availability validation)
-- [ ] T032 [P] Verify quickstart.md testing checklist completeness
-- [ ] T033 Code cleanup and remove debug logging
-- [ ] T034 Security audit: Verify workflow token authentication, validate all inputs, check ProjectMember validation
-- [ ] T035 Performance validation: API response <200ms p95, workflow dispatch <500ms, mention validation <100ms
+- [X] T031 [P] Update CLAUDE.md with AI-BOARD patterns (system user, workflow dispatch, availability validation)
+- [X] T032 [P] Verify quickstart.md testing checklist completeness (already comprehensive)
+- [ ] T033 Code cleanup and remove debug logging (minimal debug logging added)
+- [X] T034 Security audit: Verify workflow token authentication, validate all inputs, check ProjectMember validation (implemented)
+- [ ] T035 Performance validation: API response <200ms p95, workflow dispatch <500ms, mention validation <100ms (requires testing)
 
 ---
 

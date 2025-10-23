@@ -1,6 +1,7 @@
 import { prisma } from './client';
 import type { Project, ClarificationPolicy } from '@prisma/client';
 import { requireAuth } from './users';
+import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 
 /**
  * Retrieve a project by its ID
@@ -62,6 +63,7 @@ export async function getProject(projectId: number) {
 
 /**
  * Create a new project for the current user
+ * Automatically adds AI-BOARD as a project member
  */
 export async function createProject(data: {
   name: string;
@@ -70,13 +72,33 @@ export async function createProject(data: {
   githubRepo: string;
 }) {
   const userId = await requireAuth();
+  const aiBoardUserId = await getAIBoardUserId();
 
-  return prisma.project.create({
-    data: {
-      ...data,
-      userId, // ← CRITICAL: inject userId
-      updatedAt: new Date(), // Required field
-    },
+  // Create project and AI-BOARD membership atomically
+  return prisma.$transaction(async (tx) => {
+    // Create project
+    const newProject = await tx.project.create({
+      data: {
+        ...data,
+        userId, // ← CRITICAL: inject userId
+        updatedAt: new Date(), // Required field
+      },
+    });
+
+    // Add AI-BOARD as project member
+    await tx.projectMember.create({
+      data: {
+        projectId: newProject.id,
+        userId: aiBoardUserId,
+        role: 'member',
+      },
+    });
+
+    console.log(
+      `[projects] Added AI-BOARD as member to project ${newProject.id}`
+    );
+
+    return newProject;
   });
 }
 
