@@ -253,9 +253,11 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    // Click first user in list
-    const firstUser = autocomplete.locator('[data-testid="mention-user-item"]').first();
-    await firstUser.click();
+    // Click first enabled user (not AI-BOARD which is disabled in INBOX)
+    const firstEnabledUser = autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first();
+    await firstEnabledUser.click();
 
     // Verify mention markup is inserted
     const inputValue = await commentInput.inputValue();
@@ -273,8 +275,11 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
 
-    const firstUser = autocomplete.locator('[data-testid="mention-user-item"]').first();
-    await firstUser.click();
+    // Click first enabled user (not AI-BOARD which is disabled in INBOX)
+    const firstEnabledUser = autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first();
+    await firstEnabledUser.click();
 
     // Add text after mention
     await commentInput.press('End');
@@ -398,7 +403,10 @@ test.describe('US3: Multiple Mentions', () => {
     await commentInput.fill('@');
     let autocomplete = page.locator('[data-testid="mention-autocomplete"]');
     await expect(autocomplete).toBeVisible();
-    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+    await autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first()
+      .click();
 
     // Type text after first mention
     await commentInput.press('End');
@@ -417,12 +425,18 @@ test.describe('US3: Multiple Mentions', () => {
     // Insert first mention
     await commentInput.fill('@');
     let autocomplete = page.locator('[data-testid="mention-autocomplete"]');
-    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+    await autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first()
+      .click();
 
     // Add text and second mention
     await commentInput.press('End');
     await commentInput.type(' and @');
-    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+    await autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first()
+      .click();
 
     // Submit comment
     const submitButton = page.getByRole('button', { name: 'Comment', exact: true });
@@ -482,7 +496,10 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Create comment with mention
     await commentInput.fill('@');
     const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
-    await autocomplete.locator('[data-testid="mention-user-item"]').first().click();
+    await autocomplete
+      .locator('[data-testid="mention-user-item"]:not([data-unavailable="true"])')
+      .first()
+      .click();
 
     await commentInput.press('End');
     await commentInput.type(' check this');
