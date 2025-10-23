@@ -561,3 +561,258 @@ test.describe('US4: Mention Persistence and Display', () => {
     await expect(comment).not.toContainText('@[');
   });
 });
+
+/**
+ * ======================
+ * User Story 5: AI-BOARD Availability and Grey-out
+ * ======================
+ */
+
+test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
+  test.beforeEach(async () => {
+    // Create AI-BOARD user
+    await prisma.user.upsert({
+      where: { email: 'ai-board@system.local' },
+      update: {},
+      create: {
+        id: 'ai-board-system-user',
+        email: 'ai-board@system.local',
+        name: 'AI-BOARD Assistant',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Add AI-BOARD as project member
+    await prisma.projectMember.upsert({
+      where: {
+        projectId_userId: {
+          projectId: TEST_PROJECT_ID,
+          userId: 'ai-board-system-user',
+        },
+      },
+      update: {},
+      create: {
+        projectId: TEST_PROJECT_ID,
+        userId: 'ai-board-system-user',
+        role: 'member',
+      },
+    });
+  });
+
+  test('[US5] T045: AI-BOARD should be greyed out in INBOX stage', async ({ page }) => {
+    // Ensure ticket is in INBOX stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'INBOX' },
+    });
+
+    // Reload to pick up stage change
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    // Type @ to trigger autocomplete
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Find AI-BOARD in the list
+    const aiBoardItem = autocomplete.locator('[data-testid="mention-user-item"][data-ai-board="true"]');
+    await expect(aiBoardItem).toBeVisible();
+
+    // Verify AI-BOARD is marked as unavailable
+    await expect(aiBoardItem).toHaveAttribute('data-unavailable', 'true');
+
+    // Verify visual styling (opacity-50 for grey-out)
+    const classList = await aiBoardItem.getAttribute('class');
+    expect(classList).toContain('opacity-50');
+    expect(classList).toContain('cursor-not-allowed');
+
+    // Verify AI-BOARD is disabled
+    await expect(aiBoardItem).toBeDisabled();
+  });
+
+  test('[US5] T046: AI-BOARD should show tooltip with unavailability reason', async ({ page }) => {
+    // Ensure ticket is in INBOX stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'INBOX' },
+    });
+
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Find AI-BOARD item
+    const aiBoardItem = autocomplete.locator('[data-testid="mention-user-item"][data-ai-board="true"]');
+    await expect(aiBoardItem).toBeVisible();
+
+    // Hover to show tooltip
+    await aiBoardItem.hover();
+
+    // Verify tooltip appears with reason
+    const tooltip = page.locator('[role="tooltip"]');
+    await expect(tooltip).toBeVisible({ timeout: 3000 });
+    await expect(tooltip).toContainText('INBOX');
+  });
+
+  test('[US5] T047: AI-BOARD should NOT be greyed out in SPECIFY stage', async ({ page }) => {
+    // Ensure ticket is in SPECIFY stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'SPECIFY' },
+    });
+
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Find AI-BOARD item
+    const aiBoardItem = autocomplete.locator('[data-testid="mention-user-item"][data-ai-board="true"]');
+    await expect(aiBoardItem).toBeVisible();
+
+    // Verify AI-BOARD is NOT unavailable
+    await expect(aiBoardItem).toHaveAttribute('data-unavailable', 'false');
+
+    // Verify NOT disabled
+    await expect(aiBoardItem).not.toBeDisabled();
+
+    // Verify NOT greyed out (no opacity-50)
+    const classList = await aiBoardItem.getAttribute('class');
+    expect(classList).not.toContain('opacity-50');
+  });
+
+  test('[US5] T048: AI-BOARD should be greyed out when job is RUNNING', async ({ page }) => {
+    // Set ticket to SPECIFY stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'SPECIFY' },
+    });
+
+    // Create RUNNING job
+    await prisma.job.create({
+      data: {
+        ticketId: TEST_TICKET_ID,
+        projectId: TEST_PROJECT_ID,
+        command: 'comment-specify',
+        status: 'RUNNING',
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Find AI-BOARD item
+    const aiBoardItem = autocomplete.locator('[data-testid="mention-user-item"][data-ai-board="true"]');
+    await expect(aiBoardItem).toBeVisible();
+
+    // Verify AI-BOARD is unavailable
+    await expect(aiBoardItem).toHaveAttribute('data-unavailable', 'true');
+
+    // Verify greyed out
+    const classList = await aiBoardItem.getAttribute('class');
+    expect(classList).toContain('opacity-50');
+    expect(classList).toContain('cursor-not-allowed');
+
+    // Hover to verify tooltip shows job running message
+    await aiBoardItem.hover();
+    const tooltip = page.locator('[role="tooltip"]');
+    await expect(tooltip).toBeVisible({ timeout: 3000 });
+    await expect(tooltip).toContainText('already processing');
+  });
+
+  test('[US5] T049: Clicking greyed-out AI-BOARD should not insert mention', async ({ page }) => {
+    // Ensure ticket is in INBOX stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'INBOX' },
+    });
+
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Try to click greyed-out AI-BOARD
+    const aiBoardItem = autocomplete.locator('[data-testid="mention-user-item"][data-ai-board="true"]');
+    await aiBoardItem.click({ force: true }); // force click even if disabled
+
+    // Verify mention was NOT inserted
+    const inputValue = await commentInput.inputValue();
+    expect(inputValue).toBe('@'); // Still just @, no mention
+
+    // Verify autocomplete still open
+    await expect(autocomplete).toBeVisible();
+  });
+
+  test('[US5] T050: Selected item should use primary color for better distinction', async ({ page }) => {
+    // Set ticket to SPECIFY stage
+    await prisma.ticket.update({
+      where: { id: TEST_TICKET_ID },
+      data: { stage: 'SPECIFY' },
+    });
+
+    await page.reload();
+    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.waitForSelector('[role="dialog"]');
+    await page.click('[role="tab"]:has-text("Comments")');
+    await page.waitForSelector('[role="tabpanel"]:visible');
+
+    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
+    await commentInput.fill('@');
+
+    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
+    await expect(autocomplete).toBeVisible();
+
+    // Press ArrowDown to select first item
+    await commentInput.press('ArrowDown');
+
+    // Find selected item
+    const selectedItem = autocomplete.locator('[data-testid="mention-user-item"][data-selected="true"]');
+    await expect(selectedItem).toBeVisible();
+
+    // Verify primary color styling
+    const classList = await selectedItem.getAttribute('class');
+    expect(classList).toContain('bg-primary');
+    expect(classList).toContain('text-primary-foreground');
+  });
+});
