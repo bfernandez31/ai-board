@@ -388,6 +388,118 @@ The system provides a threaded comment system within each ticket:
 
 ---
 
+## User Mentions in Comments
+
+**Purpose**: Users need to reference and draw attention to specific team members within ticket discussions. Mentions enable direct communication, clearer collaboration context, and easier identification of relevant stakeholders in comment threads.
+
+### What It Does
+
+The system enables tagging project members in comments using @ symbol autocomplete:
+
+**Mention Creation**:
+- **Trigger**: Type @ character in comment textarea
+- **Autocomplete Dropdown**: Opens immediately showing all project members
+- **Real-Time Filtering**: Type letters after @ to filter users by name or email (case-insensitive)
+- **Selection Methods**:
+  - Mouse: Click on user from dropdown
+  - Keyboard: Arrow keys to navigate + Enter to select
+- **Insertion**: Selected user's name inserted as formatted mention
+- **Multiple Mentions**: Can mention multiple users in single comment, @ opens autocomplete again
+
+**Mention Display**:
+- **Visual Format**: Rendered as styled chips with distinct appearance
+- **Hover Tooltips**: Show user's full name and email on hover
+- **Current Name**: Always displays user's current name (auto-updates if user changes name)
+- **Deleted Users**: Shows "[Removed User]" when mentioned user removed from project
+- **Persistence**: Mentions maintain formatting after comment save and page reload
+
+**Keyboard Navigation**:
+- **Arrow Keys**: Up/Down to navigate autocomplete dropdown
+- **Enter**: Select highlighted user
+- **Escape**: Close autocomplete without selection
+- **Tab**: Close autocomplete and continue typing
+
+**Data Storage**:
+- **Format**: Comments stored as markdown with mention syntax `@[User Name](userId)`
+- **User IDs**: References stored by user ID, not name (enables auto-update behavior)
+- **Parsing**: Custom markdown renderer converts mention syntax to visual chips
+
+### Requirements
+
+**Autocomplete**:
+- Opens on @ character in comment textarea
+- Displays all project members (owner + members from ProjectMember table)
+- Filters in real-time as user types (searches name and email fields)
+- Case-insensitive search
+- Highlights matching text in dropdown results
+- Maximum 10 visible items with scrolling for additional users
+- <100ms response time for filtering up to 100 project members
+
+**Selection**:
+- Click on user to select (mouse interaction)
+- Arrow keys (up/down) to navigate dropdown (keyboard interaction)
+- Enter key to select highlighted user
+- ESC key to close dropdown without selection
+- Inserts `@[User Name](userId)` syntax into textarea
+- Closes dropdown after selection
+- Cursor positioned after inserted mention
+
+**Display**:
+- Mentions rendered as styled chips in saved comments
+- Chip styling: Rounded background, distinct color, hover effect
+- Tooltip on hover: Shows user's full name and email
+- Test ID: `mention-chip` for E2E testing
+- Displays current user name (fetched from User table on render)
+- Deleted users: Shows "[Removed User]" text when user not found in project
+
+**Multiple Mentions**:
+- Supports unlimited mentions per comment (within 2000 character limit)
+- Typing @ reopens autocomplete dropdown for subsequent mentions
+- Each mention maintains independent styling and behavior
+- Comment text can mix plain text, markdown, and mentions
+
+**Authorization**:
+- Only project members appear in autocomplete (filtered by ProjectMember table)
+- Any project member can mention any other project member
+- Mentioned users do NOT receive notifications (visual-only in this implementation)
+
+**Performance**:
+- Autocomplete filtering: <100ms for project with 100 members
+- Mention rendering: <500ms for comment with 10 mentions
+- No performance degradation with multiple mentions per comment
+
+### Data Model
+
+**Comment Content Format**:
+- Markdown with custom mention syntax: `@[Display Name](userId)`
+- Example: `Hey @[Alice Smith](user-alice), can you review this?`
+- User ID references enable auto-updating names
+
+**Mention Parsing**:
+- Regex pattern: `/\@\[([^\]]+)\]\(([^)]+)\)/g`
+- Capture groups: `$1` = Display Name (ignored), `$2` = User ID (used for lookup)
+- Custom react-markdown component renders mentions as chips
+
+**User Lookup**:
+- On comment render: Extract user IDs from mention syntax
+- Fetch current user data from User table
+- Display user's current name (not stored name from syntax)
+- If user not found: Display "[Removed User]" fallback
+
+**ProjectMember Integration**:
+- Autocomplete queries ProjectMember table for current project
+- Returns users with role 'owner' or 'member'
+- Includes user name and email for filtering
+- Ensures only project members appear in dropdown
+
+**Relationships**:
+- Comment belongs to Ticket (foreign key: ticketId)
+- Comment belongs to User (foreign key: userId, comment author)
+- Mentions reference Users (via user IDs in markdown syntax)
+- ProjectMember join table: many-to-many between Project and User
+
+---
+
 ## Inline Editing
 
 **Purpose**: Users need to update ticket information quickly without navigating to separate edit screens. Inline editing provides contextual editing directly in the detail modal.
@@ -772,6 +884,18 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - ✅ Optimistic updates with rollback
 - ✅ Authorization enforcement (project owners, author-only deletion)
 
+**User Mentions**:
+- ✅ @ symbol autocomplete in comment textarea
+- ✅ Real-time filtering by name and email (case-insensitive)
+- ✅ Keyboard navigation (arrow keys, Enter, ESC)
+- ✅ Mouse click selection
+- ✅ Visual chip rendering with hover tooltips
+- ✅ Multiple mentions per comment
+- ✅ Auto-updating user names (shows current name)
+- ✅ Deleted user handling ("[Removed User]" display)
+- ✅ Mention persistence after save and reload
+- ✅ Project member filtering (owner + members only)
+
 **Inline Editing**:
 - ✅ Click-to-edit title and description
 - ✅ Real-time validation
@@ -868,6 +992,21 @@ CLOUDINARY_API_SECRET="your-api-secret"
 7. **View**: User clicks image thumbnail → lightbox opens → navigates with prev/next controls
 8. Gallery updates immediately with visual confirmation
 
+**Mentioning Users in Comments**:
+1. User opens ticket detail modal and navigates to Comments tab
+2. User clicks in comment textarea and types @
+3. Autocomplete dropdown appears showing all project members
+4. User types additional letters (e.g., "ali") to filter dropdown
+5. Dropdown filters to matching users (e.g., "Alice Smith")
+6. **Mouse selection**: User clicks on desired user from dropdown
+7. **Keyboard selection**: User presses down arrow to highlight user, then presses Enter
+8. Mention inserted as `@[Alice Smith](user-alice)` syntax
+9. User continues typing rest of comment text
+10. User submits comment (click Submit or Cmd/Ctrl+Enter)
+11. Comment displays with mention rendered as styled chip
+12. Other users viewing comment see "Alice Smith" in chip format
+13. Hovering over chip shows tooltip with full name and email
+
 ### Business Rules
 
 **Movement**:
@@ -927,6 +1066,18 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Optimistic updates: Immediate UI changes with rollback on failure
 - Performance: <2s for create/delete operations, <500ms for 100 comments rendering
 
+**User Mentions in Comments** (added 2025-10-23):
+- Mention trigger: Type @ character in comment textarea to open autocomplete
+- User filtering: Real-time case-insensitive search on project members (name and email)
+- Selection methods: Click on user or use arrow keys + Enter for keyboard navigation
+- Visual formatting: Mentioned users rendered as styled chips with hover tooltips
+- Display behavior: Shows current user name (auto-updates when user changes name)
+- Deleted user handling: Displays "[Removed User]" when mentioned user removed from project
+- Multi-user support: Multiple mentions allowed per comment, autocomplete reopens on subsequent @
+- Keyboard controls: ESC to close autocomplete, arrow keys for navigation, Enter to select
+- Authorization: Only project members appear in autocomplete dropdown
+- Performance: <100ms autocomplete filtering response time for up to 100 project members
+
 ### Technical Details
 
 **Drag-and-Drop**:
@@ -964,6 +1115,18 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Validation: Zod schemas for content length (1-2000 characters)
 - Authorization: Session-based (NextAuth.js), project ownership + author validation
 - Real-time: Client-side polling (10-second interval) with deduplication
+
+**User Mentions**:
+- Autocomplete: Custom React hook (useMentionAutocomplete) with state management
+- User data: Fetched from ProjectMember join table via TanStack Query
+- Filtering: Client-side case-insensitive search on name and email fields
+- Keyboard navigation: Custom useEffect hooks for arrow keys, Enter, ESC
+- Mention syntax: Markdown format `@[Display Name](userId)` stored in comment content
+- Rendering: Custom react-markdown component (MentionRenderer) converts syntax to chips
+- User lookup: Real-time fetch from User table using user IDs extracted from mentions
+- Tooltip: shadcn/ui Tooltip component with Radix UI primitives
+- Performance: Memoized filtering function with useMemo for <100ms response
+- API: GET /api/projects/{projectId}/members endpoint for autocomplete data
 
 **Image Attachments**:
 - Cloudinary SDK v2 (official Node.js SDK)
