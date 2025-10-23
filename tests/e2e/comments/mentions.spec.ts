@@ -66,6 +66,20 @@ test.beforeEach(async ({ page }) => {
     },
   });
 
+  // Create AI-BOARD user (but don't add as project member yet)
+  // Will be added as member only in US5 tests
+  await prisma.user.upsert({
+    where: { email: 'ai-board@system.local' },
+    update: {},
+    create: {
+      id: 'ai-board-system-user',
+      email: 'ai-board@system.local',
+      name: 'AI-BOARD Assistant',
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
   // Ensure test project exists
   await prisma.project.upsert({
     where: { id: TEST_PROJECT_ID },
@@ -570,20 +584,7 @@ test.describe('US4: Mention Persistence and Display', () => {
 
 test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
   test.beforeEach(async () => {
-    // Create AI-BOARD user
-    await prisma.user.upsert({
-      where: { email: 'ai-board@system.local' },
-      update: {},
-      create: {
-        id: 'ai-board-system-user',
-        email: 'ai-board@system.local',
-        name: 'AI-BOARD Assistant',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    // Add AI-BOARD as project member
+    // Add AI-BOARD as project member (user already created in global beforeEach)
     await prisma.projectMember.upsert({
       where: {
         projectId_userId: {
