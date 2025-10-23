@@ -83,7 +83,7 @@ export function CommentForm({ projectId, ticketId, onAutocompleteOpenChange }: C
         placeholder="Write a comment... (@ to mention, Markdown supported)"
         className="min-h-[100px] resize-none"
         disabled={isPending || isMembersLoading}
-        onAutocompleteOpenChange={onAutocompleteOpenChange}
+        {...(onAutocompleteOpenChange && { onAutocompleteOpenChange })}
       />
 
       <div className="flex items-center justify-between">

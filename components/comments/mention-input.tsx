@@ -57,7 +57,7 @@ export function MentionInput({
    * when autocomplete is open
    */
   useEffect(() => {
-    const handleEscapeCapture = (e: KeyboardEvent) => {
+    const handleEscapeCapture = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape' && isAutocompleteOpen) {
         e.preventDefault();
         e.stopPropagation();
@@ -67,10 +67,10 @@ export function MentionInput({
     };
 
     // Use capture phase to intercept before Dialog's listener
-    document.addEventListener('keydown', handleEscapeCapture as any, { capture: true });
+    document.addEventListener('keydown', handleEscapeCapture, { capture: true });
 
     return () => {
-      document.removeEventListener('keydown', handleEscapeCapture as any, { capture: true });
+      document.removeEventListener('keydown', handleEscapeCapture, { capture: true });
     };
   }, [isAutocompleteOpen]);
 
