@@ -1,8 +1,10 @@
 'use client'
 
-import { Clock, Pen, CheckCircle2, XCircle, Ban } from 'lucide-react'
+import { Clock, Pen, CheckCircle2, XCircle, Ban, Cog, MessageSquare } from 'lucide-react'
 import { JobStatus } from '@prisma/client'
 import { cn } from '@/lib/utils'
+import { JobType } from '@/lib/types/job-types'
+import { getJobTypeConfig } from '@/lib/utils/job-type-classifier'
 
 /**
  * JobStatusIndicator Component Props
@@ -17,6 +19,12 @@ export interface JobStatusIndicatorProps {
    * Job command for context (e.g., "specify", "plan", "build")
    */
   command: string
+
+  /**
+   * Optional: Job type for visual distinction
+   * If not provided, no job type indicator is rendered
+   */
+  jobType?: JobType
 
   /**
    * Optional CSS class name for styling
@@ -50,6 +58,7 @@ export interface JobStatusIndicatorProps {
 export function JobStatusIndicator({
   status,
   command,
+  jobType,
   className,
   animated = true,
   ariaLabel,
@@ -57,41 +66,70 @@ export function JobStatusIndicator({
   // Map status to icon, color, and animation
   const statusConfig = getStatusConfig(status)
 
-  // Compute final aria label
-  const finalAriaLabel =
-    ariaLabel || `Job ${command} is ${status.toLowerCase()}`
+  // Get job type config if jobType is provided
+  const jobTypeConfig = jobType ? getJobTypeConfig(jobType) : null
+
+  // Build aria label
+  const statusLabel = ariaLabel || `Job ${command} is ${status.toLowerCase()}`
+  const jobTypeLabel = jobTypeConfig ? `. ${jobTypeConfig.ariaLabel}` : ''
+  const finalAriaLabel = `${statusLabel}${jobTypeLabel}`
 
   // Apply animation only for RUNNING status and if animated is true
   const shouldAnimate = status === 'RUNNING' && animated
+
+  // Icon component mapping
+  const JobTypeIcon = jobTypeConfig
+    ? jobTypeConfig.iconName === 'Cog'
+      ? Cog
+      : MessageSquare
+    : null
 
   return (
     <div
       data-testid="job-status-indicator"
       className={cn(
-        'flex items-center gap-2',
+        'flex items-center gap-3',
         className
       )}
       role="img"
       aria-label={finalAriaLabel}
     >
-      <div
-        className={cn(
-          'flex items-center justify-center',
-          shouldAnimate && 'animate-quill-writing'
-        )}
-        style={
-          shouldAnimate
-            ? {
-                willChange: 'transform',
-              }
-            : undefined
-        }
-      >
-        {statusConfig.icon}
+      {/* Status indicator (existing) */}
+      <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            'flex items-center justify-center',
+            shouldAnimate && 'animate-quill-writing'
+          )}
+          style={
+            shouldAnimate
+              ? {
+                  willChange: 'transform',
+                }
+              : undefined
+          }
+        >
+          {statusConfig.icon}
+        </div>
+        <span className={cn('text-sm font-medium', statusConfig.textColor)}>
+          {status}
+        </span>
       </div>
-      <span className={cn('text-sm font-medium', statusConfig.textColor)}>
-        {status}
-      </span>
+
+      {/* Job type indicator (new) */}
+      {jobTypeConfig && JobTypeIcon && (
+        <div
+          data-testid="job-type-indicator"
+          className="flex items-center gap-1.5 text-xs"
+        >
+          <JobTypeIcon
+            className={cn('h-4 w-4', jobTypeConfig.iconColor)}
+          />
+          <span className={cn('font-medium', jobTypeConfig.textColor)}>
+            {jobTypeConfig.label}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

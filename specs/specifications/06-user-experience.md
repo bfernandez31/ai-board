@@ -23,6 +23,7 @@ The system displays job execution status directly on ticket cards with:
 
 **Ticket Card Status Indicators**:
 - **Job Status Badge**: Shows current workflow state (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+- **Job Type Badge**: Distinguishes workflow jobs (gear icon, blue) from AI-BOARD jobs (message icon, purple)
 - **Animated Indicator**: Writing quill/pen animation displays when job is RUNNING
 - **Color-Coded Status**: Visual distinction between success (green), in-progress (blue), failure (red), and cancelled (gray)
 - **Ticket Information**: Displays ticket ID, title, and SONNET badge
@@ -43,10 +44,12 @@ The system displays job execution status directly on ticket cards with:
 
 **Display**:
 - System displays current job status on tickets with active or recent jobs
+- Job type indicator shows workflow jobs (gear icon, blue) vs. AI-BOARD jobs (message icon, purple)
 - Clean, uncluttered card design focusing on ticket title and job status
 - Distinct visual states for each status: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
 - FAILED status uses error red styling
 - CANCELLED status uses neutral gray styling (distinguishes intentional stop from error)
+- Job type visible without hover interaction (WCAG 2.1 AA compliant)
 
 **Animation**:
 - Smooth, continuous animation for RUNNING status (writing motion)
@@ -80,6 +83,16 @@ The system displays job execution status directly on ticket cards with:
 - `COMPLETED`: Finished successfully
 - `FAILED`: Encountered error
 - `CANCELLED`: Manually terminated
+
+**Job Type Classification**:
+- **Workflow Jobs**: Automated stage transitions (commands: specify, plan, tasks, implement, quick-impl)
+  - Visual: Gear/cog icon with blue color (#2563eb)
+  - Label: "Workflow"
+  - ARIA: "Automated workflow job"
+- **AI-BOARD Jobs**: User-initiated assistance (commands: comment-specify, comment-plan, comment-build, comment-verify)
+  - Visual: Message/chat icon with purple color (#9333ea)
+  - Label: "AI-BOARD"
+  - ARIA: "AI-BOARD assistance job"
 
 ---
 
@@ -527,11 +540,12 @@ The system displays a persistent header at the top of all pages:
 ### Available Features
 
 **Real-Time Status Visualization**:
-- ✅ WebSocket-based job status updates
+- ✅ Client-side polling job status updates (2-second interval)
 - ✅ Animated RUNNING indicators
 - ✅ Color-coded status badges
+- ✅ Job type distinction (workflow vs. AI-BOARD)
 - ✅ Auto-updates across browser tabs
-- ✅ 500ms minimum display prevents flickering
+- ✅ WCAG 2.1 AA accessibility compliance
 
 **Specification Access**:
 - ✅ One-click specification viewing
@@ -577,10 +591,11 @@ The system displays a persistent header at the top of all pages:
 
 **Viewing Job Status**:
 1. User views kanban board
-2. Ticket cards display current job status automatically
-3. Status updates in real-time as workflows execute
-4. User sees animation while specification is being drafted
-5. Completion status persists on card
+2. Ticket cards display current job status and type automatically
+3. User distinguishes workflow jobs (gear icon, blue) from AI-BOARD jobs (message icon, purple) at a glance
+4. Status updates in real-time as workflows execute
+5. User sees animation while specification is being drafted
+6. Completion status persists on card
 
 **Viewing Specifications**:
 1. User clicks ticket with completed specify job
@@ -618,6 +633,7 @@ The system displays a persistent header at the top of all pages:
 ### Business Rules
 
 - Only most recent active or terminal job shown per ticket
+- Job type determined by command prefix (comment-* = AI-BOARD, else workflow)
 - Terminal job statuses persist until new job starts
 - Specification button only for tickets with completed specify jobs
 - All projects visible (no pagination or filtering)
@@ -631,9 +647,10 @@ The system displays a persistent header at the top of all pages:
 ### Technical Details
 
 **Real-Time Updates**:
-- WebSocket connection for job status
-- Push-based notifications (low latency)
-- Cross-tab synchronization
+- Client-side polling at 2-second intervals
+- TanStack Query for caching and state management
+- Job type classification via command pattern matching
+- Icons: lucide-react (Cog for workflow, MessageSquare for AI-BOARD)
 
 **Content Retrieval**:
 - GitHub API via Octokit

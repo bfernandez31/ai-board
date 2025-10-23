@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
+import { classifyJobType } from '@/lib/utils/job-type-classifier';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
@@ -106,6 +107,7 @@ export const TicketCard = React.memo(
               <JobStatusIndicator
                 status={currentJob.status}
                 command={currentJob.command}
+                jobType={classifyJobType(currentJob.command)}
                 animated={true}
               />
             </div>
