@@ -135,6 +135,45 @@ export async function getAllJobsForTicket(ticketId: number): Promise<Job[]> {
 }
 
 /**
+ * Get All Jobs for Multiple Tickets (Batch Query)
+ *
+ * Fetches ALL jobs for each ticket in a single database query.
+ * Used for dual job display (workflow + AI-BOARD jobs).
+ *
+ * Performance:
+ * - Single database query for all tickets (no N+1 problem)
+ * - Uses [ticketId] index
+ * - Returns full job array per ticket for client-side filtering
+ *
+ * @param ticketIds - Array of ticket IDs
+ * @returns Map of ticketId → array of Jobs ordered by startedAt desc
+ */
+export async function getAllJobsForTickets(ticketIds: number[]): Promise<Map<number, Job[]>> {
+  // Fetch all jobs for these tickets in single query
+  const jobs = await prisma.job.findMany({
+    where: {
+      ticketId: {
+        in: ticketIds,
+      },
+    },
+    orderBy: {
+      startedAt: 'desc',
+    },
+  })
+
+  // Group jobs by ticketId
+  const jobMap = new Map<number, Job[]>()
+
+  for (const job of jobs) {
+    const existingJobs = jobMap.get(job.ticketId) || []
+    existingJobs.push(job)
+    jobMap.set(job.ticketId, existingJobs)
+  }
+
+  return jobMap
+}
+
+/**
  * Get Active Jobs Count for Project
  *
  * Returns count of PENDING and RUNNING jobs for a project.

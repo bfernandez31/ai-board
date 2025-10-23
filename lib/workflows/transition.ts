@@ -82,12 +82,15 @@ function getJobValidationErrorMessage(status: JobStatus): string {
 }
 
 /**
- * Validates that the most recent job for a ticket has completed successfully.
+ * Validates that the workflow job for the current stage has completed successfully.
  *
  * This validation ensures workflow integrity by checking:
  * 1. If the current stage requires job validation
- * 2. Whether a job exists for the ticket (data integrity check)
- * 3. Whether the most recent job has status COMPLETED
+ * 2. Whether a workflow job exists for the current stage (data integrity check)
+ * 3. Whether the workflow job has status COMPLETED
+ *
+ * IMPORTANT: This only validates WORKFLOW jobs (specify, plan, implement), not AI-BOARD jobs (comment-*).
+ * AI-BOARD jobs run in parallel and do not block stage transitions.
  *
  * @param ticket - Ticket with project relation loaded
  * @param targetStage - Target stage for transition
@@ -103,9 +106,18 @@ async function validateJobCompletion(
     return { success: true };
   }
 
-  // 2. Fetch most recent job for ticket (ordered by startedAt DESC)
-  const mostRecentJob = await prisma.job.findFirst({
-    where: { ticketId: ticket.id },
+  // 2. Fetch most recent job for ticket, excluding AI-BOARD jobs (comment-*)
+  // Workflow jobs: specify, plan, implement, quick-impl
+  // AI-BOARD jobs: comment-specify, comment-plan, comment-implement (excluded)
+  const workflowJob = await prisma.job.findFirst({
+    where: {
+      ticketId: ticket.id,
+      command: {
+        not: {
+          startsWith: 'comment-',
+        },
+      },
+    },
     orderBy: { startedAt: 'desc' },
     select: {
       id: true,
@@ -115,18 +127,19 @@ async function validateJobCompletion(
     },
   });
 
-  // 3. Handle missing job (data integrity issue)
-  if (!mostRecentJob) {
+  // 4. Handle missing workflow job (data integrity issue)
+  if (!workflowJob) {
+    const expectedCommand = STAGE_COMMAND_MAP[ticket.stage];
     return {
       success: false,
       errorCode: 'MISSING_JOB',
-      error: `Expected job for stage ${ticket.stage} but none found`,
+      error: `Expected workflow job (${expectedCommand}) for stage ${ticket.stage} but none found`,
     };
   }
 
-  // 4. Validate job status is COMPLETED
-  if (mostRecentJob.status !== JobStatus.COMPLETED) {
-    const errorMessage = getJobValidationErrorMessage(mostRecentJob.status);
+  // 5. Validate workflow job status is COMPLETED
+  if (workflowJob.status !== JobStatus.COMPLETED) {
+    const errorMessage = getJobValidationErrorMessage(workflowJob.status);
     return {
       success: false,
       errorCode: 'JOB_NOT_COMPLETED',
@@ -134,13 +147,13 @@ async function validateJobCompletion(
       details: {
         currentStage: ticket.stage,
         targetStage: targetStage,
-        jobStatus: mostRecentJob.status,
-        jobCommand: mostRecentJob.command,
+        jobStatus: workflowJob.status,
+        jobCommand: workflowJob.command,
       },
     };
   }
 
-  // 5. Validation passed
+  // 6. Validation passed
   return { success: true };
 }
 

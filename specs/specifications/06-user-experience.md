@@ -15,18 +15,25 @@ This domain covers user-facing experience features that provide real-time feedba
 
 ## Real-Time Job Status Display
 
-**Purpose**: Users need to see the current state of automated workflow executions directly on ticket cards without manually checking GitHub Actions. This provides immediate visibility into specification generation, planning, and implementation progress.
+**Purpose**: Users need to see the current state of both workflow and AI-BOARD jobs directly on ticket cards without manually checking GitHub Actions. Dual job display provides immediate visibility into parallel executions with distinct visual indicators.
 
 ### What It Does
 
-The system displays job execution status directly on ticket cards with:
+The system displays job execution status directly on ticket cards with dual job support:
 
-**Ticket Card Status Indicators**:
-- **Job Status Badge**: Shows current workflow state (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
-- **Job Type Badge**: Distinguishes workflow jobs (gear icon, blue) from AI-BOARD jobs (message icon, purple)
-- **Animated Indicator**: Writing quill/pen animation displays when job is RUNNING
-- **Color-Coded Status**: Visual distinction between success (green), in-progress (blue), failure (red), and cancelled (gray)
-- **Ticket Information**: Displays ticket ID, title, and SONNET badge
+**Dual Job Display**:
+- **Workflow Job**: Shows specify/plan/implement job with contextual labels (WRITING, CODING)
+- **AI-BOARD Job**: Shows comment-* job with ASSISTING label (stage-filtered visibility)
+- **Format**: `🔧 STAGE : STATUS` for workflow, `💬 AI-BOARD : STATUS` for AI-BOARD
+- **Simultaneous Display**: Both jobs shown when present, stacked vertically in card footer
+
+**Job Indicators**:
+- **Icon + Prefix**: Workflow (🔧 blue), AI-BOARD (💬 purple)
+- **Stage Name**: SPECIFY/PLAN/BUILD for workflow jobs
+- **Contextual Labels**: RUNNING transforms to WRITING (spec/plan) or CODING (implement)
+- **Status States**: PENDING, RUNNING→WRITING/CODING/ASSISTING, COMPLETED, FAILED, CANCELLED
+- **Animated Indicator**: Pen animation displays when job is RUNNING
+- **Color-Coded Status**: Green (COMPLETED), blue (RUNNING), red (FAILED), gray (CANCELLED/PENDING)
 
 **Real-Time Updates**:
 - Status changes appear automatically via client-side polling (2-second interval)
@@ -34,21 +41,23 @@ The system displays job execution status directly on ticket cards with:
 - No manual page refresh required
 - Polling stops when all jobs reach terminal states (optimization)
 
-**Status Display Logic**:
-- Shows most recent active job (PENDING or RUNNING) if one exists
-- If no active jobs, shows most recent terminal job (COMPLETED/FAILED/CANCELLED)
-- Terminal statuses persist indefinitely until replaced by new job
-- Tickets with no jobs display clean card without status indicator
+**Display Logic**:
+- **Workflow Job**: Most recent non-AI-BOARD job (filters out comment-* commands)
+- **AI-BOARD Job**: Most recent comment-* job matching current ticket stage
+- **Stage Filtering**: AI-BOARD jobs only visible when command matches stage (e.g., comment-specify visible only in SPECIFY)
+- **No Jobs**: Clean card without status indicators
 
 ### Requirements
 
 **Display**:
-- System displays current job status on tickets with active or recent jobs
-- Job type indicator shows workflow jobs (gear icon, blue) vs. AI-BOARD jobs (message icon, purple)
-- Clean, uncluttered card design focusing on ticket title and job status
-- Distinct visual states for each status: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
-- FAILED status uses error red styling
-- CANCELLED status uses neutral gray styling (distinguishes intentional stop from error)
+- Dual job display: workflow and AI-BOARD jobs shown simultaneously when both present
+- Format: `🔧 STAGE : STATUS` (workflow), `💬 AI-BOARD : STATUS` (AI-BOARD) with space before colon
+- Workflow jobs: Cog icon (🔧) in blue, shows stage name (SPECIFY/PLAN/BUILD)
+- AI-BOARD jobs: MessageSquare icon (💬) in purple, shows "AI-BOARD" label
+- Contextual labels: RUNNING→WRITING (spec/plan), RUNNING→CODING (implement), RUNNING→ASSISTING (AI-BOARD)
+- Stage filtering: AI-BOARD jobs visible only when command matches current stage
+- Clean card design with status indicators in footer section
+- Distinct visual states: PENDING (gray), RUNNING (blue), COMPLETED (green), FAILED (red), CANCELLED (gray)
 - Job type visible without hover interaction (WCAG 2.1 AA compliant)
 
 **Animation**:
@@ -64,35 +73,39 @@ The system displays job execution status directly on ticket cards with:
 - API endpoint: GET `/api/projects/{projectId}/jobs/status`
 
 **Data Handling**:
-- Displays most recent active job (PENDING/RUNNING priority)
-- Falls back to most recent terminal job if no active jobs
-- Terminal statuses persist until new job starts
-- Handles tickets with no jobs gracefully
+- Workflow job: Most recent job with command NOT starting with "comment-" (filters out AI-BOARD jobs)
+- AI-BOARD job: Most recent job with command starting with "comment-" AND matching current stage
+- Stage filtering: AI-BOARD job visible only if command suffix matches stage (e.g., comment-specify in SPECIFY)
+- No jobs: Clean card display without indicators
 
 ### Data Model
 
 **Ticket Card Display**:
-- Ticket ID
-- Ticket title
-- SONNET badge
-- Job status indicator (if applicable)
+- Ticket ID, title, SONNET badge
+- Workflow job indicator (if present): `🔧 STAGE : STATUS`
+- AI-BOARD job indicator (if present and stage matches): `💬 AI-BOARD : STATUS`
 
 **Job Status Values**:
-- `PENDING`: Queued for execution
-- `RUNNING`: Currently executing (shows animation)
-- `COMPLETED`: Finished successfully
-- `FAILED`: Encountered error
-- `CANCELLED`: Manually terminated
+- `PENDING`: Queued (gray, Clock icon)
+- `RUNNING`: Executing (blue, Pen icon with animation) → Transformed to WRITING/CODING/ASSISTING
+- `COMPLETED`: Success (green, CheckCircle icon)
+- `FAILED`: Error (red, XCircle icon)
+- `CANCELLED`: Stopped (gray, Ban icon)
 
-**Job Type Classification**:
-- **Workflow Jobs**: Automated stage transitions (commands: specify, plan, tasks, implement, quick-impl)
-  - Visual: Gear/cog icon with blue color (#2563eb)
-  - Label: "Workflow"
-  - ARIA: "Automated workflow job"
-- **AI-BOARD Jobs**: User-initiated assistance (commands: comment-specify, comment-plan, comment-build, comment-verify)
-  - Visual: Message/chat icon with purple color (#9333ea)
-  - Label: "AI-BOARD"
-  - ARIA: "AI-BOARD assistance job"
+**Job Filtering**:
+- **Workflow Job**: `command NOT LIKE 'comment-%'`, sorted by `startedAt DESC`
+- **AI-BOARD Job**: `command LIKE 'comment-%'` AND `matchesStage(command, currentStage)`, sorted by `startedAt DESC`
+
+**Stage Matching Logic**:
+- Extract stage from command suffix (e.g., "comment-specify" → "SPECIFY")
+- Case-insensitive comparison with current ticket stage
+- Match required for AI-BOARD job visibility
+
+**Contextual Label Transformation**:
+- `command IN (specify, plan) AND status=RUNNING` → "WRITING"
+- `command IN (implement, quick-impl) AND status=RUNNING` → "CODING"
+- `command LIKE 'comment-%' AND status=RUNNING` → "ASSISTING"
+- All other statuses: Display original status name
 
 ---
 

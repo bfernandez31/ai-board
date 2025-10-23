@@ -13,12 +13,13 @@ import { z } from 'zod';
  * Job status DTO schema
  *
  * Represents a single job's status information for polling.
- * Excludes sensitive fields (command, createdAt, completedAt).
+ * Includes command field for dual job filtering (046-dual-job-display).
  */
 export const JobStatusDtoSchema = z.object({
   id: z.number().int().positive(),
   status: z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
   ticketId: z.number().int().positive(),
+  command: z.string().min(1), // Required for workflow vs AI-BOARD job filtering
   updatedAt: z.string().datetime(), // ISO 8601 format
 });
 

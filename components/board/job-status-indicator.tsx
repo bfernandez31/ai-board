@@ -5,6 +5,7 @@ import { JobStatus } from '@prisma/client'
 import { cn } from '@/lib/utils'
 import { JobType } from '@/lib/types/job-types'
 import { getJobTypeConfig } from '@/lib/utils/job-type-classifier'
+import { getContextualLabel } from '@/lib/utils/job-label-transformer'
 
 /**
  * JobStatusIndicator Component Props
@@ -25,6 +26,12 @@ export interface JobStatusIndicatorProps {
    * If not provided, no job type indicator is rendered
    */
   jobType?: JobType
+
+  /**
+   * Optional: Current ticket stage for context (e.g., "SPECIFY", "PLAN")
+   * Used to display stage name before status label
+   */
+  stage?: string
 
   /**
    * Optional CSS class name for styling
@@ -59,18 +66,25 @@ export function JobStatusIndicator({
   status,
   command,
   jobType,
+  stage,
   className,
   animated = true,
   ariaLabel,
 }: JobStatusIndicatorProps) {
+  // Get contextual label (transforms RUNNING to WRITING/CODING/ASSISTING)
+  const displayLabel = getContextualLabel(command, status)
+
   // Map status to icon, color, and animation
   const statusConfig = getStatusConfig(status)
 
   // Get job type config if jobType is provided
   const jobTypeConfig = jobType ? getJobTypeConfig(jobType) : null
 
+  // Determine prefix text (stage name for workflow, "AI-BOARD" for AI-BOARD jobs)
+  const prefixText = jobType === JobType.AI_BOARD ? 'AI-BOARD' : stage
+
   // Build aria label
-  const statusLabel = ariaLabel || `Job ${command} is ${status.toLowerCase()}`
+  const statusLabel = ariaLabel || `Job ${command} is ${displayLabel.toLowerCase()}`
   const jobTypeLabel = jobTypeConfig ? `. ${jobTypeConfig.ariaLabel}` : ''
   const finalAriaLabel = `${statusLabel}${jobTypeLabel}`
 
@@ -84,18 +98,33 @@ export function JobStatusIndicator({
       : MessageSquare
     : null
 
+  // Color for icon + prefix (blue for workflow, purple for AI-BOARD)
+  const prefixColor = jobType === JobType.AI_BOARD
+    ? 'text-purple-500'
+    : 'text-blue-500'
+
   return (
     <div
       data-testid="job-status-indicator"
       className={cn(
-        'flex items-center gap-3',
+        'flex items-center gap-1.5',
         className
       )}
       role="img"
       aria-label={finalAriaLabel}
     >
-      {/* Status indicator (existing) */}
-      <div className="flex items-center gap-2">
+      {/* Icon + Stage/Type prefix */}
+      {jobTypeConfig && JobTypeIcon && prefixText && (
+        <div className="flex items-center gap-1">
+          <JobTypeIcon className={cn('h-4 w-4', prefixColor)} />
+          <span className={cn('text-sm font-medium uppercase', prefixColor)}>
+            {prefixText} :
+          </span>
+        </div>
+      )}
+
+      {/* Status label with icon */}
+      <div className="flex items-center gap-1.5">
         <div
           className={cn(
             'flex items-center justify-center',
@@ -112,24 +141,9 @@ export function JobStatusIndicator({
           {statusConfig.icon}
         </div>
         <span className={cn('text-sm font-medium', statusConfig.textColor)}>
-          {status}
+          {displayLabel}
         </span>
       </div>
-
-      {/* Job type indicator (new) */}
-      {jobTypeConfig && JobTypeIcon && (
-        <div
-          data-testid="job-type-indicator"
-          className="flex items-center gap-1.5 text-xs"
-        >
-          <JobTypeIcon
-            className={cn('h-4 w-4', jobTypeConfig.iconColor)}
-          />
-          <span className={cn('font-medium', jobTypeConfig.textColor)}>
-            {jobTypeConfig.label}
-          </span>
-        </div>
-      )}
     </div>
   )
 }

@@ -8,6 +8,10 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "test:unit": "vitest run",
+    "test:unit:ui": "vitest --ui",
+    "test:unit:watch": "vitest --watch",
+    "test": "vitest run && playwright test",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -63,6 +67,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@vitest/ui": "^4.0.2",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.0",
@@ -72,6 +77,7 @@
     "prisma": "^6.17.1",
     "tailwindcss": "^3.4.13",
     "tsx": "^4.20.6",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.0.2"
   }
 }

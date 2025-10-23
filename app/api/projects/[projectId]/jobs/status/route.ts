@@ -74,6 +74,7 @@ export async function GET(
         id: true,
         status: true,
         ticketId: true,
+        command: true, // Required for dual job filtering (workflow vs AI-BOARD)
         updatedAt: true,
       },
       orderBy: { updatedAt: 'desc' },
@@ -85,6 +86,7 @@ export async function GET(
         id: job.id,
         status: job.status,
         ticketId: job.ticketId,
+        command: job.command, // Required for dual job filtering
         updatedAt: job.updatedAt.toISOString(),
       })),
     };

@@ -9,6 +9,7 @@ import { NewTicketButton } from './new-ticket-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Job } from '@prisma/client';
 import { Ban } from 'lucide-react';
+import type { DualJobState } from '@/lib/types/job-types';
 
 interface StageColumnProps {
   stage: Stage;
@@ -17,6 +18,7 @@ interface StageColumnProps {
   onTicketClick?: (ticket: TicketWithVersion) => void;
   projectId: number;
   getTicketJob?: (ticketId: number) => Job | null;
+  getTicketJobs?: (ticketId: number) => DualJobState;
   dropZoneStyle?: string;
   isBlockedByJob?: boolean;
 }
@@ -122,6 +124,7 @@ export const StageColumn = React.memo(
     onTicketClick,
     projectId,
     getTicketJob,
+    getTicketJobs,
     dropZoneStyle,
     isBlockedByJob = false,
   }: StageColumnProps) => {
@@ -177,15 +180,20 @@ export const StageColumn = React.memo(
 
             {/* Ticket Cards */}
             {tickets.length > 0 ? (
-              tickets.map((ticket) => (
-                <TicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  currentJob={getTicketJob?.(ticket.id) || null}
-                  isDraggable={isDraggable}
-                  {...(onTicketClick && { onTicketClick })}
-                />
-              ))
+              tickets.map((ticket) => {
+                const dualJobs = getTicketJobs?.(ticket.id);
+                return (
+                  <TicketCard
+                    key={ticket.id}
+                    ticket={ticket}
+                    currentJob={getTicketJob?.(ticket.id) || null}
+                    workflowJob={dualJobs?.workflow || null}
+                    aiBoardJob={dualJobs?.aiBoard || null}
+                    isDraggable={isDraggable}
+                    {...(onTicketClick && { onTicketClick })}
+                  />
+                );
+              })
             ) : (
               <div className="text-center text-sm text-zinc-400/90 py-12 font-medium">
                 No tickets

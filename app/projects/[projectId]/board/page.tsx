@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
 import { getTicketsByStage } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
-import { getJobsForTickets } from '@/lib/job-queries';
+import { getAllJobsForTickets } from '@/lib/job-queries';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -52,7 +52,8 @@ export default async function ProjectBoardPage({
   const ticketIds = allTickets.map((ticket) => ticket.id);
 
   // Fetch initial jobs for all tickets (single batch query)
-  const initialJobs = await getJobsForTickets(ticketIds);
+  // For dual job display, we need ALL jobs per ticket, not just one
+  const initialJobs = await getAllJobsForTickets(ticketIds);
 
   return (
     <main className="h-[calc(100vh-4rem)] bg-black overflow-hidden">
