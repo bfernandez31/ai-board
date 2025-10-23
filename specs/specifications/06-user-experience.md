@@ -28,10 +28,10 @@ The system displays job execution status directly on ticket cards with:
 - **Ticket Information**: Displays ticket ID, title, and SONNET badge
 
 **Real-Time Updates**:
-- Status changes appear automatically via WebSocket connection
-- Updates reflect across all open browser tabs
-- No page refresh required
-- 500ms minimum display time per status prevents flickering
+- Status changes appear automatically via client-side polling (2-second interval)
+- Updates reflect in current browser tab
+- No manual page refresh required
+- Polling stops when all jobs reach terminal states (optimization)
 
 **Status Display Logic**:
 - Shows most recent active job (PENDING or RUNNING) if one exists
@@ -54,10 +54,11 @@ The system displays job execution status directly on ticket cards with:
 - Subtle and professional visual design
 
 **Real-Time**:
-- WebSocket connection for push-based status updates
-- Automatic updates without page refresh
-- Updates visible across all open tabs/windows
-- Minimum 500ms display duration per status change
+- Client-side polling at 2-second intervals
+- Automatic updates without manual page refresh
+- Polling starts when board component mounts
+- Polling stops when board component unmounts or all jobs terminal
+- API endpoint: GET `/api/projects/{projectId}/jobs/status`
 
 **Data Handling**:
 - Displays most recent active job (PENDING/RUNNING priority)
@@ -86,7 +87,7 @@ The system displays job execution status directly on ticket cards with:
 
 **Purpose**: Users need to view and edit generated documentation files (spec.md, plan.md, tasks.md) directly in the application without leaving the ticket context. This provides a complete documentation lifecycle including viewing, editing, and tracking changes with full git integration.
 
-###What It Does
+### What It Does
 
 The system provides comprehensive documentation management with viewing, editing, and history tracking:
 
