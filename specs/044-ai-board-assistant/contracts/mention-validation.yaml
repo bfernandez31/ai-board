@@ -1,0 +1,162 @@
+openapi: 3.0.3
+info:
+  title: AI-BOARD Mention Availability Validation
+  description: Rules and logic for determining when AI-BOARD can be mentioned
+  version: 1.0.0
+
+components:
+  schemas:
+    AvailabilityRules:
+      type: object
+      description: Rules for AI-BOARD mention availability
+      properties:
+        validStages:
+          type: array
+          items:
+            type: string
+            enum: [SPECIFY, PLAN, BUILD, VERIFY]
+          description: Ticket stages where AI-BOARD can be mentioned
+          example: ["SPECIFY", "PLAN", "BUILD", "VERIFY"]
+
+        invalidStages:
+          type: array
+          items:
+            type: string
+            enum: [INBOX, SHIP]
+          description: Ticket stages where AI-BOARD cannot be mentioned
+          example: ["INBOX", "SHIP"]
+
+        blockingJobStatuses:
+          type: array
+          items:
+            type: string
+            enum: [PENDING, RUNNING]
+          description: Job statuses that block AI-BOARD mentions
+          example: ["PENDING", "RUNNING"]
+
+    AvailabilityCheck:
+      type: object
+      required:
+        - available
+        - reason
+      properties:
+        available:
+          type: boolean
+          description: Whether AI-BOARD can be mentioned
+          example: true
+
+        reason:
+          type: string
+          enum:
+            - available
+            - invalid_stage
+            - job_running
+          description: Reason for availability status
+
+        tooltip:
+          type: string
+          description: User-facing tooltip message (when unavailable)
+          example: "AI-BOARD unavailable (job running)"
+
+  examples:
+    Available:
+      value:
+        available: true
+        reason: "available"
+        tooltip: null
+
+    InvalidStage:
+      value:
+        available: false
+        reason: "invalid_stage"
+        tooltip: "AI-BOARD unavailable for this stage"
+
+    JobRunning:
+      value:
+        available: false
+        reason: "job_running"
+        tooltip: "AI-BOARD unavailable (job running)"
+
+validation:
+  algorithm: |
+    function isAIBoardAvailable(ticket, jobs):
+      # Check stage validity
+      if ticket.stage NOT IN ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY']:
+        return { available: false, reason: 'invalid_stage' }
+
+      # Check for running jobs
+      runningJob = jobs.find(j => j.ticketId == ticket.id && j.status IN ['PENDING', 'RUNNING'])
+      if runningJob:
+        return { available: false, reason: 'job_running' }
+
+      return { available: true, reason: 'available' }
+
+  enforcementPoints:
+    - location: Client-side UI (MentionInput component)
+      purpose: Provide immediate feedback to users
+      implementation: Grey out AI-BOARD with tooltip
+
+    - location: Server-side API (POST /api/projects/:projectId/tickets/:id/comments)
+      purpose: Prevent invalid workflow dispatch
+      implementation: Return 400 Bad Request with structured error
+
+  errorResponses:
+    invalidStage:
+      code: "AIBOARD_UNAVAILABLE_STAGE"
+      message: "AI-BOARD cannot be mentioned in {stage} stage"
+      httpStatus: 400
+
+    jobRunning:
+      code: "AIBOARD_UNAVAILABLE_JOB_RUNNING"
+      message: "AI-BOARD is already processing this ticket (Job ID: {jobId})"
+      httpStatus: 400
+
+examples:
+  clientSideValidation: |
+    // React hook: useAIBoardAvailability
+    const { available, tooltip } = useAIBoardAvailability(ticket, jobs);
+
+    // MentionInput component
+    <UserMention
+      user={aiBoardUser}
+      disabled={!available}
+      tooltip={tooltip}
+      className={!available ? 'opacity-50 cursor-not-allowed' : ''}
+    />
+
+  serverSideValidation: |
+    // In POST /api/projects/:projectId/tickets/:id/comments
+    const aiBoardMentioned = mentionedUserIds.includes(aiBoardUserId);
+
+    if (aiBoardMentioned) {
+      // Check stage
+      if (!['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'].includes(ticket.stage)) {
+        return NextResponse.json(
+          {
+            error: `AI-BOARD cannot be mentioned in ${ticket.stage} stage`,
+            code: 'AIBOARD_UNAVAILABLE_STAGE'
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check running jobs
+      const runningJob = await prisma.job.findFirst({
+        where: {
+          ticketId,
+          status: { in: ['PENDING', 'RUNNING'] },
+        },
+      });
+
+      if (runningJob) {
+        return NextResponse.json(
+          {
+            error: `AI-BOARD is already processing this ticket (Job ID: ${runningJob.id})`,
+            code: 'AIBOARD_UNAVAILABLE_JOB_RUNNING'
+          },
+          { status: 400 }
+        );
+      }
+
+      // Proceed with workflow dispatch
+    }
