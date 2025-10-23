@@ -108,6 +108,13 @@ export function useCreateComment({
       queryClient.invalidateQueries({
         queryKey: queryKeys.comments.list(ticketId),
       });
+
+      // Invalidate job status to restart polling if @ai-board was mentioned
+      // This ensures the polling hook detects the new PENDING job and resumes polling
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.jobsStatus(projectId),
+      });
+
       onSuccess?.();
     },
   });
