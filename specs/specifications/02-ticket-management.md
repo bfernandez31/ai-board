@@ -1016,14 +1016,15 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Any authenticated user can move any ticket
 - First-write-wins for concurrent moves
 - Offline: drag-and-drop disabled
-- **Job Completion Validation** (added 2025-10-15):
-  - Automated stages (SPECIFY, PLAN, BUILD) require completed workflow job before next transition
-  - System validates most recent job by `startedAt DESC` to support retry workflows
-  - Transitions blocked when job status is PENDING, RUNNING, FAILED, or CANCELLED
-  - Transitions allowed when job status is COMPLETED
+- **Job Completion Validation** (updated 2025-10-23):
+  - Automated stages (SPECIFY, PLAN, BUILD) require completed **workflow job** before next transition
+  - System validates most recent workflow job (excludes AI-BOARD jobs with `command NOT LIKE 'comment-%'`)
+  - AI-BOARD jobs do NOT block transitions (run in parallel, assistance only)
+  - Transitions blocked when workflow job status is PENDING, RUNNING, FAILED, or CANCELLED
+  - Transitions allowed when workflow job status is COMPLETED
   - Manual stages (VERIFY, SHIP) and initial transition (INBOX → SPECIFY) bypass validation
+  - Drag-and-drop UI blocked when workflow job not COMPLETED (visual feedback with disabled cursor)
   - Error responses include job status, command, and suggested actions
-  - Query performance: <50ms using existing composite index [ticketId, status, startedAt]
 
 **Editing**:
 - Title: 1-100 characters
