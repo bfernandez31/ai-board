@@ -1107,19 +1107,19 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
     const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
     await detailsTab.click();
 
-    // Find description container (should be scrollable)
-    const descriptionContainer = dialog.locator('[data-testid="description-container"]');
-    await expect(descriptionContainer).toBeVisible();
+    // Find the Details TabsContent (should be scrollable)
+    const detailsTabContent = dialog.locator('[role="tabpanel"]').filter({ hasText: 'Description' });
+    await expect(detailsTabContent).toBeVisible();
 
-    // Verify description container has overflow-y-auto
-    const hasScroll = await descriptionContainer.evaluate((el) => {
+    // Verify Details TabsContent has overflow-y-auto
+    const hasScroll = await detailsTabContent.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.overflowY === 'auto' || style.overflowY === 'scroll';
     });
 
     expect(hasScroll).toBe(true);
 
-    // Verify footer remains visible (not scrolled)
+    // Verify footer remains visible
     const footer = dialog.locator('[data-testid="details-footer"]');
     await expect(footer).toBeVisible();
   });

@@ -682,8 +682,13 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Compact metadata row - badges and branch link */}
+          {/* Compact metadata row - ticket ID, badges and branch link */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {/* Ticket ID - at the start */}
+            <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-id">
+              #{ticket.id}
+            </span>
+
             <Badge
               className={`${stageBadge.className} text-xs px-2 py-0.5 font-medium pointer-events-none`}
               data-testid="stage-badge"
@@ -750,13 +755,6 @@ export function TicketDetailModal({
                 Edit Policy
               </Button>
             )}
-          </div>
-
-          {/* Ticket ID */}
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-sm font-mono text-muted-foreground" data-testid="ticket-id">
-              #{ticket.id}
-            </span>
           </div>
 
           <div className="group">
@@ -849,9 +847,9 @@ export function TicketDetailModal({
           </TabsList>
 
           {/* Details Tab */}
-          <TabsContent value="details" className="flex flex-col h-[calc(90vh-280px)]">
-            {/* Description section with inline editing - scrollable */}
-            <div className="flex-1 overflow-y-auto pr-2 space-y-8" data-testid="description-container">
+          <TabsContent value="details" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+            {/* Description section with inline editing */}
+            <div className="space-y-8" data-testid="description-container">
             <div className="group">
             <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
               Description
@@ -872,8 +870,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={1000}
-                  rows={8}
-                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-none px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed"
+                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed min-h-[300px] max-h-[calc(90vh-500px)]"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
                   name="description"
@@ -1014,9 +1011,11 @@ export function TicketDetailModal({
 
             </div>
 
-            {/* Footer with relative dates - sticky on desktop only */}
+            {/* Footer with relative dates - sticky on desktop only when not editing */}
             <div
-              className="border-t border-border mt-4 pt-3 text-xs text-muted-foreground md:sticky md:bottom-0 bg-[#181825]"
+              className={`border-t border-border mt-4 pt-3 text-xs text-muted-foreground bg-[#181825] ${
+                !titleEdit.isEditing && !descriptionEdit.isEditing ? 'md:sticky md:bottom-0' : ''
+              }`}
               data-testid="details-footer"
             >
               <div className="flex items-center gap-2 flex-wrap">
