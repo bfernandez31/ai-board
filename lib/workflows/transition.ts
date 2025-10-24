@@ -119,6 +119,7 @@ export async function handleTicketTransition(
       command: command,
       status: 'PENDING',
       branch: currentTicket.branch,
+      updatedAt: new Date(),
     },
   });
 

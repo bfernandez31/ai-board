@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
@@ -12,6 +12,68 @@ dotenv.config();
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
+
+/**
+ * Execute Claude command with real-time output logging
+ */
+function execClaude(command: string, cwd: string): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    // Keep CLAUDE_CODE_OAUTH_TOKEN - it's needed for non-interactive auth with Max plan
+    const env = { ...process.env };
+
+    // Log token presence for debugging
+    console.log('[Worker] CLAUDE_CODE_OAUTH_TOKEN present in exec env:', !!env.CLAUDE_CODE_OAUTH_TOKEN);
+
+    const child = spawn('/bin/sh', ['-c', command], {
+      cwd,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env,
+    });
+
+    // Close stdin immediately
+    child.stdin.end();
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      const text = data.toString();
+      stdout += text;
+      console.log('[Worker] Claude stdout:', text);
+    });
+
+    child.stderr.on('data', (data) => {
+      const text = data.toString();
+      stderr += text;
+      console.log('[Worker] Claude stderr:', text);
+    });
+
+    child.on('close', (code) => {
+      console.log('[Worker] Claude process exited with code:', code);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const error = new Error(`Command failed with exit code ${code}`) as any;
+        error.code = code;
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+      }
+    });
+
+    child.on('error', (err) => {
+      console.log('[Worker] Claude process error:', err);
+      reject(err);
+    });
+
+    // Log if process is still running after 30 seconds
+    setTimeout(() => {
+      if (!child.killed) {
+        console.log('[Worker] Claude still running after 30s, stdout so far:', stdout.substring(0, 500));
+      }
+    }, 30000);
+  });
+}
 
 // Redis connection
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -185,14 +247,60 @@ async function processJob(job: Job<WorkflowJobData>) {
             await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "/speckit.specify ${payload}"`);
           }
         } else {
-          // Legacy text mode - Claude will handle branch creation internally
+          // Legacy text mode - match GitHub Actions format exactly
           console.log('[Worker] Using legacy text format (no policy)');
           const prompt = `/speckit.specify #${ticketId} ${job.data.ticketTitle}\n${job.data.ticketDescription}`;
 
-          if (imagePaths && imageCount > 0) {
-            await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "${prompt}" ${imagePaths}`);
-          } else {
-            await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "${prompt}"`);
+          console.log('[Worker] Executing Claude command...');
+          console.log('[Worker] Prompt:', prompt.substring(0, 200));
+          console.log('[Worker] Working directory:', workspace);
+          console.log('[Worker] PATH:', process.env.PATH);
+          console.log('[Worker] CLAUDE_CODE_OAUTH_TOKEN present:', !!process.env.CLAUDE_CODE_OAUTH_TOKEN);
+
+          // Test Claude accessibility
+          console.log('[Worker] Testing Claude accessibility...');
+          try {
+            const { stdout: claudeVersion } = await execAsync(`cd ${workspace} && which claude && claude --version`);
+            console.log('[Worker] ✅ Claude found:', claudeVersion.trim());
+          } catch (versionError: any) {
+            console.error('[Worker] ❌ Claude not accessible:', versionError.message);
+            throw new Error(`Claude CLI not found in PATH. Make sure Claude is installed and accessible.`);
+          }
+
+          try {
+            let result;
+
+            // Use execClaude with stdin closed to prevent interactive mode blocking
+            const claudeCommand = imagePaths && imageCount > 0
+              ? `claude --dangerously-skip-permissions "${prompt}" ${imagePaths}`
+              : `claude --dangerously-skip-permissions "${prompt}"`;
+
+            console.log('[Worker] Full command:', claudeCommand);
+            console.log('[Worker] Working directory:', workspace);
+            console.log('[Worker] Executing with closed stdin to prevent interactive blocking...');
+
+            result = await execClaude(claudeCommand, workspace);
+
+            console.log('[Worker] ✅ Claude execution completed successfully');
+            console.log('[Worker] Claude stdout length:', result.stdout.length);
+            console.log('[Worker] Claude stdout (first 500 chars):', result.stdout.substring(0, 500));
+            console.log('[Worker] Claude stdout (last 500 chars):', result.stdout.substring(Math.max(0, result.stdout.length - 500)));
+            if (result.stderr) {
+              console.log('[Worker] Claude stderr:', result.stderr);
+            }
+          } catch (error: any) {
+            console.error('[Worker] ❌ Claude execution failed');
+            console.error('[Worker] Error type:', error.constructor.name);
+            console.error('[Worker] Error message:', error.message);
+            console.error('[Worker] Exit code:', error.code);
+            console.error('[Worker] Signal:', error.signal);
+            if (error.stdout) {
+              console.error('[Worker] Stdout before error:', error.stdout.substring(0, 1000));
+            }
+            if (error.stderr) {
+              console.error('[Worker] Stderr:', error.stderr);
+            }
+            throw error;
           }
         }
 

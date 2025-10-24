@@ -32,8 +32,9 @@ export async function enqueueWorkflow({
   };
 
   // Use job.id as the queue job ID for easy correlation
+  // Note: BullMQ doesn't allow pure integer strings as jobId, so we prefix with 'job-'
   const queueJob = await workflowQueue.add(command, jobData, {
-    jobId: job.id.toString(),
+    jobId: `job-${job.id}`,
     // Priority based on command type
     priority: getPriority(command),
   });
