@@ -327,21 +327,21 @@ The system displays a clickable branch link in the ticket detail modal:
 
 **Link Display**:
 - Appears in ticket detail header row alongside ticket ID, stage and policy badges
-- Ticket ID displayed before title: #<ticketId> in bold, monospace font (text-muted-foreground)
+- Ticket ID displayed before title in bold monospace font
 - Compact inline badge design with:
   - GitBranch icon (left)
-  - Branch name (truncated at 150px for long names)
+  - Branch name (truncated for long names)
   - ExternalLink icon (right)
-- Blue color scheme (#89b4fa) consistent with GitHub links
+- Blue color scheme consistent with GitHub links
 - Tooltip shows full branch name on hover
 
 **Modal Footer**:
 - Compact footer with relative dates in Details tab only
 - Format: "#<ticketId> · 📅 Created <relative time> · ✏️ Updated <relative time>"
-- Uses formatDistanceToNow from date-fns (e.g., "4 hours ago", "2 days ago")
-- Sticky on desktop when not editing (md:sticky md:bottom-0)
-- Not sticky on mobile or during edit mode
-- Styling: border-t border-border mt-4 pt-3 text-xs text-muted-foreground
+- Displays human-readable relative times (e.g., "4 hours ago", "2 days ago")
+- Sticky at bottom on desktop when not editing
+- Scrolls normally on mobile or during edit mode
+- Visually separated from content with border
 
 **Visibility Conditions**:
 - Link displays when:
@@ -368,16 +368,16 @@ The system displays a clickable branch link in the ticket detail modal:
 ### Requirements
 
 **Display**:
-- Ticket ID (#<ticketId>) appears before title in header (bold, monospace, text-muted-foreground)
+- Ticket ID (#<ticketId>) appears before title in header in bold monospace font
 - Branch link appears in ticket detail modal header
 - Positioned in compact header row with ticket ID, stage badge, policy badge, and edit policy button
 - Compact inline badge design saves vertical space
 - GitBranch and ExternalLink icons provide clear visual affordance
-- Branch name truncates at 150px with CSS `truncate` class
-- Blue color scheme (#89b4fa) distinguishes from other badges
+- Branch name truncates for long names to maintain layout
+- Blue color scheme distinguishes from other badges
 - Footer with relative dates appears only in Details tab
-- Footer sticky on desktop (md:sticky md:bottom-0) when not in edit mode
-- Footer not sticky on mobile or during inline editing
+- Footer remains visible at bottom on desktop when not in edit mode
+- Footer scrolls normally on mobile or during inline editing
 
 **Visibility Logic**:
 - System displays link when ticket.branch is non-empty string
