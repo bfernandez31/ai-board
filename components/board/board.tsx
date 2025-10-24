@@ -662,7 +662,7 @@ function BoardContent({
           {/* Board Grid - Restored original styling */}
           <div
             data-testid="board-grid"
-            className="grid gap-4 overflow-x-auto pb-6 px-4 pt-4 relative z-20"
+            className="grid gap-2 overflow-x-auto pb-6 px-4 pt-4 relative z-20"
             style={{
               gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))',
               height: 'calc(100vh - 4rem - 4px)',
