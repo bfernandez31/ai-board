@@ -17,6 +17,49 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: ai-board-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build: ./worker
+    container_name: ai-board-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_board
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      API_URL: http://host.docker.internal:3000
+      WORKFLOW_API_TOKEN: ${WORKFLOW_API_TOKEN}
+      WORKSPACES_DIR: /workspaces
+      WORKER_CONCURRENCY: "1"
+    volumes:
+      - ./worker:/app
+      - /app/node_modules
+      - workspaces:/workspaces
+    command: bun run dev
+
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  workspaces:
     driver: local
