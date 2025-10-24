@@ -11,6 +11,10 @@ export const WorkflowJobDataSchema = z.object({
   githubOwner: z.string(),
   githubRepo: z.string(),
   jobId: z.number(),
+  attachments: z.array(z.any()).optional(),
+  specifyPayload: z.string().optional(),
+  clarificationPolicy: z.string().optional(),
+  answersJson: z.string().optional(),
 });
 
 export type WorkflowJobData = z.infer<typeof WorkflowJobDataSchema>;
