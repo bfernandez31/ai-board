@@ -76,8 +76,8 @@ test.describe('E2E: Dual Job Display - User Story 1', () => {
     const ariaLabel = await jobIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('WRITING');
 
-    // Step 10: Verify job indicator shows stage name (e.g., "SPECIFY :")
-    await expect(jobIndicator).toContainText('SPECIFY :');
+    // Step 10: Verify workflow job does NOT show stage prefix (simplified display)
+    await expect(jobIndicator).not.toContainText('SPECIFY :');
 
     // Clean up
   });
@@ -233,12 +233,12 @@ test.describe('E2E: Dual Job Display - User Story 2', () => {
     const jobIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(jobIndicator).toBeVisible({ timeout: 5000 });
 
-    // Step 6: Verify aria-label contains "ASSISTING" (contextual label transformation)
+    // Step 6: Verify aria-label contains "AI-BOARD" (compact icon-only mode)
     const ariaLabel = await jobIndicator.getAttribute('aria-label');
-    expect(ariaLabel?.toUpperCase()).toContain('ASSISTING');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    // Step 7: Verify job indicator shows "AI-BOARD :"
-    await expect(jobIndicator).toContainText('AI-BOARD :');
+    // Step 7: Verify AI-BOARD job is icon-only (no text label)
+    await expect(jobIndicator).not.toContainText('AI-BOARD :');
 
     // Note: Cleanup handled by beforeEach cleanupDatabase()
   });

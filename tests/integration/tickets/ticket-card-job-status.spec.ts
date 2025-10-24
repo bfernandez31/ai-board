@@ -58,10 +58,10 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(statusIndicator).toBeVisible();
 
-    // Verify aria-label contains status information
+    // Verify aria-label contains status information (RUNNING → WRITING for specify)
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel).toContain('specify');
-    expect(ariaLabel?.toLowerCase()).toContain('running');
+    expect(ariaLabel?.toLowerCase()).toContain('writing');
 
     // Clean up
     await prisma.job.delete({ where: { id: job.id } });
@@ -237,10 +237,18 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
       const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
       await expect(statusIndicator).toBeVisible();
 
-      // Verify aria-label contains command and status
+      // Verify aria-label contains command and contextual status
       const ariaLabel = await statusIndicator.getAttribute('aria-label');
       expect(ariaLabel).toContain(testCase.command);
-      expect(ariaLabel?.toLowerCase()).toContain(testCase.status.toLowerCase());
+
+      // Check contextual label based on command/status
+      if (testCase.status === 'RUNNING' && testCase.command === 'specify') {
+        expect(ariaLabel?.toLowerCase()).toContain('writing');
+      } else if (testCase.status === 'RUNNING' && testCase.command === 'build') {
+        expect(ariaLabel?.toLowerCase()).toContain('coding');
+      } else {
+        expect(ariaLabel?.toLowerCase()).toContain(testCase.status.toLowerCase());
+      }
     }
 
     // Clean up
@@ -251,7 +259,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
   /**
    * T011: Integration test for workflow job visual indicator
    */
-  test('should display workflow icon for specify command', async ({ page }) => {
+  test('should display simplified workflow status for specify command', async ({ page }) => {
     // Create ticket with workflow job
     const ticket = await prisma.ticket.create({
       data: {
@@ -281,10 +289,16 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Job type is now integrated in job-status-indicator with stage/type prefix
-    // Verify stage prefix is shown (e.g., "SPECIFY :")
+    // Workflow jobs now display simplified (no prefix) - just status
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]').first();
-    await expect(statusIndicator).toContainText('SPECIFY :');
+    await expect(statusIndicator).toBeVisible();
+
+    // Should NOT contain stage prefix (US1: simplified display)
+    await expect(statusIndicator).not.toContainText('SPECIFY :');
+
+    // Should contain contextual label WRITING
+    const ariaLabel = await statusIndicator.getAttribute('aria-label');
+    expect(ariaLabel?.toUpperCase()).toContain('WRITING');
 
     // Clean up
     await prisma.job.delete({ where: { id: job.id } });
@@ -294,7 +308,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
   /**
    * T012: Integration test for AI-BOARD job visual indicator
    */
-  test('should display AI-BOARD icon for comment-specify command', async ({ page }) => {
+  test('should display compact AI-BOARD icon for comment-specify command', async ({ page }) => {
     // Create ticket with AI-BOARD job
     const ticket = await prisma.ticket.create({
       data: {
@@ -324,10 +338,16 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Job type is now integrated in job-status-indicator with stage/type prefix
-    // Verify AI-BOARD prefix is shown
+    // AI-BOARD jobs now display as compact icon-only (US2: no text label)
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]').first();
-    await expect(statusIndicator).toContainText('AI-BOARD:');
+    await expect(statusIndicator).toBeVisible();
+
+    // Should NOT contain text label (icon-only display)
+    await expect(statusIndicator).not.toContainText('AI-BOARD');
+
+    // Verify ARIA label contains AI-BOARD information
+    const ariaLabel = await statusIndicator.getAttribute('aria-label');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
     // Clean up
     await prisma.job.delete({ where: { id: job.id } });
@@ -670,9 +690,9 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(statusIndicator).toBeVisible();
 
-    // Verify ASSISTING label for AI-BOARD jobs
+    // Verify AI-BOARD ARIA label (compact icon-only mode)
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
-    expect(ariaLabel?.toUpperCase()).toContain('ASSISTING');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
     await prisma.job.delete({ where: { id: job.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
@@ -744,7 +764,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     await expect(statusIndicator).toBeVisible();
 
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
-    expect(ariaLabel?.toUpperCase()).toContain('ASSISTING');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
     await prisma.job.delete({ where: { id: job.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
@@ -781,7 +801,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     await expect(statusIndicator).toBeVisible();
 
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
-    expect(ariaLabel?.toUpperCase()).toContain('ASSISTING');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
     await prisma.job.delete({ where: { id: job.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
@@ -838,7 +858,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display ASSISTING label with correct job type indicator', async ({ page }) => {
+  test('should display ASSISTING label with compact AI-BOARD icon', async ({ page }) => {
     const ticket = await prisma.ticket.create({
       data: {
         title: '[e2e] Test AI-BOARD job type indicator',
@@ -865,10 +885,16 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Job type is now integrated in job-status-indicator with stage/type prefix
-    // Verify AI-BOARD prefix is shown
+    // AI-BOARD jobs display as compact icon-only (US2)
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]').first();
-    await expect(statusIndicator).toContainText('AI-BOARD:');
+    await expect(statusIndicator).toBeVisible();
+
+    // Should NOT contain text label (icon-only)
+    await expect(statusIndicator).not.toContainText('AI-BOARD');
+
+    // ARIA label should contain ASSISTING
+    const ariaLabel = await statusIndicator.getAttribute('aria-label');
+    expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
     await prisma.job.delete({ where: { id: job.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
