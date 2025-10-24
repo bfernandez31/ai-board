@@ -672,13 +672,13 @@ export function TicketDetailModal({
           }
         }}
         className="
-          h-screen w-screen p-6
-          sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
+          flex flex-col h-screen w-screen p-4
+          sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
           bg-[#181825] border-[#313244] text-[#cdd6f4]
         "
       >
         {/* Header with editable title */}
-        <DialogHeader className="pb-4">
+        <DialogHeader className="flex-shrink-0 pb-2 sm:pb-4 space-y-1 sm:space-y-1.5 text-left">
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
@@ -823,8 +823,8 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files')} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial">
+          <TabsList className="flex-shrink-0 grid w-full grid-cols-3 mb-2 sm:mb-4">
             <TabsTrigger value="details" className="text-sm">
               Details
             </TabsTrigger>
@@ -847,9 +847,9 @@ export function TicketDetailModal({
           </TabsList>
 
           {/* Details Tab */}
-          <TabsContent value="details" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
             {/* Description section with inline editing */}
-            <div className="space-y-8" data-testid="description-container">
+            <div className="space-y-4 sm:space-y-8" data-testid="description-container">
             <div className="group">
             <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
               Description
@@ -870,7 +870,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={1000}
-                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed min-h-[300px] max-h-[calc(90vh-500px)]"
+                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed h-[calc(100vh-470px)] sm:min-h-[300px] sm:max-h-[calc(90vh-500px)] sm:h-auto"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
                   name="description"
@@ -1029,7 +1029,7 @@ export function TicketDetailModal({
           </TabsContent>
 
           {/* Comments Tab */}
-          <TabsContent value="comments" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+          <TabsContent value="comments" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
             <CommentList
               projectId={projectId}
               ticketId={ticket.id}
@@ -1039,7 +1039,7 @@ export function TicketDetailModal({
           </TabsContent>
 
           {/* Files Tab */}
-          <TabsContent value="files" className="overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
+          <TabsContent value="files" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
             <ImageGallery
               projectId={projectId}
               ticketId={localTicket?.id || ticket.id}
