@@ -187,10 +187,13 @@ jobs:
       - name: Parse Claude Response
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         id: parse
+        env:
+          JSON_OUTPUT: ${{ steps.claude.outputs.json_output }}
         run: |
-          STATUS=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.status')
-          MESSAGE=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.message')
-          FILES=$(echo '${{ steps.claude.outputs.json_output }}' | jq -r '.filesModified | join(",")')
+          # Use env var instead of direct substitution to avoid shell escaping issues
+          STATUS=$(echo "$JSON_OUTPUT" | jq -r '.status')
+          MESSAGE=$(echo "$JSON_OUTPUT" | jq -r '.message')
+          FILES=$(echo "$JSON_OUTPUT" | jq -r '.filesModified | join(",")')
 
           echo "status=$STATUS" >> $GITHUB_OUTPUT
           echo "message=$MESSAGE" >> $GITHUB_OUTPUT
