@@ -338,7 +338,7 @@ jobs:
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
-            echo "✅ No changes to commit"
+            echo "✅ No changes to commit (Claude may have already committed)"
           else
             git commit -m "feat(ticket-${{ inputs.ticket_id }}): ${{ inputs.command }} - automated spec-kit execution
 
@@ -346,14 +346,15 @@ jobs:
           Ticket: ${{ inputs.ticket_id }}
           Command: ${{ inputs.command }}
           Branch: ${CURRENT_BRANCH}"
+            echo "✅ Changes committed"
+          fi
 
-            if [ -z "$CURRENT_BRANCH" ]; then
-              echo "⚠️ Unable to determine branch to push; skipping git push"
-            else
-              git push origin "$CURRENT_BRANCH"
-            fi
-
-            echo "✅ Changes committed and pushed successfully"
+          # Always push (Claude may have committed during command execution)
+          if [ -z "$CURRENT_BRANCH" ]; then
+            echo "⚠️ Unable to determine branch to push; skipping git push"
+          else
+            git push origin "$CURRENT_BRANCH"
+            echo "✅ Changes pushed to branch: ${CURRENT_BRANCH}"
           fi
 
       - name: Update Documentation
