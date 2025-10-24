@@ -1105,3 +1105,135 @@ The system provides an express workflow for simple tasks:
 - Same pattern as full workflow for consistency
 
 ---
+
+## Quick Workflow Rollback
+
+**Purpose**: Users need to recover from failed or cancelled quick-impl workflows without losing the ability to restart with a different approach. The rollback feature allows tickets in BUILD stage to return to INBOX stage when automated workflows fail, enabling users to choose either workflow path for recovery.
+
+### What It Does
+
+The system provides rollback capability for failed workflows:
+
+**Rollback Transition**:
+- Allows BUILD → INBOX transition when most recent workflow job has FAILED or CANCELLED status
+- Resets ticket state for fresh start while preserving debugging information
+- Blocks rollback when workflow is PENDING, RUNNING, or COMPLETED
+- Provides visual feedback during drag operations to indicate rollback eligibility
+
+**State Management During Rollback**:
+- **workflowType**: Reset from QUICK to FULL (allows choosing either workflow path)
+- **stage**: Updated from BUILD to INBOX
+- **branch**: Preserved (not reset to null, useful for debugging)
+- **Job history**: All job records preserved for audit trail and debugging
+
+**Rollback Flow**:
+1. User drags ticket from BUILD to INBOX (failed quick-impl scenario)
+2. System validates most recent workflow job status
+3. If FAILED/CANCELLED: Transition allowed, workflowType reset to FULL
+4. If PENDING/RUNNING/COMPLETED: Transition blocked with error message
+5. User can proceed with either workflow path after rollback
+
+**Visual Feedback**:
+- Amber/warning color indicator on INBOX column when dragging failed BUILD ticket
+- Disabled/invalid indicator when job is RUNNING or COMPLETED
+- Clear error messages explaining why rollback is blocked
+
+**Job Validation**:
+- System checks most recent job by `startedAt DESC` timestamp
+- Distinguishes workflow jobs (specify, plan, implement, quick-impl) from AI-BOARD jobs (comment-*)
+- Only workflow job status affects rollback eligibility
+
+### Requirements
+
+**Rollback Eligibility**:
+- Allow BUILD → INBOX when most recent workflow job status is FAILED or CANCELLED
+- Block rollback when job status is PENDING, RUNNING, or COMPLETED
+- Query most recent job: `prisma.job.findFirst({ where: { ticketId, command: { notIn: ['comment-specify', 'comment-plan', 'comment-build', 'comment-verify'] } }, orderBy: { startedAt: 'desc' } })`
+
+**State Reset**:
+- Reset `workflowType` from QUICK to FULL atomically with stage transition
+- Preserve `branch` field value (do not set to null)
+- Update `stage` from BUILD to INBOX
+- Preserve all Job records (no deletion)
+
+**Visual Feedback**:
+- Amber dashed border (`border-amber-500`) on INBOX column during BUILD ticket drag with FAILED/CANCELLED job
+- Red disabled indicator on INBOX column when job is RUNNING
+- Gray disabled indicator when job is COMPLETED
+- `not-allowed` cursor on invalid drop zones
+- Performance target: Visual feedback appears within 100ms of drag start
+
+**API Validation**:
+- Endpoint: POST `/api/projects/{projectId}/tickets/{id}/transition`
+- Rollback detection: `currentStage === BUILD && targetStage === INBOX`
+- Validation logic: Check most recent workflow job status before transition
+- Return 400 error with clear message when rollback blocked
+
+**Error Messages**:
+- PENDING/RUNNING: "Cannot rollback: workflow is still running"
+- COMPLETED: "Cannot rollback: workflow completed successfully"
+- No workflow job found: "Cannot rollback: no workflow job found" (data integrity issue)
+
+**Post-Rollback Transitions**:
+- INBOX → SPECIFY: Allowed (normal workflow)
+- INBOX → BUILD: Allowed (retry quick-impl)
+- Both transitions create new Job records
+- Historical job records remain accessible
+
+### Data Model
+
+**Rollback Validation Query**:
+```typescript
+const mostRecentWorkflowJob = await prisma.job.findFirst({
+  where: {
+    ticketId,
+    command: {
+      notIn: ['comment-specify', 'comment-plan', 'comment-build', 'comment-verify']
+    }
+  },
+  orderBy: { startedAt: 'desc' }
+});
+```
+
+**Rollback Transition**:
+```typescript
+await prisma.ticket.update({
+  where: { id: ticketId },
+  data: {
+    stage: 'INBOX',
+    workflowType: 'FULL',
+    // branch preserved (not updated)
+    version: { increment: 1 }
+  }
+});
+```
+
+**Error Response**:
+```json
+{
+  "error": "Cannot rollback",
+  "message": "Cannot rollback: workflow is still running",
+  "code": "ROLLBACK_NOT_ALLOWED",
+  "details": {
+    "currentStage": "BUILD",
+    "targetStage": "INBOX",
+    "jobStatus": "RUNNING",
+    "jobCommand": "quick-impl"
+  }
+}
+```
+
+**Rollback Eligibility States**:
+- ✅ FAILED: Rollback allowed
+- ✅ CANCELLED: Rollback allowed
+- ❌ PENDING: Rollback blocked
+- ❌ RUNNING: Rollback blocked
+- ❌ COMPLETED: Rollback blocked
+
+**Visual Feedback States**:
+- FAILED/CANCELLED job: Amber border (`border-amber-500 bg-amber-500/10`)
+- RUNNING job: Red disabled (`border-red-500 opacity-50`)
+- COMPLETED job: Gray disabled (`opacity-50 cursor-not-allowed`)
+- No valid job: Invalid transition (blocked at API level)
+
+---
