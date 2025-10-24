@@ -171,24 +171,9 @@ async function processJob(job: Job<WorkflowJobData>) {
 
     switch (command) {
       case 'specify': {
-        // For specify, we need to run create-new-feature.sh FIRST to create branch
-        // This matches what happens inside the Claude command execution
+        // The Claude command /speckit.specify will call create-new-feature.sh internally
+        // We just need to pass the right parameters to Claude
 
-        // Run create-new-feature.sh script (this creates the branch and spec file)
-        const featureDescription = job.data.ticketTitle;
-        const createFeatureCmd = `.specify/scripts/bash/create-new-feature.sh "${featureDescription}"`;
-
-        console.log(`[Worker] Creating feature branch with: ${createFeatureCmd}`);
-        const { stdout } = await execAsync(`cd ${workspace} && ${createFeatureCmd}`);
-
-        // Parse branch name from script output
-        const branchMatch = stdout.match(/BRANCH_NAME: (.+)/);
-        if (branchMatch) {
-          currentBranch = branchMatch[1];
-          console.log(`[Worker] Created branch: ${currentBranch}`);
-        }
-
-        // Now execute Claude command with the spec
         if (job.data.specifyPayload) {
           // JSON payload mode (with clarification policy)
           console.log('[Worker] Using JSON payload with clarification policy');
@@ -200,7 +185,7 @@ async function processJob(job: Job<WorkflowJobData>) {
             await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "/speckit.specify ${payload}"`);
           }
         } else {
-          // Legacy text mode
+          // Legacy text mode - Claude will handle branch creation internally
           console.log('[Worker] Using legacy text format (no policy)');
           const prompt = `/speckit.specify #${ticketId} ${job.data.ticketTitle}\n${job.data.ticketDescription}`;
 
@@ -210,6 +195,12 @@ async function processJob(job: Job<WorkflowJobData>) {
             await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "${prompt}"`);
           }
         }
+
+        // After Claude execution, get the current branch (Claude created it)
+        const { stdout: branchOutput } = await execAsync(`cd ${workspace} && git branch --show-current`);
+        currentBranch = branchOutput.trim();
+        console.log(`[Worker] Claude created branch: ${currentBranch}`);
+
         break;
       }
 
@@ -235,23 +226,18 @@ async function processJob(job: Job<WorkflowJobData>) {
       }
 
       case 'quick-impl': {
-        // For quick-impl, create minimal branch and spec
-        const featureDescription = job.data.ticketTitle;
-        const createFeatureCmd = `.specify/scripts/bash/create-new-feature.sh --mode=quick-impl "${featureDescription}"`;
-
-        console.log(`[Worker] Creating quick-impl branch with: ${createFeatureCmd}`);
-        const { stdout } = await execAsync(`cd ${workspace} && ${createFeatureCmd}`);
-
-        // Parse branch name from script output
-        const branchMatch = stdout.match(/BRANCH_NAME: (.+)/);
-        if (branchMatch) {
-          currentBranch = branchMatch[1];
-          console.log(`[Worker] Created branch: ${currentBranch}`);
-        }
-
-        // Execute quick-impl command
+        // Claude's /quick-impl command will handle branch creation internally
+        // We just pass the ticket info to Claude
         const prompt = `#${ticketId} ${job.data.ticketTitle}\n${job.data.ticketDescription}`;
+
+        console.log('[Worker] Executing quick-impl command');
         await execAsync(`cd ${workspace} && claude --dangerously-skip-permissions "/quick-impl ${prompt}"`);
+
+        // After Claude execution, get the current branch (Claude created it)
+        const { stdout: branchOutput } = await execAsync(`cd ${workspace} && git branch --show-current`);
+        currentBranch = branchOutput.trim();
+        console.log(`[Worker] Claude created branch: ${currentBranch}`);
+
         break;
       }
 
