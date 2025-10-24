@@ -18,19 +18,25 @@ You have been mentioned in a ticket comment with a specific request. Your job is
 
 ## Inputs
 
-The workflow provides these inputs via environment variables:
+The workflow provides all context as a JSON payload in `$ARGUMENTS`:
 
-- **TICKET_ID**: Ticket ID number
-- **TICKET_TITLE**: Current ticket title
-- **STAGE**: Current ticket stage (specify, plan, build, verify)
-- **BRANCH**: Git branch name for this ticket
-- **USER**: Username who mentioned you (for response)
-- **COMMENT**: The comment content with the user's request
-- **PROJECT_ID**: Project ID number
+```json
+{
+  "ticketId": "897",
+  "ticketTitle": "Rollback quick workflow",
+  "stage": "specify",
+  "branch": "051-897-rollback-quick",
+  "user": "benoit.fernandez31",
+  "comment": "@ai-board please update spec for rollback requirements",
+  "projectId": "3"
+}
+```
+
+**Parsing**: Use `jq` or `python -m json.tool` to parse `$ARGUMENTS` safely.
 
 ## File Locations
 
-Ticket artifacts are in the `specs/{BRANCH}/` directory:
+Ticket artifacts are in the `specs/{branch}/` directory (where `{branch}` comes from the JSON payload):
 
 - **spec.md**: Feature specification (SPECIFY stage)
 - **plan.md**: Implementation plan (PLAN stage)

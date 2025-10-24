@@ -140,19 +140,32 @@ jobs:
       - name: Execute AI-BOARD Command
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         id: claude
-        env:
-          TICKET_ID: ${{ inputs.ticket_id }}
-          TICKET_TITLE: ${{ inputs.ticketTitle }}
-          STAGE: ${{ inputs.stage }}
-          BRANCH: ${{ inputs.branch }}
-          USER: ${{ inputs.user }}
-          COMMENT: ${{ inputs.comment }}
-          PROJECT_ID: ${{ inputs.project_id }}
         run: |
           echo "🤖 Executing AI-BOARD assist command..."
 
-          # Execute Claude CLI command and capture output
-          OUTPUT=$(claude /ai-board-assist 2>&1 || true)
+          # Build JSON payload for Claude command (similar to speckit.yml pattern)
+          PAYLOAD=$(jq -n \
+            --arg ticketId "${{ inputs.ticket_id }}" \
+            --arg ticketTitle "${{ inputs.ticketTitle }}" \
+            --arg stage "${{ inputs.stage }}" \
+            --arg branch "${{ inputs.branch }}" \
+            --arg user "${{ inputs.user }}" \
+            --arg comment "${{ inputs.comment }}" \
+            --arg projectId "${{ inputs.project_id }}" \
+            '{
+              ticketId: $ticketId,
+              ticketTitle: $ticketTitle,
+              stage: $stage,
+              branch: $branch,
+              user: $user,
+              comment: $comment,
+              projectId: $projectId
+            }')
+
+          echo "📦 Payload: $PAYLOAD"
+
+          # Execute Claude CLI command with JSON payload in $ARGUMENTS
+          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist $PAYLOAD" 2>&1 || true)
           echo "$OUTPUT"
 
           # Extract JSON response from stdout (last valid JSON object)
