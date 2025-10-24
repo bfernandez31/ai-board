@@ -106,6 +106,12 @@ jobs:
           ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
           fetch-depth: 0
 
+      - name: Setup Bun
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       - name: Setup Node.js
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/setup-node@v4
@@ -120,7 +126,7 @@ jobs:
 
       - name: Install Claude Code CLI
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
-        run: npm install -g @anthropic-ai/claude-code
+        run: bun add -g @anthropic-ai/claude-code
 
       - name: Configure Git
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}

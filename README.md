@@ -13,8 +13,8 @@ Visual kanban board for AI-driven development using Spec-kit + Claude Code.
 
 ## Prerequisites
 
-- Node.js 18.17+ or 20.x+
-- npm package manager
+- Node.js 22.20.0 LTS
+- Bun 1.x (package manager)
 - Git
 
 ## Getting Started
@@ -22,34 +22,39 @@ Visual kanban board for AI-driven development using Spec-kit + Claude Code.
 ### Installation
 
 ```bash
+# Install Bun (if not already installed)
+curl -fsSL https://bun.sh/install | bash
+
 # Install dependencies
-npm install
+bun install
 
 # Install Playwright browsers (if not already installed)
-npx playwright install
+bunx playwright install
 ```
 
 ### Development
 
 ```bash
 # Start development server
-npm run dev
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the application.
 
 ### Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Create production build
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript type checking
-- `npm run format` - Format code with Prettier
-- `npm run format:check` - Check code formatting
-- `npm run test:e2e` - Run Playwright E2E tests
-- `npm run test:e2e:ui` - Run Playwright tests with UI
-- `npm run test:e2e:headed` - Run Playwright tests in headed mode
+- `bun run dev` - Start development server
+- `bun run build` - Create production build
+- `bun run start` - Start production server
+- `bun run lint` - Run ESLint
+- `bun run type-check` - Run TypeScript type checking
+- `bun run format` - Format code with Prettier
+- `bun run format:check` - Check code formatting
+- `bun test` - Run all tests (unit + E2E)
+- `bun run test:unit` - Run Vitest unit tests
+- `bun run test:e2e` - Run Playwright E2E tests
+- `bun run test:e2e:ui` - Run Playwright tests with UI
+- `bun run test:e2e:headed` - Run Playwright tests in headed mode
 
 ## Project Structure
 
@@ -101,14 +106,17 @@ This project uses [Spec-kit](https://github.com/anthropics/spec-kit) for specifi
 ### E2E Tests
 
 ```bash
-# Run all tests
-npm run test:e2e
+# Run all tests (unit + E2E)
+bun test
+
+# Run E2E tests only
+bun run test:e2e
 
 # Run tests in UI mode
-npm run test:e2e:ui
+bun run test:e2e:ui
 
 # Run tests in headed mode (see browser)
-npm run test:e2e:headed
+bun run test:e2e:headed
 ```
 
 ## Environment Variables
@@ -139,9 +147,9 @@ Main branch auto-deploys to production. Pull requests create preview deployments
 
 1. Create feature branch: `git checkout -b feature/your-feature`
 2. Follow the spec-kit workflow
-3. Ensure all tests pass: `npm run test:e2e`
-4. Ensure types are valid: `npm run type-check`
-5. Ensure linting passes: `npm run lint`
+3. Ensure all tests pass: `bun test`
+4. Ensure types are valid: `bun run type-check`
+5. Ensure linting passes: `bun run lint`
 6. Create pull request
 
 ## License

@@ -212,9 +212,9 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - Verify tests fail (Red)
 - Implement feature to make tests pass (Green)
 - Refactor if needed while keeping tests green
-- Run `npm run test:unit` for unit tests (fast feedback)
-- Run `npm run test:e2e` for integration/E2E tests before pushing
-- Run `npm test` to execute full test suite (unit + integration + E2E)
+- Run `bun run test:unit` for unit tests (fast feedback)
+- Run `bun run test:e2e` for integration/E2E tests before pushing
+- Run `bun test` to execute full test suite (unit + integration + E2E)
 
 **AI Agent Implementation Guidelines**:
 When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
