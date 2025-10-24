@@ -32,12 +32,12 @@ If a ticket with a quick workflow fail or are cancel on the stage build, you can
 
 - **Decision**: Whether to automatically clean up failed jobs and branches or preserve them for debugging
 - **Policy Applied**: INTERACTIVE
-- **Confidence**: High - Failed jobs and branches contain valuable debugging information
+- **Confidence**: High - Clean state is critical for reliable workflow restart
 - **Fallback Triggered?**: No
 - **Trade-offs**:
   1. **Preserve**: User can review failure logs, compare changes, valuable debugging context
-  2. **Clean up**: Cleaner state, fewer abandoned branches, simpler mental model
-- **Reviewer Notes**: Preserve failed jobs and branches for debugging. Git branches are cheap, and job history provides audit trail. User can manually delete branches after investigation.
+  2. **Clean up**: Cleaner state, fewer abandoned branches, simpler mental model, prevents state conflicts
+- **Reviewer Notes**: Clean up failed jobs and reset branch to null during rollback. This ensures ticket returns to a pristine INBOX state, preventing any state conflicts when restarting workflow. Failed job information may be available in GitHub Actions logs if needed for debugging.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -75,15 +75,15 @@ When dragging a ticket with a failed quick-impl, users see clear visual feedback
 
 ### User Story 3 - Rollback State Reset (Priority: P2)
 
-When a ticket is rolled back to INBOX, all stage-related state is reset appropriately, allowing the user to proceed with either workflow path as if starting fresh (except for preserved job history for debugging).
+When a ticket is rolled back to INBOX, all stage-related state is reset completely to provide a fresh start.
 
-**Why this priority**: Ensures clean state management and prevents data corruption or confusing state combinations. Users should get a clean slate while retaining debugging information.
+**Why this priority**: Ensures clean state management and prevents data corruption or confusing state combinations. Users should get a completely clean slate when rolling back.
 
 **Independent Test**: Can be tested by rolling back a ticket and verifying all database fields are set correctly, then proceeding through both quick-impl and normal workflow to confirm no state conflicts occur.
 
 **Acceptance Scenarios**:
 
-1. **Given** a ticket rolled back to INBOX from failed quick-impl, **When** user checks ticket state, **Then** workflowType is reset to FULL, branch field is preserved, and failed job remains in history
+1. **Given** a ticket rolled back to INBOX from failed quick-impl, **When** user checks ticket state, **Then** workflowType is reset to FULL, branch field is null, version is 1, and failed job is deleted
 2. **Given** a ticket rolled back to INBOX, **When** user transitions to SPECIFY, **Then** transition creates new job and proceeds through normal workflow without errors
 3. **Given** a ticket rolled back to INBOX, **When** user transitions to BUILD (quick-impl), **Then** transition creates new quick-impl job and workflowType is set to QUICK
 
@@ -95,16 +95,16 @@ When a ticket is rolled back to INBOX, all stage-related state is reset appropri
   - **Expected**: Transition is blocked with error message "Cannot rollback: workflow is still running"
 
 - What happens when a ticket in BUILD has multiple jobs (e.g., failed quick-impl + comment-build jobs)?
-  - **Expected**: Rollback validation only checks the workflow job (quick-impl), ignoring AI-BOARD comment jobs
+  - **Expected**: Rollback validation only checks the workflow job (quick-impl), deletes only the workflow job, ignoring AI-BOARD comment jobs
 
 - What happens when a user tries to rollback a ticket that used the normal workflow (FULL), not quick-impl?
   - **Expected**: Rollback is allowed for any FAILED/CANCELLED workflow job, regardless of workflowType
 
 - What happens to the GitHub branch when a ticket is rolled back?
-  - **Expected**: Branch is preserved (not deleted), user can manually clean up if desired
+  - **Expected**: Branch reference in database is set to null. The actual Git branch may still exist in the repository and requires manual cleanup
 
 - What happens when a ticket is rolled back and then successfully completed on second attempt?
-  - **Expected**: Both job records exist in history, ticket proceeds normally with new job
+  - **Expected**: Failed job is deleted, new job is created. Ticket proceeds normally with clean state
 
 ## Requirements *(mandatory)*
 
@@ -113,25 +113,27 @@ When a ticket is rolled back to INBOX, all stage-related state is reset appropri
 - **FR-001**: System MUST allow tickets in BUILD stage to transition back to INBOX stage when the most recent workflow job has status FAILED or CANCELLED
 - **FR-002**: System MUST block rollback transition when the most recent workflow job has status PENDING, RUNNING, or COMPLETED
 - **FR-003**: System MUST reset ticket workflowType to FULL when rolling back from BUILD to INBOX
-- **FR-004**: System MUST preserve the ticket's branch field value during rollback (not reset to null)
-- **FR-005**: System MUST preserve all job history records when rolling back (no deletion of failed/cancelled jobs)
-- **FR-006**: System MUST distinguish between workflow jobs (specify, plan, implement, quick-impl) and AI-BOARD jobs (comment-*) when validating rollback eligibility
-- **FR-007**: System MUST allow tickets to proceed through either workflow path (INBOX → SPECIFY or INBOX → BUILD) after rollback
-- **FR-008**: Drag-and-drop UI MUST provide visual feedback indicating rollback eligibility during drag operations
-- **FR-009**: System MUST validate rollback transitions at API level (cannot bypass via direct API calls)
-- **FR-010**: System MUST provide clear error messages when rollback is blocked, explaining why transition is invalid
+- **FR-004**: System MUST reset the ticket's branch field to null during rollback
+- **FR-005**: System MUST delete the failed/cancelled job record when rolling back to INBOX
+- **FR-006**: System MUST reset the ticket's version field to 1 during rollback
+- **FR-007**: System MUST distinguish between workflow jobs (specify, plan, implement, quick-impl) and AI-BOARD jobs (comment-*) when validating rollback eligibility
+- **FR-008**: System MUST allow tickets to proceed through either workflow path (INBOX → SPECIFY or INBOX → BUILD) after rollback
+- **FR-009**: Drag-and-drop UI MUST provide visual feedback indicating rollback eligibility during drag operations
+- **FR-010**: System MUST validate rollback transitions at API level (cannot bypass via direct API calls)
+- **FR-011**: System MUST provide clear error messages when rollback is blocked, explaining why transition is invalid
 
 ### Key Entities *(include if feature involves data)*
 
-- **Ticket**: Existing entity with fields: id, stage, workflowType, branch, projectId
+- **Ticket**: Existing entity with fields: id, stage, workflowType, branch, version, projectId
   - **stage**: Updated from BUILD to INBOX during rollback
   - **workflowType**: Reset from QUICK to FULL during rollback
-  - **branch**: Preserved during rollback (not modified)
+  - **branch**: Reset to null during rollback
+  - **version**: Reset to 1 during rollback
 
 - **Job**: Existing entity with fields: id, ticketId, command, status, startedAt, completedAt
   - **status**: Used to determine rollback eligibility (FAILED/CANCELLED = eligible)
   - **command**: Used to filter workflow jobs from AI-BOARD jobs (exclude "comment-*")
-  - **Records**: All job records preserved during rollback for audit trail
+  - **Records**: Failed/cancelled job is deleted during rollback to provide clean state
 
 ## Success Criteria *(mandatory)*
 
@@ -139,8 +141,8 @@ When a ticket is rolled back to INBOX, all stage-related state is reset appropri
 
 - **SC-001**: Users can successfully rollback tickets from BUILD to INBOX within 3 seconds (drag-and-drop interaction completes)
 - **SC-002**: Rollback eligibility validation completes in under 200ms (API response time for validation check)
-- **SC-003**: 100% of rollback transitions correctly reset workflowType to FULL and preserve branch field
+- **SC-003**: 100% of rollback transitions correctly reset workflowType to FULL, set branch to null, set version to 1, and delete the failed job
 - **SC-004**: 100% of invalid rollback attempts (RUNNING/COMPLETED jobs) are blocked with clear error messages
 - **SC-005**: Users can successfully restart either workflow path after rollback without state conflicts or errors
-- **SC-006**: Failed job records remain accessible in job history after rollback for debugging and audit purposes
+- **SC-006**: Rollback operations correctly delete only the failed workflow job, leaving AI-BOARD comment jobs intact
 - **SC-007**: Visual feedback for rollback eligibility appears within 100ms of drag start (responsive UI feedback)
