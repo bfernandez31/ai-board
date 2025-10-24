@@ -1,11 +1,18 @@
 'use client'
 
-import { Clock, Pen, CheckCircle2, XCircle, Ban, Cog, MessageSquare } from 'lucide-react'
+import { Clock, Pen, CheckCircle2, XCircle, Ban, Cog, MessageSquare, BotMessageSquare } from 'lucide-react'
 import { JobStatus } from '@prisma/client'
 import { cn } from '@/lib/utils'
 import { JobType } from '@/lib/types/job-types'
 import { getJobTypeConfig } from '@/lib/utils/job-type-classifier'
 import { getContextualLabel } from '@/lib/utils/job-label-transformer'
+import { formatTimestamp } from '@/lib/utils/format-timestamp'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 /**
  * JobStatusIndicator Component Props
@@ -48,6 +55,70 @@ export interface JobStatusIndicatorProps {
    * Accessibility label for screen readers
    */
   ariaLabel?: string
+
+  /**
+   * Optional: Timestamp when job completed (for AI-BOARD tooltips)
+   * Used to format human-readable completion time in tooltips
+   */
+  completedAt?: Date | string | null
+}
+
+/**
+ * Get AI-BOARD icon color based on status
+ */
+function getAIBoardColor(status: JobStatus): string {
+  switch (status) {
+    case 'PENDING':
+    case 'RUNNING':
+    case 'COMPLETED':
+      return 'text-purple-500'
+    case 'FAILED':
+      return 'text-red-500'
+    case 'CANCELLED':
+      return 'text-gray-500'
+    default:
+      return 'text-purple-500'
+  }
+}
+
+/**
+ * Get AI-BOARD tooltip text based on status
+ */
+function getAIBoardTooltip(status: JobStatus, completedAt?: Date | string | null): string {
+  switch (status) {
+    case 'PENDING':
+      return 'AI-BOARD is preparing...'
+    case 'RUNNING':
+      return 'AI-BOARD is working on this ticket'
+    case 'COMPLETED':
+      return `AI-BOARD assisted on ${formatTimestamp(completedAt || null)}`
+    case 'FAILED':
+      return 'AI-BOARD assistance failed'
+    case 'CANCELLED':
+      return 'AI-BOARD assistance cancelled'
+    default:
+      return 'AI-BOARD status unknown'
+  }
+}
+
+/**
+ * Get AI-BOARD ARIA label based on status
+ */
+function getAIBoardAriaLabel(status: JobStatus): string {
+  switch (status) {
+    case 'PENDING':
+      return 'AI-BOARD is preparing'
+    case 'RUNNING':
+      return 'AI-BOARD is working on this ticket'
+    case 'COMPLETED':
+      return 'AI-BOARD assistance completed'
+    case 'FAILED':
+      return 'AI-BOARD assistance failed'
+    case 'CANCELLED':
+      return 'AI-BOARD assistance cancelled'
+    default:
+      return 'AI-BOARD status unknown'
+  }
 }
 
 /**
@@ -61,6 +132,7 @@ export interface JobStatusIndicatorProps {
  * - GPU-accelerated animation for RUNNING status
  * - Respects prefers-reduced-motion media query
  * - Full accessibility support
+ * - Compact icon-only mode for AI-BOARD jobs with tooltips
  */
 export function JobStatusIndicator({
   status,
@@ -70,6 +142,7 @@ export function JobStatusIndicator({
   className,
   animated = true,
   ariaLabel,
+  completedAt,
 }: JobStatusIndicatorProps) {
   // Get contextual label (transforms RUNNING to WRITING/CODING/ASSISTING)
   const displayLabel = getContextualLabel(command, status)
@@ -103,6 +176,43 @@ export function JobStatusIndicator({
     ? 'text-purple-500'
     : 'text-blue-500'
 
+  // AI-BOARD compact mode: Icon-only with tooltip (US2)
+  if (jobType === JobType.AI_BOARD) {
+    const iconColor = getAIBoardColor(status)
+    const tooltipText = getAIBoardTooltip(status, completedAt)
+    const aiAriaLabel = getAIBoardAriaLabel(status)
+
+    // Apply bounce animation for PENDING/RUNNING states
+    const shouldBounce = status === 'PENDING' || status === 'RUNNING'
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              data-testid="job-status-indicator"
+              className={cn('cursor-help', className)}
+              role="img"
+              aria-label={aiAriaLabel}
+            >
+              <BotMessageSquare
+                className={cn(
+                  'h-5 w-5',
+                  iconColor,
+                  shouldBounce && 'animate-bounce'
+                )}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  // Workflow mode: Standard display (US1: simplified without prefix)
   return (
     <div
       data-testid="job-status-indicator"
@@ -113,8 +223,8 @@ export function JobStatusIndicator({
       role="img"
       aria-label={finalAriaLabel}
     >
-      {/* Icon + Stage/Type prefix */}
-      {jobTypeConfig && JobTypeIcon && prefixText && (
+      {/* Icon + Stage/Type prefix - SKIP for WORKFLOW jobs (US1: simplified display) */}
+      {jobTypeConfig && JobTypeIcon && prefixText && jobType !== JobType.WORKFLOW && (
         <div className="flex items-center gap-1">
           <JobTypeIcon className={cn('h-4 w-4', prefixColor)} />
           <span className={cn('text-sm font-medium uppercase', prefixColor)}>

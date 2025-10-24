@@ -103,30 +103,34 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
-          {/* Job Status Indicators (Dual Job Display) */}
+          {/* Job Status Indicators (Single-line layout with right-aligned AI-BOARD) */}
           {(workflowJob || aiBoardJob) && (
-            <div className="border-t border-[#313244] pt-3 space-y-2">
-              {/* Workflow Job Indicator */}
-              {workflowJob && (
-                <JobStatusIndicator
-                  status={workflowJob.status}
-                  command={workflowJob.command}
-                  jobType={classifyJobType(workflowJob.command)}
-                  stage={ticket.stage}
-                  animated={true}
-                />
-              )}
+            <div className="border-t border-[#313244] pt-3">
+              <div className="flex items-center justify-between gap-3">
+                {/* Left: Workflow Job Indicator (simplified display) */}
+                {workflowJob && (
+                  <JobStatusIndicator
+                    status={workflowJob.status}
+                    command={workflowJob.command}
+                    jobType={classifyJobType(workflowJob.command)}
+                    stage={ticket.stage}
+                    animated={true}
+                    completedAt={workflowJob.completedAt}
+                  />
+                )}
 
-              {/* AI-BOARD Job Indicator */}
-              {aiBoardJob && (
-                <JobStatusIndicator
-                  status={aiBoardJob.status}
-                  command={aiBoardJob.command}
-                  jobType={classifyJobType(aiBoardJob.command)}
-                  stage={ticket.stage}
-                  animated={true}
-                />
-              )}
+                {/* Right: AI-BOARD Job Indicator (compact icon-only) */}
+                {aiBoardJob && (
+                  <JobStatusIndicator
+                    status={aiBoardJob.status}
+                    command={aiBoardJob.command}
+                    jobType={classifyJobType(aiBoardJob.command)}
+                    stage={ticket.stage}
+                    animated={true}
+                    completedAt={aiBoardJob.completedAt}
+                  />
+                )}
+              </div>
             </div>
           )}
         </Card>
