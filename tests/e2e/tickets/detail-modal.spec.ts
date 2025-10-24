@@ -846,3 +846,281 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%2Flogin%20page%232');
   });
 });
+
+/**
+ * E2E Tests for Ticket Detail Modal Refactoring
+ * Feature: 049-rework-detail-ticket
+ *
+ * Tests for:
+ * 1. Ticket ID display in header
+ * 2. Footer with relative dates in Details tab
+ * 3. Removal of old dates section
+ * 4. Scrollable description with fixed footer
+ */
+test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
+  const BASE_URL = 'http://localhost:3000';
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async ({ request }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
+    // Create test user
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update project 1
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        userId: testUser.id,
+      },
+    });
+
+    // Create test ticket
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Test Ticket for Footer',
+        description: 'Test description for footer refactoring',
+      },
+    });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * Test: Ticket ID displays in header before title
+   */
+  test('displays ticket ID in header before title', async ({ page }) => {
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify ticket ID is displayed (format: #<ticketId>)
+    const ticketId = dialog.locator('[data-testid="ticket-id"]');
+    await expect(ticketId).toBeVisible();
+
+    // Verify it has correct styling (font-mono text-muted-foreground)
+    const ticketIdClasses = await ticketId.getAttribute('class');
+    expect(ticketIdClasses).toContain('font-mono');
+    expect(ticketIdClasses).toContain('text-muted-foreground');
+
+    // Verify text starts with #
+    const ticketIdText = await ticketId.textContent();
+    expect(ticketIdText).toMatch(/^#\d+$/);
+  });
+
+  /**
+   * Test: Footer with relative dates appears in Details tab
+   */
+  test('displays footer with relative dates in Details tab', async ({ page }) => {
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Ensure we're on Details tab
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+
+    // Wait for tab content to be visible
+    const detailsContent = dialog.locator('[role="tabpanel"]').filter({ hasText: 'Description' });
+    await expect(detailsContent).toBeVisible();
+
+    // Verify footer is visible
+    const footer = dialog.locator('[data-testid="details-footer"]');
+    await expect(footer).toBeVisible();
+
+    // Verify footer has correct styling
+    const footerClasses = await footer.getAttribute('class');
+    expect(footerClasses).toContain('border-t');
+    expect(footerClasses).toContain('text-xs');
+    expect(footerClasses).toContain('text-muted-foreground');
+
+    // Verify footer contains ticket ID
+    const footerText = await footer.textContent();
+    expect(footerText).toMatch(/#\d+/);
+
+    // Verify footer contains "Created" with relative time
+    expect(footerText).toContain('Created');
+    expect(footerText).toMatch(/(seconds?|minutes?|hours?|days?|months?|years?) ago/);
+
+    // Verify footer contains "Updated" with relative time
+    expect(footerText).toContain('Updated');
+
+    // Verify separator · is used
+    expect(footerText).toContain('·');
+  });
+
+  /**
+   * Test: Old dates section is removed
+   */
+  test('does not display old dates section in Details tab', async ({ page }) => {
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Ensure we're on Details tab
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+
+    // Verify old dates section with "Created:" and "Last Updated:" labels doesn't exist
+    const oldDatesSection = dialog.getByText('Created:');
+    await expect(oldDatesSection).not.toBeVisible();
+
+    const oldUpdatedLabel = dialog.getByText('Last Updated:');
+    await expect(oldUpdatedLabel).not.toBeVisible();
+  });
+
+  /**
+   * Test: Footer is sticky on desktop viewport
+   */
+  test('footer is sticky on desktop viewport', async ({ page }) => {
+    // Set desktop viewport
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Ensure we're on Details tab
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+
+    // Verify footer has sticky positioning on desktop
+    const footer = dialog.locator('[data-testid="details-footer"]');
+    await expect(footer).toBeVisible();
+
+    // Check if footer has sticky class (only on desktop)
+    const footerClasses = await footer.getAttribute('class');
+    expect(footerClasses).toContain('md:sticky');
+  });
+
+  /**
+   * Test: Footer is NOT sticky on mobile viewport
+   */
+  test('footer is not sticky on mobile viewport', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Navigate to board and open ticket detail modal
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Ensure we're on Details tab
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+
+    // Verify footer is visible but not sticky (no md:sticky applied by default on mobile)
+    const footer = dialog.locator('[data-testid="details-footer"]');
+    await expect(footer).toBeVisible();
+
+    // On mobile, footer should have normal positioning
+    const position = await footer.evaluate((el) => {
+      return window.getComputedStyle(el).position;
+    });
+
+    // On mobile (below md breakpoint), position should be static or relative, not sticky
+    expect(position).not.toBe('sticky');
+  });
+
+  /**
+   * Test: Description is scrollable independently
+   */
+  test('description section is scrollable independently in Details tab', async ({ page }) => {
+    // Clean database and create a ticket with a very long description directly via Prisma
+    await cleanupDatabase();
+
+    // Create test user
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update project 1
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        userId: testUser.id,
+      },
+    });
+
+    // Create ticket directly in DB with long description (max 1000 chars)
+    await prisma.ticket.create({
+      data: {
+        title: '[e2e] Ticket with Very Long Description',
+        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(15), // ~900 chars (under 1000 limit)
+        stage: 'INBOX',
+        projectId: 1,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Navigate to board and open the ticket
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+
+    // Click the first (and only) ticket
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Ensure we're on Details tab
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+
+    // Find description container (should be scrollable)
+    const descriptionContainer = dialog.locator('[data-testid="description-container"]');
+    await expect(descriptionContainer).toBeVisible();
+
+    // Verify description container has overflow-y-auto
+    const hasScroll = await descriptionContainer.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return style.overflowY === 'auto' || style.overflowY === 'scroll';
+    });
+
+    expect(hasScroll).toBe(true);
+
+    // Verify footer remains visible (not scrolled)
+    const footer = dialog.locator('[data-testid="details-footer"]');
+    await expect(footer).toBeVisible();
+  });
+});

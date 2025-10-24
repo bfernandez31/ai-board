@@ -1,6 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
 import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
@@ -106,20 +106,6 @@ const stageBadgeConfig: Record<string, { label: string; className: string }> = {
     label: 'Ship',
     className: 'bg-[#a6e3a1] text-zinc-900 border-[#a6e3a1]',
   },
-};
-
-/**
- * Helper function to format ticket dates in human-readable format
- */
-const formatTicketDate = (date: Date | string | null | undefined): string => {
-  if (!date) return 'Unknown date';
-
-  try {
-    return format(new Date(date), 'MMM d, yyyy h:mm a');
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return 'Invalid date';
-  }
 };
 
 /**
@@ -766,6 +752,13 @@ export function TicketDetailModal({
             )}
           </div>
 
+          {/* Ticket ID */}
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-sm font-mono text-muted-foreground" data-testid="ticket-id">
+              #{ticket.id}
+            </span>
+          </div>
+
           <div className="group">
             {titleEdit.isEditing ? (
               <div className="space-y-3">
@@ -856,8 +849,9 @@ export function TicketDetailModal({
           </TabsList>
 
           {/* Details Tab */}
-          <TabsContent value="details" className="space-y-8 overflow-y-auto max-h-[calc(90vh-280px)] pr-2">
-            {/* Description section with inline editing */}
+          <TabsContent value="details" className="flex flex-col h-[calc(90vh-280px)]">
+            {/* Description section with inline editing - scrollable */}
+            <div className="flex-1 overflow-y-auto pr-2 space-y-8" data-testid="description-container">
             <div className="group">
             <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
               Description
@@ -1018,23 +1012,19 @@ export function TicketDetailModal({
               </div>
             )}
 
-            {/* Dates section */}
-            <div className="border-t-2 border-[#313244]/50 pt-6 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-[#a6adc8] font-medium">
-                  Created:
-                </span>
-                <span className="text-sm text-[#cdd6f4] font-mono">
-                  {formatTicketDate(ticket.createdAt)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-[#a6adc8] font-medium">
-                  Last Updated:
-                </span>
-                <span className="text-sm text-[#cdd6f4] font-mono">
-                  {formatTicketDate(localTicket?.updatedAt || ticket.updatedAt)}
-                </span>
+            </div>
+
+            {/* Footer with relative dates - sticky on desktop only */}
+            <div
+              className="border-t border-border mt-4 pt-3 text-xs text-muted-foreground md:sticky md:bottom-0 bg-[#181825]"
+              data-testid="details-footer"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono">#{ticket.id}</span>
+                <span>·</span>
+                <span>📅 Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</span>
+                <span>·</span>
+                <span>✏️ Updated {formatDistanceToNow(new Date(localTicket?.updatedAt || ticket.updatedAt), { addSuffix: true })}</span>
               </div>
             </div>
           </TabsContent>
