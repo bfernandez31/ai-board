@@ -168,7 +168,7 @@ jobs:
           OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist $PAYLOAD" 2>&1 || true)
           echo "$OUTPUT"
 
-          # Extract JSON from markdown code block (```json ... ```)
+          # Extract JSON from markdown code block (triple-backtick json ... triple-backtick)
           # Claude Code returns conversational text with JSON inside markdown blocks
           EXTRACTED_JSON=$(echo "$OUTPUT" | sed -n '/```json/,/```/p' | sed '1d;$d')
 
