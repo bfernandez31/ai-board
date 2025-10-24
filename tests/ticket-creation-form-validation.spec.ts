@@ -253,4 +253,56 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     const createButton = page.getByRole("button", { name: /create ticket|creating/i });
     await expect(createButton).toBeEnabled();
   });
+
+  test("should accept description with emoji and UTF-8 characters", async ({ page }) => {
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
+
+    // Fill title with valid ASCII
+    await titleInput.fill("Valid title");
+
+    // Fill description with emoji and UTF-8 characters
+    await descriptionInput.fill("Description with emoji 🚀 and Chinese 中文 and Arabic العربية");
+
+    // Blur to trigger validation
+    await titleInput.blur();
+    await descriptionInput.blur();
+
+    // Wait a moment for validation
+    await page.waitForTimeout(500);
+
+    // Should not show any error
+    const errorMessage = page.getByText(/can only contain/i);
+    await expect(errorMessage).not.toBeVisible();
+
+    // Create button should be enabled
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
+    await expect(createButton).toBeEnabled();
+  });
+
+  test("should reject description with emoji but title should still reject emoji", async ({ page }) => {
+    const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
+    const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
+
+    // Fill title with emoji (should fail)
+    await titleInput.fill("Test 🚀");
+
+    // Fill description with emoji (should succeed)
+    await descriptionInput.fill("Description with emoji 🚀");
+
+    // Blur to trigger validation
+    await titleInput.blur();
+    await descriptionInput.blur();
+
+    // Wait a moment for validation
+    await page.waitForTimeout(500);
+
+    // Title should show error
+    const titleError = page.getByText(/can only contain letters, numbers, spaces, and common special characters/i);
+    await expect(titleError).toBeVisible();
+
+    // Create button should be disabled due to title error
+    const createButton = page.getByRole("button", { name: /create ticket|creating/i });
+    await expect(createButton).toBeDisabled();
+  });
 });

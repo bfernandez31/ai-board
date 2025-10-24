@@ -286,14 +286,15 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
   });
 
   /**
-   * T013: PATCH rejects description with emoji
-   * Feature: 024-16204-description-validation
+   * T013: PATCH accepts description with emoji (UTF-8 characters allowed)
+   * Feature: 048-description-ticket-change
+   * NOTE: Descriptions now accept all UTF-8 characters including emoji.
    */
-  test('PATCH /api/projects/1/tickets/:id - rejects description with emoji', async ({ request }) => {
+  test('PATCH /api/projects/1/tickets/:id - accepts description with emoji', async ({ request }) => {
     // Create ticket
     const ticket = await createTicket(request);
 
-    // PATCH with emoji (should fail)
+    // PATCH with emoji (should succeed)
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
         description: 'Bug with emoji 😀',
@@ -301,18 +302,12 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
       },
     });
 
-    // Assert 400 Bad Request
-    expect(response.status()).toBe(400);
+    // Assert 200 OK
+    expect(response.status()).toBe(200);
 
-    // Assert validation error structure
-    const error = await response.json();
-    expect(error.error).toBe('Validation failed');
-    expect(error.issues).toBeDefined();
-    expect(error.issues.length).toBeGreaterThan(0);
-    expect(error.issues[0].code).toBe('invalid_format');
-    expect(error.issues[0].format).toBe('regex');
-    expect(error.issues[0].message).toBe('can only contain letters, numbers, spaces, and common special characters');
-    expect(error.issues[0].path).toContain('description');
+    // Assert description updated with emoji
+    const updatedTicket = await response.json();
+    expect(updatedTicket.description).toBe('Bug with emoji 😀');
   });
 
   /**
@@ -368,17 +363,20 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
   });
 
   /**
-   * T016: PATCH returns correct validation error structure
-   * Feature: 024-16204-description-validation
+   * T016: PATCH returns correct validation error structure (test with too-long description)
+   * Feature: 048-description-ticket-change
+   * NOTE: Changed to test length validation instead of character validation
+   * since descriptions now accept all UTF-8 characters.
    */
   test('PATCH /api/projects/1/tickets/:id - returns correct validation error structure', async ({ request }) => {
     // Create ticket
     const ticket = await createTicket(request);
 
-    // PATCH with invalid character
+    // PATCH with description exceeding max length (1000 chars)
+    const tooLongDescription = 'a'.repeat(1001);
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        description: 'Invalid 🚀',
+        description: tooLongDescription,
         version: ticket.version,
       },
     });
@@ -392,10 +390,8 @@ test.describe('PATCH /api/projects/1/tickets/[id] - Inline Editing API', () => {
     expect(error).toHaveProperty('issues');
     expect(Array.isArray(error.issues)).toBe(true);
     expect(error.issues[0]).toHaveProperty('code');
-    expect(error.issues[0]).toHaveProperty('format');
     expect(error.issues[0]).toHaveProperty('message');
     expect(error.issues[0]).toHaveProperty('path');
-    expect(error.issues[0].code).toBe('invalid_format');
-    expect(error.issues[0].format).toBe('regex');
+    expect(error.issues[0].code).toBe('too_big');
   });
 });
