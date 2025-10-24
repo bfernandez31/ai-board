@@ -219,6 +219,9 @@ export async function PATCH(
       'autoMode' in body ||
       'clarificationPolicy' in body;
 
+    console.log('[PATCH] Request body:', JSON.stringify(body));
+    console.log('[PATCH] isStageUpdate:', isStageUpdate, 'isInlineEdit:', isInlineEdit);
+
     // Handle inline edit (title/description update)
     if (isInlineEdit) {
       const parseResult = patchTicketSchema.safeParse(body);
@@ -378,9 +381,11 @@ export async function PATCH(
 
     // Handle stage update
     if (isStageUpdate) {
+      console.log('[PATCH] Entering isStageUpdate block');
       const parseResult = UpdateStageSchema.safeParse(body);
 
       if (!parseResult.success) {
+        console.log('[PATCH] Validation failed:', parseResult.error);
         return NextResponse.json(
           {
             error: 'Validation error',
@@ -392,6 +397,7 @@ export async function PATCH(
       }
 
       const { stage: newStage, version: requestVersion } = parseResult.data;
+      console.log('[PATCH] Parsed stage:', newStage, 'version:', requestVersion);
 
       // Fetch current ticket with project validation (load project relation for workflow)
       const currentTicket = await prisma.ticket.findFirst({
@@ -405,6 +411,7 @@ export async function PATCH(
       });
 
       if (!currentTicket) {
+        console.log('[PATCH] Ticket not found');
         // Distinguish between 404 and 403
         const ticketExists = await prisma.ticket.findUnique({
           where: { id: ticketId },
@@ -421,8 +428,11 @@ export async function PATCH(
         }
       }
 
+      console.log('[PATCH] Current ticket stage:', currentTicket.stage, 'version:', currentTicket.version);
+
       // Check for version conflict (optimistic concurrency control)
       if (currentTicket.version !== requestVersion) {
+        console.log('[PATCH] Version conflict');
         return NextResponse.json(
           {
             error: 'Ticket modified by another user',
@@ -435,7 +445,9 @@ export async function PATCH(
 
       // Validate stage transition and trigger GitHub workflow
       const currentStage = currentTicket.stage as Stage;
+      console.log('[PATCH] Validating transition:', currentStage, '->', newStage);
       if (!isValidTransition(currentStage, newStage)) {
+        console.log('[PATCH] Invalid transition');
         return NextResponse.json(
           {
             error: 'Invalid stage transition',
@@ -446,10 +458,12 @@ export async function PATCH(
       }
 
       // Trigger GitHub workflow for stage transition
+      console.log('[PATCH] About to call handleTicketTransition');
       const transitionResult = await handleTicketTransition(
         currentTicket,
         newStage as PrismaStage
       );
+      console.log('[PATCH] handleTicketTransition result:', transitionResult);
 
       if (!transitionResult.success) {
         return NextResponse.json(
