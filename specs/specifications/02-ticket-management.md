@@ -564,17 +564,24 @@ The system enables editing title and description directly in the detail modal:
 - Cancel on ESC
 
 **Description Editing**:
-- Enter edit mode on click
+- Enter edit mode on click (INBOX stage only)
 - Character counter displayed
 - Min 1, max 1000 characters
 - 90% warning at 900 characters
 - No empty or whitespace-only
 - Save and cancel buttons visible during edit
+- Read-only display in non-INBOX stages (SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+
+**Clarification Policy Editing**:
+- Edit policy button visible in INBOX stage only
+- Button hidden in all non-INBOX stages
+- Re-enabled if ticket returns to INBOX stage
 
 **Validation**:
 - Real-time validation
 - Save disabled when invalid
 - Inline error messages
+- Stage-based validation: Description and policy updates blocked via API in non-INBOX stages
 
 **Save & Concurrency**:
 - Optimistic UI update
@@ -609,6 +616,20 @@ The system enables editing title and description directly in the detail modal:
 - Allowed characters: **All UTF-8 characters** including emoji 🚀, Chinese 中文, Arabic العربية, Japanese 日本語, Cyrillic Русский, mathematical symbols ∞, etc.
 - No empty or whitespace-only values
 - Feature: [048-description-ticket-change](../048-description-ticket-change/spec.md)
+
+**Stage-Based Editing Restrictions** (added 2025-10-24):
+- **Description Field**: Editable ONLY in INBOX stage
+  - Read-only display in all other stages (SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+  - Prevents unintended changes once work has started
+  - Re-enabled if ticket transitions back to INBOX
+- **Clarification Policy Field**: Editable ONLY in INBOX stage
+  - Edit policy button hidden in non-INBOX stages
+  - Same lifecycle as description field restrictions
+- **API Validation**: Stage-based validation enforced at API level
+  - Returns validation error for description/policy updates in non-INBOX stages
+  - Applies to all editing interfaces (modal, inline, direct API calls)
+- **Rationale**: Ensures specification stability during active development workflow
+- Feature: [051-895-restricted-description](../051-895-restricted-description/spec.md)
 
 ---
 
