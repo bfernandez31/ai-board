@@ -1,7 +1,8 @@
-import { Octokit } from '@octokit/rest';
+import { workflowQueue } from '@/lib/queue/client';
+import type { WorkflowJobData } from '@/lib/queue/types';
 
 /**
- * GitHub workflow dispatch inputs for AI-BOARD assist workflow
+ * AI-BOARD assist workflow inputs
  */
 export interface AIBoardWorkflowInputs {
   /** Ticket ID */
@@ -23,13 +24,13 @@ export interface AIBoardWorkflowInputs {
 }
 
 /**
- * Dispatch AI-BOARD assist GitHub workflow
+ * Dispatch AI-BOARD assist to worker queue
  *
- * Triggers the .github/workflows/ai-board-assist.yml workflow
- * with the provided inputs for ticket assistance.
+ * Enqueues an AI-BOARD assist job to be processed by the worker
+ * instead of triggering GitHub Actions workflow.
  *
  * @param inputs Workflow dispatch inputs
- * @throws Error if GITHUB_TOKEN not configured or dispatch fails
+ * @throws Error if queue enqueue fails
  *
  * @example
  * await dispatchAIBoardWorkflow({
@@ -46,46 +47,35 @@ export interface AIBoardWorkflowInputs {
 export async function dispatchAIBoardWorkflow(
   inputs: AIBoardWorkflowInputs
 ): Promise<void> {
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  if (!githubToken) {
-    throw new Error(
-      'GITHUB_TOKEN not configured - required for workflow dispatch'
-    );
-  }
-
-  const octokit = new Octokit({ auth: githubToken });
-
-  const owner = process.env.GITHUB_OWNER;
-  const repo = process.env.GITHUB_REPO;
-
-  if (!owner || !repo) {
-    throw new Error(
-      'GITHUB_OWNER and GITHUB_REPO environment variables required'
-    );
-  }
+  // Get GitHub owner and repo from environment or use defaults
+  const owner = process.env.GITHUB_OWNER || 'bfernandez31';
+  const repo = process.env.GITHUB_REPO || 'ai-board';
 
   try {
-    await octokit.actions.createWorkflowDispatch({
-      owner,
-      repo,
-      workflow_id: 'ai-board-assist.yml',
-      ref: 'main', // Workflow runs on main branch
-      inputs: {
-        ticket_id: inputs.ticket_id,
-        ticketTitle: inputs.ticketTitle,
-        stage: inputs.stage,
-        branch: inputs.branch,
-        user: inputs.user,
-        comment: inputs.comment,
-        job_id: inputs.job_id,
-        project_id: inputs.project_id,
-      },
+    // Create job data for the queue
+    const jobData: WorkflowJobData = {
+      ticketId: parseInt(inputs.ticket_id, 10),
+      projectId: parseInt(inputs.project_id, 10),
+      command: `comment-${inputs.stage}`,
+      ticketTitle: inputs.ticketTitle,
+      ticketDescription: inputs.comment, // Use comment as description for AI-BOARD assist
+      branch: inputs.branch || null,
+      githubOwner: owner,
+      githubRepo: repo,
+      jobId: parseInt(inputs.job_id, 10),
+    };
+
+    // Enqueue the job
+    const job = await workflowQueue.add(`ai-board-assist`, jobData, {
+      jobId: inputs.job_id,
+      priority: 2, // Higher priority for user-initiated AI-BOARD requests
     });
+
+    console.log(`[dispatch-ai-board] Enqueued AI-BOARD assist job ${job.id} for ticket ${inputs.ticket_id}`);
   } catch (error) {
-    console.error('[dispatch-ai-board] Failed to dispatch workflow:', error);
+    console.error('[dispatch-ai-board] Failed to enqueue job:', error);
     throw new Error(
-      `Failed to dispatch AI-BOARD workflow: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to enqueue AI-BOARD workflow: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
