@@ -272,7 +272,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
     });
 
     // Ensure no extra fields in job objects
-    const allowedJobKeys = ['id', 'status', 'ticketId', 'updatedAt'];
+    const allowedJobKeys = ['id', 'status', 'ticketId', 'command', 'updatedAt'];
     body.jobs.forEach((job: any) => {
       Object.keys(job).forEach(key => {
         expect(allowedJobKeys).toContain(key);
@@ -326,7 +326,7 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
 
     // Ensure sensitive fields are NOT present
     body.jobs.forEach((job: any) => {
-      expect(job).not.toHaveProperty('command'); // Internal implementation detail
+      expect(job).toHaveProperty('command'); // Required for dual job filtering (workflow vs AI-BOARD)
       expect(job).not.toHaveProperty('createdAt'); // Not needed for polling
       expect(job).not.toHaveProperty('completedAt'); // Can be inferred from status
       expect(job).not.toHaveProperty('projectId'); // Already in request path

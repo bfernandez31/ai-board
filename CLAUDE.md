@@ -26,7 +26,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-23
 
 ### Testing
 
-- **E2E Testing**: Playwright
+- **E2E/API Testing**: Playwright (run with `npx playwright test`)
+- **Unit Testing**: Vitest (run with `bun test`)
 
 ### Integration & Tooling
 
@@ -52,7 +53,12 @@ tests/
 
 ## Commands
 
-bun test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] bun run lint
+- **All Tests**: `bun run test` (runs unit + E2E tests)
+- **E2E/API Tests**: `bun run test:e2e [path]` (Playwright, or `npx playwright test [path]`)
+- **Unit Tests**: `bun run test:unit` (Vitest, or `bun test`)
+- **Lint**: `bun run lint`
+- **Dev Server**: `bun run dev`
+- **Type Check**: `bun run type-check`
 
 ## Code Style
 
