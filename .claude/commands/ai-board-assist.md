@@ -91,7 +91,9 @@ Ticket artifacts are in the `specs/{branch}/` directory (where `{branch}` comes 
 
 ## Response Format
 
-You MUST return a JSON object on stdout with this exact structure:
+You MUST return a JSON object **inside a markdown code block** with this exact structure:
+
+**IMPORTANT**: The workflow expects the JSON wrapped in a markdown code fence:
 
 ```json
 {

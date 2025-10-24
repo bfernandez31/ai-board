@@ -168,8 +168,18 @@ jobs:
           OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist $PAYLOAD" 2>&1 || true)
           echo "$OUTPUT"
 
-          # Extract JSON response from stdout (last valid JSON object)
-          JSON_OUTPUT=$(echo "$OUTPUT" | jq -s '.[-1]' 2>/dev/null || echo '{"status":"error","message":"Failed to parse Claude output","filesModified":[]}')
+          # Extract JSON from markdown code block (```json ... ```)
+          # Claude Code returns conversational text with JSON inside markdown blocks
+          EXTRACTED_JSON=$(echo "$OUTPUT" | sed -n '/```json/,/```/p' | sed '1d;$d')
+
+          if [ -z "$EXTRACTED_JSON" ]; then
+            # No JSON block found, use fallback error
+            JSON_OUTPUT='{"status":"error","message":"Failed to parse Claude output - no JSON block found","filesModified":[]}'
+          else
+            # Validate and compact JSON, fallback on parse error
+            JSON_OUTPUT=$(echo "$EXTRACTED_JSON" | jq -c '.' 2>/dev/null || echo '{"status":"error","message":"Failed to parse Claude output - invalid JSON","filesModified":[]}')
+          fi
+
           echo "json_output<<EOF" >> $GITHUB_OUTPUT
           echo "$JSON_OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
