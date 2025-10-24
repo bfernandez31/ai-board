@@ -23,9 +23,10 @@ export const StageSchema = z.enum([
 ]);
 
 /**
- * Regex pattern for allowed characters: letters, numbers, spaces, and extended punctuation
+ * Regex pattern for allowed characters in TITLE field: letters, numbers, spaces, and extended punctuation
  * Allowed punctuation: . , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ ` |
  * Must contain at least one non-whitespace character
+ * NOTE: This pattern is ONLY used for title validation. Description accepts all UTF-8 characters.
  */
 const ALLOWED_CHARS_PATTERN = /^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;'"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$/;
 
@@ -44,11 +45,7 @@ export const TitleFieldSchema = z
 export const DescriptionFieldSchema = z
   .string()
   .min(1, 'Description is required')
-  .max(1000, 'Description must be 1000 characters or less')
-  .regex(
-    ALLOWED_CHARS_PATTERN,
-    'can only contain letters, numbers, spaces, and common special characters'
-  );
+  .max(1000, 'Description must be 1000 characters or less');
 
 /**
  * Validation schema for creating a new ticket
@@ -84,10 +81,6 @@ export const CreateTicketSchema = z
   })
   .refine((data) => data.description.length <= 1000, {
     message: 'Description must be 1000 characters or less',
-    path: ['description'],
-  })
-  .refine((data) => ALLOWED_CHARS_PATTERN.test(data.description), {
-    message: 'can only contain letters, numbers, spaces, and common special characters',
     path: ['description'],
   });
 
@@ -126,11 +119,7 @@ export const descriptionSchema = z
   .string()
   .trim()
   .min(1, { message: 'Description cannot be empty' })
-  .max(1000, { message: 'Description must be 1000 characters or less' })
-  .regex(
-    ALLOWED_CHARS_PATTERN,
-    'can only contain letters, numbers, spaces, and common special characters'
-  );
+  .max(1000, { message: 'Description must be 1000 characters or less' });
 
 export const versionSchema = z
   .number()

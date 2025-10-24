@@ -597,11 +597,18 @@ The system enables editing title and description directly in the detail modal:
 - `workflowType`: Set automatically during initial BUILD transition, immutable thereafter
 
 **Validation Rules**:
+
+**Title Field**:
+- Length: 1-100 characters
 - Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
-- Rejects characters outside allowed set (emojis, control characters, other Unicode)
+- Rejects emojis and extended Unicode characters
 - No empty or whitespace-only values
-- Character limits enforced
-- Same validation rules apply to both title and description fields
+
+**Description Field** (updated 2025-10-24):
+- Length: 1-1000 characters
+- Allowed characters: **All UTF-8 characters** including emoji 🚀, Chinese 中文, Arabic العربية, Japanese 日本語, Cyrillic Русский, mathematical symbols ∞, etc.
+- No empty or whitespace-only values
+- Feature: [048-description-ticket-change](../048-description-ticket-change/spec.md)
 
 ---
 
@@ -1027,14 +1034,19 @@ CLOUDINARY_API_SECRET="your-api-secret"
   - Error responses include job status, command, and suggested actions
 
 **Editing**:
-- Title: 1-100 characters
-- Description: 1-1000 characters
 - Both required (no empty values)
-- Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
-- Rejects emojis, control characters, and other Unicode characters outside allowed set
-- Title and description use identical character validation rules
 - Version-based conflict detection prevents lost updates
 - Optimistic updates with rollback on failure
+
+**Title Field**:
+- Length: 1-100 characters
+- Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
+- Rejects emojis and extended Unicode characters
+
+**Description Field** (updated 2025-10-24):
+- Length: 1-1000 characters
+- Allowed characters: **All UTF-8 characters** including emoji 🚀, Chinese 中文, Arabic العربية, Japanese 日本語, etc.
+- Feature: [048-description-ticket-change](../048-description-ticket-change/spec.md)
 
 **Workflow Type** (added 2025-01-16):
 - Automatically set during first BUILD transition
