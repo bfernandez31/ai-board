@@ -107,9 +107,9 @@ You MUST return a JSON object on stdout with this exact structure:
 ```json
 {
   "status": "success",
-  "message": "@john-doe I've updated the specification to include network timeout error handling with 30-second timeout and retry logic.",
+  "message": "@benoit.fernandez31 I've updated the specification to include rollback requirements: delete job, reset workflowType to FULL, version to 1, and branch to null when rolling back to INBOX.",
   "filesModified": ["spec.md"],
-  "details": "Added error handling section with timeout requirements and retry strategy"
+  "details": "Added rollback behavior requirements to data model changes section"
 }
 ```
 
@@ -129,7 +129,7 @@ You MUST return a JSON object on stdout with this exact structure:
 ```json
 {
   "status": "not_implemented",
-  "message": "@{USER} This feature is not yet implemented for {STAGE} stage.",
+  "message": "@benoit.fernandez31 This feature is not yet implemented for build stage.",
   "filesModified": [],
   "details": "BUILD and VERIFY stage assistance will be available in a future update"
 }
@@ -140,15 +140,15 @@ You MUST return a JSON object on stdout with this exact structure:
 ```json
 {
   "status": "error",
-  "message": "@{USER} I encountered an error processing your request: {error_description}",
+  "message": "@benoit.fernandez31 I encountered an error processing your request: File not found",
   "filesModified": [],
-  "details": "Full error details for debugging"
+  "details": "spec.md does not exist at specs/051-897-rollback-quick/spec.md"
 }
 ```
 
 ## Important Rules
 
-1. **Always mention the requester**: Use @{USER} in your message
+1. **Always mention the requester**: Use @{user} from the JSON payload in your message
 2. **Be concise**: Keep message under 500 characters
 3. **List modified files**: Include all files you changed in filesModified array
 4. **Maintain quality**: Don't degrade specification or plan quality
