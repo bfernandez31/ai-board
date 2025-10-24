@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Job {
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  command     String    @db.VarChar(50)
+  status      JobStatus @default(PENDING)
+  branch      String?   @db.VarChar(200)
+  commitSha   String?   @db.VarChar(40)
+  logs        String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  projectId   Int
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([startedAt])
+  @@index([status])
+  @@index([ticketId])
+  @@index([ticketId, status, startedAt])
+}
+
+model Project {
+  id                  Int                 @id @default(autoincrement())
+  name                String              @db.VarChar(100)
+  description         String              @db.VarChar(1000)
+  githubOwner         String              @db.VarChar(100)
+  githubRepo          String              @db.VarChar(100)
+  userId              String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  clarificationPolicy ClarificationPolicy @default(AUTO)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets             Ticket[]
+  members             ProjectMember[]
+
+  @@unique([githubOwner, githubRepo])
+  @@index([githubOwner, githubRepo])
+  @@index([userId])
+}
+
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    String
+  role      String   @default("member") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Ticket {
+  id                  Int                  @id @default(autoincrement())
+  title               String               @db.VarChar(100)
+  description         String               @db.VarChar(1000)
+  stage               Stage                @default(INBOX)
+  version             Int                  @default(1)
+  projectId           Int
+  branch              String?              @db.VarChar(200)
+  autoMode            Boolean              @default(false)
+  workflowType        WorkflowType         @default(FULL)
+  attachments         Json?                @default("[]")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime
+  clarificationPolicy ClarificationPolicy?
+  comments            Comment[]
+  jobs                Job[]
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([stage])
+  @@index([updatedAt])
+  @@index([projectId, workflowType])
+}
+
+model User {
+  id            String    @id
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  accounts      Account[]
+  comments      Comment[]
+  projects      Project[]
+  sessions      Session[]
+  memberships   ProjectMember[]
+
+  @@index([email])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  userId    String
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum AuthProvider {
+  GITHUB
+  GOOGLE
+  GITLAB
+  BITBUCKET
+}
+
+enum ClarificationPolicy {
+  AUTO
+  CONSERVATIVE
+  PRAGMATIC
+  INTERACTIVE
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum Stage {
+  INBOX
+  SPECIFY
+  PLAN
+  BUILD
+  VERIFY
+  SHIP
+}
+
+enum WorkflowType {
+  FULL
+  QUICK
+}
