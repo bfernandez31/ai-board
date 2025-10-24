@@ -8,6 +8,10 @@ import { QueryProvider } from '@/app/providers/query-provider';
 export const metadata: Metadata = {
   title: 'AI Board',
   description: 'Visual kanban board for AI-driven development',
+  icons: {
+    icon: '/icon',
+    apple: '/apple-icon',
+  },
 };
 
 export default function RootLayout({
