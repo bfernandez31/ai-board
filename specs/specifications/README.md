@@ -97,5 +97,5 @@ This documentation consolidates those specifications into **current state** docu
 
 ---
 
-**Last Updated**: 2025-10-23
-**Version**: Current State (consolidated from 43 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions)
+**Last Updated**: 2025-10-24
+**Version**: Current State (consolidated from 43 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions + stage-based editing restrictions)
