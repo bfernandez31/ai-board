@@ -60,6 +60,12 @@ on:
         type: string
         default: ''
 
+      project_id:
+        description: 'Project ID (required for specify command to update ticket branch)'
+        required: false
+        type: string
+        default: ''
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -79,6 +85,7 @@ jobs:
         run: |
           echo "🔍 Debug workflow inputs:"
           echo "  ticket_id: ${{ inputs.ticket_id }}"
+          echo "  project_id: ${{ inputs.project_id }}"
           echo "  job_id: ${{ inputs.job_id }}"
           echo "  command: ${{ inputs.command }}"
           echo "  ticketTitle: ${{ inputs.ticketTitle }}"
@@ -384,7 +391,7 @@ jobs:
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.FEATURE_BRANCH != '' }}
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
-          PROJECT_ID: 1
+          PROJECT_ID: ${{ inputs.project_id }}
         run: |
           # Update ticket branch field via API
           curl -X PATCH "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/branch" \

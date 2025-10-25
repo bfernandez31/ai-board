@@ -287,6 +287,7 @@ export async function handleTicketTransition(
             command: command,
             branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
             job_id: job.id.toString(),
+            project_id: ticket.projectId.toString(),
           };
 
           // Add SPECIFY-specific inputs
