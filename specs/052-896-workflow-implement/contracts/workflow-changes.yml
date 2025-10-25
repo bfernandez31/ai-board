@@ -1,0 +1,473 @@
+# Contract: GitHub Actions Workflow Changes for `/speckit.implement`
+
+**File**: `.github/workflows/speckit.yml`
+**Purpose**: Define expected workflow structure for database and Playwright setup on implement command
+**Date**: 2025-10-25
+
+---
+
+## Service Container Configuration
+
+### PostgreSQL Service (New)
+
+**Location**: `jobs.run-speckit.services` section
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+services:
+  postgres:
+    image: postgres:14
+    ports:
+      - '5432:5432'
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_board_test
+    options: >-
+      --health-cmd pg_isready
+      --health-interval 10s
+      --health-timeout 5s
+      --health-retries 5
+```
+
+**Contract Requirements**:
+- ✅ PostgreSQL 14+ image (stable, production-compatible version)
+- ✅ Port 5432 mapped to localhost (standard PostgreSQL port)
+- ✅ Credentials match DATABASE_URL format (user: postgres, password: postgres)
+- ✅ Database name `ai_board_test` (clearly indicates test environment)
+- ✅ Health checks ensure database ready before migrations
+- ✅ Health check retries (5x) with 10s interval for reliability
+
+**Validation**:
+- Service must be accessible at `localhost:5432` after health checks pass
+- `pg_isready` command must succeed before workflow continues
+
+---
+
+## Environment Variables (New/Modified)
+
+### DATABASE_URL (New)
+
+**Scope**: `jobs.run-speckit.env` (job-level)
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+```
+
+**Contract Requirements**:
+- ✅ Must match PostgreSQL service credentials exactly
+- ✅ Must be set before Prisma migration step
+- ✅ Available to Claude during `/speckit.implement` execution
+- ✅ Available to test execution (Playwright/Vitest)
+
+**Usage**:
+- Prisma Client reads `DATABASE_URL` for database connection
+- Test fixtures seeding uses `DATABASE_URL`
+- E2E tests inherit `DATABASE_URL` from environment
+
+---
+
+## Workflow Steps (New/Modified)
+
+### Step: Cache Bun Dependencies (New)
+
+**Location**: After "Setup Bun" step, before database setup
+**Trigger Condition**: All commands (not implement-specific)
+
+```yaml
+- name: Cache Bun dependencies
+  uses: actions/cache@v4
+  with:
+    path: node_modules
+    key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+    restore-keys: |
+      ${{ runner.os }}-bun-
+```
+
+**Contract Requirements**:
+- ✅ Cache key includes `bun.lockb` hash (invalidates on dependency changes)
+- ✅ Restore key fallback for partial cache hits
+- ✅ Reduces dependency installation from ~2 min to ~10 sec (cache hit)
+
+---
+
+### Step: Install Dependencies (Modified)
+
+**Location**: After cache step
+**Trigger Condition**: All commands
+
+```yaml
+- name: Install dependencies
+  run: bun install --frozen-lockfile
+```
+
+**Contract Requirements**:
+- ✅ `--frozen-lockfile` prevents lockfile modifications (CI-safe)
+- ✅ Runs after cache restoration (uses cached node_modules if available)
+- ✅ Required before Prisma CLI usage (Prisma dependency)
+
+---
+
+### Step: Get Playwright Version (New)
+
+**Location**: After dependency installation, before Playwright cache
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+- name: Get Playwright version
+  if: ${{ inputs.command == 'implement' }}
+  id: playwright-version
+  run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+```
+
+**Contract Requirements**:
+- ✅ Extracts Playwright version from package.json
+- ✅ Sets output variable for cache key generation
+- ✅ Node.js must be available (requires prior "Setup Node.js" step)
+
+---
+
+### Step: Cache Playwright Browsers (New)
+
+**Location**: After Playwright version extraction
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+- name: Cache Playwright browsers
+  if: ${{ inputs.command == 'implement' }}
+  uses: actions/cache@v4
+  id: playwright-cache
+  with:
+    path: ~/.cache/ms-playwright
+    key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+```
+
+**Contract Requirements**:
+- ✅ Cache key includes Playwright version (invalidates on version upgrade)
+- ✅ Cache ID `playwright-cache` for conditional installation step
+- ✅ Reduces installation from ~3.5 min to ~45 sec (cache hit)
+
+---
+
+### Step: Install Playwright Browsers (New)
+
+**Location**: After Playwright cache
+**Trigger Condition**: Only when `inputs.command == 'implement'` AND cache miss
+
+```yaml
+- name: Install Playwright browsers
+  if: ${{ inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+  run: npx playwright install --with-deps
+```
+
+**Contract Requirements**:
+- ✅ Only runs on cache miss (skips when browsers cached)
+- ✅ `--with-deps` installs OS dependencies (required on Linux)
+- ✅ Full installation time ~3.5 minutes (acceptable for cold start)
+
+---
+
+### Step: Install Playwright OS Dependencies (New)
+
+**Location**: After Playwright browser installation
+**Trigger Condition**: Only when `inputs.command == 'implement'` AND cache hit
+
+```yaml
+- name: Install Playwright OS dependencies
+  if: ${{ inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit == 'true' }}
+  run: npx playwright install-deps
+```
+
+**Contract Requirements**:
+- ✅ Only runs on cache hit (when browsers cached but deps not)
+- ✅ Installs only OS dependencies (faster than full install)
+- ✅ Required because OS deps cannot be cached on Linux
+
+---
+
+### Step: Generate Prisma Client (New)
+
+**Location**: After Playwright setup, before migrations
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+- name: Generate Prisma Client
+  if: ${{ inputs.command == 'implement' }}
+  run: npx prisma generate
+```
+
+**Contract Requirements**:
+- ✅ Regenerates type-safe Prisma Client from schema.prisma
+- ✅ Required before migrations (Prisma CLI needs client)
+- ✅ Time: ~30 seconds
+
+---
+
+### Step: Apply Database Migrations (New)
+
+**Location**: After Prisma Client generation
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+- name: Apply database migrations
+  if: ${{ inputs.command == 'implement' }}
+  run: npx prisma migrate deploy
+  env:
+    DATABASE_URL: ${{ env.DATABASE_URL }}
+```
+
+**Contract Requirements**:
+- ✅ Uses `migrate deploy` (non-interactive, CI-safe)
+- ✅ Applies all pending migrations from `prisma/migrations/`
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Time: <1 minute
+
+**Failure Handling**:
+- Workflow MUST fail fast if migrations fail (database unavailable)
+- Error message MUST indicate migration failure clearly
+
+---
+
+### Step: Seed Test Database (New)
+
+**Location**: After database migrations
+**Trigger Condition**: Only when `inputs.command == 'implement'`
+
+```yaml
+- name: Seed test database
+  if: ${{ inputs.command == 'implement' }}
+  run: npx tsx tests/global-setup.ts
+  env:
+    DATABASE_URL: ${{ env.DATABASE_URL }}
+```
+
+**Contract Requirements**:
+- ✅ Calls existing global-setup.ts script
+- ✅ Creates test user (test@e2e.local)
+- ✅ Creates test projects (1, 2)
+- ✅ Cleans leftover test data
+- ✅ Time: ~30 seconds
+
+**Outputs**:
+- `.test-user-id` file created with test user ID
+- Used by Playwright for mock authentication header
+
+---
+
+### Step: Execute Spec-Kit Command (Modified)
+
+**Location**: Existing step, modify implement case
+**Trigger Condition**: All commands (implement case modified)
+
+```yaml
+- name: Execute Spec-Kit Command
+  run: |
+    case "${{ inputs.command }}" in
+      specify)
+        # ... existing specify logic ...
+        ;;
+      plan)
+        # ... existing plan logic ...
+        ;;
+      implement)
+        claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+        ;;
+      # ... other cases ...
+    esac
+```
+
+**Contract Requirements**:
+- ✅ Enhanced command instruction includes explicit directives
+- ✅ "never prompt me" → autonomous implementation (no user input)
+- ✅ "never run the full test suite" → selective test execution
+- ✅ "only impacted tests" → test selection heuristics
+
+**Environment Available to Claude**:
+- `DATABASE_URL`: PostgreSQL connection string
+- `NODE_ENV`: Set to development (for mock auth)
+- Playwright browsers installed and ready
+
+---
+
+## Workflow Input Contract
+
+### Existing Inputs (No Changes)
+
+```yaml
+inputs:
+  ticket_id:
+    required: true
+    type: string
+  command:
+    required: true
+    type: choice
+    options: [specify, plan, task, implement, clarify]
+  branch:
+    required: false
+    type: string
+  job_id:
+    required: false
+    type: string
+  # ... other inputs ...
+```
+
+**No Input Changes Required**: Existing inputs sufficient for enhanced workflow.
+
+---
+
+## Job Status Updates (No Changes)
+
+### Status Transition Contract
+
+**Existing Pattern** (maintained):
+```bash
+# Running status (when workflow starts)
+curl -X PATCH "${APP_URL}/api/jobs/${job_id}/status" \
+  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+  -d '{"status": "RUNNING"}'
+
+# Completed status (on success)
+curl -X PATCH "${APP_URL}/api/jobs/${job_id}/status" \
+  -d '{"status": "COMPLETED"}'
+
+# Failed status (on error)
+curl -X PATCH "${APP_URL}/api/jobs/${job_id}/status" \
+  -d '{"status": "FAILED"}'
+```
+
+**Contract Requirements**:
+- ✅ Status updates occur at existing points in workflow
+- ✅ RUNNING status set before infrastructure setup
+- ✅ COMPLETED/FAILED status set after Claude execution
+- ✅ No changes to status transition logic
+
+---
+
+## Performance Contract
+
+### Workflow Execution Time Budget
+
+| Phase | Maximum Time (Cold) | Maximum Time (Cached) |
+|-------|---------------------|----------------------|
+| Dependency installation | 2 min | 30 sec |
+| PostgreSQL startup | 30 sec | 30 sec |
+| Playwright installation | 3.5 min | 1 min |
+| Prisma migrations | 2 min | 2 min |
+| Database seeding | 1 min | 1 min |
+| **Infrastructure Total** | **9 min** | **5 min** |
+
+**Success Criteria**:
+- ✅ Infrastructure setup completes in <10 minutes (cold start)
+- ✅ Infrastructure setup completes in <5 minutes (warm start with caching)
+- ✅ Claude implementation time excluded from budget (feature-dependent)
+
+---
+
+## Error Handling Contract
+
+### Infrastructure Failure Scenarios
+
+**PostgreSQL Service Fails**:
+```yaml
+- name: Verify PostgreSQL Ready
+  if: ${{ inputs.command == 'implement' }}
+  run: |
+    if ! pg_isready -h localhost -p 5432 -U postgres; then
+      echo "❌ PostgreSQL service failed to start"
+      exit 1
+    fi
+```
+
+**Playwright Installation Fails**:
+- Workflow MUST fail with clear error message
+- Error MUST indicate which browser download failed
+- Retry NOT recommended (cache corruption may persist)
+
+**Migration Fails**:
+- Workflow MUST fail fast (don't proceed to Claude execution)
+- Error MUST include migration name that failed
+- Job status MUST be set to FAILED
+
+---
+
+## Backward Compatibility Contract
+
+### Non-Implement Commands
+
+**Contract Guarantee**:
+- ✅ `specify` command: No database/Playwright setup (unchanged behavior)
+- ✅ `plan` command: No database/Playwright setup (unchanged behavior)
+- ✅ `task` command: No database/Playwright setup (unchanged behavior)
+- ✅ `clarify` command: No database/Playwright setup (unchanged behavior)
+
+**Validation**:
+- All new steps MUST have `if: ${{ inputs.command == 'implement' }}` condition
+- Non-implement commands MUST complete in <5 minutes (no infrastructure overhead)
+
+---
+
+## Security Contract
+
+### Secrets Management
+
+**Required Secrets**:
+- `CLAUDE_CODE_OAUTH_TOKEN`: Existing, unchanged
+- `WORKFLOW_API_TOKEN`: Existing, unchanged
+
+**Database Credentials**:
+- ✅ Hardcoded in service container (ephemeral database, no security risk)
+- ✅ Not exposed in logs or error messages
+- ✅ Database destroyed after workflow completion
+
+**No New Secrets Required**: ✅
+
+---
+
+## Testing Contract
+
+### Workflow Validation
+
+**Acceptance Tests**:
+1. **PostgreSQL Service**: Verify `pg_isready` succeeds after health checks
+2. **Migrations**: Verify all migrations from `prisma/migrations/` applied
+3. **Seeding**: Verify test user and projects 1-2 exist in database
+4. **Playwright**: Verify browsers installed and E2E tests can execute
+5. **Selective Tests**: Verify Claude runs only modified test files (not full suite)
+
+**Test Execution**:
+- Create test ticket in INBOX stage
+- Transition to BUILD with `command: implement`
+- Verify workflow completes successfully
+- Verify implementation committed to feature branch
+- Verify selective tests executed (check logs for test file paths)
+
+---
+
+## Change Summary
+
+### New Steps
+1. Cache Bun dependencies
+2. Get Playwright version
+3. Cache Playwright browsers
+4. Install Playwright browsers (conditional)
+5. Install Playwright OS dependencies (conditional)
+6. Generate Prisma Client
+7. Apply database migrations
+8. Seed test database
+
+### Modified Steps
+1. Execute Spec-Kit Command (implement case: enhanced Claude instruction)
+
+### New Environment Variables
+1. DATABASE_URL (implement command only)
+
+### New Service Containers
+1. PostgreSQL 14 (implement command only)
+
+---
+
+**Contract Version**: 1.0
+**Compatibility**: GitHub Actions YAML 2.0, ubuntu-latest runner
+**Breaking Changes**: ❌ None (backward compatible with existing commands)
