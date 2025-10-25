@@ -5,7 +5,29 @@ import type { Stage } from '@/lib/validations/ticket';
 
 describe('getWorkflowJob', () => {
   it('returns null for empty array', () => {
-    const result = getWorkflowJob([]);
+    const result = getWorkflowJob([], 'SPECIFY' as Stage);
+    expect(result).toBe(null);
+  });
+
+  it('returns null for INBOX stage (no workflow jobs in INBOX)', () => {
+    const jobs: Job[] = [
+      {
+        id: 1,
+        command: 'quick-impl',
+        status: 'FAILED',
+        startedAt: new Date('2024-01-01'),
+        ticketId: 1,
+        projectId: 1,
+        branch: null,
+        commitSha: null,
+        logs: null,
+        completedAt: new Date('2024-01-01'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const result = getWorkflowJob(jobs, 'INBOX' as Stage);
     expect(result).toBe(null);
   });
 
@@ -41,7 +63,7 @@ describe('getWorkflowJob', () => {
       },
     ];
 
-    const result = getWorkflowJob(jobs);
+    const result = getWorkflowJob(jobs, 'SPECIFY' as Stage);
     expect(result).not.toBe(null);
     expect(result?.command).toBe('specify');
     expect(result?.id).toBe(1);
@@ -93,7 +115,7 @@ describe('getWorkflowJob', () => {
       },
     ];
 
-    const result = getWorkflowJob(jobs);
+    const result = getWorkflowJob(jobs, 'BUILD' as Stage);
     expect(result?.id).toBe(3);
     expect(result?.command).toBe('implement');
   });
@@ -130,7 +152,7 @@ describe('getWorkflowJob', () => {
       },
     ];
 
-    const result = getWorkflowJob(jobs);
+    const result = getWorkflowJob(jobs, 'SPECIFY' as Stage);
     expect(result).toBe(null);
   });
 
@@ -180,7 +202,7 @@ describe('getWorkflowJob', () => {
       },
     ];
 
-    const result = getWorkflowJob(jobs);
+    const result = getWorkflowJob(jobs, 'BUILD' as Stage);
     expect(result?.id).toBe(2);
     expect(result?.command).toBe('quick-impl');
   });

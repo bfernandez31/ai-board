@@ -1,30 +1,27 @@
-import { test, expect } from '@playwright/test';
+import { describe, it, expect } from 'vitest';
 import { Stage, isValidTransition, getNextStage } from '../../lib/stage-validation';
 
 /**
  * Unit Tests: Stage Validation Logic
- * Feature: 031-quick-implementation
+ * Features: 031-quick-implementation, 051-897-rollback-quick
  *
- * TDD Phase: RED - These tests MUST FAIL initially
- * Expected failures:
- * - Test 1: FAIL (INBOX → BUILD not yet implemented)
- * - Test 2: FAIL (INBOX → BUILD not yet implemented)
- * - Test 3: PASS (existing behavior)
- * - Test 4: PASS (existing behavior)
- * - Test 5: PASS (existing behavior)
- * - Test 6: PASS (existing behavior)
+ * Tests cover:
+ * - Quick-impl special case (INBOX → BUILD)
+ * - Rollback special case (BUILD → INBOX for QUICK workflows)
+ * - Normal sequential validation
+ * - Invalid transitions
  */
 
-test.describe('Stage Validation - Quick-Impl Support', () => {
+describe('Stage Validation - Quick-Impl Support', () => {
   /**
    * Test 1: Quick-Impl Path - INBOX → BUILD (NEW BEHAVIOR)
    * Given: Ticket in INBOX stage
    * When: Validate transition to BUILD (skipping SPECIFY and PLAN)
    * Then: Returns true (quick-impl special case)
    */
-  test('should allow INBOX → BUILD transition (quick-impl)', () => {
+  it('should allow INBOX → BUILD transition (quick-impl)', () => {
     const result = isValidTransition(Stage.INBOX, Stage.BUILD);
-    expect(result).toBe(true); // EXPECTED TO FAIL: Not implemented yet
+    expect(result).toBe(true);
   });
 
   /**
@@ -36,9 +33,9 @@ test.describe('Stage Validation - Quick-Impl Support', () => {
    * Note: getNextStage returns normal sequential path
    * isValidTransition has special case for INBOX → BUILD
    */
-  test('getNextStage returns SPECIFY for INBOX (normal path)', () => {
+  it('getNextStage returns SPECIFY for INBOX (normal path)', () => {
     const nextStage = getNextStage(Stage.INBOX);
-    expect(nextStage).toBe(Stage.SPECIFY); // EXPECTED TO PASS: Existing behavior
+    expect(nextStage).toBe(Stage.SPECIFY);
   });
 
   /**
@@ -47,9 +44,9 @@ test.describe('Stage Validation - Quick-Impl Support', () => {
    * When: Validate transition to SPECIFY
    * Then: Returns true (normal sequential transition)
    */
-  test('should allow INBOX → SPECIFY transition (normal workflow)', () => {
+  it('should allow INBOX → SPECIFY transition (normal workflow)', () => {
     const result = isValidTransition(Stage.INBOX, Stage.SPECIFY);
-    expect(result).toBe(true); // EXPECTED TO PASS: Existing behavior
+    expect(result).toBe(true);
   });
 
   /**
@@ -58,9 +55,9 @@ test.describe('Stage Validation - Quick-Impl Support', () => {
    * When: Validate transition to PLAN (skipping SPECIFY)
    * Then: Returns false (invalid, must go through SPECIFY first)
    */
-  test('should reject INBOX → PLAN transition (skipping SPECIFY)', () => {
+  it('should reject INBOX → PLAN transition (skipping SPECIFY)', () => {
     const result = isValidTransition(Stage.INBOX, Stage.PLAN);
-    expect(result).toBe(false); // EXPECTED TO PASS: Existing behavior
+    expect(result).toBe(false);
   });
 
   /**
@@ -69,9 +66,9 @@ test.describe('Stage Validation - Quick-Impl Support', () => {
    * When: Validate transition to BUILD (skipping PLAN)
    * Then: Returns false (invalid, must go through PLAN first)
    */
-  test('should reject SPECIFY → BUILD transition (skipping PLAN)', () => {
+  it('should reject SPECIFY → BUILD transition (skipping PLAN)', () => {
     const result = isValidTransition(Stage.SPECIFY, Stage.BUILD);
-    expect(result).toBe(false); // EXPECTED TO PASS: Existing behavior
+    expect(result).toBe(false);
   });
 
   /**
@@ -80,8 +77,54 @@ test.describe('Stage Validation - Quick-Impl Support', () => {
    * When: Validate transition to BUILD
    * Then: Returns true (normal sequential transition)
    */
-  test('should allow PLAN → BUILD transition (normal workflow)', () => {
+  it('should allow PLAN → BUILD transition (normal workflow)', () => {
     const result = isValidTransition(Stage.PLAN, Stage.BUILD);
-    expect(result).toBe(true); // EXPECTED TO PASS: Existing behavior
+    expect(result).toBe(true);
+  });
+});
+
+describe('Stage Validation - Rollback Support', () => {
+  /**
+   * Test: Rollback Path - BUILD → INBOX for QUICK workflow
+   * Given: Ticket in BUILD stage with workflowType=QUICK
+   * When: Validate transition to INBOX
+   * Then: Returns true (rollback special case)
+   */
+  it('should allow BUILD → INBOX transition for QUICK workflow (rollback)', () => {
+    const result = isValidTransition(Stage.BUILD, Stage.INBOX, 'QUICK');
+    expect(result).toBe(true);
+  });
+
+  /**
+   * Test: Block Rollback for FULL workflow
+   * Given: Ticket in BUILD stage with workflowType=FULL
+   * When: Validate transition to INBOX
+   * Then: Returns false (rollback only for QUICK workflows)
+   */
+  it('should reject BUILD → INBOX transition for FULL workflow', () => {
+    const result = isValidTransition(Stage.BUILD, Stage.INBOX, 'FULL');
+    expect(result).toBe(false);
+  });
+
+  /**
+   * Test: Block Rollback without workflowType specified
+   * Given: Ticket in BUILD stage without workflowType parameter
+   * When: Validate transition to INBOX
+   * Then: Returns false (defaults to blocking without explicit QUICK)
+   */
+  it('should reject BUILD → INBOX transition without workflowType', () => {
+    const result = isValidTransition(Stage.BUILD, Stage.INBOX);
+    expect(result).toBe(false);
+  });
+
+  /**
+   * Test: Normal BUILD → VERIFY transition
+   * Given: Ticket in BUILD stage
+   * When: Validate transition to VERIFY
+   * Then: Returns true (normal sequential transition)
+   */
+  it('should allow BUILD → VERIFY transition (normal workflow)', () => {
+    const result = isValidTransition(Stage.BUILD, Stage.VERIFY);
+    expect(result).toBe(true);
   });
 });

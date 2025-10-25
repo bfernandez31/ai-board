@@ -269,10 +269,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Assert - Error response
     expect(response.status()).toBe(400);
     const body = await response.json();
-    expect(body.error).toBe('Invalid stage transition');
-    expect(body.message).toContain('Cannot transition');
-    expect(body.message).toContain('SPECIFY');
-    expect(body.message).toContain('BUILD');
+    expect(body.error).toContain('Cannot transition from SPECIFY to BUILD');
+    expect(body.error).toContain('sequentially');
 
     // Assert - No changes (still in SPECIFY)
     const unchangedTicket = await prisma.ticket.findUnique({

@@ -53,25 +53,38 @@ export function getNextStage(currentStage: Stage): Stage | null {
 /**
  * Validate if a stage transition is allowed.
  * Sequential transitions to the immediately next stage are valid.
- * Special case: Quick-impl allows INBOX → BUILD (skipping SPECIFY and PLAN).
+ * Special cases:
+ * - Quick-impl allows INBOX → BUILD (skipping SPECIFY and PLAN)
+ * - Rollback allows BUILD → INBOX (only for QUICK workflowType)
  *
  * @param fromStage - The current stage
  * @param toStage - The target stage
- * @returns true if transition is valid (sequential or quick-impl), false otherwise
+ * @param workflowType - Optional workflow type ('QUICK' or 'FULL')
+ * @returns true if transition is valid (sequential, quick-impl, or rollback), false otherwise
  *
  * @example
  * isValidTransition(Stage.INBOX, Stage.SPECIFY)  // true (valid: next stage)
  * isValidTransition(Stage.INBOX, Stage.BUILD)    // true (valid: quick-impl special case)
+ * isValidTransition(Stage.BUILD, Stage.INBOX, 'QUICK')  // true (valid: rollback for quick-impl)
+ * isValidTransition(Stage.BUILD, Stage.INBOX, 'FULL')   // false (rollback not allowed for normal workflow)
  * isValidTransition(Stage.INBOX, Stage.PLAN)    // false (invalid: skipping SPECIFY)
- * isValidTransition(Stage.SPECIFY, Stage.PLAN)  // true (valid: next stage)
  * isValidTransition(Stage.SPECIFY, Stage.BUILD) // false (invalid: skipping PLAN)
  * isValidTransition(Stage.BUILD, Stage.PLAN)    // false (invalid: backwards)
  * isValidTransition(Stage.SHIP, Stage.INBOX)    // false (invalid: backwards from terminal)
  */
-export function isValidTransition(fromStage: Stage, toStage: Stage): boolean {
+export function isValidTransition(
+  fromStage: Stage,
+  toStage: Stage,
+  workflowType?: 'QUICK' | 'FULL'
+): boolean {
   // Special case: Quick-impl allows INBOX → BUILD
   if (fromStage === Stage.INBOX && toStage === Stage.BUILD) {
     return true;
+  }
+
+  // Special case: Rollback allows BUILD → INBOX (only for QUICK workflow)
+  if (fromStage === Stage.BUILD && toStage === Stage.INBOX) {
+    return workflowType === 'QUICK';
   }
 
   // Normal sequential validation

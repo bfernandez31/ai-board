@@ -24,7 +24,6 @@ export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
 export interface TransitionResult {
   success: boolean;
   jobId?: number;
-  branchName?: string;
   error?: string;
   errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
   details?: {
@@ -219,12 +218,8 @@ export async function handleTicketTransition(
     }
 
     // Handle automated stages (SPECIFY, PLAN, BUILD)
-    let branchName: string | undefined;
-
-    // Generate branch name for SPECIFY stage only
-    if (targetStage === Stage.SPECIFY) {
-      branchName = `feature/ticket-${ticket.id}`;
-    }
+    // Note: Branch is NOT set here - it will be created by GitHub workflow
+    // and updated via PATCH /api/projects/:projectId/tickets/:id/branch
 
     // Create job record (with atomic workflowType update for quick-impl)
     let job;
@@ -290,7 +285,7 @@ export async function handleTicketTransition(
           workflowInputs = {
             ticket_id: ticket.id.toString(),
             command: command,
-            branch: branchName || ticket.branch || '',
+            branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
             job_id: job.id.toString(),
           };
 
@@ -368,11 +363,11 @@ export async function handleTicketTransition(
       }
     }
 
-    // Return success with job ID and optional branch name
+    // Return success with job ID
+    // Note: Branch name is NOT returned - it will be set by GitHub workflow via /branch endpoint
     return {
       success: true,
       jobId: job.id,
-      ...(branchName && { branchName }),
     };
   } catch (error) {
     console.error('Error in handleTicketTransition:', error);
