@@ -216,43 +216,45 @@ jobs:
 
           echo "✅ Prepared $IMAGE_COUNT images for Claude context"
 
+      - name: Prepare Specify Payload
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.specifyPayload != '' }}
+        run: |
+          # Write JSON payload to temp file to avoid bash escaping issues
+          cat > /tmp/specify_payload.json <<'EOF'
+          ${{ inputs.specifyPayload }}
+          EOF
+          echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
+
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          TICKET_TITLE: ${{ inputs.ticketTitle }}
+          TICKET_DESCRIPTION: ${{ inputs.ticketDescription }}
         run: |
           set -e
 
           case "${{ inputs.command }}" in
             specify)
-              # Check if JSON payload is provided (new format with clarificationPolicy)
-              if [ -n "${{ inputs.specifyPayload }}" ]; then
+              # Check if JSON payload file exists (new format with clarificationPolicy)
+              if [ -f "${SPECIFY_PAYLOAD_FILE:-/nonexistent}" ]; then
                 echo "📦 Using JSON payload with clarification policy"
 
-                # Write JSON payload to temp file to avoid bash escaping issues
-                cat > /tmp/specify_payload.json <<'EOF'
-          ${{ inputs.specifyPayload }}
-          EOF
-
-                # Read payload from file (avoids bash interpretation of special chars)
-                payload=$(cat /tmp/specify_payload.json)
+                # Read payload from file
+                payload=$(cat "$SPECIFY_PAYLOAD_FILE")
 
                 # Add image paths if available
                 if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
                   echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-
-                  # Pass JSON and image paths to /speckit.specify command
                   claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
                 else
-                  # Pass JSON directly to /speckit.specify command (no images)
                   claude --dangerously-skip-permissions "/speckit.specify $payload"
                 fi
               else
                 # Legacy format: construct prompt from separate fields
                 echo "📝 Using legacy text format (no policy)"
-                ticket_id="${{ inputs.ticket_id }}"
-                ticket_title="${{ inputs.ticketTitle }}"
-                ticket_description="${{ inputs.ticketDescription }}"
 
-                printf -v prompt '/speckit.specify #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
+                printf -v prompt '/speckit.specify #%s %s\n%s\n' "$TICKET_ID" "$TICKET_TITLE" "$TICKET_DESCRIPTION"
 
                 # Add image paths if available
                 if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
