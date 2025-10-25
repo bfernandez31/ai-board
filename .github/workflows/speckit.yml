@@ -226,7 +226,14 @@ jobs:
               # Check if JSON payload is provided (new format with clarificationPolicy)
               if [ -n "${{ inputs.specifyPayload }}" ]; then
                 echo "📦 Using JSON payload with clarification policy"
-                payload='${{ inputs.specifyPayload }}'
+
+                # Write JSON payload to temp file to avoid bash escaping issues
+                cat > /tmp/specify_payload.json <<'EOF'
+          ${{ inputs.specifyPayload }}
+          EOF
+
+                # Read payload from file (avoids bash interpretation of special chars)
+                payload=$(cat /tmp/specify_payload.json)
 
                 # Add image paths if available
                 if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
