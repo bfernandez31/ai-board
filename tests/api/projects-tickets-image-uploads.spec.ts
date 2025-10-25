@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { cleanupDatabase } from '../helpers/db-cleanup';
-import { cleanupCloudinaryTestImages } from '../helpers/cloudinary-cleanup';
+import { cleanupCloudinaryTicketImages } from '../helpers/cloudinary-cleanup';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -138,9 +138,15 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
   });
 
   test.describe('Multipart Requests (Image Uploads)', () => {
-    // Clean up Cloudinary after each image upload test
+    const createdTicketIds: number[] = [];
+
+    // Track ticket IDs created in tests for targeted cleanup
     test.afterEach(async () => {
-      await cleanupCloudinaryTestImages();
+      // Clean up Cloudinary images for tickets created in this test
+      for (const ticketId of createdTicketIds) {
+        await cleanupCloudinaryTicketImages(ticketId);
+      }
+      createdTicketIds.length = 0; // Clear the array
     });
 
     test('should accept multipart/form-data with valid image', async ({ request }) => {
@@ -168,6 +174,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       const body = await response.json();
 
       expect(body).toHaveProperty('id');
+      createdTicketIds.push(body.id); // Track for cleanup
       expect(body.title).toBe('[e2e] Ticket with image upload');
       expect(body.attachments).toBeDefined();
       expect(Array.isArray(body.attachments)).toBe(true);
@@ -201,6 +208,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      createdTicketIds.push(body.id); // Track for cleanup
 
       expect(body.attachments.length).toBe(1);
       expect(body.attachments[0].mimeType).toBe('image/jpeg');
@@ -340,6 +348,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      createdTicketIds.push(body.id); // Track for cleanup
 
       expect(body.attachments.length).toBe(2);
 
@@ -410,6 +419,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      createdTicketIds.push(body.id); // Track for cleanup
 
       expect(body.attachments.length).toBe(1);
 
@@ -438,6 +448,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(createResponse.status()).toBe(201);
       const created = await createResponse.json();
+      createdTicketIds.push(created.id); // Track for cleanup
 
       // Query tickets
       const getResponse = await request.get(`${BASE_URL}/api/projects/1/tickets`);
@@ -521,6 +532,17 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
   });
 
   test.describe('Cloudinary Integration', () => {
+    const createdTicketIds: number[] = [];
+
+    // Track ticket IDs created in tests for targeted cleanup
+    test.afterEach(async () => {
+      // Clean up Cloudinary images for tickets created in this test
+      for (const ticketId of createdTicketIds) {
+        await cleanupCloudinaryTicketImages(ticketId);
+      }
+      createdTicketIds.length = 0; // Clear the array
+    });
+
     test('should store image with timestamp-prefixed filename', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
@@ -543,6 +565,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      createdTicketIds.push(body.id); // Track for cleanup
 
       const attachment = body.attachments[0];
 
@@ -575,6 +598,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       expect(response.status()).toBe(201);
       const body = await response.json();
+      createdTicketIds.push(body.id); // Track for cleanup
 
       const attachment = body.attachments[0];
 
