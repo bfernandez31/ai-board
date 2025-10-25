@@ -5,126 +5,84 @@ description: "Implementation tasks for Enhanced Implementation Workflow with Dat
 # Tasks: Enhanced Implementation Workflow with Database Setup and Selective Testing
 
 **Input**: Design documents from `/specs/052-896-workflow-implement/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
+**Prerequisites**: plan.md, spec.md
 
-**Tests**: Tests are NOT required for this feature (workflow infrastructure only, no application logic)
+**Approach**: Direct implementation - modify workflow file and test with real workflow execution
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**Target**: Single file modification (`.github/workflows/speckit.yml`)
 
-## Format: `[ID] [P?] [Story] Description`
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions
+## Implementation Tasks
 
-## Phase 1: Setup (Shared Infrastructure)
+### 1. Add PostgreSQL Service for Implement Command
 
-**Purpose**: Project initialization and workflow structure validation
+Add PostgreSQL service container configuration to the workflow job, only active when `command == 'implement'`:
 
-- [ ] T001 Verify existing workflow structure in .github/workflows/speckit.yml
-- [ ] T002 Backup current workflow configuration (create .github/workflows/speckit.yml.backup)
-- [ ] T003 Verify PostgreSQL service container syntax compatibility with GitHub Actions YAML 2.0
+- [ ] Add `services:` section to `run-speckit` job with PostgreSQL 14 container
+- [ ] Configure health checks: `pg_isready` with retries
+- [ ] Set environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
----
+**File**: `.github/workflows/speckit.yml`
 
-## Phase 2: Foundational (Blocking Prerequisites)
+### 2. Add Database Setup Steps (Conditional on Implement Command)
 
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
+Add steps to prepare the database before Claude executes, only when `command == 'implement'`:
 
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+- [ ] Add step: "Install Dependencies" with Bun (already exists, verify it runs before database steps)
+- [ ] Add step: "Generate Prisma Client" (`npx prisma generate`)
+- [ ] Add step: "Apply Database Migrations" (`npx prisma migrate deploy`)
+- [ ] Add step: "Seed Test Database" (`npx tsx tests/global-setup.ts`)
+- [ ] Add `DATABASE_URL` environment variable pointing to PostgreSQL service
 
-- [ ] T004 Add Bun dependency caching configuration in .github/workflows/speckit.yml
-- [ ] T005 Add DATABASE_URL environment variable configuration for implement command
-- [ ] T006 Add conditional logic for implement-specific steps (if: inputs.command == 'implement')
+**File**: `.github/workflows/speckit.yml`
+**Location**: Between "Setup" steps and "Execute Spec-Kit Command" step
+**Condition**: `if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}`
 
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+### 3. Add Playwright Setup Steps (Conditional on Implement Command)
 
----
+Add Playwright browser installation, only when `command == 'implement'`:
 
-## Phase 3: User Story 1 - Automated Implementation with Test Validation (Priority: P1) 🎯 MVP
+- [ ] Add step: "Get Playwright Version" (extract from package.json using jq)
+- [ ] Add step: "Cache Playwright Browsers" (cache path: ~/.cache/ms-playwright)
+- [ ] Add step: "Install Playwright Browsers" (conditional on cache miss)
+- [ ] Add step: "Install Playwright OS Dependencies" (conditional on cache hit)
 
-**Goal**: Set up PostgreSQL database service and apply migrations before Claude begins implementation
+**File**: `.github/workflows/speckit.yml`
+**Location**: After database setup steps, before "Execute Spec-Kit Command"
+**Condition**: `if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}`
 
-**Independent Test**: Trigger implement workflow with simple spec, verify database is accessible during implementation and Playwright tests execute successfully
+### 4. Add Dependency Caching
 
-### Implementation for User Story 1
+Optimize dependency installation with caching:
 
-- [ ] T007 [P] [US1] Add PostgreSQL service container configuration in .github/workflows/speckit.yml (services section)
-- [ ] T008 [P] [US1] Configure PostgreSQL health checks (pg_isready with 5 retries) in .github/workflows/speckit.yml
-- [ ] T009 [US1] Add "Generate Prisma Client" step after dependency installation in .github/workflows/speckit.yml
-- [ ] T010 [US1] Add "Apply database migrations" step (npx prisma migrate deploy) in .github/workflows/speckit.yml
-- [ ] T011 [US1] Add "Seed test database" step (npx tsx tests/global-setup.ts) in .github/workflows/speckit.yml
-- [ ] T012 [US1] Add step ordering validation (dependencies → database → migrations → seeding → Claude)
+- [ ] Add step: "Cache Bun Dependencies" (cache path: ~/.bun/install/cache)
+- [ ] Use cache key: `${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}`
+- [ ] Add `--frozen-lockfile` flag to `bun install` command
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently (database setup completes successfully)
+**File**: `.github/workflows/speckit.yml`
+**Location**: Before "Setup Bun" step
 
----
+### 5. Update Implement Command Instruction
 
-## Phase 4: User Story 2 - Intelligent Test Selection (Priority: P1)
+Modify the `implement` case in "Execute Spec-Kit Command" step:
 
-**Goal**: Provide Claude with enhanced command instruction to run only impacted tests
+- [ ] Change from `claude --dangerously-skip-permissions /speckit.implement` to:
+  ```bash
+  claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+  ```
+- [ ] Ensure DATABASE_URL is available in Claude's environment
 
-**Independent Test**: Verify Claude receives correct instruction and only runs related test files (e.g., modify /api/tickets/route.ts → only runs tests/api/tickets.spec.ts)
+**File**: `.github/workflows/speckit.yml`
+**Location**: Line 313 (implement case in Execute Spec-Kit Command step)
 
-### Implementation for User Story 2
+### 6. Verify and Test
 
-- [ ] T013 [US2] Modify "Execute Spec-Kit Command" step implement case in .github/workflows/speckit.yml
-- [ ] T014 [US2] Add enhanced Claude instruction with all four directives (never prompt, full implementation, no full test suite, only impacted tests)
-- [ ] T015 [US2] Verify instruction format matches contract in specs/052-896-workflow-implement/contracts/claude-instruction.md
-- [ ] T016 [US2] Add environment variable pass-through for DATABASE_URL to Claude execution context
+Final validation:
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently (database ready + Claude receives correct instruction)
-
----
-
-## Phase 5: User Story 3 - Database-Dependent Implementation (Priority: P2)
-
-**Goal**: Ensure test database is properly configured and seeded for Claude to write and validate database-dependent code
-
-**Independent Test**: Provide spec requiring database operations (e.g., "Add ticket priority field"), verify Claude can execute Prisma migrations and run database-dependent tests
-
-### Implementation for User Story 3
-
-- [ ] T017 [P] [US3] Verify DATABASE_URL is accessible in all implement command steps
-- [ ] T018 [P] [US3] Add PostgreSQL connection verification step (pg_isready check) after service startup
-- [ ] T019 [US3] Add error handling for database setup failures (fail fast with clear message)
-- [ ] T020 [US3] Add migration failure detection and reporting
-- [ ] T021 [US3] Verify test fixtures (test user, projects 1-2) are created by seeding step
-
-**Checkpoint**: All database-dependent workflows should now be fully functional (migrations apply, fixtures created, tests can run)
-
----
-
-## Phase 6: User Story 4 - Dependency Management (Priority: P3)
-
-**Goal**: Automatically install and cache Playwright and dependencies for consistent test environment
-
-**Independent Test**: Clear dependency cache, verify workflow successfully installs Playwright and completes implementation
-
-### Implementation for User Story 4
-
-- [ ] T022 [P] [US4] Add "Get Playwright version" step in .github/workflows/speckit.yml (extract from package.json)
-- [ ] T023 [P] [US4] Add "Cache Playwright browsers" step with version-based cache key
-- [ ] T024 [US4] Add "Install Playwright browsers" step with conditional execution (cache miss only)
-- [ ] T025 [US4] Add "Install Playwright OS dependencies" step with conditional execution (cache hit only)
-- [ ] T026 [US4] Verify cache key format: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
-- [ ] T027 [US4] Verify Bun cache key format: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
-- [ ] T028 [US4] Add --frozen-lockfile flag to bun install command
-
-**Checkpoint**: All user stories should now be independently functional (full workflow with caching operational)
-
----
-
-## Phase 7: Polish & Cross-Cutting Concerns
-
-**Purpose**: Improvements that affect multiple user stories and final validation
-
-- [ ] T029 [P] Verify all conditional steps have correct if: conditions (inputs.command == 'implement')
-- [ ] T030 [P] Verify backward compatibility (specify/plan commands unaffected)
-- [ ] T031 [P] Add comments in workflow file explaining each new step's purpose
-- [ ] T032 Verify step ordering matches contract in specs/052-896-workflow-implement/contracts/workflow-changes.yml
-- [ ] T033 Verify all environment variables are passed correctly to subsequent steps
-- [ ] T034 Remove backup workflow file (.github/workflows/speckit.yml.backup)
-- [ ] T035 Update CLAUDE.md with PostgreSQL service pattern and Playwright caching pattern (if not already documented)
+- [ ] Verify all new steps have correct conditional logic (`inputs.command == 'implement'`)
+- [ ] Verify specify/plan commands are unaffected (no new steps execute)
+- [ ] Add comments explaining each new section
+- [ ] Commit changes to feature branch
+- [ ] Test with real workflow dispatch (trigger implement command on test ticket)
 
 ---
 
