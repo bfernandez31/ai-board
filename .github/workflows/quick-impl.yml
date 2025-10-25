@@ -159,6 +159,20 @@ jobs:
 
           echo "✅ Updated ticket branch to: ${FEATURE_BRANCH}"
 
+      - name: Create PR and Move to VERIFY
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .specify/scripts/bash/create-pr-and-transition.sh \
+            "${TICKET_ID}" \
+            "${PROJECT_ID}" \
+            "${FEATURE_BRANCH}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |
