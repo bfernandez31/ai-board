@@ -858,6 +858,16 @@ export interface TransitionResult {
 - ✅ Mode detection: INBOX → BUILD triggers quick-impl, preserves normal workflow
 - ✅ Error handling with user-friendly messages
 
+**Enhanced Implementation Workflow** (added 2025-10-25):
+- ✅ PostgreSQL database service setup before implementation
+- ✅ Automatic Prisma migration application and test data seeding
+- ✅ Playwright and browser dependency installation with caching
+- ✅ Enhanced Claude instruction for autonomous execution without prompting
+- ✅ Selective test execution guidance (only impacted tests, not full suite)
+- ✅ Fast failure on database/Playwright setup errors
+- ✅ DATABASE_URL environment variable for database-dependent code
+- ✅ Dependency caching for faster subsequent runs (<30s installation)
+
 ### User Workflows
 
 **Triggering Specification Generation**:
@@ -1103,6 +1113,116 @@ The system provides an express workflow for simple tasks:
 **Branch Naming**:
 - Format: `{num}-{description}` (e.g., `031-quick-implementation`)
 - Same pattern as full workflow for consistency
+
+---
+
+## Enhanced Implementation Workflow with Database Setup
+
+**Purpose**: Users need automated workflows to validate implementation code with E2E tests that require database and Playwright dependencies. The enhanced implement workflow automatically sets up PostgreSQL database and installs test dependencies before Claude begins implementation, enabling database-dependent code validation and selective test execution.
+
+### What It Does
+
+The system provides complete test environment setup during implementation:
+
+**Environment Preparation**:
+- PostgreSQL database service starts before Claude begins implementation
+- All Prisma migrations applied automatically to test database
+- Test data fixtures seeded (test user, projects 1-2) matching `tests/global-setup.ts`
+- Playwright and browser dependencies installed and cached
+- Database connection string (DATABASE_URL) provided to Claude's environment
+
+**Intelligent Test Execution**:
+- Claude receives explicit instruction to run only impacted tests (not full test suite)
+- Instruction prohibits prompting user for clarifications (100% autonomous execution)
+- Selective testing reduces test runtime by ~50% compared to full suite
+- Clear guidance for identifying impacted tests based on code changes
+
+**Workflow Optimization**:
+- Dependency caching (node_modules, Playwright browsers) minimizes installation time
+- Subsequent runs complete dependency installation in under 30 seconds
+- Database setup completes in under 2 minutes (including migrations and seeding)
+- Total workflow execution under 10 minutes end-to-end
+
+**Error Handling**:
+- Fast failure if database setup fails (clear error message: "database unavailable")
+- Fast failure if Playwright installation fails (clear error: "E2E testing unavailable")
+- Claude errs on side of running broader test suite when impact unclear
+- Full test suite runs in PR validation even if selective tests pass
+
+### Requirements
+
+**Database Setup**:
+- PostgreSQL service must start before Claude begins implementation
+- All Prisma migrations applied via `npx prisma migrate deploy`
+- Test fixtures seeded matching `tests/global-setup.ts` (test user, projects 1-2)
+- DATABASE_URL environment variable provided to Claude
+- Setup completes in under 2 minutes
+
+**Dependency Installation**:
+- Install Playwright via `npx playwright install --with-deps`
+- Cache dependencies using GitHub Actions cache
+- Cache key based on package-lock.json hash
+- Fresh installation when package.json changes invalidate cache
+
+**Claude Instruction**:
+- Enhanced prompt: "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+- Explicit prohibition on prompting user for clarifications
+- Explicit requirement to identify and run only tests impacted by code changes
+- Guidance: "When in doubt about test impact, run all tests in the affected module"
+
+**Command Execution**:
+- Only when `command === "implement"` (not specify/plan commands)
+- DATABASE_URL available in environment before Claude executes
+- Playwright browsers available for test execution
+- Fast failure if prerequisites (database, Playwright) unavailable
+
+**Test Selection Guidance**:
+- API route changes: Run only API contract tests for those routes
+- UI component changes: Run only E2E tests interacting with those components
+- Shared utility changes: Run unit tests for utilities + integration tests depending on them
+- Output must indicate which tests selected and why (based on code changes)
+
+**Success Criteria**:
+- Database setup and E2E test execution complete in under 10 minutes
+- Selective testing reduces runtime by at least 50% vs full suite
+- Database setup (including migrations) completes in under 2 minutes
+- Playwright installation (with caching) completes in under 3 minutes
+- Claude completes implementation without prompting user (100% autonomous)
+- At least 80% of workflows successfully execute selective tests
+- Dependency caching achieves >80% cache hit rate
+- Zero test failures due to missing database or Playwright dependencies
+
+### Data Model
+
+**Workflow Configuration** (.github/workflows/speckit.yml):
+- Job step: "Setup PostgreSQL" (before Claude execution)
+- Job step: "Install Playwright" (before Claude execution)
+- Job step: "Apply Prisma migrations" (after PostgreSQL setup)
+- Job step: "Seed test database" (after migrations)
+- Environment variable: DATABASE_URL (PostgreSQL connection string)
+- Conditional execution: Only when `command === "implement"`
+
+**Database Service**:
+- PostgreSQL version: 14+ (matching production)
+- Port: 5432
+- Credentials: postgres/postgres (test environment only)
+- Database name: ai_board_test
+- Connection string format: `postgresql://postgres:postgres@localhost:5432/ai_board_test`
+
+**Dependency Cache**:
+- Cache key: `${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}`
+- Cache paths: `node_modules`, `~/.cache/ms-playwright`
+- Restore keys: `${{ runner.os }}-node-` (fallback for partial matches)
+
+**Test Environment Variables**:
+- DATABASE_URL: PostgreSQL connection string
+- NODE_ENV: test (enables mock authentication)
+- SKIP_SPECKIT_EXECUTION: Auto-set for [e2e] test tickets
+
+**Claude Command** (updated):
+```bash
+claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+```
 
 ---
 
