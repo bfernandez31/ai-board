@@ -249,7 +249,7 @@ The system triggers workflows automatically during stage transitions:
 - **INBOX → SPECIFY**: Dispatches "specify" command (`/speckit.specify`), generates branch name `feature/ticket-<id>`
 - **SPECIFY → PLAN**: Dispatches "plan" command (`/speckit.plan`), uses existing branch
 - **PLAN → BUILD**: Dispatches "implement" command (`/speckit.implement`), uses existing branch
-- **BUILD → VERIFY**: No workflow (manual stage transition)
+- **BUILD → VERIFY**: Automatic transition after successful implementation (PR created, no workflow dispatched)
 - **VERIFY → SHIP**: No workflow (manual stage transition)
 
 **Branch Management**:
@@ -868,6 +868,16 @@ export interface TransitionResult {
 - ✅ DATABASE_URL environment variable for database-dependent code
 - ✅ Dependency caching for faster subsequent runs (<30s installation)
 
+**Automatic PR Creation and VERIFY Transition** (added 2025-10-25):
+- ✅ Automatic Pull Request creation after successful implementation
+- ✅ PR targets main branch with auto-generated title and description
+- ✅ Comment notification posted with PR link (AI-BOARD system user)
+- ✅ Automatic ticket transition from BUILD to VERIFY
+- ✅ Reusable bash script for both speckit.yml and quick-impl.yml workflows
+- ✅ Graceful error handling (PR creation failures don't block transition)
+- ✅ Existing PR detection (retrieves URL instead of creating duplicate)
+- ✅ Performance: <10 seconds additional overhead
+
 ### User Workflows
 
 **Triggering Specification Generation**:
@@ -1223,6 +1233,193 @@ The system provides complete test environment setup during implementation:
 ```bash
 claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
 ```
+
+---
+
+## Automatic PR Creation and VERIFY Transition
+
+**Purpose**: Users need automated pull request creation after successful implementation to streamline the code review process. The system automatically creates a GitHub Pull Request and transitions the ticket to VERIFY stage when implement workflows complete successfully, enabling immediate code review without manual intervention.
+
+### What It Does
+
+The system automates PR creation and stage transition after implementation:
+
+**Post-Implementation Flow**:
+1. Implementation workflow completes successfully (specify or quick-impl)
+2. System creates Pull Request targeting main branch
+3. System posts comment on ticket with PR link
+4. System transitions ticket from BUILD to VERIFY
+5. User sees ticket in VERIFY stage with PR link in comments
+
+**Pull Request Details**:
+- **Title**: `feat(ticket-<id>): automated implementation`
+- **Body**: Auto-generated description with ticket context and review checklist
+- **Base branch**: main
+- **Head branch**: Feature branch created during specification
+- **Attribution**: 🤖 Generated with Claude Code footer
+
+**Comment Notification**:
+- Posted by AI-BOARD system user
+- Contains PR number and direct link
+- Format: "🔀 Pull Request #<num> created and ready for review\n\n👉 <url>"
+- Appears in ticket comment thread
+
+**Stage Transition**:
+- Ticket moves from BUILD to VERIFY automatically
+- No workflow execution (manual review stage)
+- Job status already updated to COMPLETED before PR creation
+- Ticket ready for code review immediately
+
+**Error Handling**:
+- PR creation failure: Logs warning, continues with transition
+- Existing PR detection: Retrieves existing PR URL instead of creating duplicate
+- Comment posting failure: Logs warning, PR link still accessible via GitHub
+- Transition failure: Returns error to user with rollback suggestion
+
+### Requirements
+
+**Workflow Integration**:
+- Trigger: After successful implement command execution (both speckit.yml and quick-impl.yml)
+- Timing: After commit/push, before job status update
+- Conditional: Only when `command === "implement"` or quick-impl mode
+- Script: Reusable bash script `.specify/scripts/bash/create-pr-and-transition.sh`
+
+**Script Responsibilities**:
+- Create Pull Request using GitHub CLI (`gh pr create`)
+- Post comment with PR link via API
+- Transition ticket to VERIFY via API
+- Handle errors gracefully with fallback behavior
+
+**Script Parameters**:
+1. `ticket_id`: Ticket identifier
+2. `project_id`: Project identifier
+3. `branch`: Feature branch name
+4. `app_url`: Application URL for API calls
+5. `workflow_api_token`: Authentication token
+
+**PR Creation**:
+- Use GitHub CLI (`gh pr create`)
+- Require GITHUB_TOKEN secret for authentication
+- Return PR URL and number
+- Detect existing PRs and return URL without error
+
+**Comment Creation**:
+- Endpoint: POST `/api/projects/{projectId}/tickets/{id}/comments`
+- Author: AI-BOARD system user
+- Content: PR notification with link
+- Authentication: WORKFLOW_API_TOKEN
+
+**Stage Transition**:
+- Endpoint: POST `/api/projects/{projectId}/tickets/{id}/transition`
+- Target stage: VERIFY
+- No workflow dispatch (VERIFY is manual stage)
+- Authentication: WORKFLOW_API_TOKEN
+
+**Execution Order**:
+1. Create Pull Request → 2. Post comment notification → 3. Transition ticket stage
+2. Failures in step 1 or 2 logged but don't block step 3
+3. Failure in step 3 returns error (blocks transition)
+
+**Performance**:
+- PR creation: <5 seconds
+- Comment posting: <1 second
+- Stage transition: <1 second
+- Total additional time: <10 seconds
+
+### Data Model
+
+**Script Location**:
+- Path: `.specify/scripts/bash/create-pr-and-transition.sh`
+- Executable: Yes (chmod +x)
+- Reusable: Called by both speckit.yml and quick-impl.yml
+
+**Workflow Integration** (speckit.yml):
+```yaml
+- name: Create PR and Move to VERIFY (Implement Command)
+  if: ${{ success() && inputs.command == 'implement' }}
+  env:
+    TICKET_ID: ${{ inputs.ticket_id }}
+    PROJECT_ID: 1
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    .specify/scripts/bash/create-pr-and-transition.sh \
+      "${TICKET_ID}" \
+      "${PROJECT_ID}" \
+      "${CURRENT_BRANCH}" \
+      "${APP_URL}" \
+      "${WORKFLOW_API_TOKEN}"
+```
+
+**Workflow Integration** (quick-impl.yml):
+```yaml
+- name: Create PR and Move to VERIFY
+  if: ${{ success() }}
+  env:
+    TICKET_ID: ${{ inputs.ticket_id }}
+    PROJECT_ID: ${{ inputs.project_id }}
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    .specify/scripts/bash/create-pr-and-transition.sh \
+      "${TICKET_ID}" \
+      "${PROJECT_ID}" \
+      "${FEATURE_BRANCH}" \
+      "${APP_URL}" \
+      "${WORKFLOW_API_TOKEN}"
+```
+
+**Pull Request Body Template**:
+```markdown
+## 🤖 Automated Implementation
+
+This pull request was automatically generated by the AI Board implementation workflow.
+
+**Ticket**: #<ticket_id>
+**Branch**: `<branch_name>`
+**Workflow**: Spec-Kit Implementation
+
+### What's Changed
+Implementation completed by Claude Code based on the feature specification.
+
+### Review Checklist
+- [ ] Code changes align with ticket requirements
+- [ ] Tests pass successfully
+- [ ] No merge conflicts
+- [ ] Ready to merge
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+**Comment Format**:
+```
+🔀 **Pull Request Created**
+
+PR #<number> is ready for review:
+👉 <pr_url>
+
+The implementation is complete and ready for code review.
+```
+
+**Transition API Request**:
+```json
+{
+  "targetStage": "VERIFY"
+}
+```
+
+**Error Handling**:
+- PR already exists: Retrieve existing PR URL (no error)
+- GitHub API error: Log warning, continue with transition
+- Comment posting error: Log warning, PR link accessible via GitHub
+- Transition error: Return 400/500 to workflow, blocks progression
+
+**Success Criteria**:
+- ✅ PR created successfully targeting main branch
+- ✅ Comment posted with PR link
+- ✅ Ticket transitioned to VERIFY stage
+- ✅ No workflow dispatched for VERIFY (manual stage)
+- ✅ Total time <10 seconds additional overhead
 
 ---
 

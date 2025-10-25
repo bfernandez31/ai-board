@@ -485,6 +485,20 @@ jobs:
 
           echo "✅ Cleanup complete (images remain in Cloudinary)"
 
+      - name: Create PR and Move to VERIFY (Implement Command)
+        if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: 1
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .specify/scripts/bash/create-pr-and-transition.sh \
+            "${TICKET_ID}" \
+            "${PROJECT_ID}" \
+            "${CURRENT_BRANCH}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: |
