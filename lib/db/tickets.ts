@@ -1,5 +1,5 @@
 import { prisma } from './client';
-import { Stage, getAllStages } from '../stage-validation';
+import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 

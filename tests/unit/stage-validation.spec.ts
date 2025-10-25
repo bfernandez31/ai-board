@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Stage, isValidTransition, getNextStage } from '../../lib/stage-validation';
+import { Stage, isValidTransition, getNextStage } from '../../lib/stage-transitions';
 
 /**
  * Unit Tests: Stage Validation Logic

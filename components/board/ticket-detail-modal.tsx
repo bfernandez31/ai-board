@@ -33,6 +33,7 @@ import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Stage } from '@prisma/client';
 import { CommentList } from '@/components/comments/comment-list';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
+import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -650,6 +651,9 @@ export function TicketDetailModal({
     className: 'bg-zinc-600 text-zinc-50 border-zinc-500',
   };
 
+  // Check if description and policy can be edited based on current stage
+  const isInboxStage = canEditDescriptionAndPolicy(ticket.stage as Stage);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -741,8 +745,8 @@ export function TicketDetailModal({
                   <ExternalLink className="w-3 h-3" aria-hidden="true" />
                 </a>
               )}
-            {/* Edit Policy button - compact */}
-            {localTicket?.project && (
+            {/* Edit Policy button - compact (only visible in INBOX stage) */}
+            {localTicket?.project && isInboxStage && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -927,29 +931,32 @@ export function TicketDetailModal({
               </div>
             ) : (
               <div
-                className="
-                  cursor-pointer hover:bg-[#313244]/50 p-4 -ml-4 rounded-lg transition-all duration-200
+                className={`
+                  p-4 -ml-4 rounded-lg transition-all duration-200
                   relative
-                "
-                onClick={descriptionEdit.startEdit}
-                onKeyDown={(e) => {
+                  ${isInboxStage ? 'cursor-pointer hover:bg-[#313244]/50' : 'cursor-default'}
+                `}
+                onClick={isInboxStage ? descriptionEdit.startEdit : undefined}
+                onKeyDown={isInboxStage ? (e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     descriptionEdit.startEdit();
                   }
-                }}
+                } : undefined}
                 data-testid="ticket-description"
-                role="button"
-                tabIndex={0}
-                aria-label="Edit ticket description"
+                role={isInboxStage ? "button" : undefined}
+                tabIndex={isInboxStage ? 0 : undefined}
+                aria-label={isInboxStage ? "Edit ticket description" : "Ticket description (read-only)"}
               >
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <Pencil
-                    className="w-5 h-5 text-[#a6adc8]"
-                    data-testid="edit-icon-description"
-                    aria-hidden="true"
-                  />
-                </div>
+                {isInboxStage && (
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Pencil
+                      className="w-5 h-5 text-[#a6adc8]"
+                      data-testid="edit-icon-description"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
                 <div
                   className="text-base text-[#cdd6f4] leading-relaxed max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e] whitespace-pre-wrap"
                 >

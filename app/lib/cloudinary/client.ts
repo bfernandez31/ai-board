@@ -94,7 +94,7 @@ export async function deleteImageFromCloudinary(
 }
 
 /**
- * Delete all images in a Cloudinary folder
+ * Delete all images in a Cloudinary folder recursively
  *
  * @param folderPrefix - Folder prefix to delete (e.g., 'ai-board/tickets')
  * @returns Deletion result
@@ -103,28 +103,55 @@ export async function deleteCloudinaryFolder(
   folderPrefix: string
 ): Promise<{ deleted: number; errors: string[] }> {
   try {
-    // List all resources in the folder
-    const result = await cloudinary.api.resources({
-      type: 'upload',
-      prefix: folderPrefix,
-      max_results: 500, // Cloudinary API limit
-    });
-
     const errors: string[] = [];
     let deleted = 0;
 
-    // Delete each resource
-    for (const resource of result.resources || []) {
-      try {
-        await cloudinary.uploader.destroy(resource.public_id);
-        deleted++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        errors.push(`Failed to delete ${resource.public_id}: ${errorMessage}`);
+    // Step 1: Delete all resources (images) in the folder and subfolders
+    let hasMore = true;
+    let nextCursor: string | undefined;
+
+    while (hasMore) {
+      const result = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: folderPrefix,
+        max_results: 500, // Cloudinary API limit
+        next_cursor: nextCursor,
+      });
+
+      // Delete each resource
+      for (const resource of result.resources || []) {
+        try {
+          await cloudinary.uploader.destroy(resource.public_id);
+          deleted++;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to delete ${resource.public_id}: ${errorMessage}`);
+        }
       }
+
+      // Check if there are more results
+      hasMore = !!result.next_cursor;
+      nextCursor = result.next_cursor;
     }
 
-    // Delete the folder itself (if empty)
+    // Step 2: Delete all subfolders recursively
+    try {
+      const subfolders = await cloudinary.api.sub_folders(folderPrefix);
+
+      for (const subfolder of subfolders.folders || []) {
+        const subfolderPath = `${folderPrefix}/${subfolder.name}`;
+        try {
+          await cloudinary.api.delete_folder(subfolderPath);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to delete subfolder ${subfolderPath}: ${errorMessage}`);
+        }
+      }
+    } catch (error) {
+      // Ignore if no subfolders exist
+    }
+
+    // Step 3: Delete the root folder itself
     try {
       await cloudinary.api.delete_folder(folderPrefix);
     } catch (error) {
@@ -133,8 +160,10 @@ export async function deleteCloudinaryFolder(
 
     return { deleted, errors };
   } catch (error) {
+    console.error('[Cloudinary Debug] Error details:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Failed to delete Cloudinary folder: ${errorMessage}`);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    throw new Error(`Failed to delete Cloudinary folder: ${errorMessage}${errorStack ? `\n${errorStack}` : ''}`);
   }
 }
 

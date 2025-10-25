@@ -1,7 +1,7 @@
 import { PrismaClient, Stage, JobStatus, Ticket, Project } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
-import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-validation';
+import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 
 const prisma = new PrismaClient();
 
@@ -287,6 +287,8 @@ export async function handleTicketTransition(
             command: command,
             branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
             job_id: job.id.toString(),
+            project_id: ticket.projectId.toString(),
+            ticketTitle: ticket.title, // Include for all commands (used in debug output)
           };
 
           // Add SPECIFY-specific inputs
@@ -308,8 +310,7 @@ export async function handleTicketTransition(
               workflowInputs.attachments = JSON.stringify(ticket.attachments);
             }
 
-            // Keep legacy fields for backward compatibility (deprecated)
-            workflowInputs.ticketTitle = ticket.title;
+            // Legacy ticketDescription field for backward compatibility (deprecated)
             workflowInputs.ticketDescription = ticket.description;
           }
         }

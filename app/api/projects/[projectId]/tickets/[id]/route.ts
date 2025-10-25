@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
+import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
 /**
  * GET /api/projects/[projectId]/tickets/[id]
@@ -264,6 +265,22 @@ export async function PATCH(
             currentVersion: currentTicket.version,
           },
           { status: 409 }
+        );
+      }
+
+      // Check stage-based editing restrictions
+      // Description and clarificationPolicy can only be edited in INBOX stage
+      if (
+        (description !== undefined || clarificationPolicy !== undefined) &&
+        !canEditDescriptionAndPolicy(currentTicket.stage)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'Description and clarification policy can only be updated in INBOX stage',
+            code: 'INVALID_STAGE_FOR_EDIT',
+          },
+          { status: 400 }
         );
       }
 

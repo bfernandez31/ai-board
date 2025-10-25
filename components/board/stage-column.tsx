@@ -3,7 +3,7 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Stage } from '@/lib/stage-validation';
+import { Stage } from '@/lib/stage-transitions';
 import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { TicketWithVersion } from '@/lib/types';
