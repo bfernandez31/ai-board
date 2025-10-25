@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { cleanupDatabase } from '../helpers/db-cleanup';
+import { cleanupCloudinaryTestImages } from '../helpers/cloudinary-cleanup';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -137,6 +138,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
   });
 
   test.describe('Multipart Requests (Image Uploads)', () => {
+    // Clean up Cloudinary after each image upload test
+    test.afterEach(async () => {
+      await cleanupCloudinaryTestImages();
+    });
+
     test('should accept multipart/form-data with valid image', async ({ request }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
