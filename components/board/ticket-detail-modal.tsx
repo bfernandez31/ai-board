@@ -33,7 +33,7 @@ import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Stage } from '@prisma/client';
 import { CommentList } from '@/components/comments/comment-list';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
-import { canEditDescriptionAndPolicy } from '@/lib/utils/stage-validation';
+import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)

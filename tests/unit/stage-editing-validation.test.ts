@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Stage } from '@prisma/client';
-import { canEditDescriptionAndPolicy } from '../../lib/utils/stage-validation';
+import { canEditDescriptionAndPolicy } from '../../lib/utils/field-edit-permissions';
 
 /**
  * Unit Tests: Stage-Based Editing Restrictions

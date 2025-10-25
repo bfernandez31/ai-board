@@ -1,4 +1,4 @@
-import { Stage } from './stage-validation';
+import { Stage } from './stage-transitions';
 import { TicketWithVersion } from './types';
 
 /**

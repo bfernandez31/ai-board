@@ -18,7 +18,7 @@ import { OfflineIndicator } from './offline-indicator';
 import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { Stage, isValidTransition, getAllStages } from '@/lib/stage-validation';
+import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
 import {
   updateTicketStageOptimistically,

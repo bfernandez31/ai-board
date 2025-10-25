@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
-import { canEditDescriptionAndPolicy } from '@/lib/utils/stage-validation';
+import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
 /**
  * GET /api/projects/[projectId]/tickets/[id]

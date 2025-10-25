@@ -1,7 +1,7 @@
 import { PrismaClient, Stage, JobStatus, Ticket, Project } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
-import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-validation';
+import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 
 const prisma = new PrismaClient();
 

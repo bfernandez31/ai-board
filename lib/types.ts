@@ -1,5 +1,5 @@
 import { Ticket as PrismaTicket, ClarificationPolicy, WorkflowType, Prisma } from '@prisma/client';
-import { Stage } from './stage-validation';
+import { Stage } from './stage-transitions';
 
 /**
  * Re-export types
