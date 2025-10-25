@@ -214,7 +214,7 @@ function BoardContent({
       if (ticketPolledJobs.length === 0) {
         const ticket = allTickets.find(t => t.id === ticketId);
         return {
-          workflow: getWorkflowJob(ticketInitialJobs),
+          workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
           aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
         };
       }
@@ -256,7 +256,7 @@ function BoardContent({
 
       // Use filtering functions to get workflow and AI-BOARD jobs
       return {
-        workflow: getWorkflowJob(fullJobs),
+        workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
       };
     },
