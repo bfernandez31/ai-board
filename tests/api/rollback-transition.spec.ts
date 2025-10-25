@@ -315,7 +315,9 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
+    // Normal transition validation handles backward moves
     expect(body.error).toContain('Cannot transition from SPECIFY to INBOX');
+    expect(body.error).toContain('must progress sequentially');
   });
 
   test('should ignore AI-BOARD jobs and use most recent workflow job', async ({ request }) => {
