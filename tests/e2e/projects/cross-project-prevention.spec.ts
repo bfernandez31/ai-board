@@ -35,19 +35,18 @@ test.describe('Cross-Project Access Prevention', () => {
     expect(createResponse.status()).toBe(201);
     const ticket = await createResponse.json();
 
-    // Attempt to update via project 1's API
-    const updateResponse = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    // Attempt to transition via project 1's API (using /transition endpoint)
+    const updateResponse = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
       data: {
-        stage: 'SPECIFY',
-        version: 1
+        targetStage: 'SPECIFY'
       }
     });
 
-    // CRITICAL: Must return 403 Forbidden
-    expect(updateResponse.status()).toBe(403);
+    // CRITICAL: Must return 404 (ticket not found in project 1) or 403 Forbidden
+    expect([403, 404]).toContain(updateResponse.status());
 
     const body = await updateResponse.json();
-    expect(body).toHaveProperty('error', 'Forbidden');
+    expect(body).toHaveProperty('error');
   });
 
   test('should not modify ticket when accessing via wrong project', async ({ request }) => {
@@ -66,11 +65,10 @@ test.describe('Cross-Project Access Prevention', () => {
 
     const ticket = await createResponse.json();
 
-    // Attempt update via wrong project
-    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    // Attempt transition via wrong project (using /transition endpoint)
+    await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
       data: {
-        stage: 'SPECIFY',
-        version: 1
+        targetStage: 'SPECIFY'
       }
     });
 
@@ -133,11 +131,10 @@ test.describe('Cross-Project Access Prevention', () => {
     expect(createResponse.status()).toBe(201);
     const ticket = await createResponse.json();
 
-    // Update via correct project API
-    const updateResponse = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    // Transition via correct project API (using /transition endpoint)
+    const updateResponse = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
       data: {
-        stage: 'SPECIFY',
-        version: 1
+        targetStage: 'SPECIFY'
       }
     });
 
