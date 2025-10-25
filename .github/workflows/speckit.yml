@@ -68,11 +68,30 @@ jobs:
     permissions:
       contents: write
 
+    # PostgreSQL service container (only for implement command)
+    # Health checks ensure database is ready before test execution
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_board_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticketTitle, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      # Database connection string for test environment
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
 
     steps:
       - name: Debug Inputs
@@ -112,6 +131,15 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun Dependencies
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Setup Node.js
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/setup-node@v4
@@ -123,6 +151,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install Dependencies
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: bun install --frozen-lockfile
 
       - name: Install Claude Code CLI
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
@@ -225,6 +257,41 @@ jobs:
           EOF
           echo "SPECIFY_PAYLOAD_FILE=/tmp/specify_payload.json" >> "$GITHUB_ENV"
 
+      # Database setup steps (implement command only)
+      - name: Generate Prisma Client
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: npx prisma generate
+
+      - name: Apply Database Migrations
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: npx prisma migrate deploy
+
+      - name: Seed Test Database
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: npx tsx tests/global-setup.ts
+
+      # Playwright setup steps (implement command only)
+      - name: Get Playwright Version
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        run: npx playwright install --with-deps
+
+      - name: Install Playwright OS Dependencies
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit == 'true' }}
+        run: npx playwright install-deps
+
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         env:
@@ -310,7 +377,7 @@ jobs:
               claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions /speckit.implement
+              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json

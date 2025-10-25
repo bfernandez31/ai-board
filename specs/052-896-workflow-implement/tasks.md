@@ -17,9 +17,9 @@ description: "Implementation tasks for Enhanced Implementation Workflow with Dat
 
 Add PostgreSQL service container configuration to the workflow job, only active when `command == 'implement'`:
 
-- [ ] Add `services:` section to `run-speckit` job with PostgreSQL 14 container
-- [ ] Configure health checks: `pg_isready` with retries
-- [ ] Set environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+- [X] Add `services:` section to `run-speckit` job with PostgreSQL 14 container
+- [X] Configure health checks: `pg_isready` with retries
+- [X] Set environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
 **File**: `.github/workflows/speckit.yml`
 
@@ -27,11 +27,11 @@ Add PostgreSQL service container configuration to the workflow job, only active 
 
 Add steps to prepare the database before Claude executes, only when `command == 'implement'`:
 
-- [ ] Add step: "Install Dependencies" with Bun (already exists, verify it runs before database steps)
-- [ ] Add step: "Generate Prisma Client" (`npx prisma generate`)
-- [ ] Add step: "Apply Database Migrations" (`npx prisma migrate deploy`)
-- [ ] Add step: "Seed Test Database" (`npx tsx tests/global-setup.ts`)
-- [ ] Add `DATABASE_URL` environment variable pointing to PostgreSQL service
+- [X] Add step: "Install Dependencies" with Bun (already exists, verify it runs before database steps)
+- [X] Add step: "Generate Prisma Client" (`npx prisma generate`)
+- [X] Add step: "Apply Database Migrations" (`npx prisma migrate deploy`)
+- [X] Add step: "Seed Test Database" (`npx tsx tests/global-setup.ts`)
+- [X] Add `DATABASE_URL` environment variable pointing to PostgreSQL service
 
 **File**: `.github/workflows/speckit.yml`
 **Location**: Between "Setup" steps and "Execute Spec-Kit Command" step
@@ -41,10 +41,10 @@ Add steps to prepare the database before Claude executes, only when `command == 
 
 Add Playwright browser installation, only when `command == 'implement'`:
 
-- [ ] Add step: "Get Playwright Version" (extract from package.json using jq)
-- [ ] Add step: "Cache Playwright Browsers" (cache path: ~/.cache/ms-playwright)
-- [ ] Add step: "Install Playwright Browsers" (conditional on cache miss)
-- [ ] Add step: "Install Playwright OS Dependencies" (conditional on cache hit)
+- [X] Add step: "Get Playwright Version" (extract from package.json using jq)
+- [X] Add step: "Cache Playwright Browsers" (cache path: ~/.cache/ms-playwright)
+- [X] Add step: "Install Playwright Browsers" (conditional on cache miss)
+- [X] Add step: "Install Playwright OS Dependencies" (conditional on cache hit)
 
 **File**: `.github/workflows/speckit.yml`
 **Location**: After database setup steps, before "Execute Spec-Kit Command"
@@ -54,9 +54,9 @@ Add Playwright browser installation, only when `command == 'implement'`:
 
 Optimize dependency installation with caching:
 
-- [ ] Add step: "Cache Bun Dependencies" (cache path: ~/.bun/install/cache)
-- [ ] Use cache key: `${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}`
-- [ ] Add `--frozen-lockfile` flag to `bun install` command
+- [X] Add step: "Cache Bun Dependencies" (cache path: ~/.bun/install/cache)
+- [X] Use cache key: `${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}`
+- [X] Add `--frozen-lockfile` flag to `bun install` command
 
 **File**: `.github/workflows/speckit.yml`
 **Location**: Before "Setup Bun" step
@@ -65,11 +65,11 @@ Optimize dependency installation with caching:
 
 Modify the `implement` case in "Execute Spec-Kit Command" step:
 
-- [ ] Change from `claude --dangerously-skip-permissions /speckit.implement` to:
+- [X] Change from `claude --dangerously-skip-permissions /speckit.implement` to:
   ```bash
   claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
   ```
-- [ ] Ensure DATABASE_URL is available in Claude's environment
+- [X] Ensure DATABASE_URL is available in Claude's environment
 
 **File**: `.github/workflows/speckit.yml`
 **Location**: Line 313 (implement case in Execute Spec-Kit Command step)
@@ -78,10 +78,10 @@ Modify the `implement` case in "Execute Spec-Kit Command" step:
 
 Final validation:
 
-- [ ] Verify all new steps have correct conditional logic (`inputs.command == 'implement'`)
-- [ ] Verify specify/plan commands are unaffected (no new steps execute)
-- [ ] Add comments explaining each new section
-- [ ] Commit changes to feature branch
+- [X] Verify all new steps have correct conditional logic (`inputs.command == 'implement'`)
+- [X] Verify specify/plan commands are unaffected (no new steps execute)
+- [X] Add comments explaining each new section
+- [X] Commit changes to feature branch
 - [ ] Test with real workflow dispatch (trigger implement command on test ticket)
 
 ---
