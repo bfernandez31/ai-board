@@ -1,10 +1,16 @@
 import { deleteCloudinaryFolder, isCloudinaryConfigured } from '@/app/lib/cloudinary/client';
+import { prisma } from '@/app/lib/db/client';
 
 /**
  * Clean up Cloudinary images uploaded during tests
  *
- * This helper deletes all images from test-specific folders to prevent
- * accumulation of test artifacts in the Cloudinary CDN.
+ * This helper deletes images ONLY from test ticket folders ([e2e] prefix)
+ * to prevent accumulation of test artifacts while preserving production/dev images.
+ *
+ * Strategy:
+ * 1. Query database for all [e2e] test tickets
+ * 2. Delete Cloudinary folders for those specific ticket IDs only
+ * 3. Preserve all other images (production, development, manual uploads)
  *
  * Usage: Call in test.afterEach() for tests that upload images
  */
@@ -16,17 +22,49 @@ export async function cleanupCloudinaryTestImages(): Promise<void> {
   }
 
   try {
-    // Delete all images from the test folder
-    // Cloudinary stores images in: ai-board/tickets/{ticketId}/
-    // We clean up the entire ai-board folder for test isolation
-    const result = await deleteCloudinaryFolder('ai-board');
+    // Find all test tickets (those with [e2e] prefix)
+    const testTickets = await prisma.ticket.findMany({
+      where: {
+        title: {
+          startsWith: '[e2e]',
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (result.deleted > 0) {
-      console.log(`[Cloudinary Cleanup] Deleted ${result.deleted} test images`);
+    if (testTickets.length === 0) {
+      console.log('[Cloudinary Cleanup] No test tickets found');
+      return;
     }
 
-    if (result.errors.length > 0) {
-      console.warn('[Cloudinary Cleanup] Errors:', result.errors);
+    let totalDeleted = 0;
+    const allErrors: string[] = [];
+
+    // Delete Cloudinary folders for each test ticket
+    for (const ticket of testTickets) {
+      const folderPath = `ai-board/tickets/${ticket.id}`;
+
+      try {
+        const result = await deleteCloudinaryFolder(folderPath);
+        totalDeleted += result.deleted;
+
+        if (result.errors.length > 0) {
+          allErrors.push(...result.errors);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        allErrors.push(`Failed to cleanup ticket ${ticket.id}: ${errorMessage}`);
+      }
+    }
+
+    if (totalDeleted > 0) {
+      console.log(`[Cloudinary Cleanup] Deleted ${totalDeleted} test images from ${testTickets.length} tickets`);
+    }
+
+    if (allErrors.length > 0) {
+      console.warn('[Cloudinary Cleanup] Errors:', allErrors);
     }
   } catch (error) {
     // Log error but don't fail the test
