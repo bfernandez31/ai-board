@@ -26,9 +26,9 @@ description: "Task list for Stage-Based Ticket Editing Restrictions feature"
 
 **Purpose**: Project initialization and test discovery
 
-- [ ] T001 [P] Search for existing ticket editing tests using grep pattern "describe.*ticket.*edit" in tests/
-- [ ] T002 [P] Search for existing ticket API tests using glob pattern "tests/**/*ticket*.(test|spec).ts"
-- [ ] T003 [P] Search for existing stage validation tests using grep pattern "stage.*validation" in tests/
+- [X] T001 [P] Search for existing ticket editing tests using grep pattern "describe.*ticket.*edit" in tests/
+- [X] T002 [P] Search for existing ticket API tests using glob pattern "tests/**/*ticket*.(test|spec).ts"
+- [X] T003 [P] Search for existing stage validation tests using grep pattern "stage.*validation" in tests/
 
 ---
 
@@ -40,21 +40,21 @@ description: "Task list for Stage-Based Ticket Editing Restrictions feature"
 
 ### Utility Function (Foundation)
 
-- [ ] T004 Create stage validation utility function in app/lib/utils/stage-validation.ts
+- [X] T004 Create stage validation utility function in lib/utils/stage-validation.ts
 
 ### Unit Tests for Validation (TDD - RED Phase)
 
-- [ ] T005 [P] Write unit test for INBOX stage returns true in tests/unit/stage-validation.test.ts
-- [ ] T006 [P] Write unit test for SPECIFY stage returns false in tests/unit/stage-validation.test.ts
-- [ ] T007 [P] Write unit test for PLAN stage returns false in tests/unit/stage-validation.test.ts
-- [ ] T008 [P] Write unit test for BUILD stage returns false in tests/unit/stage-validation.test.ts
-- [ ] T009 [P] Write unit test for VERIFY stage returns false in tests/unit/stage-validation.test.ts
-- [ ] T010 [P] Write unit test for SHIP stage returns false in tests/unit/stage-validation.test.ts
+- [X] T005 [P] Write unit test for INBOX stage returns true in tests/unit/stage-editing-validation.test.ts
+- [X] T006 [P] Write unit test for SPECIFY stage returns false in tests/unit/stage-editing-validation.test.ts
+- [X] T007 [P] Write unit test for PLAN stage returns false in tests/unit/stage-editing-validation.test.ts
+- [X] T008 [P] Write unit test for BUILD stage returns false in tests/unit/stage-editing-validation.test.ts
+- [X] T009 [P] Write unit test for VERIFY stage returns false in tests/unit/stage-editing-validation.test.ts
+- [X] T010 [P] Write unit test for SHIP stage returns false in tests/unit/stage-editing-validation.test.ts
 
 ### Implementation (TDD - GREEN Phase)
 
-- [ ] T011 Implement canEditDescriptionAndPolicy function to pass all unit tests in app/lib/utils/stage-validation.ts
-- [ ] T012 Run unit tests with bun run test:unit tests/unit/stage-validation.test.ts to verify GREEN state
+- [X] T011 Implement canEditDescriptionAndPolicy function to pass all unit tests in lib/utils/stage-validation.ts
+- [X] T012 Run unit tests with bun run test:unit tests/unit/stage-editing-validation.test.ts to verify GREEN state
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -68,14 +68,14 @@ description: "Task list for Stage-Based Ticket Editing Restrictions feature"
 
 ### Server-Side Validation (US1)
 
-- [ ] T013 [US1] Add stage validation check to PATCH handler in app/api/projects/[projectId]/tickets/[id]/route.ts (after version check, before Prisma update)
-- [ ] T014 [US1] Add 400 error response with code INVALID_STAGE_FOR_EDIT for stage violations in app/api/projects/[projectId]/tickets/[id]/route.ts
+- [X] T013 [US1] Add stage validation check to PATCH handler in app/api/projects/[projectId]/tickets/[id]/route.ts (after version check, before Prisma update)
+- [X] T014 [US1] Add 400 error response with code INVALID_STAGE_FOR_EDIT for stage violations in app/api/projects/[projectId]/tickets/[id]/route.ts
 
 ### Contract Tests for US1 (TDD - RED Phase)
 
-- [ ] T015 [P] [US1] Write contract test for PATCH with description in INBOX returns 200 in tests/api/ticket-stage-restrictions.spec.ts
-- [ ] T016 [P] [US1] Write contract test for PATCH with clarificationPolicy in INBOX returns 200 in tests/api/ticket-stage-restrictions.spec.ts
-- [ ] T017 [P] [US1] Write contract test for PATCH with title in INBOX returns 200 (title not restricted) in tests/api/ticket-stage-restrictions.spec.ts
+- [X] T015 [P] [US1] Write contract test for PATCH with description in INBOX returns 200 in tests/api/ticket-stage-restrictions.spec.ts
+- [X] T016 [P] [US1] Write contract test for PATCH with clarificationPolicy in INBOX returns 200 in tests/api/ticket-stage-restrictions.spec.ts
+- [X] T017 [P] [US1] Write contract test for PATCH with title in INBOX returns 200 (title not restricted) in tests/api/ticket-stage-restrictions.spec.ts
 
 ### Client-Side UI for US1
 
