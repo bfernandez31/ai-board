@@ -31,6 +31,7 @@ import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob } from '@/lib/utils/job-filtering';
+import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -270,7 +271,8 @@ function BoardContent({
       setIsDragging(true);
       setDragSource(ticket.stage);
 
-      // Check if ticket has a non-completed WORKFLOW job
+      // Check if ticket has a non-completed workflow job
+      // Blocks all normal transitions (FAILED/CANCELLED jobs can only rollback to INBOX)
       // AI-BOARD jobs don't block transitions, only workflow jobs do
       const jobs = getTicketJobs(ticket.id);
       const hasActiveWorkflowJob = jobs.workflow && jobs.workflow.status !== 'COMPLETED';
@@ -295,8 +297,8 @@ function BoardContent({
 
       if (!ticket || !targetStage || ticket.stage === targetStage) return;
 
-      // Validate transition
-      if (!isValidTransition(ticket.stage, targetStage)) {
+      // Validate transition (pass workflowType for rollback validation)
+      if (!isValidTransition(ticket.stage, targetStage, ticket.workflowType)) {
         toast({
           variant: 'destructive',
           title: 'Invalid stage transition',
@@ -323,16 +325,15 @@ function BoardContent({
       );
       setTicketsByStage(groupTicketsByStage(updatedTickets));
 
-      // Send update to server (project-scoped API)
+      // Send update to server using /transition endpoint for all stage changes
       try {
         const response = await fetch(
-          `/api/projects/${projectId}/tickets/${ticket.id}`,
+          `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
           {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              stage: targetStage,
-              version: originalVersion,
+              targetStage: targetStage,
             }),
           }
         );
@@ -607,7 +608,53 @@ function BoardContent({
   // Get drop zone style based on drag state (T021)
   const getDropZoneStyle = useCallback(
     (stage: Stage): string => {
-      if (!isDragging || !dragSource) return '';
+      if (!isDragging || !dragSource || !activeTicket) return '';
+
+      // Rollback mode: Dragging from BUILD to INBOX
+      if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
+        // Get most recent workflow job for the dragged ticket
+        const ticketJobs = initialJobs.get(activeTicket.id) || [];
+        const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id && !job.command.startsWith('comment-'));
+
+        // Merge polled jobs with initial jobs to get the most recent workflow job
+        let mostRecentWorkflowJob = null;
+        if (polledTicketJobs.length > 0) {
+          const mostRecentPolled = polledTicketJobs.reduce((latest, current) =>
+            new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+          );
+          mostRecentWorkflowJob = {
+            id: mostRecentPolled.id,
+            status: mostRecentPolled.status,
+            command: mostRecentPolled.command,
+          };
+        } else {
+          const workflowJobs = ticketJobs.filter(job => job.command && !job.command.startsWith('comment-'));
+          if (workflowJobs.length > 0 && workflowJobs[0]) {
+            const firstJob = workflowJobs[0];
+            mostRecentWorkflowJob = {
+              id: firstJob.id,
+              status: firstJob.status,
+              command: firstJob.command,
+            };
+          }
+        }
+
+        // Validate rollback eligibility (only for quick-impl workflows)
+        const validation = canRollbackToInbox(
+          dragSource,
+          stage,
+          activeTicket.workflowType,
+          mostRecentWorkflowJob
+        );
+
+        if (validation.allowed) {
+          // Rollback eligible - amber border
+          return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
+        } else {
+          // Rollback not allowed - disabled with tooltip hint
+          return 'opacity-50 cursor-not-allowed';
+        }
+      }
 
       // If ticket has active job, disable all drop zones
       if (draggedTicketHasJob) {
@@ -635,7 +682,7 @@ function BoardContent({
         return 'opacity-50 cursor-not-allowed';
       }
     },
-    [isDragging, dragSource, draggedTicketHasJob]
+    [isDragging, dragSource, draggedTicketHasJob, activeTicket, initialJobs, polledJobs]
   );
 
   const stages = getAllStages();
@@ -668,20 +715,26 @@ function BoardContent({
               height: 'calc(100vh - 4rem - 4px)',
             }}
           >
-            {stages.map((stage) => (
-              <StageColumn
-                key={stage}
-                stage={stage}
-                tickets={ticketsByStage[stage] || []}
-                isDraggable={isOnline}
-                onTicketClick={handleTicketClick}
-                projectId={projectId}
-                getTicketJob={getTicketJob}
-                getTicketJobs={getTicketJobs}
-                dropZoneStyle={getDropZoneStyle(stage)}
-                isBlockedByJob={isDragging && draggedTicketHasJob}
-              />
-            ))}
+            {stages.map((stage) => {
+              // Exception for rollback: INBOX is not blocked when dragging failed BUILD ticket
+              const isRollbackToInbox = dragSource === Stage.BUILD && stage === Stage.INBOX;
+              const isBlocked = isDragging && draggedTicketHasJob && !isRollbackToInbox;
+
+              return (
+                <StageColumn
+                  key={stage}
+                  stage={stage}
+                  tickets={ticketsByStage[stage] || []}
+                  isDraggable={isOnline}
+                  onTicketClick={handleTicketClick}
+                  projectId={projectId}
+                  getTicketJob={getTicketJob}
+                  getTicketJobs={getTicketJobs}
+                  dropZoneStyle={getDropZoneStyle(stage)}
+                  isBlockedByJob={isBlocked}
+                />
+              );
+            })}
           </div>
         </div>
 

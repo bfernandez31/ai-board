@@ -50,7 +50,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
     }
   }
 
-  test('should return 200 for valid stage update', async ({ request }) => {
+  test('should return 400 when trying to update stage via PATCH (use /transition instead)', async ({ request }) => {
     const ticket = await createTestTicket(request);
 
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
@@ -60,14 +60,13 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Contract Validatio
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(400);
     expect(response.headers()['content-type']).toContain('application/json');
 
     const body = await response.json();
-    expect(body).toHaveProperty('id', ticket.id);
-    expect(body).toHaveProperty('stage', 'SPECIFY');
-    expect(body).toHaveProperty('version', 2); // Version incremented
-    expect(body).toHaveProperty('updatedAt');
+    expect(body).toHaveProperty('error');
+    expect(body.error).toContain('Stage transitions must use POST');
+    expect(body.message).toContain('/transition');
   });
 
   test('should return 200 for valid inline edit (title)', async ({ request }) => {

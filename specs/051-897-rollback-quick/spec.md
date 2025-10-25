@@ -98,7 +98,7 @@ When a ticket is rolled back to INBOX, all stage-related state is reset complete
   - **Expected**: Rollback validation only checks the workflow job (quick-impl), deletes only the workflow job, ignoring AI-BOARD comment jobs
 
 - What happens when a user tries to rollback a ticket that used the normal workflow (FULL), not quick-impl?
-  - **Expected**: Rollback is allowed for any FAILED/CANCELLED workflow job, regardless of workflowType
+  - **Expected**: Rollback is BLOCKED. Rollback is only available for quick-impl workflows (workflowType=QUICK). Normal workflows must be fixed and retried from their current stage.
 
 - What happens to the GitHub branch when a ticket is rolled back?
   - **Expected**: Branch reference in database is set to null. The actual Git branch may still exist in the repository and requires manual cleanup
@@ -110,17 +110,18 @@ When a ticket is rolled back to INBOX, all stage-related state is reset complete
 
 ### Functional Requirements
 
-- **FR-001**: System MUST allow tickets in BUILD stage to transition back to INBOX stage when the most recent workflow job has status FAILED or CANCELLED
-- **FR-002**: System MUST block rollback transition when the most recent workflow job has status PENDING, RUNNING, or COMPLETED
-- **FR-003**: System MUST reset ticket workflowType to FULL when rolling back from BUILD to INBOX
-- **FR-004**: System MUST reset the ticket's branch field to null during rollback
-- **FR-005**: System MUST delete the failed/cancelled job record when rolling back to INBOX
-- **FR-006**: System MUST reset the ticket's version field to 1 during rollback
-- **FR-007**: System MUST distinguish between workflow jobs (specify, plan, implement, quick-impl) and AI-BOARD jobs (comment-*) when validating rollback eligibility
-- **FR-008**: System MUST allow tickets to proceed through either workflow path (INBOX → SPECIFY or INBOX → BUILD) after rollback
-- **FR-009**: Drag-and-drop UI MUST provide visual feedback indicating rollback eligibility during drag operations
-- **FR-010**: System MUST validate rollback transitions at API level (cannot bypass via direct API calls)
-- **FR-011**: System MUST provide clear error messages when rollback is blocked, explaining why transition is invalid
+- **FR-001**: System MUST allow tickets in BUILD stage with workflowType=QUICK to transition back to INBOX stage when the most recent workflow job has status FAILED or CANCELLED
+- **FR-002**: System MUST block rollback for tickets with workflowType=FULL (normal workflow)
+- **FR-003**: System MUST block rollback transition when the most recent workflow job has status PENDING, RUNNING, or COMPLETED
+- **FR-004**: System MUST reset ticket workflowType to FULL when rolling back from BUILD to INBOX
+- **FR-005**: System MUST reset the ticket's branch field to null during rollback
+- **FR-006**: System MUST delete the failed/cancelled job record when rolling back to INBOX
+- **FR-007**: System MUST reset the ticket's version field to 1 during rollback
+- **FR-008**: System MUST distinguish between workflow jobs (specify, plan, implement, quick-impl) and AI-BOARD jobs (comment-*) when validating rollback eligibility
+- **FR-009**: System MUST allow tickets to proceed through either workflow path (INBOX → SPECIFY or INBOX → BUILD) after rollback
+- **FR-010**: Drag-and-drop UI MUST provide visual feedback indicating rollback eligibility during drag operations
+- **FR-011**: System MUST validate rollback transitions at API level (cannot bypass via direct API calls)
+- **FR-012**: System MUST provide clear error messages when rollback is blocked, explaining why transition is invalid
 
 ### Key Entities *(include if feature involves data)*
 
