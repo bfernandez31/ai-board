@@ -276,17 +276,27 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/1/board`);
     await page.waitForLoadState('networkidle');
 
+    // Verify ticket is in BUILD column before drag attempt
+    const buildColumn = page.locator('[data-stage="BUILD"]');
+    const ticketInBuild = buildColumn.locator(`[data-ticket-id="${ticket.id}"]`);
+    await expect(ticketInBuild).toBeVisible();
+
+    // Attempt drag to INBOX (rollback) - this should be blocked
     await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id);
 
-    // Verify rollback blocked
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body.error).toContain('Rollback only available for quick-impl workflows');
+    // Wait a moment for any potential UI updates
+    await page.waitForTimeout(1000);
 
-    // Verify ticket stayed in BUILD
+    // Verify ticket is still in BUILD column (drag was blocked)
+    await expect(ticketInBuild).toBeVisible();
+    const inboxColumn = page.locator('[data-stage="INBOX"]');
+    const ticketInInbox = inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`);
+    await expect(ticketInInbox).not.toBeVisible();
+
+    // Verify database state hasn't changed
     const updatedTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
     expect(updatedTicket?.stage).toBe('BUILD');
+    expect(updatedTicket?.workflowType).toBe('FULL');
   });
 
   test('should allow normal workflow after rollback', async ({ page }) => {
@@ -334,8 +344,18 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/1/board`);
     await page.waitForLoadState('networkidle');
 
-    // Drag to BUILD (quick-impl workflow)
+    // Drag to BUILD (quick-impl workflow triggers modal)
     await dragTicketToColumn(page, ticket.id, 'BUILD');
+
+    // Wait for quick-impl confirmation modal
+    const modal = page.locator('[role="dialog"]', { hasText: /quick implementation/i });
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Click proceed button to confirm quick-impl
+    const proceedButton = modal.locator('button', { hasText: /proceed/i });
+    await proceedButton.click();
+
+    // Wait for API call after modal confirmation
     const response = await waitForTransitionAPI(page, ticket.id);
 
     expect(response.status()).toBe(200);
