@@ -95,12 +95,12 @@ export function Header() {
             height={32}
             className="w-8 h-8"
           />
-          <span className="text-xl font-bold">AI-BOARD</span>
+          <span className="hidden md:inline text-xl font-bold">AI-BOARD</span>
         </Link>
 
         {/* Center: Project Info (if available) */}
         {projectInfo && (
-          <div className="flex items-center gap-3 ml-8">
+          <div className="hidden md:flex items-center gap-3 ml-8">
             <span className="text-zinc-400">|</span>
             <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
             <a

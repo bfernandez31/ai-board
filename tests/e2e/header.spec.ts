@@ -38,4 +38,32 @@ test.describe('Application Header', () => {
     const specsLink = header.locator('a[href*="github.com"][href*="/specs/specifications"]');
     await expect(specsLink).toBeVisible();
   });
+
+  test('should show only logo on mobile, full header on desktop', async ({ page }) => {
+    // Test mobile viewport (375px width - iPhone SE)
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/projects/1/board');
+
+    const header = page.locator('header');
+
+    // Verify logo is visible
+    await expect(header.locator('img[alt="AI-BOARD Logo"]')).toBeVisible();
+
+    // Verify "AI-BOARD" text is hidden on mobile
+    const aiBoardText = header.getByText('AI-BOARD');
+    await expect(aiBoardText).toBeHidden();
+
+    // Verify project info is hidden on mobile
+    const projectName = header.getByText('[e2e] Test Project');
+    await expect(projectName).toBeHidden();
+
+    // Test desktop viewport (1280px width)
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // Verify "AI-BOARD" text is visible on desktop
+    await expect(aiBoardText).toBeVisible();
+
+    // Verify project info is visible on desktop
+    await expect(projectName).toBeVisible();
+  });
 });
