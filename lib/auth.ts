@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import type { Adapter } from "next-auth/adapters"
 import GitHub from "next-auth/providers/github"
+import { createOrUpdateUser, validateGitHubProfile } from "@/app/lib/auth/user-service"
 
 // Conditional imports to reduce Edge Runtime bundle size
 // Only import Prisma in test mode (database sessions)
@@ -33,9 +34,58 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Skip database persistence in test mode (uses PrismaAdapter)
+      if (process.env.NODE_ENV === 'test') {
+        return true;
+      }
+
+      // Validate provider
+      if (account?.provider !== 'github') {
+        console.error('Unsupported provider', {
+          provider: account?.provider,
+          timestamp: new Date().toISOString(),
+        });
+        return false;
+      }
+
+      // Validate profile
+      if (!validateGitHubProfile(profile)) {
+        return false; // Reject authentication
+      }
+
+      // Create or update user in database
+      const startTime = Date.now();
+      try {
+        await createOrUpdateUser(profile, account);
+        const duration = Date.now() - startTime;
+
+        console.log('User created/updated successfully', {
+          email: profile.email,
+          duration: `${duration}ms`,
+          timestamp: new Date().toISOString(),
+        });
+
+        return true; // Allow authentication
+      } catch (error) {
+        const duration = Date.now() - startTime;
+
+        console.error('Failed to create/update user during sign-in', {
+          email: profile.email,
+          provider: account.provider,
+          duration: `${duration}ms`,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        });
+
+        return false; // Reject authentication
+      }
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.userId = user.id
       }
       return token
     },
@@ -43,7 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // In test mode with database sessions, user comes from database
       // In production with JWT, user.id comes from token
       if (session.user) {
-        session.user.id = (user?.id || token?.id) as string
+        session.user.id = (user?.id || token?.id || token?.userId) as string
       }
       return session
     },

@@ -24,9 +24,9 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create TypeScript type extensions for NextAuth in types/next-auth.d.ts
-- [ ] T002 [P] Verify existing Prisma schema has User and Account models with correct fields in prisma/schema.prisma
-- [ ] T003 [P] Verify database connection pooling configuration in .env (connection_limit=10, pool_timeout=20)
+- [X] T001 Create TypeScript type extensions for NextAuth in types/next-auth.d.ts
+- [X] T002 [P] Verify existing Prisma schema has User and Account models with correct fields in prisma/schema.prisma
+- [X] T003 [P] Verify database connection pooling configuration in .env (connection_limit=10, pool_timeout=20)
 
 ---
 
@@ -36,14 +36,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create user service module with transaction support in app/lib/auth/user-service.ts
-- [ ] T005 [P] Implement GitHubProfile interface and validation function in app/lib/auth/user-service.ts
-- [ ] T006 [P] Implement createOrUpdateUser function with User and Account upsert logic in app/lib/auth/user-service.ts
-- [ ] T007 Create NextAuth configuration module in app/lib/auth/nextauth-config.ts
-- [ ] T008 Implement signIn callback with validation and error handling in app/lib/auth/nextauth-config.ts
-- [ ] T009 [P] Implement jwt callback to add userId to JWT token in app/lib/auth/nextauth-config.ts
-- [ ] T010 [P] Implement session callback to add userId to session in app/lib/auth/nextauth-config.ts
-- [ ] T011 Update NextAuth route handler to use new configuration in app/api/auth/[...nextauth]/route.ts
+- [X] T004 Create user service module with transaction support in app/lib/auth/user-service.ts
+- [X] T005 [P] Implement GitHubProfile interface and validation function in app/lib/auth/user-service.ts
+- [X] T006 [P] Implement createOrUpdateUser function with User and Account upsert logic in app/lib/auth/user-service.ts
+- [X] T007 Create NextAuth configuration module in app/lib/auth/nextauth-config.ts
+- [X] T008 Implement signIn callback with validation and error handling in app/lib/auth/nextauth-config.ts
+- [X] T009 [P] Implement jwt callback to add userId to JWT token in app/lib/auth/nextauth-config.ts
+- [X] T010 [P] Implement session callback to add userId to session in app/lib/auth/nextauth-config.ts
+- [X] T011 Update NextAuth route handler to use new configuration in app/api/auth/[...nextauth]/route.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -59,27 +59,27 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T012 [P] [US1] Create unit tests for validateGitHubProfile function in tests/unit/auth/user-service.test.ts
-- [ ] T013 [P] [US1] Create unit tests for createOrUpdateUser with new user scenario in tests/unit/auth/user-service.test.ts
-- [ ] T014 [P] [US1] Create unit tests for transaction rollback on Account creation failure in tests/unit/auth/user-service.test.ts
+- [X] T012 [P] [US1] Create unit tests for validateGitHubProfile function in tests/unit/auth/user-service.test.ts
+- [X] T013 [P] [US1] Create unit tests for createOrUpdateUser with new user scenario in tests/unit/auth/user-service.test.ts
+- [X] T014 [P] [US1] Create unit tests for transaction rollback on Account creation failure in tests/unit/auth/user-service.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement email validation logic (reject if missing) in validateGitHubProfile function in app/lib/auth/user-service.ts
-- [ ] T016 [US1] Implement User upsert with create branch (first-time user) in createOrUpdateUser function in app/lib/auth/user-service.ts
-- [ ] T017 [US1] Implement Account upsert with create branch (first-time link) in createOrUpdateUser function in app/lib/auth/user-service.ts
-- [ ] T018 [US1] Wrap User and Account operations in Prisma transaction for atomicity in app/lib/auth/user-service.ts
-- [ ] T019 [US1] Add error logging for validation failures in app/lib/auth/nextauth-config.ts signIn callback
-- [ ] T020 [US1] Add error logging for database operation failures in app/lib/auth/nextauth-config.ts signIn callback
-- [ ] T021 [US1] Return false from signIn callback on validation or database errors in app/lib/auth/nextauth-config.ts
+- [X] T015 [US1] Implement email validation logic (reject if missing) in validateGitHubProfile function in app/lib/auth/user-service.ts
+- [X] T016 [US1] Implement User upsert with create branch (first-time user) in createOrUpdateUser function in app/lib/auth/user-service.ts
+- [X] T017 [US1] Implement Account upsert with create branch (first-time link) in createOrUpdateUser function in app/lib/auth/user-service.ts
+- [X] T018 [US1] Wrap User and Account operations in Prisma transaction for atomicity in app/lib/auth/user-service.ts
+- [X] T019 [US1] Add error logging for validation failures in app/lib/auth/nextauth-config.ts signIn callback
+- [X] T020 [US1] Add error logging for database operation failures in app/lib/auth/nextauth-config.ts signIn callback
+- [X] T021 [US1] Return false from signIn callback on validation or database errors in app/lib/auth/nextauth-config.ts
 
 ### E2E Tests for User Story 1
 
-- [ ] T022 [US1] Create E2E test for first-time GitHub sign-in creates User record in tests/e2e/auth/first-time-signin.spec.ts
-- [ ] T023 [US1] Create E2E test for User record has correct email and name after first sign-in in tests/e2e/auth/first-time-signin.spec.ts
-- [ ] T024 [US1] Create E2E test for Account record is created with GitHub provider linkage in tests/e2e/auth/first-time-signin.spec.ts
-- [ ] T025 [US1] Create E2E test for new user can create project without foreign key errors in tests/e2e/auth/first-time-signin.spec.ts
-- [ ] T026 [US1] Create E2E test for authentication fails when GitHub profile missing email in tests/e2e/auth/first-time-signin.spec.ts
+- [X] T022 [US1] Create E2E test for first-time GitHub sign-in creates User record in tests/e2e/auth/first-time-signin.spec.ts
+- [X] T023 [US1] Create E2E test for User record has correct email and name after first sign-in in tests/e2e/auth/first-time-signin.spec.ts
+- [X] T024 [US1] Create E2E test for Account record is created with GitHub provider linkage in tests/e2e/auth/first-time-signin.spec.ts
+- [X] T025 [US1] Create E2E test for new user can create project without foreign key errors in tests/e2e/auth/first-time-signin.spec.ts
+- [X] T026 [US1] Create E2E test for authentication fails when GitHub profile missing email in tests/e2e/auth/first-time-signin.spec.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - new users can sign in and create projects
 
