@@ -57,14 +57,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Create or update user in database
       const startTime = Date.now();
       try {
-        await createOrUpdateUser(profile, account);
+        const { id: userId } = await createOrUpdateUser(profile, account);
         const duration = Date.now() - startTime;
 
         console.log('User created/updated successfully', {
           email: profile.email,
+          userId: userId,
           duration: `${duration}ms`,
           timestamp: new Date().toISOString(),
         });
+
+        // CRITICAL: Override user.id with database ID
+        // This ensures the JWT token gets the correct database user ID,
+        // not the OAuth provider ID which may change
+        user.id = userId;
 
         return true; // Allow authentication
       } catch (error) {
@@ -83,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async jwt({ token, user }) {
-      if (user) {
+      if (user?.id) {
         token.id = user.id
         token.userId = user.id
       }

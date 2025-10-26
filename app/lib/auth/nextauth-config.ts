@@ -1,8 +1,9 @@
-import { NextAuthOptions } from 'next-auth';
+import type { Account, Profile, User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import GithubProvider from 'next-auth/providers/github';
 import { createOrUpdateUser, validateGitHubProfile } from './user-service';
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
@@ -10,7 +11,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: { user: User; account: Account | null; profile?: Profile }) {
       // Validate provider
       if (account?.provider !== 'github') {
         console.error('Unsupported provider', {
@@ -28,14 +29,18 @@ export const authOptions: NextAuthOptions = {
       // Create or update user in database
       const startTime = Date.now();
       try {
-        await createOrUpdateUser(profile, account);
+        const { id: userId } = await createOrUpdateUser(profile, account);
         const duration = Date.now() - startTime;
 
         console.log('User created/updated successfully', {
           email: profile.email,
+          userId: userId,
           duration: `${duration}ms`,
           timestamp: new Date().toISOString(),
         });
+
+        // Store userId in user object for JWT callback
+        user.id = userId;
 
         return true; // Allow authentication
       } catch (error) {
@@ -53,15 +58,16 @@ export const authOptions: NextAuthOptions = {
       }
     },
 
-    async jwt({ token, user }) {
-      // Add userId to JWT on first sign-in
-      if (user) {
+    async jwt({ token, user }: { token: JWT; user?: User }) {
+      // Add userId to JWT on sign-in
+      // The user.id is set in signIn callback after createOrUpdateUser
+      if (user?.id) {
         token.userId = user.id;
       }
       return token;
     },
 
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: JWT }) {
       // Add userId from JWT to session
       if (session.user && token.userId) {
         session.user.id = token.userId as string;

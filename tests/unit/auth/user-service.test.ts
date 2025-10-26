@@ -281,4 +281,174 @@ describe('UserService', () => {
       );
     });
   });
+
+  // User Story 2: Returning User Sign-In Tests
+  describe('createOrUpdateUser - existing user scenario', () => {
+    it('returns the correct database user ID (not GitHub ID) for existing users', async () => {
+      const mockProfile: GitHubProfile = {
+        id: 99999, // GitHub ID changed
+        email: 'alice@github.com',
+        name: 'Alice',
+        login: 'alice',
+        avatar_url: 'https://github.com/alice.png',
+      };
+
+      const mockAccount = {
+        provider: 'github',
+        providerAccountId: '99999',
+        access_token: 'token',
+      } as Account;
+
+      // Database user has DIFFERENT ID than GitHub ID
+      const mockUser = { id: 'database-user-id-12345' };
+
+      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockResolvedValue(mockUser),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-123' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await createOrUpdateUser(mockProfile, mockAccount);
+
+      // Should return the DATABASE user ID, not GitHub ID
+      expect(result.id).toBe('database-user-id-12345');
+      expect(result.id).not.toBe('99999');
+    });
+
+    it('updates existing user on return sign-in', async () => {
+      const mockProfile: GitHubProfile = {
+        id: 12345,
+        email: 'alice@github.com',
+        name: 'Alice Updated',
+        login: 'alice',
+        avatar_url: 'https://github.com/alice-new.png',
+        email_verified: true,
+      };
+
+      const mockAccount = {
+        provider: 'github',
+        providerAccountId: '12345',
+        access_token: 'gho_newtoken456',
+        refresh_token: 'ghr_refresh789',
+        expires_at: 1234567890,
+        token_type: 'bearer',
+        scope: 'read:user user:email',
+      } as Account;
+
+      const mockUser = { id: '12345', email: 'alice@github.com' };
+      let capturedUpdateData: any = null;
+
+      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockImplementation(({ update }) => {
+              capturedUpdateData = update;
+              return Promise.resolve(mockUser);
+            }),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-123', userId: '12345' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await createOrUpdateUser(mockProfile, mockAccount);
+
+      expect(result.id).toBe('12345');
+      expect(capturedUpdateData).toBeDefined();
+      expect(capturedUpdateData.name).toBe('Alice Updated');
+      expect(capturedUpdateData.image).toBe('https://github.com/alice-new.png');
+    });
+
+    it('updates User name and image when changed on GitHub', async () => {
+      const mockProfile: GitHubProfile = {
+        id: 12345,
+        email: 'alice@github.com',
+        name: 'Alice Anderson',
+        login: 'alice',
+        avatar_url: 'https://github.com/alice-professional.png',
+      };
+
+      const mockAccount = {
+        provider: 'github',
+        providerAccountId: '12345',
+        access_token: 'gho_token123',
+      } as Account;
+
+      const mockUser = { id: '12345' };
+      let capturedUpdateData: any = null;
+
+      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockImplementation(({ update }) => {
+              capturedUpdateData = update;
+              return Promise.resolve(mockUser);
+            }),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-123' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await createOrUpdateUser(mockProfile, mockAccount);
+
+      expect(capturedUpdateData.name).toBe('Alice Anderson');
+      expect(capturedUpdateData.image).toBe('https://github.com/alice-professional.png');
+    });
+
+    it('updates Account access token and refresh token', async () => {
+      const mockProfile: GitHubProfile = {
+        id: 12345,
+        email: 'alice@github.com',
+        name: 'Alice',
+        login: 'alice',
+        avatar_url: 'https://github.com/alice.png',
+      };
+
+      const mockAccount = {
+        provider: 'github',
+        providerAccountId: '12345',
+        access_token: 'gho_newtoken999',
+        refresh_token: 'ghr_newrefresh111',
+        expires_at: 9876543210,
+        token_type: 'bearer',
+        scope: 'read:user user:email repo',
+      } as Account;
+
+      const mockUser = { id: '12345' };
+      let capturedAccountUpdate: any = null;
+
+      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockResolvedValue(mockUser),
+          },
+          account: {
+            upsert: vi.fn().mockImplementation(({ update }) => {
+              capturedAccountUpdate = update;
+              return Promise.resolve({ id: 'acc-123', userId: '12345' });
+            }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await createOrUpdateUser(mockProfile, mockAccount);
+
+      expect(capturedAccountUpdate).toBeDefined();
+      expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
+      expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
+      expect(capturedAccountUpdate.expires_at).toBe(9876543210);
+    });
+  });
 });

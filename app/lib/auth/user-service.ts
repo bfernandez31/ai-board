@@ -69,9 +69,9 @@ export async function createOrUpdateUser(
         },
       },
       update: {
-        access_token: account.access_token,
-        refresh_token: account.refresh_token,
-        expires_at: account.expires_at,
+        access_token: account.access_token ?? null,
+        refresh_token: account.refresh_token ?? null,
+        expires_at: account.expires_at ?? null,
       },
       create: {
         id: crypto.randomUUID(),
@@ -79,12 +79,12 @@ export async function createOrUpdateUser(
         type: 'oauth',
         provider: 'github',
         providerAccountId: String(profile.id),
-        access_token: account.access_token,
-        refresh_token: account.refresh_token,
-        expires_at: account.expires_at,
-        token_type: account.token_type,
-        scope: account.scope,
-        id_token: account.id_token,
+        access_token: account.access_token ?? null,
+        refresh_token: account.refresh_token ?? null,
+        expires_at: account.expires_at ?? null,
+        token_type: account.token_type ?? null,
+        scope: account.scope ?? null,
+        id_token: account.id_token ?? null,
       },
     });
 

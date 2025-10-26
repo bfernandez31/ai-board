@@ -224,7 +224,7 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
     });
 
     expect(userProjects).toHaveLength(1);
-    expect(userProjects[0].name).toBe('[e2e] Existing Project');
-    expect(userProjects[0].githubOwner).toBe('projectowner');
+    expect(userProjects[0]?.name).toBe('[e2e] Existing Project');
+    expect(userProjects[0]?.githubOwner).toBe('projectowner');
   });
 });

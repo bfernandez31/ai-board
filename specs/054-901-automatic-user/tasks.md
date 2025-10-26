@@ -93,22 +93,22 @@
 
 ### Tests for User Story 2
 
-- [ ] T027 [P] [US2] Create unit tests for createOrUpdateUser with existing user scenario (update branch) in tests/unit/auth/user-service.test.ts
-- [ ] T028 [P] [US2] Create unit tests for User upsert updates name and image when changed in tests/unit/auth/user-service.test.ts
-- [ ] T029 [P] [US2] Create unit tests for Account upsert updates access token and refresh token in tests/unit/auth/user-service.test.ts
+- [X] T027 [P] [US2] Create unit tests for createOrUpdateUser with existing user scenario (update branch) in tests/unit/auth/user-service.test.ts
+- [X] T028 [P] [US2] Create unit tests for User upsert updates name and image when changed in tests/unit/auth/user-service.test.ts
+- [X] T029 [P] [US2] Create unit tests for Account upsert updates access token and refresh token in tests/unit/auth/user-service.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Implement User upsert with update branch (returning user) in createOrUpdateUser function in app/lib/auth/user-service.ts
-- [ ] T031 [US2] Implement Account upsert with update branch (token refresh) in createOrUpdateUser function in app/lib/auth/user-service.ts
-- [ ] T032 [US2] Ensure User email is NOT updated (email is unique identifier) in update branch in app/lib/auth/user-service.ts
-- [ ] T033 [US2] Add logging for successful user updates with timing metrics in app/lib/auth/nextauth-config.ts signIn callback
+- [X] T030 [US2] Implement User upsert with update branch (returning user) in createOrUpdateUser function in app/lib/auth/user-service.ts
+- [X] T031 [US2] Implement Account upsert with update branch (token refresh) in createOrUpdateUser function in app/lib/auth/user-service.ts
+- [X] T032 [US2] Ensure User email is NOT updated (email is unique identifier) in update branch in app/lib/auth/user-service.ts
+- [X] T033 [US2] Add logging for successful user updates with timing metrics in app/lib/auth/nextauth-config.ts signIn callback
 
 ### E2E Tests for User Story 2
 
-- [ ] T034 [US2] Create E2E test for returning user sign-in updates User record (not duplicated) in tests/e2e/auth/returning-user.spec.ts
-- [ ] T035 [US2] Create E2E test for User record name is updated when changed on GitHub in tests/e2e/auth/returning-user.spec.ts
-- [ ] T036 [US2] Create E2E test for returning user can access existing projects immediately in tests/e2e/auth/returning-user.spec.ts
+- [X] T034 [US2] Create E2E test for returning user sign-in updates User record (not duplicated) in tests/e2e/auth/returning-user.spec.ts
+- [X] T035 [US2] Create E2E test for User record name is updated when changed on GitHub in tests/e2e/auth/returning-user.spec.ts
+- [X] T036 [US2] Create E2E test for returning user can access existing projects immediately in tests/e2e/auth/returning-user.spec.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - new and returning users work correctly
 
@@ -128,10 +128,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T040 [US3] Verify upsert uses email uniqueness constraint for User (where: { email }) in app/lib/auth/user-service.ts
-- [ ] T041 [US3] Verify upsert uses composite key for Account (provider_providerAccountId) in app/lib/auth/user-service.ts
-- [ ] T042 [US3] Add defensive error handling for Prisma P2002 (unique constraint violation) in app/lib/auth/user-service.ts
-- [ ] T043 [US3] Add logging for unexpected unique constraint violations with debug context in app/lib/auth/user-service.ts
+- [X] T040 [US3] Verify upsert uses email uniqueness constraint for User (where: { email }) in app/lib/auth/user-service.ts
+- [X] T041 [US3] Verify upsert uses composite key for Account (provider_providerAccountId) in app/lib/auth/user-service.ts
+- [X] T042 [US3] Add defensive error handling for Prisma P2002 (unique constraint violation) in app/lib/auth/user-service.ts
+- [X] T043 [US3] Add logging for unexpected unique constraint violations with debug context in app/lib/auth/user-service.ts
 
 ### E2E Tests for User Story 3
 
@@ -147,15 +147,15 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T047 [P] Add performance timing logs to signIn callback (target: < 500ms) in app/lib/auth/nextauth-config.ts
-- [ ] T048 [P] Verify NEXTAUTH_SECRET is configured for production in .env.production
-- [ ] T049 [P] Verify GitHub OAuth credentials (GITHUB_ID, GITHUB_SECRET) are configured in .env
-- [ ] T050 Add comprehensive error messages for each failure scenario (missing email, database error, etc.) in app/lib/auth/nextauth-config.ts
-- [ ] T051 [P] Document environment variable configuration in quickstart.md verification section
-- [ ] T052 Run all unit tests and verify passing (bun run test:unit)
-- [ ] T053 Run all E2E tests and verify passing (bun run test:e2e tests/e2e/auth/)
-- [ ] T054 Verify all acceptance scenarios from spec.md are covered by tests
-- [ ] T055 [P] Code cleanup and remove console.log debugging statements (keep console.error for production logging)
+- [X] T047 [P] Add performance timing logs to signIn callback (target: < 500ms) in app/lib/auth/nextauth-config.ts
+- [X] T048 [P] Verify NEXTAUTH_SECRET is configured for production in .env.production
+- [X] T049 [P] Verify GitHub OAuth credentials (GITHUB_ID, GITHUB_SECRET) are configured in .env
+- [X] T050 Add comprehensive error messages for each failure scenario (missing email, database error, etc.) in app/lib/auth/nextauth-config.ts
+- [X] T051 [P] Document environment variable configuration in quickstart.md verification section
+- [X] T052 Run all unit tests and verify passing (bun run test:unit)
+- [X] T053 Run all E2E tests and verify passing (bun run test:e2e tests/e2e/auth/)
+- [X] T054 Verify all acceptance scenarios from spec.md are covered by tests
+- [X] T055 [P] Code cleanup and remove console.log debugging statements (keep console.error for production logging)
 
 ---
 

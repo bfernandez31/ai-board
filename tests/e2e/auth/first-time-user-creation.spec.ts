@@ -41,7 +41,7 @@ test.describe('First-Time User Creation', () => {
     });
   });
 
-  test('user record is created after first sign-in', async ({ page }) => {
+  test('user record is created after first sign-in', async () => {
     // Verify user doesn't exist before sign-in
     const userBefore = await prisma.user.findUnique({
       where: { email: testEmail },
@@ -69,7 +69,7 @@ test.describe('First-Time User Creation', () => {
     expect(userAfter?.name).toBe('Test User');
   });
 
-  test('account record is created with GitHub provider linkage', async ({ page }) => {
+  test('account record is created with GitHub provider linkage', async () => {
     // Create user first
     await prisma.user.create({
       data: {
@@ -106,7 +106,7 @@ test.describe('First-Time User Creation', () => {
     expect(account?.providerAccountId).toBe('12345');
   });
 
-  test('new user can create project without foreign key errors', async ({ page }) => {
+  test('new user can create project without foreign key errors', async () => {
     // Create user
     await prisma.user.create({
       data: {
@@ -134,7 +134,7 @@ test.describe('First-Time User Creation', () => {
     expect(project.userId).toBe(testUserId);
   });
 
-  test('user and account are created atomically', async ({ page }) => {
+  test('user and account are created atomically', async () => {
     // Simulate atomic user + account creation (transaction pattern)
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -165,8 +165,8 @@ test.describe('First-Time User Creation', () => {
     });
 
     expect(user).not.toBeNull();
-    expect(user?.accounts.length).toBe(1);
-    expect(user?.accounts[0].provider).toBe('github');
+    expect(user!.accounts.length).toBe(1);
+    expect(user!.accounts[0]?.provider).toBe('github');
   });
 });
 
@@ -203,7 +203,7 @@ test.describe('Returning User Updates', () => {
     });
   });
 
-  test('user record is updated on subsequent sign-ins', async ({ page }) => {
+  test('user record is updated on subsequent sign-ins', async () => {
     // Simulate user update (upsert pattern)
     await prisma.user.update({
       where: { email: testEmail },
@@ -222,7 +222,7 @@ test.describe('Returning User Updates', () => {
     expect(updatedUser?.image).toBe('https://new-avatar.com/image.png');
   });
 
-  test('returning user can access existing projects', async ({ page }) => {
+  test('returning user can access existing projects', async () => {
     // Create project for existing user
     const project = await prisma.project.create({
       data: {
