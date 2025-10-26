@@ -25,7 +25,7 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
   PLAN: 'AI creates implementation plan and architecture',
   BUILD: 'AI implements the feature through your CI/CD',
   VERIFY: 'Review, test and validate the implementation',
-  SHIP: 'Feature ready for production deployment',
+  SHIP: 'Feature shipped to production, ticket closed',
 };
 
 // Icon configuration per stage (column index)
