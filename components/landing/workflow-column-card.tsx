@@ -20,12 +20,12 @@ export interface WorkflowColumnCardProps {
 
 // Stage descriptions for tooltips
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  INBOX: 'New ideas and feature requests start here',
-  SPECIFY: 'Define requirements and create detailed specifications',
-  PLAN: 'Design architecture and create implementation plan',
-  BUILD: 'Implement the feature with AI assistance',
-  VERIFY: 'Test and validate the implementation',
-  SHIP: 'Deploy to production and close the ticket',
+  INBOX: 'Create tickets manually or import from GitHub',
+  SPECIFY: 'AI generates detailed specifications automatically',
+  PLAN: 'AI creates implementation plan and architecture',
+  BUILD: 'AI implements the feature through your CI/CD',
+  VERIFY: 'AI validates tests and code quality',
+  SHIP: 'Feature ready for production deployment',
 };
 
 // Icon configuration per stage (column index)
