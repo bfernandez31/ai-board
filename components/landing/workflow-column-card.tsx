@@ -128,10 +128,19 @@ export function WorkflowColumnCard({
             <div className="flex items-center justify-center gap-2">
               {icons.map((iconConfig, index) => {
                 const IconComponent = iconConfig.icon;
+                // Color based on icon type
+                const iconColor =
+                  IconComponent === BotOff
+                    ? 'text-[#EF4444]' // Red for No AI
+                    : IconComponent === Eye
+                      ? 'text-[#3B82F6]' // Blue for Review
+                      : IconComponent === BotMessageSquare
+                        ? 'text-[#8B5CF6]' // Purple for Chat
+                        : 'text-[#10B981]'; // Green for AI automation
                 return (
                   <IconComponent
                     key={index}
-                    className="w-4 h-4 text-[#8B5CF6]"
+                    className={`w-4 h-4 ${iconColor}`}
                     strokeWidth={2}
                     aria-label={iconConfig.label}
                   />
