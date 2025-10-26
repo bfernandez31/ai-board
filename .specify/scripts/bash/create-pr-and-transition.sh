@@ -27,10 +27,20 @@ echo "  Ticket ID: $TICKET_ID"
 echo "  Project ID: $PROJECT_ID"
 echo "  Branch: $BRANCH"
 
+# Verify branch exists on remote before creating PR
+echo ""
+echo "🔍 Verifying branch exists on remote..."
+if ! git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
+  echo "❌ Error: Branch '${BRANCH}' does not exist on remote"
+  echo "   This should not happen - branch should have been pushed in previous step"
+  exit 1
+fi
+echo "✅ Branch exists on remote: ${BRANCH}"
+
 # Create Pull Request (branch is already pushed by previous workflow step)
 echo ""
 echo "🔀 Creating Pull Request..."
-PR_URL=$(gh pr create \
+PR_CREATE_OUTPUT=$(gh pr create \
   --title "feat(ticket-${TICKET_ID}): automated implementation" \
   --body "## 🤖 Automated Implementation
 
@@ -53,11 +63,36 @@ Implementation completed by Claude Code based on the feature specification.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
   --base main \
-  --head "${BRANCH}" 2>&1) || {
-  echo "⚠️ PR creation failed, checking if PR already exists..."
+  --head "${BRANCH}" 2>&1)
+
+PR_CREATE_EXIT=$?
+
+if [ $PR_CREATE_EXIT -eq 0 ]; then
+  PR_URL="$PR_CREATE_OUTPUT"
+  echo "✅ Pull Request created: ${PR_URL}"
+else
+  echo "⚠️ PR creation failed (exit code: $PR_CREATE_EXIT)"
+  echo "   Output: ${PR_CREATE_OUTPUT}"
+  echo "   Checking if PR already exists..."
+
   # Try to get existing PR URL
-  PR_URL=$(gh pr view "${BRANCH}" --json url -q '.url' 2>/dev/null || echo "")
-}
+  PR_URL=$(gh pr view "${BRANCH}" --json url -q '.url' 2>&1)
+  PR_VIEW_EXIT=$?
+
+  if [ $PR_VIEW_EXIT -ne 0 ]; then
+    echo "❌ Error: Could not find existing PR either"
+    echo "   gh pr view output: ${PR_URL}"
+    echo ""
+    echo "Debug information:"
+    echo "  Current branch: $(git rev-parse --abbrev-ref HEAD)"
+    echo "  Target branch: ${BRANCH}"
+    echo "  Remote branches: $(git ls-remote --heads origin | grep -F "${BRANCH}" || echo "not found")"
+    echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes" || echo "no")"
+    exit 1
+  fi
+
+  echo "✅ Found existing PR: ${PR_URL}"
+fi
 
 if [ -n "$PR_URL" ]; then
   PR_NUMBER=$(gh pr view "${BRANCH}" --json number -q '.number' 2>/dev/null || echo "")
