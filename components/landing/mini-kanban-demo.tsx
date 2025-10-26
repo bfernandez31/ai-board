@@ -39,9 +39,7 @@ export function MiniKanbanDemo({
 
   const {
     tickets,
-    isPaused,
     prefersReducedMotion,
-    togglePause,
     setVisible,
   } = useAnimationState(DEMO_TICKETS, autoStart ? animationInterval : 0);
 
@@ -69,9 +67,6 @@ export function MiniKanbanDemo({
     <div
       ref={containerRef}
       className={`mini-kanban-demo ${className}`}
-      onMouseEnter={() => !isPaused && togglePause()}
-      onMouseLeave={() => isPaused && togglePause()}
-      data-paused={isPaused}
       data-visible={isVisible}
       data-reduced-motion={prefersReducedMotion}
     >
@@ -86,17 +81,6 @@ export function MiniKanbanDemo({
           />
         ))}
       </div>
-
-      {/* Accessibility: Visual feedback for paused state */}
-      {isPaused && (
-        <div
-          className="mt-2 text-center text-xs text-gray-500 font-medium"
-          role="status"
-          aria-live="polite"
-        >
-          Animation paused
-        </div>
-      )}
     </div>
   );
 }
