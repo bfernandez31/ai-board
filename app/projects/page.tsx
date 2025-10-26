@@ -36,16 +36,18 @@ export default async function ProjectsPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-[#cdd6f4]">Projects</h1>
-        <div className="flex gap-4">
-          <Button variant="outline" disabled>
-            <Upload className="mr-2 h-4 w-4" />
-            Import Project
-          </Button>
-          <Button disabled>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Project
-          </Button>
-        </div>
+        {projects.length > 0 && (
+          <div className="flex gap-4">
+            <Button variant="outline" disabled>
+              <Upload className="mr-2 h-4 w-4" />
+              Import Project
+            </Button>
+            <Button disabled>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Project
+            </Button>
+          </div>
+        )}
       </div>
 
       <ProjectsContainer projects={projects} />

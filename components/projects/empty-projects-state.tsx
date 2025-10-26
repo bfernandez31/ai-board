@@ -1,12 +1,38 @@
+import { FolderOpen, Plus, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@/components/ui/empty';
+
 export function EmptyProjectsState() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-      <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-        No projects available
-      </h2>
-      <p className="text-gray-500">
-        Get started by clicking the &ldquo;Create Project&rdquo; button above
-      </p>
-    </div>
+    <Empty className="border-2">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FolderOpen className="size-6" />
+        </EmptyMedia>
+        <EmptyTitle>No projects yet</EmptyTitle>
+        <EmptyDescription>
+          Get started by creating a new project or importing an existing one
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <div className="flex gap-3">
+          <Button disabled variant="outline">
+            <Upload className="mr-2 h-4 w-4" />
+            Import Project
+          </Button>
+          <Button disabled>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Project
+          </Button>
+        </div>
+      </EmptyContent>
+    </Empty>
   );
 }
