@@ -32,4 +32,54 @@ This feature is being implemented via quick-impl workflow, bypassing formal spec
 
 ## Implementation
 
-Implementation will be done directly by Claude Code based on the description above.
+### Summary
+
+Successfully implemented shadcn Empty component for the Projects page empty state.
+
+### Changes Made
+
+1. **Installed shadcn Empty component** (`components/ui/empty.tsx`)
+   - Composable component with EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent
+   - Follows shadcn's new-york style with proper spacing and typography
+
+2. **Updated EmptyProjectsState component** (`components/projects/empty-projects-state.tsx`)
+   - Replaced custom empty state with shadcn Empty component
+   - Added FolderOpen icon from lucide-react
+   - Moved Create/Import buttons into empty state content
+   - Improved messaging: "No projects yet" with helpful description
+
+3. **Updated Projects page** (`app/projects/page.tsx`)
+   - Conditionally render header buttons only when projects exist
+   - When no projects: buttons appear in empty state instead of header
+   - Maintains consistent button styling and disabled state
+
+4. **Added E2E test** (`tests/e2e/projects-list.spec.ts`)
+   - Test validates empty state displays correctly
+   - Verifies buttons are in empty content (not header)
+   - Ensures proper cleanup and restoration of test fixtures
+
+### Validation
+
+- ✅ Type check passed (`bun run type-check`)
+- ✅ Linter passed (`bun run lint`)
+- ✅ E2E test for empty state passes
+- ✅ All existing projects list tests pass (except 1 pre-existing failure)
+
+### Files Modified
+
+- `app/projects/page.tsx` - Conditional button rendering
+- `components/projects/empty-projects-state.tsx` - Empty component integration
+- `components/ui/empty.tsx` - New shadcn component
+- `tests/e2e/projects-list.spec.ts` - Added empty state test
+- `specs/058-906-empty-project/spec.md` - This file
+
+### Visual Changes
+
+**Before:**
+- Empty state: Plain centered text with "No projects available"
+- Buttons always visible in header
+
+**After:**
+- Empty state: Styled Empty component with icon, title, description, and action buttons
+- Buttons in empty state when no projects, in header when projects exist
+- Consistent with shadcn design system (border-dashed, proper spacing)
