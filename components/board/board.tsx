@@ -122,8 +122,8 @@ function BoardContent({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // Long-press duration
-        tolerance: 8, // Increased movement tolerance during delay for mobile
+        delay: 250, // Long-press duration for deliberate drag
+        tolerance: 20, // Allow vertical scroll gestures without triggering drag (T905)
       },
     })
   );
