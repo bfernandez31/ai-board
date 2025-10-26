@@ -211,20 +211,6 @@ jobs:
             -d '{"status": "COMPLETED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
-      - name: Create PR and Move to VERIFY
-        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
-        env:
-          TICKET_ID: ${{ inputs.ticket_id }}
-          PROJECT_ID: ${{ inputs.project_id }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          .specify/scripts/bash/create-pr-and-transition.sh \
-            "${TICKET_ID}" \
-            "${PROJECT_ID}" \
-            "${FEATURE_BRANCH}" \
-            "${APP_URL}" \
-            "${WORKFLOW_API_TOKEN}"
-
       - name: Update Job Status - Skipped (E2E)
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION == 'true' }}
         run: |
@@ -251,6 +237,20 @@ jobs:
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d '{"status": "CANCELLED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
+
+      - name: Create PR and Move to VERIFY
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .specify/scripts/bash/create-pr-and-transition.sh \
+            "${TICKET_ID}" \
+            "${PROJECT_ID}" \
+            "${FEATURE_BRANCH}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
 
       - name: Report Success (Skipped)
         if: ${{ success() && env.SKIP_EXECUTION == 'true' }}
