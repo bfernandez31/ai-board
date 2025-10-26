@@ -2,6 +2,7 @@
  * Demo Ticket Card Component
  * Displays individual ticket card in the mini-Kanban demo
  * Matches actual board ticket card dark theme styling
+ * Shows workflow icons indicating user actions required
  */
 
 'use client';
@@ -9,6 +10,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import type { DemoTicket } from '@/lib/utils/animation-helpers';
 
 export interface DemoTicketCardProps {
@@ -16,6 +18,31 @@ export interface DemoTicketCardProps {
   isAnimating?: boolean;
   prefersReducedMotion?: boolean;
 }
+
+// Icon configuration per stage (column index)
+const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> = {
+  0: [{ icon: BotOff, label: 'No AI on this step' }], // INBOX
+  1: [
+    { icon: Eye, label: 'Review required' },
+    { icon: BotMessageSquare, label: 'Chat assistance available' },
+    { icon: Bot, label: 'AI automation' },
+  ], // SPECIFY
+  2: [
+    { icon: Eye, label: 'Review required' },
+    { icon: BotMessageSquare, label: 'Chat assistance available' },
+    { icon: Bot, label: 'AI automation' },
+  ], // PLAN
+  3: [
+    { icon: BotMessageSquare, label: 'Chat assistance available' },
+    { icon: Bot, label: 'AI automation' },
+  ], // BUILD
+  4: [
+    { icon: Eye, label: 'Review required' },
+    { icon: BotMessageSquare, label: 'Chat assistance available' },
+    { icon: Bot, label: 'AI automation' },
+  ], // VERIFY
+  5: [], // SHIP - no icons
+};
 
 /**
  * Demo ticket card matching actual board dark theme styling
@@ -29,6 +56,8 @@ export function DemoTicketCard({
   isAnimating = false,
   prefersReducedMotion = false,
 }: DemoTicketCardProps) {
+  const icons = STAGE_ICONS[ticket.column] || [];
+
   return (
     <Card
       className={`
@@ -62,9 +91,26 @@ export function DemoTicketCard({
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-all overflow-hidden">
+      <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-all overflow-hidden mb-3">
         {ticket.title}
       </h3>
+
+      {/* Workflow Icons */}
+      {icons.length > 0 && (
+        <div className="flex items-center gap-2 pt-2 border-t border-[#313244]">
+          {icons.map((iconConfig, index) => {
+            const IconComponent = iconConfig.icon;
+            return (
+              <IconComponent
+                key={index}
+                className="w-4 h-4 text-[#8B5CF6]"
+                strokeWidth={2}
+                aria-label={iconConfig.label}
+              />
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }

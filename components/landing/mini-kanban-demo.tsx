@@ -1,11 +1,13 @@
 /**
  * Mini Kanban Demo Component
  * Animated demo of 6-stage workflow for landing page
+ * Includes icon legend explaining user interaction points
  */
 
 'use client';
 
 import React, { useRef, useEffect } from 'react';
+import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { WorkflowColumnCard } from './workflow-column-card';
 import { useAnimationState } from '@/lib/hooks/use-animation-state';
 import { useIntersectionObserver } from '@/lib/hooks/use-intersection-observer';
@@ -71,7 +73,7 @@ export function MiniKanbanDemo({
       data-reduced-motion={prefersReducedMotion}
     >
       {/* Mobile/Tablet: 2-3 columns, Desktop: 6 columns */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8">
         {WORKFLOW_STAGES.map((stage: WorkflowStage) => (
           <WorkflowColumnCard
             key={stage.index}
@@ -80,6 +82,26 @@ export function MiniKanbanDemo({
             prefersReducedMotion={prefersReducedMotion}
           />
         ))}
+      </div>
+
+      {/* Icon Legend */}
+      <div className="flex flex-wrap items-center justify-center gap-6 px-4 py-6 bg-[#181825]/50 border border-[#313244] rounded-lg">
+        <div className="flex items-center gap-2">
+          <BotOff className="w-5 h-5 text-[#8B5CF6]" strokeWidth={2} />
+          <span className="text-sm text-[#cdd6f4] font-medium">No AI</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Eye className="w-5 h-5 text-[#8B5CF6]" strokeWidth={2} />
+          <span className="text-sm text-[#cdd6f4] font-medium">Review required</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <BotMessageSquare className="w-5 h-5 text-[#8B5CF6]" strokeWidth={2} />
+          <span className="text-sm text-[#cdd6f4] font-medium">Chat assistance</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-[#8B5CF6]" strokeWidth={2} />
+          <span className="text-sm text-[#cdd6f4] font-medium">AI automation</span>
+        </div>
       </div>
     </div>
   );
