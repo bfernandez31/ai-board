@@ -226,7 +226,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit != 'true' }}
-        run: npx playwright install --with-deps
+        run: npx playwright install chromium --with-deps
 
       - name: Install Playwright OS Dependencies
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit == 'true' }}
