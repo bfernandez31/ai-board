@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 
 describe('useReducedMotion', () => {
@@ -88,10 +88,12 @@ describe('useReducedMotion', () => {
     const { result } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(false);
 
-    // Simulate media query change
-    if (changeListener) {
-      changeListener({ matches: true } as MediaQueryListEvent);
-    }
+    // Simulate media query change (wrap state update in act)
+    act(() => {
+      if (changeListener) {
+        changeListener({ matches: true } as MediaQueryListEvent);
+      }
+    });
 
     expect(result.current).toBe(true);
   });
@@ -111,10 +113,12 @@ describe('useReducedMotion', () => {
     const { result } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(true);
 
-    // Simulate media query change
-    if (changeListener) {
-      changeListener({ matches: false } as MediaQueryListEvent);
-    }
+    // Simulate media query change (wrap state update in act)
+    act(() => {
+      if (changeListener) {
+        changeListener({ matches: false } as MediaQueryListEvent);
+      }
+    });
 
     expect(result.current).toBe(false);
   });
