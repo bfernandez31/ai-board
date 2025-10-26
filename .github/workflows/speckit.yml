@@ -73,6 +73,7 @@ jobs:
 
     permissions:
       contents: write
+      pull-requests: write
 
     # PostgreSQL service container (only for implement command)
     # Health checks ensure database is ready before test execution
