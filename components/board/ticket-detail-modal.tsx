@@ -677,7 +677,9 @@ export function TicketDetailModal({
         }}
         className="
           flex flex-col h-screen w-screen p-4
+          !top-0 !translate-y-0
           sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
+          sm:!top-[50%] sm:!-translate-y-1/2
           bg-[#181825] border-[#313244] text-[#cdd6f4]
         "
       >
