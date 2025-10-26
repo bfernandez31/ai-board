@@ -18,7 +18,8 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",
@@ -72,6 +73,8 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.0",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "prisma": "^6.17.1",
