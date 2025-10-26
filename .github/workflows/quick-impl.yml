@@ -20,6 +20,12 @@ on:
         type: string
         default: ''
 
+      attachments:
+        description: 'JSON array of ticket attachments (images for Claude context)'
+        required: false
+        type: string
+        default: '[]'
+
       job_id:
         description: 'Job ID for status tracking (optional)'
         required: false
@@ -103,6 +109,20 @@ jobs:
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
 
+      - name: Prepare Images for Claude
+        if: ${{ env.SKIP_EXECUTION != 'true' && inputs.attachments != '[]' }}
+        run: |
+          set -e
+
+          # Call reusable script to download and prepare images
+          IMAGE_PATHS=$(.specify/scripts/bash/prepare-images.sh \
+            "${{ inputs.ticket_id }}" \
+            '${{ inputs.attachments }}')
+
+          # Store image paths for Claude execution step
+          echo "IMAGE_PATHS=$IMAGE_PATHS" >> "$GITHUB_ENV"
+          echo "IMAGE_COUNT=$(echo $IMAGE_PATHS | wc -w | tr -d ' ')" >> "$GITHUB_ENV"
+
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
@@ -113,7 +133,14 @@ jobs:
           ticket_description="${{ inputs.ticketDescription }}"
 
           printf -v prompt '/quick-impl #%s %s\n%s\n' "$ticket_id" "$ticket_title" "$ticket_description"
-          claude --dangerously-skip-permissions "$prompt"
+
+          # Add image paths if available
+          if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+            echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+            claude --dangerously-skip-permissions "$prompt" $IMAGE_PATHS
+          else
+            claude --dangerously-skip-permissions "$prompt"
+          fi
 
       - name: Capture Branch Name
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -158,6 +185,22 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update ticket branch field"
 
           echo "✅ Updated ticket branch to: ${FEATURE_BRANCH}"
+
+      - name: Cleanup Temporary Images
+        if: ${{ always() && env.SKIP_EXECUTION != 'true' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        run: |
+          set -e
+
+          echo "🧹 Cleaning up temporary image files..."
+
+          # Remove temporary ticket assets directory
+          TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
+          if [ -d "$TICKET_ASSETS_DIR" ]; then
+            rm -rf "$TICKET_ASSETS_DIR"
+            echo "  ✅ Removed temporary directory: $TICKET_ASSETS_DIR"
+          fi
+
+          echo "✅ Cleanup complete (images remain in Cloudinary)"
 
       - name: Create PR and Move to VERIFY
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
