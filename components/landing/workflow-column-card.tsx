@@ -24,7 +24,7 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
   SPECIFY: 'AI generates detailed specifications automatically',
   PLAN: 'AI creates implementation plan and architecture',
   BUILD: 'AI implements the feature through your CI/CD',
-  VERIFY: 'AI validates tests and code quality',
+  VERIFY: 'Review, test and validate the implementation',
   SHIP: 'Feature ready for production deployment',
 };
 
