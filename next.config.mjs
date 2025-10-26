@@ -3,6 +3,7 @@ const nextConfig = {
   // Disable all caching for debugging
   experimental: {
     webpackBuildWorker: false,
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
