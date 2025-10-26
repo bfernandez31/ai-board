@@ -2,11 +2,13 @@
  * Workflow Column Card Component
  * Displays one of the 6 workflow stages (INBOX → SHIP)
  * Beautiful hover effects with elevation and purple tooltips
+ * Shows workflow icons at bottom indicating user actions required
  */
 
 'use client';
 
 import React, { useState } from 'react';
+import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { DemoTicketCard } from './demo-ticket-card';
 import type { WorkflowStage, DemoTicket } from '@/lib/utils/animation-helpers';
 
@@ -26,11 +28,37 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
   SHIP: 'Deploy to production and close the ticket',
 };
 
+// Icon configuration per stage (column index)
+const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> = {
+  0: [{ icon: BotOff, label: 'No AI' }], // INBOX
+  1: [
+    { icon: Eye, label: 'Review' },
+    { icon: BotMessageSquare, label: 'Chat' },
+    { icon: Bot, label: 'AI' },
+  ], // SPECIFY
+  2: [
+    { icon: Eye, label: 'Review' },
+    { icon: BotMessageSquare, label: 'Chat' },
+    { icon: Bot, label: 'AI' },
+  ], // PLAN
+  3: [
+    { icon: BotMessageSquare, label: 'Chat' },
+    { icon: Bot, label: 'AI' },
+  ], // BUILD
+  4: [
+    { icon: Eye, label: 'Review' },
+    { icon: BotMessageSquare, label: 'Chat' },
+    { icon: Bot, label: 'AI' },
+  ], // VERIFY
+  5: [], // SHIP - no icons
+};
+
 /**
  * Workflow column with beautiful hover effects
  * - Elevation: Column lifts up slightly on hover
  * - Overlay: Other columns dim with dark overlay
  * - Tooltip: Purple-themed tooltip with stage description
+ * - Icons: Bottom icons showing workflow interactions
  *
  * @param stage - Column configuration (name, color, etc.)
  * @param tickets - Tickets currently in this column
@@ -42,6 +70,7 @@ export function WorkflowColumnCard({
   prefersReducedMotion = false,
 }: WorkflowColumnCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const icons = STAGE_ICONS[stage.index] || [];
 
   return (
     <div className="relative group">
@@ -83,7 +112,7 @@ export function WorkflowColumnCard({
         </div>
 
         {/* Tickets */}
-        <div className="flex-1 space-y-3 px-4 pb-5 pt-3">
+        <div className="flex-1 space-y-3 px-4 pb-3 pt-3">
           {tickets.map((ticket) => (
             <DemoTicketCard
               key={ticket.id}
@@ -92,6 +121,25 @@ export function WorkflowColumnCard({
             />
           ))}
         </div>
+
+        {/* Workflow Icons Footer */}
+        {icons.length > 0 && (
+          <div className="px-4 pb-3 pt-2 border-t border-[#313244]/50">
+            <div className="flex items-center justify-center gap-2">
+              {icons.map((iconConfig, index) => {
+                const IconComponent = iconConfig.icon;
+                return (
+                  <IconComponent
+                    key={index}
+                    className="w-4 h-4 text-[#8B5CF6]"
+                    strokeWidth={2}
+                    aria-label={iconConfig.label}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Beautiful Purple Tooltip */}
