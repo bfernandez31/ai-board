@@ -280,6 +280,11 @@ export async function handleTicketTransition(
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
           };
+
+          // Add attachments for image context (if present)
+          if (ticket.attachments) {
+            workflowInputs.attachments = JSON.stringify(ticket.attachments);
+          }
         } else {
           // Normal mode: Use speckit.yml input schema
           workflowInputs = {
