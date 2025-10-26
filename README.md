@@ -6,7 +6,7 @@ Visual kanban board for AI-driven development using Spec-kit + Claude Code.
 
 - **Frontend**: Next.js 15 (App Router), React 18, TypeScript strict mode
 - **Styling**: TailwindCSS 3.x
-- **Testing**: Playwright with MCP support
+- **Testing**: Hybrid strategy with Vitest (unit tests) and Playwright (integration/E2E tests)
 - **Database**: PostgreSQL via Prisma ORM (future)
 - **AI**: Anthropic Claude API Sonnet 4.5 (future)
 - **Deployment**: Vercel
@@ -67,7 +67,10 @@ ai-board/
 │   └── globals.css        # Global styles
 ├── components/            # Reusable React components (feature-based)
 ├── lib/                   # Shared utilities and helper functions
-├── tests/                 # Playwright E2E tests
+├── tests/                 # Test files
+│   ├── unit/             # Vitest unit tests (~1ms per test)
+│   ├── integration/      # Playwright integration tests
+│   └── e2e/              # Playwright E2E tests
 ├── prisma/                # Prisma schema and migrations (future)
 ├── public/                # Static assets
 └── .specify/              # Spec-kit configuration and templates
@@ -79,7 +82,7 @@ This project follows the [AI Board Constitution](.specify/memory/constitution.md
 
 1. **TypeScript-First Development** - Strict mode, explicit types
 2. **Component-Driven Architecture** - shadcn/ui, feature-based folders
-3. **Test-Driven Development** - Playwright E2E tests (non-negotiable)
+3. **Test-Driven Development** - Hybrid testing strategy: Vitest for unit tests (~1ms), Playwright for integration/E2E tests (non-negotiable)
 4. **Security-First Design** - Input validation, secure queries, secrets management
 5. **Database Integrity** - Prisma migrations, transactions, soft deletes
 
@@ -103,7 +106,25 @@ This project uses [Spec-kit](https://github.com/anthropics/spec-kit) for specifi
 
 ## Testing
 
-### E2E Tests
+This project uses a **hybrid testing strategy** for optimal speed and coverage:
+
+- **Vitest**: Unit tests for pure utility functions (~1ms per test, instant feedback)
+- **Playwright**: Integration and E2E tests for component behavior and user flows (~500ms-2s per test)
+
+### Unit Tests (Vitest)
+
+```bash
+# Run unit tests
+bun run test:unit
+
+# Run unit tests in watch mode
+bun run test:unit:watch
+
+# Run unit tests with UI
+bun run test:unit:ui
+```
+
+### Integration & E2E Tests (Playwright)
 
 ```bash
 # Run all tests (unit + E2E)
@@ -118,6 +139,11 @@ bun run test:e2e:ui
 # Run tests in headed mode (see browser)
 bun run test:e2e:headed
 ```
+
+### Test Selection Guidelines
+
+- **Use Vitest when**: Testing pure functions, no DOM/browser needed, isolated business logic
+- **Use Playwright when**: Testing component rendering, user interactions, API integration, critical user flows
 
 ## Environment Variables
 
@@ -160,7 +186,7 @@ Private repository - All rights reserved.
 
 ✅ Next.js 15 with TypeScript strict mode
 ✅ TailwindCSS configured
-✅ Playwright E2E testing ready
+✅ Hybrid testing strategy (Vitest + Playwright)
 ✅ ESLint and Prettier configured
 ✅ Constitutional compliance verified
 ✅ Project structure established
