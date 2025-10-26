@@ -6,6 +6,7 @@ This domain covers user authentication and authorization. The system uses NextAu
 
 **Current Capabilities**:
 - NextAuth.js-based authentication system
+- GitHub OAuth provider with automatic User/Account creation
 - Mock authentication bypass for development and E2E tests
 - User ownership of projects
 - Session-based authentication
@@ -653,3 +654,339 @@ The sign-in page provides a user-facing authentication interface:
 - Zero confusion about disabled providers (clear messaging)
 - Error messages actionable in 100% of failure cases
 - No user-reported issues with callback URL handling
+
+---
+
+## Automatic User Creation for GitHub OAuth (Feature 901)
+
+**Purpose**: When users authenticate via GitHub OAuth in production, their User and Account records must be automatically created in the database to satisfy the `Project.userId` foreign key constraint and enable immediate project creation.
+
+### What It Does
+
+The system automatically persists GitHub OAuth user data to the database during authentication:
+
+**Automatic User Record Creation**:
+- First-time GitHub sign-in creates User record with GitHub email and name
+- User record includes unique identifier, email, display name, and email verification timestamp
+- Account record created linking User to GitHub OAuth provider details
+- Upsert pattern ensures both new and returning users work seamlessly
+
+**Account Linking**:
+- Account model stores OAuth provider linkage (GitHub)
+- Includes provider-specific user ID, access tokens, refresh tokens, token expiration
+- Foreign key relationship to User ensures referential integrity
+- Email used as stable identifier for user matching
+
+**Database Persistence with JWT Strategy**:
+- Uses NextAuth.js callbacks (not Prisma adapter) due to Vercel serverless limitations
+- JWT strategy maintained while adding database persistence via callbacks
+- Database writes occur during signIn, jwt, and session callbacks
+- User and Account records created/updated on each successful authentication
+
+**Error Handling**:
+- Authentication fails gracefully if User or Account record creation fails
+- Prevents orphaned sessions without corresponding database records
+- All database operation failures logged for debugging and monitoring
+- User sees helpful error message without technical details
+
+### Requirements
+
+**Functional Requirements**:
+- System MUST create User record on first-time GitHub OAuth authentication
+- System MUST create Account record linking User to GitHub provider details
+- System MUST use email address as primary identifier for matching existing users
+- System MUST update existing User records with current GitHub info on returning sign-in
+- System MUST prevent duplicate User records when same GitHub account authenticates multiple times
+- System MUST fail authentication gracefully if database operations fail
+- System MUST handle concurrent authentication attempts without duplicate records
+- System MUST allow immediate project creation after successful authentication
+- System MUST log all authentication failures related to database operations
+- System MUST maintain referential integrity between User, Account, and Project records
+
+**Key Entities**:
+
+**User Entity**:
+- id: Unique identifier (string, auto-generated)
+- email: GitHub email address (unique, required)
+- name: Display name from GitHub (string, nullable)
+- emailVerified: Email verification timestamp (DateTime, nullable)
+- createdAt: Account creation timestamp (DateTime)
+- updatedAt: Last modification timestamp (DateTime)
+
+**Account Entity**:
+- userId: Foreign key to User.id (string, required)
+- provider: OAuth provider name ("github", string, required)
+- providerAccountId: GitHub user ID (string, required)
+- access_token: GitHub access token (string, nullable, encrypted)
+- refresh_token: GitHub refresh token (string, nullable, encrypted)
+- expires_at: Token expiration timestamp (number, nullable)
+- token_type: Token type (string, nullable)
+- scope: OAuth scopes granted (string, nullable)
+
+**User-Account Relationship**:
+- One User can have multiple Accounts (future multi-provider support)
+- Account must reference valid User (foreign key constraint)
+- Composite unique constraint on (provider, providerAccountId)
+
+### User Workflows
+
+**First-Time User Sign-In**:
+1. User clicks "Sign in with GitHub" on /auth/signin
+2. Redirected to GitHub OAuth authorization page
+3. User authorizes AI-BOARD application
+4. GitHub redirects back with authorization code
+5. NextAuth.js exchanges code for access token
+6. **signIn callback**: System creates User record with GitHub email/name
+7. **signIn callback**: System creates Account record with provider details
+8. JWT and session created with user ID
+9. User redirected to projects dashboard
+10. User can immediately create projects (userId foreign key satisfied)
+
+**Returning User Sign-In**:
+1. Existing user clicks "Sign in with GitHub"
+2. GitHub OAuth flow completes
+3. **signIn callback**: System finds existing User by email
+4. **signIn callback**: System updates User record with current GitHub info
+5. **signIn callback**: System updates/creates Account record
+6. Session created with existing user ID
+7. User redirected to dashboard
+8. User accesses their existing projects
+
+**Concurrent Authentication**:
+1. Multiple users (or same user, multiple tabs) trigger OAuth flows simultaneously
+2. Each flow completes independently
+3. Database upsert operations handle race conditions gracefully
+4. All authentication attempts succeed
+5. No duplicate User records created
+6. All users can create projects afterward
+
+**Authentication Failure Scenario**:
+1. User completes GitHub OAuth successfully
+2. Database connection fails during User record creation
+3. **signIn callback** returns false to reject authentication
+4. NextAuth.js prevents session creation
+5. User sees error: "Unable to complete sign-in. Please try again later."
+6. Failure logged with timestamp and error details
+7. User can retry authentication
+
+### Business Rules
+
+**User Matching**:
+- Email is the stable identifier for matching existing users
+- GitHub user ID stored in Account for provider-specific identification
+- Email changes on GitHub side update local User record
+- No duplicate users allowed for same email address
+
+**Data Synchronization**:
+- User name and email updated from GitHub on every sign-in
+- Account tokens refreshed on every successful authentication
+- Email verification timestamp set on first creation
+- User data stays synchronized with GitHub profile
+
+**Error Handling**:
+- Database failures prevent session creation (fail closed)
+- Authentication rejected if User or Account cannot be created
+- Clear separation: OAuth success ≠ authentication success
+- All database errors logged for monitoring
+
+**Concurrency**:
+- Upsert pattern handles race conditions
+- Database unique constraints prevent duplicates
+- First write wins for concurrent User creation
+- Subsequent writes update existing record
+
+**Security**:
+- Access tokens encrypted at rest
+- Refresh tokens encrypted at rest
+- Token expiration tracked and validated
+- No sensitive data logged in error messages
+
+### Technical Details
+
+**Implementation Location**:
+- NextAuth configuration: `/app/api/auth/[...nextauth]/route.ts`
+- Callbacks: signIn, jwt, session
+- Database operations: Prisma Client (upsert pattern)
+- Error handling: try-catch with logging
+
+**NextAuth Callbacks**:
+
+**signIn Callback**:
+```typescript
+async signIn({ user, account, profile }) {
+  // Create/update User record from GitHub profile
+  await prisma.user.upsert({
+    where: { email: user.email },
+    update: { name: user.name, emailVerified: new Date() },
+    create: { email: user.email, name: user.name, emailVerified: new Date() }
+  });
+
+  // Create/update Account record with OAuth details
+  await prisma.account.upsert({
+    where: { provider_providerAccountId: { provider: 'github', providerAccountId: account.providerAccountId } },
+    update: { access_token: account.access_token, ... },
+    create: { userId: user.id, provider: 'github', ... }
+  });
+
+  return true; // Allow sign-in
+}
+```
+
+**jwt Callback**:
+```typescript
+async jwt({ token, user, account }) {
+  // Add user ID to JWT on initial sign-in
+  if (user) {
+    token.userId = user.id;
+  }
+  return token;
+}
+```
+
+**session Callback**:
+```typescript
+async session({ session, token }) {
+  // Add user ID to session object
+  session.user.id = token.userId;
+  return session;
+}
+```
+
+**Database Schema Updates**:
+- User model: Already exists, no changes needed
+- Account model: New model for OAuth provider linkage
+- Migration: Create Account table with foreign key to User
+
+**Error Handling Pattern**:
+```typescript
+try {
+  await prisma.user.upsert(...);
+  await prisma.account.upsert(...);
+  return true; // Success
+} catch (error) {
+  console.error('[NextAuth] Database error during sign-in:', error);
+  return false; // Reject authentication
+}
+```
+
+### Testing Requirements
+
+**Unit Tests**:
+- User upsert creates new user on first sign-in
+- User upsert updates existing user on returning sign-in
+- Account upsert creates provider linkage
+- Email matching works correctly
+- Duplicate prevention via unique constraints
+
+**Integration Tests**:
+- E2E test: First-time GitHub sign-in creates User and Account
+- E2E test: Returning user sign-in updates User record
+- E2E test: User can create project immediately after authentication
+- E2E test: Database failure prevents authentication
+- Load test: 50 concurrent authentications succeed without duplicates
+
+**Edge Case Tests**:
+- Missing GitHub email prevents authentication
+- Database connection failure rejects authentication
+- Concurrent sign-ins don't create duplicate users
+- GitHub email change updates User record
+- Token expiration stored correctly
+
+### Success Criteria
+
+**Measurable Outcomes**:
+- 100% of new users complete first project creation within 5 minutes of GitHub sign-in
+- Zero duplicate User records created during authentication
+- System handles 50 concurrent first-time authentications without errors
+- Authentication failure rate due to database operations below 0.1%
+- Returning users see updated GitHub profile info within 1 second of sign-in
+- Zero "foreign key constraint violation" errors after deployment
+
+**User Experience**:
+- No manual user account creation required
+- Immediate project creation capability after sign-in
+- Seamless authentication flow (no extra steps)
+- Clear error messages on authentication failures
+
+**Data Integrity**:
+- One User record per email address (no duplicates)
+- All Account records reference valid Users (referential integrity)
+- All Projects reference valid Users (no orphaned projects)
+- User data synchronized with GitHub on every sign-in
+
+### Dependencies
+
+- NextAuth.js: Authentication library with callback support
+- Prisma Client: ORM for database operations (upsert pattern)
+- PostgreSQL: Database with unique constraints and foreign keys
+- GitHub OAuth App: Valid OAuth credentials configured
+
+### Assumptions
+
+1. GitHub users always have email address available via OAuth
+2. Database supports concurrent writes and transactions
+3. NextAuth.js JWT strategy continues to be used (not Prisma adapter)
+4. Email is stable enough identifier for user matching
+5. Users authenticate with only one GitHub account per User record
+
+### Out of Scope
+
+- Multi-factor authentication (MFA)
+- Additional OAuth providers (Google, Microsoft) - GitHub only
+- User profile editing via application UI
+- Account linking/unlinking for multiple OAuth providers
+- Admin functionality for manual user management
+- Migration of existing JWT-only users (if any exist)
+
+### Technical Decisions
+
+**Why Callbacks Instead of Prisma Adapter?**
+
+**Problem**: Vercel serverless functions don't support long-lived database connections required by NextAuth Prisma adapter.
+
+**Solution**: Use NextAuth callbacks with manual database operations via Prisma Client.
+
+**Benefits**:
+- Works within Vercel serverless constraints
+- Maintains JWT strategy (no session storage in database)
+- Full control over database operations and error handling
+- No dependency on NextAuth adapter lifecycle
+
+**Trade-offs**:
+- Manual implementation of User/Account creation
+- More code to maintain (callbacks)
+- No automatic token refresh from adapter
+
+**Why Email as User Identifier?**
+
+**Problem**: Need stable identifier to match returning users.
+
+**Solution**: Use email address as primary matching field.
+
+**Benefits**:
+- GitHub provides email reliably
+- Users expect email to identify their account
+- Email is human-readable for debugging
+- Unique constraint prevents duplicates
+
+**Trade-offs**:
+- Email changes require user matching logic update
+- Email uniqueness enforced (one account per email)
+- Cannot support multiple GitHub accounts per email
+
+**Why Upsert Pattern?**
+
+**Problem**: Need to handle both new and returning users without conditional logic.
+
+**Solution**: Use database upsert operations (create or update).
+
+**Benefits**:
+- Single operation handles both cases
+- Atomic operation prevents race conditions
+- Idempotent (safe to retry)
+- Simple code (no if/else branching)
+
+**Trade-offs**:
+- Slightly more database load (check + create/update)
+- Requires unique constraint on email
+- Update branch might overwrite intentional changes (mitigated by only updating specific fields)
