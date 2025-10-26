@@ -1,4 +1,5 @@
 import { WorkflowStep } from './workflow-step';
+import { MiniKanbanDemo } from './mini-kanban-demo';
 
 export function WorkflowSection() {
   const steps = [
@@ -32,14 +33,20 @@ export function WorkflowSection() {
   return (
     <section id="workflow" className="py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
             Streamlined Development Workflow
           </h2>
           <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
-            Move your ideas from concept to production with a proven 5-stage workflow.
+            Move your ideas from concept to production with a proven 6-stage workflow.
           </p>
 
+          {/* Animated Mini-Kanban Demo */}
+          <div className="mb-16">
+            <MiniKanbanDemo className="max-w-7xl mx-auto" />
+          </div>
+
+          {/* Detailed step descriptions */}
           <div className="flex flex-col gap-8">
             {steps.map((step, index) => (
               <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
