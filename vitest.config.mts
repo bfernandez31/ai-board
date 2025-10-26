@@ -4,7 +4,8 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node', // Pure functions don't need jsdom
+    // Use happy-dom for React hook tests (faster than jsdom)
+    environment: 'happy-dom',
     include: ['tests/unit/**/*.test.ts'], // Only run Vitest unit tests
     exclude: ['tests/integration/**', 'tests/e2e/**', 'tests/**/*.spec.ts'], // Exclude Playwright tests
   },

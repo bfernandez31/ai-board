@@ -24,7 +24,7 @@ Specifications are organized by feature domain. Each category documents the curr
 | **Project Architecture** | [03-project-architecture.md](03-project-architecture.md) | Multi-project support, GitHub integration |
 | **Workflow Automation** | [04-workflow-automation.md](04-workflow-automation.md) | Job tracking, GitHub Actions, spec-kit automation, quick-impl workflow, enhanced implementation with database setup |
 | **Testing & Quality** | [05-testing-quality.md](05-testing-quality.md) | Test infrastructure, data isolation |
-| **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation, job-blocked feedback |
+| **User Experience** | [06-user-experience.md](06-user-experience.md) | Real-time updates, spec viewer, project navigation, job-blocked feedback, landing page animated workflow |
 | **Authentication** | [07-authentication.md](07-authentication.md) | User auth, project ownership, test authentication |
 | **Clarification Policies** | [08-clarification-policies.md](08-clarification-policies.md) | Auto-resolution, policy configuration, AI-driven spec generation |
 
@@ -97,5 +97,5 @@ This documentation consolidates those specifications into **current state** docu
 
 ---
 
-**Last Updated**: 2025-10-25
-**Version**: Current State (consolidated from 52 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions + enhanced implementation workflow)
+**Last Updated**: 2025-10-26
+**Version**: Current State (consolidated from 52 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions + enhanced implementation workflow + landing page animated workflow)
