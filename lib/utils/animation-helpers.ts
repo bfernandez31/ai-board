@@ -30,13 +30,20 @@ export interface DemoTicket {
 }
 
 /**
- * Workflow stage configuration
+ * Workflow stage configuration (matches actual board dark theme)
  */
 export interface WorkflowStage {
   index: number;
   name: string;
   label: string;
   color: string; // Tailwind CSS color class
+  bgColor: string;
+  headerBgColor: string;
+  headerBorderColor: string;
+  textColor: string;
+  borderColor: string;
+  badgeBgColor: string;
+  badgeTextColor: string;
 }
 
 /**
@@ -59,15 +66,87 @@ export const DEMO_TICKETS: readonly DemoTicket[] = [
 ] as const;
 
 /**
- * Hardcoded workflow stages configuration
+ * Hardcoded workflow stages configuration (matches actual board dark theme)
  */
 export const WORKFLOW_STAGES: readonly WorkflowStage[] = [
-  { index: 0, name: 'INBOX', label: 'Inbox', color: 'bg-gray-50' },
-  { index: 1, name: 'SPECIFY', label: 'Specify', color: 'bg-blue-50' },
-  { index: 2, name: 'PLAN', label: 'Plan', color: 'bg-purple-50' },
-  { index: 3, name: 'BUILD', label: 'Build', color: 'bg-green-50' },
-  { index: 4, name: 'VERIFY', label: 'Verify', color: 'bg-yellow-50' },
-  { index: 5, name: 'SHIP', label: 'Ship', color: 'bg-pink-50' },
+  {
+    index: 0,
+    name: 'INBOX',
+    label: 'INBOX',
+    color: 'gray',
+    bgColor: 'bg-[#6c7086]/10',
+    headerBgColor: 'bg-[#6c7086]/30',
+    headerBorderColor: 'border-[#6c7086]/40',
+    textColor: 'text-zinc-100',
+    borderColor: 'border-[#6c7086]/40',
+    badgeBgColor: 'bg-[#6c7086]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
+  {
+    index: 1,
+    name: 'SPECIFY',
+    label: 'SPECIFY',
+    color: 'mauve',
+    bgColor: 'bg-[#b4befe]/10',
+    headerBgColor: 'bg-[#b4befe]/30',
+    headerBorderColor: 'border-[#b4befe]/40',
+    textColor: 'text-[#b4befe]',
+    borderColor: 'border-[#b4befe]/40',
+    badgeBgColor: 'bg-[#b4befe]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
+  {
+    index: 2,
+    name: 'PLAN',
+    label: 'PLAN',
+    color: 'blue',
+    bgColor: 'bg-[#89b4fa]/10',
+    headerBgColor: 'bg-[#89b4fa]/30',
+    headerBorderColor: 'border-[#89b4fa]/40',
+    textColor: 'text-[#89b4fa]',
+    borderColor: 'border-[#89b4fa]/40',
+    badgeBgColor: 'bg-[#89b4fa]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
+  {
+    index: 3,
+    name: 'BUILD',
+    label: 'BUILD',
+    color: 'peach',
+    bgColor: 'bg-[#f9cb98]/10',
+    headerBgColor: 'bg-[#f9cb98]/30',
+    headerBorderColor: 'border-[#f9cb98]/40',
+    textColor: 'text-[#f9cb98]',
+    borderColor: 'border-[#f9cb98]/40',
+    badgeBgColor: 'bg-[#f9cb98]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
+  {
+    index: 4,
+    name: 'VERIFY',
+    label: 'VERIFY',
+    color: 'pink',
+    bgColor: 'bg-[#f2cdcd]/10',
+    headerBgColor: 'bg-[#f2cdcd]/30',
+    headerBorderColor: 'border-[#f2cdcd]/40',
+    textColor: 'text-[#f2cdcd]',
+    borderColor: 'border-[#f2cdcd]/40',
+    badgeBgColor: 'bg-[#f2cdcd]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
+  {
+    index: 5,
+    name: 'SHIP',
+    label: 'SHIP',
+    color: 'green',
+    bgColor: 'bg-[#a6e3a1]/10',
+    headerBgColor: 'bg-[#a6e3a1]/30',
+    headerBorderColor: 'border-[#a6e3a1]/40',
+    textColor: 'text-[#a6e3a1]',
+    borderColor: 'border-[#a6e3a1]/40',
+    badgeBgColor: 'bg-[#a6e3a1]/70',
+    badgeTextColor: 'text-zinc-50',
+  },
 ] as const;
 
 /**

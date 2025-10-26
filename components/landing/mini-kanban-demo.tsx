@@ -69,8 +69,8 @@ export function MiniKanbanDemo({
     <div
       ref={containerRef}
       className={`mini-kanban-demo ${className}`}
-      onMouseEnter={togglePause}
-      onMouseLeave={togglePause}
+      onMouseEnter={() => !isPaused && togglePause()}
+      onMouseLeave={() => isPaused && togglePause()}
       data-paused={isPaused}
       data-visible={isVisible}
       data-reduced-motion={prefersReducedMotion}
