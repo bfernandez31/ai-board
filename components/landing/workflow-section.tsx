@@ -41,13 +41,13 @@ export function WorkflowSection() {
             Move your ideas from concept to production with a proven 6-stage workflow.
           </p>
 
-          {/* Animated Mini-Kanban Demo */}
-          <div className="mb-16">
+          {/* Animated Mini-Kanban Demo - Desktop only */}
+          <div className="hidden lg:block mb-16">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
           </div>
 
-          {/* Detailed step descriptions */}
-          <div className="flex flex-col gap-8">
+          {/* Detailed step descriptions - Mobile only */}
+          <div className="flex flex-col gap-8 lg:hidden">
             {steps.map((step, index) => (
               <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
             ))}
