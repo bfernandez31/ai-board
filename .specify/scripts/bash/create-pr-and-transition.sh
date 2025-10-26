@@ -27,7 +27,7 @@ echo "  Ticket ID: $TICKET_ID"
 echo "  Project ID: $PROJECT_ID"
 echo "  Branch: $BRANCH"
 
-# Create Pull Request
+# Create Pull Request (branch is already pushed by previous workflow step)
 echo ""
 echo "🔀 Creating Pull Request..."
 PR_URL=$(gh pr create \
@@ -53,9 +53,8 @@ Implementation completed by Claude Code based on the feature specification.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
   --base main \
-  --head "${BRANCH}" \
-  --json url -q '.url' 2>&1) || {
-  echo "⚠️ PR creation failed or PR already exists - continuing with transition..."
+  --head "${BRANCH}" 2>&1) || {
+  echo "⚠️ PR creation failed, checking if PR already exists..."
   # Try to get existing PR URL
   PR_URL=$(gh pr view "${BRANCH}" --json url -q '.url' 2>/dev/null || echo "")
 }

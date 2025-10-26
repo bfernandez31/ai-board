@@ -422,7 +422,7 @@ jobs:
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
-          PROJECT_ID: 1
+          PROJECT_ID: ${{ inputs.project_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           .specify/scripts/bash/create-pr-and-transition.sh \
