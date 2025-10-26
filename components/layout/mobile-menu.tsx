@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu, LogOut, FileText } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,18 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
-export function MobileMenu() {
+interface MobileMenuProps {
+  projectName?: string | undefined;
+  githubOwner?: string | undefined;
+  githubRepo?: string | undefined;
+}
+
+export function MobileMenu({ projectName, githubOwner, githubRepo }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -33,7 +41,35 @@ export function MobileMenu() {
         side="right"
         className="bg-[hsl(var(--ctp-mantle))] text-[hsl(var(--ctp-text))]"
       >
-        <div className="flex flex-col gap-4 mt-8">
+        <VisuallyHidden>
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </VisuallyHidden>
+
+        {/* Project Name & Specs Link */}
+        {projectName && (
+          <>
+            <div className="mt-6 px-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
+                {githubOwner && githubRepo && (
+                  <a
+                    href={`https://github.com/${githubOwner}/${githubRepo}/tree/main/specs/specifications`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="View project specifications on GitHub"
+                    className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    <FileText className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-border my-2" />
+          </>
+        )}
+
+        <div className="flex flex-col gap-4 mt-4">
           {session?.user ? (
             // Authenticated user menu
             <>

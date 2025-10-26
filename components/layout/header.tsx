@@ -86,7 +86,7 @@ export function Header() {
     >
       <div className="flex h-16 items-center px-6">
         {/* Left: Logo + Title */}
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.svg"
@@ -95,24 +95,35 @@ export function Header() {
             height={32}
             className="w-8 h-8"
           />
-          <span className="text-xl font-bold">AI-BOARD</span>
+          <span className="hidden md:inline text-xl font-bold">AI-BOARD</span>
         </Link>
 
         {/* Center: Project Info (if available) */}
         {projectInfo && (
-          <div className="flex items-center gap-3 ml-8">
-            <span className="text-zinc-400">|</span>
-            <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
-            <a
-              href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="View project specifications on GitHub"
-              className="text-zinc-400 hover:text-zinc-50 transition-colors"
-            >
-              <FileText className="w-5 h-5" />
-            </a>
-          </div>
+          <>
+            {/* Desktop: Full layout with separator and icon */}
+            <div className="hidden md:flex items-center gap-3 ml-8">
+              <span className="text-zinc-400">|</span>
+              <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
+              <a
+                href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View project specifications on GitHub"
+                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+              </a>
+            </div>
+
+            {/* Mobile: Compact with ellipsis */}
+            <div className="flex md:hidden items-center gap-2 ml-2 min-w-0 flex-1">
+              <span className="text-zinc-400">|</span>
+              <span className="text-sm font-semibold text-zinc-50 truncate">
+                {projectInfo.name}
+              </span>
+            </div>
+          </>
         )}
 
         {/* Spacer to push buttons to the right */}
@@ -152,7 +163,11 @@ export function Header() {
           )}
 
           {/* Mobile menu (visible below md breakpoint) */}
-          <MobileMenu />
+          <MobileMenu
+            projectName={projectInfo?.name}
+            githubOwner={projectInfo?.githubOwner}
+            githubRepo={projectInfo?.githubRepo}
+          />
         </div>
       </div>
     </header>
