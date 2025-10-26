@@ -390,4 +390,91 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Verify reasonable latency with optimistic update (increased to 3s to account for network)
     expect(latency).toBeLessThan(3000);
   });
+
+  /**
+   * T012: Test mobile scrolling does not trigger drag (T905)
+   * Validates that quick swipes for scrolling don't initiate drag operations
+   */
+  test('mobile scrolling does not trigger accidental drag', async ({ page, request }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Setup: Create multiple tickets to make column scrollable
+    const tickets = [];
+    for (let i = 0; i < 8; i++) {
+      tickets.push(await createTicket(request, 'INBOX'));
+    }
+
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Get the first ticket
+    const firstTicket = tickets[0];
+    if (!firstTicket) {
+      throw new Error('No tickets created for test');
+    }
+
+    const ticketCard = page.locator(`[data-ticket-id="${firstTicket.id}"]`);
+    const inboxColumn = page.locator('[data-stage="INBOX"]');
+
+    // Simulate quick swipe (< 250ms) - should allow scroll, not trigger drag
+    const ticketBox = await ticketCard.boundingBox();
+    if (ticketBox) {
+      // Quick vertical swipe (100ms) - this should scroll, not drag
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      // Move down quickly within 100ms (less than 250ms delay threshold)
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2 + 100, { steps: 1 });
+      await page.waitForTimeout(50); // Total interaction < 250ms
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+    }
+
+    // Verify ticket stayed in INBOX (didn't accidentally trigger drag)
+    await expect(inboxColumn.locator(`[data-ticket-id="${firstTicket.id}"]`)).toBeVisible();
+
+    // Verify database unchanged
+    const unchangedTicket = await getTicket(firstTicket.id);
+    expect(unchangedTicket?.stage).toBe('INBOX');
+    expect(unchangedTicket?.version).toBe(1);
+  });
+
+  /**
+   * T013: Test mobile long-press still triggers drag (T905)
+   * Validates that deliberate long-press (>= 250ms) initiates drag as expected
+   */
+  test('mobile long-press triggers drag operation', async ({ page, request }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Setup: Create ticket
+    const ticket = await createTicket(request, 'INBOX');
+
+    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.waitForLoadState('domcontentloaded');
+
+    const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
+    const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+
+    const ticketBox = await ticketCard.boundingBox();
+    const targetBox = await specifyColumn.boundingBox();
+
+    if (ticketBox && targetBox) {
+      // Long-press (>= 250ms) then drag - should trigger drag operation
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(300); // Long-press delay (> 250ms threshold)
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForTimeout(500);
+    }
+
+    // Verify ticket moved to SPECIFY (drag succeeded)
+    await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+
+    // Verify database updated
+    const updatedTicket = await getTicket(ticket.id);
+    expect(updatedTicket?.stage).toBe('SPECIFY');
+    expect(updatedTicket?.version).toBe(2);
+  });
 });
