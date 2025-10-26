@@ -59,8 +59,11 @@ test.describe('Projects List Page', () => {
     expect(filter).toContain('brightness');
   });
 
-  test('displays Import and Create Project buttons as disabled', async ({ page }) => {
+  test('displays Import and Create Project buttons as disabled when projects exist', async ({ page }) => {
     await page.goto('http://localhost:3000/projects');
+
+    // Wait for projects to load
+    await page.waitForSelector('[data-testid="project-card"]');
 
     // Verify Import Project button
     const importButton = page.getByRole('button', { name: /import project/i });
@@ -73,18 +76,39 @@ test.describe('Projects List Page', () => {
     await expect(createButton).toBeDisabled();
   });
 
-  // Note: This test is skipped because Next.js Server Components perform server-side fetches
-  // that cannot be intercepted by Playwright's route mocking. The empty state functionality
-  // is tested manually via quickstart.md. To properly test this, we would need to:
-  // 1. Temporarily delete all projects (violates data preservation policy), OR
-  // 2. Add a query parameter to force empty state (not production code), OR
-  // 3. Use a separate test database (infrastructure change)
-  test.skip('displays empty state when no projects exist', async ({ page }) => {
-    // This test verifies the empty state UI when no projects are available
-    // Empty state component code is at: /components/projects/empty-projects-state.tsx
-    // Manual testing: Delete all projects and visit /projects
-    await page.goto('http://localhost:3000/projects');
-    await expect(page.getByText(/no projects available/i)).toBeVisible();
-    await expect(page.getByText(/get started by clicking/i)).toBeVisible();
+  test('displays Empty component when no projects exist', async ({ page }) => {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    try {
+      // Temporarily delete all test projects to test empty state
+      await prisma.ticket.deleteMany({ where: { projectId: { in: [1, 2] } } });
+      await prisma.projectMember.deleteMany({ where: { projectId: { in: [1, 2] } } });
+      await prisma.project.deleteMany({ where: { id: { in: [1, 2] } } });
+
+      await page.goto('http://localhost:3000/projects');
+
+      // Verify empty state is displayed with shadcn Empty component
+      await expect(page.getByText(/no projects yet/i)).toBeVisible();
+      await expect(page.getByText(/get started by creating a new project or importing an existing one/i)).toBeVisible();
+
+      // Verify action buttons are shown in the empty state (not in header)
+      const emptyStateImportButton = page.locator('[data-slot="empty-content"]').getByRole('button', { name: /import project/i });
+      const emptyStateCreateButton = page.locator('[data-slot="empty-content"]').getByRole('button', { name: /create project/i });
+
+      await expect(emptyStateImportButton).toBeVisible();
+      await expect(emptyStateImportButton).toBeDisabled();
+      await expect(emptyStateCreateButton).toBeVisible();
+      await expect(emptyStateCreateButton).toBeDisabled();
+
+      // Verify header action buttons are NOT shown when empty
+      const headerButtons = page.locator('h1:has-text("Projects") ~ div button');
+      await expect(headerButtons.first()).not.toBeVisible();
+    } finally {
+      // Restore test projects for other tests
+      const { ensureTestFixtures } = await import('../helpers/db-cleanup');
+      await ensureTestFixtures();
+      await prisma.$disconnect();
+    }
   });
 });
