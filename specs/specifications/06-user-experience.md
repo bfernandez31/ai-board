@@ -577,6 +577,103 @@ The system displays a persistent header at the top of all pages:
 
 ---
 
+## Landing Page Animated Workflow Demo
+
+**Purpose**: First-time visitors need to quickly understand how the AI Board workflow operates without reading documentation or watching videos. An animated mini-Kanban on the landing page provides instant visual understanding of the 6-stage workflow through live demonstration.
+
+### What It Does
+
+The system displays an animated mini-Kanban board on the landing page workflow section:
+
+**Visual Layout**:
+- 6 vertical columns representing workflow stages: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP
+- 2-3 example tickets positioned across different stages
+- Clean design matching the actual AI Board visual styling
+- Responsive layout from mobile (320px) to large desktop (2560px)
+
+**Automatic Animation**:
+- Every 10 seconds, one ticket smoothly animates from its current column to the next
+- Continuous loop showing complete ticket journey (INBOX → SHIP)
+- Smooth transitions without jarring movements
+- Complete journey visible within 60 seconds
+
+**Interactive Hover Experience**:
+- Animation pauses when visitor hovers over any ticket or board area
+- Cursor changes to indicate drag affordance (visual only)
+- Tickets provide visual drag feedback (follows cursor or highlights)
+- Drag interaction is visual only - does not functionally reorder tickets
+- Animation resumes when cursor leaves the board
+
+**Accessibility**:
+- Respects `prefers-reduced-motion` browser/OS setting
+- Static or minimally-animated version for users with motion sensitivity
+- Still communicates workflow progression without animation
+
+**Performance**:
+- Runs smoothly at 60fps on standard hardware (2018+ devices)
+- Pauses when section not visible (below fold or background tab)
+- Graceful handling of browser window resizing
+
+### Requirements
+
+**Layout**:
+- Display 6 columns in order: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP
+- Show 2-3 example tickets at different workflow stages
+- Match visual design of actual AI Board (colors, shadows, border-radius)
+- Responsive: 320px mobile to 2560px desktop
+
+**Animation Behavior**:
+- Ticket transitions every 10 seconds (smooth movement)
+- Complete INBOX → SHIP journey within 60 seconds
+- No jarring jumps or rapid movements
+- Animation pauses when board/tickets hovered
+- Animation resumes when hover ends
+
+**Interaction**:
+- Hover on ticket/board pauses animation instantly (<100ms)
+- Cursor changes to indicate draggability on hover
+- Visual drag feedback without functional position changes
+- Smooth user experience without performance issues
+
+**Accessibility**:
+- Check `prefers-reduced-motion` media query
+- Provide static/minimal animation alternative
+- Maintain workflow communication without animation
+
+**Performance**:
+- 60fps animation on 2018+ hardware
+- Pause when section not visible (viewport optimization)
+- Handle window resize without layout breaks
+
+### Data Model
+
+**Demo Ticket**:
+- Title: Example work item name
+- Current column: One of 6 workflow stages
+- Visual state: normal | hover | dragging
+
+**Mini-Kanban Column**:
+- Stage name: INBOX | SPECIFY | PLAN | BUILD | VERIFY | SHIP
+- Position: Sequential left-to-right
+- Contains: 0-2 demo tickets at any time
+
+**Animation State**:
+- Interval: 10 seconds between transitions
+- Paused: Boolean (true when hovered)
+- Current ticket: Which ticket is moving
+- Target column: Next stage in sequence
+
+**Example Ticket Data** (representative):
+```typescript
+[
+  { id: 1, title: "Add user authentication", stage: "INBOX" },
+  { id: 2, title: "Implement drag-and-drop", stage: "BUILD" },
+  { id: 3, title: "Review API changes", stage: "VERIFY" }
+]
+```
+
+---
+
 ## Current State Summary
 
 ### Available Features
@@ -629,6 +726,17 @@ The system displays a persistent header at the top of all pages:
 - ✅ Applies to all columns when ticket has active job
 - ✅ English messaging consistent with application language
 
+**Landing Page Animated Workflow Demo** (added 2025-10-26):
+- ✅ Animated mini-Kanban with 6-stage workflow visualization
+- ✅ 10-second automatic ticket transitions between stages
+- ✅ 2-3 example tickets demonstrating workflow progression
+- ✅ Interactive hover to pause animation
+- ✅ Visual drag affordance (non-functional)
+- ✅ Accessibility support for reduced motion preferences
+- ✅ Responsive layout (320px to 2560px)
+- ✅ 60fps performance on standard hardware
+- ✅ Visual design matching actual AI Board
+
 ### User Workflows
 
 **Viewing Job Status**:
@@ -672,6 +780,18 @@ The system displays a persistent header at the top of all pages:
 6. User releases drag (ticket returns to origin)
 7. User sees backend-specific error message in toast if drop attempted
 
+**Viewing Landing Page Workflow Demo**:
+1. First-time visitor lands on homepage
+2. Visitor scrolls to workflow section
+3. System displays mini-Kanban with 6 labeled columns
+4. System shows 2-3 example tickets at different stages
+5. Every 10 seconds, one ticket smoothly animates to next column
+6. Visitor observes complete ticket journey (INBOX → SHIP) within 60 seconds
+7. Visitor hovers over ticket (animation pauses, cursor shows drag affordance)
+8. Visitor attempts visual drag (ticket follows cursor but doesn't functionally move)
+9. Visitor moves cursor away (animation resumes)
+10. Visitor understands 6-stage workflow without reading documentation
+
 ### Business Rules
 
 - Only most recent active or terminal job shown per ticket
@@ -685,6 +805,11 @@ The system displays a persistent header at the top of all pages:
 - Header remains visible during scrolling (fixed positioning)
 - Job-blocked tickets cannot be moved until workflow completes (visual feedback prevents confusion)
 - Backend error messages displayed for failed transitions (user understands why operation failed)
+- Landing page animation runs continuously in 10-second intervals
+- Animation pauses on hover/interaction, resumes on leave
+- Drag interaction on landing page is visual only (non-functional)
+- Accessibility: reduced motion users see static/minimal animation
+- Landing page demo shows example tickets, not real project data
 
 ### Technical Details
 
@@ -711,6 +836,15 @@ The system displays a persistent header at the top of all pages:
 - Catppuccin Mocha color palette
 - Fixed positioning CSS
 - Responsive hamburger menu (mobile)
+
+**Landing Page Animation**:
+- CSS animations and transitions (standard browser APIs)
+- JavaScript `setInterval` for 10-second timing
+- `prefers-reduced-motion` media query for accessibility
+- Intersection Observer API for visibility detection
+- Hardcoded example ticket data (no API calls)
+- TailwindCSS for responsive layout and styling
+- Visual drag simulation (no drag-and-drop library)
 
 ---
 
