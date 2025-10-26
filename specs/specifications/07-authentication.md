@@ -6,6 +6,7 @@ This domain covers user authentication and authorization. The system uses NextAu
 
 **Current Capabilities**:
 - NextAuth.js-based authentication system
+- GitHub OAuth provider with automatic User/Account creation
 - Mock authentication bypass for development and E2E tests
 - User ownership of projects
 - Session-based authentication
@@ -653,3 +654,104 @@ The sign-in page provides a user-facing authentication interface:
 - Zero confusion about disabled providers (clear messaging)
 - Error messages actionable in 100% of failure cases
 - No user-reported issues with callback URL handling
+
+---
+
+## Automatic User Account Creation
+
+**Purpose**: Users can sign in with GitHub OAuth and immediately create projects without manual account setup.
+
+### What It Does
+
+When a user authenticates with GitHub, the system automatically:
+
+**First-Time Sign-In**:
+- Creates a user account using the GitHub email address
+- Stores the user's display name and profile information
+- Links the GitHub account to the user profile
+- Marks the email as verified
+- Allows immediate project creation after sign-in
+
+**Returning Sign-In**:
+- Identifies existing users by their email address
+- Updates the user's name and profile picture if changed on GitHub
+- Refreshes the GitHub account linkage
+- Preserves access to all existing projects
+- Synchronizes user data with current GitHub profile
+
+**Error Handling**:
+- Shows clear error message if sign-in cannot complete
+- Prevents access if user account cannot be created
+- Allows users to retry authentication
+- Never creates partial or incomplete accounts
+
+### Requirements
+
+**User Account Behavior**:
+- New users automatically get an account on first GitHub sign-in
+- Email address uniquely identifies each user
+- Returning users are recognized by their email address
+- User profile information stays synchronized with GitHub
+- Users can create projects immediately after signing in
+- Multiple sign-ins by the same user never create duplicate accounts
+- Concurrent sign-ins are handled without errors
+
+**Account Security**:
+- Email addresses must be verified through GitHub
+- Access tokens are securely stored
+- Token expiration is tracked
+- Authentication fails if account creation fails
+- No partial accounts are ever created
+
+### User Workflows
+
+**First-Time User Sign-In**:
+1. User clicks "Sign in with GitHub"
+2. Redirected to GitHub for authorization
+3. User authorizes the application
+4. System creates user account automatically
+5. User is redirected to the projects dashboard
+6. User can immediately create their first project
+
+**Returning User Sign-In**:
+1. User clicks "Sign in with GitHub"
+2. System recognizes user by email address
+3. User profile updated with current GitHub information
+4. User redirected to dashboard
+5. User sees all their existing projects
+
+**If Sign-In Fails**:
+1. User sees clear error message
+2. User can try signing in again
+3. No incomplete account is created
+4. User can contact support if problem persists
+
+### Business Rules
+
+**User Identity**:
+- Email address uniquely identifies each user
+- One user account per email address
+- User profile information synchronized with GitHub on every sign-in
+- Email verification status comes from GitHub
+
+**Data Updates**:
+- Name and profile picture refreshed on each sign-in
+- Changes made on GitHub are reflected in the application
+- User's existing projects are always preserved
+- Account credentials refreshed automatically
+
+### Success Criteria
+
+**User Experience**:
+- New users can create their first project immediately after sign-in
+- Returning users see all their existing projects after sign-in
+- Profile information stays current with GitHub
+- Sign-in process completes in under 3 seconds
+- Clear error messages if something goes wrong
+
+**System Behavior**:
+- No duplicate accounts created for the same email
+- Multiple concurrent sign-ins complete successfully
+- System handles authentication failures gracefully
+- All user data remains consistent
+- Projects are never orphaned or inaccessible

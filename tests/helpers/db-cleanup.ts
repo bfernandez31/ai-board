@@ -129,14 +129,25 @@ export async function cleanupDatabase(): Promise<void> {
       },
     });
 
-    // Delete test users created by API tests (like "Other User")
-    // Keep core test users that E2E tests recreate in global beforeEach
+    // Delete all accounts before deleting users (foreign key constraint)
+    // Only delete accounts for test users (not preserved users)
     const preservedUserIds = [
       'test-user-id', // E2E Test User (global beforeEach)
       'user-alice', // Alice Smith (global beforeEach)
       'user-bob', // Bob Johnson (global beforeEach)
       'ai-board-system-user', // AI-BOARD system user (always present)
     ];
+
+    await client.account.deleteMany({
+      where: {
+        userId: {
+          notIn: preservedUserIds,
+        },
+      },
+    });
+
+    // Delete test users created by API tests and auth tests
+    // Keep core test users that E2E tests recreate in global beforeEach
     await client.user.deleteMany({
       where: {
         AND: [
@@ -146,9 +157,23 @@ export async function cleanupDatabase(): Promise<void> {
             },
           },
           {
-            email: {
-              contains: '@test.com', // Only delete test users
-            },
+            OR: [
+              {
+                email: {
+                  contains: '@test.com', // API test users
+                },
+              },
+              {
+                email: {
+                  contains: '@github.com', // Auth test users
+                },
+              },
+              {
+                id: {
+                  startsWith: 'test-', // Auth test users with test- prefix
+                },
+              },
+            ],
           },
         ],
       },

@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth"
+import { authEdge } from "@/lib/auth-edge"
 import { NextResponse } from "next/server"
 
-export default auth((req) => {
+export default authEdge((req) => {
   const isAuthenticated = !!req.auth
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isPublicApi = req.nextUrl.pathname === '/api/health'
