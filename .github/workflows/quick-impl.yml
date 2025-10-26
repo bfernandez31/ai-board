@@ -150,6 +150,17 @@ jobs:
           echo "FEATURE_BRANCH=$current_branch" >> "$GITHUB_ENV"
           echo "✅ Feature branch: $current_branch"
 
+      - name: Cleanup Temporary Images Before Commit
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        run: |
+          echo "🧹 Cleaning up temporary image files before commit..."
+          TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
+          if [ -d "$TICKET_ASSETS_DIR" ]; then
+            rm -rf "$TICKET_ASSETS_DIR"
+            echo "  ✅ Removed temporary directory: $TICKET_ASSETS_DIR"
+          fi
+          echo "✅ Cleanup complete (images remain in Cloudinary)"
+
       - name: Commit and Push Changes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |

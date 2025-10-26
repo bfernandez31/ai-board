@@ -47,3 +47,6 @@ next-env.d.ts
 /playwright/.cache/.idea/
 .env.test
 .test-user-id
+
+# temporary ticket assets (uploaded to Cloudinary)
+ticket-assets/
