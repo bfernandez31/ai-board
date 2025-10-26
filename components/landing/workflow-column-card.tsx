@@ -55,7 +55,7 @@ export function WorkflowColumnCard({
           ${stage.bgColor}
           ${stage.borderColor}
           group-hover:scale-105
-          group-hover:shadow-[0_0_40px_rgba(137,180,250,0.3)]
+          group-hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]
           group-hover:z-10
           ${!prefersReducedMotion ? 'group-hover:-translate-y-1' : ''}
         `}
@@ -99,10 +99,10 @@ export function WorkflowColumnCard({
         <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="relative">
             {/* Arrow pointing up */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[#89b4fa]"></div>
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[#8B5CF6]"></div>
 
             {/* Tooltip content */}
-            <div className="bg-[#89b4fa] text-white px-4 py-2.5 rounded-lg shadow-lg shadow-[#89b4fa]/30 min-w-[200px] max-w-[280px]">
+            <div className="bg-[#8B5CF6] text-white px-4 py-2.5 rounded-lg shadow-lg shadow-[#8B5CF6]/40 min-w-[200px] max-w-[280px]">
               <p className="text-sm font-medium text-center leading-relaxed">
                 {STAGE_DESCRIPTIONS[stage.name]}
               </p>
