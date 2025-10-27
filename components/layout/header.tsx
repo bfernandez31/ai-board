@@ -117,17 +117,17 @@ export function Header() {
             </div>
 
             {/* Mobile: Compact with ellipsis */}
-            <div className="flex md:hidden items-center gap-2 ml-2 min-w-0 flex-1">
-              <span className="text-zinc-400">|</span>
-              <span className="text-sm font-semibold text-zinc-50 truncate">
+            <div className="flex md:hidden items-center gap-2 ml-2 flex-1 overflow-hidden">
+              <span className="text-zinc-400 shrink-0">|</span>
+              <span className="text-sm font-semibold text-zinc-50 truncate flex-1">
                 {projectInfo.name}
               </span>
             </div>
           </>
         )}
 
-        {/* Spacer to push buttons to the right */}
-        <div className="flex-1" />
+        {/* Spacer to push buttons to the right (hidden on mobile when project info exists) */}
+        <div className={projectInfo ? "hidden md:flex flex-1" : "flex-1"} />
 
         {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">
