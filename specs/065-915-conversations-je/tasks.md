@@ -22,8 +22,8 @@
 
 **Purpose**: Project initialization and create foundational TypeScript types
 
-- [ ] T001 Create ConversationEvent discriminated union types in lib/types/conversation-event.ts
-- [ ] T002 [P] Create JobEventType and TimelineItemType helper types in lib/types/conversation-event.ts
+- [X] T001 Create ConversationEvent discriminated union types in lib/types/conversation-event.ts
+- [X] T002 [P] Create JobEventType and TimelineItemType helper types in lib/types/conversation-event.ts
 
 ---
 
@@ -33,12 +33,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement getJobDisplayName() mapping function in lib/utils/job-display-names.ts
-- [ ] T004 [P] Implement createCommentEvent() transformation in lib/utils/conversation-events.ts
-- [ ] T005 [P] Implement createJobEvents() transformation in lib/utils/conversation-events.ts
-- [ ] T006 Implement mergeConversationEvents() merge and sort logic in lib/utils/conversation-events.ts (depends on T004, T005)
-- [ ] T007 [P] Implement getJobEventType() status mapper in lib/utils/conversation-events.ts
-- [ ] T008 [P] Implement getJobEventMessage() message generator in lib/utils/conversation-events.ts
+- [X] T003 Implement getJobDisplayName() mapping function in lib/utils/job-display-names.ts
+- [X] T004 [P] Implement createCommentEvent() transformation in lib/utils/conversation-events.ts
+- [X] T005 [P] Implement createJobEvents() transformation in lib/utils/conversation-events.ts
+- [X] T006 Implement mergeConversationEvents() merge and sort logic in lib/utils/conversation-events.ts (depends on T004, T005)
+- [X] T007 [P] Implement getJobEventType() status mapper in lib/utils/conversation-events.ts
+- [X] T008 [P] Implement getJobEventMessage() message generator in lib/utils/conversation-events.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

@@ -109,6 +109,11 @@ export function useCreateComment({
         queryKey: queryKeys.comments.list(ticketId),
       });
 
+      // Invalidate timeline to refresh conversation view with new comment
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.timeline(projectId, ticketId),
+      });
+
       // Invalidate job status to restart polling if @ai-board was mentioned
       // This ensures the polling hook detects the new PENDING job and resumes polling
       queryClient.invalidateQueries({

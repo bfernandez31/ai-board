@@ -64,6 +64,13 @@ export const queryKeys = {
      * Project members for autocomplete dropdown
      */
     members: (id: number) => ['projects', id, 'members'] as const,
+
+    /**
+     * Conversation timeline for a specific ticket
+     * Includes both comments and job lifecycle events merged chronologically
+     */
+    timeline: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId, 'timeline'] as const,
   },
 
   /**
