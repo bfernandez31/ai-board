@@ -4,7 +4,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { ListCommentsResponse } from '@/app/lib/types/comment';
+import type { ConversationEvent } from '@/app/lib/types/conversation-event';
 
 interface UseDeleteCommentOptions {
   projectId: number;
@@ -13,8 +13,14 @@ interface UseDeleteCommentOptions {
   onError?: (error: Error) => void;
 }
 
+interface TimelineResponse {
+  timeline: ConversationEvent[];
+  mentionedUsers: Record<string, { id: string; name: string | null; email: string }>;
+  currentUserId: string;
+}
+
 /**
- * Delete a comment with optimistic updates
+ * Delete a comment with optimistic updates to the timeline cache
  */
 export function useDeleteComment({
   projectId,
@@ -39,27 +45,28 @@ export function useDeleteComment({
       }
     },
 
-    // Optimistic update: Remove comment immediately from cache
+    // Optimistic update: Remove comment immediately from timeline cache
     onMutate: async (commentId) => {
-      // Cancel ongoing queries
+      // Cancel ongoing queries for timeline
       await queryClient.cancelQueries({
-        queryKey: queryKeys.comments.list(ticketId),
+        queryKey: queryKeys.projects.timeline(projectId, ticketId),
       });
 
       // Snapshot previous state
-      const previousData = queryClient.getQueryData<{ comments: ListCommentsResponse; currentUserId: string }>(
-        queryKeys.comments.list(ticketId)
+      const previousData = queryClient.getQueryData<TimelineResponse>(
+        queryKeys.projects.timeline(projectId, ticketId)
       );
 
-      // Optimistically remove comment from cache
-      queryClient.setQueryData<ListCommentsResponse & { currentUserId: string }>(
-        queryKeys.comments.list(ticketId),
+      // Optimistically remove comment from timeline cache
+      queryClient.setQueryData<TimelineResponse>(
+        queryKeys.projects.timeline(projectId, ticketId),
         (old) => {
           if (!old) return old;
           return {
-            comments: old.comments.filter((comment) => comment.id !== commentId),
-            mentionedUsers: old.mentionedUsers, // Preserve mentioned users
-            currentUserId: old.currentUserId,
+            ...old,
+            timeline: old.timeline.filter(
+              (event) => !(event.type === 'comment' && event.data.id === commentId)
+            ),
           };
         }
       );
@@ -72,7 +79,7 @@ export function useDeleteComment({
     onError: (error, _commentId, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(
-          queryKeys.comments.list(ticketId),
+          queryKeys.projects.timeline(projectId, ticketId),
           context.previousData
         );
       }
@@ -82,7 +89,7 @@ export function useDeleteComment({
     // Refetch to sync with server
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.comments.list(ticketId),
+        queryKey: queryKeys.projects.timeline(projectId, ticketId),
       });
       onSuccess?.();
     },

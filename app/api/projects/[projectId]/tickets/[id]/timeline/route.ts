@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { requireAuth } from '@/lib/db/users';
 import { mergeConversationEvents } from '@/app/lib/utils/conversation-events';
 import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
 
@@ -59,6 +60,9 @@ export async function GET(
     // T010: Verify authentication and project ownership
     // This also validates authentication via requireAuth()
     await verifyProjectOwnership(projectId);
+
+    // Get current user ID for response (used by frontend for ownership checks)
+    const currentUserId = await requireAuth();
 
     // T011: Verify ticket exists and belongs to this project
     const ticket = await prisma.ticket.findFirst({
@@ -157,6 +161,7 @@ export async function GET(
     return NextResponse.json({
       timeline,
       mentionedUsers: mentionedUsersMap,
+      currentUserId, // Include in body for frontend ownership checks
     });
   } catch (error) {
     console.error('[Timeline API Error]', error);

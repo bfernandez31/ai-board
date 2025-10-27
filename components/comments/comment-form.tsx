@@ -82,7 +82,7 @@ export function CommentForm({ projectId, ticketId, onAutocompleteOpenChange }: C
         projectMembers={projectMembers}
         ticketId={ticketId}
         placeholder="Write a comment... (@ to mention, Markdown supported)"
-        className="min-h-[100px] resize-none"
+        className="min-h-[100px] resize-none text-text"
         disabled={isPending || isMembersLoading}
         {...(onAutocompleteOpenChange && { onAutocompleteOpenChange })}
       />

@@ -14,6 +14,8 @@ import { JobEventTimelineItem } from './job-event-timeline-item';
 interface TimelineItemProps {
   event: ConversationEvent;
   mentionedUsers: Record<string, User>;
+  projectId: number;
+  currentUserId: string;
 }
 
 /**
@@ -26,7 +28,7 @@ interface TimelineItemProps {
  * <TimelineItem event={commentEvent} /> // → renders CommentTimelineItem
  * <TimelineItem event={jobEvent} />     // → renders JobEventTimelineItem
  */
-export function TimelineItem({ event, mentionedUsers }: TimelineItemProps) {
+export function TimelineItem({ event, mentionedUsers, projectId, currentUserId }: TimelineItemProps) {
   switch (event.type) {
     case 'comment':
       return (
@@ -34,6 +36,8 @@ export function TimelineItem({ event, mentionedUsers }: TimelineItemProps) {
           comment={event.data}
           timestamp={event.timestamp}
           mentionedUsers={mentionedUsers}
+          projectId={projectId}
+          currentUserId={currentUserId}
         />
       );
     case 'job':

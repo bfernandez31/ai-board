@@ -90,15 +90,21 @@ export function ConversationTimeline({ ticketId, projectId }: ConversationTimeli
   }
 
   // Render timeline
+  const currentUserId = data?.currentUserId || '';
+
   return (
-    <Timeline>
-      {data.timeline.map((event) => (
-        <TimelineItem
-          key={getEventKey(event)}
-          event={event}
-          mentionedUsers={data.mentionedUsers}
-        />
-      ))}
-    </Timeline>
+    <div data-testid="comment-list">
+      <Timeline>
+        {data.timeline.map((event) => (
+          <TimelineItem
+            key={getEventKey(event)}
+            event={event}
+            mentionedUsers={data.mentionedUsers}
+            projectId={projectId}
+            currentUserId={currentUserId}
+          />
+        ))}
+      </Timeline>
+    </div>
   );
 }
