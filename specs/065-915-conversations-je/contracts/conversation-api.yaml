@@ -1,0 +1,339 @@
+openapi: 3.0.0
+info:
+  title: Ticket Conversation Timeline API
+  description: |
+    API for fetching unified conversation timeline combining user comments and job lifecycle events.
+    No new database entities required - leverages existing Comment and Job tables.
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/timeline:
+    get:
+      summary: Get conversation timeline for ticket
+      description: |
+        Returns unified conversation timeline with user comments and job lifecycle events,
+        sorted chronologically by timestamp. Job events generated from Job records
+        (start event + optional completion event based on status).
+      operationId: getTicketTimeline
+      tags:
+        - Conversations
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Project ID (for authorization validation)
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Ticket ID to fetch timeline for
+      responses:
+        '200':
+          description: Conversation timeline fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timeline:
+                    type: array
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/CommentEvent'
+                        - $ref: '#/components/schemas/JobEvent'
+                      discriminator:
+                        propertyName: type
+                        mapping:
+                          comment: '#/components/schemas/CommentEvent'
+                          job: '#/components/schemas/JobEvent'
+                    description: Array of conversation events sorted chronologically (oldest first)
+              examples:
+                mixedTimeline:
+                  summary: Mixed comments and job events
+                  value:
+                    timeline:
+                      - type: comment
+                        timestamp: '2025-10-27T10:00:00.000Z'
+                        data:
+                          id: 1
+                          ticketId: 42
+                          userId: 'user-123'
+                          content: 'Initial ticket description'
+                          createdAt: '2025-10-27T10:00:00.000Z'
+                          updatedAt: '2025-10-27T10:00:00.000Z'
+                          user:
+                            id: 'user-123'
+                            name: 'John Doe'
+                            email: 'john@example.com'
+                      - type: job
+                        timestamp: '2025-10-27T10:05:00.000Z'
+                        eventType: start
+                        data:
+                          id: 10
+                          ticketId: 42
+                          projectId: 1
+                          command: 'specify'
+                          status: 'RUNNING'
+                          workflowType: 'FULL'
+                          branch: '042-new-feature'
+                          startedAt: '2025-10-27T10:05:00.000Z'
+                          completedAt: null
+                      - type: job
+                        timestamp: '2025-10-27T10:10:00.000Z'
+                        eventType: complete
+                        data:
+                          id: 10
+                          ticketId: 42
+                          projectId: 1
+                          command: 'specify'
+                          status: 'COMPLETED'
+                          workflowType: 'FULL'
+                          branch: '042-new-feature'
+                          startedAt: '2025-10-27T10:05:00.000Z'
+                          completedAt: '2025-10-27T10:10:00.000Z'
+                      - type: comment
+                        timestamp: '2025-10-27T10:15:00.000Z'
+                        data:
+                          id: 2
+                          ticketId: 42
+                          userId: 'ai-board-system-user'
+                          content: 'Specification generated successfully'
+                          createdAt: '2025-10-27T10:15:00.000Z'
+                          updatedAt: '2025-10-27T10:15:00.000Z'
+                          user:
+                            id: 'ai-board-system-user'
+                            name: 'AI-BOARD'
+                            email: 'ai-board@system.local'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - sessionCookie: []
+
+components:
+  schemas:
+    CommentEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - data
+      properties:
+        type:
+          type: string
+          enum: [comment]
+          description: Discriminator for comment events
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp (same as comment.createdAt)
+        data:
+          $ref: '#/components/schemas/CommentWithUser'
+
+    JobEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - eventType
+        - data
+      properties:
+        type:
+          type: string
+          enum: [job]
+          description: Discriminator for job events
+        timestamp:
+          type: string
+          format: date-time
+          description: |
+            ISO 8601 timestamp:
+            - For "start" eventType: job.startedAt
+            - For "complete" eventType: job.completedAt
+        eventType:
+          type: string
+          enum: [start, complete]
+          description: |
+            Event lifecycle type:
+            - start: Job started (PENDING/RUNNING status)
+            - complete: Job finished (COMPLETED/FAILED/CANCELLED status)
+        data:
+          $ref: '#/components/schemas/Job'
+
+    CommentWithUser:
+      type: object
+      required:
+        - id
+        - ticketId
+        - userId
+        - content
+        - createdAt
+        - updatedAt
+        - user
+      properties:
+        id:
+          type: integer
+          description: Comment ID
+        ticketId:
+          type: integer
+          description: Ticket ID (foreign key)
+        userId:
+          type: string
+          description: User ID (foreign key)
+        content:
+          type: string
+          description: Comment text content (supports Markdown)
+        createdAt:
+          type: string
+          format: date-time
+          description: Comment creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Comment last update timestamp
+        user:
+          $ref: '#/components/schemas/User'
+
+    Job:
+      type: object
+      required:
+        - id
+        - ticketId
+        - projectId
+        - command
+        - status
+        - workflowType
+        - startedAt
+      properties:
+        id:
+          type: integer
+          description: Job ID
+        ticketId:
+          type: integer
+          description: Ticket ID (foreign key)
+        projectId:
+          type: integer
+          description: Project ID (foreign key)
+        command:
+          type: string
+          description: Job command (e.g., "specify", "plan", "quick-impl", "comment-specify")
+          examples:
+            - specify
+            - plan
+            - implement
+            - quick-impl
+            - comment-specify
+            - comment-plan
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+          description: Job execution status
+        workflowType:
+          type: string
+          enum: [FULL, QUICK]
+          description: |
+            Workflow type:
+            - FULL: Normal workflow (INBOX → SPECIFY → PLAN → BUILD)
+            - QUICK: Quick implementation (INBOX → BUILD)
+        branch:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Git branch name (null if not yet created)
+        startedAt:
+          type: string
+          format: date-time
+          description: Job start timestamp (auto-generated)
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Job completion timestamp (null for PENDING/RUNNING)
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          description: User ID
+        name:
+          type: string
+          nullable: true
+          description: User display name
+        email:
+          type: string
+          format: email
+          description: User email address
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code (optional)
+
+  responses:
+    Unauthorized:
+      description: User not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: 'Unauthorized - no valid session'
+
+    Forbidden:
+      description: User does not have access to this project
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: 'Forbidden - project not owned by user'
+
+    NotFound:
+      description: Ticket or project not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: 'Ticket not found'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: 'Internal server error'
+            code: 'DATABASE_ERROR'
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth session cookie (auto-managed)
+
+tags:
+  - name: Conversations
+    description: Ticket conversation timeline operations
