@@ -109,7 +109,7 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
         </VisuallyHidden>
 
         {/* Header with metadata */}
-        <div className="flex items-center justify-between p-4 border-b border-surface2 bg-mantle">
+        <div className="flex items-center justify-between p-4 pr-12 border-b border-surface2 bg-mantle">
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm text-text truncate">{currentImage.filename}</p>
             <p className="text-xs text-subtext0">
