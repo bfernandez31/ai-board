@@ -388,6 +388,172 @@ The system provides a threaded comment system within each ticket:
 
 ---
 
+## GitHub-Style Ticket Conversations
+
+**Purpose**: Users need a unified timeline view combining comments and workflow events (job lifecycle) to understand ticket progress and collaboration history. The GitHub-style conversation interface provides familiar visual patterns that reduce learning curve and enable comprehensive ticket context without switching between different views.
+
+### What It Does
+
+The system displays ticket activity as a unified conversation timeline:
+
+**Conversation Timeline**:
+- **Unified Display**: Comments and job lifecycle events shown together in chronological order
+- **Visual Layout**: GitHub-style timeline with vertical line connecting events
+- **Event Types**:
+  - User comments (speech bubble style, author avatar/initials)
+  - Job start events (PENDING/RUNNING status)
+  - Job completion events (COMPLETED status with success indicator)
+  - Job failure events (FAILED status with error indicator)
+  - Job cancellation events (CANCELLED status)
+- **Timestamps**: All items display relative timestamps (e.g., "2 hours ago")
+
+**Job Event Generation**:
+- **Start Events**: Generated when job status is PENDING or RUNNING
+  - Message: User-friendly stage name (e.g., "Specification generation started")
+  - Icon: Stage-specific icon with loading indicator
+- **Success Events**: Generated when job status is COMPLETED
+  - Message: Stage name with completion message (e.g., "Planning completed")
+  - Icon: Success checkmark with stage icon
+- **Failure Events**: Generated when job status is FAILED
+  - Message: Stage name with failure message (e.g., "Implementation failed")
+  - Icon: Error indicator with stage icon
+- **Cancellation Events**: Generated when job status is CANCELLED
+  - Message: Stage name with cancellation message
+  - Icon: Warning indicator
+
+**User-Friendly Terminology**:
+- **Stage Names**: Maps Job.command to readable stage terminology
+  - `specify` → "Specification generation"
+  - `plan` → "Planning"
+  - `implement` → "Implementation"
+  - Generic fallback for unmapped commands
+- **Workflow Type Indicators**: Visual badge when Job.workflowType = QUICK
+  - Quick workflow badge or icon displayed on relevant job events
+  - Differentiates quick-impl path from full workflow
+
+**Visual Distinction**:
+- **Comments**: User-authored content with author information
+  - Avatar or initials
+  - Author name
+  - Markdown-rendered content
+  - Delete option for own comments
+- **Job Events**: System-generated workflow events
+  - System user indicator (no avatar/initials)
+  - Stage icon and status indicator
+  - Concise status messages
+  - No edit/delete options
+
+**Scope & Exclusions**:
+- **Included Stages**: SPECIFY, PLAN, BUILD (jobs exist for these stages)
+- **Excluded Stages**: VERIFY, SHIP (no jobs currently, future enhancement)
+- **Retroactive Events**: Legacy jobs generate events using Job.createdAt and Job.completedAt timestamps
+- **Real-Time Updates**: Timeline refreshes when new comments added or job statuses change
+
+**GitHub-Style Visual Experience**:
+- **Timeline Indicators**: Vertical line connecting all events
+- **Event Nodes**: Circular nodes at each event position on timeline
+- **Consistent Styling**: Event cards with GitHub-like visual patterns
+- **Responsive Layout**: Mobile-friendly conversation view
+
+### Requirements
+
+**Timeline Display**:
+- Unified conversation view showing comments and job events in chronological order
+- GitHub-style visual layout (vertical timeline, event nodes, consistent styling)
+- Chronological ordering by timestamp (earliest to latest)
+- Load complete history within 2 seconds for tickets with up to 50 combined items
+- Smooth scrolling for long conversation threads
+- Responsive design (mobile and desktop)
+
+**Job Event Generation**:
+- Generate start event for jobs with status PENDING or RUNNING
+- Generate completion event for jobs with status COMPLETED
+- Generate failure event for jobs with status FAILED
+- Generate cancellation event for jobs with status CANCELLED
+- Map Job.command to user-friendly stage names (no technical command names)
+- Display workflow type indicator when Job.workflowType = QUICK
+- Exclude VERIFY and SHIP stage events (out of current scope)
+- Support retroactive event generation from existing Job records
+
+**User-Friendly Messaging**:
+- Stage terminology: SPECIFY, PLAN, BUILD (not "specify", "plan", "implement" commands)
+- Clear status messages: "started", "completed", "failed", "cancelled"
+- Quick workflow badge/mention when applicable
+- Generic fallback for unmapped Job.command values
+
+**Visual Distinction**:
+- Comments: User avatar/initials, author name, markdown rendering, delete option
+- Job Events: System indicator, stage icon, status icon, concise message, no edit/delete
+- Timeline styling: Vertical line, event nodes, GitHub-like event cards
+- Distinct styling between comment cards and event cards
+
+**Real-Time Updates**:
+- Timeline updates when new comments added (no page reload)
+- Timeline updates when job statuses change (polling or push)
+- Comment count reflects comments only (not job events)
+- Smooth animations for new items appearing
+
+**Performance**:
+- Initial load: <2 seconds for 50 combined items
+- Render: <500ms for timeline with 100 items
+- Event generation: No perceivable delay for retroactive events
+- Chronological sorting: Efficient for large conversation threads
+
+**Data Integrity**:
+- Events generated from existing Job and Comment records
+- No new database tables required (computed view from existing data)
+- Job fields used: id, ticketId, command, status, workflowType, createdAt, completedAt
+- Comment fields used: id, ticketId, userId, content, createdAt
+
+### Data Model
+
+**ConversationEvent (Conceptual, Not Database Entity)**:
+- Type: `comment` or `job_event`
+- Timestamp: For sorting (Comment.createdAt or Job.createdAt/completedAt)
+- Content: Comment content or generated job message
+- Metadata:
+  - Comments: userId, author name, markdown content
+  - Job Events: command, status, workflowType, stage name, status icon
+
+**Job Event Mapping**:
+```typescript
+Command → Stage Name
+---------------------------------
+"specify"      → "Specification generation"
+"plan"         → "Planning"
+"implement"    → "Implementation"
+"quick-impl"   → "Quick implementation"
+unmapped       → "Workflow task"
+```
+
+**Job Status → Event Type Mapping**:
+```typescript
+Status → Event Message Template
+---------------------------------
+PENDING/RUNNING  → "{Stage name} started"
+COMPLETED        → "{Stage name} completed"
+FAILED           → "{Stage name} failed"
+CANCELLED        → "{Stage name} cancelled"
+```
+
+**Event Generation Logic**:
+1. Fetch all Comments for ticket (ordered by createdAt)
+2. Fetch all Jobs for ticket (ordered by createdAt)
+3. Exclude VERIFY and SHIP stage jobs (if any exist)
+4. Generate start event from Job.createdAt for each job
+5. Generate completion/failure/cancellation event from Job.completedAt for terminal jobs
+6. Merge comments and job events into single array
+7. Sort by timestamp (chronological order)
+8. Return unified conversation timeline
+
+**Timeline Rendering**:
+- GitHub-style CSS classes for timeline visual structure
+- Event nodes positioned at each item
+- Vertical line connecting all events
+- Responsive breakpoints for mobile/desktop layouts
+
+---
+
 ## User Mentions in Comments
 
 **Purpose**: Users need to reference and draw attention to specific team members within ticket discussions. Mentions enable direct communication, clearer collaboration context, and easier identification of relevant stakeholders in comment threads.
@@ -912,6 +1078,20 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - ✅ Optimistic updates with rollback
 - ✅ Authorization enforcement (project owners, author-only deletion)
 
+**GitHub-Style Conversations**:
+- ✅ Unified timeline display (comments + job events)
+- ✅ GitHub-style visual layout (timeline, nodes, event cards)
+- ✅ Job lifecycle events (start, complete, fail, cancel)
+- ✅ User-friendly stage terminology (not command names)
+- ✅ Quick workflow indicators on relevant events
+- ✅ Visual distinction (user comments vs system events)
+- ✅ Chronological ordering by timestamp
+- ✅ Retroactive event generation from existing jobs
+- ✅ Stage filtering (SPECIFY/PLAN/BUILD included, VERIFY/SHIP excluded)
+- ✅ Real-time timeline updates (comments and job status changes)
+- ✅ Performance: <2s load for 50 items, <500ms render for 100 items
+- ✅ No database schema changes (computed from existing data)
+
 **User Mentions**:
 - ✅ @ symbol autocomplete in comment textarea
 - ✅ Real-time filtering by name and email (case-insensitive)
@@ -1099,6 +1279,18 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Comment ordering: Reverse chronological (newest first) via `createdAt DESC`
 - Optimistic updates: Immediate UI changes with rollback on failure
 - Performance: <2s for create/delete operations, <500ms for 100 comments rendering
+
+**GitHub-Style Conversations** (added 2025-10-27):
+- Unified timeline: Comments and job lifecycle events displayed together in chronological order
+- Visual layout: GitHub-style timeline with vertical line, event nodes, and consistent event cards
+- Job event generation: Start, completion, failure, and cancellation events from Job records
+- User-friendly terminology: Job commands mapped to readable stage names (SPECIFY, PLAN, BUILD)
+- Workflow type indicators: Quick workflow badges displayed on relevant job events
+- Visual distinction: Comments (user avatar, markdown content) vs job events (system indicator, status icons)
+- Retroactive events: Legacy jobs generate events from existing createdAt/completedAt timestamps
+- Stage filtering: SPECIFY, PLAN, BUILD events included; VERIFY, SHIP excluded (out of scope)
+- Real-time updates: Timeline refreshes when comments added or job statuses change
+- Performance: <2s initial load for 50 items, <500ms render for 100 items, no database schema changes
 
 **User Mentions in Comments** (added 2025-10-23):
 - Mention trigger: Type @ character in comment textarea to open autocomplete
