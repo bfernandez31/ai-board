@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, Maximize } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn, Maximize } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -204,17 +204,6 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
             </Button>
           </div>
         )}
-
-        {/* Close Button (absolute positioned in top-right) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 bg-mantle/90 hover:bg-surface0"
-          title="Close (ESC)"
-        >
-          <X className="h-4 w-4" />
-        </Button>
       </DialogContent>
     </Dialog>
   );
