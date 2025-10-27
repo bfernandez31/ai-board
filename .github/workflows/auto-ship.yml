@@ -1,0 +1,58 @@
+name: Auto-Ship on Vercel Deployment
+
+# Trigger when Vercel deployment completes successfully
+on:
+  deployment_status:
+
+jobs:
+  auto-ship-tickets:
+    # Only run when:
+    # 1. Deployment is to production environment
+    # 2. Deployment succeeded
+    # 3. Deployment was created by Vercel bot
+    if: |
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production' &&
+      github.event.sender.login == 'vercel[bot]'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+
+    steps:
+      - name: Debug Deployment Info
+        run: |
+          echo "🚀 Deployment Status Event Received"
+          echo "  Environment: ${{ github.event.deployment.environment }}"
+          echo "  Status: ${{ github.event.deployment_status.state }}"
+          echo "  SHA: ${{ github.event.deployment.sha }}"
+          echo "  Creator: ${{ github.event.sender.login }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          fetch-depth: 0
+
+      - name: Find and Transition VERIFY Tickets
+        run: |
+          .specify/scripts/bash/auto-ship-tickets.sh \
+            "${{ github.event.deployment.sha }}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
+
+      - name: Report Success
+        if: success()
+        run: |
+          echo "✅ Auto-ship workflow completed successfully"
+          echo "📦 Deployment SHA: ${{ github.event.deployment.sha }}"
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "❌ Auto-ship workflow failed"
+          echo "📋 Check logs above for error details"
+          exit 1

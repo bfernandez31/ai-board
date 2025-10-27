@@ -878,6 +878,17 @@ export interface TransitionResult {
 - ✅ Existing PR detection (retrieves URL instead of creating duplicate)
 - ✅ Performance: <10 seconds additional overhead
 
+**Automatic SHIP Transition on Vercel Deployment** (added 2025-10-28):
+- ✅ GitHub Actions workflow triggered on Vercel production deployment success
+- ✅ Automatic detection of tickets in VERIFY stage with merged branches
+- ✅ Git ancestry checking (`git merge-base --is-ancestor`) to verify branch inclusion
+- ✅ Automatic transition VERIFY → SHIP for deployed tickets
+- ✅ Deployment notification comment posted by AI-BOARD system user
+- ✅ Batch processing of multiple tickets in single deployment
+- ✅ Graceful handling of tickets without branches or unmerged branches
+- ✅ Complete audit trail with deployment SHA and timestamp
+- ✅ Performance: <30 seconds typical, <5 minutes maximum
+
 ### User Workflows
 
 **Triggering Specification Generation**:
@@ -1559,5 +1570,186 @@ await prisma.ticket.update({
 - RUNNING job: Red disabled (`border-red-500 opacity-50`)
 - COMPLETED job: Gray disabled (`opacity-50 cursor-not-allowed`)
 - No valid job: Invalid transition (blocked at API level)
+
+---
+
+## Automatic SHIP Transition on Vercel Deployment
+
+**Purpose**: Users need tickets to automatically transition to SHIP stage after successful production deployment, eliminating manual tracking and ensuring deployment state accuracy. The auto-ship workflow detects Vercel production deployments, identifies tickets with merged branches, and transitions them from VERIFY to SHIP automatically.
+
+### What It Does
+
+The system automates final stage transition after production deployment:
+
+**Deployment Detection**:
+- GitHub Actions workflow triggered by `deployment_status` event
+- Validates deployment is to production environment
+- Confirms deployment succeeded (state: success)
+- Verifies deployment creator is Vercel bot
+
+**Ticket Discovery Flow**:
+1. Vercel deploys commit SHA to production
+2. GitHub fires `deployment_status` event
+3. Workflow fetches all tickets in VERIFY stage
+4. For each ticket, checks if branch merged into deployed commit
+5. Transitions matching tickets to SHIP stage
+6. Posts deployment notification comment
+
+**Branch Verification**:
+- Uses `git merge-base --is-ancestor` to verify branch merged
+- Fetches ticket branches from remote with depth=50
+- Skips tickets without branches gracefully
+- Skips tickets whose branches not yet merged
+
+**Transition Notification**:
+- AI-BOARD system user posts deployment comment
+- Includes deployment SHA (first 7 chars)
+- Shows environment (Production) and status (Live)
+- Provides audit trail for deployment tracking
+
+**Batch Processing**:
+- Processes all VERIFY tickets in single workflow run
+- Summary report shows shipped count and skipped count
+- Independent ticket transitions (one failure doesn't block others)
+- Performance: <30 seconds for typical batch size
+
+### Requirements
+
+**Workflow Trigger**:
+- Event: `deployment_status`
+- Conditions:
+  - `github.event.deployment_status.state == 'success'`
+  - `github.event.deployment.environment == 'Production'`
+  - `github.event.sender.login == 'vercel[bot]'`
+- Timeout: 5 minutes
+
+**Environment Variables**:
+- `APP_URL`: API endpoint for ticket transitions
+- `WORKFLOW_API_TOKEN`: Bearer token for API authentication
+- No secrets exposed in logs or output
+
+**Script Responsibilities** (`.specify/scripts/bash/auto-ship-tickets.sh`):
+- Parse deployment SHA from event
+- Fetch all tickets in VERIFY stage via API
+- For each ticket, verify branch merged into deployed commit
+- Transition matching tickets to SHIP via API
+- Post deployment notification comments
+- Generate summary report
+
+**API Integration**:
+- GET `/api/projects/{projectId}/tickets?stage=VERIFY` - Fetch tickets
+- POST `/api/projects/{projectId}/tickets/{id}/transition` - Transition to SHIP
+- POST `/api/projects/{projectId}/tickets/{id}/comments/ai-board` - Post notification
+- Authentication: Bearer token (WORKFLOW_API_TOKEN)
+
+**Git Operations**:
+- Checkout repository at deployed commit SHA
+- Full git history (`fetch-depth: 0`)
+- Fetch ticket branches from remote (`git fetch origin <branch> --depth=50`)
+- Ancestry check (`git merge-base --is-ancestor <branch-commit> <deployment-sha>`)
+
+**Error Handling**:
+- Missing branches: Skip ticket with warning, continue processing
+- Branch not merged: Skip ticket, continue processing
+- Transition API failure: Log error for specific ticket, continue processing
+- Comment posting failure: Log warning, don't block transition
+- Script failure: Workflow reports failure, deployment still successful
+
+**Performance**:
+- Workflow execution: <30 seconds typical, <5 minutes maximum
+- Batch size: 10-50 tickets per deployment (typical)
+- API calls: 3 per ticket (fetch, transition, comment)
+- Git operations: Minimal fetch per ticket branch
+
+### Requirements
+
+**Workflow File**: `.github/workflows/auto-ship.yml`
+**Script File**: `.specify/scripts/bash/auto-ship-tickets.sh` (executable)
+
+**Project Configuration**:
+- Project ID hardcoded for production deployment (project 3)
+- Configurable via environment variable in future enhancement
+- Single project per deployment assumed
+
+**Comment Format**:
+```
+🚀 **Deployed to Production**
+
+This ticket has been automatically shipped after successful Vercel deployment.
+
+**Deployment SHA**: `abc1234`
+**Environment**: Production
+**Status**: Live
+```
+
+**Summary Report Format**:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Auto-Ship Complete
+  📦 Shipped: 3 ticket(s)
+  ⏭️  Skipped: 2 ticket(s)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Data Model
+
+**Deployment Status Event** (GitHub):
+```json
+{
+  "deployment_status": {
+    "state": "success"
+  },
+  "deployment": {
+    "environment": "Production",
+    "sha": "54064b5448f79cbd53241692a32c318c1b625adf"
+  },
+  "sender": {
+    "login": "vercel[bot]"
+  }
+}
+```
+
+**Ticket Query Response** (API):
+```json
+{
+  "tickets": [
+    {
+      "id": 42,
+      "title": "Add feature X",
+      "branch": "042-add-feature-x",
+      "stage": "VERIFY"
+    }
+  ]
+}
+```
+
+**Transition Request** (API):
+```json
+{
+  "targetStage": "SHIP"
+}
+```
+
+**Comment Request** (API):
+```json
+{
+  "content": "🚀 **Deployed to Production**\n\nDeployment SHA: `abc1234`",
+  "userId": "ai-board-system-user"
+}
+```
+
+**Git Ancestry Check**:
+```bash
+# Check if branch commit is ancestor of deployment commit
+git merge-base --is-ancestor <branch-commit> <deployment-sha>
+# Exit code 0: merged (transition ticket)
+# Exit code 1: not merged (skip ticket)
+```
+
+**Workflow Outputs**:
+- Deployment SHA logged
+- Ticket processing logs per ticket
+- Summary report with counts
+- Success/failure status
 
 ---
