@@ -191,7 +191,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Verify counter shows correct count
     const textareaValue = await textarea.inputValue();
-    const remaining = 1000 - textareaValue.length;
+    const remaining = 2500 - textareaValue.length;
     await expect(counter).toContainText(`${remaining} characters remaining`);
   });
 
@@ -316,30 +316,30 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await descriptionElement.click();
     const textarea = page.getByTestId('description-textarea');
 
-    // Type exactly 910 characters (>90% of 1000)
-    const text910 = 'A'.repeat(910);
-    await textarea.fill(text910);
+    // Type exactly 2250 characters (>90% of 2500)
+    const text2250 = 'A'.repeat(2250);
+    await textarea.fill(text2250);
 
-    // Assert: counter shows "90 characters remaining"
+    // Assert: counter shows "250 characters remaining"
     const counter = page.getByTestId('character-counter');
-    await expect(counter).toContainText('90 characters remaining');
+    await expect(counter).toContainText('250 characters remaining');
 
     // Assert: warning indicator visible (yellow/orange)
     const warningIcon = counter.locator('svg').first();
     await expect(warningIcon).toBeVisible();
 
-    // Continue typing to 1000 characters
-    const text1000 = 'A'.repeat(1000);
-    await textarea.fill(text1000);
+    // Continue typing to 2500 characters
+    const text2500 = 'A'.repeat(2500);
+    await textarea.fill(text2500);
 
     // Assert: counter shows "0 characters remaining"
     await expect(counter).toContainText('0 characters remaining');
 
     // Assert: input prevents further typing (maxLength)
     const inputValue = await textarea.inputValue();
-    expect(inputValue.length).toBe(1000);
+    expect(inputValue.length).toBe(2500);
 
-    // Save button should still be enabled (1000 is valid)
+    // Save button should still be enabled (2500 is valid)
     const saveButton = page.locator('button:has-text("Save")');
     await expect(saveButton).toBeEnabled();
 

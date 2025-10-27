@@ -162,8 +162,8 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.title.length).toBe(100);
   });
 
-  test('should return 400 for description exceeding max length (1000 chars)', async ({ request }) => {
-    const longDescription = 'B'.repeat(1001); // 1001 characters
+  test('should return 400 for description exceeding max length (2500 chars)', async ({ request }) => {
+    const longDescription = 'B'.repeat(2501); // 2501 characters
 
     const requestBody = {
       title: '[e2e] Valid title',
@@ -183,8 +183,8 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should accept description at max length (1000 chars)', async ({ request }) => {
-    const maxDescription = 'B'.repeat(1000); // Exactly 1000 characters
+  test('should accept description at max length (2500 chars)', async ({ request }) => {
+    const maxDescription = 'B'.repeat(2500); // Exactly 2500 characters
 
     const requestBody = {
       title: '[e2e] Valid title',
@@ -200,7 +200,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     const body = await response.json();
 
     expect(body.description).toBe(maxDescription);
-    expect(body.description.length).toBe(1000);
+    expect(body.description.length).toBe(2500);
   });
 
   test('should return 400 for invalid JSON payload', async ({ request }) => {
