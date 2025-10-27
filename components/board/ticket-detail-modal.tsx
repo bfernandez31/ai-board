@@ -890,7 +890,7 @@ export function TicketDetailModal({
                 />
                 <CharacterCounter
                   current={descriptionEdit.value.length}
-                  max={1000}
+                  max={2500}
                 />
                 {descriptionEdit.error && (
                   <p
