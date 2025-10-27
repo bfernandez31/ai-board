@@ -114,7 +114,7 @@ if [ -n "$PR_URL" ]; then
   curl -X POST "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comments" \
     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
     -H "Content-Type: application/json" \
-    -d "{\"content\": \"🔀 **Pull Request Created**\\n\\nPR #${PR_NUMBER} is ready for review:\\n👉 ${PR_URL}\\n\\nThe implementation is complete and ready for code review.\"}" \
+    -d "{\"content\": \"✅ **Pull Request Ready for Review**\\n\\n**PR #${PR_NUMBER}**: [View Pull Request](${PR_URL})\\n\\nThe implementation is complete. Code review can now begin.\\n\\n**Next Steps**:\\n- Review the code changes\\n- Run tests to verify functionality\\n- Approve and merge when ready\"}" \
     -f -s -S || echo "⚠️ Failed to post PR comment (continuing...)"
 else
   echo "⚠️ Could not determine PR URL"
