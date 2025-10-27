@@ -103,7 +103,7 @@ The system provides a modal form for creating tickets:
 
 **Form Fields**:
 - **Title**: Required, max 100 characters
-- **Description**: Required, max 1000 characters
+- **Description**: Required, max 2500 characters
 - **Character Restrictions**: Alphanumeric and basic punctuation only (no emojis, no special characters)
 
 **Validation**:
@@ -134,7 +134,7 @@ The system provides a modal form for creating tickets:
 
 **Validation**:
 - Title: required, max 100 characters, no whitespace-only
-- Description: required, max 1000 characters, no whitespace-only
+- Description: required, max 2500 characters, no whitespace-only
 - Character restrictions: alphanumeric + basic punctuation (. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ ` |)
 - Real-time error display as user types
 - Create button disabled when invalid
@@ -156,7 +156,7 @@ The system provides a modal form for creating tickets:
 
 **Created Ticket**:
 - `title`: 1-100 characters, alphanumeric + basic punctuation
-- `description`: 1-1000 characters, alphanumeric + basic punctuation
+- `description`: 1-2500 characters, alphanumeric + basic punctuation
 - `stage`: Set to INBOX automatically
 - `projectId`: Assigned from current project context
 - `createdAt`: Timestamp of creation
@@ -179,7 +179,7 @@ The system provides a modal form for creating tickets:
 **Ticket Creation**:
 - ✅ Modal-based creation form
 - ✅ Real-time validation
-- ✅ Character limits (title 100, description 1000)
+- ✅ Character limits (title 100, description 2500)
 - ✅ Character restrictions (no emojis/special chars)
 - ✅ Immediate ticket display after creation
 - ✅ Multiple modal dismissal methods
@@ -203,7 +203,7 @@ The system provides a modal form for creating tickets:
 1. User clicks "+ New Ticket" in INBOX column
 2. Modal opens with empty form
 3. User enters title (1-100 chars)
-4. User enters description (1-1000 chars)
+4. User enters description (1-2500 chars)
 5. User clicks Create
 6. Ticket appears immediately in INBOX column
 

@@ -120,10 +120,10 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(newTicket.first()).toBeVisible({ timeout: 3000 });
   });
 
-  test("should create ticket with maximum length description (1000 chars)", async ({ page }) => {
+  test("should create ticket with maximum length description (2500 chars)", async ({ page }) => {
     const testId = Date.now();
     const testTitle = `Test with long description ${testId}`;
-    const maxDescription = "b".repeat(1000);
+    const maxDescription = "b".repeat(2500);
 
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();

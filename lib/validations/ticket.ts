@@ -45,7 +45,7 @@ export const TitleFieldSchema = z
 export const DescriptionFieldSchema = z
   .string()
   .min(1, 'Description is required')
-  .max(1000, 'Description must be 1000 characters or less');
+  .max(2500, 'Description must be 2500 characters or less');
 
 /**
  * Validation schema for creating a new ticket
@@ -79,8 +79,8 @@ export const CreateTicketSchema = z
     message: 'Description is required',
     path: ['description'],
   })
-  .refine((data) => data.description.length <= 1000, {
-    message: 'Description must be 1000 characters or less',
+  .refine((data) => data.description.length <= 2500, {
+    message: 'Description must be 2500 characters or less',
     path: ['description'],
   });
 
@@ -96,7 +96,7 @@ export const TicketSchema = z.object({
   description: z
     .string()
     .min(1, 'Description is required')
-    .max(1000, 'Description must be 1000 characters or less'),
+    .max(2500, 'Description must be 2500 characters or less'),
   stage: StageSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -119,7 +119,7 @@ export const descriptionSchema = z
   .string()
   .trim()
   .min(1, { message: 'Description cannot be empty' })
-  .max(1000, { message: 'Description must be 1000 characters or less' });
+  .max(2500, { message: 'Description must be 2500 characters or less' });
 
 export const versionSchema = z
   .number()

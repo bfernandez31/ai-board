@@ -637,7 +637,7 @@ export function TicketDetailModal({
   const descriptionEdit = useTicketEdit({
     initialValue: localTicket?.description || '',
     onSave: handleSaveDescription,
-    maxLength: 1000,
+    maxLength: 2500,
   });
 
   // Don't render content if no ticket is selected (after all hooks)
@@ -875,7 +875,7 @@ export function TicketDetailModal({
                       event.stopPropagation();
                     }
                   }}
-                  maxLength={1000}
+                  maxLength={2500}
                   className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed h-[calc(100vh-470px)] sm:min-h-[300px] sm:max-h-[calc(90vh-500px)] sm:h-auto"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
@@ -890,7 +890,7 @@ export function TicketDetailModal({
                 />
                 <CharacterCounter
                   current={descriptionEdit.value.length}
-                  max={1000}
+                  max={2500}
                 />
                 {descriptionEdit.error && (
                   <p

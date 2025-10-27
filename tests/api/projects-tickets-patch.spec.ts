@@ -201,12 +201,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('error');
   });
 
-  test('should return 400 for description exceeding 1000 characters', async ({ request }) => {
+  test('should return 400 for description exceeding 2500 characters', async ({ request }) => {
     const ticket = await createTestTicket(request);
 
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
       data: {
-        description: 'a'.repeat(1001),
+        description: 'a'.repeat(2501),
         version: 1
       }
     });

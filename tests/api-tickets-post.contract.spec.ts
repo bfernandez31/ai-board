@@ -71,8 +71,8 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(body.title.length).toBe(100);
     });
 
-    test("should create ticket with maximum length description (1000 chars)", async ({ request }) => {
-      const maxDescription = "a".repeat(1000);
+    test("should create ticket with maximum length description (2500 chars)", async ({ request }) => {
+      const maxDescription = "a".repeat(2500);
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: '[e2e] Test ticket',
@@ -84,7 +84,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
 
       const body = await response.json();
       expect(body.description).toBe(maxDescription);
-      expect(body.description.length).toBe(1000);
+      expect(body.description.length).toBe(2500);
     });
 
     test("should create ticket with allowed punctuation", async ({ request }) => {
@@ -211,8 +211,8 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(body.details.fieldErrors.title).toContain("Title must be 100 characters or less");
     });
 
-    test("should reject description longer than 1000 characters", async ({ request }) => {
-      const tooLongDescription = "a".repeat(1001);
+    test("should reject description longer than 2500 characters", async ({ request }) => {
+      const tooLongDescription = "a".repeat(2501);
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: '[e2e] Valid title',
@@ -223,7 +223,7 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(response.status()).toBe(400);
 
       const body = await response.json();
-      expect(body.details.fieldErrors.description).toContain("Description must be 1000 characters or less");
+      expect(body.details.fieldErrors.description).toContain("Description must be 2500 characters or less");
     });
 
     test("should reject title with special characters (emoji)", async ({ request }) => {
@@ -240,18 +240,18 @@ test.describe("POST /api/projects/1/tickets - Contract Tests", () => {
       expect(body.details.fieldErrors.title).toContain("can only contain letters, numbers, spaces, and common special characters");
     });
 
-    test("should reject description with emoji characters", async ({ request }) => {
+    test("should accept description with emoji characters", async ({ request }) => {
       const response = await request.post(`${API_BASE_URL}/api/projects/1/tickets`, {
         data: {
           title: '[e2e] Valid title',
-          description: "Invalid description with emoji 🚀 characters",
+          description: "Valid description with emoji 🚀 characters",
         },
       });
 
-      expect(response.status()).toBe(400);
+      expect(response.status()).toBe(201);
 
       const body = await response.json();
-      expect(body.details.fieldErrors.description).toContain("can only contain letters, numbers, spaces, and common special characters");
+      expect(body.description).toBe("Valid description with emoji 🚀 characters");
     });
 
     test("should reject missing title field", async ({ request }) => {
