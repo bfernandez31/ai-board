@@ -1421,6 +1421,13 @@ The implementation is complete and ready for code review.
 - ✅ No workflow dispatched for VERIFY (manual stage)
 - ✅ Total time <10 seconds additional overhead
 
+**PR Ready Notification Enhancement** (added 2025-10-27):
+- ✅ Comment explicitly states "ready for review" with clear messaging
+- ✅ PR number included in comment when available
+- ✅ Markdown-formatted link provides direct navigation to PR
+- ✅ Comment rendering works correctly in ticket UI with clickable links
+- ✅ Comment posting failure doesn't block ticket transition to VERIFY
+
 ---
 
 ## Quick Workflow Rollback
