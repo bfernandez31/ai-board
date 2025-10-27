@@ -31,7 +31,8 @@ import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Stage } from '@prisma/client';
-import { CommentList } from '@/components/comments/comment-list';
+import { CommentForm } from '@/components/comments/comment-form';
+import { ConversationTimeline } from '@/components/ticket/conversation-timeline';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
@@ -1037,14 +1038,25 @@ export function TicketDetailModal({
             </div>
           </TabsContent>
 
-          {/* Comments Tab */}
+          {/* Comments Tab - now Conversation Timeline */}
           <TabsContent value="comments" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
-            <CommentList
-              projectId={projectId}
-              ticketId={ticket.id}
-              isActive={activeTab === 'comments'}
-              onAutocompleteOpenChange={setIsAutocompleteOpen}
-            />
+            <div className="space-y-4">
+              {/* Comment form at top for adding new comments */}
+              <CommentForm
+                projectId={projectId}
+                ticketId={ticket.id}
+                {...(setIsAutocompleteOpen && { onAutocompleteOpenChange: setIsAutocompleteOpen })}
+              />
+
+              {/* Timeline separator */}
+              <div className="border-t border-surface0 pt-4">
+                {/* Unified conversation timeline (comments + job events) */}
+                <ConversationTimeline
+                  projectId={projectId}
+                  ticketId={ticket.id}
+                />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Files Tab */}

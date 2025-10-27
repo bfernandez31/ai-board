@@ -223,8 +223,8 @@ Multi-line content is preserved.`;
     const commentText = page.locator('text=Comment to delete');
     await commentText.waitFor({ state: 'visible' });
 
-    // Find the exact comment container div with class "group flex gap-3 py-3"
-    const commentContainer = page.locator('.group.flex.gap-3.py-3').filter({ hasText: 'Comment to delete' });
+    // Find the exact comment container (now using data-testid for timeline design)
+    const commentContainer = page.locator('[data-testid="comment-item"]').filter({ hasText: 'Comment to delete' });
 
     // Hover over the comment container to trigger isHovered state
     await commentContainer.hover();

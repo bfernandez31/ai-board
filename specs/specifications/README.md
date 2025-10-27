@@ -20,7 +20,7 @@ Specifications are organized by feature domain. Each category documents the curr
 | Category | File | Features Covered |
 |----------|------|------------------|
 | **Foundation** | [01-foundation.md](01-foundation.md) | Kanban board, ticket display, basic workflow |
-| **Ticket Management** | [02-ticket-management.md](02-ticket-management.md) | Drag-drop movement, detail viewer, inline editing, comments, user mentions, image attachments |
+| **Ticket Management** | [02-ticket-management.md](02-ticket-management.md) | Drag-drop movement, detail viewer, inline editing, comments, user mentions, image attachments, GitHub-style conversations |
 | **Project Architecture** | [03-project-architecture.md](03-project-architecture.md) | Multi-project support, GitHub integration |
 | **Workflow Automation** | [04-workflow-automation.md](04-workflow-automation.md) | Job tracking, GitHub Actions, spec-kit automation, quick-impl workflow, enhanced implementation with database setup |
 | **Testing & Quality** | [05-testing-quality.md](05-testing-quality.md) | Test infrastructure, data isolation |
@@ -98,4 +98,4 @@ This documentation consolidates those specifications into **current state** docu
 ---
 
 **Last Updated**: 2025-10-27
-**Version**: Current State (consolidated from 52 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions + enhanced implementation workflow + landing page animated workflow + PR ready notification enhancement)
+**Version**: Current State (consolidated from 52 specifications + authentication + clarification policies + quick-implementation + job-blocked UX + ticket comments with tabs + user mentions + enhanced implementation workflow + landing page animated workflow + PR ready notification enhancement + GitHub-style conversations)
