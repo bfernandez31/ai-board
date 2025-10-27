@@ -40,6 +40,13 @@ echo "✅ Branch exists on remote: ${BRANCH}"
 # Create Pull Request (branch is already pushed by previous workflow step)
 echo ""
 echo "🔀 Creating Pull Request..."
+echo "Debug - GH CLI environment:"
+echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes (length: ${#GH_TOKEN})" || echo "no")"
+echo "  gh version: $(gh --version | head -n1)"
+echo "  gh auth status:"
+gh auth status 2>&1 || echo "  ⚠️ gh auth check failed"
+echo ""
+
 PR_CREATE_OUTPUT=$(gh pr create \
   --title "feat(ticket-${TICKET_ID}): automated implementation" \
   --body "## 🤖 Automated Implementation
@@ -72,7 +79,16 @@ if [ $PR_CREATE_EXIT -eq 0 ]; then
   echo "✅ Pull Request created: ${PR_URL}"
 else
   echo "⚠️ PR creation failed (exit code: $PR_CREATE_EXIT)"
-  echo "   Output: ${PR_CREATE_OUTPUT}"
+  echo "   Full output: ${PR_CREATE_OUTPUT}"
+  echo ""
+  echo "Debug information:"
+  echo "  Current branch: $(git rev-parse --abbrev-ref HEAD)"
+  echo "  Target branch: ${BRANCH}"
+  echo "  Base branch: main"
+  echo "  Remote branches: $(git ls-remote --heads origin | grep -F "${BRANCH}" || echo "not found")"
+  echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes (length: ${#GH_TOKEN})" || echo "no")"
+  echo "  Repository: $(git config --get remote.origin.url)"
+  echo ""
   echo "   Checking if PR already exists..."
 
   # Try to get existing PR URL
@@ -82,12 +98,6 @@ else
   if [ $PR_VIEW_EXIT -ne 0 ]; then
     echo "❌ Error: Could not find existing PR either"
     echo "   gh pr view output: ${PR_URL}"
-    echo ""
-    echo "Debug information:"
-    echo "  Current branch: $(git rev-parse --abbrev-ref HEAD)"
-    echo "  Target branch: ${BRANCH}"
-    echo "  Remote branches: $(git ls-remote --heads origin | grep -F "${BRANCH}" || echo "not found")"
-    echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo "yes" || echo "no")"
     exit 1
   fi
 
