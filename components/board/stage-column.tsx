@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Stage } from '@/lib/stage-transitions';
 import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
+import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Job } from '@prisma/client';
 import { Ban } from 'lucide-react';
@@ -140,6 +141,60 @@ export const StageColumn = React.memo(
     const ticketCount = tickets.length;
     const showNewTicketButton = stageConfig.order === 0; // Only show in INBOX
 
+    // Scroll detection state for mobile scroll buttons
+    const [canScrollUp, setCanScrollUp] = React.useState(false);
+    const [canScrollDown, setCanScrollDown] = React.useState(false);
+    const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+
+    // Check scroll position to determine button visibility
+    const checkScrollPosition = React.useCallback(() => {
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      const scrollThreshold = 10; // Small threshold to account for rounding
+
+      setCanScrollUp(scrollTop > scrollThreshold);
+      setCanScrollDown(scrollTop + clientHeight < scrollHeight - scrollThreshold);
+    }, []);
+
+    // Handle scroll button clicks
+    const handleScrollUp = React.useCallback(() => {
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      viewport.scrollBy({
+        top: -200, // Scroll up by 200px
+        behavior: 'smooth',
+      });
+    }, []);
+
+    const handleScrollDown = React.useCallback(() => {
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      viewport.scrollBy({
+        top: 200, // Scroll down by 200px
+        behavior: 'smooth',
+      });
+    }, []);
+
+    // Check scroll position on mount and when tickets change
+    React.useEffect(() => {
+      checkScrollPosition();
+    }, [tickets, checkScrollPosition]);
+
+    // Set up scroll event listener
+    React.useEffect(() => {
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      viewport.addEventListener('scroll', checkScrollPosition);
+      return () => {
+        viewport.removeEventListener('scroll', checkScrollPosition);
+      };
+    }, [checkScrollPosition]);
+
     return (
       <div
         ref={setNodeRef}
@@ -171,7 +226,7 @@ export const StageColumn = React.memo(
         </div>
 
         {/* Tickets Scroll Area */}
-        <ScrollArea className="flex-1 overscroll-none">
+        <ScrollArea className="flex-1 overscroll-none" viewportRef={scrollViewportRef}>
           <div className="space-y-3 px-4 pb-5 pt-3 touch-pan-y">
             {/* New Ticket Button - Only in INBOX */}
             {showNewTicketButton && (
@@ -201,6 +256,18 @@ export const StageColumn = React.memo(
             )}
           </div>
         </ScrollArea>
+
+        {/* Mobile Scroll Buttons */}
+        <MobileScrollButton
+          direction="up"
+          onClick={handleScrollUp}
+          visible={canScrollUp}
+        />
+        <MobileScrollButton
+          direction="down"
+          onClick={handleScrollDown}
+          visible={canScrollDown}
+        />
 
         {/* Blocked by Job Overlay */}
         {isBlockedByJob && (
