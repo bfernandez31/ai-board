@@ -27,9 +27,9 @@ description: "Task list for PR Ready Notification Enhancement"
 
 **Purpose**: Project initialization and verification
 
-- [ ] T001 Verify Git repository is on correct branch (065-916-update-script)
-- [ ] T002 Verify target script exists at .specify/scripts/bash/create-pr-and-transition.sh
-- [ ] T003 [P] Review existing comment posting logic (lines 111-118)
+- [X] T001 Verify Git repository is on correct branch (065-916-update-script)
+- [X] T002 Verify target script exists at .specify/scripts/bash/create-pr-and-transition.sh
+- [X] T003 [P] Review existing comment posting logic (lines 111-118)
 
 ---
 
@@ -39,10 +39,10 @@ description: "Task list for PR Ready Notification Enhancement"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Analyze current comment template format at .specify/scripts/bash/create-pr-and-transition.sh:117
-- [ ] T005 [P] Review PR number extraction logic at .specify/scripts/bash/create-pr-and-transition.sh:108
-- [ ] T006 [P] Review error handling pattern at .specify/scripts/bash/create-pr-and-transition.sh:118
-- [ ] T007 Confirm API endpoint contract (POST /api/projects/:projectId/tickets/:id/comments) supports markdown format
+- [X] T004 Analyze current comment template format at .specify/scripts/bash/create-pr-and-transition.sh:117
+- [X] T005 [P] Review PR number extraction logic at .specify/scripts/bash/create-pr-and-transition.sh:108
+- [X] T006 [P] Review error handling pattern at .specify/scripts/bash/create-pr-and-transition.sh:118
+- [X] T007 Confirm API endpoint contract (POST /api/projects/:projectId/tickets/:id/comments) supports markdown format
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -56,13 +56,13 @@ description: "Task list for PR Ready Notification Enhancement"
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Update comment template content in .specify/scripts/bash/create-pr-and-transition.sh:117 to use enhanced format with "Ready for Review" heading
-- [ ] T009 [US1] Replace comment title from "Pull Request Created" to "Pull Request Ready for Review" with checkmark emoji (✅)
-- [ ] T010 [US1] Update PR reference format from "PR #${PR_NUMBER} is ready for review:" to "**PR #${PR_NUMBER}**: [View Pull Request](${PR_URL})"
-- [ ] T011 [US1] Add explicit "Code review can now begin" language to comment body
-- [ ] T012 [US1] Add "Next Steps" section with actionable reviewer checklist (Review code changes, Run tests, Approve and merge)
-- [ ] T013 [US1] Verify JSON escaping is correct for all special characters (newlines \\n, quotes \", markdown syntax)
-- [ ] T014 [US1] Validate error handling remains non-blocking (|| echo "⚠️ Failed..." pattern preserved at line 118)
+- [X] T008 [US1] Update comment template content in .specify/scripts/bash/create-pr-and-transition.sh:117 to use enhanced format with "Ready for Review" heading
+- [X] T009 [US1] Replace comment title from "Pull Request Created" to "Pull Request Ready for Review" with checkmark emoji (✅)
+- [X] T010 [US1] Update PR reference format from "PR #${PR_NUMBER} is ready for review:" to "**PR #${PR_NUMBER}**: [View Pull Request](${PR_URL})"
+- [X] T011 [US1] Add explicit "Code review can now begin" language to comment body
+- [X] T012 [US1] Add "Next Steps" section with actionable reviewer checklist (Review code changes, Run tests, Approve and merge)
+- [X] T013 [US1] Verify JSON escaping is correct for all special characters (newlines \\n, quotes \", markdown syntax)
+- [X] T014 [US1] Validate error handling remains non-blocking (|| echo "⚠️ Failed..." pattern preserved at line 118)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -72,14 +72,14 @@ description: "Task list for PR Ready Notification Enhancement"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T015 [P] Create validation script to test JSON payload format (test-comment-format.sh per quickstart.md)
-- [ ] T016 Run validation script with sample PR_NUMBER and PR_URL to verify JSON correctness
+- [X] T015 [P] Create validation script to test JSON payload format (test-comment-format.sh per quickstart.md)
+- [X] T016 Run validation script with sample PR_NUMBER and PR_URL to verify JSON correctness
 - [ ] T017 [P] Verify markdown rendering in ticket UI with manual workflow test
 - [ ] T018 [P] Run existing E2E test suite (tests/e2e/workflow-integration.spec.ts) to validate integration
 - [ ] T019 Update E2E test assertions if needed to match new comment format expectations
 - [ ] T020 Verify comment appears correctly after workflow execution in development project
-- [ ] T021 [P] Update CLAUDE.md if workflow behavior documentation needs changes
-- [ ] T022 Run quickstart.md validation checklist (Script syntax valid, JSON valid, Markdown renders, PR link clickable, Error handling preserved)
+- [X] T021 [P] Update CLAUDE.md if workflow behavior documentation needs changes
+- [X] T022 Run quickstart.md validation checklist (Script syntax valid, JSON valid, Markdown renders, PR link clickable, Error handling preserved)
 
 ---
 
