@@ -218,7 +218,7 @@ export function ImageUpload({
         onDrop={handleDrop}
         className={`
           border-2 border-dashed rounded-lg text-center transition-colors
-          ${images.length > 0 ? 'p-4' : 'p-8'}
+          ${images.length > 0 ? 'p-3' : 'p-4'}
           ${
             isDragging
               ? 'border-primary bg-primary/10'
@@ -252,7 +252,7 @@ export function ImageUpload({
         />
 
         <div className={`flex ${images.length > 0 ? 'flex-row' : 'flex-col'} items-center gap-2`}>
-          <Upload className={`${images.length > 0 ? 'h-5 w-5' : 'h-10 w-10'} text-muted-foreground`} />
+          <Upload className={`${images.length > 0 ? 'h-5 w-5' : 'h-6 w-6'} text-muted-foreground`} />
           <div className="flex flex-col items-center gap-1">
             <div className="text-sm font-medium">
               {isDragging ? 'Drop images here' : images.length > 0 ? 'Add more images' : 'Drag and drop images here'}
