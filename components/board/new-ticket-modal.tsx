@@ -271,7 +271,7 @@ export function NewTicketModal({
               <p className="text-sm text-red-500">{errors.description}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              {formData.description.length}/1000 characters
+              {formData.description.length}/2500 characters
             </p>
           </div>
 
