@@ -9,13 +9,16 @@
 
 import React from 'react';
 import { Avatar } from '@/components/comments/avatar';
+import { MentionDisplay } from '@/components/comments/mention-display';
 import { TimelineBadge } from './timeline-badge';
 import { TimelineContent } from './timeline-content';
 import type { CommentWithUser } from '@/app/lib/types/comment';
+import type { User } from '@/app/lib/types/mention';
 
 interface CommentTimelineItemProps {
   comment: CommentWithUser;
   timestamp: string;
+  mentionedUsers: Record<string, User>;
 }
 
 /**
@@ -55,14 +58,19 @@ function formatRelativeTime(timestamp: string): string {
  * Memoized for performance (prevents re-renders when other events update)
  */
 export const CommentTimelineItem = React.memo(
-  function CommentTimelineItem({ comment, timestamp }: CommentTimelineItemProps) {
+  function CommentTimelineItem({ comment, timestamp, mentionedUsers }: CommentTimelineItemProps) {
     return (
-      <li className="relative flex gap-4">
+      <li className="relative pl-12">
         <TimelineBadge variant="avatar">
           <Avatar name={comment.user.name} image={comment.user.image} />
         </TimelineBadge>
         <TimelineContent>
-          <div className="border border-surface0 rounded-lg bg-mantle p-4 shadow-sm">
+          {/* Speech bubble with tail pointing to avatar */}
+          <div className="relative border border-surface0 rounded-lg bg-mantle p-4 shadow-sm">
+            {/* Speech bubble tail (triangle pointing left) */}
+            <div className="absolute -left-2 top-3 w-0 h-0 border-t-8 border-t-transparent border-r-8 border-r-surface0 border-b-8 border-b-transparent" />
+            <div className="absolute -left-[7px] top-3 w-0 h-0 border-t-8 border-t-transparent border-r-8 border-r-mantle border-b-8 border-b-transparent" />
+
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-text">
                 {comment.user.name || comment.user.email}
@@ -71,8 +79,8 @@ export const CommentTimelineItem = React.memo(
                 {formatRelativeTime(timestamp)}
               </time>
             </div>
-            <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap">
-              {comment.content}
+            <div className="prose prose-sm prose-invert max-w-none">
+              <MentionDisplay content={comment.content} mentionedUsers={mentionedUsers} />
             </div>
           </div>
         </TimelineContent>

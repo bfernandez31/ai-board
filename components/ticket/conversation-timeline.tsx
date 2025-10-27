@@ -93,7 +93,11 @@ export function ConversationTimeline({ ticketId, projectId }: ConversationTimeli
   return (
     <Timeline>
       {data.timeline.map((event) => (
-        <TimelineItem key={getEventKey(event)} event={event} />
+        <TimelineItem
+          key={getEventKey(event)}
+          event={event}
+          mentionedUsers={data.mentionedUsers}
+        />
       ))}
     </Timeline>
   );

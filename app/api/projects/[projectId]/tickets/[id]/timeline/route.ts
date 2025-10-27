@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { mergeConversationEvents } from '@/app/lib/utils/conversation-events';
+import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
 
 /**
  * Schema for route parameters validation
@@ -96,8 +97,29 @@ export async function GET(
           },
         },
       },
-      orderBy: { createdAt: 'asc' }, // Oldest first for natural timeline flow
+      orderBy: { createdAt: 'desc' }, // Most recent first
     });
+
+    // Extract all mentioned user IDs from all comments
+    const allMentionedUserIds = comments.flatMap((comment) =>
+      extractMentionUserIds(comment.content)
+    );
+    const uniqueUserIds = Array.from(new Set(allMentionedUserIds));
+
+    // Fetch mentioned users (LEFT JOIN behavior for deleted users)
+    const mentionedUsers = await prisma.user.findMany({
+      where: { id: { in: uniqueUserIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    // Create user map for client-side mention resolution
+    const mentionedUsersMap = Object.fromEntries(
+      mentionedUsers.map((user) => [user.id, user])
+    );
 
     // T013: Fetch jobs with VERIFY/SHIP exclusion filter (chronological order)
     // VERIFY and SHIP stages are out of scope (no jobs for those stages yet)
@@ -109,7 +131,7 @@ export async function GET(
           notIn: ['verify', 'ship'],
         },
       },
-      orderBy: { startedAt: 'asc' }, // Oldest first for natural timeline flow
+      orderBy: { startedAt: 'desc' }, // Most recent first
     });
 
     // T014: Transform comments to API format with ISO timestamps
@@ -131,8 +153,11 @@ export async function GET(
     // T014: Merge and sort events using utility function
     const timeline = mergeConversationEvents(commentsWithISOTimestamps, jobs);
 
-    // Return unified timeline
-    return NextResponse.json({ timeline });
+    // Return unified timeline with mentioned users
+    return NextResponse.json({
+      timeline,
+      mentionedUsers: mentionedUsersMap,
+    });
   } catch (error) {
     console.error('[Timeline API Error]', error);
 

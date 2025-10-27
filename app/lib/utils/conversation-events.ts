@@ -83,9 +83,9 @@ export function mergeConversationEvents(
   // Spread operator optimal for <100 items
   const allEvents = [...commentEvents, ...jobEvents];
 
-  // Single sort by timestamp (chronological order, oldest first)
+  // Single sort by timestamp (reverse chronological order, most recent first)
   return allEvents.sort((a, b) =>
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 }
 

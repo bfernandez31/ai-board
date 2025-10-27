@@ -8,12 +8,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { ConversationEvent } from '@/app/lib/types/conversation-event';
+import type { User } from '@/app/lib/types/mention';
 
 /**
  * Response interface for timeline API
  */
 interface TimelineResponse {
   timeline: ConversationEvent[];
+  mentionedUsers: Record<string, User>;
 }
 
 /**

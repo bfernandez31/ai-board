@@ -28,10 +28,10 @@ interface TimelineProps {
 export function Timeline({ children, className }: TimelineProps) {
   return (
     <ol
-      className={cn('relative pl-10 space-y-4', className)}
+      className={cn('relative space-y-4', className)}
       aria-label="Timeline of ticket activity"
     >
-      {/* Vertical connector line */}
+      {/* Vertical connector line - centered on 32px badges at left: 16px (4rem) */}
       <div
         className="absolute left-4 top-0 bottom-0 w-0.5 bg-surface0"
         aria-hidden="true"

@@ -6,12 +6,14 @@
  */
 
 import type { ConversationEvent } from '@/app/lib/types/conversation-event';
+import type { User } from '@/app/lib/types/mention';
 import { assertNever } from '@/app/lib/types/conversation-event';
 import { CommentTimelineItem } from './comment-timeline-item';
 import { JobEventTimelineItem } from './job-event-timeline-item';
 
 interface TimelineItemProps {
   event: ConversationEvent;
+  mentionedUsers: Record<string, User>;
 }
 
 /**
@@ -24,10 +26,16 @@ interface TimelineItemProps {
  * <TimelineItem event={commentEvent} /> // → renders CommentTimelineItem
  * <TimelineItem event={jobEvent} />     // → renders JobEventTimelineItem
  */
-export function TimelineItem({ event }: TimelineItemProps) {
+export function TimelineItem({ event, mentionedUsers }: TimelineItemProps) {
   switch (event.type) {
     case 'comment':
-      return <CommentTimelineItem comment={event.data} timestamp={event.timestamp} />;
+      return (
+        <CommentTimelineItem
+          comment={event.data}
+          timestamp={event.timestamp}
+          mentionedUsers={mentionedUsers}
+        />
+      );
     case 'job':
       return (
         <JobEventTimelineItem

@@ -31,7 +31,7 @@ export function TimelineBadge({ variant = 'avatar', children }: TimelineBadgePro
   return (
     <div
       className={cn(
-        '-ml-14 flex-shrink-0',
+        'absolute left-0 flex-shrink-0',
         variant === 'event' &&
           'w-8 h-8 rounded-full bg-surface0 border-2 border-base flex items-center justify-center'
       )}
