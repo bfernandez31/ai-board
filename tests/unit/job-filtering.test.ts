@@ -31,6 +31,50 @@ describe('getWorkflowJob', () => {
     expect(result).toBe(null);
   });
 
+  it('returns null for VERIFY stage (no workflow jobs in VERIFY)', () => {
+    const jobs: Job[] = [
+      {
+        id: 1,
+        command: 'implement',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        ticketId: 1,
+        projectId: 1,
+        branch: null,
+        commitSha: null,
+        logs: null,
+        completedAt: new Date('2024-01-01'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const result = getWorkflowJob(jobs, 'VERIFY' as Stage);
+    expect(result).toBe(null);
+  });
+
+  it('returns null for SHIP stage (no workflow jobs in SHIP)', () => {
+    const jobs: Job[] = [
+      {
+        id: 1,
+        command: 'implement',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        ticketId: 1,
+        projectId: 1,
+        branch: null,
+        commitSha: null,
+        logs: null,
+        completedAt: new Date('2024-01-01'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const result = getWorkflowJob(jobs, 'SHIP' as Stage);
+    expect(result).toBe(null);
+  });
+
   it('filters out comment jobs', () => {
     const jobs: Job[] = [
       {
