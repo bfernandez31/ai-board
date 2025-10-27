@@ -524,10 +524,10 @@ The system enables editing title and description directly in the detail modal:
 - Click description → becomes textarea with focus
 - Type changes
 - Character counter displayed
-- 90% warning at 900 characters
+- 90% warning at 2250 characters
 - Save: Click save button
 - Cancel: Click cancel button or press ESC
-- Min 1, max 1000 characters enforced
+- Min 1, max 2500 characters enforced
 
 **Validation**:
 - Real-time validation as user types
@@ -566,8 +566,8 @@ The system enables editing title and description directly in the detail modal:
 **Description Editing**:
 - Enter edit mode on click (INBOX stage only)
 - Character counter displayed
-- Min 1, max 1000 characters
-- 90% warning at 900 characters
+- Min 1, max 2500 characters
+- 90% warning at 2250 characters
 - No empty or whitespace-only
 - Save and cancel buttons visible during edit
 - Read-only display in non-INBOX stages (SPECIFY, PLAN, BUILD, VERIFY, SHIP)
@@ -595,7 +595,7 @@ The system enables editing title and description directly in the detail modal:
 
 **Editable Fields**:
 - `title`: 1-100 characters
-- `description`: 1-1000 characters
+- `description`: 1-2500 characters
 - `clarificationPolicy`: Optional policy override (nullable, see [08-clarification-policies.md](08-clarification-policies.md))
 - `version`: Incremented on each update (concurrency control)
 - `updatedAt`: Set to current timestamp on save
@@ -611,8 +611,8 @@ The system enables editing title and description directly in the detail modal:
 - Rejects emojis and extended Unicode characters
 - No empty or whitespace-only values
 
-**Description Field** (updated 2025-10-24):
-- Length: 1-1000 characters
+**Description Field** (updated 2025-10-27):
+- Length: 1-2500 characters
 - Allowed characters: **All UTF-8 characters** including emoji 🚀, Chinese 中文, Arabic العربية, Japanese 日本語, Cyrillic Русский, mathematical symbols ∞, etc.
 - No empty or whitespace-only values
 - Feature: [048-description-ticket-change](../048-description-ticket-change/spec.md)
@@ -1064,8 +1064,8 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - Allowed characters: letters (a-z, A-Z), numbers (0-9), spaces, and special characters (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
 - Rejects emojis and extended Unicode characters
 
-**Description Field** (updated 2025-10-24):
-- Length: 1-1000 characters
+**Description Field** (updated 2025-10-27):
+- Length: 1-2500 characters
 - Allowed characters: **All UTF-8 characters** including emoji 🚀, Chinese 中文, Arabic العربية, Japanese 日本語, etc.
 - Feature: [048-description-ticket-change](../048-description-ticket-change/spec.md)
 
