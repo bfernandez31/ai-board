@@ -470,7 +470,7 @@ jobs:
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
-          GH_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           .specify/scripts/bash/create-pr-and-transition.sh \
             "${TICKET_ID}" \
