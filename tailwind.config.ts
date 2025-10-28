@@ -10,6 +10,19 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        'ticket-drift': {
+          '0%': {
+            transform: 'translateX(-100px)',
+          },
+          '100%': {
+            transform: 'translateX(calc(100vw + 100px))',
+          },
+        },
+      },
+      animation: {
+        'ticket-drift': 'ticket-drift linear infinite',
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
