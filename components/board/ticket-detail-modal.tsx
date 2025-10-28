@@ -782,7 +782,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={100}
-                  className="text-2xl font-bold bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50"
+                  className="text-2xl font-bold bg-[#313244] border-2 border-[#8B5CF6] px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 !text-white"
                   disabled={titleEdit.isSaving}
                   data-testid="title-input"
                   name="title"
@@ -877,7 +877,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={2500}
-                  className="bg-[#313244] border-2 border-[#8B5CF6] text-[#cdd6f4] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed h-[calc(100vh-470px)] sm:min-h-[300px] sm:max-h-[calc(90vh-500px)] sm:h-auto"
+                  className="bg-[#313244] border-2 border-[#8B5CF6] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed h-[calc(100vh-470px)] sm:min-h-[300px] sm:max-h-[calc(90vh-500px)] sm:h-auto !text-white"
                   disabled={descriptionEdit.isSaving}
                   data-testid="description-textarea"
                   name="description"
@@ -961,7 +961,7 @@ export function TicketDetailModal({
                   </div>
                 )}
                 <div
-                  className="text-base text-[#cdd6f4] leading-relaxed max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e] whitespace-pre-wrap"
+                  className="text-base leading-relaxed max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#585b70] scrollbar-track-[#1e1e2e] whitespace-pre-wrap text-white"
                 >
                   {localTicket?.description ||
                     ticket.description ||
