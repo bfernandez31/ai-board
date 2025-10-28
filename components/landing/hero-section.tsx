@@ -4,7 +4,7 @@ import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-b
 
 export function HeroSection() {
   return (
-    <section className="relative py-16 md:py-24 lg:py-32">
+    <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
       {/* Animated background layer (behind content) */}
       <AnimatedTicketBackground className="absolute inset-0 -z-10" />
 

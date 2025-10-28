@@ -13,10 +13,10 @@ const config: Config = {
       keyframes: {
         'ticket-drift': {
           '0%': {
-            transform: 'translateX(-100px)',
+            left: '-100px',
           },
           '100%': {
-            transform: 'translateX(calc(100vw + 100px))',
+            left: 'calc(100vw + 100px)',
           },
         },
       },

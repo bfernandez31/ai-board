@@ -25,8 +25,8 @@ function getTicketProps(index: number): TicketCardProps {
   return {
     index,
     color: TICKET_COLORS[index % TICKET_COLORS.length] as TicketColor,
-    duration: 40 + pseudoRandom(13) * 20, // 40-60s
-    delay: pseudoRandom(17) * 60, // 0-60s
+    duration: 30 + pseudoRandom(13) * 20, // 30-50s (faster)
+    delay: -(pseudoRandom(17) * 30), // Negative delays: start mid-animation
     verticalPosition: pseudoRandom(23) * 100, // 0-100%
     rotation: -10 + pseudoRandom(31) * 20, // -10 to +10 degrees
   };
@@ -41,35 +41,35 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
     animationDelay: `${delay}s`,
     top: `${verticalPosition}%`,
     transform: `rotate(${rotation}deg)`,
-    willChange: 'transform',
+    willChange: 'left, transform',
   };
 
   // Map colors to explicit Tailwind classes (required for JIT compiler)
   const colorClasses = {
     mauve: {
-      border: 'border-ctp-mauve/10',
-      bg1: 'bg-ctp-mauve/20',
-      bg2: 'bg-ctp-mauve/20',
+      border: 'border-ctp-mauve/40',
+      bg1: 'bg-ctp-mauve/30',
+      bg2: 'bg-ctp-mauve/30',
     },
     blue: {
-      border: 'border-ctp-blue/10',
-      bg1: 'bg-ctp-blue/20',
-      bg2: 'bg-ctp-blue/20',
+      border: 'border-ctp-blue/40',
+      bg1: 'bg-ctp-blue/30',
+      bg2: 'bg-ctp-blue/30',
     },
     sapphire: {
-      border: 'border-ctp-sapphire/10',
-      bg1: 'bg-ctp-sapphire/20',
-      bg2: 'bg-ctp-sapphire/20',
+      border: 'border-ctp-sapphire/40',
+      bg1: 'bg-ctp-sapphire/30',
+      bg2: 'bg-ctp-sapphire/30',
     },
     green: {
-      border: 'border-ctp-green/10',
-      bg1: 'bg-ctp-green/20',
-      bg2: 'bg-ctp-green/20',
+      border: 'border-ctp-green/40',
+      bg1: 'bg-ctp-green/30',
+      bg2: 'bg-ctp-green/30',
     },
     yellow: {
-      border: 'border-ctp-yellow/10',
-      bg1: 'bg-ctp-yellow/20',
-      bg2: 'bg-ctp-yellow/20',
+      border: 'border-ctp-yellow/40',
+      bg1: 'bg-ctp-yellow/30',
+      bg2: 'bg-ctp-yellow/30',
     },
   };
 
@@ -78,8 +78,8 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
   return (
     <div
       className={`
-        ticket-card absolute w-16 h-10 rounded border-2
-        ${classes.border} backdrop-blur-sm
+        ticket-card absolute w-24 h-16 rounded-lg border-2
+        ${classes.border} backdrop-blur-sm shadow-lg
         pointer-events-none
         motion-safe:animate-ticket-drift motion-reduce:animate-none
       `}
@@ -87,9 +87,9 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
       aria-hidden="true"
     >
       {/* Decorative content (simulated ticket text lines) */}
-      <div className="p-2 space-y-1">
-        <div className={`h-1 w-8 rounded ${classes.bg1}`} />
-        <div className={`h-1 w-6 rounded ${classes.bg2}`} />
+      <div className="p-3 space-y-2">
+        <div className={`h-1.5 w-12 rounded ${classes.bg1}`} />
+        <div className={`h-1.5 w-8 rounded ${classes.bg2}`} />
       </div>
     </div>
   );
@@ -103,7 +103,7 @@ export default function AnimatedTicketBackground({ className = '' }: { className
   const tickets = Array.from({ length: 18 }, (_, i) => getTicketProps(i));
 
   return (
-    <div className={`animated-ticket-background absolute inset-0 overflow-hidden ${className}`}>
+    <div className={`animated-ticket-background absolute inset-0 ${className}`}>
       {tickets.map((props) => (
         <TicketCard key={props.index} {...props} />
       ))}
