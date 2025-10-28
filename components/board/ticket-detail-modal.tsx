@@ -233,7 +233,7 @@ export function TicketDetailModal({
         e.preventDefault();
         setActiveTab('details');
       }
-      // Cmd+2 or Ctrl+2 for Comments tab
+      // Cmd+2 or Ctrl+2 for Conversation tab
       if ((e.metaKey || e.ctrlKey) && e.key === '2') {
         e.preventDefault();
         setActiveTab('comments');
@@ -836,7 +836,7 @@ export function TicketDetailModal({
               Details
             </TabsTrigger>
             <TabsTrigger value="comments" className="text-sm relative">
-              Comments
+              Conversation
               {comments?.comments && comments.comments.length > 0 && (
                 <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
                   {comments.comments.length}

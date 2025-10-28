@@ -182,8 +182,8 @@ test.beforeEach(async ({ page }) => {
   await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
   await page.waitForSelector('[role="dialog"]');
 
-  // Click Comments tab and wait for tab content to be visible
-  await page.click('[role="tab"]:has-text("Comments")');
+  // Click Conversation tab and wait for tab content to be visible
+  await page.click('[role="tab"]:has-text("Conversation")');
   await page.waitForSelector('[role="tabpanel"]:visible');
 });
 
@@ -473,7 +473,7 @@ test.describe('US3: Multiple Mentions', () => {
     // Re-open ticket modal and comments tab after reload
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify both mentions are displayed
@@ -519,7 +519,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Re-open ticket modal and comments tab after reload
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify mention still formatted
@@ -547,7 +547,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Re-open ticket modal and comments tab after reload
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Hover over mention
@@ -596,7 +596,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     // Re-open ticket modal and comments tab after reload
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Verify mention shows "[Removed User]"
@@ -629,7 +629,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Type @ to trigger autocomplete
@@ -665,7 +665,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
@@ -697,7 +697,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
@@ -743,7 +743,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
@@ -781,7 +781,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
@@ -812,7 +812,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await page.reload();
     await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
     await page.waitForSelector('[role="dialog"]');
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
