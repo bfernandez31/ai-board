@@ -62,7 +62,7 @@ export function DemoTicketCard({
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-all overflow-hidden">
+      <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden">
         {ticket.title}
       </h3>
     </Card>

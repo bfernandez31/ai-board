@@ -97,7 +97,7 @@ export const TicketCard = React.memo(
 
           {/* Title */}
           <h3
-            className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-all overflow-hidden mb-3"
+            className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden mb-3"
             title={ticket.title}
           >
             {ticket.title}
