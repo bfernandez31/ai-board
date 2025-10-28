@@ -1124,3 +1124,222 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
     await expect(footer).toBeVisible();
   });
 });
+
+/**
+ * E2E Tests for Ticket Detail Modal - Initial Tab Selection
+ * Feature: 920-open-ticket-to-conversation-tab
+ *
+ * Tests for:
+ * 1. Tickets in VERIFY stage open with Conversation tab active
+ * 2. Tickets in other stages open with Details tab active
+ */
+test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
+  const BASE_URL = 'http://localhost:3000';
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async ({ request }) => {
+    // Clean database before each test
+    await cleanupDatabase();
+
+    // Create test user
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update project 1
+    await prisma.project.update({
+      where: { id: 1 },
+      data: {
+        userId: testUser.id,
+      },
+    });
+
+    // Create ticket in INBOX stage
+    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket in INBOX',
+        description: 'Test ticket in INBOX stage',
+      },
+    });
+
+    // Create ticket in BUILD stage
+    const buildTicket = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket in BUILD',
+        description: 'Test ticket in BUILD stage',
+      },
+    });
+    const buildTicketData = await buildTicket.json();
+
+    // Update to BUILD stage
+    await prisma.ticket.update({
+      where: { id: buildTicketData.id },
+      data: {
+        stage: 'BUILD',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create ticket in VERIFY stage
+    const verifyTicket = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      data: {
+        title: '[e2e] Ticket in VERIFY',
+        description: 'Test ticket in VERIFY stage',
+      },
+    });
+    const verifyTicketData = await verifyTicket.json();
+
+    // Update to VERIFY stage
+    await prisma.ticket.update({
+      where: { id: verifyTicketData.id },
+      data: {
+        stage: 'VERIFY',
+        updatedAt: new Date(),
+      },
+    });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * Test: Ticket in VERIFY stage opens with Conversation tab active
+   */
+  test('opens Conversation tab when clicking ticket in VERIFY stage', async ({ page }) => {
+    // Navigate to board
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+
+    // Find the VERIFY column
+    const verifyColumn = page.locator('[data-stage="VERIFY"]');
+    await expect(verifyColumn).toBeVisible();
+
+    // Click the ticket in VERIFY stage
+    const verifyTicket = verifyColumn.locator('[data-testid="ticket-card"]').first();
+    await verifyTicket.click();
+
+    // Modal should be visible
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify Conversation tab is active
+    const conversationTab = dialog.locator('[role="tab"]').filter({ hasText: 'Conversation' });
+    await expect(conversationTab).toHaveAttribute('data-state', 'active');
+
+    // Verify Details tab is not active
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await expect(detailsTab).toHaveAttribute('data-state', 'inactive');
+
+    // Verify conversation tab panel is visible
+    const conversationPanel = dialog.locator('[role="tabpanel"]').nth(1); // Conversation is the second tab panel
+    await expect(conversationPanel).toBeVisible();
+  });
+
+  /**
+   * Test: Ticket in INBOX stage opens with Details tab active
+   */
+  test('opens Details tab when clicking ticket in INBOX stage', async ({ page }) => {
+    // Navigate to board
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+
+    // Find the INBOX column
+    const inboxColumn = page.locator('[data-stage="INBOX"]');
+    await expect(inboxColumn).toBeVisible();
+
+    // Click the ticket in INBOX stage
+    const inboxTicket = inboxColumn.locator('[data-testid="ticket-card"]').first();
+    await inboxTicket.click();
+
+    // Modal should be visible
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify Details tab is active
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await expect(detailsTab).toHaveAttribute('data-state', 'active');
+
+    // Verify Conversation tab is not active
+    const conversationTab = dialog.locator('[role="tab"]').filter({ hasText: 'Conversation' });
+    await expect(conversationTab).toHaveAttribute('data-state', 'inactive');
+
+    // Verify description is visible
+    const description = dialog.locator('[data-testid="ticket-description"]');
+    await expect(description).toBeVisible();
+  });
+
+  /**
+   * Test: Ticket in BUILD stage opens with Details tab active
+   */
+  test('opens Details tab when clicking ticket in BUILD stage', async ({ page }) => {
+    // Navigate to board
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+
+    // Find the BUILD column
+    const buildColumn = page.locator('[data-stage="BUILD"]');
+    await expect(buildColumn).toBeVisible();
+
+    // Click the ticket in BUILD stage
+    const buildTicket = buildColumn.locator('[data-testid="ticket-card"]').first();
+    await buildTicket.click();
+
+    // Modal should be visible
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify Details tab is active
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await expect(detailsTab).toHaveAttribute('data-state', 'active');
+
+    // Verify Conversation tab is not active
+    const conversationTab = dialog.locator('[role="tab"]').filter({ hasText: 'Conversation' });
+    await expect(conversationTab).toHaveAttribute('data-state', 'inactive');
+  });
+
+  /**
+   * Test: Modal resets to correct initial tab when reopening ticket
+   */
+  test('resets to correct initial tab when reopening same ticket', async ({ page }) => {
+    // Navigate to board
+    await page.goto('/projects/1/board');
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+
+    // Find and click VERIFY ticket
+    const verifyColumn = page.locator('[data-stage="VERIFY"]');
+    const verifyTicket = verifyColumn.locator('[data-testid="ticket-card"]').first();
+    await verifyTicket.click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify Conversation tab is active
+    const conversationTab = dialog.locator('[role="tab"]').filter({ hasText: 'Conversation' });
+    await expect(conversationTab).toHaveAttribute('data-state', 'active');
+
+    // Switch to Details tab manually
+    const detailsTab = dialog.locator('[role="tab"]').filter({ hasText: 'Details' });
+    await detailsTab.click();
+    await expect(detailsTab).toHaveAttribute('data-state', 'active');
+
+    // Close modal
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+
+    // Reopen the same ticket
+    await verifyTicket.click();
+    await expect(dialog).toBeVisible();
+
+    // Verify it reopened with Conversation tab active (reset to initial)
+    await expect(conversationTab).toHaveAttribute('data-state', 'active');
+  });
+});
