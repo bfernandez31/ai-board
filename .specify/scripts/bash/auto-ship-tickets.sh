@@ -135,10 +135,23 @@ echo "$TICKETS_RESPONSE" | jq -c '.tickets[]' | while read -r ticket; do
 
       # Post comment notification
       echo "    💬 Posting deployment notification..."
+
+      # Build the JSON payload properly
+      COMMENT_CONTENT="🚀 **Deployed to Production**
+
+This ticket has been automatically shipped after successful Vercel deployment.
+
+**Deployment SHA**: \`${DEPLOYMENT_SHA:0:7}\`
+**Environment**: Production
+**Status**: Live"
+
+      # Create JSON payload using printf to properly escape
+      JSON_PAYLOAD=$(printf '{"content": "%s", "userId": "ai-board-system-user"}' "$(echo "$COMMENT_CONTENT" | sed 's/"/\\"/g' | sed 's/`/\\`/g' | sed ':a;N;$!ba;s/\n/\\n/g')")
+
       curl -X POST "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comments/ai-board" \
         -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
         -H "Content-Type: application/json" \
-        -d "{\"content\": \"🚀 **Deployed to Production**\\n\\nThis ticket has been automatically shipped after successful Vercel deployment.\\n\\n**Deployment SHA**: \\\`${DEPLOYMENT_SHA:0:7}\\\`\\n**Environment**: Production\\n**Status**: Live\", \"userId\": \"ai-board-system-user\"}" \
+        -d "$JSON_PAYLOAD" \
         -f -s -S >/dev/null 2>&1 || echo "    ⚠️  Failed to post deployment comment (continuing...)"
     else
       echo "    ⚠️  Failed to transition (HTTP $HTTP_CODE)"
