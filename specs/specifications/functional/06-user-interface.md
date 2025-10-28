@@ -1,0 +1,357 @@
+# User Interface - Functional Specification
+
+## Purpose
+
+The user interface provides an intuitive, modern experience for managing tickets and projects. Visual feedback, responsive design, and keyboard accessibility ensure efficient workflows across devices.
+
+## Visual Design
+
+### Theme
+
+**Dark Mode**:
+- Dark theme applied by default throughout application
+- Reduced eye strain for extended use
+- High contrast for readability
+- Consistent color palette across all screens
+
+### Typography
+
+**Hierarchy**:
+- Large, prominent titles for primary content
+- Clear differentiation between headings and body text
+- Readable font sizes across all device types
+- Proper line spacing for scanning content
+
+### Color System
+
+**Stage Colors**:
+- INBOX: Gray (neutral, starting point)
+- SPECIFY: Blue (planning and documentation)
+- PLAN: Blue (planning and documentation)
+- BUILD: Green (active development)
+- VERIFY: Orange (testing and validation)
+- SHIP: Purple (completed work)
+
+**Semantic Colors**:
+- Success actions: Green indicators
+- Warnings: Orange highlights
+- Errors: Red messaging
+- Information: Blue accents
+
+## Interactive Elements
+
+### Buttons
+
+**Primary Actions**:
+- Create, Save, Submit actions use prominent styling
+- Loading states during operation execution
+- Disabled state when validation fails
+- Clear visual feedback on hover
+
+**Secondary Actions**:
+- Cancel, Close actions use subtle styling
+- Less prominent than primary actions
+- Still easily accessible
+
+**Icon Buttons**:
+- Icons with descriptive text labels
+- Tooltips provide additional context
+- Appropriate sizing for touch targets
+
+### Forms
+
+**Input Fields**:
+- Clear labels for all fields
+- Placeholder text provides examples
+- Required field indicators
+- Character counters for length limits
+
+**Validation**:
+- Real-time validation as user types
+- Error messages appear below fields
+- Field borders indicate validation state
+- Submit disabled when form invalid
+
+**Keyboard Support**:
+- Tab navigation between fields
+- Enter/Return to submit (where appropriate)
+- Cmd/Ctrl+Enter shortcuts for submission
+- Escape to cancel/close modals
+
+### Modals
+
+**Display Behavior**:
+- Modal overlays centered on screen (desktop)
+- Full-screen presentation on mobile
+- Backdrop darkens underlying content
+- Focus trapped within modal
+
+**Closing Methods**:
+- Close button (X) in header
+- Cancel button in footer
+- Escape key press
+- Click outside modal (configurable)
+
+**Confirmation Modals**:
+- Clear title explaining action
+- Warning message for destructive operations
+- Cancel and Proceed/Confirm buttons
+- Mandatory for quick implementation workflow
+
+## Drag-and-Drop
+
+### Visual Feedback
+
+**During Drag**:
+- Dragged item shows ghost/preview
+- Valid drop zones highlighted with colored borders
+- Invalid zones reduced opacity (50%)
+- Cursor indicates drop allowed/prohibited
+
+**Drop Zones**:
+- Green highlighting: Quick implementation path (INBOX → BUILD)
+- Blue highlighting: Normal workflow path (INBOX → SPECIFY)
+- Gray with prohibited icon: Invalid transitions
+- Badge text explains special transitions
+
+**Smooth Animations**:
+- Ticket movement between columns animated
+- Card returns to original position if dropped on invalid zone
+- Visual confirmation when drop succeeds
+
+### Touch Support
+
+**Mobile Interaction**:
+- Long-press to initiate drag
+- Touch-friendly drag targets
+- Visual feedback adapted for touch
+- Smooth performance on mobile devices
+
+## Responsive Behavior
+
+### Desktop (≥1024px)
+
+**Layout**:
+- All six columns visible side-by-side
+- Adequate spacing between columns
+- Multiple tickets visible per column
+- Sidebar and navigation accessible
+
+**Interaction**:
+- Mouse hover states active
+- Keyboard shortcuts available
+- Drag-and-drop with mouse
+- Context menus and tooltips
+
+### Tablet (768px - 1023px)
+
+**Layout**:
+- Columns adapt to narrower viewport
+- Horizontal scrolling if needed
+- Touch-optimized spacing
+- Simplified navigation
+
+**Interaction**:
+- Touch-first interaction model
+- Long-press for drag operations
+- Tap targets appropriately sized
+- Reduced reliance on hover states
+
+### Mobile (375px - 767px)
+
+**Layout**:
+- Horizontal scroll for all columns
+- Full-width ticket cards
+- Modals occupy full screen
+- Simplified header and navigation
+
+**Interaction**:
+- Touch-only interaction
+- Swipe gestures where appropriate
+- Tap targets minimum 44px
+- No keyboard shortcuts expected
+
+### Small Screens (<375px)
+
+**Layout**:
+- Horizontal scrolling enabled
+- Minimum usable layout maintained
+- Critical features accessible
+- Simplified presentation
+
+## Navigation
+
+### Tab Navigation
+
+**Ticket Detail Tabs**:
+- Details, Comments, Files tabs available
+- Active tab visually highlighted
+- Click tab headers to switch
+- Smooth transition between tabs
+
+**Keyboard Navigation**:
+- Arrow keys (left/right) navigate between tabs
+- Cmd/Ctrl+1, +2, +3 for direct tab access
+- Tab order follows visual sequence
+- Ignored on mobile devices
+
+**Tab Indicators**:
+- Comment count badge on Comments tab
+- Shows number of comments: "Comments (5)"
+- Updates in real-time as comments added/deleted
+- Provides activity overview
+
+### Board Navigation
+
+**Column Scrolling**:
+- Vertical scroll within columns
+- Independent scrolling per column
+- Smooth scrolling behavior
+- Scroll position maintained when switching
+
+**Page Navigation**:
+- Project list to board
+- Board back to project list
+- Breadcrumb or back button (implementation-specific)
+
+## Loading States
+
+### Initial Load
+
+**Board Loading**:
+- Loading indicator while fetching tickets
+- Skeleton screens for anticipated content
+- Smooth transition when content loads
+
+**Ticket Loading**:
+- Loading state in modal when opening ticket
+- Spinner or skeleton for ticket details
+- Progressive content loading
+
+### Operation Feedback
+
+**Creating Tickets**:
+- Form shows loading state
+- Submit button disabled during creation
+- Success confirmation when complete
+
+**Moving Tickets**:
+- Optimistic update (immediate visual change)
+- Loading indicator during API call
+- Rollback if operation fails
+
+**Job Status**:
+- Status indicator shows current state
+- Updates every 2 seconds via polling
+- Clear visual distinction between states:
+  - PENDING: Waiting indicator
+  - RUNNING: Progress animation
+  - COMPLETED: Success checkmark
+  - FAILED: Error icon
+
+## Empty States
+
+### Board Columns
+
+When column has no tickets:
+- Empty state message displayed
+- Consistent messaging across columns
+- Encouragement to add tickets
+- Clear visual indication of emptiness
+
+### Comments
+
+When ticket has no comments:
+- "No comments yet. Be the first to comment!"
+- Comment form immediately visible
+- Encourages engagement
+
+### Project List
+
+When user has no projects:
+- Clear message explaining empty state
+- Call-to-action to create first project
+- Helpful guidance for getting started
+
+## Accessibility
+
+### Keyboard Support
+
+**Navigation**:
+- Tab key navigates interactive elements
+- Arrow keys for tab switching
+- Shortcuts for common actions
+- Escape to close modals/cancel actions
+
+**Focus Management**:
+- Visible focus indicators
+- Logical focus order
+- Focus trapped in modals
+- Auto-focus on form inputs
+
+### Visual Accessibility
+
+**Contrast**:
+- Sufficient contrast ratios for text
+- Color not sole indicator of state
+- Icons supplement color coding
+
+**Text**:
+- Readable font sizes (minimum 14px)
+- Clear hierarchy and spacing
+- Support for browser zoom
+- No fixed-width containers preventing reflow
+
+## Performance
+
+### Perceived Performance
+
+**Optimistic Updates**:
+- UI updates immediately on user action
+- Background API calls confirm changes
+- Rollback if confirmation fails
+- Creates illusion of instant response
+
+**Smooth Animations**:
+- 60fps target for all animations
+- Hardware acceleration where appropriate
+- Reduce motion support for accessibility
+- Disable animations on low-end devices
+
+### Actual Performance
+
+**Loading Times**:
+- Board loads in <2 seconds
+- Modal opens in <100ms
+- Drag operations respond in <100ms
+- Page transitions in <500ms
+
+**Polling Efficiency**:
+- 2-second interval for job status
+- 10-second interval for comments
+- Automatic stop when updates complete
+- Minimal network overhead
+
+## Error Presentation
+
+### Error Messages
+
+**User-Friendly Language**:
+- Plain language, no technical jargon
+- Explain what went wrong
+- Suggest how to fix the problem
+- Provide recovery options
+
+**Error Placement**:
+- Inline errors below relevant fields
+- Toast notifications for global errors
+- Modal errors within modal context
+- Persistent errors until resolved
+
+### Recovery Actions
+
+**Retry Options**:
+- "Try Again" button for network failures
+- "Refresh" for stale data
+- "Cancel" to abort operation
+- Link to support/documentation if available

@@ -1,0 +1,539 @@
+# Data Model Reference
+
+## Prisma Schema Overview
+
+Complete database schema with relationships, constraints, and indexes.
+
+## Core Models
+
+### User
+
+User accounts with authentication and project ownership.
+
+```prisma
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projects      Project[]
+  comments      Comment[]
+  accounts      Account[]
+  sessions      Session[]
+  projectMembers ProjectMember[]
+}
+```
+
+**Purpose**: Authentication and project ownership
+
+**Fields**:
+- `id`: Unique identifier (CUID format)
+- `email`: Unique email address (authentication identifier)
+- `name`: Display name (nullable, from OAuth provider)
+- `emailVerified`: Email verification timestamp (from OAuth)
+- `createdAt`: Account creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers
+
+**Constraints**:
+- Unique email address
+- Cascade delete: Comments, ProjectMembers
+
+**Business Rules**:
+- Every project must have a user (required userId)
+- Email uniquely identifies users across system
+- Mock authentication uses `test@e2e.local` in development
+
+### Project
+
+Projects represent GitHub repositories with workflow automation.
+
+```prisma
+model Project {
+  id                   Int                  @id @default(autoincrement())
+  name                 String
+  description          String?
+  githubOwner          String
+  githubRepo           String
+  userId               String
+  clarificationPolicy  ClarificationPolicy  @default(AUTO)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets              Ticket[]
+  jobs                 Job[]
+  projectMembers       ProjectMember[]
+
+  @@unique([githubOwner, githubRepo])
+  @@index([githubOwner, githubRepo])
+  @@index([userId])
+}
+```
+
+**Purpose**: Multi-project organization with GitHub repository integration
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `name`: Human-readable project name
+- `description`: Optional project details
+- `githubOwner`: GitHub repository owner (user or organization)
+- `githubRepo`: GitHub repository name
+- `userId`: Owner of the project (required foreign key)
+- `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
+- `createdAt`: Creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to User (required, cascade delete)
+- One-to-many: Tickets, Jobs, ProjectMembers
+
+**Constraints**:
+- Unique (githubOwner, githubRepo) - one project per repository
+- Index on (githubOwner, githubRepo) for efficient lookups
+- Index on userId for authorization queries
+- NOT NULL userId (every project must have owner)
+
+**Business Rules**:
+- Cannot have duplicate projects for same repository
+- Deleting project deletes all tickets and jobs (cascade)
+- User can only access their own projects
+- Default clarification policy AUTO (context-aware)
+
+### Ticket
+
+Tickets track work items through six workflow stages.
+
+```prisma
+model Ticket {
+  id                   Int                  @id @default(autoincrement())
+  title                String               @db.VarChar(100)
+  description          String               @db.Text
+  stage                Stage                @default(INBOX)
+  projectId            Int
+  branch               String?              @db.VarChar(200)
+  workflowType         WorkflowType         @default(FULL)
+  clarificationPolicy  ClarificationPolicy?
+  attachments          Json?
+  version              Int                  @default(1)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  project              Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobs                 Job[]
+  comments             Comment[]
+
+  @@index([projectId])
+  @@index([projectId, stage])
+  @@index([projectId, workflowType])
+}
+```
+
+**Purpose**: Work item tracking with kanban workflow
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `title`: Short description (max 100 characters)
+- `description`: Detailed description (max 2500 characters, all UTF-8 allowed)
+- `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+- `projectId`: Parent project (required foreign key)
+- `branch`: Git branch name (max 200 chars, nullable, set by workflow)
+- `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
+- `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
+- `attachments`: Image attachments (JSON array of TicketAttachment objects)
+- `version`: Optimistic concurrency control (incremented on each update)
+- `createdAt`: Creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+- One-to-many: Jobs, Comments
+
+**Constraints**:
+- Index on projectId for filtering
+- Composite index (projectId, stage) for board queries
+- Composite index (projectId, workflowType) for filtering
+
+**Validation Rules**:
+- Title: 1-100 characters, alphanumeric + basic punctuation, no emojis
+- Description: 1-2500 characters, all UTF-8 characters allowed (including emojis, Chinese, Arabic, etc.)
+- Branch: Max 200 characters
+- Attachments: Max 5 images, 10MB each, formats: JPEG/PNG/GIF/WebP
+- Stage: Sequential progression only (no skipping or backwards)
+
+**Business Rules**:
+- New tickets always created in INBOX stage
+- Sequential stage progression (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP)
+- Branch created by workflow during SPECIFY transition
+- workflowType set during first BUILD transition (immutable thereafter)
+- Description editable only in INBOX stage (frozen after SPECIFY)
+- Clarification policy overrides project default when set
+
+### Job
+
+Jobs track GitHub Actions workflow executions.
+
+```prisma
+model Job {
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  projectId   Int
+  command     String    @db.VarChar(50)
+  status      JobStatus @default(PENDING)
+  branch      String?   @db.VarChar(200)
+  commitSha   String?   @db.VarChar(40)
+  logs        String?   @db.Text
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([projectId])
+  @@index([ticketId, status, startedAt])
+  @@index([status])
+}
+```
+
+**Purpose**: Workflow execution tracking and status monitoring
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `ticketId`: Associated ticket (required foreign key)
+- `projectId`: Parent project (required foreign key, for polling queries)
+- `command`: Spec-kit command executed (specify|plan|task|implement|clarify|quick-impl, max 50 chars)
+- `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+- `branch`: Git branch name (max 200 chars, nullable)
+- `commitSha`: Git commit hash (max 40 chars, nullable)
+- `logs`: Complete execution logs (text, unlimited)
+- `startedAt`: Execution start timestamp (set on creation)
+- `completedAt`: Execution completion timestamp (nullable, set on terminal state)
+- `createdAt`: Record creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Ticket (required, cascade delete)
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Index on ticketId for job history queries
+- Index on projectId for polling all project jobs
+- Composite index (ticketId, status, startedAt) for job completion validation
+- Index on status for filtering running jobs
+
+**State Machine**:
+```
+PENDING → RUNNING → COMPLETED
+                  → FAILED
+                  → CANCELLED
+
+Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except idempotent)
+```
+
+**Business Rules**:
+- Created when workflow dispatched (status: PENDING)
+- Status updated by workflow via API (Bearer token auth)
+- Terminal states cannot transition to other states
+- Idempotent updates allowed (same status returns 200)
+- Most recent job (by startedAt) used for transition validation
+- Jobs never deleted (indefinite retention for audit trail)
+- AI-BOARD jobs (command like 'comment-%') don't block transitions
+
+### Comment
+
+Comments enable ticket collaboration with markdown support.
+
+```prisma
+model Comment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
+}
+```
+
+**Purpose**: Ticket discussion and collaboration
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `ticketId`: Parent ticket (required foreign key)
+- `userId`: Comment author (required foreign key)
+- `content`: Markdown-formatted content (1-2000 characters)
+- `createdAt`: Creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Ticket (required, cascade delete)
+- Belongs to User (required, cascade delete)
+
+**Constraints**:
+- Composite index (ticketId, createdAt) for efficient sorting
+- Index on userId for author filtering
+
+**Features**:
+- Markdown rendering with HTML escaping (XSS protection)
+- User mentions via `@[Name](userId)` syntax
+- Real-time updates via 10-second client polling
+- Author-only deletion with optimistic UI updates
+
+**Business Rules**:
+- Content: 1-2000 characters (enforced server-side)
+- Only project owners can create comments
+- Only comment authors can delete their own comments
+- Cascade delete when ticket or user deleted
+- Displayed in reverse chronological order (newest first)
+
+### ProjectMember
+
+Project collaboration with many-to-many user-project relationship.
+
+```prisma
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+```
+
+**Purpose**: Multi-user project collaboration
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required foreign key)
+- `userId`: Collaborating user (required foreign key)
+- `role`: Membership role (default: "member")
+- `createdAt`: Membership creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+- Belongs to User (required, cascade delete)
+
+**Constraints**:
+- Unique (projectId, userId) - one membership per user per project
+- Index on projectId for listing project members
+- Index on userId for listing user's projects
+
+**Business Rules**:
+- AI-BOARD system user automatically added as member on project creation
+- Project owner has implicit access (doesn't require ProjectMember entry)
+- Members can view and comment on tickets
+- Role enforcement for future RBAC enhancements
+
+## Enums
+
+### Stage
+
+Workflow stages for tickets.
+
+```prisma
+enum Stage {
+  INBOX   // Initial stage for new tickets
+  SPECIFY // Specification generation
+  PLAN    // Planning and task breakdown
+  BUILD   // Implementation
+  VERIFY  // Review and testing
+  SHIP    // Completed and deployed
+}
+```
+
+**Transitions**:
+- Sequential progression only (one stage forward)
+- No skipping or backwards movement
+- Initial: INBOX
+- Terminal: SHIP
+
+### JobStatus
+
+Workflow execution states.
+
+```prisma
+enum JobStatus {
+  PENDING   // Created, not yet started
+  RUNNING   // Currently executing
+  COMPLETED // Finished successfully
+  FAILED    // Encountered error
+  CANCELLED // Manually terminated
+}
+```
+
+**State Machine**:
+- PENDING → RUNNING
+- RUNNING → COMPLETED | FAILED | CANCELLED
+- Terminal states: COMPLETED, FAILED, CANCELLED
+
+### WorkflowType
+
+Workflow path tracking.
+
+```prisma
+enum WorkflowType {
+  FULL  // Standard workflow (INBOX → SPECIFY → PLAN → BUILD)
+  QUICK // Quick-implementation (INBOX → BUILD)
+}
+```
+
+**Usage**:
+- Set during first BUILD transition
+- Immutable after initial setting
+- Determines visual badge (⚡ Quick)
+
+### ClarificationPolicy
+
+Spec generation decision-making strategy.
+
+```prisma
+enum ClarificationPolicy {
+  AUTO          // Context-aware (system default)
+  CONSERVATIVE  // Security & quality first
+  PRAGMATIC     // Speed & simplicity first
+  INTERACTIVE   // Manual clarification (future)
+}
+```
+
+**Hierarchy**:
+- Ticket policy overrides project policy
+- Project policy overrides system default (AUTO)
+- Null ticket policy means inherit from project
+
+## Relationships Diagram
+
+```
+User
+├── projects (one-to-many) → Project
+│   ├── tickets (one-to-many) → Ticket
+│   │   ├── jobs (one-to-many) → Job
+│   │   └── comments (one-to-many) → Comment
+│   ├── jobs (one-to-many) → Job
+│   └── projectMembers (one-to-many) → ProjectMember
+├── comments (one-to-many) → Comment
+├── projectMembers (one-to-many) → ProjectMember
+└── accounts/sessions (one-to-many) → NextAuth tables
+```
+
+## Indexes Strategy
+
+### Performance Indexes
+
+**Project Filtering**:
+- `Project(userId)` - User's projects query
+- `Project(githubOwner, githubRepo)` - Repository lookup
+
+**Ticket Queries**:
+- `Ticket(projectId)` - Project's tickets
+- `Ticket(projectId, stage)` - Board view filtering
+- `Ticket(projectId, workflowType)` - Workflow type filtering
+
+**Job Queries**:
+- `Job(ticketId, status, startedAt)` - Job completion validation
+- `Job(projectId)` - Project job polling
+- `Job(ticketId)` - Job history per ticket
+- `Job(status)` - Running jobs query
+
+**Comment Queries**:
+- `Comment(ticketId, createdAt)` - Chronological sorting
+- `Comment(userId)` - Author filtering
+
+**Collaboration**:
+- `ProjectMember(projectId)` - Project members list
+- `ProjectMember(userId)` - User's projects
+- `ProjectMember(projectId, userId)` - Unique constraint + lookup
+
+### Composite Indexes
+
+Used for multi-column queries with optimal performance:
+
+- `Job(ticketId, status, startedAt)`: Efficient job completion validation
+- `Ticket(projectId, stage)`: Board view with stage filtering
+- `Ticket(projectId, workflowType)`: Workflow type filtering per project
+- `Comment(ticketId, createdAt)`: Comment timeline sorting
+- `ProjectMember(projectId, userId)`: Unique membership constraint
+
+## Data Types
+
+### JSON Fields
+
+**Ticket.attachments**:
+```typescript
+interface TicketAttachment {
+  type: 'uploaded' | 'external';
+  url: string;                   // Cloudinary HTTPS URL
+  filename: string;              // Original filename
+  mimeType: string;              // image/jpeg, image/png, etc.
+  sizeBytes: number;             // File size
+  uploadedAt: string;            // ISO 8601 timestamp
+  cloudinaryPublicId?: string;   // For deletion
+}
+
+type Attachments = TicketAttachment[];  // Max 5 items
+```
+
+### String Length Constraints
+
+| Field | Max Length | Database Type |
+|-------|------------|---------------|
+| Ticket.title | 100 | VARCHAR(100) |
+| Ticket.description | 2500 | TEXT |
+| Ticket.branch | 200 | VARCHAR(200) |
+| Job.command | 50 | VARCHAR(50) |
+| Job.branch | 200 | VARCHAR(200) |
+| Job.commitSha | 40 | VARCHAR(40) |
+| Job.logs | Unlimited | TEXT |
+| Comment.content | 2000 | TEXT |
+
+### Character Validation
+
+**Ticket.title**:
+- Allowed: letters (a-z, A-Z), numbers (0-9), spaces, basic punctuation (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
+- Rejected: Emojis, extended Unicode
+
+**Ticket.description**:
+- Allowed: All UTF-8 characters (including emojis, Chinese, Arabic, Japanese, etc.)
+- No restrictions on character sets
+
+**Comment.content**:
+- Allowed: All printable UTF-8 characters
+- Markdown formatting supported
+
+## Migration Strategy
+
+### Version Control
+- All schema changes tracked in `prisma/migrations/`
+- Migration naming: `{timestamp}_{description}/migration.sql`
+- Applied via `npx prisma migrate deploy` in workflows
+
+### Backward Compatibility
+- Additive changes preferred (new columns nullable or with defaults)
+- Enum additions supported (no removals)
+- Indexes added without downtime (PostgreSQL supports concurrent index creation)
+
+### Test Data
+- Seed script: `prisma/seed.ts`
+- Reserved projects: 1-2 for tests, 3 for development
+- Test user: `test@e2e.local` (never deleted)

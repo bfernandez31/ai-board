@@ -1,0 +1,738 @@
+# State Management Implementation
+
+Complete guide to TanStack Query usage, optimistic updates, and client-side state patterns.
+
+## TanStack Query v5.90.5
+
+### Core Configuration
+
+**Query Client Setup** (`app/providers.tsx`):
+
+```typescript
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,        // 5 minutes
+      gcTime: 1000 * 60 * 10,           // 10 minutes (formerly cacheTime)
+      refetchOnWindowFocus: true,       // Refetch when tab gains focus
+      refetchOnReconnect: true,         // Refetch on network reconnection
+      retry: 3,                         // Retry failed requests 3 times
+      retryDelay: (attemptIndex) =>
+        Math.min(1000 * 2 ** attemptIndex, 30000),  // Exponential backoff
+    },
+    mutations: {
+      retry: 1,                         // Retry mutations once
+    },
+  },
+});
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+```
+
+### Query Key Factory
+
+**Hierarchical Keys** (`app/lib/query-keys.ts`):
+
+```typescript
+export const queryKeys = {
+  all: ['projects'] as const,
+
+  projects: {
+    all: () => [...queryKeys.all] as const,
+    detail: (projectId: number) => [...queryKeys.all, projectId] as const,
+
+    tickets: (projectId: number) => [...queryKeys.projects.detail(projectId), 'tickets'] as const,
+    ticket: (projectId: number, ticketId: number) =>
+      [...queryKeys.projects.tickets(projectId), ticketId] as const,
+
+    comments: (projectId: number, ticketId: number) =>
+      [...queryKeys.projects.ticket(projectId, ticketId), 'comments'] as const,
+
+    jobs: (projectId: number) => [...queryKeys.projects.detail(projectId), 'jobs'] as const,
+  },
+};
+```
+
+**Benefits**:
+- Hierarchical invalidation (invalidate all tickets: `queryKeys.projects.tickets(1)`)
+- Type-safe keys
+- Consistent across codebase
+- Easy cache debugging
+
+## Query Hooks
+
+### Tickets Query
+
+**Hook** (`app/lib/hooks/queries/useTickets.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+
+export function useTickets(projectId: number) {
+  return useQuery({
+    queryKey: queryKeys.projects.tickets(projectId),
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/tickets`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch tickets');
+      }
+
+      return response.json();
+    },
+    staleTime: 1000 * 60,  // 1 minute
+  });
+}
+```
+
+**Usage**:
+
+```typescript
+function BoardComponent({ projectId }: { projectId: number }) {
+  const { data, isLoading, error } = useTickets(projectId);
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return <Board tickets={data.tickets} />;
+}
+```
+
+### Comments Query with Polling
+
+**Hook** (`app/lib/hooks/queries/useComments.ts`):
+
+```typescript
+export function useComments(projectId: number, ticketId: number, options?: {
+  enabled?: boolean;
+  pollingInterval?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.projects.comments(projectId, ticketId),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}/comments`
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch comments');
+
+      return response.json();
+    },
+    enabled: options?.enabled ?? true,
+    refetchInterval: options?.pollingInterval ?? 10000,  // 10 seconds
+    staleTime: 0,  // Always consider stale for real-time updates
+  });
+}
+```
+
+**Features**:
+- **Polling**: Automatic refetch every 10 seconds
+- **Conditional**: Can disable via `enabled` option
+- **Real-time**: Stale time 0 for immediate updates
+
+### Job Polling Hook
+
+**Hook** (`app/lib/hooks/useJobPolling.ts`):
+
+```typescript
+export function useJobPolling(projectId: number) {
+  const [terminalJobIds, setTerminalJobIds] = useState<Set<number>>(new Set());
+
+  const { data, isError } = useQuery({
+    queryKey: queryKeys.projects.jobs(projectId),
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/jobs/status`);
+
+      if (!response.ok) throw new Error('Failed to fetch job status');
+
+      return response.json();
+    },
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.jobs || [];
+
+      // Stop polling when all jobs terminal
+      const allTerminal = jobs.every((job: Job) =>
+        ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)
+      );
+
+      return allTerminal ? false : 2000;  // 2 seconds or stop
+    },
+    staleTime: 0,
+  });
+
+  // Track terminal jobs
+  useEffect(() => {
+    if (data?.jobs) {
+      const newTerminalIds = new Set(terminalJobIds);
+
+      data.jobs.forEach((job: Job) => {
+        if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)) {
+          newTerminalIds.add(job.id);
+        }
+      });
+
+      setTerminalJobIds(newTerminalIds);
+    }
+  }, [data]);
+
+  return {
+    jobs: data?.jobs || [],
+    isPolling: !isError && data?.jobs.some((job: Job) =>
+      !['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)
+    ),
+    error: isError,
+  };
+}
+```
+
+**Features**:
+- **Auto-Stop**: Polling stops when all jobs terminal
+- **Auto-Resume**: Polling resumes when new jobs created
+- **Terminal Tracking**: Client tracks which jobs completed
+- **2-Second Interval**: Real-time feel
+
+## Mutation Hooks
+
+### Create Ticket Mutation
+
+**Hook** (`app/lib/hooks/mutations/useCreateTicket.ts`):
+
+```typescript
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+
+export function useCreateTicket(projectId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateTicketInput) => {
+      const response = await fetch(`/api/projects/${projectId}/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create ticket');
+      }
+
+      return response.json();
+    },
+
+    onSuccess: (newTicket) => {
+      // Invalidate tickets query to refetch
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.tickets(projectId),
+      });
+
+      // Optionally add to cache directly
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        (old: any) => ({
+          ...old,
+          tickets: [newTicket, ...old.tickets],
+        })
+      );
+    },
+
+    onError: (error) => {
+      console.error('Failed to create ticket:', error);
+      // Error handled by UI via mutation.error
+    },
+  });
+}
+```
+
+**Usage**:
+
+```typescript
+function CreateTicketForm({ projectId }: { projectId: number }) {
+  const mutation = useCreateTicket(projectId);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    mutation.mutate(
+      { title: titleValue, description: descValue },
+      {
+        onSuccess: () => {
+          toast.success('Ticket created');
+          closeModal();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      }
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+      <Button disabled={mutation.isPending}>
+        {mutation.isPending ? 'Creating...' : 'Create'}
+      </Button>
+    </form>
+  );
+}
+```
+
+### Update Ticket with Optimistic Updates
+
+**Hook** (`app/lib/hooks/mutations/useUpdateTicket.ts`):
+
+```typescript
+export function useUpdateTicket(projectId: number, ticketId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateTicketInput) => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          throw new Error('VERSION_CONFLICT');
+        }
+
+        throw new Error(error.message || 'Failed to update ticket');
+      }
+
+      return response.json();
+    },
+
+    onMutate: async (input) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.projects.ticket(projectId, ticketId),
+      });
+
+      // Snapshot previous value
+      const previousTicket = queryClient.getQueryData(
+        queryKeys.projects.ticket(projectId, ticketId)
+      );
+
+      // Optimistically update
+      queryClient.setQueryData(
+        queryKeys.projects.ticket(projectId, ticketId),
+        (old: any) => ({
+          ...old,
+          ...input,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+
+      return { previousTicket };
+    },
+
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousTicket) {
+        queryClient.setQueryData(
+          queryKeys.projects.ticket(projectId, ticketId),
+          context.previousTicket
+        );
+      }
+
+      if (error.message === 'VERSION_CONFLICT') {
+        toast.error('Ticket was updated by someone else. Please refresh.');
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.ticket(projectId, ticketId),
+        });
+      }
+    },
+
+    onSuccess: (updatedTicket) => {
+      // Merge server response (includes new version)
+      queryClient.setQueryData(
+        queryKeys.projects.ticket(projectId, ticketId),
+        updatedTicket
+      );
+
+      // Also update tickets list
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        (old: any) => ({
+          ...old,
+          tickets: old.tickets.map((t: Ticket) =>
+            t.id === ticketId ? updatedTicket : t
+          ),
+        })
+      );
+    },
+  });
+}
+```
+
+**Optimistic Update Flow**:
+1. **onMutate**: Update cache immediately, return snapshot
+2. **API Call**: Send request to server
+3. **onError**: Rollback using snapshot if failure
+4. **onSuccess**: Merge server response (with new version)
+
+### Transition Ticket Mutation
+
+**Hook** (`app/lib/hooks/mutations/useTransitionTicket.ts`):
+
+```typescript
+export function useTransitionTicket(projectId: number, ticketId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { targetStage: Stage }) => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}/transition`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to transition ticket');
+      }
+
+      return response.json();
+    },
+
+    onMutate: async (input) => {
+      // Cancel queries
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.projects.tickets(projectId),
+      });
+
+      const previousTickets = queryClient.getQueryData(
+        queryKeys.projects.tickets(projectId)
+      );
+
+      // Optimistic update: move ticket to target stage
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        (old: any) => ({
+          ...old,
+          tickets: old.tickets.map((t: Ticket) =>
+            t.id === ticketId
+              ? { ...t, stage: input.targetStage, updatedAt: new Date().toISOString() }
+              : t
+          ),
+        })
+      );
+
+      return { previousTickets };
+    },
+
+    onError: (error, variables, context) => {
+      // Rollback
+      if (context?.previousTickets) {
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          context.previousTickets
+        );
+      }
+
+      toast.error(error.message);
+    },
+
+    onSuccess: (data) => {
+      // Invalidate to refetch (includes new Job)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.tickets(projectId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.jobs(projectId),
+      });
+
+      toast.success('Workflow started');
+    },
+  });
+}
+```
+
+**Features**:
+- Optimistic stage update
+- Rollback on error
+- Invalidate jobs query (new job created)
+- Toast notifications
+
+## Cache Invalidation Patterns
+
+### Hierarchical Invalidation
+
+```typescript
+// Invalidate all tickets
+queryClient.invalidateQueries({
+  queryKey: queryKeys.projects.tickets(projectId),
+});
+
+// Invalidate single ticket (and its children)
+queryClient.invalidateQueries({
+  queryKey: queryKeys.projects.ticket(projectId, ticketId),
+});
+
+// Invalidate comments for specific ticket
+queryClient.invalidateQueries({
+  queryKey: queryKeys.projects.comments(projectId, ticketId),
+});
+```
+
+### Selective Invalidation
+
+```typescript
+// Invalidate only tickets in INBOX stage
+queryClient.invalidateQueries({
+  queryKey: queryKeys.projects.tickets(projectId),
+  predicate: (query) => {
+    const data = query.state.data as any;
+    return data?.tickets?.some((t: Ticket) => t.stage === 'INBOX');
+  },
+});
+```
+
+### Manual Cache Updates
+
+```typescript
+// Add comment to cache without refetch
+queryClient.setQueryData(
+  queryKeys.projects.comments(projectId, ticketId),
+  (old: any) => ({
+    ...old,
+    comments: [newComment, ...old.comments],
+  })
+);
+```
+
+## Real-Time Updates
+
+### Polling Strategy
+
+**Comments Polling**:
+- **Interval**: 10 seconds
+- **Trigger**: When Comments tab opened
+- **Stop**: When modal closed
+- **Deduplication**: Filter optimistically added comments
+
+**Job Status Polling**:
+- **Interval**: 2 seconds
+- **Trigger**: When board visible
+- **Stop**: When all jobs terminal
+- **Resume**: When new job created
+
+### Implementation Pattern
+
+```typescript
+const { data } = useQuery({
+  queryKey: ['comments', ticketId],
+  queryFn: fetchComments,
+  refetchInterval: isModalOpen ? 10000 : false,  // Conditional polling
+  staleTime: 0,
+});
+```
+
+## Error Handling
+
+### Global Error Handler
+
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      onError: (error) => {
+        console.error('Query error:', error);
+        // Optionally show global error toast
+      },
+    },
+    mutations: {
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      },
+    },
+  },
+});
+```
+
+### Per-Query Error Handling
+
+```typescript
+const { error, isError } = useQuery({
+  queryKey: ['tickets'],
+  queryFn: fetchTickets,
+});
+
+if (isError) {
+  return <ErrorBoundary error={error} />;
+}
+```
+
+### Mutation Error Recovery
+
+```typescript
+mutation.mutate(input, {
+  onError: (error) => {
+    if (error.message === 'VERSION_CONFLICT') {
+      // Refetch and retry
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+      toast.error('Please retry after refresh');
+    } else {
+      toast.error(error.message);
+    }
+  },
+});
+```
+
+## Performance Optimization
+
+### Request Deduplication
+
+TanStack Query automatically deduplicates simultaneous identical queries:
+
+```typescript
+// Both components render simultaneously
+function ComponentA() {
+  const { data } = useTickets(1);  // Triggers API call
+}
+
+function ComponentB() {
+  const { data } = useTickets(1);  // Uses same request
+}
+
+// Result: Only 1 API call made
+```
+
+### Prefetching
+
+```typescript
+// Prefetch before navigation
+const queryClient = useQueryClient();
+
+const handleTicketClick = (ticketId: number) => {
+  queryClient.prefetchQuery({
+    queryKey: queryKeys.projects.ticket(projectId, ticketId),
+    queryFn: () => fetchTicket(projectId, ticketId),
+  });
+
+  // Navigate after prefetch starts
+  router.push(`/projects/${projectId}/tickets/${ticketId}`);
+};
+```
+
+### Optimistic Updates
+
+Reduce perceived latency with optimistic updates:
+
+1. Update cache immediately (onMutate)
+2. Show changes to user
+3. API call in background
+4. Rollback if error, merge if success
+
+**Performance Gain**: Feels instant (0ms perceived latency)
+
+## Testing Patterns
+
+### Test Query Client
+
+```typescript
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,  // Disable retries in tests
+        gcTime: Infinity,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+}
+
+export function wrapper({ children }: { children: React.ReactNode }) {
+  const testQueryClient = createTestQueryClient();
+
+  return (
+    <QueryClientProvider client={testQueryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+```
+
+### Testing Queries
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react';
+import { useTickets } from './useTickets';
+import { wrapper } from './test-utils';
+
+test('fetches tickets', async () => {
+  const { result } = renderHook(() => useTickets(1), { wrapper });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(result.current.data.tickets).toHaveLength(2);
+});
+```
+
+### Testing Mutations
+
+```typescript
+test('creates ticket with optimistic update', async () => {
+  const { result } = renderHook(() => useCreateTicket(1), { wrapper });
+
+  act(() => {
+    result.current.mutate({ title: 'Test', description: 'Desc' });
+  });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(result.current.data.title).toBe('Test');
+});
+```
+
+## Best Practices
+
+### Query Keys
+- ✅ Use factory pattern (`queryKeys` object)
+- ✅ Hierarchical structure for easy invalidation
+- ✅ Never hardcode keys
+- ❌ Don't use dynamic keys without factory
+
+### Optimistic Updates
+- ✅ Always return snapshot in `onMutate`
+- ✅ Always rollback in `onError`
+- ✅ Merge server response in `onSuccess`
+- ❌ Don't skip version field
+
+### Error Handling
+- ✅ Handle errors in UI
+- ✅ Show user-friendly messages
+- ✅ Provide retry mechanisms
+- ❌ Don't silently swallow errors
+
+### Performance
+- ✅ Use appropriate `staleTime` (default: 0)
+- ✅ Enable request deduplication (automatic)
+- ✅ Prefetch on hover/click
+- ❌ Don't poll unnecessarily
