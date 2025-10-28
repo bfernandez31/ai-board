@@ -30,15 +30,15 @@ export interface UseAnimationStateReturn {
  * Handles ticket progression every N milliseconds
  *
  * @param initialTickets - Initial ticket configuration
- * @param interval - Time between progressions in milliseconds (default: 10000)
+ * @param interval - Time between progressions in milliseconds (default: 4000)
  * @returns Animation state and control functions
  *
  * @example
- * const { tickets, isPaused, togglePause } = useAnimationState(DEMO_TICKETS, 10000);
+ * const { tickets, isPaused, togglePause } = useAnimationState(DEMO_TICKETS, 4000);
  */
 export function useAnimationState(
   initialTickets: readonly DemoTicket[],
-  interval: number = 10000
+  interval: number = 4000
 ): UseAnimationStateReturn {
   const [tickets, setTickets] = useState<DemoTicket[]>([...initialTickets]);
   const [isPaused, setIsPaused] = useState(false);

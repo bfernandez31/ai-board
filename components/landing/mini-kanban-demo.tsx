@@ -28,12 +28,12 @@ export interface MiniKanbanDemoProps {
  * Mini Kanban demo component with automatic ticket progression
  *
  * @param className - Additional CSS classes
- * @param animationInterval - Time between progressions (default: 10000ms)
+ * @param animationInterval - Time between progressions (default: 4000ms)
  * @param autoStart - Whether to start animation immediately (default: true)
  */
 export function MiniKanbanDemo({
   className = '',
-  animationInterval = 10000,
+  animationInterval = 4000,
   autoStart = true,
 }: MiniKanbanDemoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
