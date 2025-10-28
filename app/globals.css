@@ -104,4 +104,21 @@
       animation: none;
     }
   }
+
+  /* Responsive ticket visibility for animated background */
+  /* Mobile (<768px): Show only first 8 tickets */
+  @media (max-width: 767px) {
+    .ticket-card:nth-child(n+9) {
+      @apply hidden;
+    }
+  }
+
+  /* Tablet (768-1023px): Show only first 12 tickets */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .ticket-card:nth-child(n+13) {
+      @apply hidden;
+    }
+  }
+
+  /* Desktop (≥1024px): Show all 18 tickets (default) */
 }

@@ -4,6 +4,49 @@
 
 The user interface provides an intuitive, modern experience for managing tickets and projects. Visual feedback, responsive design, and keyboard accessibility ensure efficient workflows across devices.
 
+## Landing Page
+
+### Hero Section Background Animation
+
+**Visual Effect**:
+- Subtle animated ticket cards drift across the hero section background
+- Reinforces the product's core concept (ticket management) visually
+- Premium visual effect without interfering with text content
+- 15-20 semi-transparent ticket cards move from left to right
+- Each card completes one cycle in 40-60 seconds (randomized)
+
+**Ticket Card Appearance**:
+- Size: 64x40px mini ticket cards
+- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber)
+- Opacity: 0.10-0.15 for subtle appearance
+- Blur: 2px blur filter for enhanced depth perception
+- Rotation: Random rotation between -10° to +10° for organic feel
+- Content: Minimal decorative lines (abstract, not readable text)
+
+**Responsive Behavior**:
+- Desktop (≥1024px): 18 animated ticket cards
+- Tablet (768-1023px): 12 animated ticket cards
+- Mobile (<768px): 8 animated ticket cards
+- Animation maintains 60fps performance across all devices
+
+**Interaction Design**:
+- Cards positioned behind hero text (z-index layering)
+- No pointer event interference with text or buttons
+- Users can click buttons and select text without animation blocking
+- Animation does not capture or block any user interactions
+
+**Accessibility**:
+- Completely disabled when user has "prefers-reduced-motion" enabled
+- Hidden from assistive technologies (aria-hidden)
+- Text remains fully legible with contrast ratio ≥4.5:1
+- No motion for users with motion sensitivity
+
+**Performance**:
+- CSS-only implementation (no JavaScript required)
+- GPU-accelerated transforms for smooth animation
+- Page load time increases by no more than 200ms
+- Browser window resize adapts gracefully without page reload
+
 ## Visual Design
 
 ### Theme

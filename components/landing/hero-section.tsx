@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-background';
 
 export function HeroSection() {
   return (
-    <section className="py-16 md:py-24 lg:py-32">
-      <div className="container mx-auto px-4">
+    <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
+      {/* Animated background layer (behind content) */}
+      <AnimatedTicketBackground className="absolute inset-0 -z-10" />
+
+      <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Gradient Title */}
           <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-[#8B5CF6] via-[#6366F1] to-[#3B82F6] bg-clip-text text-transparent">

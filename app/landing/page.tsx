@@ -11,7 +11,7 @@ import { CTASection } from '@/components/landing/cta-section';
  */
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[hsl(var(--ctp-base))]">
+    <div className="min-h-screen">
       <HeroSection />
       <FeaturesGrid />
       <WorkflowSection />
