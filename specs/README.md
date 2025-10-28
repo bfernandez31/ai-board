@@ -4,7 +4,7 @@ All AI Board documentation has been reorganized and is now located in the `speci
 
 ## 📚 Documentation
 
-**[➡️ View Complete Documentation](./specifications/NAVIGATION.md)**
+**[➡️ View Complete Documentation](./specifications/README.md)**
 
 The documentation is organized into:
 - **Functional Specifications** - What the application does (user behaviors)
@@ -18,9 +18,8 @@ specs/
     ├── NAVIGATION.md     # Main navigation guide
     ├── functional/       # User-facing specifications
     ├── technical/        # Technical implementation
-    └── archive/          # Original consolidated specs
 ```
 
 ---
 
-*For complete navigation and documentation, see [specifications/NAVIGATION.md](./specifications/NAVIGATION.md)*
+*For complete navigation and documentation, see [specifications/README.md](./specifications/README.md)*
