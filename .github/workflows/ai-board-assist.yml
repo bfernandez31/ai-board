@@ -140,44 +140,102 @@ jobs:
       - name: Execute AI-BOARD Command
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         id: claude
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          TICKET_TITLE: ${{ inputs.ticketTitle }}
+          STAGE: ${{ inputs.stage }}
+          BRANCH: ${{ inputs.branch }}
+          USER: ${{ inputs.user }}
+          PROJECT_ID: ${{ inputs.project_id }}
         run: |
           echo "🤖 Executing AI-BOARD assist command..."
 
-          # Build JSON payload for Claude command (similar to speckit.yml pattern)
-          PAYLOAD=$(jq -n \
-            --arg ticketId "${{ inputs.ticket_id }}" \
-            --arg ticketTitle "${{ inputs.ticketTitle }}" \
-            --arg stage "${{ inputs.stage }}" \
-            --arg branch "${{ inputs.branch }}" \
-            --arg user "${{ inputs.user }}" \
-            --arg comment "${{ inputs.comment }}" \
-            --arg projectId "${{ inputs.project_id }}" \
-            '{
-              ticketId: $ticketId,
-              ticketTitle: $ticketTitle,
-              stage: $stage,
-              branch: $branch,
-              user: $user,
-              comment: $comment,
-              projectId: $projectId
-            }')
+          echo "📦 Request details:"
+          echo "  Ticket: #$TICKET_ID - $TICKET_TITLE"
+          echo "  Stage: $STAGE"
+          echo "  Branch: $BRANCH"
+          echo "  User: @$USER"
+          echo "  Comment: ${{ inputs.comment }}"
 
-          echo "📦 Payload: $PAYLOAD"
+          # Debug: Show current directory and branch
+          echo "📂 Current directory: $(pwd)"
+          echo "🌿 Current branch: $(git branch --show-current)"
 
-          # Execute Claude CLI command with JSON payload in $ARGUMENTS
-          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist $PAYLOAD" 2>&1 || true)
-          echo "$OUTPUT"
-
-          # Extract JSON from markdown code block (triple-backtick json ... triple-backtick)
-          # Claude Code returns conversational text with JSON inside markdown blocks
-          EXTRACTED_JSON=$(echo "$OUTPUT" | sed -n '/```json/,/```/p' | sed '1d;$d')
-
-          if [ -z "$EXTRACTED_JSON" ]; then
-            # No JSON block found, use fallback error
-            JSON_OUTPUT='{"status":"error","message":"Failed to parse Claude output - no JSON block found","filesModified":[]}'
+          # Debug: Check if spec files exist
+          if [ -d "specs/${{ inputs.branch }}" ]; then
+            echo "✅ Spec directory exists: specs/${{ inputs.branch }}"
+            ls -la "specs/${{ inputs.branch }}/" || true
           else
-            # Validate and compact JSON, fallback on parse error
-            JSON_OUTPUT=$(echo "$EXTRACTED_JSON" | jq -c '.' 2>/dev/null || echo '{"status":"error","message":"Failed to parse Claude output - invalid JSON","filesModified":[]}')
+            echo "⚠️ Spec directory not found: specs/${{ inputs.branch }}"
+          fi
+
+          # Execute Claude CLI command with comment as plain text argument
+          echo "🚀 Executing Claude command..."
+          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" 2>&1 || true)
+
+          # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
+          # Remove ```json ... ``` blocks as they cause "Invalid format" errors
+          CLAUDE_MESSAGE=$(echo "$OUTPUT" | sed '/^```json$/,/^```$/d' | sed 's/```//g')
+
+          # Also save raw output for debugging
+          echo "📝 Raw Claude output (first 50 lines):"
+          echo "$OUTPUT" | head -n 50
+
+          # Check if result file was created for status determination
+          RESULT_FILE="specs/${{ inputs.branch }}/.ai-board-result.md"
+          if [ -f "$RESULT_FILE" ]; then
+            echo "✅ Result file found: $RESULT_FILE"
+
+            # Extract status from result file
+            STATUS=$(grep -A 1 "^## Status" "$RESULT_FILE" | tail -1 | tr -d ' ')
+
+            # Extract files modified for tracking
+            FILES_SECTION=$(sed -n '/^## Files Modified/,/^##/p' "$RESULT_FILE" | grep "^- " | sed 's/^- //' | tr '\n' ',' | sed 's/,$//')
+
+            # Create JSON output based on status
+            if [ "$STATUS" = "SUCCESS" ]; then
+              JSON_OUTPUT=$(jq -n \
+                --arg status "success" \
+                --arg message "$CLAUDE_MESSAGE" \
+                --arg files "$FILES_SECTION" \
+                '{"status": $status, "message": $message, "filesModified": ($files | split(","))}'
+              )
+            elif [ "$STATUS" = "NOT_IMPLEMENTED" ]; then
+              JSON_OUTPUT=$(jq -n \
+                --arg status "not_implemented" \
+                --arg message "$CLAUDE_MESSAGE" \
+                '{"status": $status, "message": $message, "filesModified": []}'
+              )
+            else
+              JSON_OUTPUT=$(jq -n \
+                --arg status "error" \
+                --arg message "$CLAUDE_MESSAGE" \
+                '{"status": $status, "message": $message, "filesModified": []}'
+              )
+            fi
+          else
+            echo "⚠️ Result file not found, checking for changes..."
+
+            # Fallback: try to detect if changes were made
+            if git diff --quiet; then
+              echo "ℹ️ No changes detected in repository"
+              # If no changes and no result file, consider it an error
+              JSON_OUTPUT=$(jq -n \
+                --arg status "error" \
+                --arg message "$CLAUDE_MESSAGE" \
+                '{"status": $status, "message": $message, "filesModified": []}'
+              )
+            else
+              echo "✅ Changes detected, assuming success"
+              # Get list of modified files
+              MODIFIED_FILES=$(git diff --name-only | grep "^specs/" | xargs -I {} basename {} | tr '\n' ',' | sed 's/,$//')
+              JSON_OUTPUT=$(jq -n \
+                --arg status "success" \
+                --arg message "$CLAUDE_MESSAGE" \
+                --arg files "$MODIFIED_FILES" \
+                '{"status": $status, "message": $message, "filesModified": ($files | split(",") | map(select(. != "")))}'
+              )
+            fi
           fi
 
           echo "json_output<<EOF" >> $GITHUB_OUTPUT
@@ -195,13 +253,22 @@ jobs:
           MESSAGE=$(echo "$JSON_OUTPUT" | jq -r '.message')
           FILES=$(echo "$JSON_OUTPUT" | jq -r '.filesModified | join(",")')
 
+          # Set outputs in a safer way - status and files first (single line)
           echo "status=$STATUS" >> $GITHUB_OUTPUT
-          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
           echo "files=$FILES" >> $GITHUB_OUTPUT
+
+          # Then the multiline message last
+          echo "message<<GITHUB_MESSAGE_DELIMITER" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "GITHUB_MESSAGE_DELIMITER" >> $GITHUB_OUTPUT
 
           echo "📊 Claude Response:"
           echo "  Status: $STATUS"
           echo "  Files: $FILES"
+
+          # Debug: Verify outputs are set
+          echo "🔍 Debug - Status output: $STATUS"
+          echo "🔍 Debug - Files output: $FILES"
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' && steps.parse.outputs.files != '' }}
@@ -249,9 +316,18 @@ jobs:
             -d "{\"content\": ${MESSAGE_JSON}, \"userId\": \"ai-board-system-user\"}" \
             -f -s -S || echo "⚠️ Failed to post AI-BOARD comment"
 
+      - name: Debug Status Check
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: |
+          echo "🔍 Debug Job Status Update"
+          echo "  Parse status output: '${{ steps.parse.outputs.status }}'"
+          echo "  Is success?: ${{ steps.parse.outputs.status == 'success' }}"
+          echo "  Files output: '${{ steps.parse.outputs.files }}'"
+
       - name: Update Job Status - Success
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
         run: |
+          echo "✅ Updating job status to COMPLETED"
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
@@ -261,6 +337,7 @@ jobs:
       - name: Update Job Status - Failure
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' }}
         run: |
+          echo "❌ Updating job status to FAILED (status was: '${{ steps.parse.outputs.status }}')"
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
