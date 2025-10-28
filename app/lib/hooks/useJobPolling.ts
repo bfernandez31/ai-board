@@ -15,7 +15,8 @@
 
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 
@@ -54,6 +55,9 @@ export function useJobPolling(
   projectId: number,
   pollingInterval: number = 2000
 ): UseJobPollingReturn {
+  const queryClient = useQueryClient();
+  const previousJobsRef = useRef<JobStatusDto[]>([]);
+
   const { data, error, isFetching, dataUpdatedAt, failureCount } = useQuery({
     queryKey: queryKeys.projects.jobsStatus(projectId),
     queryFn: async () => {
@@ -93,6 +97,35 @@ export function useJobPolling(
   // Compute polling state for UI feedback
   const jobs = data || [];
   const allTerminal = areAllJobsTerminal(jobs);
+
+  // Detect terminal status transitions and invalidate tickets cache
+  useEffect(() => {
+    // Skip on initial mount (no previous jobs to compare)
+    if (previousJobsRef.current.length === 0 && jobs.length > 0) {
+      previousJobsRef.current = jobs;
+      return;
+    }
+
+    // Find jobs that transitioned to terminal status
+    const newlyTerminal = jobs.filter(job => {
+      const isTerminal = TERMINAL_STATUSES.has(job.status);
+      const wasTerminal = previousJobsRef.current.some(
+        prev => prev.id === job.id && TERMINAL_STATUSES.has(prev.status)
+      );
+      return isTerminal && !wasTerminal;
+    });
+
+    // Invalidate tickets cache when workflow completes
+    if (newlyTerminal.length > 0) {
+      console.log('[useJobPolling] Detected terminal jobs:', newlyTerminal);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.tickets(projectId),
+      });
+    }
+
+    // Update previous state for next comparison
+    previousJobsRef.current = jobs;
+  }, [jobs, projectId, queryClient]);
 
   return {
     jobs,

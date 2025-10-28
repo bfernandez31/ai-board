@@ -33,6 +33,7 @@ Users can monitor job progress:
 - Status updates automatically every 2 seconds via polling
 - Visual indicators show current state (pending, running, completed, failed)
 - Polling stops automatically when job reaches terminal state
+- Board automatically refreshes when job completes and ticket stage changes
 
 ### Job Restrictions
 

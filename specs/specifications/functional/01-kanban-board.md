@@ -73,11 +73,59 @@ Each ticket appears as a card within its current stage column. Cards display:
 - **Mobile** (≥375px): Functional layout with appropriate sizing
 - **Small Screens** (<375px): Horizontal scrolling enabled to view all columns
 
+## Real-Time Updates
+
+### Automatic Board Refresh
+
+The board automatically updates when workflow-initiated stage transitions occur:
+
+**Workflow Completion Updates**:
+- When a GitHub Actions workflow completes and transitions a ticket to a new stage, the board automatically refreshes
+- Updates occur within 2 seconds of workflow completion (maximum polling interval)
+- No manual page refresh required
+- Only the affected ticket updates (other tickets remain unchanged)
+
+**Update Triggers**:
+- Workflow job status changes to COMPLETED, FAILED, or CANCELLED
+- TanStack Query cache automatically invalidates
+- Board refetches latest ticket data from server
+- Updated ticket appears in correct stage column
+
+**Manual Transitions**:
+- Drag-and-drop transitions continue to use optimistic updates
+- Immediate visual feedback (under 100ms perceived latency)
+- No impact from workflow-based update mechanism
+
+### Update Behavior
+
+**During Workflow Execution**:
+- Ticket remains in current stage while job is PENDING or RUNNING
+- Job status updates every 2 seconds via polling
+- No board refresh until job reaches terminal state
+
+**After Workflow Success**:
+- Job status changes to COMPLETED
+- Cache invalidates automatically
+- Board refetches tickets
+- Ticket appears in new stage column (e.g., BUILD → VERIFY)
+
+**After Workflow Failure**:
+- Job status changes to FAILED
+- Ticket remains in current stage
+- Failure state visible in ticket detail view
+
+**Multiple Concurrent Workflows**:
+- System handles multiple tickets with active workflows
+- TanStack Query deduplicates concurrent refetch requests
+- Single API call fetches all updated tickets
+- All affected tickets update simultaneously
+
 ## Performance Expectations
 
 - Board loads and displays correctly on all supported viewport sizes
 - Page remains functional with up to 100 tickets across all columns
 - Ticket count in column headers updates when tickets are created or moved
+- Automatic workflow updates complete within 2 seconds of job completion
 
 ## Visual Theme
 
