@@ -387,11 +387,35 @@ jobs:
       - name: Update Documentation
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' }}
         run: |
-          claude --dangerously-skip-permissions "Update /specs/specifications/ with spec from specs/${CURRENT_BRANCH}/spec.md. Update CLAUDE.md only if new tech. Don't commit."
+          claude --dangerously-skip-permissions "Update the AI Board documentation based on the new specification in specs/${CURRENT_BRANCH}/spec.md:
+
+          1. Update /specs/specifications/functional/ documentation:
+             - Identify which functional file(s) need updating (01-kanban-board.md, 02-ticket-management.md, etc.)
+             - Add or update the relevant sections with NEW user-facing behaviors
+             - Focus on WHAT the feature does, not HOW
+             - Keep descriptions from user perspective
+
+          2. Update /specs/specifications/technical/ documentation:
+             - Update relevant technical files (api/endpoints.md, architecture/data-model.md, etc.)
+             - Add new API endpoints, data models, schemas
+             - Document implementation patterns and technical details
+             - Focus on HOW it's implemented
+
+          3. Update CLAUDE.md ONLY if:
+             - New technologies or dependencies are added
+             - New architectural patterns are introduced
+             - New conventions need to be documented
+
+          Remember: Documentation should reflect CURRENT STATE only, no historical information.
+          Don't commit the changes."
 
           git add specs/specifications/ CLAUDE.md
           if ! git diff --staged --quiet; then
-            git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation"
+            git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation
+
+          - Updated functional specs with new user-facing behaviors
+          - Updated technical docs with implementation details
+          - Maintained current state documentation (no history)"
             git push origin "$CURRENT_BRANCH"
             echo "✅ Documentation updated and committed"
           else
