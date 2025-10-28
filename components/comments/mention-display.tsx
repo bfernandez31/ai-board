@@ -1,13 +1,16 @@
 /**
  * MentionDisplay Component
  *
- * Renders comment content with mentions formatted as chips/badges.
+ * Renders comment content with markdown formatting and mentions as chips/badges.
  * Parses mention markup and replaces with visual formatting.
  * Handles deleted users by showing "[Removed User]".
  */
 
 'use client';
 
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { parseMentions } from '@/app/lib/utils/mention-parser';
 import { User } from '@/app/lib/types/mention';
 import {
@@ -24,61 +27,130 @@ interface MentionDisplayProps {
 }
 
 /**
- * Render comment content with mentions formatted as chips
+ * Render comment content with markdown and mentions formatted as chips
  *
  * Parses mention markup (@[userId:displayName]) and replaces with:
  * - Visual badge/chip for existing users
  * - "[Removed User]" text for deleted users
+ * Also renders markdown syntax (bold, italic, links, etc.)
  */
 export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps) {
   const mentions = parseMentions(content);
 
-  // If no mentions, return plain text
-  if (mentions.length === 0) {
-    return <span className="whitespace-pre-wrap">{content}</span>;
-  }
+  // Replace mentions with placeholder tokens that won't be affected by markdown parsing
+  let processedContent = content;
+  const mentionMap = new Map<string, { user: User | undefined; displayName: string; userId: string; isDeleted: boolean }>();
 
-  // Split content into segments (text + mentions)
-  const segments: React.ReactNode[] = [];
-  let lastIndex = 0;
-
-  mentions.forEach((mention, idx) => {
-    // Text before mention
-    if (mention.startIndex > lastIndex) {
-      segments.push(
-        <span key={`text-${idx}`} className="whitespace-pre-wrap">
-          {content.substring(lastIndex, mention.startIndex)}
-        </span>
-      );
-    }
-
-    // Mention segment
+  // Replace mentions with unique tokens (in reverse order to preserve indices)
+  [...mentions].reverse().forEach((mention) => {
     const user = mentionedUsers[mention.userId];
-    const isDeleted = !user;
-
-    segments.push(
-      <MentionChip
-        key={`mention-${idx}`}
-        userId={mention.userId}
-        displayName={user?.name || mention.displayName}
-        email={user?.email}
-        isDeleted={isDeleted}
-      />
-    );
-
-    lastIndex = mention.endIndex;
+    const token = `__MENTION_${mention.userId}_${mention.startIndex}__`;
+    mentionMap.set(token, {
+      user,
+      displayName: user?.name || mention.displayName,
+      userId: mention.userId,
+      isDeleted: !user,
+    });
+    processedContent = processedContent.substring(0, mention.startIndex) + token + processedContent.substring(mention.endIndex);
   });
 
-  // Remaining text
-  if (lastIndex < content.length) {
-    segments.push(
-      <span key="text-end" className="whitespace-pre-wrap">
-        {content.substring(lastIndex)}
-      </span>
-    );
-  }
+  // Text component that handles mention tokens
+  const TextWithMentions = ({ value }: { value: string }) => {
+    const mentionTokenRegex = /__MENTION_([^_]+)_(\d+)__/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
 
-  return <>{segments}</>;
+    while ((match = mentionTokenRegex.exec(value)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(value.substring(lastIndex, match.index));
+      }
+
+      // Add mention chip
+      const token = match[0];
+      const mentionData = mentionMap.get(token);
+      if (mentionData) {
+        parts.push(
+          <MentionChip
+            key={`mention-${match.index}`}
+            userId={mentionData.userId}
+            displayName={mentionData.displayName}
+            email={mentionData.user?.email}
+            isDeleted={mentionData.isDeleted}
+          />
+        );
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < value.length) {
+      parts.push(value.substring(lastIndex));
+    }
+
+    return <>{parts.length > 0 ? parts : value}</>;
+  };
+
+  const components: Components = {
+    p: ({ children }) => (
+      <span className="whitespace-pre-wrap block">
+        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+      </span>
+    ),
+    strong: ({ children }) => (
+      <strong className="font-semibold text-zinc-100">
+        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+      </strong>
+    ),
+    em: ({ children }) => (
+      <em className="italic">
+        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+      </em>
+    ),
+    a: ({ href, children }) => (
+      <a
+        className="text-blue-400 hover:text-blue-300 underline"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+      </a>
+    ),
+    code: ({ children, className }) => {
+      const inline = !className;
+      const text = String(children);
+      return inline ? (
+        <code className="bg-surface0 px-1.5 py-0.5 rounded text-sm text-mauve font-mono">
+          {text}
+        </code>
+      ) : (
+        <code className="block bg-surface0 rounded p-2 text-sm text-mauve font-mono overflow-x-auto my-2">
+          {text}
+        </code>
+      );
+    },
+    ul: ({ children }) => <ul className="list-disc ml-4 my-2">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
+    li: ({ children }) => (
+      <li className="mb-1">
+        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+      </li>
+    ),
+    blockquote: ({ children }) => (
+      <blockquote className="border-l-4 border-surface0 pl-3 italic text-subtext0 my-2">
+        {children}
+      </blockquote>
+    ),
+  };
+
+  return (
+    <div className="markdown-content">
+      <ReactMarkdown components={components}>{processedContent}</ReactMarkdown>
+    </div>
+  );
 }
 
 /**
