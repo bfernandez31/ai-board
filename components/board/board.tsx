@@ -82,6 +82,7 @@ function BoardContent({
   const [selectedTicket, setSelectedTicket] =
     useState<TicketWithVersion | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState<'details' | 'comments' | 'files'>('details');
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
 
@@ -426,6 +427,8 @@ function BoardContent({
   const handleTicketClick = useCallback((ticket: TicketWithVersion) => {
     setSelectedTicket(ticket);
     setIsModalOpen(true);
+    // Open conversation tab for tickets in VERIFY stage
+    setModalInitialTab(ticket.stage === 'VERIFY' ? 'comments' : 'details');
   }, []);
 
   // Handle modal close
@@ -748,6 +751,7 @@ function BoardContent({
         onOpenChange={handleModalClose}
         onUpdate={handleTicketUpdate}
         projectId={projectId}
+        initialTab={modalInitialTab}
       />
 
       {/* Quick Implementation Modal (T039) */}

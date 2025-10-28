@@ -78,6 +78,9 @@ interface TicketDetailModalProps {
 
   /** The project ID for project-scoped API calls */
   projectId: number;
+
+  /** Optional initial tab to display when modal opens. Defaults to 'details'. */
+  initialTab?: 'details' | 'comments' | 'files';
 }
 
 /**
@@ -153,6 +156,7 @@ export function TicketDetailModal({
   onOpenChange,
   onUpdate,
   projectId,
+  initialTab = 'details',
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
@@ -160,7 +164,7 @@ export function TicketDetailModal({
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
   // Fetch comment count for badge
@@ -192,9 +196,12 @@ export function TicketDetailModal({
   useEffect(() => {
     if (!open) {
       setPolicyEditOpen(false);
-      setActiveTab('details'); // Reset to details tab when modal closes
+      setActiveTab(initialTab); // Reset to initial tab when modal closes
+    } else {
+      // Set to initial tab when opening
+      setActiveTab(initialTab);
     }
-  }, [open]);
+  }, [open, initialTab]);
 
   // Fetch jobs for the ticket to check for completed specify job
   useEffect(() => {
