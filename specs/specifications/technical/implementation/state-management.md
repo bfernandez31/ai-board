@@ -199,6 +199,7 @@ export function useJobPolling(projectId: number) {
 - **Auto-Resume**: Polling resumes when new jobs created
 - **Terminal Tracking**: Client tracks which jobs completed
 - **2-Second Interval**: Real-time feel
+- **Cache Invalidation**: Automatically invalidates tickets cache when job reaches terminal state
 
 ## Mutation Hooks
 
@@ -537,6 +538,54 @@ queryClient.setQueryData(
 - **Trigger**: When board visible
 - **Stop**: When all jobs terminal
 - **Resume**: When new job created
+
+### Workflow-Triggered Cache Invalidation
+
+**Pattern**: When workflows complete and transition tickets to new stages, the board automatically updates via cache invalidation.
+
+**Implementation** (`useJobPolling` hook):
+
+```typescript
+useEffect(() => {
+  if (data?.jobs) {
+    data.jobs.forEach((job: Job) => {
+      const isTerminal = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
+      const wasNotTerminalBefore = !terminalJobIds.has(job.id);
+
+      if (isTerminal && wasNotTerminalBefore) {
+        // Invalidate tickets cache when job transitions to terminal state
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.tickets(projectId),
+        });
+
+        // Track that we've processed this job's terminal state
+        setTerminalJobIds((prev) => new Set(prev).add(job.id));
+      }
+    });
+  }
+}, [data?.jobs, terminalJobIds, projectId, queryClient]);
+```
+
+**Flow**:
+1. **Job Polling**: Client polls `/api/projects/:projectId/jobs/status` every 2 seconds
+2. **Terminal Detection**: Hook detects when job transitions to COMPLETED/FAILED/CANCELLED
+3. **Cache Invalidation**: Automatically invalidates `queryKeys.projects.tickets(projectId)`
+4. **Board Refetch**: TanStack Query refetches tickets from `/api/projects/:projectId/tickets`
+5. **UI Update**: Board re-renders with updated ticket positions
+6. **Deduplication**: Terminal job IDs tracked to prevent duplicate invalidations
+
+**Benefits**:
+- **Automatic**: No manual refresh required
+- **Efficient**: Only invalidates when workflows complete (not during PENDING/RUNNING)
+- **Consistent**: Uses existing TanStack Query infrastructure
+- **Race-Safe**: TanStack Query deduplicates concurrent refetch requests
+- **Eventual Consistency**: Server state is source of truth
+
+**Edge Cases**:
+- **Offline Recovery**: Board refetches when network reconnects (built-in TanStack Query feature)
+- **Concurrent Workflows**: Multiple jobs finishing simultaneously → single API call via deduplication
+- **Polling Stopped**: If all jobs terminal before invalidation, next job creation resumes polling
+- **Manual Transitions**: Optimistic updates for drag-and-drop continue to work independently
 
 ### Implementation Pattern
 
