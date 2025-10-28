@@ -32,10 +32,34 @@ echo "📋 Fetching tickets in VERIFY stage..."
 # In production, you might want to make this configurable via environment variable
 PROJECT_ID=3
 
-TICKETS_RESPONSE=$(curl -X GET "${APP_URL}/api/projects/${PROJECT_ID}/tickets?stage=VERIFY" \
+echo "  API URL: ${APP_URL}/api/projects/${PROJECT_ID}/tickets/verify"
+TICKETS_RESPONSE=$(curl -X GET "${APP_URL}/api/projects/${PROJECT_ID}/tickets/verify" \
   -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
   -H "Content-Type: application/json" \
+  -w "\n%{http_code}" \
   -s -S)
+
+# Extract HTTP status code and response body
+HTTP_CODE=$(echo "$TICKETS_RESPONSE" | tail -n1)
+RESPONSE_BODY=$(echo "$TICKETS_RESPONSE" | head -n-1)
+
+echo "  HTTP Status: $HTTP_CODE"
+
+# Check if request was successful
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "❌ Error: Failed to fetch tickets (HTTP $HTTP_CODE)"
+  echo "Response: $RESPONSE_BODY"
+  exit 1
+fi
+
+# Validate JSON response
+if ! echo "$RESPONSE_BODY" | jq -e . >/dev/null 2>&1; then
+  echo "❌ Error: Invalid JSON response from API"
+  echo "Response: $RESPONSE_BODY"
+  exit 1
+fi
+
+TICKETS_RESPONSE="$RESPONSE_BODY"
 
 # Parse ticket IDs and branches from response
 TICKET_COUNT=$(echo "$TICKETS_RESPONSE" | jq -r '.tickets | length')
