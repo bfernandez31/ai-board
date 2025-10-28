@@ -23,10 +23,10 @@
 
 **Purpose**: Project initialization and test discovery
 
-- [ ] T001 Review existing cache invalidation pattern in app/lib/hooks/mutations/useStageTransition.ts:87-93
-- [ ] T002 Review TanStack Query query key structure in app/lib/query-keys.ts:33
-- [ ] T003 [P] Search for existing useJobPolling tests with command: npx grep -r "useJobPolling" tests/
-- [ ] T004 [P] Search for existing board E2E tests with command: npx glob "tests/e2e/**/*board*.spec.ts"
+- [X] T001 Review existing cache invalidation pattern in app/lib/hooks/mutations/useStageTransition.ts:87-93
+- [X] T002 Review TanStack Query query key structure in app/lib/query-keys.ts:33
+- [X] T003 [P] Search for existing useJobPolling tests with command: npx grep -r "useJobPolling" tests/
+- [X] T004 [P] Search for existing board E2E tests with command: npx glob "tests/e2e/**/*board*.spec.ts"
 
 **Checkpoint**: Existing patterns understood, test locations identified
 
@@ -38,9 +38,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Add imports to app/lib/hooks/useJobPolling.ts: useQueryClient from @tanstack/react-query, useRef and useEffect from react
-- [ ] T006 Import queryKeys factory in app/lib/hooks/useJobPolling.ts from app/lib/query-keys.ts
-- [ ] T007 Verify TERMINAL_STATUSES constant exists in app/lib/hooks/useJobPolling.ts (line 36)
+- [X] T005 Add imports to app/lib/hooks/useJobPolling.ts: useQueryClient from @tanstack/react-query, useRef and useEffect from react
+- [X] T006 Import queryKeys factory in app/lib/hooks/useJobPolling.ts from app/lib/query-keys.ts
+- [X] T007 Verify TERMINAL_STATUSES constant exists in app/lib/hooks/useJobPolling.ts (line 36)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -56,22 +56,22 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T008 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should invalidate tickets cache when job transitions to COMPLETED
-- [ ] T009 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should NOT invalidate cache on initial load
-- [ ] T010 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should NOT invalidate cache when job transitions from PENDING to RUNNING
-- [ ] T011 [US1] Run unit tests to verify they FAIL: bun run test:unit useJobPolling
+- [X] T008 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should invalidate tickets cache when job transitions to COMPLETED
+- [X] T009 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should NOT invalidate cache on initial load
+- [X] T010 [P] [US1] Add unit test in tests/unit/useJobPolling.test.ts: should NOT invalidate cache when job transitions from PENDING to RUNNING
+- [X] T011 [US1] Run unit tests to verify they FAIL: bun run test:unit useJobPolling
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Create previousJobsRef using useRef<JobStatusDto[]>([]) in app/lib/hooks/useJobPolling.ts
-- [ ] T013 [US1] Get queryClient instance using useQueryClient() hook in app/lib/hooks/useJobPolling.ts
-- [ ] T014 [US1] Add useEffect hook with dependencies [jobs, projectId, queryClient] in app/lib/hooks/useJobPolling.ts
-- [ ] T015 [US1] Implement initial mount guard in useEffect: skip if previousJobsRef.current.length === 0 and jobs.length > 0
-- [ ] T016 [US1] Implement terminal status detection logic: filter jobs that transitioned from non-terminal to terminal status
-- [ ] T017 [US1] Call queryClient.invalidateQueries with queryKeys.projects.tickets(projectId) when terminal jobs detected
-- [ ] T018 [US1] Update previousJobsRef.current = jobs at end of useEffect
-- [ ] T019 [US1] Add console.log for debugging terminal job detection in app/lib/hooks/useJobPolling.ts
-- [ ] T020 [US1] Run unit tests to verify they PASS: bun run test:unit useJobPolling
+- [X] T012 [US1] Create previousJobsRef using useRef<JobStatusDto[]>([]) in app/lib/hooks/useJobPolling.ts
+- [X] T013 [US1] Get queryClient instance using useQueryClient() hook in app/lib/hooks/useJobPolling.ts
+- [X] T014 [US1] Add useEffect hook with dependencies [jobs, projectId, queryClient] in app/lib/hooks/useJobPolling.ts
+- [X] T015 [US1] Implement initial mount guard in useEffect: skip if previousJobsRef.current.length === 0 and jobs.length > 0
+- [X] T016 [US1] Implement terminal status detection logic: filter jobs that transitioned from non-terminal to terminal status
+- [X] T017 [US1] Call queryClient.invalidateQueries with queryKeys.projects.tickets(projectId) when terminal jobs detected
+- [X] T018 [US1] Update previousJobsRef.current = jobs at end of useEffect
+- [X] T019 [US1] Add console.log for debugging terminal job detection in app/lib/hooks/useJobPolling.ts
+- [X] T020 [US1] Run unit tests to verify they PASS: bun run test:unit useJobPolling
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -85,13 +85,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Add unit test in tests/unit/useJobPolling.test.ts: should invalidate cache for multiple jobs transitioning simultaneously
-- [ ] T022 [US2] Run unit tests to verify new test FAILS: bun run test:unit useJobPolling
+- [X] T021 [P] [US2] Add unit test in tests/unit/useJobPolling.test.ts: should invalidate cache for multiple jobs transitioning simultaneously
+- [X] T022 [US2] Run unit tests to verify new test FAILS: bun run test:unit useJobPolling
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Verify cache invalidation works for multiple concurrent workflows in app/lib/hooks/useJobPolling.ts (implementation from US1 should handle this)
-- [ ] T024 [US2] Run unit tests to verify they PASS: bun run test:unit useJobPolling
+- [X] T023 [US2] Verify cache invalidation works for multiple concurrent workflows in app/lib/hooks/useJobPolling.ts (implementation from US1 should handle this)
+- [X] T024 [US2] Run unit tests to verify they PASS: bun run test:unit useJobPolling
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -105,21 +105,21 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Create new E2E test file: tests/e2e/board/workflow-transitions.spec.ts
-- [ ] T026 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should update board when workflow transitions ticket to VERIFY
-- [ ] T027 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should update board when quick-impl workflow completes
-- [ ] T028 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should not break manual drag-and-drop transitions
-- [ ] T029 [US3] Run E2E tests to verify they FAIL: bun run test:e2e board/workflow-transitions
+- [X] T025 [P] [US3] Create new E2E test file: tests/e2e/board/workflow-transitions.spec.ts
+- [X] T026 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should update board when workflow transitions ticket to VERIFY
+- [X] T027 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should update board when quick-impl workflow completes
+- [X] T028 [P] [US3] Add E2E test in tests/e2e/board/workflow-transitions.spec.ts: should not break manual drag-and-drop transitions
+- [X] T029 [US3] Run E2E tests to verify they FAIL: bun run test:e2e board/workflow-transitions
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Verify board component in components/board/board.tsx uses useJobPolling and useTickets hooks correctly
-- [ ] T031 [US3] Verify no changes needed to board component (passive consumer of cache updates)
-- [ ] T032 [US3] Run E2E tests to verify they PASS: bun run test:e2e board/workflow-transitions
-- [ ] T033 [US3] Manual testing: Start dev server with bun run dev
-- [ ] T034 [US3] Manual testing: Navigate to http://localhost:3000/projects/1/board
-- [ ] T035 [US3] Manual testing: Manually drag ticket between stages and verify immediate optimistic update
-- [ ] T036 [US3] Manual testing: Trigger workflow via API and verify board updates within 2 seconds
+- [X] T030 [US3] Verify board component in components/board/board.tsx uses useJobPolling and useTickets hooks correctly
+- [X] T031 [US3] Verify no changes needed to board component (passive consumer of cache updates)
+- [X] T032 [US3] Run E2E tests to verify they PASS: bun run test:e2e board/workflow-transitions
+- [X] T033 [US3] Manual testing: Start dev server with bun run dev
+- [X] T034 [US3] Manual testing: Navigate to http://localhost:3000/projects/1/board
+- [X] T035 [US3] Manual testing: Manually drag ticket between stages and verify immediate optimistic update
+- [X] T036 [US3] Manual testing: Trigger workflow via API and verify board updates within 2 seconds
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -129,14 +129,14 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T037 [P] Run full test suite to verify no regressions: bun run test
-- [ ] T038 [P] Verify type checking passes: bun run type-check
-- [ ] T039 [P] Run linter: bun run lint
-- [ ] T040 Remove debug console.log statements from app/lib/hooks/useJobPolling.ts (if desired for production)
-- [ ] T041 Review browser console logs for cache invalidation behavior during manual testing
-- [ ] T042 Verify no performance regressions: check network tab shows single refetch per workflow completion
-- [ ] T043 Review edge cases from spec.md: offline network recovery, rapid consecutive completions, rollback transitions
-- [ ] T044 Run quickstart.md validation steps for deployment readiness
+- [X] T037 [P] Run full test suite to verify no regressions: bun run test
+- [X] T038 [P] Verify type checking passes: bun run type-check
+- [X] T039 [P] Run linter: bun run lint
+- [X] T040 Remove debug console.log statements from app/lib/hooks/useJobPolling.ts (if desired for production)
+- [X] T041 Review browser console logs for cache invalidation behavior during manual testing
+- [X] T042 Verify no performance regressions: check network tab shows single refetch per workflow completion
+- [X] T043 Review edge cases from spec.md: offline network recovery, rapid consecutive completions, rollback transitions
+- [X] T044 Run quickstart.md validation steps for deployment readiness
 
 ---
 
