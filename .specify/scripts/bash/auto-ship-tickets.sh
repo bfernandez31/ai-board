@@ -136,7 +136,7 @@ echo "$TICKETS_RESPONSE" | jq -c '.tickets[]' | while read -r ticket; do
       # Post comment notification
       echo "    💬 Posting deployment notification..."
 
-      # Build the JSON payload properly
+      # Build the JSON payload properly - use jq for proper JSON escaping
       COMMENT_CONTENT="🚀 **Deployed to Production**
 
 This ticket has been automatically shipped after successful Vercel deployment.
@@ -145,8 +145,22 @@ This ticket has been automatically shipped after successful Vercel deployment.
 **Environment**: Production
 **Status**: Live"
 
-      # Create JSON payload using printf to properly escape
-      JSON_PAYLOAD=$(printf '{"content": "%s", "userId": "ai-board-system-user"}' "$(echo "$COMMENT_CONTENT" | sed 's/"/\\"/g' | sed 's/`/\\`/g' | sed ':a;N;$!ba;s/\n/\\n/g')")
+      # Create JSON payload using jq for proper escaping (if available), otherwise use python
+      if command -v jq >/dev/null 2>&1; then
+        JSON_PAYLOAD=$(echo "$COMMENT_CONTENT" | jq -Rs --arg userId "ai-board-system-user" '{content: ., userId: $userId}')
+      elif command -v python3 >/dev/null 2>&1; then
+        JSON_PAYLOAD=$(echo "$COMMENT_CONTENT" | python3 -c "
+import json
+import sys
+content = sys.stdin.read()
+payload = {'content': content, 'userId': 'ai-board-system-user'}
+print(json.dumps(payload))
+")
+      else
+        # Fallback to manual escaping (less reliable but works in most cases)
+        ESCAPED_CONTENT=$(echo "$COMMENT_CONTENT" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/`/\\`/g' | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+        JSON_PAYLOAD="{\"content\": \"${ESCAPED_CONTENT}\", \"userId\": \"ai-board-system-user\"}"
+      fi
 
       curl -X POST "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comments/ai-board" \
         -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
