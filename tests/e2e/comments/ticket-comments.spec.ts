@@ -93,8 +93,8 @@ test.describe('Ticket Comments - User Stories', () => {
     await page.click(`[data-ticket-id="${ticket.id}"]`);
     await page.waitForSelector('[role="dialog"]');
 
-    // Click Comments tab and wait for tab content to be visible
-    await page.click('[role="tab"]:has-text("Comments")');
+    // Click Conversation tab and wait for tab content to be visible
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Wait for textarea to be visible (confirms CommentList loaded)
@@ -173,8 +173,8 @@ Multi-line content is preserved.`;
     await page.click(`[data-ticket-id="${ticket.id}"]`);
     await page.waitForSelector('[role="dialog"]');
 
-    // Click Comments tab
-    await page.click('[role="tab"]:has-text("Comments")');
+    // Click Conversation tab
+    await page.click('[role="tab"]:has-text("Conversation")');
 
     // Verify comment content is displayed (as plain text with whitespace preserved)
     const commentItem = page.locator('[data-testid="comment-item"]').first();
@@ -292,8 +292,8 @@ Multi-line content is preserved.`;
     await page.click(`[data-ticket-id="${ticket.id}"]`);
     await page.waitForSelector('[role="dialog"]');
 
-    // Click Comments tab
-    await page.click('[role="tab"]:has-text("Comments")');
+    // Click Conversation tab
+    await page.click('[role="tab"]:has-text("Conversation")');
 
     // Wait for comment to load
     await page.waitForSelector('text=Another user\'s comment');
@@ -333,9 +333,9 @@ Multi-line content is preserved.`;
     // Verify Details tab is active by default
     await expect(page.locator('[role="tab"][data-state="active"]:has-text("Details")')).toBeVisible();
 
-    // Press Cmd+2 (or Ctrl+2) to switch to Comments tab
+    // Press Cmd+2 (or Ctrl+2) to switch to Conversation tab
     await page.keyboard.press('Meta+2');
-    await expect(page.locator('[role="tab"][data-state="active"]:has-text("Comments")')).toBeVisible();
+    await expect(page.locator('[role="tab"][data-state="active"]:has-text("Conversation")')).toBeVisible();
 
     // Press Cmd+3 to switch to Files tab
     await page.keyboard.press('Meta+3');
@@ -384,12 +384,12 @@ Multi-line content is preserved.`;
     await expect(page.getByTestId('stage-badge')).toContainText('Specify');
 
     // Verify all tabs are accessible
-    await expect(page.locator('[role="tab"]:has-text("Comments")')).toBeVisible();
+    await expect(page.locator('[role="tab"]:has-text("Conversation")')).toBeVisible();
     await expect(page.locator('[role="tab"]:has-text("Files")')).toBeVisible();
 
     // Verify can switch between tabs
     await page.click('[role="tab"]:has-text("Comments")');
-    await expect(page.locator('[role="tab"][data-state="active"]:has-text("Comments")')).toBeVisible();
+    await expect(page.locator('[role="tab"][data-state="active"]:has-text("Conversation")')).toBeVisible();
 
     await page.click('[role="tab"]:has-text("Files")');
     await expect(page.locator('[role="tab"][data-state="active"]:has-text("Files")')).toBeVisible();
