@@ -77,11 +77,8 @@ This command implements simple features directly from ticket context without for
    - Update inline documentation if public APIs changed
    - Add JSDoc comments for new functions
    - Update README.md ONLY if user-facing behavior changed
-   - **Update specs/specifications documentation**:
-     - **Functional** (`specs/specifications/functional/`): Update relevant files with new user-facing behaviors
-     - **Technical** (`specs/specifications/technical/`): Update API endpoints, data models, implementation details
-     - Focus on CURRENT STATE only (no history)
-   - Update CLAUDE.md ONLY if new technologies or patterns introduced
+   - **DO NOT** update specs/specifications documentation (handled by workflow)
+   - **DO NOT** update CLAUDE.md (handled by workflow)
    - **DO NOT** create separate feature documentation (this is quick-impl)
 
 10. **Completion checklist**:
