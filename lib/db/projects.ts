@@ -19,12 +19,18 @@ export async function getProjectById(
 
 /**
  * Get all projects for the current user
+ * Returns projects where user is owner OR member
  */
 export async function getUserProjects() {
   const userId = await requireAuth();
 
   return prisma.project.findMany({
-    where: { userId },
+    where: {
+      OR: [
+        { userId },                            // Owner access
+        { members: { some: { userId } } }      // Member access
+      ]
+    },
     include: {
       _count: {
         select: { tickets: true },
