@@ -1,13 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { describe, it, expect } from 'vitest';
 import {
   classifyJobType,
   getJobTypeConfig,
 } from '@/lib/utils/job-type-classifier';
 import { JobType } from '@/lib/types/job-types';
 
-test.describe('Job Type Classifier', () => {
-  test.describe('classifyJobType', () => {
-    test('should classify workflow commands as WORKFLOW', () => {
+describe('Job Type Classifier', () => {
+  describe('classifyJobType', () => {
+    it('should classify workflow commands as WORKFLOW', () => {
       expect(classifyJobType('specify')).toBe(JobType.WORKFLOW);
       expect(classifyJobType('plan')).toBe(JobType.WORKFLOW);
       expect(classifyJobType('tasks')).toBe(JobType.WORKFLOW);
@@ -15,21 +15,21 @@ test.describe('Job Type Classifier', () => {
       expect(classifyJobType('quick-impl')).toBe(JobType.WORKFLOW);
     });
 
-    test('should classify AI-BOARD commands as AI_BOARD', () => {
+    it('should classify AI-BOARD commands as AI_BOARD', () => {
       expect(classifyJobType('comment-specify')).toBe(JobType.AI_BOARD);
       expect(classifyJobType('comment-plan')).toBe(JobType.AI_BOARD);
       expect(classifyJobType('comment-build')).toBe(JobType.AI_BOARD);
       expect(classifyJobType('comment-verify')).toBe(JobType.AI_BOARD);
     });
 
-    test('should default unknown commands to WORKFLOW', () => {
+    it('should default unknown commands to WORKFLOW', () => {
       expect(classifyJobType('unknown-command')).toBe(JobType.WORKFLOW);
       expect(classifyJobType('')).toBe(JobType.WORKFLOW);
     });
   });
 
-  test.describe('getJobTypeConfig', () => {
-    test('should return correct config for WORKFLOW', () => {
+  describe('getJobTypeConfig', () => {
+    it('should return correct config for WORKFLOW', () => {
       const config = getJobTypeConfig(JobType.WORKFLOW);
       expect(config.label).toBe('Workflow');
       expect(config.iconName).toBe('Cog');
@@ -38,7 +38,7 @@ test.describe('Job Type Classifier', () => {
       expect(config.ariaLabel).toBe('Automated workflow job');
     });
 
-    test('should return correct config for AI_BOARD', () => {
+    it('should return correct config for AI_BOARD', () => {
       const config = getJobTypeConfig(JobType.AI_BOARD);
       expect(config.label).toBe('AI-BOARD');
       expect(config.iconName).toBe('MessageSquare');
