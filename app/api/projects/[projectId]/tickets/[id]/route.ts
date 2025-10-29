@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
-import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { verifyTicketAccess, verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 
@@ -32,8 +32,16 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ticket ID' }, { status: 400 });
     }
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // First verify project access (this will throw if project not found or no access)
+    await verifyProjectAccess(projectId);
+
+    // Then verify ticket access (owner OR member via project)
+    const ticketAuth = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticketAuth.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Fetch ticket with project validation (include project for clarificationPolicy)
     const ticket = await prisma.ticket.findFirst({
@@ -106,7 +114,13 @@ export async function GET(
       }
       if (error.message === 'Project not found') {
         return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
           { status: 404 }
         );
       }
@@ -186,8 +200,16 @@ export async function PATCH(
       );
     }
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // First verify project access (this will throw if project not found or no access)
+    await verifyProjectAccess(projectId);
+
+    // Then verify ticket access (owner OR member via project)
+    const ticketAuth = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticketAuth.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Parse request body
     const body = await request.json();
@@ -375,7 +397,13 @@ export async function PATCH(
       }
       if (error.message === 'Project not found') {
         return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
           { status: 404 }
         );
       }

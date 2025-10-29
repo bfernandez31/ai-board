@@ -36,8 +36,8 @@ export async function getUserProjects() {
 
 /**
  * Get a single project by ID
- * Ensures the project belongs to the current user
- * @throws Error if project not found or doesn't belong to user
+ * Ensures the current user has access (owner OR member)
+ * @throws Error if project not found or user doesn't have access
  */
 export async function getProject(projectId: number) {
   const userId = await requireAuth();
@@ -45,7 +45,10 @@ export async function getProject(projectId: number) {
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      userId, // ← CRITICAL: filter by userId
+      OR: [
+        { userId },                            // Owner access
+        { members: { some: { userId } } }      // Member access
+      ]
     },
     include: {
       tickets: {

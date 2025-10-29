@@ -58,7 +58,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
         return isRollback || isNormalTransition;
       },
-      { timeout: 5000 }
+      { timeout: 2000 }
     );
   };
 
@@ -349,7 +349,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
     // Wait for quick-impl confirmation modal
     const modal = page.locator('[role="dialog"]', { hasText: /quick implementation/i });
-    await expect(modal).toBeVisible({ timeout: 5000 });
+    await expect(modal).toBeVisible({ timeout: 2000 });
 
     // Click proceed button to confirm quick-impl
     const proceedButton = modal.locator('button', { hasText: /proceed/i });

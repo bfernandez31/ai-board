@@ -107,7 +107,7 @@ export function UserProfile() {
 
 ## Authorization Patterns
 
-### Project Ownership Validation
+### Project Access Validation (Owner OR Member)
 
 ```typescript
 export async function GET(
@@ -120,13 +120,27 @@ export async function GET(
   const userId = session.user.id;
   const projectId = parseInt(params.projectId);
 
-  // Verify project ownership
+  // Check ownership first (performance optimization - no join needed)
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId }
   });
 
-  if (!project) {
-    // Project doesn't exist OR belongs to different user
+  if (project) {
+    // User is owner - proceed with authorized operation
+    return /* ... */;
+  }
+
+  // Check membership (requires join)
+  const membership = await prisma.projectMember.findFirst({
+    where: {
+      projectId,
+      userId
+    },
+    include: { project: true }
+  });
+
+  if (!membership) {
+    // User is neither owner nor member
     const exists = await prisma.project.findUnique({
       where: { id: projectId }
     });
@@ -136,14 +150,43 @@ export async function GET(
       : NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
-  // Proceed with authorized operation
+  // User is member - proceed with authorized operation
+  // Use membership.project for project data
 }
 ```
 
-### Comment Author Validation
+**Authorization Helper Pattern**:
 
 ```typescript
-// Delete comment - only author can delete
+// Helper function for reusable authorization logic
+async function verifyProjectAccess(projectId: number, userId: string) {
+  // Check ownership first
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId }
+  });
+
+  if (project) {
+    return { hasAccess: true, isOwner: true, project };
+  }
+
+  // Check membership
+  const membership = await prisma.projectMember.findFirst({
+    where: { projectId, userId },
+    include: { project: true }
+  });
+
+  if (membership) {
+    return { hasAccess: true, isOwner: false, project: membership.project };
+  }
+
+  return { hasAccess: false, isOwner: false, project: null };
+}
+```
+
+### Comment Author Validation (With Project Access Check)
+
+```typescript
+// Delete comment - only author can delete, and user must have project access
 const comment = await prisma.comment.findUnique({
   where: { id: commentId },
   include: { ticket: { include: { project: true } } }
@@ -153,8 +196,13 @@ if (!comment) {
   return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 
-// Check project ownership
-if (comment.ticket.project.userId !== session.user.id) {
+// Check project access (owner OR member)
+const { hasAccess } = await verifyProjectAccess(
+  comment.ticket.project.id,
+  session.user.id
+);
+
+if (!hasAccess) {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }
 
@@ -405,7 +453,7 @@ await prisma.$transaction([
 
 ## Common Patterns
 
-### Authenticated API Route
+### Authenticated API Route with Project Access
 
 ```typescript
 export async function GET(request: NextRequest) {
@@ -418,12 +466,10 @@ export async function GET(request: NextRequest) {
   // 2. Extract user ID
   const userId = session.user.id;
 
-  // 3. Verify authorization
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId }
-  });
+  // 3. Verify authorization (owner OR member)
+  const { hasAccess, project } = await verifyProjectAccess(projectId, userId);
 
-  if (!project) {
+  if (!hasAccess) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -433,6 +479,38 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ data });
+}
+```
+
+### Owner-Only API Route
+
+```typescript
+export async function PATCH(request: NextRequest) {
+  // 1. Check authentication
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // 2. Extract user ID
+  const userId = session.user.id;
+
+  // 3. Verify ownership (NOT membership - owner-only action)
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId }
+  });
+
+  if (!project) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // 4. Perform owner-only operation (e.g., update project settings)
+  const updatedProject = await prisma.project.update({
+    where: { id: projectId },
+    data: { name: newName }
+  });
+
+  return NextResponse.json({ project: updatedProject });
 }
 ```
 

@@ -40,7 +40,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
 
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -86,7 +86,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
 
     // Navigate to board and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -122,7 +122,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
 
     // Navigate to board and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');

@@ -67,7 +67,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should open modal when ticket card is clicked and close with button', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click first ticket card
     const firstTicket = page.locator('[data-testid="ticket-card"]').first();
@@ -95,7 +95,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should close modal when ESC key is pressed', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card to open modal
     await page.locator('[data-testid="ticket-card"]').first().click();
@@ -118,7 +118,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should close modal when clicking outside (overlay)', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Open modal by clicking ticket
     await page.locator('[data-testid="ticket-card"]').first().click();
@@ -151,7 +151,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should display different ticket data for different tickets', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     const tickets = page.locator('[data-testid="ticket-card"]');
 
@@ -195,7 +195,7 @@ test.describe('Ticket Detail Modal', () => {
 
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card
     await page.locator('[data-testid="ticket-card"]').first().click();
@@ -232,7 +232,7 @@ test.describe('Ticket Detail Modal', () => {
 
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card
     await page.locator('[data-testid="ticket-card"]').first().click();
@@ -265,7 +265,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should handle long description with scrolling', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click the third ticket (which has a long description)
     await page.locator('[data-testid="ticket-card"]').nth(2).click();
@@ -299,7 +299,7 @@ test.describe('Ticket Detail Modal', () => {
   test('should display correct badge colors for different stages', async ({ page }) => {
     // Navigate to board and wait for tickets to load
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Stage color mapping (Catppuccin theme from ticket-detail-modal.tsx)
     const stageColors = {
@@ -413,7 +413,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -462,7 +462,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate to board and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -509,7 +509,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -534,7 +534,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -569,7 +569,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -612,7 +612,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -655,7 +655,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -691,7 +691,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -727,7 +727,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -763,7 +763,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -799,7 +799,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -835,7 +835,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Navigate and open modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -905,7 +905,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   test('displays ticket ID in header before title', async ({ page }) => {
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -931,7 +931,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   test('displays footer with relative dates in Details tab', async ({ page }) => {
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -976,7 +976,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   test('does not display old dates section in Details tab', async ({ page }) => {
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -1003,7 +1003,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
 
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -1031,7 +1031,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
 
     // Navigate to board and open ticket detail modal
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
@@ -1095,7 +1095,7 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
 
     // Navigate to board and open the ticket
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click the first (and only) ticket
     await page.locator('[data-testid="ticket-card"]').first().click();
@@ -1217,7 +1217,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   test('opens Conversation tab when clicking ticket in VERIFY stage', async ({ page }) => {
     // Navigate to board
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the VERIFY column
     const verifyColumn = page.locator('[data-stage="VERIFY"]');
@@ -1250,7 +1250,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   test('opens Details tab when clicking ticket in INBOX stage', async ({ page }) => {
     // Navigate to board
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the INBOX column
     const inboxColumn = page.locator('[data-stage="INBOX"]');
@@ -1283,7 +1283,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   test('opens Details tab when clicking ticket in BUILD stage', async ({ page }) => {
     // Navigate to board
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the BUILD column
     const buildColumn = page.locator('[data-stage="BUILD"]');
@@ -1312,7 +1312,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   test('resets to correct initial tab when reopening same ticket', async ({ page }) => {
     // Navigate to board
     await page.goto('/projects/1/board');
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find and click VERIFY ticket
     const verifyColumn = page.locator('[data-stage="VERIFY"]');

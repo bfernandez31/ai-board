@@ -82,22 +82,22 @@ test.describe("Ticket Creation Modal - Form Validation", () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test("should show error when description exceeds 1000 characters", async ({ page }) => {
+  test("should show error when description exceeds 2500 characters", async ({ page }) => {
     const titleInput = page.getByRole("dialog").getByLabel(/^title$/i);
     const descriptionInput = page.getByRole("dialog").getByLabel(/^description$/i);
-    const tooLongDescription = "a".repeat(1001);
+    const tooLongDescription = "a".repeat(2501);
 
     // Fill title with valid data
     await titleInput.fill("Valid title");
 
-    // Fill description with 1001 characters
+    // Fill description with 2501 characters
     await descriptionInput.fill(tooLongDescription);
 
     // Blur to trigger validation
     await descriptionInput.blur();
 
     // Wait for error message
-    const errorMessage = page.getByText(/description must be 1000 characters or less/i);
+    const errorMessage = page.getByText(/description must be 2500 characters or less/i);
     await expect(errorMessage).toBeVisible();
 
     // Create button should be disabled

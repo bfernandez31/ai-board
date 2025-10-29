@@ -110,21 +110,30 @@ Projects have a configurable default clarification policy:
 
 ### Project Ownership
 
-- Every project belongs to a user (project owner)
+- Every project has one owner (the user who created it)
 - User ID is required when creating projects
-- Owner has full access to project and all its tickets
+- Owner has full administrative access to the project
 
-### Access Control
+### Project Membership
 
-**Project Access**:
-- Users can only access their own projects
-- Cross-user access returns permission error
-- Project queries always filtered by user ID
+**Member Access**:
+- Projects can have multiple members (collaborators)
+- Members can access the project board and all tickets
+- Members have read-write access (create, update, comment on tickets)
+- Members can transition tickets through workflow stages
+- Members cannot delete projects or manage other members (owner-only)
+
+**Access Control**:
+- Users can access projects they own OR projects they are members of
+- Authorization checks validate "owner OR member" relationship
+- Cross-user access (neither owner nor member) returns permission error
+- Project ownership check is performed first for performance optimization
 
 **Ticket Access**:
-- Users can view/modify tickets in their projects
-- Ticket operations require project ownership
+- Project members can view/modify all tickets in the project
+- Ticket operations require project ownership OR membership
 - Authorization validated on every request
+- No per-ticket permission differences between owner and members
 
 ### AI-BOARD Membership
 

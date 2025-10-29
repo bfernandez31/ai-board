@@ -37,7 +37,7 @@ test.describe('E2E: Dual Job Display - User Story 1', () => {
 
     // Step 3: Verify ticket appears on board (anywhere)
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
-    await expect(ticketCard).toBeVisible({ timeout: 10000 });
+    await expect(ticketCard).toBeVisible({ timeout: 3000 });
 
     // Step 4: Verify no job indicator initially (ticket has no jobs yet)
     const initialJobIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
@@ -66,7 +66,7 @@ test.describe('E2E: Dual Job Display - User Story 1', () => {
 
     // Step 7: Find ticket on board (should be in SPECIFY now)
     const ticketInSpecify = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
-    await expect(ticketInSpecify).toBeVisible({ timeout: 10000 });
+    await expect(ticketInSpecify).toBeVisible({ timeout: 3000 });
 
     // Step 8: Verify workflow job indicator appears with WRITING label
     const jobIndicator = ticketInSpecify.locator('[data-testid="job-status-indicator"]');
@@ -128,7 +128,7 @@ test.describe('E2E: Dual Job Display - User Story 1', () => {
     });
 
     // Wait for polling to detect the change (2-second polling interval)
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
     // Verify status updated to COMPLETED (no longer WRITING)
     ariaLabel = await jobIndicator.getAttribute('aria-label');
@@ -227,7 +227,7 @@ test.describe('E2E: Dual Job Display - User Story 2', () => {
 
     // Step 4: Find ticket on board (should be in SPECIFY)
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
-    await expect(ticketCard).toBeVisible({ timeout: 10000 });
+    await expect(ticketCard).toBeVisible({ timeout: 3000 });
 
     // Step 5: Verify AI-BOARD job indicator appears with ASSISTING label
     const jobIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
@@ -287,7 +287,7 @@ test.describe('E2E: Dual Job Display - User Story 2', () => {
 
     // Step 5: Find ticket on board (should be in PLAN now)
     ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
-    await expect(ticketCard).toBeVisible({ timeout: 10000 });
+    await expect(ticketCard).toBeVisible({ timeout: 3000 });
 
     // Step 6: Verify AI-BOARD job is NO LONGER visible (stage mismatch)
     jobIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
@@ -346,10 +346,10 @@ test.describe('E2E: Dual Job Display - User Story 2', () => {
     const firstAriaLabel = await firstIndicator.getAttribute('aria-label');
     expect(firstAriaLabel?.toUpperCase()).toContain('WRITING');
 
-    // Step 6: Verify AI-BOARD job shows ASSISTING label
+    // Step 6: Verify AI-BOARD job shows expected label
     const secondIndicator = jobIndicators.last();
     const secondAriaLabel = await secondIndicator.getAttribute('aria-label');
-    expect(secondAriaLabel?.toUpperCase()).toContain('ASSISTING');
+    expect(secondAriaLabel?.toUpperCase()).toContain('AI-BOARD IS WORKING ON THIS TICKET');
 
     // Step 7: Verify distinct prefixes (PLAN : for workflow, AI-BOARD : for AI-BOARD)
     const firstText = await firstIndicator.textContent();

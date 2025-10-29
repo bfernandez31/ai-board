@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { imageFileSchema } from '@/lib/schemas/ticket-image';
@@ -35,8 +35,13 @@ export async function GET(
       );
     }
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // Verify ticket access (owner OR member via project)
+    const ticketAuth = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticketAuth.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Fetch ticket with attachments
     const ticket = await prisma.ticket.findFirst({
@@ -131,8 +136,13 @@ export async function POST(
       );
     }
 
-    // Verify project ownership
-    await verifyProjectOwnership(projectId);
+    // Verify ticket access (owner OR member via project)
+    const ticketAuth = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticketAuth.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check content type
     const contentType = request.headers.get('content-type') || '';

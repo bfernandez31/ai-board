@@ -231,7 +231,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     // Wait for board to be visible
     const board = page.locator('main').or(page.locator('[data-testid="board"]'));
-    await board.first().waitFor({ state: 'visible', timeout: 10000 });
+    await board.first().waitFor({ state: 'visible', timeout: 3000 });
 
     const loadTime = Date.now() - startTime;
 
