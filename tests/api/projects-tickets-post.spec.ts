@@ -155,8 +155,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
     expect(body.error.toLowerCase()).toContain('100');
   });
 
-  test('should return 400 for description exceeding 1000 characters', async ({ request }) => {
-    const longDescription = 'a'.repeat(1001);
+  test('should return 400 for description exceeding 2500 characters', async ({ request }) => {
+    const longDescription = 'a'.repeat(2501);
 
     const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
       data: {
@@ -170,7 +170,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Contract Validation', ()
 
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(body.error.toLowerCase()).toContain('1000');
+    expect(body.error.toLowerCase()).toContain('2500');
   });
 
   test('should trim whitespace from title and description', async ({ request }) => {

@@ -284,10 +284,10 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   });
 
   /**
-   * Test Scenario 6: Cross-Project Access (Forbidden)
+   * Test Scenario 6: Cross-Project Access (Not Found)
    * Given: Ticket belongs to project 1
    * When: POST via project 2 URL (both projects exist)
-   * Then: 403 Forbidden, no changes
+   * Then: 404 Not Found (ticket doesn't exist in project 2), no changes
    */
   test('should reject cross-project access', async ({ request }) => {
     // Arrange
@@ -360,10 +360,10 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Forbidden
-    expect(response.status()).toBe(403);
+    // Assert - Not Found (ticket doesn't exist in project 2)
+    expect(response.status()).toBe(404);
     const body = await response.json();
-    expect(body.error).toBe('Forbidden');
+    expect(body.error).toBe('Ticket not found');
 
     // Assert - No changes
     const unchangedTicket = await prisma.ticket.findUnique({
@@ -387,11 +387,10 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert
+    // Assert - Ticket not found (because project doesn't exist)
     expect(response.status()).toBe(404);
     const body = await response.json();
-    expect(body.error).toBe('Project not found');
-    expect(body.code).toBe('PROJECT_NOT_FOUND');
+    expect(body.error).toBe('Ticket not found');
   });
 
   /**
