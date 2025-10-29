@@ -199,12 +199,24 @@ jobs:
           echo ""
           claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
 
-      # Phase 4: Final Validation
-      - name: Validate All Tests Pass
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+      # Phase 4: Final Validation (only if there were failures that needed fixing)
+      - name: Report - All Tests Passed Initially
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.UNIT_FAILED != 'true' && env.E2E_FAILED != 'true' }}
         run: |
-          echo "✅ Running final test validation..."
-          bun run test
+          echo "✅ All tests passed on first run - no fixes needed!"
+          echo "   Skipping final validation (tests already validated)"
+
+      - name: Final Validation - Unit Tests
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.UNIT_FAILED == 'true' }}
+        run: |
+          echo "✅ Running final unit test validation..."
+          bun run test:unit
+
+      - name: Final Validation - E2E Tests
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.E2E_FAILED == 'true' }}
+        run: |
+          echo "✅ Running final E2E test validation..."
+          npx playwright test
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}

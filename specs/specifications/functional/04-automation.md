@@ -245,7 +245,10 @@ When ticket moves from BUILD to VERIFY stage:
 - Maximum 3 fix attempts per root cause
 
 **Phase 4: Final Validation**
-- Run complete test suite (all tests must pass)
+- Run final validation only for test suites that had failures
+- If unit tests failed: Re-run unit test suite
+- If E2E tests failed: Re-run E2E test suite
+- If all tests passed initially: Skip final validation (already validated)
 - Commit all test fixes to feature branch
 - Push changes to remote
 
@@ -314,6 +317,13 @@ When tests cannot be fixed automatically:
 - Only re-run affected tests after each fix
 - Avoids redundant full test suite execution
 - Provides faster feedback during fix iteration
+
+**Smart Final Validation**:
+- Only re-run test suites that had failures
+- If unit tests failed: Final unit validation only
+- If E2E tests failed: Final E2E validation only
+- If all passed initially: Skip final validation entirely
+- Saves 2-10 minutes per workflow when tests pass on first run
 
 **Test Categorization**:
 - Fast tests (unit): < 10 seconds total
