@@ -257,7 +257,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     await page.goto(`http://localhost:3000/projects/${testProjectId}/board`);
 
     // Wait for the board to load
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click on ticket to open detail modal
     await page.getByText('[e2e] Test Ticket for Override').click();
@@ -322,7 +322,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     await page.goto(`http://localhost:3000/projects/${testProjectId}/board`);
 
     // Wait for the board to load
-    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click on ticket to open detail modal
     await page.getByText('[e2e] Test Ticket for Override').click();

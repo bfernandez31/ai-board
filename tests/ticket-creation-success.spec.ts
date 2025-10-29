@@ -64,7 +64,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(createButton).toBeDisabled();
 
     // Step 8: Wait for modal to close (indicates successful creation)
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Step 9: Wait for ticket to appear in INBOX column (board refresh is async)
     await waitForTicketInColumn(page, testTitle);
@@ -86,7 +86,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Verify ticket exists (might be hard to find by single char, check count increased)
     const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();
@@ -112,7 +112,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Verify ticket exists (check by partial text match)
     const partialTitle = "a".repeat(20); // Check first 20 chars
@@ -137,7 +137,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Wait for ticket to appear in INBOX column
     await waitForTicketInColumn(page, testTitle);
@@ -160,7 +160,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Wait for ticket to appear in INBOX column
     await waitForTicketInColumn(page, titleWithPunctuation);
@@ -191,7 +191,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for completion
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
   });
 
   test("should refresh board automatically after ticket creation", async ({ page }) => {
@@ -208,7 +208,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Wait for board to update (slight delay for optimistic update)
     await page.waitForTimeout(1000);
@@ -239,7 +239,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
       // Wait for modal to close
       const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-      await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+      await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
       // Verify ticket was created
       const newTicket = page.getByText(ticket.title);
@@ -275,7 +275,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for completion (allow up to 15 seconds per spec)
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 15000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 3000 });
 
     // Verify ticket was created
     const newTicket = page.getByText(testTitle);
@@ -293,7 +293,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
 
     // Wait for modal to close
     const modalTitle = page.getByRole("heading", { name: /create new ticket/i });
-    await expect(modalTitle).not.toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
 
     // Verify ticket appears in INBOX column (not in other columns)
     const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();

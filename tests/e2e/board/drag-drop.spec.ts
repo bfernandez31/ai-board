@@ -167,7 +167,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
 
     // Wait longer for server processing
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     // Verify database updated to SPECIFY
     let updatedTicket = await getTicket(ticket.id);
@@ -187,7 +187,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
 
     // Wait longer for server processing
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     // Verify database updated to PLAN
     updatedTicket = await getTicket(ticket.id);
@@ -380,7 +380,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
     // Wait for ticket to appear in new column
     const specifyColumn = page.locator('[data-stage="SPECIFY"]');
-    await specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`).waitFor({ state: 'visible', timeout: 5000 });
+    await specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`).waitFor({ state: 'visible', timeout: 2000 });
 
     const endTime = Date.now();
     const latency = endTime - startTime;
