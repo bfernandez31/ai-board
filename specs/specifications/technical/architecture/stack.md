@@ -292,7 +292,22 @@
   - Preview deployments
   - Production deployments
   - Build caching
+  - Speed Insights (performance monitoring)
 - **Limitations**: No long-lived connections (no WebSockets)
+
+### Vercel Speed Insights
+- **Package**: `@vercel/speed-insights` ^1.2.0
+- **Purpose**: Real user monitoring (RUM) for web performance metrics
+- **Integration**: `<SpeedInsights />` component in root layout
+- **Metrics Tracked**:
+  - First Contentful Paint (FCP)
+  - Largest Contentful Paint (LCP)
+  - First Input Delay (FID)
+  - Cumulative Layout Shift (CLS)
+  - Time to First Byte (TTFB)
+- **Data Collection**: Automatic, no configuration required
+- **Privacy**: GDPR-compliant, no personal data collected
+- **Dashboard**: Available in Vercel project analytics
 
 ### Environment Variables
 - **Development**: `.env.local`
@@ -341,6 +356,7 @@
 | @octokit/rest | ^22.0.0 | GitHub API |
 | react-markdown | ^9.0.1 | Markdown rendering |
 | date-fns | Latest | Date utilities |
+| @vercel/speed-insights | ^1.2.0 | Performance monitoring |
 
 ## Browser Support
 

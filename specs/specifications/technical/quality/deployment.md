@@ -444,6 +444,49 @@ vercel logs --follow
 - Click on deployment
 - View logs tab
 
+### Vercel Speed Insights
+
+**Performance Monitoring**:
+- Real User Monitoring (RUM) for production traffic
+- Automatic metric collection via `@vercel/speed-insights` package
+- No configuration required after installation
+
+**Metrics Tracked**:
+- **First Contentful Paint (FCP)**: Time to first text/image render
+- **Largest Contentful Paint (LCP)**: Time to largest element render
+- **First Input Delay (FID)**: Time from first interaction to browser response
+- **Cumulative Layout Shift (CLS)**: Visual stability score
+- **Time to First Byte (TTFB)**: Server response time
+
+**Dashboard Access**:
+- Navigate to Vercel project dashboard
+- Click "Analytics" tab
+- View "Speed Insights" section
+- Filter by page, time range, device type
+- Export data for analysis
+
+**Performance Targets**:
+- LCP: <2.5s (good), <4.0s (needs improvement), ≥4.0s (poor)
+- FID: <100ms (good), <300ms (needs improvement), ≥300ms (poor)
+- CLS: <0.1 (good), <0.25 (needs improvement), ≥0.25 (poor)
+
+**Integration**:
+```typescript
+// app/layout.tsx
+import { SpeedInsights } from '@vercel/speed-insights/next';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <SpeedInsights />
+      </body>
+    </html>
+  );
+}
+```
+
 ### Application Logging
 
 **Server Logs** (API routes):
