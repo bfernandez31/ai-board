@@ -112,7 +112,13 @@ export async function GET(
           { status: 401 }
         );
       }
-      if (error.message === 'Project not found' || error.message === 'Ticket not found') {
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
         return NextResponse.json(
           { error: 'Ticket not found' },
           { status: 404 }
@@ -389,7 +395,13 @@ export async function PATCH(
           { status: 401 }
         );
       }
-      if (error.message === 'Project not found' || error.message === 'Ticket not found') {
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
         return NextResponse.json(
           { error: 'Ticket not found' },
           { status: 404 }

@@ -360,10 +360,10 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Not Found (ticket doesn't exist in project 2)
-    expect(response.status()).toBe(404);
+    // Assert - Forbidden (ticket exists but in different project)
+    expect(response.status()).toBe(403);
     const body = await response.json();
-    expect(body.error).toBe('Ticket not found');
+    expect(body.error).toBe('Forbidden');
 
     // Assert - No changes
     const unchangedTicket = await prisma.ticket.findUnique({
@@ -387,10 +387,11 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       }
     );
 
-    // Assert - Ticket not found (because project doesn't exist)
+    // Assert
     expect(response.status()).toBe(404);
     const body = await response.json();
-    expect(body.error).toBe('Ticket not found');
+    expect(body.error).toBe('Project not found');
+    expect(body.code).toBe('PROJECT_NOT_FOUND');
   });
 
   /**
