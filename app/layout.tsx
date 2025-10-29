@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/layout/header';
 import { SessionProvider } from '@/components/auth/session-provider';
 import { QueryProvider } from '@/app/providers/query-provider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'AI Board',
@@ -29,6 +30,7 @@ export default function RootLayout({
             <Toaster />
           </SessionProvider>
         </QueryProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
