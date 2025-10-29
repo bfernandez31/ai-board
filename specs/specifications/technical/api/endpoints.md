@@ -8,7 +8,13 @@ All API endpoints require authentication via NextAuth.js session cookies except 
 
 **Authentication Header**: Session cookie (set automatically by NextAuth.js)
 **Unauthenticated**: 401 Unauthorized
-**Unauthorized Access**: 403 Forbidden (project belongs to different user)
+**Unauthorized Access**: 403 Forbidden (user is neither project owner nor member)
+
+**Authorization Pattern**:
+- All project-scoped endpoints validate "owner OR member" access
+- Owner check performed first for performance (no database join needed)
+- Member check performed via ProjectMember table join if not owner
+- Non-members receive 403 Forbidden (API) or 404 Not Found (pages)
 
 **Workflow Endpoints**: Require Bearer token authentication
 ```
@@ -27,7 +33,7 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 Fetch project details including clarification policy.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -49,7 +55,7 @@ Fetch project details including clarification policy.
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: Project belongs to different user
+- `403`: User is neither project owner nor member
 - `404`: Project not found
 
 ### PATCH /api/projects/:projectId
@@ -57,7 +63,7 @@ Fetch project details including clarification policy.
 Update project details including clarification policy.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner (owner-only action)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -89,7 +95,7 @@ Update project details including clarification policy.
 **Errors**:
 - `400`: Invalid request body or clarification policy enum
 - `401`: Not authenticated
-- `403`: Project belongs to different user
+- `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found
 
 ## Ticket Endpoints
@@ -99,7 +105,7 @@ Update project details including clarification policy.
 Fetch all tickets for a project.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -131,7 +137,7 @@ Fetch all tickets for a project.
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: Project belongs to different user
+- `403`: User is neither project owner nor member
 - `404`: Project not found
 
 ### POST /api/projects/:projectId/tickets
@@ -139,7 +145,7 @@ Fetch all tickets for a project.
 Create a new ticket.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -177,7 +183,7 @@ Create a new ticket.
 **Errors**:
 - `400`: Invalid request body (Zod validation errors)
 - `401`: Not authenticated
-- `403`: Project belongs to different user
+- `403`: User is neither project owner nor member
 - `404`: Project not found
 - `500`: Database error
 
@@ -186,7 +192,7 @@ Create a new ticket.
 Fetch single ticket with nested project data.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -227,7 +233,7 @@ Fetch single ticket with nested project data.
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: Ticket belongs to different project/user
+- `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 
 ### PATCH /api/projects/:projectId/tickets/:id
@@ -235,7 +241,7 @@ Fetch single ticket with nested project data.
 Update ticket fields with optimistic concurrency control.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -272,7 +278,7 @@ Update ticket fields with optimistic concurrency control.
 **Errors**:
 - `400`: Invalid request body, validation failure, or stage restriction violation
 - `401`: Not authenticated
-- `403`: Ticket belongs to different project/user
+- `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 - `409`: Version conflict (concurrent update detected)
 
@@ -281,7 +287,7 @@ Update ticket fields with optimistic concurrency control.
 Update ticket branch name (workflow-only endpoint).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN)
-**Authorization**: Workflow token validation
+**Authorization**: Workflow token validation (no project membership check)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -318,7 +324,7 @@ Update ticket branch name (workflow-only endpoint).
 Transition ticket to target stage with workflow dispatch.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -355,7 +361,7 @@ Transition ticket to target stage with workflow dispatch.
 **Errors**:
 - `400`: Invalid transition (non-sequential, job not completed, rollback not allowed)
 - `401`: Not authenticated
-- `403`: Ticket belongs to different project/user
+- `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 - `500`: Workflow dispatch error or database error
 
@@ -381,7 +387,7 @@ Transition ticket to target stage with workflow dispatch.
 Fetch all comments for a ticket.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -410,7 +416,7 @@ Fetch all comments for a ticket.
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: Ticket belongs to different project/user
+- `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 
 ### POST /api/projects/:projectId/tickets/:id/comments
@@ -418,7 +424,7 @@ Fetch all comments for a ticket.
 Create a new comment.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -454,7 +460,7 @@ Create a new comment.
 **Errors**:
 - `400`: Invalid content (empty, too long)
 - `401`: Not authenticated
-- `403`: Ticket belongs to different project/user
+- `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 
 ### POST /api/projects/:projectId/tickets/:id/comments/ai-board
@@ -462,7 +468,7 @@ Create a new comment.
 Create AI-BOARD comment (workflow-only endpoint).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN)
-**Authorization**: Workflow token validation
+**Authorization**: Workflow token validation (no project membership check)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -502,7 +508,7 @@ Create AI-BOARD comment (workflow-only endpoint).
 Delete a comment (author only).
 
 **Authentication**: Required (session)
-**Authorization**: Must be comment author
+**Authorization**: Must be comment author AND (project owner or member)
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -523,7 +529,7 @@ Delete a comment (author only).
 Upload image attachment.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -550,7 +556,7 @@ Upload image attachment.
 **Errors**:
 - `400`: Invalid file type, file too large, or max attachments (5) reached
 - `401`: Not authenticated
-- `403`: Ticket in non-editable stage (only SPECIFY/PLAN allowed)
+- `403`: User is neither project owner nor member, or ticket in non-editable stage
 - `404`: Ticket or project not found
 - `413`: Payload too large (>10MB)
 - `500`: Cloudinary upload error
@@ -560,7 +566,7 @@ Upload image attachment.
 Replace image at specific index.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -584,7 +590,7 @@ Replace image at specific index.
 **Errors**:
 - `400`: Invalid index or file type
 - `401`: Not authenticated
-- `403`: Ticket in non-editable stage
+- `403`: User is neither project owner nor member, or ticket in non-editable stage
 - `404`: Ticket, project, or attachment index not found
 - `500`: Cloudinary error
 
@@ -593,7 +599,7 @@ Replace image at specific index.
 Delete image at specific index.
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -605,7 +611,7 @@ Delete image at specific index.
 **Errors**:
 - `400`: Invalid index
 - `401`: Not authenticated
-- `403`: Ticket in non-editable stage
+- `403`: User is neither project owner nor member, or ticket in non-editable stage
 - `404`: Ticket, project, or attachment index not found
 - `500`: Cloudinary error (logged but doesn't block deletion)
 
@@ -616,7 +622,7 @@ Delete image at specific index.
 Fetch all job statuses for a project (polling endpoint).
 
 **Authentication**: Required (session)
-**Authorization**: Must be project owner
+**Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -643,7 +649,7 @@ Fetch all job statuses for a project (polling endpoint).
 
 **Errors**:
 - `401`: Not authenticated
-- `403`: Project belongs to different user
+- `403`: User is neither project owner nor member
 - `404`: Project not found
 
 **Performance**: <100ms p95 (indexed query on projectId)
@@ -653,7 +659,7 @@ Fetch all job statuses for a project (polling endpoint).
 Update job status (workflow-only endpoint).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN)
-**Authorization**: Workflow token validation
+**Authorization**: Workflow token validation (no project membership check)
 
 **Path Parameters**:
 - `id` (number, required): Job ID

@@ -343,8 +343,10 @@ model ProjectMember {
 **Business Rules**:
 - AI-BOARD system user automatically added as member on project creation
 - Project owner has implicit access (doesn't require ProjectMember entry)
-- Members can view and comment on tickets
-- Role enforcement for future RBAC enhancements
+- Members have full read-write access to tickets (create, update, comment, transition)
+- Members cannot delete projects or manage other members (owner-only actions)
+- Role field exists but not currently used for authorization (all members have equal access)
+- Authorization pattern: Check ownership first (performance), then membership (database join)
 
 ## Enums
 

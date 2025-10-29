@@ -249,25 +249,50 @@ The ticket detail modal organizes content into tabs:
 
 ## Authorization
 
-### Project Membership
+### Project Access
 
-All collaboration features require project membership:
-- Only project members can view comments
-- Only project members can post comments
-- Only project members can delete their own comments
-- AI-BOARD automatically added as member to all projects
+All collaboration features require project access (owner or member):
+- Project owners can access all features
+- Project members can access all collaboration features
+- Non-members cannot view or interact with the project
 
-### Comment Ownership
+### Comment Permissions
 
-Users can only delete comments they authored:
+**Creating Comments**:
+- Project owners can post comments
+- Project members can post comments
+- Non-members receive 403 Forbidden error
+
+**Deleting Comments**:
+- Users can only delete their own comments
 - Comment author ID must match session user ID
 - API returns 403 Forbidden for unauthorized deletion attempts
 - UI hides delete button for comments user doesn't own
 
-### Project Ownership
+**Viewing Comments**:
+- All project owners and members can view all comments
+- Comments visible regardless of who created them
+- No per-comment access restrictions
 
-Project owners have full access:
-- View all tickets and comments in their projects
+### Member Capabilities
+
+**Project Members Can**:
+- View all tickets and comments in the project
 - Create and delete their own comments
-- Move tickets between stages
-- Configure project settings
+- Mention other project members and @ai-board
+- Transition tickets between workflow stages
+- Create and update tickets
+
+**Project Members Cannot**:
+- Delete the project
+- Add or remove project members
+- Modify project settings (clarification policy, name, description)
+- Delete comments by other users
+
+### Owner-Only Actions
+
+Project owners retain exclusive control over:
+- Project deletion
+- Member management (add/remove members)
+- Project settings configuration
+- All capabilities available to members
