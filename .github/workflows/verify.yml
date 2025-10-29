@@ -1,0 +1,304 @@
+name: Verify Implementation Workflow
+# Test-gated workflow that runs tests and fixes failures before PR creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket_id:
+        description: 'Ticket identifier (e.g., 016, PROJ-123)'
+        required: true
+        type: string
+
+      job_id:
+        description: 'Job ID for status tracking'
+        required: true
+        type: string
+
+      project_id:
+        description: 'Project ID for API calls'
+        required: true
+        type: string
+
+      branch:
+        description: 'Feature branch to verify'
+        required: true
+        type: string
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45  # Longer timeout for test execution and fixes
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    # PostgreSQL service container for testing
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_board_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+
+    steps:
+      - name: Debug Inputs
+        run: |
+          echo "🔍 Debug workflow inputs:"
+          echo "  ticket_id: ${{ inputs.ticket_id }}"
+          echo "  job_id: ${{ inputs.job_id }}"
+          echo "  project_id: ${{ inputs.project_id }}"
+          echo "  branch: ${{ inputs.branch }}"
+
+      - name: Report E2E Skip
+        if: ${{ env.SKIP_EXECUTION == 'true' }}
+        run: |
+          echo "ℹ️ '[e2e]' detected in ticket ID; skipping execution to preserve resources"
+
+      - name: Update Job Status - Running
+        if: ${{ inputs.job_id }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "RUNNING"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
+
+      - name: Checkout repository
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+
+      - name: Setup Python
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: bun install --frozen-lockfile
+
+      - name: Install Claude Code CLI
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: bun add -g @anthropic-ai/claude-code
+
+      - name: Configure Git
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          git config --global user.name "ai-board[bot]"
+          git config --global user.email "bot@ai-board.app"
+
+      # Database setup steps
+      - name: Generate Prisma Client
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: npx prisma generate
+
+      - name: Apply Database Migrations
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: npx prisma migrate deploy
+
+      - name: Seed Test Database
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: npx tsx tests/global-setup.ts
+
+      # Playwright setup steps
+      - name: Get Playwright Version
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright OS Dependencies
+        if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit == 'true' }}
+        run: npx playwright install-deps
+
+      # Phase 1: Test Execution
+      - name: Run Unit Tests
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          echo "🧪 Running unit tests..."
+          bun run test:unit --reporter=json --outputFile=unit-results.json || echo "UNIT_FAILED=true" >> "$GITHUB_ENV"
+
+      - name: Run E2E Tests
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        id: e2e-tests
+        continue-on-error: true
+        run: |
+          echo "🧪 Running E2E tests..."
+          npx playwright test --reporter=json --output=e2e-results.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+
+      # Phase 2: Generate Failure Report
+      - name: Generate Test Failure Report
+        if: ${{ env.SKIP_EXECUTION != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        run: |
+          echo "📊 Generating structured test failure report..."
+          node .specify/scripts/generate-test-report.js \
+            --unit unit-results.json \
+            --e2e e2e-results.json \
+            --output test-failures.json
+
+      # Phase 3: Claude Fix Execution
+      - name: Execute /verify Command
+        if: ${{ env.SKIP_EXECUTION != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        run: |
+          echo "🤖 Executing /verify command to fix test failures..."
+          echo ""
+          echo "📋 CRITICAL CONTEXT FOR ANALYSIS:"
+          echo "  ℹ️  All tests were passing on main branch (100% baseline)"
+          echo "  ℹ️  Test failures are EXPECTED when implementing new features"
+          echo "  💡 Your job: Determine if failure is BUG or INTENTIONAL behavior change"
+          echo ""
+          echo "📖 Analysis Framework:"
+          echo "  1. Read specification (specs/*/spec.md) - Source of truth"
+          echo "  2. Compare test expectations with spec requirements"
+          echo "  3. Fix implementation if it violates spec (bugs)"
+          echo "  4. Update test if spec documents new behavior (intentional changes)"
+          echo ""
+          claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
+
+      # Phase 4: Final Validation
+      - name: Validate All Tests Pass
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          echo "✅ Running final test validation..."
+          bun run test
+
+      - name: Commit Test Fixes
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          git add .
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "✅ No test fixes needed (all tests passed on first run)"
+          else
+            git commit -m "test(ticket-${{ inputs.ticket_id }}): fix test failures from /verify" \
+              -m "Automated test fixes by GitHub Actions verify workflow" \
+              -m "Ticket: ${{ inputs.ticket_id }}" \
+              -m "Branch: ${{ inputs.branch }}"
+            echo "✅ Test fixes committed"
+          fi
+
+          # Always push (Claude may have committed during /verify execution)
+          git push origin "${{ inputs.branch }}"
+          echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
+
+      - name: Update Job Status - Success
+        if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
+
+      - name: Update Job Status - Skipped (E2E)
+        if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION == 'true' }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "COMPLETED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
+
+      - name: Update Job Status - Failure
+        if: ${{ failure() && inputs.job_id }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "FAILED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to FAILED"
+
+      - name: Update Job Status - Cancelled
+        if: ${{ cancelled() && inputs.job_id }}
+        run: |
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d '{"status": "CANCELLED"}' \
+            -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
+
+      # Phase 5: PR Creation (ONLY if all tests pass)
+      - name: Create Pull Request
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          FEATURE_BRANCH: ${{ inputs.branch }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🚀 All tests passed! Creating PR..."
+          echo "   Note: Ticket is already in VERIFY stage, no transition needed"
+          .specify/scripts/bash/create-pr-only.sh \
+            "${TICKET_ID}" \
+            "${PROJECT_ID}" \
+            "${FEATURE_BRANCH}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
+
+      - name: Report Success (Skipped)
+        if: ${{ success() && env.SKIP_EXECUTION == 'true' }}
+        run: |
+          echo "✅ Verify workflow skipped because ticket contains '[e2e]'"
+          echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+
+      - name: Report Success
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          echo "✅ Verification completed successfully"
+          echo "📍 Branch: ${{ inputs.branch }}"
+          echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+          echo "🧪 All tests passed"
+          echo "📋 Pull Request created and ready for review"
+
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "❌ Verification failed"
+          echo "📋 Check logs above for error details"
+          echo "💡 Tests may still be failing after /verify command execution"
+          exit 1

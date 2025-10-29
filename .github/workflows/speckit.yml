@@ -489,17 +489,17 @@ jobs:
             -d '{"status": "CANCELLED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
 
-      - name: Create PR and Move to VERIFY (Implement Command)
+      - name: Transition to VERIFY (Implement Command)
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          .specify/scripts/bash/create-pr-and-transition.sh \
+          echo "🔄 Transitioning ticket to VERIFY stage..."
+          echo "   This will trigger the verify workflow to run tests and create PR"
+          .specify/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
-            "${CURRENT_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
 
@@ -516,6 +516,9 @@ jobs:
           echo "✅ Spec-kit command '${{ inputs.command }}' completed successfully"
           echo "📍 Branch: ${CURRENT_BRANCH:-${{ inputs.branch || github.ref_name }}}"
           echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+          if [ "${{ inputs.command }}" = "implement" ]; then
+            echo "🔄 Ticket transitioned to VERIFY - tests will run next"
+          fi
 
       - name: Report Failure
         if: failure()

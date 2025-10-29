@@ -559,6 +559,141 @@ jobs:
           retention-days: 30
 ```
 
+## Automated Test Verification
+
+### Verify Workflow
+
+The verify workflow (`.github/workflows/verify.yml`) runs automatically when tickets transition BUILD → VERIFY:
+
+**Phase 1: Test Execution**
+```yaml
+- name: Run Unit Tests
+  run: bun run test:unit --reporter=json --outputFile=unit-results.json
+
+- name: Run E2E Tests
+  run: npx playwright test --reporter=json --output=e2e-results.json
+```
+
+**Phase 2: Failure Report Generation**
+```bash
+# If tests fail, generate structured report
+node .specify/scripts/generate-test-report.js \
+  --unit unit-results.json \
+  --e2e e2e-results.json \
+  --output test-failures.json
+```
+
+**Phase 3: AI-Powered Fixes**
+```bash
+# Claude analyzes failures and applies fixes
+claude --dangerously-skip-permissions "/verify"
+```
+
+**Phase 4: Pull Request Creation**
+```bash
+# Only if all tests pass
+.specify/scripts/bash/create-pr-only.sh
+```
+
+### Test Failure Report Format
+
+**File**: `test-failures.json`
+
+```json
+{
+  "summary": {
+    "totalFailures": 5,
+    "unitFailures": 2,
+    "e2eFailures": 3
+  },
+  "categories": {
+    "assertions": [...],
+    "timeouts": [...],
+    "errors": [...],
+    "setup": [...]
+  },
+  "rootCauses": [
+    {
+      "pattern": "Expected N but got N",
+      "originalMessage": "Expected 5 but got 3",
+      "affectedTests": [
+        {
+          "testPath": "tests/api/tickets.spec.ts > GET /tickets",
+          "testName": "GET /tickets returns correct count",
+          "filePath": "tests/api/tickets.spec.ts"
+        }
+      ],
+      "category": "assertions",
+      "count": 2
+    }
+  ],
+  "impactPriority": [
+    {
+      "description": "Expected 5 but got 3",
+      "affectedTestCount": 2,
+      "category": "assertions",
+      "tests": ["tests/api/tickets.spec.ts > GET /tickets"]
+    }
+  ]
+}
+```
+
+### AI Fix Strategy
+
+**Critical Context**:
+- ℹ️ **All tests were passing on main branch (100% baseline)**
+- ℹ️ **Test failures are expected when implementing new features**
+- 💡 **Your job**: Determine if failure is bug OR intentional behavior change
+
+**Root Cause Analysis**:
+1. Group failures by similar error patterns
+2. Identify common root causes
+3. Prioritize by impact (number of affected tests)
+4. **Read specification FIRST**: `specs/*/spec.md` - Source of truth for intended behavior
+5. **Compare with main branch**: `git diff main...HEAD` to see what changed
+6. **Check test history**: `git show main:<test-file>` to verify test existed
+7. Analyze each root cause systematically
+
+**Fix Application**:
+1. **CRITICAL**: Read specification to understand intended behavior
+2. Read test file and implementation
+3. Check recent changes: `git diff main...HEAD`
+4. Check if test passed on main: `git show main:<test-file>`
+5. **Decision Framework** (specification is source of truth):
+   - **Case A - Implementation Bug**: Spec says X, implementation does Y, test expects X
+     → Fix implementation to match specification
+   - **Case B - Intentional Change**: Spec requires NEW behavior X, test expects OLD behavior Y
+     → Update test to expect new behavior from specification
+   - **Case C - Unclear**: When uncertain, prefer fixing implementation (safer)
+6. Apply minimal fix (implementation OR test, based on spec)
+7. Re-run only affected tests
+8. Validate with lint and typecheck
+
+**Quality Gates**:
+- Lint must pass after each fix
+- Type check must pass after each fix
+- No new test failures introduced
+- Maximum 3 fix attempts per root cause
+
+### Verification Success Criteria
+
+Tests must pass with these requirements:
+
+**Unit Tests**:
+- ≥80% line coverage maintained
+- All test suites pass
+- No skipped tests (unless marked intentionally)
+
+**E2E Tests**:
+- All critical user paths tested
+- All API endpoints validated
+- No flaky tests (consistent results)
+
+**Integration**:
+- Database migrations successful
+- Test data cleanup working
+- No orphaned data in test database
+
 ## Test Coverage
 
 ### Target Coverage

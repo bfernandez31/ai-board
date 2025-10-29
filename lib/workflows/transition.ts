@@ -7,14 +7,14 @@ const prisma = new PrismaClient();
 
 /**
  * Stage-to-command mapping for automated workflow stages
- * null indicates no automated workflow (manual stages like VERIFY and SHIP)
+ * null indicates no automated workflow (manual stages like SHIP)
  */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   INBOX: null,
   SPECIFY: 'specify',
   PLAN: 'plan',
   BUILD: 'implement',
-  VERIFY: null,
+  VERIFY: 'verify', // Test-gated workflow
   SHIP: null,
 };
 
@@ -270,6 +270,7 @@ export async function handleTicketTransition(
 
         // Prepare workflow inputs based on mode
         let workflowInputs: Record<string, string>;
+        let workflowFile: string;
 
         if (isQuickImpl) {
           // Quick-impl mode: Use quick-impl.yml input schema
@@ -285,6 +286,18 @@ export async function handleTicketTransition(
           if (ticket.attachments) {
             workflowInputs.attachments = JSON.stringify(ticket.attachments);
           }
+
+          workflowFile = 'quick-impl.yml';
+        } else if (command === 'verify') {
+          // Verify mode: Use verify.yml input schema
+          workflowInputs = {
+            ticket_id: ticket.id.toString(),
+            job_id: job.id.toString(),
+            project_id: ticket.projectId.toString(),
+            branch: ticket.branch || '', // Branch must exist for VERIFY stage
+          };
+
+          workflowFile = 'verify.yml';
         } else {
           // Normal mode: Use speckit.yml input schema
           workflowInputs = {
@@ -318,10 +331,9 @@ export async function handleTicketTransition(
             // Legacy ticketDescription field for backward compatibility (deprecated)
             workflowInputs.ticketDescription = ticket.description;
           }
-        }
 
-        // Determine workflow file based on mode
-        const workflowFile = isQuickImpl ? 'quick-impl.yml' : 'speckit.yml';
+          workflowFile = 'speckit.yml';
+        }
 
         // Dispatch GitHub Actions workflow
         await octokit.actions.createWorkflowDispatch({

@@ -24,6 +24,11 @@ describe('getContextualLabel', () => {
       expect(result).toBe('CODING');
     });
 
+    it('transforms "verify" command to TESTING', () => {
+      const result = getContextualLabel('verify', 'RUNNING');
+      expect(result).toBe('TESTING');
+    });
+
     it('transforms "comment-specify" to ASSISTING', () => {
       const result = getContextualLabel('comment-specify', 'RUNNING');
       expect(result).toBe('ASSISTING');
@@ -66,6 +71,11 @@ describe('getContextualLabel', () => {
 
       it(`returns ${status} unchanged for "comment-specify" command`, () => {
         const result = getContextualLabel('comment-specify', status);
+        expect(result).toBe(status);
+      });
+
+      it(`returns ${status} unchanged for "verify" command`, () => {
+        const result = getContextualLabel('verify', status);
         expect(result).toBe(status);
       });
     });

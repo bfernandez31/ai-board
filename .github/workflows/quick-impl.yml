@@ -346,17 +346,17 @@ jobs:
             -d '{"status": "CANCELLED"}' \
             -f -s -S || echo "⚠️ Failed to update job status to CANCELLED"
 
-      - name: Create PR and Move to VERIFY
+      - name: Transition to VERIFY
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          .specify/scripts/bash/create-pr-and-transition.sh \
+          echo "🔄 Transitioning ticket to VERIFY stage..."
+          echo "   This will trigger the verify workflow to run tests and create PR"
+          .specify/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
-            "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
 
@@ -372,6 +372,7 @@ jobs:
           echo "✅ Quick implementation completed successfully"
           echo "📍 Branch: ${FEATURE_BRANCH}"
           echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+          echo "🔄 Ticket transitioned to VERIFY - tests will run next"
 
       - name: Report Failure
         if: failure()

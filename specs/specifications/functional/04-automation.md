@@ -13,6 +13,7 @@ A job is created each time a ticket transitions between stages:
 - **INBOX → SPECIFY**: Creates specification generation job
 - **SPECIFY → PLAN**: Creates planning job
 - **PLAN → BUILD**: Creates implementation job
+- **BUILD → VERIFY**: Creates test verification job
 - **INBOX → BUILD**: Creates quick implementation job (bypasses specification and planning)
 
 ### Job Status Lifecycle
@@ -32,6 +33,11 @@ Users can monitor job progress:
 - Job status displays in ticket detail view
 - Status updates automatically every 2 seconds via polling
 - Visual indicators show current state (pending, running, completed, failed)
+- Contextual labels transform based on job type:
+  - Specification/Planning jobs: "WRITING" when running
+  - Implementation jobs: "CODING" when running
+  - Verification jobs: "TESTING" when running
+  - AI-BOARD jobs: "ASSISTING" when running
 - Polling stops automatically when job reaches terminal state
 - Board automatically refreshes when job completes and ticket stage changes
 
@@ -193,6 +199,132 @@ When ticket moves directly from INBOX to BUILD:
 - New APIs or database changes
 - Features requiring detailed planning
 
+## Test Verification (BUILD → VERIFY)
+
+### Automatic Trigger
+
+When ticket moves from BUILD to VERIFY stage:
+
+1. System creates verification job
+2. Workflow checks out feature branch
+3. All tests executed (unit + E2E)
+4. If tests fail: Generate structured failure report
+5. AI analyzes failures and applies systematic fixes
+6. Tests re-run until all pass
+7. Pull request created only if all tests pass
+8. Job status updates to COMPLETED
+
+### Test Execution Strategy
+
+**Phase 1: Test Execution**
+- Unit tests run first (fast feedback)
+- E2E tests run after unit tests pass
+- Results captured in JSON format
+- Continue workflow even if tests fail initially
+
+**Phase 2: Failure Analysis**
+- Parse JSON test results from both test suites
+- Categorize failures: assertions, timeouts, errors, setup issues
+- Identify root causes by grouping similar error patterns
+- Calculate impact priority (number of affected tests)
+- Generate structured report: `test-failures.json`
+
+**Phase 3: Systematic Fixes**
+- AI executes `/verify` command with failure report
+- **Critical Context**: All tests were passing on main branch (100% baseline)
+- **Key Insight**: Test failures are expected when implementing new features
+- AI reads specification first to understand intended behavior
+- AI compares with main branch: `git diff main...HEAD` to identify changes
+- **Decision Framework**:
+  - If implementation violates specification → Fix implementation (bugs)
+  - If test expects old behavior, spec requires new → Update test (intentional changes)
+  - If unclear → Specification is source of truth
+- Fixes applied by root cause (highest impact first)
+- Incremental validation: re-run only affected tests after each fix
+- Quality gates: lint and typecheck after each fix
+- Maximum 3 fix attempts per root cause
+
+**Phase 4: Final Validation**
+- Run complete test suite (all tests must pass)
+- Commit all test fixes to feature branch
+- Push changes to remote
+
+**Phase 5: Pull Request Creation**
+- Create PR only if all tests pass successfully
+- PR body includes test results and implementation details
+- Comment posted to ticket with PR link
+- Ticket remains in VERIFY stage (no additional transition)
+
+### Test Failure Categories
+
+**Assertion Failures**:
+- Test expects value A, but got value B
+- Usually indicates implementation logic issues
+- AI verifies against specification requirements
+
+**Timeout Failures**:
+- Test execution exceeds time limit
+- May indicate infinite loops or missing await keywords
+- AI analyzes async operation handling
+
+**Runtime Errors**:
+- Crashes, exceptions, null pointer errors
+- Indicates missing error handling or type safety issues
+- AI reviews error boundaries and validation
+
+**Setup Failures**:
+- Test environment or database initialization issues
+- Problems with test data fixtures
+- AI validates test isolation and global setup
+
+### Verification Success
+
+When all tests pass:
+
+**Workflow Actions**:
+- Commits any test fixes to branch
+- Creates pull request for code review
+- Posts AI-BOARD comment with PR link
+- Updates job status to COMPLETED
+
+**User Feedback**:
+- Visual indicator shows "TESTING" while running
+- Status updates every 2 seconds via polling
+- Success notification when PR created
+- Clear message that code review can begin
+
+### Verification Failure
+
+When tests cannot be fixed automatically:
+
+**Workflow Behavior**:
+- Does NOT create pull request
+- Job status updates to FAILED
+- Detailed error log available in GitHub Actions
+
+**User Actions**:
+- Review failure details in workflow logs
+- Manually fix remaining test failures
+- Can re-transition ticket to trigger verification again
+- Or manually create PR after fixing issues
+
+### Resource Optimization
+
+**Incremental Testing**:
+- Only re-run affected tests after each fix
+- Avoids redundant full test suite execution
+- Provides faster feedback during fix iteration
+
+**Test Categorization**:
+- Fast tests (unit): < 10 seconds total
+- Medium tests (API): < 2 minutes total
+- Slow tests (E2E): < 10 minutes total
+
+**Failure Prevention**:
+- Clear error messages guide AI to correct fixes
+- Structured failure reports enable systematic analysis
+- Quality gates prevent introducing new issues
+
 ## Branch Management
 
 ### Branch Creation
@@ -235,6 +367,7 @@ Workflows execute on GitHub Actions infrastructure:
 **Workflow Files**:
 - `.github/workflows/speckit.yml`: Normal workflow (SPECIFY → PLAN → BUILD)
 - `.github/workflows/quick-impl.yml`: Quick implementation (INBOX → BUILD)
+- `.github/workflows/verify.yml`: Test verification and PR creation (BUILD → VERIFY)
 - `.github/workflows/ai-board-assist.yml`: AI-BOARD comment responses
 
 **Inputs**:
@@ -253,8 +386,10 @@ Workflows execute on GitHub Actions infrastructure:
 ### Workflow Timeouts
 
 **Default Limits**:
-- Maximum execution time: 120 minutes
+- Specification/Planning/Implementation: 120 minutes maximum
+- Verification workflow: 45 minutes maximum
 - Typical execution: 2-5 minutes for specification
+- Typical execution: 5-15 minutes for verification (with test fixes)
 - Network timeout: 15 seconds for API calls
 
 **Timeout Behavior**:
