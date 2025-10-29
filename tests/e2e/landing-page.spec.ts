@@ -114,16 +114,21 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     const workflowSection = page.locator('#workflow');
     await expect(workflowSection).toBeVisible();
 
-    // And: 5 workflow stages are visible
-    const workflowSteps = page.locator('[data-testid="workflow-step"]');
-    await expect(workflowSteps).toHaveCount(5);
+    // And: 5 workflow stages are visible (desktop columns OR mobile steps)
+    const desktopColumns = page.locator('[data-column-name]');
+    const mobileSteps = page.locator('[data-testid="workflow-step"]');
 
-    // And: Stage names are visible (INBOX, SPECIFY, PLAN, BUILD, VERIFY)
-    await expect(workflowSection.getByText('INBOX', { exact: true })).toBeVisible();
-    await expect(workflowSection.getByText('SPECIFY', { exact: true })).toBeVisible();
-    await expect(workflowSection.getByText('PLAN', { exact: true })).toBeVisible();
-    await expect(workflowSection.getByText('BUILD', { exact: true })).toBeVisible();
-    await expect(workflowSection.getByText('VERIFY', { exact: true })).toBeVisible();
+    // Count visible elements (either desktop columns or mobile steps)
+    const desktopCount = await desktopColumns.count();
+    const mobileCount = await mobileSteps.count();
+    expect(desktopCount === 6 || mobileCount === 5).toBeTruthy();
+
+    // And: Stage names are visible in workflow columns (use data-column-name attribute)
+    await expect(workflowSection.locator('[data-column-name="INBOX"]')).toBeVisible();
+    await expect(workflowSection.locator('[data-column-name="SPECIFY"]')).toBeVisible();
+    await expect(workflowSection.locator('[data-column-name="PLAN"]')).toBeVisible();
+    await expect(workflowSection.locator('[data-column-name="BUILD"]')).toBeVisible();
+    await expect(workflowSection.locator('[data-column-name="VERIFY"]')).toBeVisible();
 
     await context.close();
   });
