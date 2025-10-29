@@ -179,9 +179,71 @@ The application uses **NextAuth.js** for authentication with a user-project owne
 **Authorization Flow**:
 
 1. Extract user ID from NextAuth session
-2. Filter project queries by `userId`
-3. Validate project ownership before operations
-4. Return 403 if project belongs to different user
+2. Check if user is owner OR member of project
+3. Validate authorization before operations
+4. Return 403 if user has no access
+
+### Project Member Authorization
+
+**Overview**:
+
+Project members (ProjectMember table) can access projects alongside owners. Authorization uses "owner OR member" pattern for most operations, with owner-only access for administrative actions.
+
+**Authorization Helpers** (`lib/db/auth-helpers.ts`):
+
+- `verifyProjectAccess(projectId)` - Owner OR member access (use for board, tickets, comments)
+- `verifyTicketAccess(ticketId)` - Owner OR member access via parent project
+- `verifyProjectOwnership(projectId)` - Owner-only access (use for member management, project settings)
+
+**Authorization Pattern**:
+
+```typescript
+// Example: Ticket access (owner OR member)
+const ticket = await verifyTicketAccess(ticketId);
+
+// Validate ticket belongs to correct project
+if (ticket.projectId !== projectId) {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+}
+
+// Proceed with authorized operation
+```
+
+**Database Query**:
+
+```typescript
+// Owner OR member query pattern
+const project = await prisma.project.findFirst({
+  where: {
+    id: projectId,
+    OR: [
+      { userId },                            // Owner access
+      { members: { some: { userId } } }      // Member access
+    ]
+  }
+});
+```
+
+**Access Control Matrix**:
+
+| Operation | Owner | Member | Non-Member |
+|-----------|-------|--------|------------|
+| View board | ✅ | ✅ | ❌ |
+| Create ticket | ✅ | ✅ | ❌ |
+| Update ticket | ✅ | ✅ | ❌ |
+| Delete ticket | ✅ | ✅ | ❌ |
+| Add comment | ✅ | ✅ | ❌ |
+| Upload image | ✅ | ✅ | ❌ |
+| Add member | ✅ | ❌ | ❌ |
+| Remove member | ✅ | ❌ | ❌ |
+| Update project settings | ✅ | ❌ | ❌ |
+| Delete project | ✅ | ❌ | ❌ |
+
+**Performance**:
+
+- Authorization queries use existing indexes (`ProjectMember.@@index([projectId])`, `ProjectMember.@@index([userId])`)
+- Target: <100ms p95 for authorization checks
+- Single query validates both ticket existence and project access
 
 ### Test Authentication Strategy
 

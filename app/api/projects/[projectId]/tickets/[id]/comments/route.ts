@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
-import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { createCommentSchema } from '@/app/lib/schemas/comment-validation';
 import { requireAuth } from '@/lib/db/users';
 import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
@@ -45,34 +45,16 @@ export async function GET(
     const projectId = parseInt(projectIdString, 10);
     const ticketId = parseInt(ticketIdString, 10);
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // Verify ticket access (owner OR member via project)
+    const ticket = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticket.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Get current user ID for response header (used by frontend for ownership checks)
     const currentUserId = await requireAuth();
-
-    // Verify ticket exists and belongs to this project
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-      select: { id: true },
-    });
-
-    if (!ticket) {
-      // Check if ticket exists in different project
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true },
-      });
-
-      if (!ticketExists) {
-        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-      } else {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
 
     // Fetch comments with user information (newest first)
     const comments = await prisma.comment.findMany({
@@ -186,35 +168,16 @@ export async function POST(
     const projectId = parseInt(projectIdString, 10);
     const ticketId = parseInt(ticketIdString, 10);
 
-    // Verify project ownership (throws if unauthorized or not found)
-    // This also validates authentication via requireAuth()
-    await verifyProjectOwnership(projectId);
+    // Verify ticket access (owner OR member via project)
+    const ticket = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticket.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Get authenticated user ID
     const userId = await requireAuth();
-
-    // Verify ticket exists and belongs to this project
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-      select: { id: true },
-    });
-
-    if (!ticket) {
-      // Check if ticket exists in different project
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true },
-      });
-
-      if (!ticketExists) {
-        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-      } else {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
 
     // Parse and validate request body
     const body = await request.json();

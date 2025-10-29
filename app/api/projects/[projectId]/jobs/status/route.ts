@@ -47,22 +47,21 @@ export async function GET(
       );
     }
 
-    // 3. Verify project exists and check ownership (authorization)
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
+    // 3. Verify project exists and check access (owner OR member)
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { userId },                            // Owner access
+          { members: { some: { userId } } }      // Member access
+        ]
+      },
       select: { userId: true },
     });
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Not Found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
-
-    if (project.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Forbidden', code: 'PROJECT_NOT_OWNED' },
+        { error: 'Forbidden', code: 'PROJECT_NOT_ACCESSIBLE' },
         { status: 403 }
       );
     }

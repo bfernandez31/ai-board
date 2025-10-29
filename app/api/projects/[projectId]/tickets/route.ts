@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getTicketsByStage, createTicket } from '@/lib/db/tickets';
-import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
 import { validateImageFile } from '@/app/lib/validations/image';
@@ -38,8 +38,8 @@ export async function GET(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // Verify project access (owner OR member)
+    await verifyProjectAccess(projectId);
 
     // Fetch tickets for this project
     const ticketsByStage = await getTicketsByStage(projectId);
@@ -148,8 +148,8 @@ export async function POST(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Verify project ownership (throws if unauthorized or not found)
-    await verifyProjectOwnership(projectId);
+    // Verify project access (owner OR member)
+    await verifyProjectAccess(projectId);
 
     const contentType = request.headers.get('content-type') || '';
     let ticketData: { title: string; description: string; clarificationPolicy?: string };

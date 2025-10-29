@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
-import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
+import { verifyTicketAccess } from '@/lib/db/auth-helpers';
 import { requireAuth } from '@/lib/db/users';
 import { mergeConversationEvents } from '@/app/lib/utils/conversation-events';
 import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
@@ -57,38 +57,18 @@ export async function GET(
     const projectId = parseInt(projectIdString, 10);
     const ticketId = parseInt(ticketIdString, 10);
 
-    // T010: Verify authentication and project ownership
-    // This also validates authentication via requireAuth()
-    await verifyProjectOwnership(projectId);
+    // Verify ticket access (owner OR member via project)
+    const ticket = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to correct project
+    if (ticket.projectId !== projectId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Get current user ID for response (used by frontend for ownership checks)
     const currentUserId = await requireAuth();
 
-    // T011: Verify ticket exists and belongs to this project
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-      select: { id: true, projectId: true },
-    });
-
-    if (!ticket) {
-      // Check if ticket exists in different project
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true },
-      });
-
-      if (!ticketExists) {
-        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-      } else {
-        // Ticket exists but belongs to different project
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
-
-    // T012: Fetch comments with user relation (chronological order)
+    // Fetch comments with user relation (chronological order)
     const comments = await prisma.comment.findMany({
       where: { ticketId },
       include: {
