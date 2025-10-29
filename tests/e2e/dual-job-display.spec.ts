@@ -351,15 +351,8 @@ test.describe('E2E: Dual Job Display - User Story 2', () => {
     const secondAriaLabel = await secondIndicator.getAttribute('aria-label');
     expect(secondAriaLabel?.toUpperCase()).toContain('AI-BOARD IS WORKING ON THIS TICKET');
 
-    // Step 7: Verify distinct prefixes (PLAN : for workflow, AI-BOARD : for AI-BOARD)
-    const firstText = await firstIndicator.textContent();
-    const secondText = await secondIndicator.textContent();
-
-    const hasWorkflow = firstText?.includes('PLAN :') || secondText?.includes('PLAN :');
-    const hasAIBoard = firstText?.includes('AI-BOARD :') || secondText?.includes('AI-BOARD :');
-
-    expect(hasWorkflow).toBe(true);
-    expect(hasAIBoard).toBe(true);
+    // Note: Step 7 removed - workflow jobs no longer show stage prefix (US1 simplification)
+    // AI-BOARD jobs show icon-only with tooltip, no text content verification needed
 
     // Clean up
   });

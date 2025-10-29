@@ -269,33 +269,6 @@ test.describe('Markdown Rendering', () => {
  * ======================
  * Timeline Comments Markdown Tests
  * ======================
+ * NOTE: Timeline tab has been removed from the ticket modal.
+ * Markdown rendering is now tested in the Conversation tab only.
  */
-
-test.describe('Timeline Markdown Rendering', () => {
-  test('T010: Markdown should render in timeline view comments', async ({ page }) => {
-    // Create a comment with markdown via API
-    const testUser = await prisma.user.findUnique({
-      where: { email: TEST_USER_EMAIL },
-    });
-
-    await prisma.comment.create({
-      data: {
-        ticketId: TEST_TICKET_ID,
-        userId: testUser!.id,
-        content: 'Timeline comment with **bold** and *italic*',
-      },
-    });
-
-    // Navigate to timeline tab
-    await page.click('[role="tab"]:has-text("Timeline")');
-    await page.waitForSelector('[role="tabpanel"]:visible');
-
-    // Find the comment in timeline
-    const timelineComment = page.locator('[data-testid="comment-item"]').last();
-    await expect(timelineComment).toBeVisible();
-
-    // Verify markdown is rendered
-    await expect(timelineComment.locator('strong')).toHaveText('bold');
-    await expect(timelineComment.locator('em')).toHaveText('italic');
-  });
-});

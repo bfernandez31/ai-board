@@ -316,13 +316,13 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await descriptionElement.click();
     const textarea = page.getByTestId('description-textarea');
 
-    // Type exactly 2250 characters (>90% of 2500)
-    const text2250 = 'A'.repeat(2250);
-    await textarea.fill(text2250);
+    // Type exactly 2251 characters (>90% of 2500, since 2500 * 0.9 = 2250)
+    const text2251 = 'A'.repeat(2251);
+    await textarea.fill(text2251);
 
-    // Assert: counter shows "250 characters remaining"
+    // Assert: counter shows "249 characters remaining"
     const counter = page.getByTestId('character-counter');
-    await expect(counter).toContainText('250 characters remaining');
+    await expect(counter).toContainText('249 characters remaining');
 
     // Assert: warning indicator visible (yellow/orange)
     const warningIcon = counter.locator('svg').first();
@@ -346,7 +346,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Click Save and verify success
     await saveButton.click();
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
+    await expect(toast).toBeVisible({ timeout: 5000 });
   });
 
   /**

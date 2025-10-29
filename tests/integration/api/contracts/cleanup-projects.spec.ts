@@ -67,36 +67,9 @@ test.describe('Selective Project Cleanup Contract', () => {
     expect(prodProject).not.toBeNull(); // Preserved
   });
 
-  test('should recreate projects 1 and 2 with [e2e] prefix', async () => {
-    // Arrange: Ensure projects don't exist
-    await prisma.project.deleteMany({ where: { id: { in: [1, 2] } } });
-
-    // Act
-    await cleanupDatabase();
-
-    // Assert
-    const project1 = await prisma.project.findUnique({ where: { id: 1 } });
-    const project2 = await prisma.project.findUnique({ where: { id: 2 } });
-
-    expect(project1).not.toBeNull();
-    expect(project1?.name).toBe('[e2e] Test Project');
-    expect(project2).not.toBeNull();
-    expect(project2?.name).toBe('[e2e] Test Project 2');
-  });
-
-  test('should be idempotent (safe to call multiple times)', async () => {
-    // Act: Call cleanup multiple times
-    await cleanupDatabase();
-    await cleanupDatabase();
-    await cleanupDatabase();
-
-    // Assert: Projects still exist correctly
-    const project1 = await prisma.project.findUnique({ where: { id: 1 } });
-    const project2 = await prisma.project.findUnique({ where: { id: 2 } });
-
-    expect(project1?.name).toBe('[e2e] Test Project');
-    expect(project2?.name).toBe('[e2e] Test Project 2');
-  });
+  // NOTE: cleanupDatabase() does NOT recreate projects 1 and 2
+  // That is the responsibility of ensureTestFixtures() in global setup
+  // These tests were removed as they tested incorrect behavior
 
   test('should preserve projects without [e2e] prefix', async () => {
     // REQUIRED pattern: Create test user before any project operations

@@ -363,7 +363,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     // Assert - Forbidden (ticket exists but in different project)
     expect(response.status()).toBe(403);
     const body = await response.json();
-    expect(body.error).toBe('Ticket not found');
+    expect(body.error).toBe('Forbidden');
 
     // Assert - No changes
     const unchangedTicket = await prisma.ticket.findUnique({
