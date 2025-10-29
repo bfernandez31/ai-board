@@ -215,8 +215,8 @@ Multi-line content is preserved.`;
     await page.click(`[data-ticket-id="${ticket.id}"]`);
     await page.waitForSelector('[role="dialog"]');
 
-    // Click Comments tab and wait for it to be visible
-    await page.click('[role="tab"]:has-text("Comments")');
+    // Click Conversation tab and wait for it to be visible
+    await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
 
     // Wait for comment to load and be visible
@@ -388,7 +388,7 @@ Multi-line content is preserved.`;
     await expect(page.locator('[role="tab"]:has-text("Files")')).toBeVisible();
 
     // Verify can switch between tabs
-    await page.click('[role="tab"]:has-text("Comments")');
+    await page.click('[role="tab"]:has-text("Conversation")');
     await expect(page.locator('[role="tab"][data-state="active"]:has-text("Conversation")')).toBeVisible();
 
     await page.click('[role="tab"]:has-text("Files")');

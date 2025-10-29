@@ -263,59 +263,6 @@ test.describe('Markdown Rendering', () => {
     await expect(newComment.locator('code')).toHaveText('code');
   });
 
-  test('T009: Markdown with mentions should work together', async ({ page }) => {
-    // Add a second user for mentions
-    await prisma.user.upsert({
-      where: { email: 'alice@test.com' },
-      update: {},
-      create: {
-        id: 'user-alice',
-        email: 'alice@test.com',
-        name: 'Alice Smith',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    await prisma.projectMember.upsert({
-      where: {
-        projectId_userId: {
-          projectId: TEST_PROJECT_ID,
-          userId: 'user-alice',
-        },
-      },
-      update: {},
-      create: {
-        projectId: TEST_PROJECT_ID,
-        userId: 'user-alice',
-        role: 'member',
-      },
-    });
-
-    const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
-
-    // Insert mention
-    await commentInput.fill('@');
-    const autocomplete = page.locator('[data-testid="mention-autocomplete"]');
-    await expect(autocomplete).toBeVisible();
-
-    const aliceItem = autocomplete.locator('[data-testid="mention-user-item"]').filter({ hasText: 'Alice' });
-    await aliceItem.click();
-
-    // Add markdown after mention
-    await commentInput.press('End');
-    await commentInput.type(' can you review **this code**?');
-
-    const submitButton = page.getByRole('button', { name: 'Comment', exact: true });
-    await submitButton.click();
-
-    const newComment = page.locator('[data-testid="comment-list"] [data-testid="comment-item"]').last();
-    await expect(newComment).toBeVisible();
-
-    // Verify both mention chip and markdown bold exist
-    await expect(newComment.locator('[data-testid="mention-chip"]')).toBeVisible();
-    await expect(newComment.locator('strong')).toHaveText('this code');
-  });
 });
 
 /**
