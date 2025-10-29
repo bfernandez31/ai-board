@@ -61,17 +61,14 @@ description: "Task list for Project Member Authorization implementation"
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Create E2E test file at tests/e2e/board-member-access.spec.ts
-- [ ] T011 [P] [US1] Write E2E test: member can access board page in tests/e2e/board-member-access.spec.ts
-- [ ] T012 [P] [US1] Write E2E test: member sees same tickets as owner in tests/e2e/board-member-access.spec.ts
-- [ ] T013 [P] [US1] Write E2E test: non-member receives 404 in tests/e2e/board-member-access.spec.ts
+- [ ] T010 [P] [US1] Create API test file at tests/api/project-member-auth.spec.ts with consolidated authorization tests (owner, member, non-member scenarios for all endpoints)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Update board page authorization in app/projects/[projectId]/board/page.tsx (replace verifyProjectOwnership with verifyProjectAccess)
-- [ ] T015 [US1] Update GET /api/projects/:projectId in app/api/projects/[projectId]/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
-- [ ] T016 [US1] Update GET /api/projects/:projectId/tickets in app/api/projects/[projectId]/tickets/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
-- [ ] T017 [US1] Update GET /api/projects/:projectId/jobs/status in app/api/projects/[projectId]/jobs/status/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
+- [ ] T011 [US1] Update board page authorization in app/projects/[projectId]/board/page.tsx (replace verifyProjectOwnership with verifyProjectAccess)
+- [ ] T012 [US1] Update GET /api/projects/:projectId in app/api/projects/[projectId]/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
+- [ ] T013 [US1] Update GET /api/projects/:projectId/tickets in app/api/projects/[projectId]/tickets/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
+- [ ] T014 [US1] Update GET /api/projects/:projectId/jobs/status in app/api/projects/[projectId]/jobs/status/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - members can view boards and tickets
 
@@ -85,14 +82,11 @@ description: "Task list for Project Member Authorization implementation"
 
 ### Tests for User Story 2 (MANDATORY)
 
-- [ ] T018 [P] [US2] Create API test file at tests/api/project-member-auth.spec.ts
-- [ ] T019 [P] [US2] Write API test: owner can create ticket (backward compatibility) in tests/api/project-member-auth.spec.ts
-- [ ] T020 [P] [US2] Write API test: member can create ticket in tests/api/project-member-auth.spec.ts
-- [ ] T021 [P] [US2] Write API test: non-member receives 403 for ticket creation in tests/api/project-member-auth.spec.ts
+- [ ] T015 [P] [US2] Write API test: ticket creation for owner/member/non-member in tests/api/project-member-auth.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Update POST /api/projects/:projectId/tickets in app/api/projects/[projectId]/tickets/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
+- [ ] T016 [US2] Update POST /api/projects/:projectId/tickets in app/api/projects/[projectId]/tickets/route.ts (replace verifyProjectOwnership with verifyProjectAccess)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -106,19 +100,15 @@ description: "Task list for Project Member Authorization implementation"
 
 ### Tests for User Story 3 (MANDATORY)
 
-- [ ] T023 [P] [US3] Write API test: owner can update ticket (backward compatibility) in tests/api/project-member-auth.spec.ts
-- [ ] T024 [P] [US3] Write API test: member can update ticket title in tests/api/project-member-auth.spec.ts
-- [ ] T025 [P] [US3] Write API test: member can update ticket description in tests/api/project-member-auth.spec.ts
-- [ ] T026 [P] [US3] Write API test: member can transition ticket stage in tests/api/project-member-auth.spec.ts
-- [ ] T027 [P] [US3] Write API test: non-member receives 403 for ticket updates in tests/api/project-member-auth.spec.ts
+- [ ] T017 [P] [US3] Write API test: ticket updates (GET/PATCH/DELETE/transition/branch) for owner/member/non-member in tests/api/project-member-auth.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] Update GET /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T029 [P] [US3] Update PATCH /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T030 [P] [US3] Update DELETE /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T031 [P] [US3] Update POST /api/projects/:projectId/tickets/:id/transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T032 [P] [US3] Update PATCH /api/projects/:projectId/tickets/:id/branch in app/api/projects/[projectId]/tickets/[id]/branch/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T018 [P] [US3] Update GET /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T019 [P] [US3] Update PATCH /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T020 [P] [US3] Update DELETE /api/projects/:projectId/tickets/:id in app/api/projects/[projectId]/tickets/[id]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T021 [P] [US3] Update POST /api/projects/:projectId/tickets/:id/transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T022 [P] [US3] Update PATCH /api/projects/:projectId/tickets/:id/branch in app/api/projects/[projectId]/tickets/[id]/branch/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
 
 **Checkpoint**: All core ticket operations now support member access
 
@@ -132,20 +122,15 @@ description: "Task list for Project Member Authorization implementation"
 
 ### Tests for User Story 4 (MANDATORY)
 
-- [ ] T033 [P] [US4] Write API test: owner can post comment (backward compatibility) in tests/api/project-member-auth.spec.ts
-- [ ] T034 [P] [US4] Write API test: member can post comment in tests/api/project-member-auth.spec.ts
-- [ ] T035 [P] [US4] Write API test: member can list comments in tests/api/project-member-auth.spec.ts
-- [ ] T036 [P] [US4] Write API test: member can update comment in tests/api/project-member-auth.spec.ts
-- [ ] T037 [P] [US4] Write API test: member can delete comment in tests/api/project-member-auth.spec.ts
-- [ ] T038 [P] [US4] Write API test: non-member receives 403 for comments in tests/api/project-member-auth.spec.ts
+- [ ] T023 [P] [US4] Write API test: comments (GET/POST/PATCH/DELETE) and timeline for owner/member/non-member in tests/api/project-member-auth.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T039 [P] [US4] Update GET /api/projects/:projectId/tickets/:id/comments in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T040 [P] [US4] Update POST /api/projects/:projectId/tickets/:id/comments in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T041 [P] [US4] Update PATCH /api/projects/:projectId/tickets/:id/comments/:commentId in app/api/projects/[projectId]/tickets/[id]/comments/[commentId]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T042 [P] [US4] Update DELETE /api/projects/:projectId/tickets/:id/comments/:commentId in app/api/projects/[projectId]/tickets/[id]/comments/[commentId]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T043 [US4] Update GET /api/projects/:projectId/tickets/:id/timeline in app/api/projects/[projectId]/tickets/[id]/timeline/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T024 [P] [US4] Update GET /api/projects/:projectId/tickets/:id/comments in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T025 [P] [US4] Update POST /api/projects/:projectId/tickets/:id/comments in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T026 [P] [US4] Update PATCH /api/projects/:projectId/tickets/:id/comments/:commentId in app/api/projects/[projectId]/tickets/[id]/comments/[commentId]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T027 [P] [US4] Update DELETE /api/projects/:projectId/tickets/:id/comments/:commentId in app/api/projects/[projectId]/tickets/[id]/comments/[commentId]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T028 [US4] Update GET /api/projects/:projectId/tickets/:id/timeline in app/api/projects/[projectId]/tickets/[id]/timeline/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
 
 **Checkpoint**: All commenting features now support member access
 
@@ -159,16 +144,12 @@ description: "Task list for Project Member Authorization implementation"
 
 ### Tests for User Story 5 (MANDATORY)
 
-- [ ] T044 [P] [US5] Write API test: owner can add member in tests/api/project-member-auth.spec.ts
-- [ ] T045 [P] [US5] Write API test: owner can remove member in tests/api/project-member-auth.spec.ts
-- [ ] T046 [P] [US5] Write API test: member receives 403 when adding members in tests/api/project-member-auth.spec.ts
-- [ ] T047 [P] [US5] Write API test: member receives 403 when removing members in tests/api/project-member-auth.spec.ts
-- [ ] T048 [P] [US5] Write API test: non-member receives 403 for member management in tests/api/project-member-auth.spec.ts
+- [ ] T029 [P] [US5] Write API test: member management (POST/DELETE) for owner/member/non-member in tests/api/project-member-auth.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T049 [US5] Verify POST /api/projects/:projectId/members still uses verifyProjectOwnership in app/api/projects/[projectId]/members/route.ts (no change needed)
-- [ ] T050 [US5] Verify DELETE /api/projects/:projectId/members/:memberId still uses verifyProjectOwnership in app/api/projects/[projectId]/members/route.ts (no change needed)
+- [ ] T030 [US5] Verify POST /api/projects/:projectId/members still uses verifyProjectOwnership in app/api/projects/[projectId]/members/route.ts (no change needed)
+- [ ] T031 [US5] Verify DELETE /api/projects/:projectId/members/:memberId still uses verifyProjectOwnership in app/api/projects/[projectId]/members/route.ts (no change needed)
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -182,15 +163,12 @@ description: "Task list for Project Member Authorization implementation"
 
 ### Tests for Image Support (MANDATORY)
 
-- [ ] T051 [P] Write API test: owner can upload image (backward compatibility) in tests/api/project-member-auth.spec.ts
-- [ ] T052 [P] Write API test: member can upload image in tests/api/project-member-auth.spec.ts
-- [ ] T053 [P] Write API test: member can delete image in tests/api/project-member-auth.spec.ts
-- [ ] T054 [P] Write API test: non-member receives 403 for image operations in tests/api/project-member-auth.spec.ts
+- [ ] T032 [P] Write API test: image operations (POST/DELETE) for owner/member/non-member in tests/api/project-member-auth.spec.ts
 
 ### Implementation for Image Support
 
-- [ ] T055 [P] Update POST /api/projects/:projectId/tickets/:id/images in app/api/projects/[projectId]/tickets/[id]/images/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
-- [ ] T056 [P] Update DELETE /api/projects/:projectId/tickets/:id/images/:attachmentIndex in app/api/projects/[projectId]/tickets/[id]/images/[attachmentIndex]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T033 [P] Update POST /api/projects/:projectId/tickets/:id/images in app/api/projects/[projectId]/tickets/[id]/images/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
+- [ ] T034 [P] Update DELETE /api/projects/:projectId/tickets/:id/images/:attachmentIndex in app/api/projects/[projectId]/tickets/[id]/images/[attachmentIndex]/route.ts (replace verifyTicketOwnership with verifyTicketAccess)
 
 **Checkpoint**: All 22 endpoints now support member authorization
 
@@ -200,13 +178,13 @@ description: "Task list for Project Member Authorization implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T057 [P] Add deprecation comments to old helper functions in app/lib/db/auth-helpers.ts
-- [ ] T058 [P] Update CLAUDE.md with member authorization patterns
-- [ ] T059 Run full test suite (bun test) and verify all tests pass
-- [ ] T060 Add performance assertions to API tests (<100ms p95 target) in tests/api/project-member-auth.spec.ts
-- [ ] T061 [P] Code review authorization logic for security vulnerabilities
-- [ ] T062 Run manual testing following quickstart.md validation steps
-- [ ] T063 [P] Update project documentation with member authorization patterns in docs/
+- [ ] T035 [P] Add deprecation comments to old helper functions in app/lib/db/auth-helpers.ts
+- [ ] T036 [P] Update CLAUDE.md with member authorization patterns
+- [ ] T037 Run full test suite (bun test) and verify all tests pass
+- [ ] T038 Add performance assertions to API tests (<100ms p95 target) in tests/api/project-member-auth.spec.ts
+- [ ] T039 [P] Code review authorization logic for security vulnerabilities
+- [ ] T040 Run manual testing following quickstart.md validation steps
+- [ ] T041 [P] Update project documentation with member authorization patterns in docs/
 
 ---
 
@@ -305,22 +283,24 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 63
+**Total Tasks**: 41 (reduced from 63)
 - **Phase 1 (Setup)**: 3 tasks
 - **Phase 2 (Foundational)**: 6 tasks (BLOCKS all user stories)
-- **Phase 3 (User Story 1 - P1)**: 8 tasks (4 tests, 4 implementation)
-- **Phase 4 (User Story 2 - P2)**: 5 tasks (4 tests, 1 implementation)
-- **Phase 5 (User Story 3 - P2)**: 10 tasks (5 tests, 5 implementation)
-- **Phase 6 (User Story 4 - P3)**: 11 tasks (6 tests, 5 implementation)
-- **Phase 7 (User Story 5 - P3)**: 7 tasks (5 tests, 2 verification)
-- **Phase 8 (Images)**: 6 tasks (4 tests, 2 implementation)
+- **Phase 3 (User Story 1 - P1)**: 5 tasks (1 test, 4 implementation)
+- **Phase 4 (User Story 2 - P2)**: 2 tasks (1 test, 1 implementation)
+- **Phase 5 (User Story 3 - P2)**: 6 tasks (1 test, 5 implementation)
+- **Phase 6 (User Story 4 - P3)**: 6 tasks (1 test, 5 implementation)
+- **Phase 7 (User Story 5 - P3)**: 3 tasks (1 test, 2 verification)
+- **Phase 8 (Images)**: 3 tasks (1 test, 2 implementation)
 - **Phase 9 (Polish)**: 7 tasks
 
-**Parallel Opportunities**: 34 tasks marked [P] can run in parallel within their phase
+**Parallel Opportunities**: 20 tasks marked [P] can run in parallel within their phase
 
-**MVP Scope**: Phase 1 + Phase 2 + Phase 3 (User Story 1) = 17 tasks
+**MVP Scope**: Phase 1 + Phase 2 + Phase 3 (User Story 1) = 14 tasks
 
-**Test Coverage**: 28 test tasks covering all 22 endpoints (owner, member, non-member scenarios)
+**Test Coverage**: 7 consolidated test tasks covering all 22 endpoints (owner, member, non-member scenarios)
+
+**Optimization**: Tests consolidated into parameterized test scenarios in single API contract test file. E2E test file eliminated (board access validated via API tests). Same security coverage with 50% fewer test tasks.
 
 ---
 
@@ -330,6 +310,7 @@ With multiple developers:
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
 - Tests are MANDATORY for authorization changes (constitution requirement)
+- Tests use parameterized scenarios to validate owner/member/non-member in single test case
 - Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
