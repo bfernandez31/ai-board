@@ -60,8 +60,21 @@ export async function GET(
     });
 
     if (!project) {
+      // Check if project exists at all
+      const projectExists = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true },
+      });
+
+      if (!projectExists) {
+        return NextResponse.json(
+          { error: 'Not Found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+
       return NextResponse.json(
-        { error: 'Forbidden', code: 'PROJECT_NOT_ACCESSIBLE' },
+        { error: 'Forbidden', code: 'PROJECT_NOT_OWNED' },
         { status: 403 }
       );
     }

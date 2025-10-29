@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 
 // Zod schema for request validation
 const TransitionRequestSchema = z.object({
@@ -68,9 +69,10 @@ export async function POST(
 
     const { targetStage } = parseResult.data;
 
+    // Verify project access (owner OR member)
+    await verifyProjectAccess(projectId);
+
     // Fetch ticket with workflow jobs
-    // Note: In production, project ownership would be validated via NextAuth session
-    // For test/dev, we fetch ticket directly
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
@@ -94,7 +96,17 @@ export async function POST(
     });
 
     if (!ticket) {
-      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      // Check if ticket exists in a different project
+      const ticketExists = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { id: true, projectId: true },
+      });
+
+      if (!ticketExists) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      } else {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     // Detect rollback attempt (BUILD → INBOX)
@@ -233,6 +245,23 @@ export async function POST(
     }
   } catch (error) {
     console.error('Error transitioning ticket:', error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

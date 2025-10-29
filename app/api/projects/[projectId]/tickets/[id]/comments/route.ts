@@ -134,6 +134,9 @@ export async function GET(
           { status: 403 }
         );
       }
+      if (error.message === 'Ticket not found' || error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
     }
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -363,6 +366,9 @@ export async function POST(
           { error: 'Forbidden: You do not have access to this project' },
           { status: 403 }
         );
+      }
+      if (error.message === 'Ticket not found' || error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
       }
     }
 

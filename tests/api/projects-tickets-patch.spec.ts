@@ -120,17 +120,17 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body.error).toContain('Project not found');
   });
 
-  test('should return 400 for non-existent ticket (no fields to update)', async ({ request }) => {
+  test('should return 404 for non-existent ticket', async ({ request }) => {
     const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/999999`, {
       data: {
         version: 1
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(404);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(body.message).toContain('Must provide fields to update');
+    expect(body.error).toContain('Ticket not found');
   });
 
   test('should return 409 for version mismatch', async ({ request }) => {

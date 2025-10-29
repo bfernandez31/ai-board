@@ -160,6 +160,9 @@ export async function GET(
           { status: 403 }
         );
       }
+      if (error.message === 'Ticket not found' || error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
     }
 
     return NextResponse.json(
