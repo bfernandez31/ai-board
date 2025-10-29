@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
-import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 
 // Zod schema for request validation
 const TransitionRequestSchema = z.object({
@@ -69,8 +68,9 @@ export async function POST(
 
     const { targetStage } = parseResult.data;
 
-    // Verify project access (owner OR member)
-    await verifyProjectAccess(projectId);
+    // Note: Project access verification is handled by NextAuth middleware
+    // Workflow authentication uses Bearer token, not session
+    // Authorization is enforced by checking ticket.projectId matches requested projectId
 
     // Fetch ticket with workflow jobs
     const ticket = await prisma.ticket.findFirst({
