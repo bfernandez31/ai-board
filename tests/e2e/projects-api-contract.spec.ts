@@ -24,21 +24,40 @@ test.describe('GET /api/projects Contract', () => {
       expect(project).toHaveProperty('id');
       expect(project).toHaveProperty('name');
       expect(project).toHaveProperty('description');
+      expect(project).toHaveProperty('githubOwner');
+      expect(project).toHaveProperty('githubRepo');
+      expect(project).toHaveProperty('deploymentUrl');
       expect(project).toHaveProperty('updatedAt');
       expect(project).toHaveProperty('ticketCount');
+      expect(project).toHaveProperty('lastShippedTicket');
 
       // Field types
       expect(typeof project.id).toBe('number');
       expect(typeof project.name).toBe('string');
       expect(typeof project.description).toBe('string');
+      expect(typeof project.githubOwner).toBe('string');
+      expect(typeof project.githubRepo).toBe('string');
+      expect(project.deploymentUrl === null || typeof project.deploymentUrl === 'string').toBe(true);
       expect(typeof project.updatedAt).toBe('string');
       expect(typeof project.ticketCount).toBe('number');
+      expect(project.lastShippedTicket === null || typeof project.lastShippedTicket === 'object').toBe(true);
 
       // Validate ISO 8601 timestamp format
       expect(new Date(project.updatedAt).toISOString()).toBe(project.updatedAt);
 
+      // Validate lastShippedTicket structure if present
+      if (project.lastShippedTicket) {
+        expect(project.lastShippedTicket).toHaveProperty('id');
+        expect(project.lastShippedTicket).toHaveProperty('title');
+        expect(project.lastShippedTicket).toHaveProperty('updatedAt');
+        expect(typeof project.lastShippedTicket.id).toBe('number');
+        expect(typeof project.lastShippedTicket.title).toBe('string');
+        expect(typeof project.lastShippedTicket.updatedAt).toBe('string');
+        expect(new Date(project.lastShippedTicket.updatedAt).toISOString()).toBe(project.lastShippedTicket.updatedAt);
+      }
+
       // Ensure no extra fields (security check)
-      const allowedKeys = ['id', 'name', 'description', 'updatedAt', 'ticketCount'];
+      const allowedKeys = ['id', 'name', 'description', 'githubOwner', 'githubRepo', 'deploymentUrl', 'updatedAt', 'ticketCount', 'lastShippedTicket'];
       const actualKeys = Object.keys(project);
       expect(actualKeys.sort()).toEqual(allowedKeys.sort());
     }
