@@ -31,7 +31,7 @@ describe('getWorkflowJob', () => {
     expect(result).toBe(null);
   });
 
-  it('returns null for VERIFY stage (no workflow jobs in VERIFY)', () => {
+  it('returns verify job for VERIFY stage', () => {
     const jobs: Job[] = [
       {
         id: 1,
@@ -47,10 +47,26 @@ describe('getWorkflowJob', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+      {
+        id: 2,
+        command: 'verify',
+        status: 'RUNNING',
+        startedAt: new Date('2024-01-02'),
+        ticketId: 1,
+        projectId: 1,
+        branch: null,
+        commitSha: null,
+        logs: null,
+        completedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
 
     const result = getWorkflowJob(jobs, 'VERIFY' as Stage);
-    expect(result).toBe(null);
+    expect(result).not.toBe(null);
+    expect(result?.id).toBe(2);
+    expect(result?.command).toBe('verify');
   });
 
   it('returns null for SHIP stage (no workflow jobs in SHIP)', () => {
