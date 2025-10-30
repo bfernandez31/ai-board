@@ -216,7 +216,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.error).toContain('Ticket not found');
   });
 
-  test('should exclude VERIFY and SHIP stage jobs from timeline', async ({ request }) => {
+  test('should include VERIFY jobs but exclude SHIP stage jobs from timeline', async ({ request }) => {
     // Create jobs for different stages
     await prisma.job.createMany({
       data: [
@@ -256,9 +256,16 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
     const body = await response.json();
 
-    // Should only include specify job events (2 events: start + complete)
-    expect(body.timeline.length).toBe(2);
-    expect(body.timeline.every((e: any) => e.data.command === 'specify')).toBe(true);
+    // Should include specify + verify job events (4 events: 2 start + 2 complete)
+    expect(body.timeline.length).toBe(4);
+
+    // Verify both specify and verify commands are present
+    const commands = body.timeline.map((e: any) => e.data.command);
+    expect(commands.filter((c: string) => c === 'specify').length).toBe(2); // start + complete
+    expect(commands.filter((c: string) => c === 'verify').length).toBe(2); // start + complete
+
+    // Verify ship command is NOT present
+    expect(commands.includes('ship')).toBe(false);
   });
 
   test('should include mentionedUsers map for @mentions in comments', async ({ request }) => {

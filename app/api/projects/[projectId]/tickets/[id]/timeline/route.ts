@@ -105,14 +105,14 @@ export async function GET(
       mentionedUsers.map((user) => [user.id, user])
     );
 
-    // T013: Fetch jobs with VERIFY/SHIP exclusion filter (chronological order)
-    // VERIFY and SHIP stages are out of scope (no jobs for those stages yet)
+    // T013: Fetch jobs with SHIP exclusion filter (chronological order)
+    // SHIP stage is out of scope (no jobs for that stage yet)
     const jobs = await prisma.job.findMany({
       where: {
         ticketId,
-        // Exclude VERIFY and SHIP stage jobs (out of scope for this feature)
+        // Exclude SHIP stage jobs (out of scope for this feature)
         command: {
-          notIn: ['verify', 'ship'],
+          not: 'ship',
         },
       },
       orderBy: { startedAt: 'desc' }, // Most recent first

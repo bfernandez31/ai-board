@@ -17,6 +17,30 @@ Tickets display comments in a dedicated Comments tab within the ticket detail mo
   - Comment content rendered as Markdown
   - Relative timestamp (e.g., "2 hours ago")
 
+### Conversation Timeline
+
+The Comments tab displays a unified timeline that interleaves comments with workflow job events:
+
+**Timeline Events**:
+- **User Comments**: Comments posted by team members or AI-BOARD
+- **Job Start Events**: When automation jobs begin (SPECIFY, PLAN, BUILD, VERIFY stages)
+- **Job Completion Events**: When automation jobs finish (success, failure, or cancelled)
+
+**Visual Presentation**:
+- Events ordered chronologically (oldest first) for natural conversation flow
+- Job events displayed with distinct styling (icon, timestamp, status)
+- Comments and job events clearly differentiated visually
+- Job status indicators: success (green), failure (red), cancelled (gray)
+
+**Included Job Stages**:
+- SPECIFY: Specification generation workflows
+- PLAN: Planning and task breakdown workflows
+- BUILD: Implementation workflows
+- VERIFY: Verification workflows
+
+**Excluded Job Stages**:
+- SHIP: Ship stage jobs excluded from timeline (out of scope)
+
 ### Creating Comments
 
 **Comment Form**:
