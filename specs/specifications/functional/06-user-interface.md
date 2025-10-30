@@ -260,8 +260,10 @@ The user interface provides an intuitive, modern experience for managing tickets
 ### Project Cards
 
 **Information Display**:
-- Shipped ticket status with checkmark icon and relative timestamp
-- Total ticket count across all stages
+- Shipped ticket title with checkmark icon (truncated with ellipsis)
+- Metadata line displayed below ticket title:
+  - Relative timestamp ("Shipped 2h ago")
+  - Total ticket count ("· 5 total")
 - Optional deployment URL (clickable link with copy button)
 - Optional GitHub repository link (opens in new tab)
 

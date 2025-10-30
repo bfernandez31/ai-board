@@ -36,11 +36,11 @@ Users access projects through a dedicated projects list page:
 - Deployment URL (if configured, with copy-to-clipboard functionality)
 - GitHub repository link (if configured, displayed as "owner/repo")
 - Latest shipped ticket information:
-  - Ticket title (truncated with ellipsis if too long)
-  - Relative timestamp ("Shipped 2h ago")
-  - Checkmark icon indicating completion
+  - Ticket title with checkmark icon (truncated with ellipsis if too long)
+  - Metadata displayed below ticket title:
+    - Relative timestamp ("Shipped 2h ago")
+    - Total ticket count across all stages ("· 5 total")
   - "No tickets shipped yet" message when no shipped tickets exist
-- Total ticket count across all stages
 
 **Visual Design**:
 - Modern and clean interface
