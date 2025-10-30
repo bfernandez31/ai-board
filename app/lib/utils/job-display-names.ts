@@ -42,7 +42,8 @@ export const JOB_COMMAND_DISPLAY_NAMES: Record<string, string> = {
  * @example
  * getJobDisplayName('specify') // → "Specification generation"
  * getJobDisplayName('comment-plan') // → "Planning assistance"
- * getJobDisplayName('comment-ship') // → "Ship assistance" (fallback pattern)
+ * getJobDisplayName('verify') // → "Verification"
+ * getJobDisplayName('comment-ship') // → "Deployment assistance"
  * getJobDisplayName('unknown-cmd') // → "Unknown command (unknown-cmd)"
  */
 export function getJobDisplayName(command: string): string {
