@@ -142,7 +142,7 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: npx tsx tests/global-setup.ts
 
-      # Playwright setup steps
+      # Playwright setup - GitHub runners have system deps pre-installed
       - name: Get Playwright Version
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         id: playwright-version
@@ -158,11 +158,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
-        run: npx playwright install chromium --with-deps
-
-      - name: Install Playwright OS Dependencies
-        if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit == 'true' }}
-        run: npx playwright install-deps
+        run: npx playwright install chromium
 
       # Phase 1: Test Execution
       - name: Run Unit Tests
