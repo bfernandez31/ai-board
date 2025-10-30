@@ -88,7 +88,7 @@ test.describe('Responsive Board Design', () => {
       board.scrollLeft = 500;
     });
 
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(100);
 
     // Check that a different column header is now visible
     const erroredHeader = page.getByRole('heading', { name: /errored/i }).first();
@@ -145,7 +145,7 @@ test.describe('Responsive Board Design', () => {
       el.scrollLeft = 200;
     });
 
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(50);
 
     // Verify scroll occurred
     const newScroll = await boardGrid.evaluate((el) => el.scrollLeft);
@@ -240,7 +240,7 @@ test.describe('Responsive Board Design', () => {
 
     // Landscape
     await page.setViewportSize({ width: 667, height: 375 });
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(100);
 
     // Board should still be visible and functional
     await expect(board.first()).toBeVisible();
