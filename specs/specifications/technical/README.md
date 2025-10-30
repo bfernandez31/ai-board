@@ -102,6 +102,14 @@ Core implementation patterns and code organization.
 - Environment variables
 - Error handling and retries
 
+**[utilities.md](implementation/utilities.md)**
+- Job display name mapping
+- Conversation event transformation
+- Timeline merging and sorting
+- Authorization helpers
+- Date utilities
+- Common helper functions
+
 ### Quality
 
 Testing infrastructure and deployment processes.
@@ -143,6 +151,7 @@ Testing infrastructure and deployment processes.
 **Frontend Developer**:
 - [architecture/stack.md](architecture/stack.md) - UI libraries and tools
 - [implementation/state-management.md](implementation/state-management.md) - TanStack Query patterns
+- [implementation/utilities.md](implementation/utilities.md) - Helper functions and utilities
 - [api/endpoints.md](api/endpoints.md) - API contracts
 - [api/schemas.md](api/schemas.md) - Request/response types
 
@@ -167,6 +176,7 @@ Testing infrastructure and deployment processes.
 **Comments**:
 - API endpoints: [api/endpoints.md](api/endpoints.md#comment-endpoints)
 - Real-time updates: [implementation/state-management.md](implementation/state-management.md#comments-query-with-polling)
+- Timeline utilities: [implementation/utilities.md](implementation/utilities.md#conversation-events)
 - Data model: [architecture/data-model.md](architecture/data-model.md#comment)
 
 **Workflow Automation**:
