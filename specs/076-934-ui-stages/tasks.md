@@ -24,9 +24,9 @@
 
 **Purpose**: Project initialization and test environment setup
 
-- [ ] T001 [P] Search for existing useJobPolling test files in tests/ directory
-- [ ] T002 [P] Search for existing real-time test directory structure in tests/
-- [ ] T003 Verify TanStack Query v5.90.5 installed and query-keys factory available in app/lib/query-keys.ts
+- [X] T001 [P] Search for existing useJobPolling test files in tests/ directory
+- [X] T002 [P] Search for existing real-time test directory structure in tests/
+- [X] T003 Verify TanStack Query v5.90.5 installed and query-keys factory available in app/lib/query-keys.ts
 
 **Checkpoint**: Setup complete - test discovery finished, no new test files needed if existing tests found
 
@@ -38,11 +38,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Read and understand existing useJobPolling hook implementation in app/lib/hooks/useJobPolling.ts
-- [ ] T005 Read and understand TanStack Query cache patterns in app/lib/hooks/queries/useTickets.ts
-- [ ] T006 Read and understand queryKeys factory structure in app/lib/query-keys.ts
-- [ ] T007 Verify polling endpoint contract in app/api/projects/[projectId]/jobs/status/route.ts
-- [ ] T008 Verify tickets endpoint contract in app/api/projects/[projectId]/tickets/route.ts
+- [X] T004 Read and understand existing useJobPolling hook implementation in app/lib/hooks/useJobPolling.ts
+- [X] T005 Read and understand TanStack Query cache patterns in app/lib/hooks/queries/useTickets.ts
+- [X] T006 Read and understand queryKeys factory structure in app/lib/query-keys.ts
+- [X] T007 Verify polling endpoint contract in app/api/projects/[projectId]/jobs/status/route.ts
+- [X] T008 Verify tickets endpoint contract in app/api/projects/[projectId]/tickets/route.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -58,22 +58,22 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] Write Vitest unit test for terminal job detection logic in tests/unit/useJobPolling.test.ts
-- [ ] T010 [P] [US1] Write Vitest unit test for cache invalidation trigger on terminal status in tests/unit/useJobPolling.test.ts
-- [ ] T011 [P] [US1] Write Vitest unit test for useRef tracking of previous job state in tests/unit/useJobPolling.test.ts
+- [X] T009 [P] [US1] Write Vitest unit test for terminal job detection logic in tests/unit/useJobPolling.test.ts
+- [X] T010 [P] [US1] Write Vitest unit test for cache invalidation trigger on terminal status in tests/unit/useJobPolling.test.ts
+- [X] T011 [P] [US1] Write Vitest unit test for useRef tracking of previous job state in tests/unit/useJobPolling.test.ts
 - [ ] T012 [US1] Write Playwright E2E test for quick-impl workflow stage sync in tests/e2e/real-time/ui-stage-sync.spec.ts (depends on T009-T011)
 
 **⚠️ VERIFY ALL TESTS FAIL** before proceeding to implementation tasks
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Add useRef to track previous job state in app/lib/hooks/useJobPolling.ts
-- [ ] T014 [US1] Implement terminal job detection logic (compare current vs previous jobs) in app/lib/hooks/useJobPolling.ts
-- [ ] T015 [US1] Import useQueryClient hook from @tanstack/react-query in app/lib/hooks/useJobPolling.ts
-- [ ] T016 [US1] Import queryKeys factory in app/lib/hooks/useJobPolling.ts
-- [ ] T017 [US1] Add useEffect to call queryClient.invalidateQueries when terminal jobs detected in app/lib/hooks/useJobPolling.ts
-- [ ] T018 [US1] Update previousJobsRef.current with current jobs state at end of effect in app/lib/hooks/useJobPolling.ts
-- [ ] T019 [US1] Run Vitest unit tests to verify terminal detection logic (tests T009-T011 should pass)
+- [X] T013 [US1] Add useRef to track previous job state in app/lib/hooks/useJobPolling.ts
+- [X] T014 [US1] Implement terminal job detection logic (compare current vs previous jobs) in app/lib/hooks/useJobPolling.ts
+- [X] T015 [US1] Import useQueryClient hook from @tanstack/react-query in app/lib/hooks/useJobPolling.ts
+- [X] T016 [US1] Import queryKeys factory in app/lib/hooks/useJobPolling.ts
+- [X] T017 [US1] Add useEffect to call queryClient.invalidateQueries when terminal jobs detected in app/lib/hooks/useJobPolling.ts
+- [X] T018 [US1] Update previousJobsRef.current with current jobs state at end of effect in app/lib/hooks/useJobPolling.ts
+- [X] T019 [US1] Run Vitest unit tests to verify terminal detection logic (tests T009-T011 should pass)
 - [ ] T020 [US1] Run Playwright E2E test for quick-impl stage sync (test T012 should pass)
 
 **Checkpoint**: User Story 1 complete - quick-impl workflow stage transitions now visible in UI automatically within 2-3 seconds
@@ -95,7 +95,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Verify existing terminal detection logic handles auto-ship command in app/lib/hooks/useJobPolling.ts (code review)
+- [X] T023 [US2] Verify existing terminal detection logic handles auto-ship command in app/lib/hooks/useJobPolling.ts (code review)
 - [ ] T024 [US2] Run Playwright E2E test for auto-ship stage sync (test T021 should pass)
 - [ ] T025 [US2] Run Playwright integration test for concurrent transitions (test T022 should pass)
 
@@ -119,7 +119,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Verify existing optimistic update logic in drag-and-drop handler is unaffected by polling (code review)
+- [X] T029 [US3] Verify existing optimistic update logic in drag-and-drop handler is unaffected by polling (code review)
 - [ ] T030 [US3] Test backward compatibility: manual drag from BUILD to INBOX while polling active (quickstart.md scenario 3)
 - [ ] T031 [US3] Run Playwright E2E tests for manual transitions (tests T026-T027 should pass)
 - [ ] T032 [US3] Run Playwright integration test for cache consistency (test T028 should pass)
@@ -142,7 +142,7 @@
 
 ### Implementation for Edge Cases
 
-- [ ] T036 Verify TanStack Query request deduplication handles rapid transitions (code review of useJobPolling.ts)
+- [X] T036 Verify TanStack Query request deduplication handles rapid transitions (code review of useJobPolling.ts)
 - [ ] T037 Test rapid successive transitions: workflow chains BUILD → VERIFY → SHIP within 4 seconds (quickstart.md edge case 1)
 - [ ] T038 Test network latency: delay tickets refetch and verify eventual consistency (quickstart.md edge case 2)
 - [ ] T039 Test version conflict: manual drag at exact moment of workflow transition (quickstart.md edge case 3)
@@ -156,18 +156,18 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T041 [P] Remove debug console.logs from useJobPolling.ts (if any added during development)
-- [ ] T042 [P] Verify TypeScript strict mode compliance in app/lib/hooks/useJobPolling.ts (no `any` types)
+- [X] T041 [P] Remove debug console.logs from useJobPolling.ts (if any added during development)
+- [X] T042 [P] Verify TypeScript strict mode compliance in app/lib/hooks/useJobPolling.ts (no `any` types)
 - [ ] T043 [P] Run full test suite: bun test (all unit + E2E tests must pass)
-- [ ] T044 [P] Run type check: bun run type-check (no TypeScript errors)
-- [ ] T045 [P] Run lint: bun run lint (no linting errors)
+- [X] T044 [P] Run type check: bun run type-check (no TypeScript errors)
+- [X] T045 [P] Run lint: bun run lint (no linting errors)
 - [ ] T046 Performance validation: measure UI update latency (target < 3000ms, see quickstart.md)
 - [ ] T047 Performance validation: monitor polling endpoint response time (target < 100ms p95, see quickstart.md)
 - [ ] T048 Performance validation: monitor tickets endpoint response time (target < 100ms p95, see quickstart.md)
 - [ ] T049 Run quickstart.md test scenarios manually (Test Scenarios 1-3)
-- [ ] T050 Verify no new dependencies added (only existing TanStack Query used)
-- [ ] T051 Verify backward compatibility: existing manual transitions still work (regression test)
-- [ ] T052 Update CLAUDE.md if needed (document cache invalidation pattern if not already documented)
+- [X] T050 Verify no new dependencies added (only existing TanStack Query used)
+- [X] T051 Verify backward compatibility: existing manual transitions still work (regression test)
+- [X] T052 Update CLAUDE.md if needed (document cache invalidation pattern if not already documented)
 
 ---
 

@@ -117,7 +117,6 @@ export function useJobPolling(
 
     // Invalidate tickets cache when workflow completes
     if (newlyTerminal.length > 0) {
-      console.log('[useJobPolling] Detected terminal jobs:', newlyTerminal);
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
       });

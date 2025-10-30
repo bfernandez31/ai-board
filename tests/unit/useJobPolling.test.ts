@@ -29,8 +29,8 @@ describe('useJobPolling - Cache Invalidation', () => {
     global.fetch = vi.fn(() => {
       callCount++;
       const jobs: JobStatusDto[] = callCount === 1
-        ? [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }]
-        : [{ id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() }];
+        ? [{ id: 1, ticketId: 10, status: 'RUNNING', command: 'quick-impl', updatedAt: new Date().toISOString() }]
+        : [{ id: 1, ticketId: 10, status: 'COMPLETED', command: 'quick-impl', updatedAt: new Date().toISOString() }];
 
       return Promise.resolve({
         ok: true,
@@ -62,7 +62,7 @@ describe('useJobPolling - Cache Invalidation', () => {
 
     global.fetch = vi.fn(() => {
       const jobs: JobStatusDto[] = [
-        { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
+        { id: 1, ticketId: 10, status: 'COMPLETED', command: 'quick-impl', updatedAt: new Date().toISOString() },
       ];
       return Promise.resolve({
         ok: true,
@@ -92,8 +92,8 @@ describe('useJobPolling - Cache Invalidation', () => {
     global.fetch = vi.fn(() => {
       callCount++;
       const jobs: JobStatusDto[] = callCount === 1
-        ? [{ id: 1, ticketId: 10, status: 'PENDING', updatedAt: new Date().toISOString() }]
-        : [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }];
+        ? [{ id: 1, ticketId: 10, status: 'PENDING', command: 'specify', updatedAt: new Date().toISOString() }]
+        : [{ id: 1, ticketId: 10, status: 'RUNNING', command: 'specify', updatedAt: new Date().toISOString() }];
 
       return Promise.resolve({
         ok: true,
@@ -125,12 +125,12 @@ describe('useJobPolling - Cache Invalidation', () => {
       callCount++;
       const jobs: JobStatusDto[] = callCount === 1
         ? [
-            { id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() },
-            { id: 2, ticketId: 11, status: 'RUNNING', updatedAt: new Date().toISOString() },
+            { id: 1, ticketId: 10, status: 'RUNNING', command: 'implement', updatedAt: new Date().toISOString() },
+            { id: 2, ticketId: 11, status: 'RUNNING', command: 'verify', updatedAt: new Date().toISOString() },
           ]
         : [
-            { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
-            { id: 2, ticketId: 11, status: 'FAILED', updatedAt: new Date().toISOString() },
+            { id: 1, ticketId: 10, status: 'COMPLETED', command: 'implement', updatedAt: new Date().toISOString() },
+            { id: 2, ticketId: 11, status: 'FAILED', command: 'verify', updatedAt: new Date().toISOString() },
           ];
 
       return Promise.resolve({

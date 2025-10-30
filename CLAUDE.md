@@ -855,6 +855,19 @@ TanStack Query v5.90.5 is used for server state management with intelligent cach
 
 **Query Pattern**: Use hierarchical query keys from `queryKeys` factory, never hardcode strings.
 **Mutation Pattern**: All mutations must implement optimistic updates with onMutate/onError/onSuccess.
+**Cache Invalidation Pattern**: Use `queryClient.invalidateQueries()` to trigger refetch when external events change server state (e.g., workflow completion detected by polling hook).
+
+Example (from `useJobPolling.ts`):
+```typescript
+// Detect terminal job status and invalidate tickets cache
+useEffect(() => {
+  if (newlyTerminal.length > 0) {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.projects.tickets(projectId),
+    });
+  }
+}, [jobs, projectId, queryClient]);
+```
 
 See constitution.md for state management requirements and patterns.
 
