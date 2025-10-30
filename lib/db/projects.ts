@@ -31,7 +31,17 @@ export async function getUserProjects() {
         { members: { some: { userId } } }      // Member access
       ]
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      githubOwner: true,
+      githubRepo: true,
+      deploymentUrl: true,
+      updatedAt: true,
+      createdAt: true,
+      userId: true,
+      clarificationPolicy: true,
       _count: {
         select: { tickets: true },
       },

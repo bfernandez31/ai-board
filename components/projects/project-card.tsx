@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -20,6 +21,12 @@ interface ProjectCardProps {
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
   const { copy, isCopied } = useCopyToClipboard();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering timestamp after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleClick = () => {
     router.push(`/projects/${project.id}/board`);
@@ -103,9 +110,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
             >
               {project.lastShippedTicket.title}
             </span>
-            <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
-              · Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
-            </span>
+            {mounted && (
+              <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
+                · Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
+              </span>
+            )}
             <span className="text-[#6c7086] whitespace-nowrap" data-testid="ticket-count">
               · {project.ticketCount} total
             </span>
