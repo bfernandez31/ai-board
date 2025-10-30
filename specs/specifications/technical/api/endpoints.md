@@ -584,6 +584,101 @@ Delete a comment (author only).
 - `403`: Not comment author
 - `404`: Comment, ticket, or project not found
 
+## Timeline Endpoints
+
+### GET /api/projects/:projectId/tickets/:id/timeline
+
+Fetch unified conversation timeline (comments + job events).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "timeline": [
+    {
+      "type": "comment",
+      "timestamp": "2025-01-15T10:00:00.000Z",
+      "data": {
+        "id": 1,
+        "ticketId": 42,
+        "userId": "user-abc123",
+        "content": "Updated the specification",
+        "createdAt": "2025-01-15T10:00:00.000Z",
+        "updatedAt": "2025-01-15T10:00:00.000Z",
+        "user": {
+          "id": "user-abc123",
+          "name": "Alice Smith",
+          "email": "alice@example.com",
+          "image": null
+        }
+      }
+    },
+    {
+      "type": "job_start",
+      "timestamp": "2025-01-15T10:05:00.000Z",
+      "data": {
+        "id": 123,
+        "ticketId": 42,
+        "projectId": 1,
+        "command": "specify",
+        "status": "RUNNING",
+        "branch": "042-add-login-feature",
+        "startedAt": "2025-01-15T10:05:00.000Z",
+        "completedAt": null
+      }
+    },
+    {
+      "type": "job_complete",
+      "timestamp": "2025-01-15T10:10:00.000Z",
+      "data": {
+        "id": 123,
+        "ticketId": 42,
+        "projectId": 1,
+        "command": "specify",
+        "status": "COMPLETED",
+        "branch": "042-add-login-feature",
+        "startedAt": "2025-01-15T10:05:00.000Z",
+        "completedAt": "2025-01-15T10:10:00.000Z"
+      }
+    }
+  ],
+  "mentionedUsers": {
+    "user-def456": {
+      "id": "user-def456",
+      "name": "Bob Johnson",
+      "email": "bob@example.com"
+    }
+  },
+  "currentUserId": "user-abc123"
+}
+```
+
+**Timeline Event Types**:
+- `comment`: User comment posted on ticket
+- `job_start`: Job entered PENDING or RUNNING state
+- `job_complete`: Job reached terminal state (COMPLETED, FAILED, CANCELLED)
+
+**Job Filtering**:
+- Includes jobs for stages: SPECIFY, PLAN, BUILD, VERIFY
+- Excludes jobs for stage: SHIP (out of scope)
+- Jobs ordered chronologically (oldest first)
+
+**Mentioned Users**:
+- Map of user ID → user info for @mentions in comments
+- Only includes users still in system (deleted users omitted)
+- Used by frontend to render mention links
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+
 ## Image Attachment Endpoints
 
 ### POST /api/projects/:projectId/tickets/:id/images
