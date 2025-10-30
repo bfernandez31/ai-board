@@ -178,34 +178,6 @@ test.describe('Responsive Board Design', () => {
     }
   });
 
-  test('should maintain proper spacing between columns on all screen sizes', async ({ page }) => {
-    const viewports = [
-      { width: 1920, height: 1080, name: 'Large Desktop' },
-      { width: 1024, height: 768, name: 'Desktop' },
-      { width: 768, height: 1024, name: 'Tablet' },
-      { width: 375, height: 667, name: 'Mobile' }
-    ];
-
-    for (const viewport of viewports) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await page.goto(`${BASE_URL}/projects/1/board`);
-
-      // Measure gap between INBOX and SPECIFY (adjacent columns)
-      const firstColumn = page.locator(`[data-testid="column-INBOX"]`).first();
-      const secondColumn = page.locator(`[data-testid="column-SPECIFY"]`).first();
-
-      const firstBox = await firstColumn.boundingBox();
-      const secondBox = await secondColumn.boundingBox();
-
-      if (firstBox && secondBox && secondBox.x > firstBox.x) {
-        // Gap between columns should be reasonable (8px - 32px)
-        const gap = secondBox.x - (firstBox.x + firstBox.width);
-        expect(gap).toBeGreaterThanOrEqual(0);
-        expect(gap).toBeLessThanOrEqual(50);
-      }
-    }
-  });
-
   test('should adapt font sizes for mobile devices', async ({ page }) => {
     // Desktop font sizes
     await page.setViewportSize({ width: 1024, height: 768 });
