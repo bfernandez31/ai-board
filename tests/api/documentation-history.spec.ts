@@ -83,38 +83,32 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
       `${BASE_URL}/api/projects/1/docs/history?ticketId=${ticket.id}&docType=spec`
     );
 
-    // Conditional assertions based on GITHUB_TOKEN
-    if (process.env.GITHUB_TOKEN) {
-      expect(response.status()).toBe(200);
-      const data = await response.json();
+    // Assert response (mocked GitHub API always succeeds in test mode)
+    expect(response.status()).toBe(200);
+    const data = await response.json();
 
-      // Verify response structure
-      expect(data).toHaveProperty('commits');
-      expect(Array.isArray(data.commits)).toBe(true);
+    // Verify response structure
+    expect(data).toHaveProperty('commits');
+    expect(Array.isArray(data.commits)).toBe(true);
+    expect(data.commits.length).toBeGreaterThan(0); // Mock always returns at least 1 commit
 
-      // If commits exist, verify structure
-      if (data.commits.length > 0) {
-        const commit = data.commits[0];
-        expect(commit).toHaveProperty('sha');
-        expect(commit).toHaveProperty('author');
-        expect(commit).toHaveProperty('message');
-        expect(commit).toHaveProperty('url');
+    // Verify mock commit structure
+    const commit = data.commits[0];
+    expect(commit).toHaveProperty('sha');
+    expect(commit).toHaveProperty('author');
+    expect(commit).toHaveProperty('message');
+    expect(commit).toHaveProperty('url');
 
-        // Verify author structure
-        expect(commit.author).toHaveProperty('name');
-        expect(commit.author).toHaveProperty('email');
-        expect(commit.author).toHaveProperty('date');
+    // Verify author structure
+    expect(commit.author).toHaveProperty('name');
+    expect(commit.author).toHaveProperty('email');
+    expect(commit.author).toHaveProperty('date');
 
-        // Verify SHA format (40 char hex)
-        expect(commit.sha).toMatch(/^[a-f0-9]{40}$/);
+    // Verify mock SHA format
+    expect(commit.sha).toMatch(/^mock-sha-/);
 
-        // Verify date is ISO 8601
-        expect(commit.author.date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-      }
-    } else {
-      // Without GITHUB_TOKEN, expect either 404 (branch not found) or 500 (GitHub API error)
-      expect([404, 500]).toContain(response.status());
-    }
+    // Verify date is ISO 8601
+    expect(commit.author.date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 
   test('returns 400 for invalid docType', async ({ request }) => {
@@ -196,43 +190,37 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
       status: 'COMPLETED',
     });
 
-    // Use a valid commit SHA format (will fail without GITHUB_TOKEN or if commit doesn't exist)
+    // Use a valid commit SHA format
     const validSha = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 
     const response = await request.get(
       `${BASE_URL}/api/projects/1/docs/diff?ticketId=${ticket.id}&docType=spec&sha=${validSha}`
     );
 
-    // Conditional assertions based on GITHUB_TOKEN
-    if (process.env.GITHUB_TOKEN) {
-      // With token, may return 200 (commit exists) or 404 (commit not found)
-      if (response.status() === 200) {
-        const data = await response.json();
+    // Assert response (mocked GitHub API always succeeds in test mode)
+    expect(response.status()).toBe(200);
+    const data = await response.json();
 
-        // Verify response structure
-        expect(data).toHaveProperty('sha');
-        expect(data).toHaveProperty('files');
-        expect(Array.isArray(data.files)).toBe(true);
+    // Verify response structure
+    expect(data).toHaveProperty('sha');
+    expect(data).toHaveProperty('files');
+    expect(Array.isArray(data.files)).toBe(true);
+    expect(data.files.length).toBeGreaterThan(0); // Mock always returns at least 1 file
 
-        // If files exist, verify structure
-        if (data.files.length > 0) {
-          const file = data.files[0];
-          expect(file).toHaveProperty('filename');
-          expect(file).toHaveProperty('status');
-          expect(file).toHaveProperty('additions');
-          expect(file).toHaveProperty('deletions');
+    // Verify mock file structure
+    const file = data.files[0];
+    expect(file).toHaveProperty('filename');
+    expect(file).toHaveProperty('status');
+    expect(file).toHaveProperty('additions');
+    expect(file).toHaveProperty('deletions');
+    expect(file).toHaveProperty('patch');
 
-          // Status should be one of the expected values
-          expect(['added', 'modified', 'removed']).toContain(file.status);
-        }
-      } else {
-        // Commit not found in repository
-        expect(response.status()).toBe(404);
-      }
-    } else {
-      // Without GITHUB_TOKEN, expect either 404 (branch not found) or 500 (GitHub API error)
-      expect([404, 500]).toContain(response.status());
-    }
+    // Status should be one of the expected values
+    expect(['added', 'modified', 'removed']).toContain(file.status);
+
+    // Verify mock data
+    expect(data.sha).toBe(validSha);
+    expect(file.filename).toMatch(/^specs\//);
   });
 
   test('returns 400 for invalid SHA format', async ({ request }) => {

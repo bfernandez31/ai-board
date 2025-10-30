@@ -174,6 +174,17 @@ jobs:
           git config --global user.name "ai-board[bot]"
           git config --global user.email "bot@ai-board.app"
 
+      - name: Setup Test Environment
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          echo "🔧 Setting up test environment..."
+          .github/scripts/setup-test-env.sh
+
       - name: Prepare Images for Claude (Specify Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.attachments != '[]' }}
         run: |
