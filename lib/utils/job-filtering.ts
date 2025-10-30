@@ -9,22 +9,22 @@ import { matchesStage } from './stage-matcher';
  * Workflow jobs are those where command does NOT start with 'comment-'.
  *
  * @param jobs - Array of Job objects associated with a ticket
- * @param currentStage - Current ticket stage (used to filter out jobs for INBOX, VERIFY, and SHIP stages)
+ * @param currentStage - Current ticket stage (used to filter out jobs for INBOX and SHIP stages)
  * @returns Job | null - Most recent workflow job sorted by startedAt DESC, or null if none exist
  *
  * Filtering Rules:
- * - Return null if stage is INBOX, VERIFY, or SHIP (no workflow jobs in these stages)
+ * - Return null if stage is INBOX or SHIP (no workflow jobs in these stages)
  * - Exclude jobs where command starts with 'comment-' (AI-BOARD jobs)
  * - Sort remaining jobs by startedAt DESC (most recent first)
  * - Return first job or null if array is empty
  *
  * Examples:
- * - Workflow commands: specify, plan, implement, quick-impl
+ * - Workflow commands: specify, plan, implement, quick-impl, verify
  * - AI-BOARD commands (excluded): comment-specify, comment-plan, comment-build, comment-verify
  */
 export function getWorkflowJob(jobs: Job[], currentStage: Stage): Job | null {
-  // INBOX, VERIFY, and SHIP stages never have workflow jobs
-  if (currentStage === 'INBOX' || currentStage === 'VERIFY' || currentStage === 'SHIP') {
+  // INBOX and SHIP stages never have workflow jobs
+  if (currentStage === 'INBOX' || currentStage === 'SHIP') {
     return null;
   }
 

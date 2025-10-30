@@ -164,12 +164,12 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   });
 
   /**
-   * Test Scenario 4: VERIFY Stage (No Workflow)
-   * Given: Ticket in BUILD stage
+   * Test Scenario 4: VERIFY Stage (Automated Workflow)
+   * Given: Ticket in BUILD stage with completed job
    * When: POST with targetStage="VERIFY"
-   * Then: Stage updated, NO job created
+   * Then: Stage updated, job created with command="verify"
    */
-  test('should transition ticket to VERIFY without creating job', async ({ request }) => {
+  test('should transition ticket to VERIFY and create verify job', async ({ request }) => {
     // Arrange
     const { ticket } = await setupTestData();
     const prisma = getPrismaClient();
@@ -191,9 +191,15 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
     expect(body.id).toBeGreaterThan(0);
     expect(body.stage).toBe('VERIFY');
 
-    // Assert - No new job created
+    // Assert - New verify job created
     const afterJobs = await prisma.job.findMany({ where: { ticketId: ticket.id } });
-    expect(afterJobs.length).toBe(beforeJobs.length);
+    expect(afterJobs.length).toBe(beforeJobs.length + 1);
+
+    const verifyJob = afterJobs.find(j => j.command === 'verify');
+    expect(verifyJob).toBeDefined();
+    expect(verifyJob?.status).toBe('PENDING');
+    expect(verifyJob?.ticketId).toBe(ticket.id);
+    expect(verifyJob?.projectId).toBe(1);
 
     // Assert - Stage updated
     const updatedTicket = await prisma.ticket.findUnique({
@@ -888,7 +894,7 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
      * User Story 2: Allow BUILD→VERIFY transition when build job is COMPLETED
      * Given: Ticket in BUILD stage with COMPLETED build job
      * When: Attempt transition to VERIFY
-     * Then: 200 success, no new job (manual stage)
+     * Then: 200 success, new verify job created
      */
     test('should allow BUILD→VERIFY transition when build job is COMPLETED', async ({ request }) => {
       // Arrange
@@ -897,6 +903,8 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
 
       // Complete SPECIFY, PLAN, and BUILD stages
       await transitionThrough(request, ticket.id, ['SPECIFY', 'PLAN', 'BUILD']);
+
+      const beforeJobs = await prisma.job.findMany({ where: { ticketId: ticket.id } });
 
       // Act - Transition to VERIFY with COMPLETED build job
       const response = await request.post(
@@ -909,6 +917,14 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
       const body = await response.json();
       expect(body.id).toBeGreaterThan(0);
       expect(body.stage).toBe('VERIFY');
+
+      // Assert - New verify job created
+      const afterJobs = await prisma.job.findMany({ where: { ticketId: ticket.id } });
+      expect(afterJobs.length).toBe(beforeJobs.length + 1);
+
+      const verifyJob = afterJobs.find(j => j.command === 'verify');
+      expect(verifyJob).toBeDefined();
+      expect(verifyJob?.status).toBe('PENDING');
 
       // Assert - VERIFY stage reached
       const updatedTicket = await prisma.ticket.findUnique({

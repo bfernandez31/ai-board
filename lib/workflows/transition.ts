@@ -7,14 +7,14 @@ const prisma = new PrismaClient();
 
 /**
  * Stage-to-command mapping for automated workflow stages
- * null indicates no automated workflow (manual stages like VERIFY, SHIP)
+ * null indicates no automated workflow (manual stages like SHIP)
  */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   INBOX: null,
   SPECIFY: 'specify',
   PLAN: 'plan',
   BUILD: 'implement',
-  VERIFY: null, // Manual stage - no automated workflow
+  VERIFY: 'verify', // Automated workflow with test execution and PR creation
   SHIP: null,
 };
 
