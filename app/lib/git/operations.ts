@@ -54,6 +54,13 @@ export interface CommitResult {
  * console.log('Committed:', result.commitSha);
  */
 export async function commitAndPush(options: CommitAndPushOptions): Promise<CommitResult> {
+  // Mock GitHub operations in test environment
+  if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true' || process.env.TEST_USER_ID) {
+    return {
+      commitSha: `mock-sha-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    };
+  }
+
   const githubToken = process.env.GITHUB_TOKEN;
 
   if (!githubToken) {

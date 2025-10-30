@@ -129,6 +129,28 @@ export async function GET(
       );
     }
 
+    // Construct file path pattern for filtering
+    // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)
+    const filePathPattern = `specs/${ticket.branch}/${validatedDocType}.md`;
+
+    // Mock GitHub API in test environment
+    if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true' || process.env.TEST_USER_ID) {
+      console.log('[docs/diff/GET] Using mock data (test mode)');
+      const response: DocumentationDiffResponse = {
+        sha: validatedSha,
+        files: [
+          {
+            filename: filePathPattern,
+            status: 'modified',
+            additions: 5,
+            deletions: 2,
+            patch: `@@ -1,3 +1,6 @@\n # Test Spec\n \n-Old content\n+New content\n+Additional line\n Mock changes`,
+          },
+        ],
+      };
+      return NextResponse.json(response);
+    }
+
     // Initialize GitHub API client
     const githubToken = process.env.GITHUB_TOKEN;
     if (!githubToken) {
@@ -140,10 +162,6 @@ export async function GET(
     }
 
     const octokit = new Octokit({ auth: githubToken });
-
-    // Construct file path pattern for filtering
-    // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)
-    const filePathPattern = `specs/${ticket.branch}/${validatedDocType}.md`;
 
     console.log('[docs/diff/GET] Fetching commit diff:', {
       owner: project.githubOwner,

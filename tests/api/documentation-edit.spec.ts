@@ -71,28 +71,21 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
       commitMessage: 'docs: update spec for testing',
     };
 
-    // NOTE: This test requires GITHUB_TOKEN to be set and will make real GitHub API calls
-    // In CI/CD, mock the GitHub API or use a test repository
+    // NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
     const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
       data: requestBody,
     });
 
-    // Assert response
-    if (process.env.GITHUB_TOKEN) {
-      // If token is available, expect success
-      expect(response.status()).toBe(200);
+    // Assert response (mocked GitHub API always succeeds in test mode)
+    expect(response.status()).toBe(200);
 
-      const data = await response.json();
-      expect(data).toHaveProperty('success', true);
-      expect(data).toHaveProperty('commitSha');
-      expect(data).toHaveProperty('updatedAt');
-      expect(data).toHaveProperty('message');
-      expect(data.commitSha).toMatch(/^[a-f0-9]{40}$/); // Valid git SHA
-      expect(data.message).toContain('spec.md');
-    } else {
-      // If no token, expect 500 (GITHUB_TOKEN not set)
-      expect(response.status()).toBe(500);
-    }
+    const data = await response.json();
+    expect(data).toHaveProperty('success', true);
+    expect(data).toHaveProperty('commitSha');
+    expect(data).toHaveProperty('updatedAt');
+    expect(data).toHaveProperty('message');
+    expect(data.commitSha).toMatch(/^mock-sha-/); // Mock SHA format
+    expect(data.message).toContain('spec.md');
   });
 
   /**
@@ -436,7 +429,7 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
 
   /**
    * T025: POST with docType=plan in PLAN stage returns 200
-   * NOTE: Requires GITHUB_TOKEN environment variable to make real GitHub API calls
+   * NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
    */
   test('returns 200 when editing plan.md in PLAN stage', async ({ request }) => {
     // Setup: Create ticket in PLAN stage
@@ -455,27 +448,21 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
       },
     });
 
-    // Assert based on GITHUB_TOKEN availability
-    if (process.env.GITHUB_TOKEN) {
-      // If token available, expect success
-      expect(response.status()).toBe(200);
+    // Assert response (mocked GitHub API always succeeds in test mode)
+    expect(response.status()).toBe(200);
 
-      const data = await response.json();
-      expect(data).toHaveProperty('success', true);
-      expect(data).toHaveProperty('commitSha');
-      expect(data).toHaveProperty('updatedAt');
-      expect(data).toHaveProperty('message');
-      expect(data.commitSha).toMatch(/^[a-f0-9]{40}$/);
-      expect(data.message).toContain('plan.md');
-    } else {
-      // If no token, expect 500 (GITHUB_TOKEN not set)
-      expect(response.status()).toBe(500);
-    }
+    const data = await response.json();
+    expect(data).toHaveProperty('success', true);
+    expect(data).toHaveProperty('commitSha');
+    expect(data).toHaveProperty('updatedAt');
+    expect(data).toHaveProperty('message');
+    expect(data.commitSha).toMatch(/^mock-sha-/); // Mock SHA format
+    expect(data.message).toContain('plan.md');
   });
 
   /**
    * T026: POST with docType=tasks in PLAN stage returns 200
-   * NOTE: Requires GITHUB_TOKEN environment variable to make real GitHub API calls
+   * NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
    */
   test('returns 200 when editing tasks.md in PLAN stage', async ({ request }) => {
     // Setup: Create ticket in PLAN stage
@@ -494,22 +481,16 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
       },
     });
 
-    // Assert based on GITHUB_TOKEN availability
-    if (process.env.GITHUB_TOKEN) {
-      // If token available, expect success
-      expect(response.status()).toBe(200);
+    // Assert response (mocked GitHub API always succeeds in test mode)
+    expect(response.status()).toBe(200);
 
-      const data = await response.json();
-      expect(data).toHaveProperty('success', true);
-      expect(data).toHaveProperty('commitSha');
-      expect(data).toHaveProperty('updatedAt');
-      expect(data).toHaveProperty('message');
-      expect(data.commitSha).toMatch(/^[a-f0-9]{40}$/);
-      expect(data.message).toContain('tasks.md');
-    } else {
-      // If no token, expect 500 (GITHUB_TOKEN not set)
-      expect(response.status()).toBe(500);
-    }
+    const data = await response.json();
+    expect(data).toHaveProperty('success', true);
+    expect(data).toHaveProperty('commitSha');
+    expect(data).toHaveProperty('updatedAt');
+    expect(data).toHaveProperty('message');
+    expect(data.commitSha).toMatch(/^mock-sha-/); // Mock SHA format
+    expect(data.message).toContain('tasks.md');
   });
 
   /**

@@ -123,6 +123,34 @@ export async function GET(
       );
     }
 
+    // Determine branch (SHIP → main, else → feature branch)
+    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
+
+    // Construct file path for this doc type
+    // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)
+    // Path always uses original ticket branch name, even for SHIP tickets
+    const filePath = `specs/${ticket.branch}/${validatedDocType}.md`;
+
+    // Mock GitHub API in test environment
+    if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true' || process.env.TEST_USER_ID) {
+      console.log('[docs/history/GET] Using mock data (test mode)');
+      const response: DocumentationHistoryResponse = {
+        commits: [
+          {
+            sha: `mock-sha-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            author: {
+              name: 'Test User',
+              email: 'test@e2e.local',
+              date: new Date().toISOString(),
+            },
+            message: `docs: update ${validatedDocType}.md`,
+            url: `https://github.com/${project.githubOwner}/${project.githubRepo}/commit/mock-sha`,
+          },
+        ],
+      };
+      return NextResponse.json(response);
+    }
+
     // Initialize GitHub API client
     const githubToken = process.env.GITHUB_TOKEN;
     if (!githubToken) {
@@ -134,14 +162,6 @@ export async function GET(
     }
 
     const octokit = new Octokit({ auth: githubToken });
-
-    // Determine branch (SHIP → main, else → feature branch)
-    const branch = ticket.stage === 'SHIP' ? 'main' : ticket.branch;
-
-    // Construct file path for this doc type
-    // File structure: specs/{branchName}/{docType}.md (created by create-new-feature.sh)
-    // Path always uses original ticket branch name, even for SHIP tickets
-    const filePath = `specs/${ticket.branch}/${validatedDocType}.md`;
 
     console.log('[docs/history/GET] Fetching commit history:', {
       owner: project.githubOwner,
