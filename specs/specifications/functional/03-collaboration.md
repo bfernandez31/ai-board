@@ -37,9 +37,7 @@ The Comments tab displays a unified timeline that interleaves comments with work
 - PLAN: Planning and task breakdown workflows
 - BUILD: Implementation workflows
 - VERIFY: Verification workflows
-
-**Excluded Job Stages**:
-- SHIP: Ship stage jobs excluded from timeline (out of scope)
+- SHIP: Deployment workflows
 
 ### Creating Comments
 
@@ -131,12 +129,11 @@ Comments support @mentions to notify specific users:
 **Availability Rules**:
 
 AI-BOARD can be mentioned when:
-- Ticket is in SPECIFY, PLAN, BUILD, or VERIFY stage
+- Ticket is in SPECIFY, PLAN, BUILD, VERIFY, or SHIP stage
 - No workflow job is currently running for the ticket
 
 AI-BOARD cannot be mentioned when:
 - Ticket is in INBOX stage (specification not started)
-- Ticket is in SHIP stage (work completed)
 - Active job is PENDING or RUNNING for the ticket
 
 **Visual Feedback**:
@@ -182,12 +179,12 @@ When users mention @ai-board in a comment:
 - Update task breakdown in tasks.md
 - AI ensures consistency across spec.md, plan.md, and tasks.md
 
-**BUILD and VERIFY Stages**:
+**BUILD, VERIFY, and SHIP Stages**:
 - Not implemented in current version
 - AI-BOARD responds with "not implemented" message
 - Job completes successfully without file modifications
 
-**INBOX and SHIP Stages**:
+**INBOX Stage**:
 - Mentions blocked at UI level (greyed out)
 - API rejects if validation bypassed
 - Clear error message explains stage restriction
