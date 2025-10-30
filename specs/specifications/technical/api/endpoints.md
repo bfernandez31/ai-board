@@ -28,6 +28,64 @@ Authorization: Bearer <WORKFLOW_API_TOKEN>
 
 ## Project Endpoints
 
+### GET /api/projects
+
+Fetch all projects for the authenticated user with shipping status.
+
+**Authentication**: Required (session)
+**Authorization**: Returns projects owned by or accessible to the user (owner OR member)
+
+**Response** (200 OK):
+```json
+{
+  "projects": [
+    {
+      "id": 1,
+      "name": "AI Board Development",
+      "description": "Project management tool",
+      "deploymentUrl": "https://ai-board.vercel.app",
+      "githubOwner": "bfernandez31",
+      "githubRepo": "ai-board",
+      "userId": "user-abc123",
+      "clarificationPolicy": "AUTO",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-15T10:30:00.000Z",
+      "ticketCount": 12,
+      "lastShippedTicket": {
+        "id": 42,
+        "title": "Add user authentication",
+        "updatedAt": "2025-01-14T16:20:00.000Z"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Mobile App",
+      "description": null,
+      "deploymentUrl": null,
+      "githubOwner": "company",
+      "githubRepo": "mobile-app",
+      "userId": "user-abc123",
+      "clarificationPolicy": "CONSERVATIVE",
+      "createdAt": "2025-01-05T00:00:00.000Z",
+      "updatedAt": "2025-01-10T08:15:00.000Z",
+      "ticketCount": 5,
+      "lastShippedTicket": null
+    }
+  ]
+}
+```
+
+**Fields**:
+- `ticketCount`: Total number of tickets across all stages
+- `lastShippedTicket`: Most recent ticket in SHIP stage (null if no shipped tickets)
+  - `id`: Ticket ID
+  - `title`: Ticket title (truncated on frontend if needed)
+  - `updatedAt`: When ticket was moved to SHIP stage (used for relative time display)
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
+
 ### GET /api/projects/:projectId
 
 Fetch project details including clarification policy.
@@ -44,6 +102,7 @@ Fetch project details including clarification policy.
   "id": 1,
   "name": "AI Board Development",
   "description": "Project management tool",
+  "deploymentUrl": "https://ai-board.vercel.app",
   "githubOwner": "bfernandez31",
   "githubRepo": "ai-board",
   "userId": "user-abc123",
@@ -73,6 +132,7 @@ Update project details including clarification policy.
 {
   "name": "Updated Project Name",
   "description": "Updated description",
+  "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE"
 }
 ```
@@ -80,6 +140,7 @@ Update project details including clarification policy.
 **Validation**:
 - `name`: Optional, string
 - `description`: Optional, string or null
+- `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
 
 **Response** (200 OK):
@@ -87,13 +148,14 @@ Update project details including clarification policy.
 {
   "id": 1,
   "name": "Updated Project Name",
+  "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
   ...
 }
 ```
 
 **Errors**:
-- `400`: Invalid request body or clarification policy enum
+- `400`: Invalid request body, URL format, or clarification policy enum
 - `401`: Not authenticated
 - `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found

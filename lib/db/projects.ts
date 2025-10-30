@@ -35,6 +35,16 @@ export async function getUserProjects() {
       _count: {
         select: { tickets: true },
       },
+      tickets: {
+        where: { stage: 'SHIP' },              // Only shipped tickets
+        orderBy: { updatedAt: 'desc' },        // Most recent first
+        take: 1,                               // Only last shipped ticket
+        select: {
+          id: true,
+          title: true,
+          updatedAt: true,
+        }
+      }
     },
     orderBy: { updatedAt: 'desc' },
   });
@@ -123,6 +133,7 @@ export async function updateProject(
     githubOwner?: string | undefined;
     githubRepo?: string | undefined;
     clarificationPolicy?: ClarificationPolicy | undefined;
+    deploymentUrl?: string | null | undefined;
   }
 ) {
   const userId = await requireAuth();
@@ -143,6 +154,7 @@ export async function updateProject(
   if (data.githubOwner !== undefined) updateData.githubOwner = data.githubOwner;
   if (data.githubRepo !== undefined) updateData.githubRepo = data.githubRepo;
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
+  if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
 
   return prisma.project.update({
     where: { id: projectId },

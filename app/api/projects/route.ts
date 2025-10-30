@@ -12,8 +12,16 @@ export async function GET() {
       id: project.id,
       name: project.name,
       description: project.description,
+      githubOwner: project.githubOwner,
+      githubRepo: project.githubRepo,
+      deploymentUrl: project.deploymentUrl,
       updatedAt: project.updatedAt.toISOString(),
       ticketCount: project._count.tickets,
+      lastShippedTicket: project.tickets[0] ? {
+        id: project.tickets[0].id,
+        title: project.tickets[0].title,
+        updatedAt: project.tickets[0].updatedAt.toISOString(),
+      } : null,
     }));
 
     return NextResponse.json(response);

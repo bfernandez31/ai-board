@@ -58,6 +58,7 @@ model Project {
   id                   Int                  @id @default(autoincrement())
   name                 String
   description          String?
+  deploymentUrl        String?
   githubOwner          String
   githubRepo           String
   userId               String
@@ -81,7 +82,8 @@ model Project {
 **Fields**:
 - `id`: Auto-incrementing unique identifier
 - `name`: Human-readable project name
-- `description`: Optional project details
+- `description`: Optional project details (not displayed on project cards)
+- `deploymentUrl`: Optional deployment URL (displayed on cards with copy-to-clipboard functionality)
 - `githubOwner`: GitHub repository owner (user or organization)
 - `githubRepo`: GitHub repository name
 - `userId`: Owner of the project (required foreign key)
@@ -104,6 +106,8 @@ model Project {
 - Deleting project deletes all tickets and jobs (cascade)
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
+- Deployment URL displayed on project cards when configured (hidden when null)
+- Project description stored but not displayed on list view cards
 
 ### Ticket
 

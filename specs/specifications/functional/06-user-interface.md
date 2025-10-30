@@ -257,6 +257,32 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Board back to project list
 - Breadcrumb or back button (implementation-specific)
 
+### Project Cards
+
+**Information Display**:
+- Shipped ticket status with checkmark icon and relative timestamp
+- Total ticket count across all stages
+- Optional deployment URL (clickable link with copy button)
+- Optional GitHub repository link (opens in new tab)
+
+**Interactive Elements**:
+- Copy-to-clipboard button for deployment URL
+- Non-blocking interactions (clicking URL/GitHub/copy doesn't trigger card navigation)
+- Visual feedback for copy action (icon change or tooltip)
+- Hover tooltips for truncated ticket titles
+
+**Text Truncation**:
+- Long ticket titles truncated with ellipsis
+- Full titles visible on hover via tooltip
+- Maintains consistent card layout
+- Prevents breaking fixed-width containers
+
+**Relative Time Display**:
+- Recent activity shown as "2h ago", "5m ago", etc.
+- Updates on page refresh
+- Tooltip with absolute timestamp on hover (recommended)
+- Industry-standard pattern for activity indicators
+
 ## Loading States
 
 ### Initial Load

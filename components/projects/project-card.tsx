@@ -4,10 +4,13 @@ import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, Copy, Check, Github } from 'lucide-react';
+import { formatTimestamp } from '@/lib/utils/format-timestamp';
+import { useCopyToClipboard } from '@/app/lib/hooks/useCopyToClipboard';
 import type { ProjectWithCount } from '@/app/lib/types/project';
 
 interface ProjectCardProps {
@@ -16,17 +19,22 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
+  const { copy, isCopied } = useCopyToClipboard();
 
   const handleClick = () => {
     router.push(`/projects/${project.id}/board`);
   };
 
-  // Format timestamp
-  const formattedDate = new Date(project.updatedAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const handleCopyUrl = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
+    if (project.deploymentUrl) {
+      copy(project.deploymentUrl);
+    }
+  };
+
+  const handleGitHubClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
+  };
 
   return (
     <Card
@@ -35,21 +43,80 @@ export function ProjectCard({ project }: ProjectCardProps) {
       data-testid="project-card"
       data-project-id={project.id}
     >
-      <CardHeader>
-        <CardTitle className="text-[#cdd6f4]" data-testid="project-name">{project.name}</CardTitle>
-        <CardDescription className="text-[#a6adc8]" data-testid="project-description">
-          {project.description}
-        </CardDescription>
+      <CardHeader className="space-y-3">
+        <CardTitle className="text-[#cdd6f4]" data-testid="project-name">
+          {project.name}
+        </CardTitle>
+
+        {/* GitHub Repository Link (User Story 3) */}
+        <a
+          href={`https://github.com/${project.githubOwner}/${project.githubRepo}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleGitHubClick}
+          className="flex items-center gap-2 text-sm text-[#a6adc8] hover:text-[#cdd6f4] transition-colors w-fit"
+          data-testid="github-link"
+        >
+          <Github className="h-4 w-4" />
+          <span>{project.githubOwner}/{project.githubRepo}</span>
+        </a>
+
+        {/* Deployment URL (User Story 2) */}
+        {project.deploymentUrl && (
+          <div className="flex items-center gap-2" data-testid="deployment-section">
+            <a
+              href={project.deploymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-[#89b4fa] hover:text-[#b4befe] transition-colors truncate"
+              data-testid="deployment-url"
+            >
+              {new URL(project.deploymentUrl).hostname}
+            </a>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleCopyUrl}
+              className="h-8 w-8 text-[#a6adc8] hover:text-[#cdd6f4]"
+              data-testid="copy-deployment-url"
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4" data-testid="check-icon" />
+              ) : (
+                <Copy className="h-4 w-4" data-testid="copy-icon" />
+              )}
+            </Button>
+          </div>
+        )}
       </CardHeader>
+
       <CardContent>
-        <div className="flex justify-between text-sm text-[#6c7086]">
-          <span data-testid="project-updated">
-            Last updated: {formattedDate}
+        {/* Shipped Ticket Status (User Story 1) */}
+        {project.lastShippedTicket ? (
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle className="h-4 w-4 text-[#a6e3a1] flex-shrink-0" />
+            <span
+              className="text-[#cdd6f4] truncate"
+              data-testid="shipped-ticket-title"
+              title={project.lastShippedTicket.title}
+            >
+              {project.lastShippedTicket.title}
+            </span>
+            <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
+              · Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
+            </span>
+            <span className="text-[#6c7086] whitespace-nowrap" data-testid="ticket-count">
+              · {project.ticketCount} total
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-[#6c7086]" data-testid="no-shipped-tickets">
+            {project.ticketCount === 0
+              ? 'No tickets yet'
+              : `No tickets shipped yet · ${project.ticketCount} total`}
           </span>
-          <span data-testid="project-ticket-count">
-            {project.ticketCount} {project.ticketCount === 1 ? 'ticket' : 'tickets'}
-          </span>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

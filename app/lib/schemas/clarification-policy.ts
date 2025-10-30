@@ -12,6 +12,7 @@ export const projectClarificationPolicySchema = z.nativeEnum(ClarificationPolicy
  */
 export const projectUpdateSchema = z.object({
   clarificationPolicy: projectClarificationPolicySchema.or(z.undefined()).optional(),
+  deploymentUrl: z.string().url().max(500).nullable().optional(),
 }).partial();
 
 /**

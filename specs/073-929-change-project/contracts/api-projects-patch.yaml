@@ -1,0 +1,289 @@
+openapi: 3.0.0
+info:
+  title: Projects API - Update Project with Deployment URL
+  version: 2.0.0
+  description: |
+    API contract for PATCH /api/projects/:projectId endpoint with deployment URL support.
+    Allows updating project details including the new optional deploymentUrl field.
+
+paths:
+  /api/projects/{projectId}:
+    patch:
+      summary: Update project details
+      description: |
+        Updates project fields for the specified project.
+        User must be the project owner (not just a member).
+        All fields are optional; only provided fields are updated.
+
+      operationId: updateProject
+      tags:
+        - Projects
+
+      security:
+        - sessionCookie: []
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: integer
+            format: int32
+          example: 1
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdateRequest'
+            examples:
+              updateDeploymentUrl:
+                summary: Update deployment URL only
+                value:
+                  deploymentUrl: "https://ai-board.vercel.app"
+
+              removeDeploymentUrl:
+                summary: Remove deployment URL
+                value:
+                  deploymentUrl: null
+
+              updateMultipleFields:
+                summary: Update multiple fields
+                value:
+                  name: "AI Board Production"
+                  description: "Production environment for AI Board"
+                  deploymentUrl: "https://ai-board.vercel.app"
+                  clarificationPolicy: "CONSERVATIVE"
+
+      responses:
+        '200':
+          description: Project successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 1
+                name: "AI Board Production"
+                description: "Production environment for AI Board"
+                githubOwner: "bfernandez31"
+                githubRepo: "ai-board"
+                userId: "user_abc123"
+                deploymentUrl: "https://ai-board.vercel.app"
+                clarificationPolicy: "CONSERVATIVE"
+                createdAt: "2025-10-01T10:00:00Z"
+                updatedAt: "2025-10-29T14:30:00Z"
+
+        '400':
+          description: Invalid request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidUrl:
+                  summary: Invalid deployment URL format
+                  value:
+                    error: "Invalid deploymentUrl: must be a valid URL"
+                    code: "VALIDATION_ERROR"
+
+                urlTooLong:
+                  summary: Deployment URL exceeds max length
+                  value:
+                    error: "deploymentUrl must be at most 500 characters"
+                    code: "VALIDATION_ERROR"
+
+        '401':
+          description: Unauthorized - No valid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                code: "AUTH_ERROR"
+
+        '403':
+          description: Forbidden - User is not project owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Only project owner can update project settings"
+                code: "FORBIDDEN"
+
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Project not found"
+                code: "NOT_FOUND"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to update project"
+                code: "DATABASE_ERROR"
+
+components:
+  schemas:
+    ProjectUpdateRequest:
+      type: object
+      description: |
+        Project update payload. All fields are optional.
+        Only provided fields will be updated.
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Project display name
+          example: "AI Board Production"
+
+        description:
+          type: string
+          maxLength: 1000
+          description: Project description
+          example: "Production environment for AI Board"
+
+        githubOwner:
+          type: string
+          maxLength: 100
+          description: GitHub repository owner
+          example: "bfernandez31"
+
+        githubRepo:
+          type: string
+          maxLength: 100
+          description: GitHub repository name
+          example: "ai-board"
+
+        deploymentUrl:
+          type: string
+          format: uri
+          maxLength: 500
+          nullable: true
+          description: |
+            Production/staging deployment URL.
+            - Must be valid URL format (http/https protocol required)
+            - Max 500 characters
+            - Set to null to remove deployment URL
+          example: "https://ai-board.vercel.app"
+
+        clarificationPolicy:
+          type: string
+          enum:
+            - AUTO
+            - CONSERVATIVE
+            - PRAGMATIC
+            - INTERACTIVE
+          description: Default clarification policy for new tickets
+          example: "CONSERVATIVE"
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - githubOwner
+        - githubRepo
+        - userId
+        - deploymentUrl
+        - clarificationPolicy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Unique project identifier
+          example: 1
+
+        name:
+          type: string
+          maxLength: 100
+          example: "AI Board Production"
+
+        description:
+          type: string
+          maxLength: 1000
+          example: "Production environment for AI Board"
+
+        githubOwner:
+          type: string
+          maxLength: 100
+          example: "bfernandez31"
+
+        githubRepo:
+          type: string
+          maxLength: 100
+          example: "ai-board"
+
+        userId:
+          type: string
+          description: Project owner user ID
+          example: "user_abc123"
+
+        deploymentUrl:
+          type: string
+          format: uri
+          maxLength: 500
+          nullable: true
+          example: "https://ai-board.vercel.app"
+
+        clarificationPolicy:
+          type: string
+          enum:
+            - AUTO
+            - CONSERVATIVE
+            - PRAGMATIC
+            - INTERACTIVE
+          example: "CONSERVATIVE"
+
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-10-01T10:00:00Z"
+
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-10-29T14:30:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Invalid deploymentUrl: must be a valid URL"
+
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+          enum:
+            - AUTH_ERROR
+            - FORBIDDEN
+            - NOT_FOUND
+            - VALIDATION_ERROR
+            - DATABASE_ERROR
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie for authenticated requests

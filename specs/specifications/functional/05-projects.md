@@ -11,7 +11,9 @@ Projects organize tickets into separate workspaces, each with its own Kanban boa
 Each project contains:
 
 - **Name**: Project identifier and title
-- **Description**: Brief explanation of project purpose
+- **Description**: Brief explanation of project purpose (stored but not displayed on cards)
+- **Deployment URL**: Optional URL for deployed project (with quick-copy functionality)
+- **GitHub Repository**: GitHub owner and repository name
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
@@ -31,19 +33,35 @@ Users access projects through a dedicated projects list page:
 
 **Display Information**:
 - Project name
-- Project description
-- Last updated timestamp
-- Total ticket count
+- Deployment URL (if configured, with copy-to-clipboard functionality)
+- GitHub repository link (if configured, displayed as "owner/repo")
+- Latest shipped ticket information:
+  - Ticket title (truncated with ellipsis if too long)
+  - Relative timestamp ("Shipped 2h ago")
+  - Checkmark icon indicating completion
+  - "No tickets shipped yet" message when no shipped tickets exist
+- Total ticket count across all stages
 
 **Visual Design**:
 - Modern and clean interface
 - Scrollable container for many projects (50+)
 - No pagination - all projects visible
+- Compact card layout with clear information hierarchy
 
 **Interaction**:
 - Hover over project shows scale/transform effect
 - Cursor changes to pointer indicating clickability
 - Click project navigates to project board
+- Click deployment URL opens in current tab (does not trigger card navigation)
+- Click GitHub link opens repository in new tab (does not trigger card navigation)
+- Click copy icon copies deployment URL to clipboard without triggering navigation
+- Visual feedback on successful copy action (icon change or tooltip)
+
+**Smart Display**:
+- Deployment URL section hidden when not configured (no empty placeholder)
+- GitHub link section hidden when not configured
+- Full ticket title visible via tooltip on hover for truncated titles
+- Relative timestamps update on page refresh
 
 ### Empty State
 
@@ -55,7 +73,7 @@ When no projects exist:
 ### Navigation
 
 **To Project Board**:
-- Click any project in list
+- Click any project card (except interactive elements)
 - Redirects to project's Kanban board
 - URL format: `/projects/{projectId}/board`
 
