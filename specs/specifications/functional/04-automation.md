@@ -186,6 +186,14 @@ When ticket moves directly from INBOX to BUILD:
 - Executes /quick-impl command instead of /implement
 - AI implements based solely on title and description context
 - No formal requirements or planning documents
+- **Sets ticket.workflowType to QUICK** (atomically with job creation)
+
+**WorkflowType Impact**:
+- **QUICK**: Set automatically when using quick-impl
+- Persists through all subsequent stage transitions
+- Controls verification behavior (BUILD → VERIFY skips tests)
+- Visual indicator: ⚡ Quick badge shown on ticket card
+- Immutable after first BUILD transition (application-level enforcement)
 
 **Use Cases**:
 - Bug fixes (typos, small corrections)
@@ -207,14 +215,31 @@ When ticket moves from BUILD to VERIFY stage:
 
 1. System creates verification job
 2. Workflow checks out feature branch
-3. All tests executed (unit + E2E)
-4. If tests fail: Generate structured failure report
-5. AI analyzes failures and applies systematic fixes
-6. Tests re-run until all pass
-7. Pull request created only if all tests pass
-8. Job status updates to COMPLETED
+3. **Workflow behavior depends on workflowType**:
+   - **FULL workflow**: Complete test suite execution and verification
+   - **QUICK workflow**: Skip tests, proceed directly to PR creation
+4. Job status updates to COMPLETED
 
-### Test Execution Strategy
+### Workflow Type Behavior
+
+**FULL Workflow (Normal Implementation)**:
+- Executes complete test verification process (see Test Execution Strategy below)
+- Runs all tests (unit + E2E)
+- Generates failure reports if tests fail
+- AI analyzes failures and applies systematic fixes
+- Creates PR only after all tests pass
+- **Time**: ~10-45 minutes (depends on test results)
+
+**QUICK Workflow (Quick Implementation)**:
+- Skips all test execution steps
+- Skips database setup and Playwright installation
+- Skips failure analysis and verification
+- Proceeds directly to PR creation
+- **Time**: ~2-5 minutes (minimal overhead)
+- **Use**: Simple changes where tests are unnecessary (typos, styling, docs)
+- **Risk**: No automated validation before PR
+
+### Test Execution Strategy (FULL Workflow Only)
 
 **Phase 1: Test Execution**
 - Unit tests run first (fast feedback)
@@ -385,6 +410,7 @@ Workflows execute on GitHub Actions infrastructure:
 - Project ID for context
 - Job ID for status tracking
 - Branch name (empty for new branches)
+- WorkflowType (FULL or QUICK) - controls verify.yml test execution
 - User information (for AI-BOARD mentions)
 - Comment content (for AI-BOARD requests)
 

@@ -413,10 +413,10 @@ Transition ticket to target stage with workflow dispatch.
 
 **Transition Logic**:
 - **INBOX → SPECIFY**: Creates job, dispatches workflow (specify command)
-- **INBOX → BUILD**: Quick-impl mode, creates job, dispatches quick-impl workflow
+- **INBOX → BUILD**: Quick-impl mode, creates job, dispatches quick-impl workflow, sets workflowType=QUICK
 - **SPECIFY → PLAN**: Validates specify job completed, creates job, dispatches workflow (plan command)
 - **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
-- **BUILD → VERIFY**: Manual transition (no workflow)
+- **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
 - **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
 - **VERIFY → SHIP**: Manual transition (no workflow)
 
