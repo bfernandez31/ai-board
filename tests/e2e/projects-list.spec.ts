@@ -64,6 +64,41 @@ test.describe('Projects List Page', () => {
     expect(filter).toContain('brightness');
   });
 
+  test('displays shipped ticket metadata below ticket title', async ({ page }) => {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    try {
+      // Create a shipped ticket for testing the layout
+      await prisma.ticket.create({
+        data: {
+          id: 999,
+          title: '[e2e] Test Shipped Ticket',
+          description: 'Test ticket for layout verification',
+          stage: 'SHIP',
+          projectId: 1,
+          updatedAt: new Date(),
+        },
+      });
+
+      await page.goto('http://localhost:3000/projects');
+      await page.waitForSelector('[data-testid="project-card"]');
+
+      // Find the card for project 1 (which now has a shipped ticket)
+      const cardWithShippedTicket = page.locator('[data-testid="project-card"][data-project-id="1"]');
+
+      // Verify the metadata (timestamp and count) is on a separate line below the title
+      const metadata = cardWithShippedTicket.locator('[data-testid="shipped-ticket-metadata"]');
+      await expect(metadata).toBeVisible();
+
+      // Verify metadata contains timestamp and count
+      await expect(metadata.locator('[data-testid="shipped-ticket-time"]')).toBeVisible();
+      await expect(metadata.locator('[data-testid="ticket-count"]')).toBeVisible();
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
   test('displays Import and Create Project buttons as disabled when projects exist', async ({ page }) => {
     await page.goto('http://localhost:3000/projects');
 

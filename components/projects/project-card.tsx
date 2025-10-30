@@ -101,23 +101,27 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <CardContent>
         {/* Shipped Ticket Status (User Story 1) */}
         {project.lastShippedTicket ? (
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle className="h-4 w-4 text-[#a6e3a1] flex-shrink-0" />
-            <span
-              className="text-[#cdd6f4] truncate"
-              data-testid="shipped-ticket-title"
-              title={project.lastShippedTicket.title}
-            >
-              {project.lastShippedTicket.title}
-            </span>
-            {mounted && (
-              <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
-                · Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle className="h-4 w-4 text-[#a6e3a1] flex-shrink-0" />
+              <span
+                className="text-[#cdd6f4] truncate"
+                data-testid="shipped-ticket-title"
+                title={project.lastShippedTicket.title}
+              >
+                {project.lastShippedTicket.title}
               </span>
-            )}
-            <span className="text-[#6c7086] whitespace-nowrap" data-testid="ticket-count">
-              · {project.ticketCount} total
-            </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm pl-6" data-testid="shipped-ticket-metadata">
+              {mounted && (
+                <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
+                  Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
+                </span>
+              )}
+              <span className="text-[#6c7086] whitespace-nowrap" data-testid="ticket-count">
+                · {project.ticketCount} total
+              </span>
+            </div>
           </div>
         ) : (
           <span className="text-sm text-[#6c7086]" data-testid="no-shipped-tickets">
