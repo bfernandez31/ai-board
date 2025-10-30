@@ -45,7 +45,7 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/.idea/
-.env.test
+# .env.test is now committed (contains only test templates, no real secrets)
 .test-user-id
 
 # temporary ticket assets (uploaded to Cloudinary)
