@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
-import { getTicketsByStage } from '@/lib/db/tickets';
+import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
-import { getAllJobsForTickets } from '@/lib/job-queries';
 
 // Force dynamic rendering to ensure fresh data on router.refresh()
 export const dynamic = 'force-dynamic';
@@ -31,29 +30,27 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  // Check if project exists and belongs to current user
-  try {
-    await getProject(projectId);
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === 'Project not found' || error.message === 'Unauthorized')
-    ) {
-      notFound();
-    }
-    throw error;
-  }
+  // Fetch project and tickets+jobs in parallel (validation + data)
+  // Single optimized query for tickets with jobs included
+  const [, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+    getProject(projectId).catch((error) => {
+      if (
+        error instanceof Error &&
+        (error.message === 'Project not found' || error.message === 'Unauthorized')
+      ) {
+        notFound();
+      }
+      throw error;
+    }),
+    getTicketsWithJobs(projectId),
+  ]);
 
-  // Fetch tickets for this project
-  const ticketsByStage = await getTicketsByStage(projectId);
-
-  // Get all ticket IDs for job fetching
-  const allTickets = Object.values(ticketsByStage).flat();
-  const ticketIds = allTickets.map((ticket) => ticket.id);
-
-  // Fetch initial jobs for all tickets (single batch query)
-  // For dual job display, we need ALL jobs per ticket, not just one
-  const initialJobs = await getAllJobsForTickets(ticketIds);
+  // Transform tickets with jobs into initialJobs map
+  // Jobs are already included in the tickets query (no N+1 problem)
+  const allTicketsWithJobs = Object.values(ticketsWithJobs).flat();
+  const initialJobs = new Map(
+    allTicketsWithJobs.map((ticket) => [ticket.id, ticket.jobs])
+  );
 
   return (
     <main className="h-[calc(100vh-4rem)] bg-black overflow-hidden">

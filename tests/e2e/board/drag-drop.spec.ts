@@ -138,7 +138,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
       await page.mouse.down();
       await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
       await page.mouse.up();
-      await page.waitForTimeout(500); // Wait for UI update
+      await page.waitForTimeout(300); // Wait for UI update and API call
     }
   };
 
@@ -159,15 +159,17 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
 
     // Step 1: Drag ticket from INBOX to SPECIFY
+    // Wait for the API transition request to complete
+    const transitionPromise = page.waitForResponse(resp =>
+      resp.url().includes('/transition') && resp.status() === 200
+    );
     await dragTicketToColumn(page, ticket.id, 'SPECIFY');
+    await transitionPromise;
 
     // Verify ticket moved to SPECIFY column
     const specifyColumn = page.locator('[data-stage="SPECIFY"]');
     await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
     await expect(inboxColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
-
-    // Wait longer for server processing
-    await page.waitForTimeout(500);
 
     // Verify database updated to SPECIFY
     let updatedTicket = await getTicket(ticket.id);
@@ -179,15 +181,17 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     await completeJobForTicket(ticket.id);
 
     // Step 2: Drag ticket from SPECIFY to PLAN
+    // Wait for the API transition request to complete
+    const transitionPromise2 = page.waitForResponse(resp =>
+      resp.url().includes('/transition') && resp.status() === 200
+    );
     await dragTicketToColumn(page, ticket.id, 'PLAN');
+    await transitionPromise2;
 
     // Verify ticket moved to PLAN column
     const planColumn = page.locator('[data-stage="PLAN"]');
     await expect(planColumn.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
     await expect(specifyColumn.locator(`[data-ticket-id="${ticket.id}"]`)).not.toBeVisible();
-
-    // Wait longer for server processing
-    await page.waitForTimeout(500);
 
     // Verify database updated to PLAN
     updatedTicket = await getTicket(ticket.id);
@@ -210,8 +214,8 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     // Use mouse events for @dnd-kit compatibility
     await dragTicketToColumn(page, ticket.id, 'SHIP');
 
-    // Wait for drag operation to complete
-    await page.waitForTimeout(500);
+    // Wait for drag operation to complete (optimized: 200ms)
+    await page.waitForTimeout(200);
 
     // Verify ticket returned to PLAN column
     const planColumn = page.locator('[data-stage="PLAN"]');
@@ -278,11 +282,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
     // User 1 drags first (should succeed)
     await dragTicketToColumn(page1, ticket.id, 'SPECIFY');
-    await page1.waitForTimeout(500);
+    await page1.waitForTimeout(200);
 
     // User 2 attempts to drag the same ticket (should get version conflict since ticket is now version 2)
     await dragTicketToColumn(page2, ticket.id, 'PLAN'); // Try to move to PLAN (will fail due to stale version)
-    await page2.waitForTimeout(500);
+    await page2.waitForTimeout(200);
 
     // Verify user 1 succeeded - ticket should be in SPECIFY
     const specifyColumn1 = page1.locator('[data-stage="SPECIFY"]');
@@ -466,7 +470,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
       await page.waitForTimeout(300); // Long-press delay (> 250ms threshold)
       await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
       await page.mouse.up();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(200);
     }
 
     // Verify ticket moved to SPECIFY (drag succeeded)

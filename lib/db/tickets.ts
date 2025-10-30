@@ -109,3 +109,85 @@ export async function createTicket(
     data: dataWithOptionals,
   });
 }
+
+/**
+ * Fetch all tickets for a specific project with their jobs (optimized)
+ * Single query with jobs included - no N+1 problem
+ * Sorted by most recently updated first
+ * @param projectId - The project ID to filter tickets by
+ * @returns Tickets grouped by stage with jobs included
+ */
+export async function getTicketsWithJobs(projectId: number) {
+  const tickets = await prisma.ticket.findMany({
+    where: { projectId },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      stage: true,
+      version: true,
+      projectId: true,
+      branch: true,
+      autoMode: true,
+      clarificationPolicy: true,
+      workflowType: true,
+      attachments: true,
+      createdAt: true,
+      updatedAt: true,
+      project: {
+        select: {
+          clarificationPolicy: true,
+          githubOwner: true,
+          githubRepo: true,
+        },
+      },
+      jobs: {
+        orderBy: { startedAt: 'desc' },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  // Group tickets by stage with new stage names
+  const grouped = getAllStages().reduce(
+    (acc, stage) => {
+      acc[stage] = [];
+      return acc;
+    },
+    {} as Record<Stage, typeof tickets>
+  );
+
+  // Transform tickets to TicketWithVersion format (without jobs)
+  const groupedTickets = getAllStages().reduce(
+    (acc, stage) => {
+      acc[stage] = [];
+      return acc;
+    },
+    {} as Record<Stage, TicketWithVersion[]>
+  );
+
+  tickets.forEach((ticket) => {
+    if (ticket.stage in groupedTickets) {
+      groupedTickets[ticket.stage as Stage].push({
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        stage: ticket.stage as Stage,
+        version: ticket.version,
+        projectId: ticket.projectId,
+        branch: ticket.branch,
+        autoMode: ticket.autoMode,
+        clarificationPolicy: ticket.clarificationPolicy,
+        workflowType: ticket.workflowType,
+        attachments: ticket.attachments,
+        createdAt: ticket.createdAt.toISOString(),
+        updatedAt: ticket.updatedAt.toISOString(),
+        project: ticket.project,
+      });
+      // Keep original tickets with jobs for job map
+      grouped[ticket.stage as Stage].push(ticket);
+    }
+  });
+
+  return { ticketsByStage: groupedTickets, ticketsWithJobs: grouped };
+}
