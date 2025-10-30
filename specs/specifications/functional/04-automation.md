@@ -39,7 +39,7 @@ Users can monitor job progress:
   - Verification jobs: "TESTING" when running
   - AI-BOARD jobs: "ASSISTING" when running
 - Polling stops automatically when job reaches terminal state
-- Board automatically refreshes when job completes and ticket stage changes
+- Board automatically refreshes within 2-3 seconds when job completes and workflow transitions ticket to new stage
 
 ### Job Restrictions
 
@@ -359,6 +359,47 @@ When tests cannot be fixed automatically:
 - Clear error messages guide AI to correct fixes
 - Structured failure reports enable systematic analysis
 - Quality gates prevent introducing new issues
+
+## Workflow-Initiated Stage Transitions
+
+### Automatic Stage Updates
+
+Certain workflows automatically transition tickets to new stages when they complete:
+
+**Quick Implementation (INBOX → BUILD → VERIFY)**:
+- Quick-impl workflow completes implementation in BUILD stage
+- Workflow automatically transitions ticket to VERIFY stage
+- User sees ticket move from BUILD column to VERIFY column within 2-3 seconds
+- No manual intervention required
+
+**Auto-Ship Deployment (VERIFY → SHIP)**:
+- Production deployment completes successfully
+- Auto-ship workflow detects merged ticket branches
+- Workflow automatically transitions merged tickets to SHIP stage
+- Users see tickets move from VERIFY column to SHIP column within 2-3 seconds
+- Only tickets with merged branches are transitioned
+
+### Real-Time Synchronization
+
+**How It Works**:
+1. Workflow completes and updates job status to COMPLETED/FAILED/CANCELLED
+2. Workflow transitions ticket to new stage via API call (if applicable)
+3. Client polling hook detects terminal job status (2-second polling interval)
+4. TanStack Query cache automatically invalidates
+5. Board refetches latest ticket data from server
+6. Ticket appears in new stage column with updated job status
+
+**User Experience**:
+- Automatic updates without page refresh
+- Smooth visual transitions between columns
+- Correct job status indicators after transition
+- Works for both single and multiple concurrent workflows
+
+**Edge Cases Handled**:
+- Multiple rapid stage transitions (BUILD → VERIFY → SHIP within 4 seconds)
+- Network latency delays in refetch requests
+- Concurrent manual drag-and-drop during workflow transitions
+- Polling endpoint failures or timeouts
 
 ## Branch Management
 

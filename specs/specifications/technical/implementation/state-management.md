@@ -541,7 +541,7 @@ queryClient.setQueryData(
 
 ### Workflow-Triggered Cache Invalidation
 
-**Pattern**: When workflows complete and transition tickets to new stages, the board automatically updates via cache invalidation.
+**Pattern**: When workflows complete (reach terminal state), the board automatically updates via cache invalidation. This ensures ticket stage changes are reflected in the UI without manual refresh.
 
 **Implementation** (`useJobPolling` hook):
 
@@ -553,7 +553,7 @@ useEffect(() => {
       const wasNotTerminalBefore = !terminalJobIds.has(job.id);
 
       if (isTerminal && wasNotTerminalBefore) {
-        // Invalidate tickets cache when job transitions to terminal state
+        // Invalidate tickets cache when ANY job transitions to terminal state
         queryClient.invalidateQueries({
           queryKey: queryKeys.projects.tickets(projectId),
         });
@@ -566,26 +566,42 @@ useEffect(() => {
 }, [data?.jobs, terminalJobIds, projectId, queryClient]);
 ```
 
+**Invalidation Trigger**:
+- Cache invalidates when ANY job reaches terminal status (COMPLETED, FAILED, or CANCELLED)
+- Applies to ALL job types:
+  - **Workflow completion jobs**: specify, plan, implement (ticket remains in same stage)
+  - **Stage transition jobs**: quick-impl → verify, verify → ship (ticket moves to new stage)
+- No distinction made between job types - simplified logic for reliability
+
 **Flow**:
 1. **Job Polling**: Client polls `/api/projects/:projectId/jobs/status` every 2 seconds
 2. **Terminal Detection**: Hook detects when job transitions to COMPLETED/FAILED/CANCELLED
 3. **Cache Invalidation**: Automatically invalidates `queryKeys.projects.tickets(projectId)`
 4. **Board Refetch**: TanStack Query refetches tickets from `/api/projects/:projectId/tickets`
-5. **UI Update**: Board re-renders with updated ticket positions
-6. **Deduplication**: Terminal job IDs tracked to prevent duplicate invalidations
+5. **UI Update**: Board re-renders with updated ticket data (stage changes, job status updates)
+6. **Deduplication**: Terminal job IDs tracked client-side to prevent duplicate invalidations for same job
 
 **Benefits**:
-- **Automatic**: No manual refresh required
-- **Efficient**: Only invalidates when workflows complete (not during PENDING/RUNNING)
+- **Automatic**: No manual refresh required for workflow-initiated stage transitions
+- **Simple**: Invalidates on ANY terminal job status (no command type detection needed)
 - **Consistent**: Uses existing TanStack Query infrastructure
 - **Race-Safe**: TanStack Query deduplicates concurrent refetch requests
-- **Eventual Consistency**: Server state is source of truth
+- **Eventual Consistency**: Server state is source of truth (2-3 second sync window)
+- **Reliable**: Catches all stage transitions regardless of workflow type
+
+**Performance**:
+- **Deduplication**: Multiple jobs finishing within 2 seconds → single API call
+- **Minimal Overhead**: One additional tickets refetch per terminal job (acceptable trade-off)
+- **No Excessive Polling**: Terminal job tracking prevents duplicate invalidations
+- **Target Latency**: 2-3 seconds from workflow completion to UI update
 
 **Edge Cases**:
 - **Offline Recovery**: Board refetches when network reconnects (built-in TanStack Query feature)
 - **Concurrent Workflows**: Multiple jobs finishing simultaneously → single API call via deduplication
-- **Polling Stopped**: If all jobs terminal before invalidation, next job creation resumes polling
+- **Rapid Stage Transitions**: Multiple workflow-initiated transitions (e.g., BUILD → VERIFY → SHIP within 4s) handled correctly
 - **Manual Transitions**: Optimistic updates for drag-and-drop continue to work independently
+- **Polling Stopped**: If all jobs terminal before invalidation, next job creation resumes polling
+- **Network Latency**: TanStack Query retry logic ensures eventual consistency
 
 ### Implementation Pattern
 
