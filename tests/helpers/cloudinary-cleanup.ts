@@ -25,7 +25,7 @@ export async function cleanupCloudinaryTicketImages(ticketId: number): Promise<v
     const result = await deleteCloudinaryFolder(folderPath);
 
     if (result.deleted > 0) {
-      console.log(`[Cloudinary Cleanup] Deleted ${result.deleted} images for ticket ${ticketId}`);
+      console.error(`[Cloudinary Cleanup] Deleted ${result.deleted} images for ticket ${ticketId}`);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

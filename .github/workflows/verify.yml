@@ -220,8 +220,8 @@ jobs:
           echo "   Using 4 parallel workers, 10s timeout per test"
 
           # Run tests with CI-optimized configuration
-          # Keep stderr visible for debugging, capture stdout as JSON
-          if CI=true npx playwright test --config=playwright.ci.config.ts --reporter=json > e2e-results-full.json 2>&1; then
+          # Capture only stdout (JSON) to file, stderr (logs) goes to console
+          if CI=true npx playwright test --config=playwright.ci.config.ts --reporter=json > e2e-results-full.json; then
             echo "✅ E2E tests passed"
             echo "E2E_FAILED=false" >> "$GITHUB_ENV"
           else

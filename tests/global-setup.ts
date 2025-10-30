@@ -8,7 +8,7 @@ import * as fs from 'fs';
  * Runs once before all tests
  */
 async function globalSetup() {
-  console.log('\n🧹 Running global test setup...');
+  console.error('\n🧹 Running global test setup...');
 
   // Load environment variables from .env file
   const envPath = path.resolve(process.cwd(), '.env');
@@ -25,7 +25,7 @@ async function globalSetup() {
   const testUserIdPath = path.resolve(process.cwd(), '.test-user-id');
   fs.writeFileSync(testUserIdPath, testUserId, 'utf-8');
 
-  console.log(`✅ Global setup complete (test user ID: ${testUserId})\n`);
+  console.error(`✅ Global setup complete (test user ID: ${testUserId})\n`);
 }
 
 export default globalSetup;

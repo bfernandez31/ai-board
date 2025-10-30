@@ -83,7 +83,7 @@ export async function ensureTestFixtures(): Promise<string> {
       },
     });
 
-    console.log('✓ Test fixtures ensured (user + 2 projects)');
+    console.error('✓ Test fixtures ensured (user + 2 projects)');
     return testUser.id;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
