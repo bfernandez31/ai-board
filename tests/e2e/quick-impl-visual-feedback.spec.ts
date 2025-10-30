@@ -94,7 +94,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Move mouse slightly to trigger drag (important for @dnd-kit)
     await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(100); // Wait for drag state to activate
+    await page.waitForTimeout(50); // Wait for drag state to activate
 
     // Check SPECIFY column - should have blue border (normal workflow)
     const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
@@ -157,7 +157,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Move mouse slightly to trigger drag
     await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(50);
 
     // Verify styling is applied during drag
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
@@ -166,7 +166,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // End drag
     await page.mouse.up();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(50);
 
     // Verify styling is removed after drag
     buildClasses = await buildColumn.getAttribute('class');
@@ -214,7 +214,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Move mouse slightly to trigger drag
     await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(50);
 
     // Check PLAN column - should have blue border (valid transition)
     const planColumn = page.locator('[data-testid="column-PLAN"]');
