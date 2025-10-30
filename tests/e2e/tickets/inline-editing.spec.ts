@@ -126,7 +126,6 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Close modal and verify board shows updated title
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
     const boardCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
     await expect(boardCard).toContainText('Updated Title');
   });
@@ -449,8 +448,8 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await titleInput.fill('My Update');
     await titleInput.press('Enter');
 
-    // Give time for the request to complete and toast to render
-    await page.waitForTimeout(1000);
+    // Wait for API error response
+    await page.waitForTimeout(300);
 
     // Assert: API returns 409
     // Wait for conflict toast
@@ -495,7 +494,6 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Close modal
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
 
     // Assert: board shows updated title
     await expect(boardCard).toContainText('Updated Title');
@@ -626,8 +624,8 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Type invalid character (emoji)
     await textarea.fill('Bug with emoji 😀');
 
-    // Wait for validation to run
-    await page.waitForTimeout(100);
+    // Wait for validation to run (optimized)
+    await page.waitForTimeout(50);
 
     // Verify error message appears
     const errorMessage = page.getByTestId('description-error');
@@ -664,8 +662,8 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     // Use emoji instead which is definitely invalid
     await textarea.fill('Bug 🚀');
 
-    // Wait for validation to run
-    await page.waitForTimeout(100);
+    // Wait for validation to run (optimized)
+    await page.waitForTimeout(50);
 
     // Wait for error message
     const errorMessage = page.getByTestId('description-error');
@@ -683,7 +681,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Verify: User can fix the error and save
     await textarea.fill('Bug fixed'); // Remove emoji
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(50);
 
     // Error should be gone and Save button enabled
     await expect(errorMessage).not.toBeVisible();
