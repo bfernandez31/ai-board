@@ -15,8 +15,8 @@
  * }
  */
 
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');
+const path = require('path');
 
 // Parse command-line arguments
 function parseArgs() {
@@ -175,7 +175,10 @@ function processE2ETests(results) {
     if (suite.specs) {
       suite.specs.forEach(spec => {
         spec.tests?.forEach(test => {
-          if (test.status === 'failed' || test.status === 'timedOut') {
+          // Playwright uses test.status = "expected" for passing tests
+          // and test.status = "unexpected" for failures
+          // Also check for "timedOut" and "interrupted" status
+          if (test.status === 'unexpected' || test.status === 'timedOut' || test.status === 'interrupted') {
             const result = test.results?.[0];
             failures.push({
               testPath: `${suitePath} > ${spec.title}`,

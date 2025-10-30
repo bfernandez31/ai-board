@@ -171,7 +171,15 @@ jobs:
         continue-on-error: true
         run: |
           echo "🧪 Running unit tests..."
-          bun run test:unit --reporter=json --outputFile=unit-results-full.json || echo "UNIT_FAILED=true" >> "$GITHUB_ENV"
+
+          # Run unit tests and capture exit code
+          if bun run test:unit --reporter=json --outputFile=unit-results-full.json; then
+            echo "✅ Unit tests passed"
+            echo "UNIT_FAILED=false" >> "$GITHUB_ENV"
+          else
+            echo "❌ Unit tests failed"
+            echo "UNIT_FAILED=true" >> "$GITHUB_ENV"
+          fi
 
           # Extract only failed tests to reduce file size
           if [ -f "unit-results-full.json" ]; then
@@ -202,7 +210,13 @@ jobs:
 
           # Run tests with CI-optimized configuration
           # Use JSON reporter and redirect stderr to avoid mixing output
-          CI=true npx playwright test --config=playwright.ci.config.ts --reporter=json 2>/dev/null > e2e-results-full.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+          if CI=true npx playwright test --config=playwright.ci.config.ts --reporter=json 2>/dev/null > e2e-results-full.json; then
+            echo "✅ E2E tests passed"
+            echo "E2E_FAILED=false" >> "$GITHUB_ENV"
+          else
+            echo "❌ E2E tests failed"
+            echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+          fi
 
           # Check if JSON file exists and is valid
           if [ -f "e2e-results-full.json" ] && [ -s "e2e-results-full.json" ]; then
@@ -277,15 +291,29 @@ jobs:
 
       - name: Final Validation - Unit Tests
         if: ${{ env.SKIP_EXECUTION != 'true' && env.UNIT_FAILED == 'true' }}
+        id: final-unit-validation
         run: |
           echo "✅ Running final unit test validation..."
-          bun run test:unit
+          if bun run test:unit; then
+            echo "✅ All unit tests now pass after fixes"
+          else
+            echo "❌ Unit tests still failing after /verify fixes"
+            echo "💡 Check logs above for remaining failures"
+            exit 1
+          fi
 
       - name: Final Validation - E2E Tests
         if: ${{ env.SKIP_EXECUTION != 'true' && env.E2E_FAILED == 'true' }}
+        id: final-e2e-validation
         run: |
           echo "✅ Running final E2E test validation..."
-          npx playwright test
+          if npx playwright test; then
+            echo "✅ All E2E tests now pass after fixes"
+          else
+            echo "❌ E2E tests still failing after /verify fixes"
+            echo "💡 Check logs above for remaining failures"
+            exit 1
+          fi
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
