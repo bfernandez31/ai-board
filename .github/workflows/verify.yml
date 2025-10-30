@@ -195,30 +195,48 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         id: e2e-tests
         continue-on-error: true
+        timeout-minutes: 15  # Hard timeout at 15 minutes
         run: |
-          echo "🧪 Running E2E tests..."
-          # Run tests and capture full JSON output
-          npx playwright test --reporter=json > e2e-results-full.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+          echo "🧪 Running E2E tests with optimized CI configuration..."
+          echo "   Using 4 parallel workers, 10s timeout per test"
 
-          # Extract only failed tests to reduce file size
-          if [ -f "e2e-results-full.json" ]; then
-            echo "📊 Filtering E2E results to only include failures..."
-            node -e "
-              const fs = require('fs');
-              const results = JSON.parse(fs.readFileSync('e2e-results-full.json', 'utf-8'));
-              const filtered = {
-                ...results,
-                suites: results.suites?.map(suite => ({
-                  ...suite,
-                  specs: suite.specs?.filter(spec =>
-                    spec.tests?.some(test => test.status !== 'expected')
-                  )
-                })).filter(suite => suite.specs?.length > 0)
-              };
-              fs.writeFileSync('e2e-results.json', JSON.stringify(filtered, null, 2));
-              console.log(\`   Reduced from \${results.suites?.length || 0} suites to \${filtered.suites?.length || 0} suites with failures\`);
-            " || cp e2e-results-full.json e2e-results.json
+          # Run tests with CI-optimized configuration
+          # Use JSON reporter and redirect stderr to avoid mixing output
+          CI=true npx playwright test --config=playwright.ci.config.ts --reporter=json 2>/dev/null > e2e-results-full.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+
+          # Check if JSON file exists and is valid
+          if [ -f "e2e-results-full.json" ] && [ -s "e2e-results-full.json" ]; then
+            # Validate JSON before attempting to parse
+            if node -e "JSON.parse(require('fs').readFileSync('e2e-results-full.json', 'utf-8'))" 2>/dev/null; then
+              echo "📊 Filtering E2E results to only include failures..."
+              node -e "
+                const fs = require('fs');
+                try {
+                  const results = JSON.parse(fs.readFileSync('e2e-results-full.json', 'utf-8'));
+                  const filtered = {
+                    ...results,
+                    suites: results.suites?.map(suite => ({
+                      ...suite,
+                      specs: suite.specs?.filter(spec =>
+                        spec.tests?.some(test => test.status !== 'expected')
+                      )
+                    })).filter(suite => suite.specs?.length > 0)
+                  };
+                  fs.writeFileSync('e2e-results.json', JSON.stringify(filtered, null, 2));
+                  console.log(\`   Reduced from \${results.suites?.length || 0} suites to \${filtered.suites?.length || 0} suites with failures\`);
+                } catch (e) {
+                  console.error('   Failed to filter results:', e.message);
+                  fs.copyFileSync('e2e-results-full.json', 'e2e-results.json');
+                }
+              "
+            else
+              echo "⚠️  Invalid JSON in e2e-results-full.json, using empty results"
+              echo '{"suites":[]}' > e2e-results.json
+            fi
             rm -f e2e-results-full.json
+          else
+            echo "⚠️  No E2E results file generated, creating empty results"
+            echo '{"suites":[]}' > e2e-results.json
           fi
 
       # Phase 2: Generate Failure Report
