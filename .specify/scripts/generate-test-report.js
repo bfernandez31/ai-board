@@ -39,6 +39,14 @@ function readTestResults(filePath) {
     return null;
   }
 
+  // Check if path is a directory instead of a file
+  const stats = fs.statSync(filePath);
+  if (stats.isDirectory()) {
+    console.error(`❌ Expected file but got directory: ${filePath}`);
+    console.warn(`   Skipping ${path.basename(filePath)} - no test results available`);
+    return null;
+  }
+
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(content);

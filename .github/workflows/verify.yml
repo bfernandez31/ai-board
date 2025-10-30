@@ -171,7 +171,25 @@ jobs:
         continue-on-error: true
         run: |
           echo "🧪 Running unit tests..."
-          bun run test:unit --reporter=json --outputFile=unit-results.json || echo "UNIT_FAILED=true" >> "$GITHUB_ENV"
+          bun run test:unit --reporter=json --outputFile=unit-results-full.json || echo "UNIT_FAILED=true" >> "$GITHUB_ENV"
+
+          # Extract only failed tests to reduce file size
+          if [ -f "unit-results-full.json" ]; then
+            echo "📊 Filtering unit test results to only include failures..."
+            node -e "
+              const fs = require('fs');
+              const results = JSON.parse(fs.readFileSync('unit-results-full.json', 'utf-8'));
+              const filtered = {
+                ...results,
+                testResults: results.testResults?.filter(file =>
+                  file.assertionResults?.some(test => test.status === 'failed')
+                )
+              };
+              fs.writeFileSync('unit-results.json', JSON.stringify(filtered, null, 2));
+              console.log(\`   Reduced from \${results.testResults?.length || 0} files to \${filtered.testResults?.length || 0} files with failures\`);
+            " || cp unit-results-full.json unit-results.json
+            rm -f unit-results-full.json
+          fi
 
       - name: Run E2E Tests
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -179,7 +197,29 @@ jobs:
         continue-on-error: true
         run: |
           echo "🧪 Running E2E tests..."
-          npx playwright test --reporter=json --output=e2e-results.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+          # Run tests and capture full JSON output
+          npx playwright test --reporter=json > e2e-results-full.json || echo "E2E_FAILED=true" >> "$GITHUB_ENV"
+
+          # Extract only failed tests to reduce file size
+          if [ -f "e2e-results-full.json" ]; then
+            echo "📊 Filtering E2E results to only include failures..."
+            node -e "
+              const fs = require('fs');
+              const results = JSON.parse(fs.readFileSync('e2e-results-full.json', 'utf-8'));
+              const filtered = {
+                ...results,
+                suites: results.suites?.map(suite => ({
+                  ...suite,
+                  specs: suite.specs?.filter(spec =>
+                    spec.tests?.some(test => test.status !== 'expected')
+                  )
+                })).filter(suite => suite.specs?.length > 0)
+              };
+              fs.writeFileSync('e2e-results.json', JSON.stringify(filtered, null, 2));
+              console.log(\`   Reduced from \${results.suites?.length || 0} suites to \${filtered.suites?.length || 0} suites with failures\`);
+            " || cp e2e-results-full.json e2e-results.json
+            rm -f e2e-results-full.json
+          fi
 
       # Phase 2: Generate Failure Report
       - name: Generate Test Failure Report
