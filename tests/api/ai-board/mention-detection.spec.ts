@@ -67,6 +67,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
         title: '[e2e] Test Ticket',
         description: 'Test ticket for AI-BOARD mentions',
         stage: 'SPECIFY',
+        branch: '001-test-ticket', // Required for AI-BOARD workflow dispatch
         projectId: 1,
         updatedAt: new Date(),
       },
