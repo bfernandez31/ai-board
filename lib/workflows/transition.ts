@@ -295,6 +295,7 @@ export async function handleTicketTransition(
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             branch: ticket.branch || '', // Branch must exist for VERIFY stage
+            workflowType: ticket.workflowType, // FULL or QUICK determines if tests should run
           };
 
           workflowFile = 'verify.yml';

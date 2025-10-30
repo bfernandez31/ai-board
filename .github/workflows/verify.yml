@@ -24,6 +24,11 @@ on:
         required: true
         type: string
 
+      workflowType:
+        description: 'Workflow type (FULL or QUICK)'
+        required: true
+        type: string
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -52,6 +57,7 @@ jobs:
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
@@ -64,11 +70,20 @@ jobs:
           echo "  job_id: ${{ inputs.job_id }}"
           echo "  project_id: ${{ inputs.project_id }}"
           echo "  branch: ${{ inputs.branch }}"
+          echo "  workflowType: ${{ inputs.workflowType }}"
+          echo "  SKIP_TESTS: ${{ env.SKIP_TESTS }}"
 
       - name: Report E2E Skip
         if: ${{ env.SKIP_EXECUTION == 'true' }}
         run: |
           echo "ℹ️ '[e2e]' detected in ticket ID; skipping execution to preserve resources"
+
+      - name: Report QUICK Workflow
+        if: ${{ env.SKIP_TESTS == 'true' }}
+        run: |
+          echo "⚡ QUICK workflow detected (workflowType=QUICK)"
+          echo "ℹ️  Skipping test execution and verification"
+          echo "ℹ️  Will proceed directly to PR creation"
 
       - name: Update Job Status - Running
         if: ${{ inputs.job_id }}
@@ -119,7 +134,7 @@ jobs:
           git config --global user.email "bot@ai-board.app"
 
       - name: Setup Test Environment
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -131,25 +146,25 @@ jobs:
 
       # Database setup steps
       - name: Generate Prisma Client
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         run: npx prisma generate
 
       - name: Apply Database Migrations
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         run: npx prisma migrate deploy
 
       - name: Seed Test Database
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         run: npx tsx tests/global-setup.ts
 
       # Playwright setup - GitHub runners have system deps pre-installed
       - name: Get Playwright Version
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         uses: actions/cache@v4
         id: playwright-cache
         with:
@@ -157,12 +172,12 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         run: npx playwright install chromium
 
       # Phase 1: Test Execution
       - name: Run Unit Tests
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         id: unit-tests
         continue-on-error: true
         run: |
@@ -196,7 +211,7 @@ jobs:
           fi
 
       - name: Run E2E Tests
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
         id: e2e-tests
         continue-on-error: true
         timeout-minutes: 15  # Hard timeout at 15 minutes
@@ -292,7 +307,7 @@ jobs:
 
       # Phase 2: Generate Failure Report
       - name: Generate Test Failure Report
-        if: ${{ env.SKIP_EXECUTION != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         run: |
           echo "📊 Generating structured test failure report..."
           node .specify/scripts/generate-test-report.js \
@@ -302,7 +317,7 @@ jobs:
 
       # Phase 3: Claude Fix Execution
       - name: Execute /verify Command
-        if: ${{ env.SKIP_EXECUTION != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         run: |
           echo "🤖 Executing /verify command to fix test failures..."
           echo ""
