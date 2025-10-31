@@ -28,23 +28,33 @@ Describes HOW the application is implemented:
 
 ## 📝 Documentation Maintenance
 
-### When Developing a New Feature
+### Automated Documentation Updates
 
-1. **Before Development**
-   - Read relevant functional specs to understand expected behavior
-   - Review technical docs for implementation patterns
+Documentation is **automatically updated** during the feature development workflow:
 
-2. **After Development**
-   - Update functional specs with new/changed behaviors
-   - Update technical docs with implementation details
-   - Ensure both reflect the current state (no historical notes)
+#### Development Stages (SPECIFY → PLAN → BUILD)
+- **Ticket specification** in `specs/{branch}/spec.md` is created and maintained
+- **Global documentation** (`specs/specifications/`) remains unchanged during development
+- AI-BOARD assistant can help iterate on ticket specifications
+
+#### Verification Stage (VERIFY)
+- **Automated workflow** updates global documentation before PR creation
+- Updates functional specs with new user-facing behaviors
+- Updates technical docs with implementation details
+- Documentation reflects the verified, tested implementation
+
+#### What Gets Updated Automatically
+- ✅ **Functional Specs**: New features, changed behaviors, updated workflows
+- ✅ **Technical Docs**: New API endpoints, data models, implementation patterns
+- ✅ **CLAUDE.md**: New technologies, architectural patterns, conventions
 
 ### Documentation Principles
 
 - ✅ **Current State Only**: Always document what exists NOW
 - ✅ **No History**: Remove outdated information, don't mark as deprecated
 - ✅ **Clear Separation**: Functional = WHAT, Technical = HOW
-- ✅ **Living Documents**: Update with every feature/fix
+- ✅ **Living Documents**: Updated automatically with every feature
+- ✅ **Single Update**: Documentation updated once before PR (not during iterations)
 
 ## 🗂️ Quick Navigation
 
