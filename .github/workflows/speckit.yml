@@ -324,7 +324,7 @@ jobs:
               claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests. Do the commit and push"
+              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. Do the commit and push, continue fix if needed"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
