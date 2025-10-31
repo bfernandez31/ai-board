@@ -281,10 +281,14 @@ test.describe('GET /api/projects/{projectId}/jobs/status - Contract Tests', () =
   });
 
   test('response time is under 100ms (p95 performance requirement)', async ({ request }) => {
-    const iterations = 20; // Sample size for p95 calculation
+    const testIterations = 20; // Sample size for p95 calculation
     const responseTimes: number[] = [];
 
-    for (let i = 0; i < iterations; i++) {
+    // Warm-up request to trigger compilation (exclude from timing)
+    await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
+
+    // Timed requests
+    for (let i = 0; i < testIterations; i++) {
       const startTime = Date.now();
       const response = await request.get(ENDPOINT.replace('{projectId}', String(TEST_PROJECT_ID)));
       const endTime = Date.now();

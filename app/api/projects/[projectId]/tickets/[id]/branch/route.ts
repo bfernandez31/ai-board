@@ -5,6 +5,91 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 /**
+ * GET /api/projects/[projectId]/tickets/[id]/branch
+ * Returns 404 for non-existent tickets (common error case handling)
+ *
+ * Error Responses:
+ * - 404: Project or ticket not found
+ * - 500: Internal server error
+ */
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ projectId: string; id: string }> }
+): Promise<NextResponse> {
+  try {
+    // Await params in Next.js 15
+    const params = await context.params;
+    const { projectId: projectIdString, id: ticketIdString } = params;
+
+    // Validate projectId format
+    const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
+    if (!projectIdResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid project ID',
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
+    }
+
+    const projectId = parseInt(projectIdString, 10);
+
+    // Validate ticket ID
+    const ticketId = parseInt(ticketIdString, 10);
+    if (isNaN(ticketId)) {
+      return NextResponse.json(
+        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
+        { status: 400 }
+      );
+    }
+
+    // Check if project exists
+    const project = await getProjectById(projectId);
+    if (!project) {
+      return NextResponse.json(
+        {
+          error: 'Project not found',
+          code: 'PROJECT_NOT_FOUND',
+        },
+        { status: 404 }
+      );
+    }
+
+    // Check if ticket exists
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id: ticketId,
+        projectId: projectId,
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { error: 'Ticket not found' },
+        { status: 404 }
+      );
+    }
+
+    // Return ticket branch info
+    return NextResponse.json(
+      {
+        id: ticket.id,
+        branch: ticket.branch,
+        updatedAt: ticket.updatedAt.toISOString(),
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error getting ticket branch:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * PATCH /api/projects/[projectId]/tickets/[id]/branch
  * Specialized endpoint for updating ticket branch name
  *
