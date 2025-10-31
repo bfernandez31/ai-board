@@ -26,13 +26,13 @@
 
 **⚠️ CRITICAL**: This phase MUST complete before any other work. Migration includes data population for existing tickets.
 
-- [ ] T001 Update Prisma schema to add Project.key field (VARCHAR(6), unique, not null, indexed, 3-6 characters) in prisma/schema.prisma
-- [ ] T002 Update Prisma schema to add Ticket.ticketNumber field (INT, not null, unique per project) in prisma/schema.prisma
-- [ ] T003 Update Prisma schema to add Ticket.ticketKey field (VARCHAR(20), unique, not null, indexed) in prisma/schema.prisma
-- [ ] T004 Generate Prisma migration with --create-only flag using name "jira_style_numbering"
-- [ ] T005 Update migration SQL to include complete migration script with: schema changes, sequence function creation, project key population, ticket number/key population, constraints, indexes, and sequence initialization in prisma/migrations/YYYYMMDDHHMMSS_jira_style_numbering/migration.sql
-- [ ] T006 Test migration on local database (backup first, run migration, verify all projects have keys, all tickets have numbers/keys)
-- [ ] T007 Run Prisma generate to update TypeScript types for new fields
+- [X] T001 Update Prisma schema to add Project.key field (VARCHAR(6), unique, not null, indexed, 3-6 characters) in prisma/schema.prisma
+- [X] T002 Update Prisma schema to add Ticket.ticketNumber field (INT, not null, unique per project) in prisma/schema.prisma
+- [X] T003 Update Prisma schema to add Ticket.ticketKey field (VARCHAR(20), unique, not null, indexed) in prisma/schema.prisma
+- [X] T004 Generate Prisma migration with --create-only flag using name "jira_style_numbering"
+- [X] T005 Update migration SQL to include complete migration script with: schema changes, sequence function creation, project key population, ticket number/key population, constraints, indexes, and sequence initialization in prisma/migrations/YYYYMMDDHHMMSS_jira_style_numbering/migration.sql
+- [X] T006 Test migration on local database (backup first, run migration, verify all projects have keys, all tickets have numbers/keys)
+- [X] T007 Run Prisma generate to update TypeScript types for new fields
 
 **Checkpoint**: Database schema complete with all existing data migrated - API and frontend work can now begin in parallel
 
@@ -44,11 +44,11 @@
 
 **⚠️ CRITICAL**: These utilities are required for ticket creation and lookup. Must complete before user story implementation.
 
-- [ ] T008 [P] Create project key validation schema using Zod (3-6 uppercase alphanumeric chars, transform to uppercase) in app/lib/schemas/project.ts
-- [ ] T009 [P] Create ticket key validation schema using Zod (format: KEY-NUM regex) in app/lib/schemas/ticket.ts
-- [ ] T010 [P] Update ticket response schema to include ticketNumber and ticketKey fields in app/lib/schemas/ticket.ts
-- [ ] T011 [P] Update project create schema to accept optional key field in app/lib/schemas/project.ts
-- [ ] T012 Create getNextTicketNumber helper function that calls PostgreSQL sequence function via Prisma.$queryRaw in app/lib/db/ticket-sequence.ts
+- [X] T008 [P] Create project key validation schema using Zod (3-6 uppercase alphanumeric chars, transform to uppercase) in app/lib/schemas/project.ts
+- [X] T009 [P] Create ticket key validation schema using Zod (format: KEY-NUM regex) in app/lib/schemas/ticket.ts
+- [X] T010 [P] Update ticket response schema to include ticketNumber and ticketKey fields in app/lib/schemas/ticket.ts
+- [X] T011 [P] Update project create schema to accept optional key field in app/lib/schemas/project.ts
+- [X] T012 Create getNextTicketNumber helper function that calls PostgreSQL sequence function via Prisma.$queryRaw in app/lib/db/ticket-sequence.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

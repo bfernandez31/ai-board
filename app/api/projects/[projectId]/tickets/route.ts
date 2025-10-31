@@ -434,6 +434,8 @@ export async function POST(
     return NextResponse.json(
       {
         id: finalTicket.id,
+        ticketNumber: finalTicket.ticketNumber,
+        ticketKey: finalTicket.ticketKey,
         title: finalTicket.title,
         description: finalTicket.description,
         stage: finalTicket.stage,

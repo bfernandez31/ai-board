@@ -161,6 +161,8 @@ export const TransitionRequestSchema = z.object({
 
 export const ticketResponseSchema = z.object({
   id: z.number().int().positive(),
+  ticketNumber: z.number().int().positive(),
+  ticketKey: z.string().regex(/^[A-Z0-9]{3,6}-\d+$/, 'Invalid ticket key format'),
   title: z.string(),
   description: z.string(),
   stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
@@ -174,6 +176,7 @@ export const ticketResponseSchema = z.object({
   project: z.object({
     id: z.number().int().positive(),
     name: z.string(),
+    key: z.string().regex(/^[A-Z0-9]{3,6}$/, 'Invalid project key format'),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy),
   }).optional(),
 });

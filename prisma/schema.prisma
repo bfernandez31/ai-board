@@ -56,6 +56,7 @@ model Project {
   githubRepo          String              @db.VarChar(100)
   userId              String
   deploymentUrl       String?             @db.VarChar(500)
+  key                 String              @unique @db.VarChar(6)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
@@ -66,6 +67,7 @@ model Project {
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
   @@index([userId])
+  @@index([key])
 }
 
 model ProjectMember {
@@ -99,6 +101,8 @@ model Ticket {
   stage               Stage                @default(INBOX)
   version             Int                  @default(1)
   projectId           Int
+  ticketNumber        Int
+  ticketKey           String               @unique @db.VarChar(20)
   branch              String?              @db.VarChar(200)
   autoMode            Boolean              @default(false)
   workflowType        WorkflowType         @default(FULL)
@@ -110,10 +114,12 @@ model Ticket {
   jobs                Job[]
   project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@unique([projectId, ticketNumber])
   @@index([projectId])
   @@index([stage])
   @@index([updatedAt])
   @@index([projectId, workflowType])
+  @@index([ticketKey])
 }
 
 model User {
