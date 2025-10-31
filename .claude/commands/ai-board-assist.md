@@ -68,19 +68,29 @@ Ticket artifacts are in the `specs/$BRANCH/` directory (using the BRANCH environ
 
 **Goal**: Update spec.md based on user request while maintaining specification quality.
 
+**⚠️ CRITICAL RESTRICTIONS**:
+- ❌ **DO NOT** modify any files outside `specs/$BRANCH/` directory
+- ❌ **DO NOT** modify CLAUDE.md, constitution.md, or any project documentation
+- ❌ **DO NOT** modify code files, API routes, or components
+- ✅ **ONLY** modify `specs/$BRANCH/spec.md` and create `specs/$BRANCH/.ai-board-result.md`
+
 **MANDATORY Process** (you MUST do ALL these steps):
 1. **READ**: Use Read tool to read `specs/$BRANCH/spec.md`
 2. **ANALYZE**: Understand the user request from $ARGUMENTS
 3. **MODIFY**: Make the requested changes to the content
-4. **WRITE**: Use Write tool to save the modified `specs/$BRANCH/spec.md`
-5. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS
+4. **WRITE**: Use Write tool to save the modified `specs/$BRANCH/spec.md` (REQUIRED - NOT OPTIONAL)
+5. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
 6. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+
+**⚠️ VERIFICATION STEP**:
+After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
 
 **Example**: If user asks "remove phase 5", you MUST:
 - Read the actual spec.md file
 - Remove phase 5 from the content
-- Write the modified content back
-- Create the result file
+- Write the modified content back to `specs/$BRANCH/spec.md`
+- Create the result file at `specs/$BRANCH/.ai-board-result.md`
+- Verify the changes by reading both files again
 - Output the success message
 
 **Example Request**: "@ai-board please add error handling for network timeouts"
@@ -90,20 +100,30 @@ Ticket artifacts are in the `specs/$BRANCH/` directory (using the BRANCH environ
 
 **Goal**: Update plan.md and/or tasks.md while maintaining consistency with spec.md.
 
+**⚠️ CRITICAL RESTRICTIONS**:
+- ❌ **DO NOT** modify any files outside `specs/$BRANCH/` directory
+- ❌ **DO NOT** modify CLAUDE.md, constitution.md, or any project documentation
+- ❌ **DO NOT** modify code files, API routes, or components
+- ✅ **ONLY** modify files in `specs/$BRANCH/` and create `specs/$BRANCH/.ai-board-result.md`
+
 **MANDATORY Process** (you MUST do ALL these steps):
 1. **READ SPEC**: Use Read tool to read `specs/$BRANCH/spec.md` (for context)
 2. **READ FILES**: Use Read tool to read `specs/$BRANCH/plan.md` and/or `specs/$BRANCH/tasks.md`
 3. **ANALYZE**: Understand the user request from $ARGUMENTS
 4. **MODIFY**: Make the requested changes to the content
-5. **WRITE**: Use Write tool to save the modified files
-6. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS
+5. **WRITE**: Use Write tool to save the modified files (REQUIRED - NOT OPTIONAL)
+6. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
 7. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+
+**⚠️ VERIFICATION STEP**:
+After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
 
 **Example**: If user asks "remove tasks T045 and T047", you MUST:
 - Read the actual tasks.md file
 - Find and remove those specific tasks
-- Write the modified content back
-- Create the result file
+- Write the modified content back to `specs/$BRANCH/tasks.md`
+- Create the result file at `specs/$BRANCH/.ai-board-result.md`
+- Verify the changes by reading both files again
 - Output the success message
 
 **Example Request**: "@ai-board update database approach to use read replicas"
