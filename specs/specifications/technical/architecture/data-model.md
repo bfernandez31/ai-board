@@ -57,6 +57,7 @@ Projects represent GitHub repositories with workflow automation.
 model Project {
   id                   Int                  @id @default(autoincrement())
   name                 String
+  key                  String               @unique @db.VarChar(3)
   description          String?
   deploymentUrl        String?
   githubOwner          String
@@ -74,6 +75,7 @@ model Project {
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
   @@index([userId])
+  @@index([key])
 }
 ```
 
@@ -82,6 +84,11 @@ model Project {
 **Fields**:
 - `id`: Auto-incrementing unique identifier
 - `name`: Human-readable project name
+- `key`: Unique 3-character identifier (uppercase alphanumeric, e.g., "ABC")
+  - Used as prefix for all ticket keys (e.g., "ABC-123")
+  - Generated from project name or provided by user
+  - Unique constraint enforced across all projects
+  - Immutable after creation
 - `description`: Optional project details (not displayed on project cards)
 - `deploymentUrl`: Optional deployment URL (displayed on cards with copy-to-clipboard functionality)
 - `githubOwner`: GitHub repository owner (user or organization)
@@ -96,18 +103,22 @@ model Project {
 - One-to-many: Tickets, Jobs, ProjectMembers
 
 **Constraints**:
+- Unique key (project identifier for ticket prefixes)
 - Unique (githubOwner, githubRepo) - one project per repository
 - Index on (githubOwner, githubRepo) for efficient lookups
 - Index on userId for authorization queries
+- Index on key for ticket lookup by key
 - NOT NULL userId (every project must have owner)
 
 **Business Rules**:
+- Cannot have duplicate project keys across system
 - Cannot have duplicate projects for same repository
 - Deleting project deletes all tickets and jobs (cascade)
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
+- Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
 
 ### Ticket
 
@@ -116,6 +127,8 @@ Tickets track work items through six workflow stages.
 ```prisma
 model Ticket {
   id                   Int                  @id @default(autoincrement())
+  ticketNumber         Int
+  ticketKey            String               @unique @db.VarChar(20)
   title                String               @db.VarChar(100)
   description          String               @db.Text
   stage                Stage                @default(INBOX)
@@ -132,16 +145,27 @@ model Ticket {
   jobs                 Job[]
   comments             Comment[]
 
+  @@unique([projectId, ticketNumber])
   @@index([projectId])
   @@index([projectId, stage])
   @@index([projectId, workflowType])
+  @@index([ticketKey])
 }
 ```
 
 **Purpose**: Work item tracking with kanban workflow
 
 **Fields**:
-- `id`: Auto-incrementing unique identifier
+- `id`: Auto-incrementing unique identifier (internal use only, not user-facing)
+- `ticketNumber`: Sequential number within project (1, 2, 3, ...)
+  - Starts from 1 for each project
+  - Increments independently per project
+  - Used to form ticketKey
+- `ticketKey`: Human-readable unique identifier (e.g., "ABC-123")
+  - Format: {PROJECT_KEY}-{TICKET_NUMBER}
+  - Denormalized field for performance
+  - Unique constraint across all tickets
+  - Used in URLs, UI displays, and API lookups
 - `title`: Short description (max 100 characters)
 - `description`: Detailed description (max 2500 characters, all UTF-8 allowed)
 - `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP)
@@ -159,9 +183,12 @@ model Ticket {
 - One-to-many: Jobs, Comments
 
 **Constraints**:
+- Unique ticketKey across all tickets
+- Unique (projectId, ticketNumber) within project
 - Index on projectId for filtering
 - Composite index (projectId, stage) for board queries
 - Composite index (projectId, workflowType) for filtering
+- Index on ticketKey for lookup by key
 
 **Validation Rules**:
 - Title: 1-100 characters, alphanumeric + basic punctuation, no emojis
@@ -172,11 +199,15 @@ model Ticket {
 
 **Business Rules**:
 - New tickets always created in INBOX stage
+- Ticket number assigned using thread-safe PostgreSQL sequence per project
+- Ticket key generated from project key + ticket number (e.g., "ABC-123")
+- Internal ID used for foreign keys, not exposed to users
 - Sequential stage progression (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP)
 - Branch created by workflow during SPECIFY transition
 - workflowType set during first BUILD transition (immutable thereafter)
 - Description editable only in INBOX stage (frozen after SPECIFY)
 - Clarification policy overrides project default when set
+- Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 
 ### Job
 

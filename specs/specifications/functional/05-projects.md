@@ -11,6 +11,11 @@ Projects organize tickets into separate workspaces, each with its own Kanban boa
 Each project contains:
 
 - **Name**: Project identifier and title
+- **Key**: Unique 3-character identifier (e.g., "ABC", "DEF")
+  - Uppercase alphanumeric format
+  - Generated from project name or provided by user
+  - Used as prefix for all ticket keys in the project
+  - Immutable after project creation
 - **Description**: Brief explanation of project purpose (stored but not displayed on cards)
 - **Deployment URL**: Optional URL for deployed project (with quick-copy functionality)
 - **GitHub Repository**: GitHub owner and repository name
@@ -76,6 +81,12 @@ When no projects exist:
 - Click any project card (except interactive elements)
 - Redirects to project's Kanban board
 - URL format: `/projects/{projectId}/board`
+
+**To Ticket Details**:
+- Access tickets via clean, human-readable URLs
+- URL format: `/browse/{TICKET_KEY}` (e.g., `/browse/ABC-123`)
+- Ticket keys clearly indicate which project they belong to
+- URLs are stable and shareable (bookmarks, external links)
 
 **Action Buttons**:
 - "Import Project" button (with icon)

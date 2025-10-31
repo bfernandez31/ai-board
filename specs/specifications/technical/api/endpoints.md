@@ -42,6 +42,7 @@ Fetch all projects for the authenticated user with shipping status.
     {
       "id": 1,
       "name": "AI Board Development",
+      "key": "ABC",
       "description": "Project management tool",
       "deploymentUrl": "https://ai-board.vercel.app",
       "githubOwner": "bfernandez31",
@@ -53,6 +54,7 @@ Fetch all projects for the authenticated user with shipping status.
       "ticketCount": 12,
       "lastShippedTicket": {
         "id": 42,
+        "ticketKey": "ABC-5",
         "title": "Add user authentication",
         "updatedAt": "2025-01-14T16:20:00.000Z"
       }
@@ -60,6 +62,7 @@ Fetch all projects for the authenticated user with shipping status.
     {
       "id": 2,
       "name": "Mobile App",
+      "key": "MOB",
       "description": null,
       "deploymentUrl": null,
       "githubOwner": "company",
@@ -101,6 +104,7 @@ Fetch project details including clarification policy.
 {
   "id": 1,
   "name": "AI Board Development",
+  "key": "ABC",
   "description": "Project management tool",
   "deploymentUrl": "https://ai-board.vercel.app",
   "githubOwner": "bfernandez31",
@@ -131,6 +135,7 @@ Update project details including clarification policy.
 ```json
 {
   "name": "Updated Project Name",
+  "key": "UPD",
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE"
@@ -139,6 +144,7 @@ Update project details including clarification policy.
 
 **Validation**:
 - `name`: Optional, string
+- `key`: Optional, 3-character uppercase alphanumeric string (immutable after creation, validation only)
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
@@ -148,11 +154,14 @@ Update project details including clarification policy.
 {
   "id": 1,
   "name": "Updated Project Name",
+  "key": "ABC",
   "deploymentUrl": "https://my-app.vercel.app",
   "clarificationPolicy": "CONSERVATIVE",
   ...
 }
 ```
+
+**Note**: Project key is immutable after creation and cannot be changed via PATCH.
 
 **Errors**:
 - `400`: Invalid request body, URL format, or clarification policy enum
@@ -181,6 +190,8 @@ Fetch all tickets for a project.
   "tickets": [
     {
       "id": 42,
+      "ticketNumber": 5,
+      "ticketKey": "ABC-5",
       "title": "Add login feature",
       "description": "Implement user authentication",
       "stage": "SPECIFY",
@@ -228,6 +239,8 @@ Create a new ticket.
 ```json
 {
   "id": 43,
+  "ticketNumber": 6,
+  "ticketKey": "ABC-6",
   "title": "Fix login bug",
   "description": "Login button doesn't work on mobile devices",
   "stage": "INBOX",
@@ -249,21 +262,71 @@ Create a new ticket.
 - `404`: Project not found
 - `500`: Database error
 
+### GET /browse/:key
+
+Fetch ticket by human-readable key (primary user-facing endpoint).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member (resolved via ticket key)
+
+**Path Parameters**:
+- `key` (string, required): Ticket key in format "{PROJECT_KEY}-{TICKET_NUMBER}" (e.g., "ABC-123")
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
+  "title": "Add login feature",
+  "description": "Implement user authentication",
+  "stage": "SPECIFY",
+  "projectId": 1,
+  "branch": "042-add-login-feature",
+  "workflowType": "FULL",
+  "clarificationPolicy": null,
+  "attachments": [],
+  "version": 3,
+  "project": {
+    "id": 1,
+    "name": "AI Board Development",
+    "key": "ABC",
+    "clarificationPolicy": "AUTO"
+  },
+  "createdAt": "2025-01-10T14:00:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket not found
+
+**Notes**:
+- This is the primary user-facing endpoint for ticket access
+- URLs like `/browse/ABC-123` are shareable and stable
+- Used for bookmarks, external links, and ticket references
+
 ### GET /api/projects/:projectId/tickets/:id
 
-Fetch single ticket with nested project data.
+Fetch single ticket with nested project data (legacy endpoint).
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
-- `id` (number, required): Ticket ID
+- `id` (number or string, required): Ticket ID (numeric) or Ticket Key (e.g., "ABC-123")
+
+**Note**: This endpoint supports both internal numeric IDs (for backward compatibility) and human-readable ticket keys. New code should use `/browse/:key` for ticket access.
 
 **Response** (200 OK):
 ```json
 {
   "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
   "title": "Add login feature",
   "description": "Implement user authentication",
   "stage": "SPECIFY",
@@ -286,6 +349,7 @@ Fetch single ticket with nested project data.
   "project": {
     "id": 1,
     "name": "AI Board Development",
+    "key": "ABC",
     "clarificationPolicy": "AUTO"
   },
   "createdAt": "2025-01-10T14:00:00.000Z",
@@ -329,6 +393,8 @@ Update ticket fields with optimistic concurrency control.
 ```json
 {
   "id": 42,
+  "ticketNumber": 5,
+  "ticketKey": "ABC-5",
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
