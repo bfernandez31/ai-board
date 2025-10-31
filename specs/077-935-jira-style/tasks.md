@@ -26,7 +26,7 @@
 
 **⚠️ CRITICAL**: This phase MUST complete before any other work. Migration includes data population for existing tickets.
 
-- [ ] T001 Update Prisma schema to add Project.key field (VARCHAR(3), unique, not null, indexed) in prisma/schema.prisma
+- [ ] T001 Update Prisma schema to add Project.key field (VARCHAR(6), unique, not null, indexed, 3-6 characters) in prisma/schema.prisma
 - [ ] T002 Update Prisma schema to add Ticket.ticketNumber field (INT, not null, unique per project) in prisma/schema.prisma
 - [ ] T003 Update Prisma schema to add Ticket.ticketKey field (VARCHAR(20), unique, not null, indexed) in prisma/schema.prisma
 - [ ] T004 Generate Prisma migration with --create-only flag using name "jira_style_numbering"
@@ -44,7 +44,7 @@
 
 **⚠️ CRITICAL**: These utilities are required for ticket creation and lookup. Must complete before user story implementation.
 
-- [ ] T008 [P] Create project key validation schema using Zod (3 uppercase alphanumeric chars, transform to uppercase) in app/lib/schemas/project.ts
+- [ ] T008 [P] Create project key validation schema using Zod (3-6 uppercase alphanumeric chars, transform to uppercase) in app/lib/schemas/project.ts
 - [ ] T009 [P] Create ticket key validation schema using Zod (format: KEY-NUM regex) in app/lib/schemas/ticket.ts
 - [ ] T010 [P] Update ticket response schema to include ticketNumber and ticketKey fields in app/lib/schemas/ticket.ts
 - [ ] T011 [P] Update project create schema to accept optional key field in app/lib/schemas/project.ts
@@ -75,17 +75,17 @@
 
 ## Phase 4: User Story 2 - Access Tickets via Clean URLs (Priority: P1) 🎯 MVP
 
-**Goal**: Users can access tickets using memorable URLs like `/browse/ABC-123` instead of numeric IDs
+**Goal**: Users can access tickets using memorable URLs like `/ticket/ABC-123` instead of numeric IDs
 
-**Independent Test**: Users can navigate to `/browse/ABC-123` and view the correct ticket. Can be tested by creating a ticket and accessing it via its key-based URL.
+**Independent Test**: Users can navigate to `/ticket/ABC-123` and view the correct ticket. Can be tested by creating a ticket and accessing it via its key-based URL.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create new API endpoint GET /api/browse/[key]/route.ts with session validation, ticket key validation, ticket lookup by key with project include, and authorization check (owner or member)
+- [ ] T019 [US2] Create new API endpoint GET /api/ticket/[key]/route.ts with session validation, ticket key validation, ticket lookup by key with project include, and authorization check (owner or member)
 - [ ] T020 [US2] Update existing ticket detail endpoint to support both numeric ID and ticket key lookup (detect format with regex, query accordingly) in app/api/projects/[projectId]/tickets/[id]/route.ts
-- [ ] T021 [US2] Create new Next.js page at app/browse/[key]/page.tsx that fetches ticket via /api/browse/:key and renders TicketDetail component
-- [ ] T022 [US2] Update ticket card links to use /browse/:ticketKey format instead of /projects/:projectId/tickets/:id in components/board/ticket-card.tsx
-- [ ] T023 [US2] Add redirect from old ticket URLs to new /browse/:key URLs for backward compatibility (optional: implement as Next.js middleware or page redirect)
+- [ ] T021 [US2] Create new Next.js page at app/ticket/[key]/page.tsx that fetches ticket via /api/ticket/:key and renders TicketDetail component
+- [ ] T022 [US2] Update ticket card links to use /ticket/:ticketKey format instead of /projects/:projectId/tickets/:id in components/board/ticket-card.tsx
+- [ ] T023 [US2] Add redirect from old ticket URLs to new /ticket/:key URLs for backward compatibility (optional: implement as Next.js middleware or page redirect)
 
 **Checkpoint**: User Story 2 complete - clean URLs now work for ticket access
 
@@ -111,13 +111,13 @@
 
 ## Phase 6: User Story 4 - Project Creation with Keys (Priority: P2)
 
-**Goal**: New projects are created with auto-generated or custom 3-character keys
+**Goal**: New projects are created with auto-generated or custom keys (3-6 characters)
 
-**Independent Test**: Create a new project and verify it receives a valid 3-character key (either auto-generated from name or custom-provided)
+**Independent Test**: Create a new project and verify it receives a valid key of 3-6 characters (either auto-generated from name or custom-provided)
 
 ### Implementation for User Story 4
 
-- [ ] T027 [P] [US4] Create project key generation function that derives key from project name (first 3 uppercase alphanumeric chars, padded if needed, collision handling) in app/lib/utils/generate-project-key.ts
+- [ ] T027 [P] [US4] Create project key generation function that derives key from project name (first 3-6 uppercase alphanumeric chars, min 3 chars padded if needed, collision handling) in app/lib/utils/generate-project-key.ts
 - [ ] T028 [US4] Update project creation endpoint to validate optional key field, generate key if not provided, handle duplicate key errors (409 status) in app/api/projects/route.ts
 - [ ] T029 [US4] Update project response to include key field in GET /api/projects/[projectId]/route.ts
 - [ ] T030 [P] [US4] Update ProjectForm component to include optional project key input field with validation in components/projects/project-form.tsx
@@ -149,10 +149,10 @@
 
 - [ ] T037 [P] Update CLAUDE.md to document ticket key system (URL structure, API patterns, test data conventions) in CLAUDE.md
 - [ ] T038 [P] Update API documentation with new endpoints and field changes (if separate API docs exist)
-- [ ] T039 Run quickstart.md validation checklist: all projects have keys, new tickets get sequential numbers, /browse/:key URLs work, no errors in logs
+- [ ] T039 Run quickstart.md validation checklist: all projects have keys, new tickets get sequential numbers, /ticket/:key URLs work, no errors in logs
 - [ ] T040 Performance validation: benchmark ticket creation (<100ms p95) and lookup by key (<50ms p95) using load testing tool
 - [ ] T041 Code review: verify error handling, input validation, authorization checks on all new endpoints
-- [ ] T042 Security audit: verify ticket key enumeration risks, authorization on /browse endpoint, SQL injection prevention in sequence function
+- [ ] T042 Security audit: verify ticket key enumeration risks, authorization on /ticket endpoint, SQL injection prevention in sequence function
 
 ---
 

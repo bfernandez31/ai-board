@@ -16,15 +16,15 @@ This document defines the database schema changes required to implement Jira-sty
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `key` | `String` | `@db.VarChar(3)`, `NOT NULL`, `@unique` | Unique 3-character project identifier (e.g., "ABC", "MOB") |
+| `key` | `String` | `@db.VarChar(6)`, `NOT NULL`, `@unique` | Unique 3-6 character project identifier (e.g., "ABC", "MOB", "MOBILE", "BACKEND") |
 
 **Indexes**:
 - Unique index on `key` (automatically created by `@unique`)
 - Additional B-tree index for query optimization
 
 **Validation Rules**:
-- Length: Exactly 3 characters
-- Format: Uppercase alphanumeric only (`[A-Z0-9]{3}`)
+- Length: 3-6 characters (minimum 3, maximum 6)
+- Format: Uppercase alphanumeric only (`[A-Z0-9]{3,6}`)
 - Uniqueness: Enforced at database level
 - Immutability: Cannot be changed after project creation (application-level enforcement)
 
@@ -38,7 +38,7 @@ model Project {
   githubRepo          String              @db.VarChar(100)
   userId              String
   deploymentUrl       String?             @db.VarChar(500)
-  key                 String              @db.VarChar(3) @unique  // NEW
+  key                 String              @db.VarChar(6) @unique  // NEW (3-6 characters)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
@@ -189,7 +189,7 @@ const ticket = await prisma.ticket.create({
 
 ```sql
 -- Add new columns as nullable initially
-ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(3);
+ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(6);  -- 3-6 characters
 ALTER TABLE "Ticket" ADD COLUMN "ticketNumber" INTEGER;
 ALTER TABLE "Ticket" ADD COLUMN "ticketKey" VARCHAR(20);
 ```
@@ -282,8 +282,9 @@ import { z } from 'zod';
 
 export const projectKeySchema = z
   .string()
-  .length(3, 'Project key must be exactly 3 characters')
-  .regex(/^[A-Z0-9]{3}$/, 'Project key must be uppercase alphanumeric (A-Z, 0-9)')
+  .min(3, 'Project key must be at least 3 characters')
+  .max(6, 'Project key must be at most 6 characters')
+  .regex(/^[A-Z0-9]{3,6}$/, 'Project key must be 3-6 uppercase alphanumeric characters (A-Z, 0-9)')
   .transform((val) => val.toUpperCase());
 
 export const projectCreateSchema = z.object({
@@ -323,7 +324,7 @@ export const ticketResponseSchema = z.object({
 ### Lookup by Ticket Key (Primary Path)
 
 ```typescript
-// GET /browse/:key
+// GET /ticket/:key
 const ticket = await prisma.ticket.findUnique({
   where: { ticketKey: 'ABC-123' },
   include: { project: true },

@@ -12,7 +12,7 @@ This document defines the API contract changes for the Jira-style ticket numberi
 
 ## New Endpoints
 
-### GET /browse/:key
+### GET /ticket/:key
 
 **Purpose**: Retrieve ticket by ticket key (primary user-facing endpoint)
 
@@ -23,7 +23,7 @@ This document defines the API contract changes for the Jira-style ticket numberi
 
 **Request Example**:
 ```http
-GET /browse/ABC-123 HTTP/1.1
+GET /ticket/ABC-123 HTTP/1.1
 Cookie: next-auth.session-token=...
 ```
 
@@ -420,8 +420,9 @@ export const ticketKeySchema = z
 ```typescript
 export const projectKeySchema = z
   .string()
-  .length(3, 'Project key must be exactly 3 characters')
-  .regex(/^[A-Z0-9]{3}$/, 'Project key must be uppercase alphanumeric')
+  .min(3, 'Project key must be at least 3 characters')
+  .max(6, 'Project key must be at most 6 characters')
+  .regex(/^[A-Z0-9]{3,6}$/, 'Project key must be 3-6 uppercase alphanumeric characters')
   .transform((val) => val.toUpperCase());
 ```
 
@@ -529,7 +530,7 @@ All existing endpoints continue to work:
 
 **Phase 2** (Gradual migration):
 - Update client code to use `ticketKey` for display
-- Update client code to use `/browse/:key` for navigation
+- Update client code to use `/ticket/:key` for navigation
 - Keep using numeric IDs for API calls (optional)
 
 **Phase 3** (Future):
@@ -542,7 +543,7 @@ All existing endpoints continue to work:
 
 | Endpoint | Target (p95) | Rationale |
 |----------|--------------|-----------|
-| GET /browse/:key | <50ms | Single indexed query on ticketKey |
+| GET /ticket/:key | <50ms | Single indexed query on ticketKey |
 | POST /api/projects/:projectId/tickets | <100ms | Sequence generation + insert |
 | GET /api/projects/:projectId/tickets/:id | <50ms | Single indexed query (ID or key) |
 | GET /api/projects/:projectId/tickets | <100ms | Filtered query with pagination |

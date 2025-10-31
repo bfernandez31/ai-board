@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement a Jira-style ticket numbering system where each project has a unique 3-character key (e.g., "ABC", "MOB") and tickets are numbered sequentially per project (e.g., ABC-1, ABC-2, MOB-1). This replaces the current global ticket ID system with project-scoped identifiers for better UX. The system will use PostgreSQL sequences for thread-safe number generation, denormalized ticket keys for performance, and provide clean URLs like `/browse/ABC-123`. Existing tickets will be migrated to the new system while preserving internal IDs for backward compatibility.
+Implement a Jira-style ticket numbering system where each project has a unique key of 3-6 characters (e.g., "ABC", "MOB", "MOBILE", "BACKEND") and tickets are numbered sequentially per project (e.g., ABC-1, ABC-2, MOBILE-1). This replaces the current global ticket ID system with project-scoped identifiers for better UX. The system will use PostgreSQL sequences for thread-safe number generation, denormalized ticket keys for performance, and provide clean URLs like `/ticket/ABC-123` or `/ticket/MOBILE-123`. Existing tickets will be migrated to the new system while preserving internal IDs for backward compatibility.
 
 ## Technical Context
 
@@ -82,7 +82,7 @@ prisma/
 
 app/
 ├── api/
-│   ├── browse/[key]/route.ts               # NEW: Ticket lookup by key endpoint
+│   ├── ticket/[key]/route.ts               # NEW: Ticket lookup by key endpoint
 │   └── projects/[projectId]/
 │       ├── route.ts                        # UPDATE: Add project key to response
 │       └── tickets/
@@ -95,7 +95,7 @@ app/
 │   └── schemas/
 │       ├── project.ts                      # UPDATE: Add key field validation
 │       └── ticket.ts                       # UPDATE: Add ticketKey and ticketNumber schemas
-└── browse/[key]/
+└── ticket/[key]/
     └── page.tsx                            # NEW: Ticket detail page via key URL
 
 components/
@@ -114,7 +114,7 @@ tests/
 
 **Structure Decision**: This is a Next.js 15 App Router application with full-stack architecture. Database changes via Prisma migrations, API routes for backend logic, and React components for frontend. The feature primarily touches:
 1. **Database layer**: Schema changes and migration (Project.key, Ticket fields, sequence function)
-2. **API layer**: New `/browse/:key` endpoint, updated ticket CRUD operations
+2. **API layer**: New `/ticket/:key` endpoint, updated ticket CRUD operations
 3. **UI layer**: Ticket display components updated to show keys instead of IDs
 4. **Test layer**: Existing tests updated to accommodate new numbering system
 
@@ -169,12 +169,12 @@ All technical unknowns have been resolved through research:
 ### Design Summary
 
 **Schema Changes**:
-- `Project.key`: VARCHAR(3), unique, not null, indexed
+- `Project.key`: VARCHAR(6), unique, not null, indexed (3-6 characters)
 - `Ticket.ticketNumber`: INT, not null, unique per project
 - `Ticket.ticketKey`: VARCHAR(20), unique, not null, indexed
 
 **New Endpoints**:
-- `GET /browse/:key` - Primary user-facing ticket lookup
+- `GET /ticket/:key` - Primary user-facing ticket lookup
 
 **Updated Endpoints**:
 - `POST /api/projects/:projectId/tickets` - Auto-generate ticket number and key

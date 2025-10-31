@@ -35,7 +35,7 @@ Add new fields to `Project` model:
 ```prisma
 model Project {
   // ... existing fields
-  key String @db.VarChar(3) @unique
+  key String @db.VarChar(6) @unique  // 3-6 characters
   // ... rest of model
 
   @@index([key])
@@ -80,7 +80,7 @@ Replace the auto-generated content with the complete migration script:
 BEGIN;
 
 -- Phase 1: Add columns as nullable
-ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(3);
+ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(6);  -- 3-6 characters
 ALTER TABLE "Ticket" ADD COLUMN "ticketNumber" INTEGER;
 ALTER TABLE "Ticket" ADD COLUMN "ticketKey" VARCHAR(20);
 
@@ -213,8 +213,9 @@ npx prisma studio
 ```typescript
 export const projectKeySchema = z
   .string()
-  .length(3, 'Project key must be exactly 3 characters')
-  .regex(/^[A-Z0-9]{3}$/, 'Project key must be uppercase alphanumeric')
+  .min(3, 'Project key must be at least 3 characters')
+  .max(6, 'Project key must be at most 6 characters')
+  .regex(/^[A-Z0-9]{3,6}$/, 'Project key must be 3-6 uppercase alphanumeric characters')
   .transform((val) => val.toUpperCase());
 
 export const projectCreateSchema = z.object({
@@ -300,7 +301,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
 
 #### Step 2.4: Create Browse Endpoint
 
-**File**: `app/api/browse/[key]/route.ts`
+**File**: `app/api/ticket/[key]/route.ts`
 
 ```typescript
 import { NextResponse } from 'next/server';
@@ -402,13 +403,13 @@ Change ticket display from ID to ticketKey:
 
 #### Step 3.2: Update Ticket Detail Page
 
-**File**: `app/browse/[key]/page.tsx` (NEW)
+**File**: `app/ticket/[key]/page.tsx` (NEW)
 
 ```typescript
 import { TicketDetail } from '@/components/board/ticket-detail';
 
 export default async function BrowseTicketPage({ params }: { params: { key: string } }) {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/browse/${params.key}`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/ticket/${params.key}`, {
     headers: { cookie: request.headers.get('cookie') || '' },
   });
 
@@ -433,7 +434,7 @@ Update link href to use ticket key:
 <Link href={`/projects/${projectId}/tickets/${ticket.id}`}>
 
 // After:
-<Link href={`/browse/${ticket.ticketKey}`}>
+<Link href={`/ticket/${ticket.ticketKey}`}>
 ```
 
 ---
@@ -473,7 +474,7 @@ test('should retrieve ticket by ticket key', async () => {
   });
 
   // Lookup by key
-  const response = await request.get(`/api/browse/${ticket.ticketKey}`);
+  const response = await request.get(`/api/ticket/${ticket.ticketKey}`);
   expect(response.status).toBe(200);
 
   const retrieved = await response.json();
@@ -505,7 +506,7 @@ test('should retrieve ticket by ticket key', async () => {
    - [ ] All projects have keys
    - [ ] All tickets have keys
    - [ ] Create new ticket → receives sequential number
-   - [ ] Access ticket via `/browse/KEY-NUM` URL
+   - [ ] Access ticket via `/ticket/KEY-NUM` URL
    - [ ] Old URLs redirect correctly
 
 #### Step 5.2: Production Deployment
@@ -660,7 +661,7 @@ curl -X POST https://ai-board.vercel.app/api/projects/1/tickets \
 # Measure response time (should be <100ms p95)
 
 # Test ticket lookup by key
-curl https://ai-board.vercel.app/api/browse/ABC-123
+curl https://ai-board.vercel.app/api/ticket/ABC-123
 
 # Measure response time (should be <50ms p95)
 ```

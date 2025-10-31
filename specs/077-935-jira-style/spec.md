@@ -96,7 +96,7 @@ Users can mention tickets in comments using clean key syntax (e.g., "ABC-123") a
 ### Edge Cases
 
 - **What happens when ticket number generation fails (race condition)?** PostgreSQL sequence function must be thread-safe; if generation fails, retry or return clear error
-- **What happens if two projects have the same 3-character key?** System must enforce unique constraint on project keys to prevent collisions
+- **What happens if two projects have the same key?** System must enforce unique constraint on project keys to prevent collisions
 
 ## Requirements
 

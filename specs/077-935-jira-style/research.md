@@ -53,33 +53,34 @@ $$ LANGUAGE plpgsql;
 
 ### 2. Project Key Generation Strategy
 
-**Question**: How to generate and validate unique 3-character project keys?
+**Question**: How to generate and validate unique project keys (3-6 characters)?
 
 **Research Findings**:
 
 **Decision**: Derive keys from project name with collision handling
 
 **Rationale**:
-- User-friendly: Keys reflect project name (e.g., "Mobile App" → "MOB")
+- User-friendly: Keys reflect project name (e.g., "Mobile App" → "MOBILE", "Backend" → "BACK")
 - Automatic generation reduces friction during project creation
 - Manual override option for custom keys
+- Flexible length (3-6 chars) accommodates longer project names
 
 **Implementation Pattern**:
 ```typescript
 // Key generation logic
 function generateProjectKey(name: string, existingKeys: string[]): string {
-  // 1. Extract first 3 characters, uppercase, alphanumeric only
+  // 1. Extract first 3-6 characters, uppercase, alphanumeric only
   let baseKey = name
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .substring(0, 3)
-    .padEnd(3, 'X'); // Pad if name is too short
+    .substring(0, 6)  // Take up to 6 characters
+    .padEnd(3, 'X');  // Pad to minimum 3 if name is too short
 
-  // 2. Handle collisions by appending digits
+  // 2. Handle collisions by appending digits (if needed)
   let key = baseKey;
   let suffix = 1;
   while (existingKeys.includes(key)) {
-    key = baseKey.substring(0, 2) + suffix.toString();
+    key = baseKey.substring(0, Math.min(baseKey.length - 1, 5)) + suffix.toString();
     suffix++;
   }
 
@@ -88,7 +89,7 @@ function generateProjectKey(name: string, existingKeys: string[]): string {
 ```
 
 **Validation Rules** (Zod schema):
-- Exactly 3 characters
+- 3-6 characters (min 3, max 6)
 - Uppercase alphanumeric only (A-Z, 0-9)
 - Unique constraint at database level
 - No profanity filter (business decision)
@@ -97,6 +98,7 @@ function generateProjectKey(name: string, existingKeys: string[]): string {
 1. Random 3-character codes: Rejected due to lack of memorability
 2. User always provides key: Rejected due to poor UX (extra step during project creation)
 3. Sequential global codes (PR1, PR2, ...): Rejected due to lack of project identity
+4. Fixed 3-character limit: Rejected due to inflexibility for longer project names
 
 ---
 
@@ -118,7 +120,7 @@ function generateProjectKey(name: string, existingKeys: string[]): string {
 BEGIN;
 
 -- 1. Add project key field (assuming already assigned)
-ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(3);
+ALTER TABLE "Project" ADD COLUMN "key" VARCHAR(6);  -- 3-6 characters
 
 -- 2. Add ticket numbering fields (nullable initially)
 ALTER TABLE "Ticket" ADD COLUMN "ticketNumber" INTEGER;
@@ -280,13 +282,13 @@ export async function GET(
 ```
 
 **New Endpoints**:
-- `GET /browse/:key` - Primary user-facing endpoint for ticket access
+- `GET /ticket/:key` - Primary user-facing endpoint for ticket access
   - Clean URL structure
   - No project ID required (ticket keys are globally unique)
   - Resolves project ownership from ticket key
 
 **URL Strategy**:
-- User-facing links: Always use `/browse/ABC-123` format
+- User-facing links: Always use `/ticket/ABC-123` format
 - Internal API calls: Can use either format
 - Frontend redirects: Old numeric URLs redirect to new key-based URLs
 
@@ -319,8 +321,8 @@ export async function GET(
    - Constraint: Project keys immutable after creation
 
 4. **Human-Friendly Keys**: Short, memorable, meaningful
-   - Benefit: Easy to communicate ("See ABC-5")
-   - Constraint: 3-character limit on keys
+   - Benefit: Easy to communicate ("See ABC-5" or "See MOBILE-5")
+   - Constraint: 3-6 character limit on keys (flexible for project names)
 
 5. **Unique Constraints**: Database-level enforcement
    - Benefit: Prevents collisions at source
@@ -382,5 +384,5 @@ export async function GET(
 
 **User Experience Targets**:
 - All ticket references use keys (not IDs) in UI
-- Clean URLs (`/browse/ABC-123`) resolve correctly
+- Clean URLs (`/ticket/ABC-123`) resolve correctly
 - Existing bookmarks/links work with redirects
