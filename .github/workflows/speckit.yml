@@ -239,10 +239,6 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         run: npx playwright install chromium --with-deps
 
-      - name: Install Playwright OS Dependencies
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit == 'true' }}
-        run: npx playwright install-deps
-
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         env:
@@ -328,7 +324,7 @@ jobs:
               claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests. Do the commit and push"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
