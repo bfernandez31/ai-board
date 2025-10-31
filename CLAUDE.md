@@ -368,12 +368,20 @@ The User model manages authentication and project ownership:
 
 ### Project Model
 
-The Project model now includes user ownership and clarification policies:
+The Project model now includes user ownership, clarification policies, and project keys:
 
 - **`userId`** (String): Owner of the project (required foreign key to User.id)
   - Every project must belong to a user
   - Index on userId for efficient filtering
   - Used for authorization checks
+
+- **`key`** (String, NOT NULL, UNIQUE, max 3 chars): Unique 3-character identifier for the project
+  - Format: Uppercase alphanumeric (e.g., "ABC", "DEF", "MOB")
+  - Generated from project name (first 3 characters, uppercase) or provided by user
+  - Used as prefix for all ticket keys in the project (e.g., "ABC-123")
+  - Immutable after project creation
+  - Unique constraint enforced across all projects
+  - Index on key for efficient ticket lookup by key
 
 - **`clarificationPolicy`** (ClarificationPolicy enum, NOT NULL, default: AUTO): Default policy for all tickets
   - Values: AUTO (context-aware), CONSERVATIVE (security-first), PRAGMATIC (speed-first), INTERACTIVE (manual)
@@ -386,9 +394,35 @@ The Project model now includes user ownership and clarification policies:
 - Cross-user access returns 403 Forbidden
 - Project queries always include userId validation
 
+**Key Generation**:
+
+- Derived from first 3 characters of project name (uppercase)
+- Padded or disambiguated if name is too short or key already exists
+- User can provide custom key during project creation
+
 ### Ticket Model
 
-The Ticket model includes the following fields for GitHub branch tracking and automation:
+The Ticket model includes the following fields for GitHub branch tracking, automation, and Jira-style numbering:
+
+- **`ticketNumber`** (Int, NOT NULL): Sequential number within the project
+  - Starts from 1 for each project (e.g., 1, 2, 3, ...)
+  - Increments independently per project
+  - Assigned using thread-safe PostgreSQL sequence or function
+  - Combined with project key to form ticketKey
+  - Unique constraint on (projectId, ticketNumber)
+
+- **`ticketKey`** (String, NOT NULL, UNIQUE, max 20 chars): Human-readable unique identifier
+  - Format: `{PROJECT_KEY}-{TICKET_NUMBER}` (e.g., "ABC-123", "MOB-5")
+  - Denormalized field for performance (cached composite of project.key + ticket.ticketNumber)
+  - Unique constraint across all tickets in the system
+  - Used in URLs (`/browse/ABC-123`), UI displays, and API lookups
+  - Index on ticketKey for efficient lookup by key
+  - Primary user-facing identifier (internal ID not exposed to users)
+
+- **`id`** (Int, auto-increment): Internal numeric identifier
+  - Used for foreign key relationships (Job, Comment)
+  - Not exposed in user-facing contexts (UI, URLs, exports)
+  - Preserved for backward compatibility and database integrity
 
 - **`branch`** (String?, max 200 chars): Tracks the Git branch associated with the ticket
   - Nullable field, defaults to `null` for new tickets
@@ -473,6 +507,45 @@ The correct branch lifecycle for automated workflows:
 - Response: Full ticket object including new fields
 
 **Note**: The `/branch` endpoint is designed for workflow automation scripts and does not increment the version field, while the general PATCH endpoint uses version-based conflict detection.
+
+### Ticket Lookup and URL Structure
+
+**Primary User-Facing Endpoint**:
+
+**GET `/browse/:key`**
+
+- Fetch ticket by human-readable key (e.g., `/browse/ABC-123`)
+- Path parameter: `key` (string) - Ticket key in format `{PROJECT_KEY}-{TICKET_NUMBER}`
+- Response: Full ticket object with nested project data
+- Authorization: User must be project owner or member (resolved via ticket key)
+- This is the primary endpoint for ticket access in user-facing contexts
+
+**Legacy Endpoint** (Backward Compatibility):
+
+**GET `/api/projects/:projectId/tickets/:id`**
+
+- Supports both numeric ID (e.g., `/api/projects/1/tickets/42`) and ticket key (e.g., `/api/projects/1/tickets/ABC-123`)
+- Preserved for backward compatibility with existing code
+- New code should use `/browse/:key` instead
+
+**URL Structure**:
+
+- **User-facing**: `/browse/{TICKET_KEY}` (e.g., `/browse/ABC-123`)
+  - Clean, memorable, shareable URLs
+  - Stable across ticket lifecycle
+  - Used in bookmarks, external links, exports
+- **Legacy**: `/projects/{projectId}/tickets/{id}` (numeric ID)
+  - Maintained for backward compatibility
+  - Should redirect to `/browse/{TICKET_KEY}` in UI
+- **API**: `/api/projects/{projectId}/tickets/{id}` (supports both ID and key)
+  - Internal API endpoint
+  - Accepts both numeric ID and ticket key for flexibility
+
+**Lookup Performance**:
+
+- Index on `ticketKey` for efficient key-based lookups
+- Index on `id` (primary key) for internal ID lookups
+- Both lookups target <50ms p95 response time
 
 ### Job Status Management
 

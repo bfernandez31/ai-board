@@ -155,9 +155,17 @@ All ticket data persists automatically:
 
 ### Unique Identification
 
-- Each ticket receives a unique sequential ID on creation
-- IDs auto-increment (1, 2, 3, ...)
-- IDs display with # prefix (#1, #2, etc.)
+**Ticket Keys**:
+- Each ticket receives a unique human-readable key in format "{PROJECT_KEY}-{TICKET_NUMBER}"
+- Example: ABC-1, ABC-2, DEF-123
+- Project key: 3-character uppercase identifier (e.g., "ABC", "DEF")
+- Ticket number: Sequential integer starting from 1 within each project
+- Ticket numbers increment independently per project
+
+**Internal ID**:
+- Each ticket has an internal numeric ID for database relationships
+- Internal IDs not exposed in user-facing contexts
+- Used only for foreign keys and backward compatibility
 
 ### Timestamps
 
@@ -173,7 +181,14 @@ Timestamps display in user-friendly formats:
 
 ### Core Fields
 
-- **ID**: System-generated unique identifier
+- **Ticket Key**: Human-readable unique identifier (e.g., "ABC-123")
+  - Format: {PROJECT_KEY}-{TICKET_NUMBER}
+  - Used in URLs, UI displays, and references
+  - Stable across ticket lifecycle
+- **Ticket Number**: Project-scoped sequential number (1, 2, 3, ...)
+  - Increments independently per project
+  - Combined with project key to form ticket key
+- **Internal ID**: System-generated numeric identifier (not user-facing)
 - **Title**: User-provided short description
 - **Description**: User-provided detailed context
 - **Stage**: Current workflow position (one of six stages)
