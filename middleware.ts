@@ -7,9 +7,9 @@ export default authEdge((req) => {
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
   const isWorkflowApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/status$/) !== null
-  const isAIBoardCommentApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/\d+\/comments\/ai-board$/) !== null
-  const isTicketBranchApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/\d+\/branch$/) !== null
-  const isTransitionApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/\d+\/transition$/) !== null
+  const isAIBoardCommentApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/comments\/ai-board$/) !== null
+  const isTicketBranchApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/branch$/) !== null
+  const isTransitionApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/transition$/) !== null
   const isVerifyTicketsApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/verify$/) !== null
   const isLandingPage = req.nextUrl.pathname === '/'
 
