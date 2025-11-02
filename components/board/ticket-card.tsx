@@ -75,11 +75,8 @@ export const TicketCard = React.memo(
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
         >
-          {/* Header: Ticket Key and Badges */}
-          <div className="flex items-start justify-between mb-3">
-            <span className="text-xs text-[#a6adc8] font-mono font-semibold">
-              {ticket.ticketKey}
-            </span>
+          {/* Header: Badges */}
+          <div className="flex items-start justify-end mb-3">
             <div className="flex items-center gap-2">
               {ticket.workflowType === 'QUICK' && (
                 <Badge
@@ -95,11 +92,13 @@ export const TicketCard = React.memo(
             </div>
           </div>
 
-          {/* Title */}
+          {/* Title with Ticket Key */}
           <h3
             className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden mb-3"
-            title={ticket.title}
+            title={`${ticket.ticketKey} - ${ticket.title}`}
           >
+            <span className="text-[#a6adc8] font-mono">{ticket.ticketKey}</span>
+            <span className="text-[#a6adc8]"> - </span>
             {ticket.title}
           </h3>
 
