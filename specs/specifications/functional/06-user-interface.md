@@ -257,6 +257,28 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Board back to project list
 - Breadcrumb or back button (implementation-specific)
 
+### Ticket Cards
+
+**Visual Layout**:
+- **Header**: Badges aligned to the right
+  - ⚡ Quick badge (amber) for quick implementation tickets
+  - SONNET badge (blue) indicating AI model
+- **Title Section**: Ticket key and title
+  - Ticket key displayed as `#{TICKET_KEY}` in blue accent color
+  - Separator dash between key and title
+  - Format: `#ABC-123 - Fix login bug`
+  - Line clamping (2 lines maximum) with ellipsis for long titles
+  - Full title shown in hover tooltip
+- **Job Status Section**: Workflow and AI-BOARD job indicators (when active)
+  - Left side: Workflow job status (specify, plan, implement)
+  - Right side: AI-BOARD job status (when mentioned in comments)
+  - Single-line layout with space-between justification
+
+**Interactive States**:
+- Hover: Border and background color change
+- Drag: Semi-transparent ghost preview
+- Click: Opens ticket detail modal
+
 ### Project Cards
 
 **Information Display**:

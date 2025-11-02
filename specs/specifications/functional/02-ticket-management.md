@@ -112,7 +112,22 @@ When two users modify the same ticket simultaneously:
 - Ticket reverts to the current database position
 - User can retry the operation
 
-## Ticket Details
+## Ticket Display
+
+### Card Display Format
+
+Ticket cards on the Kanban board display the following information:
+
+- **Ticket Key**: Prefixed before the title in format `#{TICKET_KEY}`
+  - Example: `#ABC-123`
+  - Styled in blue accent color for visual distinction
+  - Provides quick identification and reference
+- **Title**: Ticket title text following the ticket key
+  - Format: `#{TICKET_KEY} - {TITLE}`
+  - Example: `#ABC-123 - Fix login bug`
+- **Badges**: Visual indicators for workflow type and AI model
+  - ⚡ Quick badge for quick implementation tickets
+  - SONNET badge indicating AI model
 
 ### Viewing Details
 
