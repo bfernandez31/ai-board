@@ -112,6 +112,36 @@ When two users modify the same ticket simultaneously:
 - Ticket reverts to the current database position
 - User can retry the operation
 
+## Ticket Card Display
+
+### Visual Layout
+
+Each ticket card displays information in the following layout:
+
+- **Header Area**: Right-aligned badges
+  - ⚡ Quick badge (for quick implementation workflow)
+  - SONNET model badge
+- **Title Area**: Ticket key and title on single line
+  - Format: `{ticketKey} - {title}`
+  - Example: "AIB-45 - Add ticketKey on project card"
+  - Ticket key displayed in monospace font with muted color
+  - Title uses standard font weight and color
+  - Text truncates with ellipsis if too long (line-clamp-2)
+  - Full text visible via title tooltip on hover
+- **Job Status Area**: Workflow and AI-BOARD job indicators (when active)
+  - Left side: Workflow job indicator (specify, plan, implement)
+  - Right side: AI-BOARD job indicator (compact icon-only)
+
+### Ticket Key Display
+
+The ticket key (e.g., "AIB-45") appears before the ticket title on all ticket cards:
+
+- **Format**: `{PROJECT_KEY}-{NUMBER}` (e.g., "AIB-45", "MOB-123")
+- **Styling**: Monospace font with muted text color for visual distinction
+- **Separator**: Hyphen-space separator " - " between key and title
+- **Accessibility**: Included in aria-label for screen readers
+- **Consistency**: Same format across board view, detail modal, and URLs
+
 ## Ticket Details
 
 ### Viewing Details
