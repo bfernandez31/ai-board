@@ -281,7 +281,7 @@ export async function handleTicketTransition(
         if (isQuickImpl) {
           // Quick-impl mode: Use quick-impl.yml input schema
           workflowInputs = {
-            ticket_id: ticket.id.toString(),
+            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
             ticketTitle: ticket.title,
             ticketDescription: ticket.description,
             job_id: job.id.toString(),
@@ -297,7 +297,7 @@ export async function handleTicketTransition(
         } else if (command === 'verify') {
           // Verify mode: Use verify.yml input schema
           workflowInputs = {
-            ticket_id: ticket.id.toString(),
+            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             branch: ticket.branch || '', // Branch must exist for VERIFY stage
@@ -308,7 +308,7 @@ export async function handleTicketTransition(
         } else {
           // Normal mode: Use speckit.yml input schema
           workflowInputs = {
-            ticket_id: ticket.id.toString(),
+            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
             command: command,
             branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
             job_id: job.id.toString(),
