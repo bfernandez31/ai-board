@@ -185,4 +185,88 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
     const originalDate = new Date(originalUpdatedAt);
     expect(updatedAt.getTime()).toBeGreaterThan(originalDate.getTime());
   });
+
+  test('should accept ticketKey instead of numeric ID in GET request', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test ticket for ticketKey', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
+    // Update branch using numeric ID
+    await request.patch(`/api/projects/${projectId}/tickets/${ticket.id}/branch`, {
+      data: { branch: '001-test-branch' },
+      headers: getWorkflowHeaders(),
+    });
+
+    // Fetch using ticketKey instead of numeric ID
+    const response = await request.get(
+      `/api/projects/${projectId}/tickets/${ticket.ticketKey}/branch`
+    );
+
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.id).toBe(ticket.id);
+    expect(result.branch).toBe('001-test-branch');
+  });
+
+  test('should accept ticketKey instead of numeric ID in PATCH request', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test ticket for ticketKey PATCH', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
+    // Update branch using ticketKey instead of numeric ID
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/${ticket.ticketKey}/branch`,
+      {
+        data: { branch: '002-ticketkey-patch' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.id).toBe(ticket.id);
+    expect(result.branch).toBe('002-ticketkey-patch');
+  });
+
+  test('should return 400 for invalid ticketKey format in GET', async ({ request, projectId }) => {
+    const response = await request.get(
+      `/api/projects/${projectId}/tickets/INVALID-KEY-FORMAT/branch`
+    );
+
+    expect(response.status()).toBe(400);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
+    expect(error.message).toContain('Ticket identifier must be a number or ticket key');
+  });
+
+  test('should return 400 for invalid ticketKey format in PATCH', async ({ request, projectId }) => {
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/INVALID-KEY-FORMAT/branch`,
+      {
+        data: { branch: '001-test' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(400);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
+    expect(error.message).toContain('Ticket identifier must be a number or ticket key');
+  });
+
+  test('should return 404 for non-existent ticketKey', async ({ request, projectId }) => {
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/XYZ-99999/branch`,
+      {
+        data: { branch: '001-test' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(404);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
+  });
 });
