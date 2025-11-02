@@ -1,28 +1,28 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
- * Contract Test: POST /api/projects/1/tickets
+ * Contract Test: POST /api/projects/${projectId}/tickets
  * Validates API contract from contracts/tickets-api.yaml
  *
  * This test MUST FAIL until the API endpoint is implemented
  */
 
-test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
+test.describe('POST /api/projects/${projectId}/tickets - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
-  test('should create ticket and return 201 with complete Ticket schema', async ({ request }) => {
+  test('should create ticket and return 201 with complete Ticket schema', async ({ request , projectId }) => {
     const requestBody = {
       title: '[e2e] Fix authentication bug',
       description: 'Users cannot log in after password reset'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -59,12 +59,12 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(Math.abs(updated.getTime() - created.getTime())).toBeLessThan(1000);
   });
 
-  test('should return 400 when description is missing', async ({ request }) => {
+  test('should return 400 when description is missing', async ({ request , projectId }) => {
     const requestBody = {
       title: '[e2e] Add dark mode toggle'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -78,12 +78,12 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should return 400 for missing title', async ({ request }) => {
+  test('should return 400 for missing title', async ({ request , projectId }) => {
     const requestBody = {
       description: 'This request has no title'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -101,13 +101,13 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should return 400 for empty title', async ({ request }) => {
+  test('should return 400 for empty title', async ({ request , projectId }) => {
     const requestBody = {
       title: ' ',
       description: 'Empty title should be rejected'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -121,7 +121,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should return 400 for title exceeding max length (100 chars)', async ({ request }) => {
+  test('should return 400 for title exceeding max length (100 chars)', async ({ request , projectId }) => {
     const longTitle = 'A'.repeat(101); // 101 characters
 
     const requestBody = {
@@ -129,7 +129,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
       description: 'Title is too long'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -142,7 +142,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should accept title at max length (100 chars)', async ({ request }) => {
+  test('should accept title at max length (100 chars)', async ({ request , projectId }) => {
     const maxTitle = 'A'.repeat(100); // Exactly 100 characters
 
     const requestBody = {
@@ -150,7 +150,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
       description: 'Title is at maximum allowed length'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -162,7 +162,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.title.length).toBe(100);
   });
 
-  test('should return 400 for description exceeding max length (2500 chars)', async ({ request }) => {
+  test('should return 400 for description exceeding max length (2500 chars)', async ({ request , projectId }) => {
     const longDescription = 'B'.repeat(2501); // 2501 characters
 
     const requestBody = {
@@ -170,7 +170,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
       description: longDescription
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -183,7 +183,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.code).toBe('VALIDATION_ERROR');
   });
 
-  test('should accept description at max length (2500 chars)', async ({ request }) => {
+  test('should accept description at max length (2500 chars)', async ({ request , projectId }) => {
     const maxDescription = 'B'.repeat(2500); // Exactly 2500 characters
 
     const requestBody = {
@@ -191,7 +191,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
       description: maxDescription
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -203,8 +203,8 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.description.length).toBe(2500);
   });
 
-  test('should return 400 for invalid JSON payload', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  test('should return 400 for invalid JSON payload', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: 'invalid json string',
       headers: {
         'Content-Type': 'application/json'
@@ -217,13 +217,13 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body).toHaveProperty('error');
   });
 
-  test('should handle allowed punctuation in title and description', async ({ request }) => {
+  test('should handle allowed punctuation in title and description', async ({ request , projectId }) => {
     const requestBody = {
       title: '[e2e] Fix bug - test, test? test! test.',
       description: 'Description with allowed punctuation - comma, period. question? exclamation!'
     };
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: requestBody
     });
 
@@ -235,7 +235,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     expect(body.description).toBe(requestBody.description);
   });
 
-  test('should handle concurrent ticket creation', async ({ request }) => {
+  test('should handle concurrent ticket creation', async ({ request , projectId }) => {
     const requests = Array.from({ length: 5 }, (_, i) => ({
       title: `Concurrent ticket ${i + 1}`,
       description: `Created concurrently number ${i + 1}`
@@ -243,7 +243,7 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
 
     const responses = await Promise.all(
       requests.map(data =>
-        request.post(`${BASE_URL}/api/projects/1/tickets`, { data })
+        request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, { data })
       )
     );
 
@@ -265,13 +265,13 @@ test.describe('POST /api/projects/1/tickets - Contract Validation', () => {
     });
   });
 
-  test('should return 500 with ErrorResponse schema on database error', async ({ request }) => {
+  test('should return 500 with ErrorResponse schema on database error', async ({ request , projectId }) => {
     // This test is challenging to trigger without database manipulation
     // Documented for completeness per OpenAPI spec
     // Implementation may require database connection mocking
 
     // For now, we validate that normal requests work
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Normal ticket for error handling test',
         description: 'This should succeed'

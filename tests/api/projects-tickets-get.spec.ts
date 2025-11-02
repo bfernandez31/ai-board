@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
@@ -11,13 +11,13 @@ import { cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
-  test('should return 200 with tickets grouped by stage for valid project', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+  test('should return 200 with tickets grouped by stage for valid project', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
 
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toContain('application/json');
@@ -41,7 +41,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     expect(Array.isArray(body.SHIP)).toBe(true);
   });
 
-  test('should return 400 for invalid projectId format (non-numeric)', async ({ request }) => {
+  test('should return 400 for invalid projectId format (non-numeric)', async ({ request , projectId }) => {
     const response = await request.get(`${BASE_URL}/api/projects/abc/tickets`);
 
     expect(response.status()).toBe(400);
@@ -52,7 +52,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     expect(body.error).toContain('Invalid project ID');
   });
 
-  test('should return 404 for non-existent project', async ({ request }) => {
+  test('should return 404 for non-existent project', async ({ request , projectId }) => {
     const response = await request.get(`${BASE_URL}/api/projects/999999/tickets`);
 
     expect(response.status()).toBe(404);
@@ -64,27 +64,29 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     expect(body).toHaveProperty('code', 'PROJECT_NOT_FOUND');
   });
 
-  test('should only return tickets from specified project (no leaks)', async ({ request }) => {
-    // Create ticket in project 1
-    const ticket1Response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  test('should only return tickets from specified project (no leaks)', async ({ request , projectId }) => {
+    // Create ticket in current worker's project
+    const ticket1Response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
-        title: '[e2e] Ticket in project 1',
+        title: `[e2e] Ticket in project ${projectId}`,
         description: 'Should be visible'
       }
     });
     expect(ticket1Response.status()).toBe(201);
     const ticket1 = await ticket1Response.json();
 
-    // Create ticket in project 2 (if it exists, otherwise this will fail which is fine)
-    await request.post(`${BASE_URL}/api/projects/2/tickets`, {
+    // Create ticket in different project (worker isolation pattern)
+    // Each worker gets unique wrongProjectId (projectId + 10) to prevent race conditions
+    const wrongProjectId = projectId + 10;
+    await request.post(`${BASE_URL}/api/projects/${wrongProjectId}/tickets`, {
       data: {
-        title: '[e2e] Ticket in project 2',
-        description: 'Should NOT be visible in project 1'
+        title: `[e2e] Ticket in project ${wrongProjectId}`,
+        description: `Should NOT be visible in project ${projectId}`
       }
     });
 
-    // Fetch tickets for project 1
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+    // Fetch tickets for current project
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -105,19 +107,19 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     // Verify the ticket we created is there
     const foundTicket = allTickets.find(t => t.id === ticket1.id);
     expect(foundTicket).toBeDefined();
-    expect(foundTicket.title).toBe('[e2e] Ticket in project 1');
+    expect(foundTicket.title).toBe(`[e2e] Ticket in project ${projectId}`);
 
     // CRITICAL: Verify no tickets from other projects leaked through
     for (const ticket of allTickets) {
       // We can't check projectId directly if it's not in response, but we verified our ticket is there
-      // and the count should not include project 2's ticket
-      expect(ticket.title).not.toBe('[e2e] Ticket in project 2');
+      // and the count should not include wrongProjectId's ticket
+      expect(ticket.title).not.toBe(`[e2e] Ticket in project ${wrongProjectId}`);
     }
   });
 
-  test('should return tickets with correct schema when tickets exist', async ({ request }) => {
+  test('should return tickets with correct schema when tickets exist', async ({ request , projectId }) => {
     // Create a test ticket in project 1
-    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const createResponse = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test ticket for GET contract validation',
         description: 'This ticket validates the GET endpoint contract'
@@ -127,7 +129,7 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     expect(createResponse.status()).toBe(201);
 
     // Now fetch all tickets for project 1
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -174,8 +176,8 @@ test.describe('GET /api/projects/[projectId]/tickets - Contract Validation', () 
     expect(new Date(foundTicket.updatedAt).toISOString()).toBe(foundTicket.updatedAt);
   });
 
-  test('should return empty arrays for all stages when project has no tickets', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+  test('should return empty arrays for all stages when project has no tickets', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
 
     expect(response.status()).toBe(200);
 

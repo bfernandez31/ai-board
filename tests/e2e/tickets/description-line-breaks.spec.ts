@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
 
 /**
@@ -13,9 +13,9 @@ test.describe('Ticket Description Line Break Preservation', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
@@ -25,11 +25,11 @@ test.describe('Ticket Description Line Break Preservation', () => {
   /**
    * T001: Line breaks in description are preserved in view mode
    */
-  test('preserves line breaks in ticket description view mode', async ({ page, request }) => {
+  test('preserves line breaks in ticket description view mode', async ({ page, request , projectId }) => {
     // Create ticket with multi-line description
     const descriptionWithLineBreaks = 'First line of description\nSecond line of description\nThird line of description';
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket with Multi-line Description',
         description: descriptionWithLineBreaks,
@@ -39,7 +39,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
     expect(response.ok()).toBe(true);
 
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -73,11 +73,11 @@ test.describe('Ticket Description Line Break Preservation', () => {
   /**
    * T002: Multiple consecutive line breaks are preserved
    */
-  test('preserves multiple consecutive line breaks', async ({ page, request }) => {
+  test('preserves multiple consecutive line breaks', async ({ page, request , projectId }) => {
     // Create ticket with description containing double line breaks (paragraphs)
     const descriptionWithParagraphs = 'First paragraph.\n\nSecond paragraph after blank line.\n\n\nThird paragraph after two blank lines.';
 
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket with Paragraphs',
         description: descriptionWithParagraphs,
@@ -85,7 +85,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
     });
 
     // Navigate to board and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -111,9 +111,9 @@ test.describe('Ticket Description Line Break Preservation', () => {
   /**
    * T003: Line breaks are preserved after editing
    */
-  test('preserves line breaks after editing description', async ({ page, request }) => {
+  test('preserves line breaks after editing description', async ({ page, request , projectId }) => {
     // Create ticket
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket for Edit Test',
         description: 'Initial description',
@@ -121,7 +121,7 @@ test.describe('Ticket Description Line Break Preservation', () => {
     });
 
     // Navigate to board and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 import { Stage } from '@prisma/client';
 
@@ -25,8 +25,9 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    ticketCounter = 0;
   });
 
   test.afterAll(async () => {
@@ -36,18 +37,25 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
   /**
    * Helper: Create test ticket with branch
    */
-  const createTestTicket = async (params: {
-    stage: Stage;
-    branch: string;
-    title?: string;
-  }) => {
+  let ticketCounter = 0;
+  const createTestTicket = async (
+    projectId: number,
+    params: {
+      stage: Stage;
+      branch: string;
+      title?: string;
+    }
+  ) => {
+    ticketCounter++;
     return await prisma.ticket.create({
       data: {
+        ticketNumber: ticketCounter,
+        ticketKey: `E2E${projectId}-${ticketCounter}`,
         title: params.title || '[e2e] Doc Edit Test',
         description: 'Test ticket for documentation editing',
         stage: params.stage,
         branch: params.branch,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -56,9 +64,9 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
   /**
    * T014: POST /api/projects/:id/docs returns 200 with valid request for spec.md
    */
-  test('POST docs returns 200 for spec.md edit in SPECIFY stage', async ({ request }) => {
+  test('POST docs returns 200 for spec.md edit in SPECIFY stage', async ({ request, projectId }) => {
     // Setup: Create ticket in SPECIFY stage
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-test-branch',
     });
@@ -72,7 +80,7 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
     };
 
     // NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: requestBody,
     });
 
@@ -91,13 +99,13 @@ test.describe('POST /api/projects/[projectId]/docs - Success Cases', () => {
   /**
    * T014: Verify response schema structure
    */
-  test('POST docs response matches schema', async ({ request }) => {
-    const ticket = await createTestTicket({
+  test('POST docs response matches schema', async ({ request, projectId }) => {
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-schema-test',
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'spec',
@@ -127,8 +135,8 @@ test.describe('POST /api/projects/[projectId]/docs - Permission Errors (403)', (
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
@@ -138,20 +146,22 @@ test.describe('POST /api/projects/[projectId]/docs - Permission Errors (403)', (
   /**
    * T015: Permission denied - trying to edit spec.md when NOT in SPECIFY stage
    */
-  test('POST docs returns 403 PERMISSION_DENIED for spec in PLAN stage', async ({ request }) => {
+  test('POST docs returns 403 PERMISSION_DENIED for spec in PLAN stage', async ({ request, projectId }) => {
     // Setup: Ticket in PLAN stage (spec editing not allowed)
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] Permission Test',
         description: 'Test permission denial',
         stage: 'PLAN', // Wrong stage for spec editing
         branch: '036-permission-test',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'spec', // Not allowed in PLAN stage
@@ -172,19 +182,21 @@ test.describe('POST /api/projects/[projectId]/docs - Permission Errors (403)', (
   /**
    * T015: Permission denied - trying to edit plan.md when in SPECIFY stage
    */
-  test('POST docs returns 403 for plan.md edit in SPECIFY stage', async ({ request }) => {
+  test('POST docs returns 403 for plan.md edit in SPECIFY stage', async ({ request, projectId }) => {
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 2,
+        ticketKey: `E2E${projectId}-2`,
         title: '[e2e] Plan Permission Test',
         description: 'Test plan editing permission',
         stage: 'SPECIFY', // Wrong stage for plan editing
         branch: '036-plan-test',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'plan', // Not allowed in SPECIFY stage
@@ -204,19 +216,21 @@ test.describe('POST /api/projects/[projectId]/docs - Permission Errors (403)', (
   /**
    * T015: Permission denied - no editing allowed in BUILD stage
    */
-  test('POST docs returns 403 for any doc type in BUILD stage', async ({ request }) => {
+  test('POST docs returns 403 for any doc type in BUILD stage', async ({ request, projectId }) => {
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 3,
+        ticketKey: `E2E${projectId}-3`,
         title: '[e2e] BUILD Stage Test',
         description: 'No editing in BUILD',
         stage: 'BUILD', // No editing allowed
         branch: '036-build-test',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'spec',
@@ -236,8 +250,8 @@ test.describe('POST /api/projects/[projectId]/docs - Validation Errors (400)', (
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
@@ -247,8 +261,8 @@ test.describe('POST /api/projects/[projectId]/docs - Validation Errors (400)', (
   /**
    * Validation error - missing required fields
    */
-  test('POST docs returns 400 for missing ticketId', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+  test('POST docs returns 400 for missing ticketId', async ({ request, projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         // Missing ticketId
         docType: 'spec',
@@ -266,19 +280,21 @@ test.describe('POST /api/projects/[projectId]/docs - Validation Errors (400)', (
   /**
    * Validation error - invalid docType
    */
-  test('POST docs returns 400 for invalid docType', async ({ request }) => {
+  test('POST docs returns 400 for invalid docType', async ({ request, projectId }) => {
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] Invalid DocType',
         description: 'Test invalid docType',
         stage: 'SPECIFY',
         branch: '036-invalid-type',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'invalid', // Invalid type
@@ -296,14 +312,16 @@ test.describe('POST /api/projects/[projectId]/docs - Validation Errors (400)', (
   /**
    * Validation error - content exceeds 1MB
    */
-  test('POST docs returns 400 for content exceeding 1MB', async ({ request }) => {
+  test('POST docs returns 400 for content exceeding 1MB', async ({ request, projectId }) => {
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 2,
+        ticketKey: `E2E${projectId}-2`,
         title: '[e2e] Large Content',
         description: 'Test content size limit',
         stage: 'SPECIFY',
         branch: '036-large-content',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -311,7 +329,7 @@ test.describe('POST /api/projects/[projectId]/docs - Validation Errors (400)', (
     // Generate content > 1MB (1,048,576 bytes)
     const largeContent = 'x'.repeat(1048577);
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'spec',
@@ -332,8 +350,8 @@ test.describe('POST /api/projects/[projectId]/docs - Not Found Errors (404)', ()
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
@@ -343,8 +361,8 @@ test.describe('POST /api/projects/[projectId]/docs - Not Found Errors (404)', ()
   /**
    * Not found - ticket doesn't exist
    */
-  test('POST docs returns 404 for non-existent ticket', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+  test('POST docs returns 404 for non-existent ticket', async ({ request, projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: 99999, // Non-existent
         docType: 'spec',
@@ -362,19 +380,21 @@ test.describe('POST /api/projects/[projectId]/docs - Not Found Errors (404)', ()
   /**
    * Not found - ticket has no branch
    */
-  test('POST docs returns 404 BRANCH_NOT_FOUND when ticket has no branch', async ({ request }) => {
+  test('POST docs returns 404 BRANCH_NOT_FOUND when ticket has no branch', async ({ request, projectId }) => {
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] No Branch',
         description: 'Ticket without branch',
         stage: 'SPECIFY',
         branch: null, // No branch assigned
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'spec',
@@ -398,8 +418,9 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    ticketCounter2 = 0;
   });
 
   test.afterAll(async () => {
@@ -409,18 +430,25 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
   /**
    * Helper: Create test ticket with branch
    */
-  const createTestTicket = async (params: {
-    stage: Stage;
-    branch: string;
-    title?: string;
-  }) => {
+  let ticketCounter2 = 0;
+  const createTestTicket = async (
+    projectId: number,
+    params: {
+      stage: Stage;
+      branch: string;
+      title?: string;
+    }
+  ) => {
+    ticketCounter2++;
     return await prisma.ticket.create({
       data: {
+        ticketNumber: ticketCounter2,
+        ticketKey: `E2E${projectId}-${ticketCounter2}`,
         title: params.title || '[e2e] US2 API Test',
         description: 'Test ticket for plan/tasks editing',
         stage: params.stage,
         branch: params.branch,
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -431,16 +459,16 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
    * T025: POST with docType=plan in PLAN stage returns 200
    * NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
    */
-  test('returns 200 when editing plan.md in PLAN stage', async ({ request }) => {
+  test('returns 200 when editing plan.md in PLAN stage', async ({ request, projectId }) => {
     // Setup: Create ticket in PLAN stage
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'PLAN',
       branch: '036-us2-plan-api-test',
       title: '[e2e] US2 Plan API Test',
     });
 
     // Make API request
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'plan',
@@ -464,16 +492,16 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
    * T026: POST with docType=tasks in PLAN stage returns 200
    * NOTE: GitHub API is mocked in test environment (TEST_MODE=true)
    */
-  test('returns 200 when editing tasks.md in PLAN stage', async ({ request }) => {
+  test('returns 200 when editing tasks.md in PLAN stage', async ({ request, projectId }) => {
     // Setup: Create ticket in PLAN stage
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'PLAN',
       branch: '036-us2-tasks-api-test',
       title: '[e2e] US2 Tasks API Test',
     });
 
     // Make API request
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'tasks',
@@ -496,16 +524,16 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
   /**
    * Permission test: Editing plan.md in SPECIFY stage returns 403
    */
-  test('returns 403 when editing plan.md in SPECIFY stage', async ({ request }) => {
+  test('returns 403 when editing plan.md in SPECIFY stage', async ({ request, projectId }) => {
     // Setup: Create ticket in SPECIFY stage
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us2-plan-permission-test',
       title: '[e2e] US2 Plan Permission Test',
     });
 
     // Make API request (should fail permission check)
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'plan',
@@ -526,16 +554,16 @@ test.describe('POST /api/projects/[projectId]/docs - User Story 2: Plan/Tasks', 
   /**
    * Permission test: Editing tasks.md in SPECIFY stage returns 403
    */
-  test('returns 403 when editing tasks.md in SPECIFY stage', async ({ request }) => {
+  test('returns 403 when editing tasks.md in SPECIFY stage', async ({ request, projectId }) => {
     // Setup: Create ticket in SPECIFY stage
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us2-tasks-permission-test',
       title: '[e2e] US2 Tasks Permission Test',
     });
 
     // Make API request (should fail permission check)
-    const response = await request.post(`${BASE_URL}/api/projects/1/docs`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/docs`, {
       data: {
         ticketId: ticket.id,
         docType: 'tasks',

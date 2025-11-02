@@ -33,6 +33,7 @@ export async function getUserProjects() {
     },
     select: {
       id: true,
+      key: true,
       name: true,
       description: true,
       githubOwner: true,
@@ -99,6 +100,7 @@ export async function createProject(data: {
   description: string;
   githubOwner: string;
   githubRepo: string;
+  key: string;
 }) {
   const userId = await requireAuth();
   const aiBoardUserId = await getAIBoardUserId();

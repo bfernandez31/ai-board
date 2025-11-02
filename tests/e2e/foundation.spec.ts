@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('Foundation Validation', () => {
-  test('no console errors on homepage', async ({ page }) => {
+  test('no console errors on homepage', async ({ page , projectId }) => {
     const consoleErrors: string[] = [];
 
     page.on('console', (msg) => {

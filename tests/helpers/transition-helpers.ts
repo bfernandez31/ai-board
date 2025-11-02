@@ -24,16 +24,18 @@ export async function getLatestJobId(
 /**
  * Transitions a ticket through multiple stages sequentially
  * @param request Playwright APIRequestContext
+ * @param projectId Project ID for worker isolation
  * @param ticketId Ticket ID to transition
  * @param stages Array of stage names to transition through (e.g., ['SPECIFY', 'PLAN', 'BUILD'])
  */
 export async function transitionThrough(
   request: APIRequestContext,
+  projectId: number,
   ticketId: number,
   stages: string[]
 ): Promise<void> {
   for (const stage of stages) {
-    const response = await request.post(`/api/projects/1/tickets/${ticketId}/transition`, {
+    const response = await request.post(`/api/projects/${projectId}/tickets/${ticketId}/transition`, {
       data: { targetStage: stage },
     });
 
@@ -66,7 +68,7 @@ export async function transitionThrough(
       if (stage === 'SPECIFY') {
         const branchName = `feature/ticket-${ticketId}`;
 
-        const branchResponse = await request.patch(`/api/projects/1/tickets/${ticketId}/branch`, {
+        const branchResponse = await request.patch(`/api/projects/${projectId}/tickets/${ticketId}/branch`, {
           data: { branch: branchName },
           headers: {
             'Authorization': `Bearer ${workflowToken}`,

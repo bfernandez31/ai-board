@@ -1,6 +1,6 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from '../helpers/worker-isolation';
 import { PrismaClient } from '@prisma/client';
-import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { getPrismaClient, cleanupDatabase, getProjectKey } from '../helpers/db-cleanup';
 
 /**
  * E2E Tests: Rollback from BUILD to INBOX
@@ -11,13 +11,16 @@ import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('Rollback Quick-Impl Workflow', () => {
   const BASE_URL = 'http://localhost:3000';
   let prisma: PrismaClient;
+  let nextTicketNumber = 1;
 
   test.beforeAll(() => {
     prisma = getPrismaClient();
   });
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   /**
@@ -42,17 +45,17 @@ test.describe('Rollback Quick-Impl Workflow', () => {
    * Helper: Wait for API response after drag-and-drop
    * Accepts both POST /transition (rollback) and PATCH /tickets/[id] (normal transitions)
    */
-  const waitForTransitionAPI = async (page: Page, ticketId: number) => {
+  const waitForTransitionAPI = async (page: Page, ticketId: number, projectId: number) => {
     return await page.waitForResponse(
       (response) => {
         const url = response.url();
         const method = response.request().method();
 
         // POST to /transition (rollback)
-        const isRollback = url.includes(`/api/projects/1/tickets/${ticketId}/transition`) && method === 'POST';
+        const isRollback = url.includes(`/api/projects/${projectId}/tickets/${ticketId}/transition`) && method === 'POST';
 
         // PATCH to /tickets/[id] (normal transitions)
-        const isNormalTransition = url.includes(`/api/projects/1/tickets/${ticketId}`) &&
+        const isNormalTransition = url.includes(`/api/projects/${projectId}/tickets/${ticketId}`) &&
                                    !url.includes('/transition') &&
                                    method === 'PATCH';
 
@@ -62,17 +65,21 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     );
   };
 
-  test('should rollback ticket from BUILD to INBOX with FAILED job', async ({ page }) => {
+  test('should rollback ticket from BUILD to INBOX with FAILED job', async ({ page , projectId }) => {
     // Setup: Create ticket in BUILD stage with FAILED job
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - FAILED',
         description: 'Test ticket for rollback',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '123-test-branch',
         version: 3,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -80,7 +87,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
         command: 'quick-impl',
         status: 'FAILED',
@@ -90,12 +97,12 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     });
 
     // Navigate to board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     // Drag ticket from BUILD to INBOX
     await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     // Verify API response
     expect(response.status()).toBe(200);
@@ -127,17 +134,21 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     expect(jobs).toHaveLength(0);
   });
 
-  test('should rollback ticket from BUILD to INBOX with CANCELLED job', async ({ page }) => {
+  test('should rollback ticket from BUILD to INBOX with CANCELLED job', async ({ page , projectId }) => {
     // Setup: Create ticket in BUILD stage with CANCELLED job (QUICK workflow)
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - CANCELLED',
         description: 'Test ticket for rollback',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '456-cancelled-branch',
         version: 5,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -145,7 +156,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
         command: 'quick-impl',
         status: 'CANCELLED',
@@ -155,12 +166,12 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     });
 
     // Navigate to board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     // Drag ticket from BUILD to INBOX
     await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     // Verify rollback succeeded
     expect(response.status()).toBe(200);
@@ -169,15 +180,19 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     expect(body.workflowType).toBe('FULL');
   });
 
-  test('should block rollback when job is RUNNING', async ({ page }) => {
+  test('should block rollback when job is RUNNING', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - RUNNING',
         description: 'Test ticket with RUNNING job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '789-running-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -185,7 +200,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
         command: 'quick-impl',
         status: 'RUNNING',
@@ -194,11 +209,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
       },
     });
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     // Verify rollback blocked
     expect(response.status()).toBe(400);
@@ -210,15 +225,19 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     expect(updatedTicket?.stage).toBe('BUILD');
   });
 
-  test('should block rollback when job is COMPLETED', async ({ page }) => {
+  test('should block rollback when job is COMPLETED', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - COMPLETED',
         description: 'Test ticket with COMPLETED job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '101-completed-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -226,7 +245,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
         command: 'quick-impl',
         status: 'COMPLETED',
@@ -236,11 +255,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
       },
     });
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     // Verify rollback blocked
     expect(response.status()).toBe(400);
@@ -248,15 +267,19 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     expect(body.error).toContain('completed successfully');
   });
 
-  test('should block rollback for FULL workflow type', async ({ page }) => {
+  test('should block rollback for FULL workflow type', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - FULL Workflow',
         description: 'Test ticket with FULL workflow type',
         stage: 'BUILD',
         workflowType: 'FULL',
         branch: '102-full-workflow-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -264,7 +287,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
         command: 'implement',
         status: 'FAILED',
@@ -273,7 +296,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
       },
     });
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     // Verify ticket is in BUILD column before drag attempt
@@ -299,49 +322,57 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     expect(updatedTicket?.workflowType).toBe('FULL');
   });
 
-  test('should allow normal workflow after rollback', async ({ page }) => {
+  test('should allow normal workflow after rollback', async ({ page , projectId }) => {
     // Setup: Ticket that was rolled back
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - Post-Rollback Normal',
         description: 'Test ticket after rollback',
         stage: 'INBOX', // Already rolled back
         workflowType: 'FULL', // Reset to FULL
         branch: null, // Reset to null
         version: 1, // Reset to 1
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     // Drag to SPECIFY (normal workflow)
     await dragTicketToColumn(page, ticket.id, 'SPECIFY');
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.stage).toBe('SPECIFY');
   });
 
-  test('should allow quick-impl workflow after rollback', async ({ page }) => {
+  test('should allow quick-impl workflow after rollback', async ({ page , projectId }) => {
     // Setup: Ticket that was rolled back
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Rollback Test - Post-Rollback Quick',
         description: 'Test ticket after rollback',
         stage: 'INBOX',
         workflowType: 'FULL',
         branch: null,
         version: 1,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
     // Drag to BUILD (quick-impl workflow triggers modal)
@@ -356,7 +387,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await proceedButton.click();
 
     // Wait for API call after modal confirmation
-    const response = await waitForTransitionAPI(page, ticket.id);
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
 
     expect(response.status()).toBe(200);
     const body = await response.json();

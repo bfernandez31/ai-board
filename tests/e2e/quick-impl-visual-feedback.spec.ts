@@ -1,8 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase, ensureProjectExists, getProjectKey } from '../helpers/db-cleanup';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+let nextTicketNumber = 1;
 
 /**
  * E2E Tests: Quick-Impl Visual Feedback
@@ -15,47 +17,24 @@ const prisma = new PrismaClient();
  */
 
 test.describe('Quick-Impl Visual Feedback', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    await ensureProjectExists(projectId);
 
-    // Create test user (same pattern as db-cleanup.ts)
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    // Ensure test project 1 exists with correct userId
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Reset ticket counter
+    nextTicketNumber = 1;
 
     // Create test ticket in INBOX
+    const projectKey = getProjectKey(projectId);
+    const ticketNumber = nextTicketNumber++;
     await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Quick-Impl Visual Test',
         description: 'Testing visual feedback during drag',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -71,11 +50,9 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Hovering over different columns
    * Then: SPECIFY shows blue, BUILD shows green, others grayed out
    */
-  test('should show color-coded drop zones during INBOX drag (quick-impl)', async ({
-    page,
-  }) => {
+  test('should show color-coded drop zones during INBOX drag (quick-impl)', async ({ page, projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Wait for board to load
     await page.waitForSelector('[data-testid="column-INBOX"]');
@@ -136,9 +113,9 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Drag ends
    * Then: All drop zone styling is removed
    */
-  test('should reset visual feedback after drag ends', async ({ page }) => {
+  test('should reset visual feedback after drag ends', async ({ page , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Wait for board to load
     await page.waitForSelector('[data-testid="column-INBOX"]');
@@ -180,22 +157,24 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Hovering over different columns
    * Then: Only PLAN shows blue (sequential validation), others grayed out
    */
-  test('should show normal workflow visual feedback for SPECIFY → PLAN', async ({
-    page,
-  }) => {
+  test('should show normal workflow visual feedback for SPECIFY → PLAN', async ({ page, projectId }) => {
     // Create ticket in SPECIFY stage (instead of INBOX)
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] SPECIFY Visual Test',
         description: 'Testing visual feedback for SPECIFY stage',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Wait for board to load
     await page.waitForSelector('[data-testid="column-SPECIFY"]');
@@ -245,21 +224,25 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Board loads
    * Then: ⚡ Quick badge is visible on ticket card
    */
-  test('should show ⚡ Quick badge for quick-impl tickets', async ({ page }) => {
+  test('should show ⚡ Quick badge for quick-impl tickets', async ({ page , projectId }) => {
     // Create ticket with workflowType=QUICK
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Quick-Impl Badge Test',
         description: 'Testing badge visibility for quick-impl',
         stage: 'BUILD',
         workflowType: 'QUICK',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Wait for board to load
     await page.waitForSelector('[data-testid="column-BUILD"]');
@@ -288,21 +271,25 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Board loads
    * Then: ⚡ Quick badge is NOT visible on ticket card
    */
-  test('should NOT show badge for full workflow tickets', async ({ page }) => {
+  test('should NOT show badge for full workflow tickets', async ({ page , projectId }) => {
     // Create ticket with workflowType=FULL (default)
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Full Workflow Badge Test',
         description: 'Testing badge absence for full workflow',
         stage: 'BUILD',
         workflowType: 'FULL',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Wait for board to load
     await page.waitForSelector('[data-testid="column-BUILD"]');
@@ -323,9 +310,9 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Quick-impl transition completes
    * Then: ⚡ Quick badge appears immediately without page refresh
    */
-  test('should show badge immediately after quick-impl transition', async ({ page, request }) => {
+  test('should show badge immediately after quick-impl transition', async ({ page, request , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="column-INBOX"]');
 
     // Get the ticket card in INBOX
@@ -341,7 +328,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketId = parseInt(ticketIdAttr || '0', 10);
 
     // Perform quick-impl transition via API (simulates successful drag-and-drop)
-    const response = await request.post(`/api/projects/1/tickets/${ticketId}/transition`, {
+    const response = await request.post(`/api/projects/${projectId}/tickets/${ticketId}/transition`, {
       data: { targetStage: 'BUILD' },
     });
 
@@ -380,15 +367,19 @@ test.describe('Quick-Impl Visual Feedback', () => {
    * When: Ticket transitions to VERIFY, then SHIP
    * Then: ⚡ Quick badge remains visible throughout
    */
-  test('should persist badge through stage transitions', async ({ page, request }) => {
+  test('should persist badge through stage transitions', async ({ page, request , projectId }) => {
     // Create ticket with workflowType=QUICK in BUILD
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Badge Persistence Test',
         description: 'Testing badge persistence across transitions',
         stage: 'BUILD',
         workflowType: 'QUICK',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -397,7 +388,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'COMPLETED',
         startedAt: new Date(),
@@ -407,7 +398,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="column-BUILD"]');
 
     // Verify badge is visible in BUILD stage
@@ -418,7 +409,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Transition to VERIFY using API (simpler than drag-and-drop with modal)
     const ticketData = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
+    await request.post(`/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: { targetStage: 'VERIFY', version: ticketData?.version },
     });
 
@@ -434,7 +425,7 @@ test.describe('Quick-Impl Visual Feedback', () => {
 
     // Transition to SHIP
     const updatedTicketData = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    await request.post(`/api/projects/1/tickets/${ticket.id}/transition`, {
+    await request.post(`/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: { targetStage: 'SHIP', version: updatedTicketData?.version },
     });
 

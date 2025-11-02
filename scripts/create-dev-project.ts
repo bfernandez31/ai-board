@@ -40,6 +40,7 @@ async function main() {
     },
     create: {
       id: 3,
+      key: 'DEV', // Development project key
       name: 'AI Board Development',
       description: 'Main development project for AI Board kanban application',
       githubOwner: 'bfernandez31',

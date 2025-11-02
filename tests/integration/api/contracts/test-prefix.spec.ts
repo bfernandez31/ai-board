@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../helpers/worker-isolation';
 
 test.describe('Test Data Prefix Pattern Contract', () => {
   // Regex pattern for validation

@@ -12,10 +12,13 @@
  * TDD Approach: These tests validate the plan and tasks viewing functionality
  */
 
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase, ensureProjectExists, getPrismaClient, getProjectKey, getProjectGithub } from '../helpers/db-cleanup';
 
 const prisma = getPrismaClient();
+
+// Track ticket numbers per worker (keyed by projectId)
+const ticketCounters = new Map<number, number>();
 
 // Helper to create ticket with required test prefix
 async function createTestTicket(data: {
@@ -26,7 +29,13 @@ async function createTestTicket(data: {
   stage?: string;
   workflowType?: string;
 }) {
+  const currentCounter = ticketCounters.get(data.projectId) || 1;
+  const ticketNumber = currentCounter;
+  ticketCounters.set(data.projectId, currentCounter + 1);
+  const projectKey = getProjectKey(data.projectId);
   const ticketData: {
+    ticketNumber: number;
+    ticketKey: string;
     title: string;
     description: string;
     branch?: string | null;
@@ -35,6 +44,8 @@ async function createTestTicket(data: {
     workflowType: any;
     updatedAt: Date;
   } = {
+    ticketNumber,
+    ticketKey: `${projectKey}-${ticketNumber}`,
     title: data.title,
     description: data.description ?? 'Test description',
     projectId: data.projectId,
@@ -55,13 +66,14 @@ async function createTestTicket(data: {
 // Helper to create job
 async function createTestJob(data: {
   ticketId: number;
+  projectId: number;
   command: string;
   status: string;
 }) {
   return prisma.job.create({
     data: {
       ticketId: data.ticketId,
-      projectId: 1,
+      projectId: data.projectId,
       command: data.command,
       status: data.status as any,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,
@@ -72,57 +84,36 @@ async function createTestJob(data: {
 
 // Helper to open ticket modal and wait for jobs to load
 async function openTicketModal(page: any, ticketId: number) {
+  // Wait for ticket to be present on the page first
+  const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
+  await ticketCard.waitFor({ state: 'visible', timeout: 10000 });
+
   const jobsPromise = page.waitForResponse(
-    (response: any) => response.url().includes(`/tickets/${ticketId}/jobs`) && response.status() === 200
+    (response: any) => response.url().includes(`/tickets/${ticketId}/jobs`) && response.status() === 200,
+    { timeout: 15000 }
   );
 
-  await page.click(`[data-ticket-id="${ticketId}"]`);
+  await ticketCard.click();
   await jobsPromise;
 }
 
 test.describe('Documentation Viewer - Plan Button Visibility', () => {
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Cleanup before each test - use cleanupDatabase for complete isolation
+    await cleanupDatabase(projectId);
 
-    // Ensure test user exists
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Reset ticket counter for this worker's project
+    ticketCounters.set(projectId, 1);
 
-    // Ensure test project exists
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
-  test('shows Plan button when FULL workflow ticket has completed plan job', async ({ page }) => {
+  test('shows Plan button when FULL workflow ticket has completed plan job', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Plan Button Visible',
       branch: 'test-branch-plan',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
@@ -130,76 +121,80 @@ test.describe('Documentation Viewer - Plan Button Visibility', () => {
     // Need specify job to make action buttons section visible
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
     await expect(page.getByRole('button', { name: 'Plan' })).toBeVisible();
   });
 
-  test('hides Plan button for QUICK workflow tickets', async ({ page }) => {
+  test('hides Plan button for QUICK workflow tickets', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Quick Workflow',
       branch: 'test-branch-quick',
-      projectId: 1,
+      projectId,
       stage: 'BUILD',
       workflowType: 'QUICK',
     });
 
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'quick-impl',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
     await expect(page.getByRole('button', { name: 'Plan' })).not.toBeVisible();
   });
 
-  test('hides Plan button when ticket has no branch', async ({ page }) => {
+  test('hides Plan button when ticket has no branch', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc No Branch',
       branch: null,
-      projectId: 1,
+      projectId,
       workflowType: 'FULL',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
     await expect(page.getByRole('button', { name: 'Plan' })).not.toBeVisible();
   });
 
-  test('hides Plan button when plan job not completed', async ({ page }) => {
+  test('hides Plan button when plan job not completed', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Plan Job Pending',
       branch: 'test-branch',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
 
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'PENDING',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
@@ -208,45 +203,22 @@ test.describe('Documentation Viewer - Plan Button Visibility', () => {
 });
 
 test.describe('Documentation Viewer - Tasks Button Visibility', () => {
-  test.beforeEach(async () => {
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Cleanup before each test - use cleanupDatabase for complete isolation
+    await cleanupDatabase(projectId);
 
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Reset ticket counter
+    ticketCounters.set(projectId, 1);
 
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
-  test('shows Tasks button when FULL workflow ticket has completed plan job', async ({ page }) => {
+  test('shows Tasks button when FULL workflow ticket has completed plan job', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Tasks Button Visible',
       branch: 'test-branch-tasks',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
@@ -254,44 +226,46 @@ test.describe('Documentation Viewer - Tasks Button Visibility', () => {
     // Need specify job to make action buttons section visible
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
     await expect(page.getByRole('button', { name: 'Tasks' })).toBeVisible();
   });
 
-  test('hides Tasks button for QUICK workflow tickets', async ({ page }) => {
+  test('hides Tasks button for QUICK workflow tickets', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Tasks Quick Workflow',
       branch: 'test-branch-quick-tasks',
-      projectId: 1,
+      projectId,
       stage: 'BUILD',
       workflowType: 'QUICK',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
     await expect(page.getByRole('button', { name: 'Tasks' })).not.toBeVisible();
   });
 
-  test('shows both Plan and Tasks buttons together', async ({ page }) => {
+  test('shows both Plan and Tasks buttons together', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Both Buttons',
       branch: 'test-branch-both',
-      projectId: 1,
+      projectId,
       stage: 'BUILD',
       workflowType: 'FULL',
     });
@@ -299,17 +273,19 @@ test.describe('Documentation Viewer - Tasks Button Visibility', () => {
     // Need specify job to make action buttons section visible
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
@@ -320,55 +296,32 @@ test.describe('Documentation Viewer - Tasks Button Visibility', () => {
 });
 
 test.describe('Documentation Viewer - Content Display', () => {
-  test.beforeEach(async () => {
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Cleanup before each test - use cleanupDatabase for complete isolation
+    await cleanupDatabase(projectId);
 
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Reset ticket counter
+    ticketCounters.set(projectId, 1);
 
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
-  test('displays plan content when Plan button clicked', async ({ page }) => {
+  test('displays plan content when Plan button clicked', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Plan Content',
       branch: 'test-branch-plan-content',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Plan")');
@@ -380,21 +333,21 @@ test.describe('Documentation Viewer - Content Display', () => {
     await expect(page.getByText('Test Mode plan')).toBeVisible();
   });
 
-  test('displays tasks content when Tasks button clicked', async ({ page }) => {
+  test('displays tasks content when Tasks button clicked', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Tasks Content',
       branch: 'test-branch-tasks-content',
-      projectId: 1,
+      projectId,
       stage: 'BUILD',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Tasks")');
@@ -406,21 +359,21 @@ test.describe('Documentation Viewer - Content Display', () => {
     await expect(page.getByText('Test Mode tasks')).toBeVisible();
   });
 
-  test('renders markdown headings in plan viewer', async ({ page }) => {
+  test('renders markdown headings in plan viewer', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Plan Headings',
       branch: 'test-branch-plan-headings',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Plan")');
@@ -433,55 +386,32 @@ test.describe('Documentation Viewer - Content Display', () => {
 });
 
 test.describe('Documentation Viewer - Branch Selection for Shipped Tickets', () => {
-  test.beforeEach(async () => {
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Cleanup before each test - use cleanupDatabase for complete isolation
+    await cleanupDatabase(projectId);
 
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Reset ticket counter
+    ticketCounters.set(projectId, 1);
 
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
-  test('fetches plan from main branch for SHIP stage tickets', async ({ page }) => {
+  test('fetches plan from main branch for SHIP stage tickets', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Shipped Plan',
       branch: 'test-branch-shipped',
-      projectId: 1,
+      projectId,
       stage: 'SHIP',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
@@ -502,21 +432,21 @@ test.describe('Documentation Viewer - Branch Selection for Shipped Tickets', () 
     expect(data.metadata.branch).toBe('main');
   });
 
-  test('fetches tasks from main branch for SHIP stage tickets', async ({ page }) => {
+  test('fetches tasks from main branch for SHIP stage tickets', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Shipped Tasks',
       branch: 'test-branch-shipped-tasks',
-      projectId: 1,
+      projectId,
       stage: 'SHIP',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
@@ -537,18 +467,18 @@ test.describe('Documentation Viewer - Branch Selection for Shipped Tickets', () 
     expect(data.metadata.branch).toBe('main');
   });
 
-  test('fetches spec from main branch for SHIP stage tickets', async ({ page }) => {
+  test('fetches spec from main branch for SHIP stage tickets', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Shipped Spec',
       branch: 'test-branch-shipped-spec',
-      projectId: 1,
+      projectId,
       stage: 'SHIP',
       workflowType: 'FULL',
     });
 
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
 
@@ -571,55 +501,32 @@ test.describe('Documentation Viewer - Branch Selection for Shipped Tickets', () 
 });
 
 test.describe('Documentation Viewer - Modal Interactions', () => {
-  test.beforeEach(async () => {
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Cleanup before each test - use cleanupDatabase for complete isolation
+    await cleanupDatabase(projectId);
 
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Reset ticket counter
+    ticketCounters.set(projectId, 1);
 
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
-  test('closes plan modal with ESC key', async ({ page }) => {
+  test('closes plan modal with ESC key', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Plan ESC',
       branch: 'test-branch-plan-esc',
-      projectId: 1,
+      projectId,
       stage: 'PLAN',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Plan")');
@@ -632,21 +539,21 @@ test.describe('Documentation Viewer - Modal Interactions', () => {
     await expect(planModal).not.toBeVisible();
   });
 
-  test('closes tasks modal with ESC key', async ({ page }) => {
+  test('closes tasks modal with ESC key', async ({ page , projectId }) => {
     const ticket = await createTestTicket({
       title: '[e2e] Doc Tasks ESC',
       branch: 'test-branch-tasks-esc',
-      projectId: 1,
+      projectId,
       stage: 'BUILD',
       workflowType: 'FULL',
     });
 
     // Need specify job to make action buttons section visible
-    await createTestJob({ ticketId: ticket.id, command: 'specify', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'specify', status: 'COMPLETED' });
 
-    await createTestJob({ ticketId: ticket.id, command: 'plan', status: 'COMPLETED' });
+    await createTestJob({ ticketId: ticket.id, projectId, command: 'plan', status: 'COMPLETED' });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Tasks")');
@@ -665,37 +572,40 @@ test.describe('Documentation Viewer - Modal Interactions', () => {
 // =============================================================================
 
 test.describe('Commit History - User Story 3', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    ticketCounters.set(projectId, 1);
+
+    // Ensure test project exists for this worker (guarantees user + project)
+    await ensureProjectExists(projectId);
   });
 
   /**
    * T031: E2E test for commit history display
    * Verifies "View History" button appears and commit list shows with authors and timestamps
    */
-  test('displays commit history when View History button clicked', async ({ page }) => {
+  test('displays commit history when View History button clicked', async ({ page , projectId }) => {
     // Create test ticket with branch
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: '[e2e] US3 Commit History Test',
-        description: 'Testing commit history display',
-        stage: 'SPECIFY',
-        branch: '036-us3-history-test',
-        projectId: 1,
-        workflowType: 'FULL',
-        updatedAt: new Date(),
-      },
+    const ticket = await createTestTicket({
+      title: '[e2e] US3 Commit History Test',
+      description: 'Testing commit history display',
+      stage: 'SPECIFY',
+      branch: '036-us3-history-test',
+      projectId,
+      workflowType: 'FULL',
     });
 
     // Create completed job (ticket has progressed through SPECIFY)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     // Mock GitHub commit history API response
-    await page.route('**/api/projects/1/docs/history*', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs/history*`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -727,7 +637,7 @@ test.describe('Commit History - User Story 3', () => {
     });
 
     // Open documentation viewer
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Spec")');
 
@@ -760,29 +670,27 @@ test.describe('Commit History - User Story 3', () => {
    * T032: E2E test for diff viewing
    * Verifies clicking a commit displays the diff
    */
-  test('displays diff when clicking on a commit', async ({ page }) => {
+  test('displays diff when clicking on a commit', async ({ page , projectId }) => {
     // Create test ticket with branch
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: '[e2e] US3 Diff Viewing Test',
-        description: 'Testing diff display',
-        stage: 'SPECIFY',
-        branch: '036-us3-diff-test',
-        projectId: 1,
-        workflowType: 'FULL',
-        updatedAt: new Date(),
-      },
+    const ticket = await createTestTicket({
+      title: '[e2e] US3 Diff Viewing Test',
+      description: 'Testing diff display',
+      stage: 'SPECIFY',
+      branch: '036-us3-diff-test',
+      projectId,
+      workflowType: 'FULL',
     });
 
     // Create completed job
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     // Mock commit history API
-    await page.route('**/api/projects/1/docs/history*', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs/history*`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -804,7 +712,7 @@ test.describe('Commit History - User Story 3', () => {
     });
 
     // Mock diff API response
-    await page.route('**/api/projects/1/docs/diff*', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs/diff*`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -825,7 +733,7 @@ test.describe('Commit History - User Story 3', () => {
     });
 
     // Open documentation viewer and history
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await openTicketModal(page, ticket.id);
     await page.click('button:has-text("Spec")');
     await page.click('button:has-text("View History")');
@@ -854,34 +762,33 @@ test.describe('Commit History - User Story 3', () => {
    * T033: E2E test for multi-user attribution
    * Verifies different authors shown correctly in commit history
    */
-  test('displays multiple authors correctly in commit history', async ({ page }) => {
+  test('displays multiple authors correctly in commit history', async ({ page , projectId }) => {
     // Create test ticket with branch
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: '[e2e] US3 Multi-User Attribution Test',
-        description: 'Testing multi-user commit attribution',
-        stage: 'PLAN',
-        branch: '036-us3-multi-user-test',
-        projectId: 1,
-        workflowType: 'FULL',
-        updatedAt: new Date(),
-      },
+    const ticket = await createTestTicket({
+      title: '[e2e] US3 Multi-User Attribution Test',
+      description: 'Testing multi-user commit attribution',
+      stage: 'PLAN',
+      branch: '036-us3-multi-user-test',
+      projectId,
+      workflowType: 'FULL',
     });
 
     // Create completed jobs for SPECIFY and PLAN stages
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
     // Mock commit history with multiple different authors
-    await page.route('**/api/projects/1/docs/history*', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs/history*`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -933,7 +840,7 @@ test.describe('Commit History - User Story 3', () => {
     });
 
     // Open documentation viewer and history
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
     await page.click('button:has-text("Plan")');
     await page.click('button:has-text("View History")');

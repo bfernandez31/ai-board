@@ -8,17 +8,23 @@
  * - US4: Persistence and deleted user handling
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
+import { getProjectKey, getProjectGithub } from '../../helpers/db-cleanup';
 
 const TEST_USER_EMAIL = 'test@e2e.local';
-const TEST_PROJECT_ID = 1;
-const TEST_TICKET_ID = 1;
+
+// Module-level variables to store IDs for test access
+let testProjectId: number;
+let testTicketId: number;
 
 /**
  * Setup: Create test user, project, and ticket before each test
  */
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page , projectId }) => {
+  testProjectId = projectId; // Store for test access
+  const github = getProjectGithub(projectId);
+  const projectKey = getProjectKey(projectId);
   // Create test user (project owner)
   const testUser = await prisma.user.upsert({
     where: { email: TEST_USER_EMAIL },
@@ -81,15 +87,16 @@ test.beforeEach(async ({ page }) => {
 
   // Ensure test project exists
   await prisma.project.upsert({
-    where: { id: TEST_PROJECT_ID },
+    where: { id: projectId },
     update: { userId: testUser.id },
     create: {
-      id: TEST_PROJECT_ID,
+      id: projectId,
       name: '[e2e] Test Project',
       description: 'Test project for E2E tests',
-      githubOwner: 'test',
-      githubRepo: 'test',
+      githubOwner: github.owner,
+      githubRepo: github.repo,
       userId: testUser.id,
+      key: projectKey,
       updatedAt: new Date(),
     },
   });
@@ -98,13 +105,13 @@ test.beforeEach(async ({ page }) => {
   await prisma.projectMember.upsert({
     where: {
       projectId_userId: {
-        projectId: TEST_PROJECT_ID,
+        projectId,
         userId: testUser.id,
       },
     },
     update: {},
     create: {
-      projectId: TEST_PROJECT_ID,
+      projectId,
       userId: testUser.id,
       role: 'owner',
     },
@@ -113,13 +120,13 @@ test.beforeEach(async ({ page }) => {
   await prisma.projectMember.upsert({
     where: {
       projectId_userId: {
-        projectId: TEST_PROJECT_ID,
+        projectId,
         userId: user2.id,
       },
     },
     update: {},
     create: {
-      projectId: TEST_PROJECT_ID,
+      projectId,
       userId: user2.id,
       role: 'member',
     },
@@ -128,13 +135,13 @@ test.beforeEach(async ({ page }) => {
   await prisma.projectMember.upsert({
     where: {
       projectId_userId: {
-        projectId: TEST_PROJECT_ID,
+        projectId,
         userId: user3.id,
       },
     },
     update: {},
     create: {
-      projectId: TEST_PROJECT_ID,
+      projectId,
       userId: user3.id,
       role: 'member',
     },
@@ -144,42 +151,50 @@ test.beforeEach(async ({ page }) => {
   await prisma.projectMember.upsert({
     where: {
       projectId_userId: {
-        projectId: TEST_PROJECT_ID,
+        projectId,
         userId: 'ai-board-system-user',
       },
     },
     update: {},
     create: {
-      projectId: TEST_PROJECT_ID,
+      projectId,
       userId: 'ai-board-system-user',
       role: 'member',
     },
   });
 
   // Ensure test ticket exists
-  await prisma.ticket.upsert({
-    where: { id: TEST_TICKET_ID },
-    update: { projectId: TEST_PROJECT_ID },
+  const testTicket = await prisma.ticket.upsert({
+    where: {
+      projectId_ticketNumber: {
+        projectId,
+        ticketNumber: 1,
+      }
+    },
+    update: {},
     create: {
-      id: TEST_TICKET_ID,
       title: '[e2e] Test Ticket for Mentions',
       description: 'Ticket for testing mention functionality',
       stage: 'INBOX',
-      projectId: TEST_PROJECT_ID,
+      projectId,
+      ticketNumber: 1,
+      ticketKey: `${projectKey}-1`,
       updatedAt: new Date(),
     },
   });
 
+  testTicketId = testTicket.id; // Store for test access
+
   // Clean up existing comments
   await prisma.comment.deleteMany({
-    where: { ticketId: TEST_TICKET_ID },
+    where: { ticketId: testTicket.id },
   });
 
   // Navigate to board and open ticket modal
-  await page.goto(`/projects/${TEST_PROJECT_ID}/board`);
+  await page.goto(`/projects/${projectId}/board`);
 
   // Click ticket to open detail modal
-  await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+  await page.click(`[data-ticket-id="${testTicket.id}"]`);
   await page.waitForSelector('[role="dialog"]');
 
   // Click Conversation tab and wait for tab content to be visible
@@ -189,12 +204,8 @@ test.beforeEach(async ({ page }) => {
 
 /**
  * Cleanup: Remove test data after each test
+ * Note: Comments are already cleaned up in beforeEach
  */
-test.afterEach(async () => {
-  await prisma.comment.deleteMany({
-    where: { ticketId: TEST_TICKET_ID },
-  });
-});
 
 /**
  * ======================
@@ -203,7 +214,7 @@ test.afterEach(async () => {
  */
 
 test.describe('US1: Basic Mention Autocomplete', () => {
-  test('[US1] T011: Typing @ opens autocomplete dropdown', async ({ page }) => {
+  test('[US1] T011: Typing @ opens autocomplete dropdown', async ({ page , projectId }) => {
     // Find comment input field
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await expect(commentInput).toBeVisible();
@@ -220,7 +231,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     await expect(userItems).toHaveCount(4); // E2E Test User, Alice Smith, Bob Johnson, AI-BOARD Assistant
   });
 
-  test('[US1] T012: Typing letters after @ filters user list', async ({ page }) => {
+  test('[US1] T012: Typing letters after @ filters user list', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -245,7 +256,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     await expect(userItems).toHaveCount(0);
   });
 
-  test('[US1] T013: Clicking user in dropdown inserts mention', async ({ page }) => {
+  test('[US1] T013: Clicking user in dropdown inserts mention', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -267,7 +278,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
     await expect(autocomplete).not.toBeVisible();
   });
 
-  test('[US1] T014: Submitted comment with mention is saved and displayed with formatting', async ({ page }) => {
+  test('[US1] T014: Submitted comment with mention is saved and displayed with formatting', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert mention
@@ -311,7 +322,7 @@ test.describe('US1: Basic Mention Autocomplete', () => {
  */
 
 test.describe('US2: Keyboard Navigation', () => {
-  test('[US2] T024: Arrow Down key highlights next user', async ({ page }) => {
+  test('[US2] T024: Arrow Down key highlights next user', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -328,7 +339,7 @@ test.describe('US2: Keyboard Navigation', () => {
     await expect(highlightedUser).toBeVisible();
   });
 
-  test('[US2] T025: Arrow Up key highlights previous user', async ({ page }) => {
+  test('[US2] T025: Arrow Up key highlights previous user', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -347,7 +358,7 @@ test.describe('US2: Keyboard Navigation', () => {
     await expect(highlightedUser).toBeVisible();
   });
 
-  test('[US2] T026: Enter key selects highlighted user', async ({ page }) => {
+  test('[US2] T026: Enter key selects highlighted user', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -368,7 +379,7 @@ test.describe('US2: Keyboard Navigation', () => {
     await expect(autocomplete).not.toBeVisible();
   });
 
-  test('[US2] T027: Escape key closes dropdown without inserting mention', async ({ page }) => {
+  test('[US2] T027: Escape key closes dropdown without inserting mention', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
     await commentInput.fill('@');
 
@@ -394,7 +405,7 @@ test.describe('US2: Keyboard Navigation', () => {
  */
 
 test.describe('US3: Multiple Mentions', () => {
-  test('[US3] T033: Typing @ after existing mention opens new autocomplete', async ({ page }) => {
+  test('[US3] T033: Typing @ after existing mention opens new autocomplete', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert first mention
@@ -417,7 +428,7 @@ test.describe('US3: Multiple Mentions', () => {
     await expect(autocomplete).toBeVisible();
   });
 
-  test('[US3] T034: Submitting comment with multiple mentions saves all mentions', async ({ page }) => {
+  test('[US3] T034: Submitting comment with multiple mentions saves all mentions', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Insert first mention
@@ -451,7 +462,7 @@ test.describe('US3: Multiple Mentions', () => {
     await expect(newComment).not.toContainText('@['); // No raw markup
   });
 
-  test('[US3] T035: Viewing comment with multiple mentions displays all mentions formatted', async ({ page }) => {
+  test('[US3] T035: Viewing comment with multiple mentions displays all mentions formatted', async ({ page , projectId }) => {
     // Create comment with multiple mentions via API
     const testUser = await prisma.user.findUnique({
       where: { email: TEST_USER_EMAIL },
@@ -459,7 +470,7 @@ test.describe('US3: Multiple Mentions', () => {
 
     await prisma.comment.create({
       data: {
-        ticketId: TEST_TICKET_ID,
+        ticketId: testTicketId,
         userId: testUser!.id,
         content: `Hey @[${testUser!.id}:E2E User] and @[${testUser!.id}:Test User], check this!`,
       },
@@ -469,7 +480,7 @@ test.describe('US3: Multiple Mentions', () => {
     await page.reload();
 
     // Re-open ticket modal and comments tab after reload
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -489,7 +500,7 @@ test.describe('US3: Multiple Mentions', () => {
  */
 
 test.describe('US4: Mention Persistence and Display', () => {
-  test('[US4] T040: Mentions remain formatted after page reload', async ({ page }) => {
+  test('[US4] T040: Mentions remain formatted after page reload', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Create comment with mention
@@ -516,7 +527,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     await page.reload();
 
     // Re-open ticket modal and comments tab after reload
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -528,12 +539,12 @@ test.describe('US4: Mention Persistence and Display', () => {
     await expect(persistedComment).not.toContainText('@['); // No raw markup
   });
 
-  test('[US4] T042: Deleted user mention displays "[Removed User]"', async ({ page }) => {
+  test('[US4] T042: Deleted user mention displays "[Removed User]"', async ({ page , projectId }) => {
     // Create another user
     const tempUser = await prisma.user.create({
       data: {
-        id: 'temp-user-deleted',
-        email: 'temp-deleted@e2e.local',
+        id: `temp-user-deleted-${projectId}`,
+        email: `temp-deleted-${projectId}@e2e.local`,
         name: 'Temp User',
         emailVerified: new Date(),
         updatedAt: new Date(),
@@ -547,7 +558,7 @@ test.describe('US4: Mention Persistence and Display', () => {
 
     await prisma.comment.create({
       data: {
-        ticketId: TEST_TICKET_ID,
+        ticketId: testTicketId,
         userId: testUser!.id,
         content: `Hey @[${tempUser.id}:Temp User], check this!`,
       },
@@ -562,7 +573,7 @@ test.describe('US4: Mention Persistence and Display', () => {
     await page.reload();
 
     // Re-open ticket modal and comments tab after reload
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -587,16 +598,16 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
   // NOTE: AI-BOARD is automatically added as project member when project is created (User Story 3)
   // No additional beforeEach needed - AI-BOARD is already a member from global beforeEach
 
-  test('[US5] T045: AI-BOARD should be greyed out in INBOX stage', async ({ page }) => {
+  test('[US5] T045: AI-BOARD should be greyed out in INBOX stage', async ({ page , projectId }) => {
     // Ensure ticket is in INBOX stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'INBOX' },
     });
 
     // Reload to pick up stage change
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -624,15 +635,15 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await expect(aiBoardItem).toBeDisabled();
   });
 
-  test('[US5] T046: AI-BOARD should show tooltip with unavailability reason', async ({ page }) => {
+  test('[US5] T046: AI-BOARD should show tooltip with unavailability reason', async ({ page , projectId }) => {
     // Ensure ticket is in INBOX stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'INBOX' },
     });
 
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -656,15 +667,15 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await expect(tooltip).toContainText('INBOX');
   });
 
-  test('[US5] T047: AI-BOARD should NOT be greyed out in SPECIFY stage', async ({ page }) => {
+  test('[US5] T047: AI-BOARD should NOT be greyed out in SPECIFY stage', async ({ page , projectId }) => {
     // Ensure ticket is in SPECIFY stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'SPECIFY' },
     });
 
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -690,18 +701,18 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     expect(classList).not.toContain('opacity-50');
   });
 
-  test('[US5] T048: AI-BOARD should be greyed out when job is RUNNING', async ({ page }) => {
+  test('[US5] T048: AI-BOARD should be greyed out when job is RUNNING', async ({ page , projectId }) => {
     // Set ticket to SPECIFY stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'SPECIFY' },
     });
 
     // Create RUNNING job
     await prisma.job.create({
       data: {
-        ticketId: TEST_TICKET_ID,
-        projectId: TEST_PROJECT_ID,
+        ticketId: testTicketId,
+        projectId: testProjectId,
         command: 'comment-specify',
         status: 'RUNNING',
         startedAt: new Date(),
@@ -710,7 +721,7 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     });
 
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -740,15 +751,15 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await expect(tooltip).toContainText('already processing');
   });
 
-  test('[US5] T049: Clicking greyed-out AI-BOARD should not insert mention', async ({ page }) => {
+  test('[US5] T049: Clicking greyed-out AI-BOARD should not insert mention', async ({ page , projectId }) => {
     // Ensure ticket is in INBOX stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'INBOX' },
     });
 
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');
@@ -771,15 +782,15 @@ test.describe('US5: AI-BOARD Availability Visual Feedback', () => {
     await expect(autocomplete).toBeVisible();
   });
 
-  test('[US5] T050: Selected item should use primary color for better distinction', async ({ page }) => {
+  test('[US5] T050: Selected item should use primary color for better distinction', async ({ page , projectId }) => {
     // Set ticket to SPECIFY stage
     await prisma.ticket.update({
-      where: { id: TEST_TICKET_ID },
+      where: { id: testTicketId },
       data: { stage: 'SPECIFY' },
     });
 
     await page.reload();
-    await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+    await page.click(`[data-ticket-id="${testTicketId}"]`);
     await page.waitForSelector('[role="dialog"]');
     await page.click('[role="tab"]:has-text("Conversation")');
     await page.waitForSelector('[role="tabpanel"]:visible');

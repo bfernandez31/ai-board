@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase, getPrismaClient, getProjectKey } from '../../helpers/db-cleanup';
 import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 
 /**
@@ -15,33 +15,40 @@ import { getWorkflowHeaders } from '../../helpers/workflow-auth';
 test.describe('Job Status Update - Workflow Completion Scenarios', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
+  let nextTicketNumber = 1;
+  let testTicket: any;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
 
     // Create test ticket for Job foreign key constraint
-    await prisma.ticket.create({
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
+    testTicket = await prisma.ticket.create({
       data: {
-        id: 1,
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Test Ticket for Jobs',
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
   });
 
-  test('T006: should update RUNNING job to COMPLETED with timestamp', async ({ request }) => {
+  test('T006: should update RUNNING job to COMPLETED with timestamp', async ({ request , projectId }) => {
     // Setup: Create job in RUNNING state
     const startTime = new Date('2025-10-10T10:00:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'specify',
         status: 'RUNNING',
         branch: 'feature/test',
-        projectId: 1,
+        projectId,
         startedAt: startTime,
         updatedAt: new Date(), // Required field
       },
@@ -79,16 +86,16 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(updatedJob!.startedAt.toISOString()).toBe(startTime.toISOString());
   });
 
-  test('T007: should update RUNNING job to FAILED with timestamp', async ({ request }) => {
+  test('T007: should update RUNNING job to FAILED with timestamp', async ({ request , projectId }) => {
     // Setup: Create job in RUNNING state
     const startTime = new Date('2025-10-10T10:00:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'plan',
         status: 'RUNNING',
         branch: 'feature/bug-fix',
-        projectId: 1,
+        projectId,
         startedAt: startTime,
         updatedAt: new Date(), // Required field
       },
@@ -119,16 +126,16 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(updatedJob!.startedAt.toISOString()).toBe(startTime.toISOString());
   });
 
-  test('T008: should update RUNNING job to CANCELLED with timestamp', async ({ request }) => {
+  test('T008: should update RUNNING job to CANCELLED with timestamp', async ({ request , projectId }) => {
     // Setup: Create job in RUNNING state
     const startTime = new Date('2025-10-10T10:00:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'build',
         status: 'RUNNING',
         branch: 'feature/cancelled-test',
-        projectId: 1,
+        projectId,
         startedAt: startTime,
         updatedAt: new Date(), // Required field
       },
@@ -159,16 +166,16 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(updatedJob!.startedAt.toISOString()).toBe(startTime.toISOString());
   });
 
-  test('T009: should handle idempotent updates (COMPLETED → COMPLETED)', async ({ request }) => {
+  test('T009: should handle idempotent updates (COMPLETED → COMPLETED)', async ({ request , projectId }) => {
     // Setup: Create job already COMPLETED
     const completedTime = new Date('2025-10-10T10:05:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'verify',
         status: 'COMPLETED',
         branch: 'feature/idempotent',
-        projectId: 1,
+        projectId,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
         updatedAt: new Date(), // Required field
@@ -198,15 +205,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(unchangedJob!.completedAt!.toISOString()).toBe(completedTime.toISOString());
   });
 
-  test('T010: should reject invalid transitions (COMPLETED → FAILED)', async ({ request }) => {
+  test('T010: should reject invalid transitions (COMPLETED → FAILED)', async ({ request , projectId }) => {
     // Setup: Create job already COMPLETED
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'COMPLETED',
         branch: 'feature/invalid-transition',
-        projectId: 1,
+        projectId,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: new Date('2025-10-10T10:05:00Z'),
         updatedAt: new Date(), // Required field
@@ -232,15 +239,15 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(unchangedJob!.status).toBe('COMPLETED'); // Still COMPLETED
   });
 
-  test('T011: should reject invalid status value', async ({ request }) => {
+  test('T011: should reject invalid status value', async ({ request , projectId }) => {
     // Setup: Create job in RUNNING state
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'deploy',
         status: 'RUNNING',
         branch: 'feature/invalid-status',
-        projectId: 1,
+        projectId,
         startedAt: new Date(),
         updatedAt: new Date(), // Required field
       },
@@ -272,7 +279,7 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
     expect(unchangedJob!.status).toBe('RUNNING'); // Still RUNNING
   });
 
-  test('T012: should return 404 for non-existent job', async ({ request }) => {
+  test('T012: should return 404 for non-existent job', async ({ request , projectId }) => {
     // Action: Send request for non-existent job ID
     const response = await request.patch(`${BASE_URL}/api/jobs/999999/status`, {
       data: { status: 'COMPLETED' },
@@ -291,31 +298,38 @@ test.describe('Job Status Update - Workflow Completion Scenarios', () => {
 test.describe('Job Status Update - Additional Edge Cases', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
+  let nextTicketNumber = 1;
+  let testTicket: any;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
 
     // Create test ticket for Job foreign key constraint
-    await prisma.ticket.create({
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
+    testTicket = await prisma.ticket.create({
       data: {
-        id: 1,
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Test Ticket for Jobs',
         description: 'Ticket for testing Job status updates',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
   });
 
-  test('should reject transition from FAILED to COMPLETED', async ({ request }) => {
+  test('should reject transition from FAILED to COMPLETED', async ({ request , projectId }) => {
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'FAILED',
         branch: 'test',
-        projectId: 1,
+        projectId,
         startedAt: new Date(),
         completedAt: new Date(),
         updatedAt: new Date(), // Required field
@@ -332,14 +346,14 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
     expect(body.error).toContain('Invalid transition from FAILED to COMPLETED');
   });
 
-  test('should reject transition from CANCELLED to COMPLETED', async ({ request }) => {
+  test('should reject transition from CANCELLED to COMPLETED', async ({ request , projectId }) => {
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'CANCELLED',
         branch: 'test',
-        projectId: 1,
+        projectId,
         startedAt: new Date(),
         completedAt: new Date(),
         updatedAt: new Date(), // Required field
@@ -356,14 +370,14 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
     expect(body.error).toContain('Invalid transition from CANCELLED to COMPLETED');
   });
 
-  test('should reject transition from PENDING to COMPLETED (must go through RUNNING)', async ({ request }) => {
+  test('should reject transition from PENDING to COMPLETED (must go through RUNNING)', async ({ request , projectId }) => {
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'PENDING',
         branch: 'test',
-        projectId: 1,
+        projectId,
         startedAt: new Date(),
         updatedAt: new Date(), // Required field
       },
@@ -379,15 +393,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
     expect(body.error).toContain('Invalid transition from PENDING to COMPLETED');
   });
 
-  test('should handle idempotent FAILED → FAILED', async ({ request }) => {
+  test('should handle idempotent FAILED → FAILED', async ({ request , projectId }) => {
     const completedTime = new Date('2025-10-10T10:05:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'FAILED',
         branch: 'test',
-        projectId: 1,
+        projectId,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
         updatedAt: new Date(), // Required field
@@ -408,15 +422,15 @@ test.describe('Job Status Update - Additional Edge Cases', () => {
     expect(unchangedJob!.completedAt!.toISOString()).toBe(completedTime.toISOString());
   });
 
-  test('should handle idempotent CANCELLED → CANCELLED', async ({ request }) => {
+  test('should handle idempotent CANCELLED → CANCELLED', async ({ request , projectId }) => {
     const completedTime = new Date('2025-10-10T10:05:00Z');
     const job = await prisma.job.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicket.id,
         command: 'test',
         status: 'CANCELLED',
         branch: 'test',
-        projectId: 1,
+        projectId,
         startedAt: new Date('2025-10-10T10:00:00Z'),
         completedAt: completedTime,
         updatedAt: new Date(), // Required field

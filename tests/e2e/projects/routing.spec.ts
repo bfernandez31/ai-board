@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -8,12 +8,12 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
  */
 
 test.describe('Project Routing', () => {
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
-  test('should redirect from root to /projects', async ({ page }) => {
+  test('should redirect from root to /projects', async ({ page , projectId }) => {
     // Navigate to root URL
     await page.goto('http://localhost:3000/');
 
@@ -28,7 +28,7 @@ test.describe('Project Routing', () => {
     await expect(heading).toBeVisible();
   });
 
-  test('should allow direct access to /projects/1/board', async ({ page }) => {
+  test('should allow direct access to /projects/1/board', async ({ page , projectId }) => {
     // Navigate directly to project board
     await page.goto('http://localhost:3000/projects/1/board');
 
@@ -40,7 +40,7 @@ test.describe('Project Routing', () => {
     expect(page.url()).toBe('http://localhost:3000/projects/1/board');
   });
 
-  test('should maintain project context in URL', async ({ page }) => {
+  test('should maintain project context in URL', async ({ page , projectId }) => {
     // Navigate to board
     await page.goto('http://localhost:3000/projects/1/board');
 

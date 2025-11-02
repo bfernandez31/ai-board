@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
@@ -9,9 +9,10 @@ import { prisma } from '@/lib/db/client';
 
 test.describe('DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[commentId] - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
+  let testTicketId: number;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
 
     // Create test user
     await prisma.user.upsert({
@@ -27,31 +28,31 @@ test.describe('DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[com
     });
 
     // Create test ticket
-    await prisma.ticket.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
+    const testTicket = await prisma.ticket.create({
+      data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] Test Ticket',
         description: 'Test ticket for comments',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
+    testTicketId = testTicket.id;
   });
 
-  test('should return 204 for successful deletion by author', async ({ request }) => {
+  test('should return 204 for successful deletion by author', async ({ request , projectId }) => {
     // Create comment
     const comment = await prisma.comment.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicketId,
         userId: 'test-user-id',
         content: 'Comment to be deleted',
       },
     });
 
     const response = await request.delete(
-      `${BASE_URL}/api/projects/1/tickets/1/comments/${comment.id}`
+      `${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments/${comment.id}`
     );
 
     expect(response.status()).toBe(204);
@@ -64,22 +65,24 @@ test.describe('DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[com
     expect(deletedComment).toBeNull();
   });
 
-  test('should return 404 for non-existent comment', async ({ request }) => {
-    const response = await request.delete(`${BASE_URL}/api/projects/1/tickets/1/comments/999999`);
+  test('should return 404 for non-existent comment', async ({ request , projectId }) => {
+    const response = await request.delete(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments/999999`);
 
     expect(response.status()).toBe(404);
     const body = await response.json();
     expect(body.error).toContain('Comment not found');
   });
 
-  test('should return 404 for comment belonging to different ticket', async ({ request }) => {
+  test('should return 404 for comment belonging to different ticket', async ({ request , projectId }) => {
     // Create another ticket
     await prisma.ticket.create({
       data: {
         id: 2,
+        ticketNumber: 2,
+        ticketKey: `E2E${projectId}-2`,
         title: '[e2e] Another Ticket',
         description: 'Another test ticket',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -95,7 +98,7 @@ test.describe('DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[com
 
     // Try to delete comment via ticket 1 endpoint
     const response = await request.delete(
-      `${BASE_URL}/api/projects/1/tickets/1/comments/${comment.id}`
+      `${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments/${comment.id}`
     );
 
     expect(response.status()).toBe(404);
@@ -103,8 +106,8 @@ test.describe('DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[com
     expect(body.error).toContain('Comment not found');
   });
 
-  test('should return 400 for invalid comment ID', async ({ request }) => {
-    const response = await request.delete(`${BASE_URL}/api/projects/1/tickets/1/comments/abc`);
+  test('should return 400 for invalid comment ID', async ({ request , projectId }) => {
+    const response = await request.delete(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments/abc`);
 
     expect(response.status()).toBe(400);
     const body = await response.json();

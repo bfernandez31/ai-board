@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -12,9 +12,9 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
 test.describe('Project Validation - 404 Errors', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Mock SSE endpoint to prevent connection timeouts
     await page.route('**/api/sse**', async (route) => {
@@ -26,7 +26,7 @@ test.describe('Project Validation - 404 Errors', () => {
     });
   });
 
-  test('should return 404 for non-existent project ID', async ({ page }) => {
+  test('should return 404 for non-existent project ID', async ({ page , projectId }) => {
     // Navigate to board with non-existent project
     const response = await page.goto(`${BASE_URL}/projects/999999/board`);
 
@@ -35,7 +35,7 @@ test.describe('Project Validation - 404 Errors', () => {
     expect(response?.status()).toBe(404);
   });
 
-  test('should display error message for non-existent project', async ({ page }) => {
+  test('should display error message for non-existent project', async ({ page , projectId }) => {
     // Navigate to non-existent project
     await page.goto(`${BASE_URL}/projects/999999/board`);
 
@@ -50,9 +50,9 @@ test.describe('Project Validation - 404 Errors', () => {
     expect(hasError).toBe(true);
   });
 
-  test('should not display tickets for non-existent project', async ({ page, request }) => {
+  test('should not display tickets for non-existent project', async ({ page, request , projectId }) => {
     // Create a ticket in project 1
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test ticket in project 1',
         description: 'Should not appear when viewing invalid project'
@@ -70,7 +70,7 @@ test.describe('Project Validation - 404 Errors', () => {
     await expect(ticketCards).toHaveCount(0);
   });
 
-  test('should not crash when accessing invalid project', async ({ page }) => {
+  test('should not crash when accessing invalid project', async ({ page , projectId }) => {
     // Navigate to invalid project
     await page.goto(`${BASE_URL}/projects/999999/board`, { waitUntil: 'domcontentloaded' });
 

@@ -1,4 +1,5 @@
-import { test, expect, Page, APIResponse } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
+import type { Page, APIResponse } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import { getPrismaClient, cleanupDatabase } from '../../helpers/db-cleanup';
 
@@ -19,9 +20,9 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     prisma = getPrismaClient();
   });
 
-  test.beforeEach(async () => {
-    // Clean database before each test
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    // Clean database before each test (worker-specific cleanup for parallel execution)
+    await cleanupDatabase(projectId);
   });
 
   /**
@@ -30,9 +31,10 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    */
   const createTicket = async (
     request: any,
+    projectId: number,
     stage: string = 'INBOX'
   ): Promise<{ id: number; version: number; title: string }> => {
-    const response: APIResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response: APIResponse = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: `[e2e] Test Ticket ${stage}`,
         description: `Test description for ${stage}`,
@@ -70,7 +72,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
         await prisma.job.create({
           data: {
             ticketId: ticket.id,
-            projectId: 1,
+            projectId,
             command: command,
             status: 'COMPLETED',
             startedAt: new Date(),
@@ -146,12 +148,12 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T005: Test sequential drag through workflow (INBOX → SPECIFY → PLAN)
    * Updated for SPECIFY stage addition
    */
-  test('user can drag ticket sequentially through workflow', async ({ page, request }) => {
+  test('user can drag ticket sequentially through workflow', async ({ page, request , projectId }) => {
     // Setup: Create ticket in INBOX
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
 
     // Navigate to board AFTER creating ticket so server renders it
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Verify ticket is in INBOX column
@@ -203,11 +205,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T006: Test rejecting invalid stage transition (skipping)
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot skip stages when dragging', async ({ page, request }) => {
+  test('user cannot skip stages when dragging', async ({ page, request , projectId }) => {
     // Setup: Create ticket in PLAN
-    const ticket = await createTicket(request, 'PLAN');
+    const ticket = await createTicket(request, projectId, 'PLAN');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Attempt to drag from PLAN to SHIP (invalid - skipping BUILD and VERIFY)
@@ -236,11 +238,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T007: Test rejecting backwards movement
    * Expected: FAILS (validation not implemented)
    */
-  test('user cannot move ticket backwards', async ({ page, request }) => {
+  test('user cannot move ticket backwards', async ({ page, request , projectId }) => {
     // Setup: Create ticket in BUILD
-    const ticket = await createTicket(request, 'BUILD');
+    const ticket = await createTicket(request, projectId, 'BUILD');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Attempt to drag from BUILD to PLAN (invalid - backwards)
@@ -263,22 +265,27 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T008: Test handling concurrent updates with first-write-wins
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('handles concurrent updates with first-write-wins', async ({ page, context, request }) => {
+  test('handles concurrent updates with first-write-wins', async ({ page, context, request , projectId }) => {
     // Setup: Create ticket in INBOX
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
+
+    // Wait for ticket to be queryable (ensure DB write is committed)
+    await page.waitForTimeout(100);
 
     // Open board in two browser contexts (simulating two users)
     const page1 = page;
     const page2: Page = await context.newPage();
 
-    await page1.goto(`${BASE_URL}/projects/1/board`);
-    await page1.waitForLoadState('domcontentloaded');
-    await page2.goto(`${BASE_URL}/projects/1/board`);
-    await page2.waitForLoadState('domcontentloaded');
+    // Navigate both pages to board
+    await page1.goto(`${BASE_URL}/projects/${projectId}/board`);
+    await page1.waitForLoadState('networkidle');
+    await page2.goto(`${BASE_URL}/projects/${projectId}/board`);
+    await page2.waitForLoadState('networkidle');
 
-    // Wait for both pages to load
-    await page1.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
-    await page2.waitForSelector(`[data-ticket-id="${ticket.id}"]`);
+    // Wait for both pages to load with increased timeout for multi-worker scenarios
+    // Use retry logic to handle server-side caching/propagation delays
+    await page1.waitForSelector(`[data-ticket-id="${ticket.id}"]`, { timeout: 15000 });
+    await page2.waitForSelector(`[data-ticket-id="${ticket.id}"]`, { timeout: 15000 });
 
     // User 1 drags first (should succeed)
     await dragTicketToColumn(page1, ticket.id, 'SPECIFY');
@@ -310,11 +317,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T009: Test disabling drag when offline
    * Expected: FAILS (offline detection not implemented)
    */
-  test('disables drag when network is offline', async ({ page, context, request }) => {
+  test('disables drag when network is offline', async ({ page, context, request , projectId }) => {
     // Setup: Create ticket
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Go offline
@@ -347,14 +354,14 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T010: Test touch drag on mobile viewport
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('supports touch drag on mobile viewport', async ({ page, request }) => {
+  test('supports touch drag on mobile viewport', async ({ page, request , projectId }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Setup: Create ticket
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Drag using mouse events (works on mobile viewport) - INBOX to SPECIFY
@@ -369,11 +376,11 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T011: Test sub-100ms latency validation
    * Updated for SPECIFY stage - tests INBOX → SPECIFY transition
    */
-  test('meets sub-100ms latency requirement', async ({ page, request }) => {
+  test('meets sub-100ms latency requirement', async ({ page, request , projectId }) => {
     // Setup: Create ticket
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Measure time from drag start to visual update
@@ -399,17 +406,17 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T012: Test mobile scrolling does not trigger drag (T905)
    * Validates that quick swipes for scrolling don't initiate drag operations
    */
-  test('mobile scrolling does not trigger accidental drag', async ({ page, request }) => {
+  test('mobile scrolling does not trigger accidental drag', async ({ page, request , projectId }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Setup: Create multiple tickets to make column scrollable
     const tickets = [];
     for (let i = 0; i < 8; i++) {
-      tickets.push(await createTicket(request, 'INBOX'));
+      tickets.push(await createTicket(request, projectId, 'INBOX'));
     }
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Get the first ticket
@@ -447,14 +454,14 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * T013: Test mobile long-press still triggers drag (T905)
    * Validates that deliberate long-press (>= 250ms) initiates drag as expected
    */
-  test('mobile long-press triggers drag operation', async ({ page, request }) => {
+  test('mobile long-press triggers drag operation', async ({ page, request , projectId }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Setup: Create ticket
-    const ticket = await createTicket(request, 'INBOX');
+    const ticket = await createTicket(request, projectId, 'INBOX');
 
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);

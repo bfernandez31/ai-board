@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
 import { Stage } from '@prisma/client';
 
@@ -14,19 +14,22 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
+  let nextTicketNumber = 1;
+
   /**
    * Helper: Create a ticket directly in database with specified stage
    */
   async function createTicket(
     _request: any,
+    projectId: number,
     stage: Stage = Stage.INBOX,
     description: string = '[e2e] Test description'
   ) {
@@ -36,8 +39,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
         title: '[e2e] Test ticket',
         description,
         stage,
-        projectId: 1,
+        projectId,
         version: 1,
+        ticketNumber: nextTicketNumber++,
+        ticketKey: `E2E${projectId}-${nextTicketNumber - 1}`,
         updatedAt: new Date(),
       },
     });
@@ -65,11 +70,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
   test.describe('User Story 1: INBOX Editing Allowed', () => {
     test('US1-T1: PATCH with description in INBOX returns 200', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.INBOX);
+      const ticket = await createTicket(request, projectId, Stage.INBOX);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             description: '[e2e] Updated description in INBOX',
@@ -86,11 +92,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US1-T2: PATCH with clarificationPolicy in INBOX returns 200', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.INBOX);
+      const ticket = await createTicket(request, projectId, Stage.INBOX);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             clarificationPolicy: 'PRAGMATIC',
@@ -107,11 +114,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US1-T3: PATCH with title in INBOX returns 200 (title not restricted)', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.INBOX);
+      const ticket = await createTicket(request, projectId, Stage.INBOX);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             title: '[e2e] Updated title',
@@ -134,11 +142,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
   test.describe('User Story 2: Non-INBOX Restrictions', () => {
     test('US2-T1: PATCH with description in SPECIFY returns 400 with INVALID_STAGE_FOR_EDIT', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.SPECIFY);
+      const ticket = await createTicket(request, projectId, Stage.SPECIFY);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             description: '[e2e] Attempting to update in SPECIFY',
@@ -155,11 +164,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US2-T2: PATCH with clarificationPolicy in PLAN returns 400', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.PLAN);
+      const ticket = await createTicket(request, projectId, Stage.PLAN);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             clarificationPolicy: 'CONSERVATIVE',
@@ -175,11 +185,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US2-T3: PATCH with description in BUILD returns 400', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.BUILD);
+      const ticket = await createTicket(request, projectId, Stage.BUILD);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             description: '[e2e] Attempting to update in BUILD',
@@ -195,11 +206,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US2-T4: PATCH with clarificationPolicy in VERIFY returns 400', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.VERIFY);
+      const ticket = await createTicket(request, projectId, Stage.VERIFY);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             clarificationPolicy: 'INTERACTIVE',
@@ -215,11 +227,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US2-T5: PATCH with description in SHIP returns 400', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.SHIP);
+      const ticket = await createTicket(request, projectId, Stage.SHIP);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             description: '[e2e] Attempting to update in SHIP',
@@ -235,11 +248,12 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Stage-Based Restri
 
     test('US2-T6: PATCH with title in SPECIFY returns 200 (title not restricted)', async ({
       request,
+      projectId,
     }) => {
-      const ticket = await createTicket(request, Stage.SPECIFY);
+      const ticket = await createTicket(request, projectId, Stage.SPECIFY);
 
       const response = await request.patch(
-        `${BASE_URL}/api/projects/1/tickets/${ticket.id}`,
+        `${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`,
         {
           data: {
             title: '[e2e] Updated title in SPECIFY',

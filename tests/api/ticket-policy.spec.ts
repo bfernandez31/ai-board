@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase, getPrismaClient, getProjectKey } from '../helpers/db-cleanup';
 import { ClarificationPolicy } from '@prisma/client';
 
 /**
@@ -15,8 +15,39 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Ensure project exists with AUTO policy for test isolation
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        clarificationPolicy: 'AUTO',
+        userId: testUser.id,
+      },
+      create: {
+        id: projectId,
+        key: getProjectKey(projectId),
+        name: `[e2e] Test Project${projectId === 1 ? '' : ' ' + projectId}`,
+        description: `Worker project for parallel test execution`,
+        githubOwner: 'test',
+        githubRepo: `test${projectId === 1 ? '' : projectId}`,
+        userId: testUser.id,
+        clarificationPolicy: 'AUTO',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      },
+    });
   });
 
   test.afterAll(async () => {
@@ -26,14 +57,15 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
   /**
    * Helper: Create a ticket via API
    */
-  const createTicket = async (
+  const createTicket = async (projectId: number,
     request: any,
     title: string = '[e2e] Test Ticket',
     description: string = 'Test description'
   ): Promise<{ id: number; version: number }> => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: { title, description },
     });
+    expect(response.status()).toBe(201);
     const ticket = await response.json();
     return { id: ticket.id, version: ticket.version || 1 };
   };
@@ -41,12 +73,12 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
   /**
    * T001: GET ticket returns clarificationPolicy field (default null)
    */
-  test('GET ticket returns clarificationPolicy with default null', async ({ request }) => {
+  test('GET ticket returns clarificationPolicy with default null', async ({ request, projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(projectId, request);
 
     // GET ticket
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Assert 200 OK
     expect(response.status()).toBe(200);
@@ -60,9 +92,9 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
   /**
    * T002: GET ticket returns clarificationPolicy for all policy values
    */
-  test('GET ticket returns clarificationPolicy when set to CONSERVATIVE', async ({ request }) => {
+  test('GET ticket returns clarificationPolicy when set to CONSERVATIVE', async ({ request, projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(projectId, request);
 
     // Update ticket to CONSERVATIVE
     await prisma.ticket.update({
@@ -71,48 +103,48 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
     });
 
     // GET ticket
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Assert response includes CONSERVATIVE policy
     const data = await response.json();
     expect(data.clarificationPolicy).toBe('CONSERVATIVE');
   });
 
-  test('GET ticket returns clarificationPolicy when set to PRAGMATIC', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('GET ticket returns clarificationPolicy when set to PRAGMATIC', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     await prisma.ticket.update({
       where: { id: ticket.id },
       data: { clarificationPolicy: ClarificationPolicy.PRAGMATIC },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`);
     const data = await response.json();
     expect(data.clarificationPolicy).toBe('PRAGMATIC');
   });
 
-  test('GET ticket returns clarificationPolicy when set to AUTO', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('GET ticket returns clarificationPolicy when set to AUTO', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     await prisma.ticket.update({
       where: { id: ticket.id },
       data: { clarificationPolicy: ClarificationPolicy.AUTO },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`);
     const data = await response.json();
     expect(data.clarificationPolicy).toBe('AUTO');
   });
 
-  test('GET ticket returns clarificationPolicy when set to INTERACTIVE', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('GET ticket returns clarificationPolicy when set to INTERACTIVE', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     await prisma.ticket.update({
       where: { id: ticket.id },
       data: { clarificationPolicy: ClarificationPolicy.INTERACTIVE },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`);
     const data = await response.json();
     expect(data.clarificationPolicy).toBe('INTERACTIVE');
   });
@@ -120,8 +152,8 @@ test.describe('GET /api/projects/[projectId]/tickets/[id] - clarificationPolicy 
   /**
    * T003: GET non-existent ticket returns 404
    */
-  test('GET non-existent ticket returns 404', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/99999`);
+  test('GET non-existent ticket returns 404', async ({ request, projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/99999`);
     expect(response.status()).toBe(404);
   });
 });
@@ -130,18 +162,50 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Ensure project exists with AUTO policy for test isolation
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        clarificationPolicy: 'AUTO',
+        userId: testUser.id, // Update userId in case it changed
+      },
+      create: {
+        id: projectId,
+        key: getProjectKey(projectId),
+        name: `[e2e] Test Project${projectId === 1 ? '' : ' ' + projectId}`,
+        description: `Worker project for parallel test execution`,
+        githubOwner: 'test',
+        githubRepo: `test${projectId === 1 ? '' : projectId}`,
+        userId: testUser.id,
+        clarificationPolicy: 'AUTO',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      },
+    });
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  const createTicket = async (request: any): Promise<{ id: number; version: number }> => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  const createTicket = async (projectId: number, request: any): Promise<{ id: number; version: number }> => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: { title: '[e2e] Test', description: 'Test' },
     });
+    expect(response.status()).toBe(201);
     const ticket = await response.json();
     return { id: ticket.id, version: ticket.version || 1 };
   };
@@ -149,15 +213,15 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T004: PATCH ticket with valid clarificationPolicy updates field
    */
-  test('PATCH ticket to CONSERVATIVE updates clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket to CONSERVATIVE updates clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // Verify initial state (null by default)
     const initialTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
     expect(initialTicket?.clarificationPolicy).toBeNull();
 
     // PATCH to CONSERVATIVE
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'CONSERVATIVE',
         version: ticket.version,
@@ -177,10 +241,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     expect(dbTicket?.clarificationPolicy).toBe('CONSERVATIVE');
   });
 
-  test('PATCH ticket to PRAGMATIC updates clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket to PRAGMATIC updates clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'PRAGMATIC',
         version: ticket.version,
@@ -193,10 +257,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     expect(updatedTicket.clarificationPolicy).toBe('PRAGMATIC');
   });
 
-  test('PATCH ticket to AUTO updates clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket to AUTO updates clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'AUTO',
         version: ticket.version,
@@ -209,10 +273,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     expect(updatedTicket.clarificationPolicy).toBe('AUTO');
   });
 
-  test('PATCH ticket to INTERACTIVE updates clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket to INTERACTIVE updates clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'INTERACTIVE',
         version: ticket.version,
@@ -228,8 +292,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T005: PATCH ticket to null resets to inherit from project
    */
-  test('PATCH ticket to null resets clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket to null resets clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // First set to CONSERVATIVE
     await prisma.ticket.update({
@@ -238,7 +302,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     });
 
     // PATCH back to null
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: null,
         version: 2,
@@ -259,11 +323,11 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T006: PATCH ticket with invalid policy returns 400
    */
-  test('PATCH ticket with invalid policy returns 400 validation error', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket with invalid policy returns 400 validation error', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // PATCH with invalid policy value
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'INVALID_POLICY',
         version: ticket.version,
@@ -284,8 +348,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T007: PATCH ticket with stale version returns 409 Conflict
    */
-  test('PATCH ticket policy with stale version returns 409 Conflict', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket policy with stale version returns 409 Conflict', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // Update ticket directly in database to version 2
     await prisma.ticket.update({
@@ -294,7 +358,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     });
 
     // PATCH with stale version (version = 1)
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'CONSERVATIVE',
         version: 1, // Stale version
@@ -313,8 +377,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T008: PATCH non-existent ticket returns 404
    */
-  test('PATCH non-existent ticket returns 404', async ({ request }) => {
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/99999`, {
+  test('PATCH non-existent ticket returns 404', async ({ request, projectId }) => {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/99999`, {
       data: {
         clarificationPolicy: 'CONSERVATIVE',
         version: 1,
@@ -327,8 +391,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T009: PATCH ticket with other fields does not affect clarificationPolicy
    */
-  test('PATCH ticket title does not affect clarificationPolicy', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket title does not affect clarificationPolicy', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // Set initial policy to CONSERVATIVE
     await prisma.ticket.update({
@@ -337,7 +401,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
     });
 
     // PATCH only title
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: '[e2e] Updated Title',
         version: 2,
@@ -354,23 +418,23 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - clarificationPolic
   /**
    * T010: PATCH ticket policy persists across multiple updates
    */
-  test('PATCH ticket policy persists across multiple updates', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH ticket policy persists across multiple updates', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // Update 1: null → CONSERVATIVE
-    const resp1 = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const resp1 = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: { clarificationPolicy: 'CONSERVATIVE', version: 1 },
     });
     const ticket1 = await resp1.json();
 
     // Update 2: CONSERVATIVE → PRAGMATIC
-    const resp2 = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const resp2 = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: { clarificationPolicy: 'PRAGMATIC', version: ticket1.version },
     });
     const ticket2 = await resp2.json();
 
     // Update 3: PRAGMATIC → null
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: { clarificationPolicy: null, version: ticket2.version },
     });
 
@@ -390,18 +454,50 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Response Format', 
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Ensure project exists with AUTO policy for test isolation
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        clarificationPolicy: 'AUTO',
+        userId: testUser.id,
+      },
+      create: {
+        id: projectId,
+        key: getProjectKey(projectId),
+        name: `[e2e] Test Project${projectId === 1 ? '' : ' ' + projectId}`,
+        description: `Worker project for parallel test execution`,
+        githubOwner: 'test',
+        githubRepo: `test${projectId === 1 ? '' : projectId}`,
+        userId: testUser.id,
+        clarificationPolicy: 'AUTO',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      },
+    });
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  const createTicket = async (request: any): Promise<{ id: number; version: number }> => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  const createTicket = async (projectId: number, request: any): Promise<{ id: number; version: number }> => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: { title: '[e2e] Test', description: 'Test' },
     });
+    expect(response.status()).toBe(201);
     const ticket = await response.json();
     return { id: ticket.id, version: ticket.version || 1 };
   };
@@ -409,10 +505,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Response Format', 
   /**
    * T011: PATCH response includes all expected ticket fields
    */
-  test('PATCH response includes all expected ticket fields', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH response includes all expected ticket fields', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'CONSERVATIVE',
         version: ticket.version,
@@ -437,8 +533,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Response Format', 
   /**
    * T012: PATCH updates updatedAt timestamp
    */
-  test('PATCH updates updatedAt timestamp', async ({ request }) => {
-    const ticket = await createTicket(request);
+  test('PATCH updates updatedAt timestamp', async ({ request, projectId }) => {
+    const ticket = await createTicket(projectId, request);
 
     // Get initial updatedAt
     const initialTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -448,7 +544,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Response Format', 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     // PATCH policy
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'CONSERVATIVE',
         version: ticket.version,
@@ -468,18 +564,50 @@ test.describe('Hierarchical Policy Resolution - Effective Policy', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Ensure project exists with AUTO policy for test isolation
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        clarificationPolicy: 'AUTO',
+        userId: testUser.id,
+      },
+      create: {
+        id: projectId,
+        key: getProjectKey(projectId),
+        name: `[e2e] Test Project${projectId === 1 ? '' : ' ' + projectId}`,
+        description: `Worker project for parallel test execution`,
+        githubOwner: 'test',
+        githubRepo: `test${projectId === 1 ? '' : projectId}`,
+        userId: testUser.id,
+        clarificationPolicy: 'AUTO',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      },
+    });
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  const createTicket = async (request: any): Promise<{ id: number; version: number }> => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  const createTicket = async (projectId: number, request: any): Promise<{ id: number; version: number }> => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: { title: '[e2e] Test', description: 'Test' },
     });
+    expect(response.status()).toBe(201);
     const ticket = await response.json();
     return { id: ticket.id, version: ticket.version || 1 };
   };
@@ -487,13 +615,13 @@ test.describe('Hierarchical Policy Resolution - Effective Policy', () => {
   /**
    * T013: Ticket inherits project policy when ticket policy is null
    */
-  test('Ticket with null policy inherits project AUTO default', async ({ request }) => {
+  test('Ticket with null policy inherits project AUTO default', async ({ request, projectId }) => {
     // Verify project has AUTO default
-    const project = await prisma.project.findUnique({ where: { id: 1 } });
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
     expect(project?.clarificationPolicy).toBe('AUTO');
 
     // Create ticket (policy = null)
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(projectId, request);
 
     // Verify ticket has null policy (inherits from project)
     const dbTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -503,15 +631,15 @@ test.describe('Hierarchical Policy Resolution - Effective Policy', () => {
     // This will be tested in implementation phase
   });
 
-  test('Ticket with null policy inherits project CONSERVATIVE', async ({ request }) => {
+  test('Ticket with null policy inherits project CONSERVATIVE', async ({ request, projectId }) => {
     // Set project to CONSERVATIVE
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: { clarificationPolicy: ClarificationPolicy.CONSERVATIVE },
     });
 
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(projectId, request);
 
     // Verify ticket has null policy
     const dbTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -523,18 +651,18 @@ test.describe('Hierarchical Policy Resolution - Effective Policy', () => {
   /**
    * T014: Ticket policy overrides project policy when set
    */
-  test('Ticket PRAGMATIC overrides project CONSERVATIVE', async ({ request }) => {
+  test('Ticket PRAGMATIC overrides project CONSERVATIVE', async ({ request, projectId }) => {
     // Set project to CONSERVATIVE
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: { clarificationPolicy: ClarificationPolicy.CONSERVATIVE },
     });
 
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(projectId, request);
 
     // Set ticket to PRAGMATIC
-    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         clarificationPolicy: 'PRAGMATIC',
         version: ticket.version,

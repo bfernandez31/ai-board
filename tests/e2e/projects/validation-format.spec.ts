@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -12,12 +12,12 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
 test.describe('Project Validation - Format Errors', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
-  test('should return 404 for non-numeric project ID', async ({ page }) => {
+  test('should return 404 for non-numeric project ID', async ({ page , projectId }) => {
     // Navigate with non-numeric project ID
     const response = await page.goto(`${BASE_URL}/projects/abc/board`);
 
@@ -25,7 +25,7 @@ test.describe('Project Validation - Format Errors', () => {
     expect(response?.status()).toBe(404);
   });
 
-  test('should not crash with alphabetic project ID', async ({ page }) => {
+  test('should not crash with alphabetic project ID', async ({ page , projectId }) => {
     // Navigate with invalid format
     await page.goto(`${BASE_URL}/projects/abc/board`, { waitUntil: 'domcontentloaded' });
 
@@ -35,7 +35,7 @@ test.describe('Project Validation - Format Errors', () => {
     expect(html.length).toBeGreaterThan(100);
   });
 
-  test('should not crash with special characters in project ID', async ({ page }) => {
+  test('should not crash with special characters in project ID', async ({ page , projectId }) => {
     // Navigate with special characters
     await page.goto(`${BASE_URL}/projects/@#$/board`, { waitUntil: 'domcontentloaded' });
 
@@ -44,7 +44,7 @@ test.describe('Project Validation - Format Errors', () => {
     expect(html).toBeTruthy();
   });
 
-  test('should not crash with decimal project ID', async ({ page }) => {
+  test('should not crash with decimal project ID', async ({ page , projectId }) => {
     // Navigate with decimal number
     await page.goto(`${BASE_URL}/projects/1.5/board`, { waitUntil: 'domcontentloaded' });
 
@@ -53,7 +53,7 @@ test.describe('Project Validation - Format Errors', () => {
     expect(html).toBeTruthy();
   });
 
-  test('should not crash with negative project ID', async ({ page }) => {
+  test('should not crash with negative project ID', async ({ page , projectId }) => {
     // Navigate with negative number
     await page.goto(`${BASE_URL}/projects/-1/board`, { waitUntil: 'domcontentloaded' });
 
@@ -62,7 +62,7 @@ test.describe('Project Validation - Format Errors', () => {
     expect(html).toBeTruthy();
   });
 
-  test('should display error message for invalid format', async ({ page }) => {
+  test('should display error message for invalid format', async ({ page , projectId }) => {
     // Navigate with invalid format
     await page.goto(`${BASE_URL}/projects/abc/board`);
 

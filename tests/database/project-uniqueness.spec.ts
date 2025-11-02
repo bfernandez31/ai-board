@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { getPrismaClient } from '../helpers/db-cleanup';
 import { createTestProject } from '../helpers/db-setup';
 
 /**
@@ -17,31 +17,38 @@ import { createTestProject } from '../helpers/db-setup';
  * EXPECTED: Test PASSES after migration (database constraint enforced)
  */
 
+// Helper: Generate unique ID for multi-worker isolation
+const uniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+// Helper: Generate unique 3-character key (random alphanumeric)
+const uniqueKey = () => {
+  // Generate 3 random uppercase alphanumeric characters
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
+
 test.describe('Project Uniqueness Constraint', () => {
   test.beforeEach(async () => {
-    // Clean database before each test
-    await cleanupDatabase();
-  });
-
-  test.afterAll(async () => {
-    // Cleanup after all tests
-    await cleanupDatabase();
+    // Tests create their own projects with unique owner/repo combinations
+    // No cleanup needed - tests are isolated by unique githubOwner/githubRepo
   });
 
   test('should prevent duplicate projects with same githubOwner and githubRepo', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create first project
     const project1 = await createTestProject({
       name: 'Original Project',
       description: 'First project for this repository',
-      githubOwner: 'test-owner',
-      githubRepo: 'test-repo',
+      githubOwner: `test-owner-${id}`,
+      githubRepo: `test-repo-${id}`,
+      key: uniqueKey(),
     });
 
     expect(project1).toBeDefined();
-    expect(project1.githubOwner).toBe('test-owner');
-    expect(project1.githubRepo).toBe('test-repo');
+    expect(project1.githubOwner).toBe(`test-owner-${id}`);
+    expect(project1.githubRepo).toBe(`test-repo-${id}`);
 
     // Ensure test user exists for duplicate attempt
     const testUser = await prisma.user.upsert({
@@ -61,8 +68,9 @@ test.describe('Project Uniqueness Constraint', () => {
       data: {
         name: 'Duplicate Project',
         description: 'Attempting to create duplicate',
-        githubOwner: 'test-owner', // Same as project1
-        githubRepo: 'test-repo', // Same as project1
+        githubOwner: `test-owner-${id}`, // Same as project1
+        githubRepo: `test-repo-${id}`, // Same as project1
+        key: 'DUP',
         userId: testUser.id,
         updatedAt: new Date(), // Required field
         createdAt: new Date(), // Required field
@@ -83,8 +91,8 @@ test.describe('Project Uniqueness Constraint', () => {
     // Verify only one project exists
     const allProjects = await prisma.project.findMany({
       where: {
-        githubOwner: 'test-owner',
-        githubRepo: 'test-repo',
+        githubOwner: `test-owner-${id}`,
+        githubRepo: `test-repo-${id}`,
       },
     });
 
@@ -96,28 +104,32 @@ test.describe('Project Uniqueness Constraint', () => {
   test('should allow different projects with different repositories', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create first project
     const project1 = await createTestProject({
       name: 'Project 1',
       description: 'First repository',
-      githubOwner: 'owner1',
-      githubRepo: 'repo1',
+      githubOwner: `owner1-${id}`,
+      githubRepo: `repo1-${id}`,
+      key: uniqueKey(),
     });
 
     // Create second project with different repo (should succeed)
     const project2 = await createTestProject({
       name: 'Project 2',
       description: 'Second repository',
-      githubOwner: 'owner1',
-      githubRepo: 'repo2', // Different repo
+      githubOwner: `owner1-${id}`,
+      githubRepo: `repo2-${id}`, // Different repo
+      key: uniqueKey(),
     });
 
     // Create third project with different owner (should succeed)
     const project3 = await createTestProject({
       name: 'Project 3',
       description: 'Third repository',
-      githubOwner: 'owner2', // Different owner
-      githubRepo: 'repo1',
+      githubOwner: `owner2-${id}`, // Different owner
+      githubRepo: `repo1-${id}`,
+      key: uniqueKey(),
     });
 
     // Verify all three test projects were created (may be more if other projects exist)
@@ -125,105 +137,116 @@ test.describe('Project Uniqueness Constraint', () => {
     expect(allProjects.length).toBeGreaterThanOrEqual(3);
 
     // Verify each project has correct data
-    expect(project1.githubOwner).toBe('owner1');
-    expect(project1.githubRepo).toBe('repo1');
+    expect(project1.githubOwner).toBe(`owner1-${id}`);
+    expect(project1.githubRepo).toBe(`repo1-${id}`);
 
-    expect(project2.githubOwner).toBe('owner1');
-    expect(project2.githubRepo).toBe('repo2');
+    expect(project2.githubOwner).toBe(`owner1-${id}`);
+    expect(project2.githubRepo).toBe(`repo2-${id}`);
 
-    expect(project3.githubOwner).toBe('owner2');
-    expect(project3.githubRepo).toBe('repo1');
+    expect(project3.githubOwner).toBe(`owner2-${id}`);
+    expect(project3.githubRepo).toBe(`repo1-${id}`);
   });
 
   test('should allow same repository name with different owners', async () => {
+    const id = uniqueId();
     const prisma = getPrismaClient();
 
     // Create project with owner1
     await createTestProject({
       name: 'Project A',
       description: 'Owner 1 repository',
-      githubOwner: 'owner1',
-      githubRepo: 'shared-repo-name',
+      githubOwner: `owner1-${id}`,
+      githubRepo: `shared-repo-name-${id}`,
+      key: uniqueKey(),
     });
 
     // Create project with owner2 and same repo name (should succeed)
     await createTestProject({
       name: 'Project B',
       description: 'Owner 2 repository',
-      githubOwner: 'owner2',
-      githubRepo: 'shared-repo-name', // Same repo name, different owner
+      githubOwner: `owner2-${id}`,
+      githubRepo: `shared-repo-name-${id}`, // Same repo name, different owner
+      key: uniqueKey(),
     });
 
     // Verify both projects exist
     const allProjects = await prisma.project.findMany({
       where: {
-        githubRepo: 'shared-repo-name',
+        githubRepo: `shared-repo-name-${id}`,
       },
     });
 
     expect(allProjects).toHaveLength(2);
 
     const owners = allProjects.map((p) => p.githubOwner).sort();
-    expect(owners).toEqual(['owner1', 'owner2']);
+    expect(owners).toEqual([`owner1-${id}`, `owner2-${id}`]);
   });
 
   test('should allow same owner with different repository names', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
+
     // Create first project for owner
     await createTestProject({
       name: 'Project 1',
       description: 'First repository',
-      githubOwner: 'shared-owner',
-      githubRepo: 'repo1',
+      githubOwner: `shared-owner-${id}`,
+      githubRepo: `repo1-${id}`,
+      key: uniqueKey(),
     });
 
     // Create second project with same owner but different repo (should succeed)
     await createTestProject({
       name: 'Project 2',
       description: 'Second repository',
-      githubOwner: 'shared-owner', // Same owner
-      githubRepo: 'repo2', // Different repo
+      githubOwner: `shared-owner-${id}`, // Same owner
+      githubRepo: `repo2-${id}`, // Different repo
+      key: uniqueKey(),
     });
 
     // Create third project with same owner but different repo (should succeed)
     await createTestProject({
       name: 'Project 3',
       description: 'Third repository',
-      githubOwner: 'shared-owner', // Same owner
-      githubRepo: 'repo3', // Different repo
+      githubOwner: `shared-owner-${id}`, // Same owner
+      githubRepo: `repo3-${id}`, // Different repo
+      key: uniqueKey(),
     });
 
     // Verify all three projects exist for the same owner
     const ownerProjects = await prisma.project.findMany({
       where: {
-        githubOwner: 'shared-owner',
+        githubOwner: `shared-owner-${id}`,
       },
     });
 
     expect(ownerProjects).toHaveLength(3);
 
     const repos = ownerProjects.map((p) => p.githubRepo).sort();
-    expect(repos).toEqual(['repo1', 'repo2', 'repo3']);
+    expect(repos).toEqual([`repo1-${id}`, `repo2-${id}`, `repo3-${id}`]);
   });
 
   test('should enforce uniqueness case-sensitively', async () => {
     const prisma = getPrismaClient();
+    const id = uniqueId();
 
     // Create project with lowercase owner/repo
     await createTestProject({
       name: 'Lowercase Project',
       description: 'Lowercase repository',
-      githubOwner: 'testowner',
-      githubRepo: 'testrepo',
+      githubOwner: `testowner-${id}`,
+      githubRepo: `testrepo-${id}`,
+      key: uniqueKey(),
     });
 
     // Create project with different case (should succeed - case sensitive)
     await createTestProject({
       name: 'Uppercase Project',
       description: 'Uppercase repository',
-      githubOwner: 'TestOwner', // Different case
-      githubRepo: 'TestRepo', // Different case
+      githubOwner: `TestOwner-${id}`, // Different case
+      githubRepo: `TestRepo-${id}`, // Different case
+      key: uniqueKey(),
     });
 
     // Verify both projects exist (case-sensitive uniqueness)
@@ -234,8 +257,8 @@ test.describe('Project Uniqueness Constraint', () => {
     const lowercaseProject = await prisma.project.findUnique({
       where: {
         githubOwner_githubRepo: {
-          githubOwner: 'testowner',
-          githubRepo: 'testrepo',
+          githubOwner: `testowner-${id}`,
+          githubRepo: `testrepo-${id}`,
         },
       },
     });
@@ -243,8 +266,8 @@ test.describe('Project Uniqueness Constraint', () => {
     const uppercaseProject = await prisma.project.findUnique({
       where: {
         githubOwner_githubRepo: {
-          githubOwner: 'TestOwner',
-          githubRepo: 'TestRepo',
+          githubOwner: `TestOwner-${id}`,
+          githubRepo: `TestRepo-${id}`,
         },
       },
     });
@@ -257,20 +280,22 @@ test.describe('Project Uniqueness Constraint', () => {
   test('should use composite unique constraint for lookups', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const createdProject = await createTestProject({
       name: 'Lookup Test Project',
       description: 'Testing composite unique constraint',
-      githubOwner: 'lookup-owner',
-      githubRepo: 'lookup-repo',
+      githubOwner: `lookup-owner-${id}`,
+      githubRepo: `lookup-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Use composite unique constraint for lookup
     const foundProject = await prisma.project.findUnique({
       where: {
         githubOwner_githubRepo: {
-          githubOwner: 'lookup-owner',
-          githubRepo: 'lookup-repo',
+          githubOwner: `lookup-owner-${id}`,
+          githubRepo: `lookup-repo-${id}`,
         },
       },
     });
@@ -279,7 +304,7 @@ test.describe('Project Uniqueness Constraint', () => {
     expect(foundProject).toBeDefined();
     expect(foundProject?.id).toBe(createdProject.id);
     expect(foundProject?.name).toBe('[e2e] Lookup Test Project');
-    expect(foundProject?.githubOwner).toBe('lookup-owner');
-    expect(foundProject?.githubRepo).toBe('lookup-repo');
+    expect(foundProject?.githubOwner).toBe(`lookup-owner-${id}`);
+    expect(foundProject?.githubRepo).toBe(`lookup-repo-${id}`);
   });
 });

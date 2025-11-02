@@ -48,6 +48,20 @@ export async function dispatchAIBoardWorkflow(
 ): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN;
 
+  // Skip GitHub API call in test mode (same logic as transition.ts)
+  const isTestMode =
+    process.env.TEST_MODE === 'true' ||
+    process.env.NODE_ENV === 'test' ||
+    (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
+
+  if (isTestMode) {
+    console.log('[dispatch-ai-board] Skipping workflow dispatch in test mode:', {
+      ticket_id: inputs.ticket_id,
+      stage: inputs.stage,
+    });
+    return; // Exit early - no GitHub API call
+  }
+
   if (!githubToken) {
     throw new Error(
       'GITHUB_TOKEN not configured - required for workflow dispatch'

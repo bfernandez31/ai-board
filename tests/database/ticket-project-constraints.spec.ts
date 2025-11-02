@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { getPrismaClient } from '../helpers/db-cleanup';
 import { createTestProject, createTestTicket } from '../helpers/db-setup';
 
 /**
@@ -14,13 +14,14 @@ import { createTestProject, createTestTicket } from '../helpers/db-setup';
  * EXPECTED: All tests will FAIL until schema migration is completed (TDD approach)
  */
 
+// Helper: Generate unique ID for multi-worker isolation
+const uniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
 test.describe('Ticket-Project Constraints', () => {
   // Track projects created in each test for cleanup
   const createdProjectIds: number[] = [];
 
   test.beforeEach(async () => {
-    // Clean database before each test
-    await cleanupDatabase();
     // Reset project tracking
     createdProjectIds.length = 0;
   });
@@ -33,11 +34,6 @@ test.describe('Ticket-Project Constraints', () => {
         where: { id: { in: createdProjectIds } }
       });
     }
-  });
-
-  test.afterAll(async () => {
-    // Final cleanup after all tests
-    await cleanupDatabase();
   });
 
   test('should fail to create ticket without projectId', async () => {
@@ -63,6 +59,8 @@ test.describe('Ticket-Project Constraints', () => {
         title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: 99999, // Non-existent project ID
+        ticketNumber: 1,
+        ticketKey: 'TST-1',
         updatedAt: new Date(), // Required field
       },
     });
@@ -74,12 +72,14 @@ test.describe('Ticket-Project Constraints', () => {
   test('should cascade delete tickets when project is deleted', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Cascade Test Project',
       description: 'Project for testing cascade delete',
-      githubOwner: 'test-owner',
-      githubRepo: 'cascade-test-repo',
+      githubOwner: `test-owner-${id}`,
+      githubRepo: `cascade-test-repo-${id}`,
+      key: 'CAD',
     });
     createdProjectIds.push(project.id);
 
@@ -87,16 +87,22 @@ test.describe('Ticket-Project Constraints', () => {
     await createTestTicket(project.id, {
       title: '[e2e] Ticket 1',
       description: 'First ticket',
+      ticketNumber: 1,
+      ticketKey: 'CAD-1',
     });
 
     await createTestTicket(project.id, {
       title: '[e2e] Ticket 2',
       description: 'Second ticket',
+      ticketNumber: 2,
+      ticketKey: 'CAD-2',
     });
 
     await createTestTicket(project.id, {
       title: '[e2e] Ticket 3',
       description: 'Third ticket',
+      ticketNumber: 3,
+      ticketKey: 'CAD-3',
     });
 
     // Verify tickets were created
@@ -127,20 +133,23 @@ test.describe('Ticket-Project Constraints', () => {
   test('should return only tickets for specified project', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create two separate projects
     const project1 = await createTestProject({
       name: 'Project 1',
       description: 'First project',
-      githubOwner: 'owner1',
-      githubRepo: 'repo1',
+      githubOwner: `owner1-${id}`,
+      githubRepo: `repo1-${id}`,
+      key: 'P1',
     });
     createdProjectIds.push(project1.id);
 
     const project2 = await createTestProject({
       name: 'Project 2',
       description: 'Second project',
-      githubOwner: 'owner2',
-      githubRepo: 'repo2',
+      githubOwner: `owner2-${id}`,
+      githubRepo: `repo2-${id}`,
+      key: 'P2',
     });
     createdProjectIds.push(project2.id);
 
@@ -148,27 +157,37 @@ test.describe('Ticket-Project Constraints', () => {
     await createTestTicket(project1.id, {
       title: '[e2e] Project 1 - Ticket 1',
       description: 'First ticket for project 1',
+      ticketNumber: 1,
+      ticketKey: 'P1-1',
     });
 
     await createTestTicket(project1.id, {
       title: '[e2e] Project 1 - Ticket 2',
       description: 'Second ticket for project 1',
+      ticketNumber: 2,
+      ticketKey: 'P1-2',
     });
 
     // Create tickets for project 2
     await createTestTicket(project2.id, {
       title: '[e2e] Project 2 - Ticket 1',
       description: 'First ticket for project 2',
+      ticketNumber: 1,
+      ticketKey: 'P2-1',
     });
 
     await createTestTicket(project2.id, {
       title: '[e2e] Project 2 - Ticket 2',
       description: 'Second ticket for project 2',
+      ticketNumber: 2,
+      ticketKey: 'P2-2',
     });
 
     await createTestTicket(project2.id, {
       title: '[e2e] Project 2 - Ticket 3',
       description: 'Third ticket for project 2',
+      ticketNumber: 3,
+      ticketKey: 'P2-3',
     });
 
     // Query tickets for project 1 only
@@ -200,12 +219,14 @@ test.describe('Ticket-Project Constraints', () => {
   test('should allow querying tickets via project relation', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Relation Test Project',
       description: 'Project for testing relations',
-      githubOwner: 'relation-owner',
-      githubRepo: 'relation-repo',
+      githubOwner: `relation-owner-${id}`,
+      githubRepo: `relation-repo-${id}`,
+      key: 'REL',
     });
     createdProjectIds.push(project.id);
 
@@ -214,12 +235,16 @@ test.describe('Ticket-Project Constraints', () => {
       title: '[e2e] Ticket 1',
       description: 'First ticket',
       stage: 'INBOX',
+      ticketNumber: 1,
+      ticketKey: 'REL-1',
     });
 
     await createTestTicket(project.id, {
       title: '[e2e] Ticket 2',
       description: 'Second ticket',
       stage: 'PLAN',
+      ticketNumber: 2,
+      ticketKey: 'REL-2',
     });
 
     // Query project with tickets included
@@ -242,6 +267,8 @@ test.describe('Ticket-Project Constraints', () => {
         title: '[e2e] Test Ticket',
         description: 'Test description',
         projectId: null as unknown as number, // Force null value
+        ticketNumber: 1,
+        ticketKey: 'TST-1',
         updatedAt: new Date(), // Required field
       },
     });

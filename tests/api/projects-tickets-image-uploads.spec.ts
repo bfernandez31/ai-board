@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 import { cleanupCloudinaryTicketImages } from '../helpers/cloudinary-cleanup';
 import * as fs from 'fs';
@@ -20,14 +20,14 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
   const BASE_URL = 'http://localhost:3000';
   const FIXTURES_PATH = path.join(process.cwd(), 'tests', 'fixtures', 'images');
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
   test.describe('JSON Requests (Backward Compatibility)', () => {
-    test('should create ticket with JSON request without attachments', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should create ticket with JSON request without attachments', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] JSON-only ticket',
           description: 'Traditional JSON request without images',
@@ -49,8 +49,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       }
     });
 
-    test('should extract external image URLs from markdown description', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should extract external image URLs from markdown description', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] Ticket with markdown image',
           description: 'Check out this mockup: ![Design](https://example.com/mockup.png)',
@@ -73,8 +73,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(attachment.uploadedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
-    test('should ignore non-HTTPS image URLs in markdown', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should ignore non-HTTPS image URLs in markdown', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] HTTP image ignored',
           description: 'This image is HTTP: ![Image](http://example.com/image.png)',
@@ -90,8 +90,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       }
     });
 
-    test('should extract multiple external URLs from markdown', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should extract multiple external URLs from markdown', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] Multiple markdown images',
           description: `
@@ -114,8 +114,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[2].url).toBe('https://example.com/mockup3.png');
     });
 
-    test('should enforce max 5 external URLs from markdown', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should enforce max 5 external URLs from markdown', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] Too many markdown images',
           description: `
@@ -149,7 +149,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       createdTicketIds.length = 0; // Clear the array
     });
 
-    test('should accept multipart/form-data with valid image', async ({ request }) => {
+    test('should accept multipart/form-data with valid image', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
@@ -158,7 +158,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       formData.append('description', 'Testing image upload functionality');
       formData.append('images', new Blob([imageBuffer], { type: 'image/png' }), 'valid-image.png');
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Ticket with image upload',
           description: 'Testing image upload functionality',
@@ -190,11 +190,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(attachment.uploadedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
-    test('should accept JPEG image upload', async ({ request }) => {
+    test('should accept JPEG image upload', async ({ request , projectId }) => {
       const validJpegPath = path.join(FIXTURES_PATH, 'valid-jpeg.jpg');
       const imageBuffer = fs.readFileSync(validJpegPath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Ticket with JPEG upload',
           description: 'Testing JPEG image upload',
@@ -214,11 +214,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[0].mimeType).toBe('image/jpeg');
     });
 
-    test.skip('should accept multiple image uploads (up to 5)', async ({ request }) => {
+    test.skip('should accept multiple image uploads (up to 5)', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Ticket with multiple images',
           description: 'Testing multiple image uploads',
@@ -249,7 +249,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[2].type).toBe('uploaded');
     });
 
-    test.skip('should reject more than 5 image uploads', async ({ request }) => {
+    test.skip('should reject more than 5 image uploads', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
@@ -267,7 +267,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
         };
       }
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: multipartData,
       });
 
@@ -278,7 +278,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error).toContain('Maximum 5 images');
     });
 
-    test.skip('should reject image exceeding 10MB size limit', async ({ request }) => {
+    test.skip('should reject image exceeding 10MB size limit', async ({ request , projectId }) => {
       const largeImagePath = path.join(FIXTURES_PATH, 'large-image.png');
 
       // Verify test fixture exists and is large enough
@@ -288,7 +288,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
 
       const imageBuffer = fs.readFileSync(largeImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Large image rejection',
           description: 'Testing file size limit',
@@ -307,11 +307,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error.toLowerCase()).toMatch(/file size|10mb|exceeds/);
     });
 
-    test('should reject file with mismatched MIME type and magic bytes', async ({ request }) => {
+    test('should reject file with mismatched MIME type and magic bytes', async ({ request , projectId }) => {
       const invalidFilePath = path.join(FIXTURES_PATH, 'invalid-signature.txt');
       const fileBuffer = fs.readFileSync(invalidFilePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Invalid file signature',
           description: 'Testing magic byte validation',
@@ -330,11 +330,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error).toMatch(/validation failed|signature|mismatch/i);
     });
 
-    test('should combine uploaded images and markdown URLs (max 5 total)', async ({ request }) => {
+    test('should combine uploaded images and markdown URLs (max 5 total)', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Mixed attachments',
           description: 'Uploaded image plus markdown: ![External](https://example.com/external.png)',
@@ -361,7 +361,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[1].url).toBe('https://example.com/external.png');
     });
 
-    test.skip('should enforce max 5 total attachments (uploaded + external)', async ({ request }) => {
+    test.skip('should enforce max 5 total attachments (uploaded + external)', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
@@ -383,7 +383,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
         };
       }
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: multipartData,
       });
 
@@ -401,11 +401,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(externalCount).toBe(2); // Third external URL should be skipped
     });
 
-    test('should sanitize filename to prevent path traversal', async ({ request }) => {
+    test('should sanitize filename to prevent path traversal', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Filename sanitization',
           description: 'Testing path traversal prevention',
@@ -429,12 +429,12 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.attachments[0].filename).toMatch(/^\d+_.*\.png$/);
     });
 
-    test('should return ticket with attachments via GET after creation', async ({ request }) => {
+    test('should return ticket with attachments via GET after creation', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
       // Create ticket with image
-      const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const createResponse = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Queryable ticket with image',
           description: 'Should appear in GET response with attachments',
@@ -451,7 +451,7 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       createdTicketIds.push(created.id); // Track for cleanup
 
       // Query tickets
-      const getResponse = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+      const getResponse = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
       expect(getResponse.status()).toBe(200);
 
       const allTickets = await getResponse.json();
@@ -467,11 +467,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
   });
 
   test.describe('Validation Error Handling', () => {
-    test('should return 400 for missing title in multipart request', async ({ request }) => {
+    test('should return 400 for missing title in multipart request', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           description: 'Missing title field',
           images: {
@@ -489,11 +489,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error).toContain('title');
     });
 
-    test('should return 400 for missing description in multipart request', async ({ request }) => {
+    test('should return 400 for missing description in multipart request', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Missing description',
           images: {
@@ -511,8 +511,8 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       expect(body.error).toContain('description');
     });
 
-    test('should create ticket with multipart request but no images', async ({ request }) => {
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    test('should create ticket with multipart request but no images', async ({ request , projectId }) => {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Multipart without images',
           description: 'Testing multipart form without file uploads',
@@ -543,13 +543,13 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       createdTicketIds.length = 0; // Clear the array
     });
 
-    test('should store image with timestamp-prefixed filename', async ({ request }) => {
+    test('should store image with timestamp-prefixed filename', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
       const beforeTimestamp = Date.now();
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Timestamp filename test',
           description: 'Verifying filename timestamp prefix',
@@ -580,11 +580,11 @@ test.describe('POST /api/projects/[projectId]/tickets - Image Uploads', () => {
       }
     });
 
-    test('should generate Cloudinary URL for uploaded images', async ({ request }) => {
+    test('should generate Cloudinary URL for uploaded images', async ({ request , projectId }) => {
       const validImagePath = path.join(FIXTURES_PATH, 'valid-image.png');
       const imageBuffer = fs.readFileSync(validImagePath);
 
-      const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+      const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
         multipart: {
           title: '[e2e] Cloudinary URL verification',
           description: 'Checking Cloudinary URL format',

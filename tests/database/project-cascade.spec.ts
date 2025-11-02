@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { getPrismaClient, cleanupDatabase } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { getPrismaClient } from '../helpers/db-cleanup';
 import { createTestProject, createTestTicket } from '../helpers/db-setup';
 
 /**
@@ -18,41 +18,31 @@ import { createTestProject, createTestTicket } from '../helpers/db-setup';
  * EXPECTED: Test PASSES after migration (database CASCADE DELETE constraint enforced)
  */
 
+// Helper: Generate unique ID for multi-worker isolation
+const uniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+// Helper: Generate unique 3-character key (random alphanumeric)
+const uniqueKey = () => {
+  // Generate 3 random uppercase alphanumeric characters
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
+
 test.describe('Project Cascade Delete', () => {
-  // Track projects created in each test for cleanup
-  const createdProjectIds: number[] = [];
-
-  test.beforeEach(async () => {
-    // Clean database before each test
-    await cleanupDatabase();
-    // Reset project tracking
-    createdProjectIds.length = 0;
-  });
-
-  test.afterEach(async () => {
-    // Clean up projects created in this test
-    const prisma = getPrismaClient();
-    if (createdProjectIds.length > 0) {
-      await prisma.project.deleteMany({
-        where: { id: { in: createdProjectIds } }
-      });
-    }
-  });
-
-  test.afterAll(async () => {
-    // Final cleanup after all tests
-    await cleanupDatabase();
-  });
+  // No beforeEach/afterEach needed - tests clean up their own projects by deleting them
+  // Global-teardown handles any remaining [e2e] projects with IDs ≥8
 
   test('should cascade delete all tickets when project is deleted', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Cascade Test Project',
       description: 'Project for testing cascade delete',
-      githubOwner: 'cascade-owner',
-      githubRepo: 'cascade-repo',
+      githubOwner: `cascade-owner-${id}`,
+      githubRepo: `cascade-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Create multiple tickets for this project
@@ -116,12 +106,14 @@ test.describe('Project Cascade Delete', () => {
   test('should cascade delete tickets with different stages', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Multi-Stage Project',
       description: 'Project with tickets in various stages',
-      githubOwner: 'multi-stage-owner',
-      githubRepo: 'multi-stage-repo',
+      githubOwner: `multi-stage-owner-${id}`,
+      githubRepo: `multi-stage-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Create tickets in all different stages
@@ -156,12 +148,14 @@ test.describe('Project Cascade Delete', () => {
   test('should only delete tickets from the deleted project', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create first project with tickets
     const project1 = await createTestProject({
       name: 'Project 1',
       description: 'First project',
-      githubOwner: 'owner1',
-      githubRepo: 'repo1',
+      githubOwner: `owner1-${id}`,
+      githubRepo: `repo1-${id}`,
+      key: uniqueKey(),
     });
 
     await createTestTicket(project1.id, {
@@ -178,8 +172,9 @@ test.describe('Project Cascade Delete', () => {
     const project2 = await createTestProject({
       name: 'Project 2',
       description: 'Second project',
-      githubOwner: 'owner2',
-      githubRepo: 'repo2',
+      githubOwner: `owner2-${id}`,
+      githubRepo: `repo2-${id}`,
+      key: uniqueKey(),
     });
 
     await createTestTicket(project2.id, {
@@ -237,12 +232,14 @@ test.describe('Project Cascade Delete', () => {
   test('should handle cascade delete with large number of tickets', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Large Project',
       description: 'Project with many tickets',
-      githubOwner: 'large-owner',
-      githubRepo: 'large-repo',
+      githubOwner: `large-owner-${id}`,
+      githubRepo: `large-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Create 50 tickets
@@ -282,12 +279,14 @@ test.describe('Project Cascade Delete', () => {
   test('should allow deleting project with no tickets', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create project without any tickets
     const project = await createTestProject({
       name: 'Empty Project',
       description: 'Project with no tickets',
-      githubOwner: 'empty-owner',
-      githubRepo: 'empty-repo',
+      githubOwner: `empty-owner-${id}`,
+      githubRepo: `empty-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Verify project exists
@@ -317,12 +316,14 @@ test.describe('Project Cascade Delete', () => {
   test('should cascade delete tickets created at different times', async () => {
     const prisma = getPrismaClient();
 
+    const id = uniqueId();
     // Create test project
     const project = await createTestProject({
       name: 'Time Test Project',
       description: 'Project for testing cascade delete over time',
-      githubOwner: 'time-owner',
-      githubRepo: 'time-repo',
+      githubOwner: `time-owner-${id}`,
+      githubRepo: `time-repo-${id}`,
+      key: uniqueKey(),
     });
 
     // Create first ticket

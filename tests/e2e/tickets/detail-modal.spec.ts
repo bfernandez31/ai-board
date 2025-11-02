@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase, getPrismaClient, getProjectKey, getProjectGithub } from '../../helpers/db-cleanup';
 
 /**
  * E2E Tests for Ticket Detail Modal
@@ -13,19 +13,19 @@ test.describe('Ticket Detail Modal', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ request , projectId }) => {
     // Clean database before each test - protects project 3
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test tickets for each stage
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test Ticket in INBOX',
         description: 'This is a test ticket in the INBOX stage for modal testing.',
       },
     });
 
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test Ticket in PLAN',
         description: 'This is a test ticket in the PLAN stage.',
@@ -33,7 +33,7 @@ test.describe('Ticket Detail Modal', () => {
     });
 
     // Create a ticket with a long description for scrolling tests
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket with Long Description',
         description: 'Lorem ipsum dolor sit amet, consectetur adipiscing'.repeat(20), // ~1000 chars
@@ -42,7 +42,7 @@ test.describe('Ticket Detail Modal', () => {
 
     // Update stages for test tickets (API creates them in INBOX by default)
     const tickets = await prisma.ticket.findMany({
-      where: { projectId: 1 },
+      where: { projectId },
       orderBy: { id: 'asc' },
     });
     if (tickets.length >= 2 && tickets[1]) {
@@ -64,9 +64,9 @@ test.describe('Ticket Detail Modal', () => {
    * T004: Basic modal open and close
    * Scenario 1 from quickstart.md
    */
-  test('should open modal when ticket card is clicked and close with button', async ({ page }) => {
+  test('should open modal when ticket card is clicked and close with button', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click first ticket card
@@ -92,9 +92,9 @@ test.describe('Ticket Detail Modal', () => {
    * T005: ESC key dismissal
    * Scenario 2 from quickstart.md
    */
-  test('should close modal when ESC key is pressed', async ({ page }) => {
+  test('should close modal when ESC key is pressed', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card to open modal
@@ -115,9 +115,9 @@ test.describe('Ticket Detail Modal', () => {
    * T006: Click outside to close
    * Scenario 3 from quickstart.md
    */
-  test('should close modal when clicking outside (overlay)', async ({ page }) => {
+  test('should close modal when clicking outside (overlay)', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Open modal by clicking ticket
@@ -148,9 +148,9 @@ test.describe('Ticket Detail Modal', () => {
    * T007: Multiple tickets display correctly
    * Scenario 4 from quickstart.md
    */
-  test('should display different ticket data for different tickets', async ({ page }) => {
+  test('should display different ticket data for different tickets', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     const tickets = page.locator('[data-testid="ticket-card"]');
@@ -189,12 +189,12 @@ test.describe('Ticket Detail Modal', () => {
    * T008: Mobile responsive (full-screen)
    * Scenario 5 from quickstart.md
    */
-  test('should display full-screen modal on mobile viewport', async ({ page }) => {
+  test('should display full-screen modal on mobile viewport', async ({ page , projectId }) => {
     // Set viewport to mobile size (375px width)
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card
@@ -226,12 +226,12 @@ test.describe('Ticket Detail Modal', () => {
    * T009: Desktop responsive (centered)
    * Scenario 6 from quickstart.md
    */
-  test('should display centered modal on desktop viewport', async ({ page }) => {
+  test('should display centered modal on desktop viewport', async ({ page , projectId }) => {
     // Set viewport to desktop size (1280px width)
     await page.setViewportSize({ width: 1280, height: 800 });
 
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click ticket card
@@ -262,9 +262,9 @@ test.describe('Ticket Detail Modal', () => {
    * T010: Long content scrolling
    * Scenario 7 from quickstart.md
    */
-  test('should handle long description with scrolling', async ({ page }) => {
+  test('should handle long description with scrolling', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click the third ticket (which has a long description)
@@ -296,9 +296,9 @@ test.describe('Ticket Detail Modal', () => {
    * T011: Stage badge colors
    * Scenario 8 from quickstart.md
    */
-  test('should display correct badge colors for different stages', async ({ page }) => {
+  test('should display correct badge colors for different stages', async ({ page , projectId }) => {
     // Navigate to board and wait for tickets to load
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Stage color mapping (Catppuccin theme from ticket-detail-modal.tsx)
@@ -356,9 +356,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test user
     const testUser = await prisma.user.upsert({
@@ -373,12 +373,13 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
       },
     });
 
-    // Update project 1 with GitHub configuration
+    // Update worker project with GitHub configuration
+    const github = getProjectGithub(projectId);
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
-        githubOwner: 'testorg',
-        githubRepo: 'testrepo',
+        githubOwner: github.owner,
+        githubRepo: github.repo,
         userId: testUser.id,
       },
     });
@@ -391,9 +392,11 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T006: User Story 1 - displays branch link when branch exists and stage is not SHIP
    */
-  test('displays branch link when branch exists and stage is not SHIP', async ({ page, request }) => {
+  test('displays branch link when branch exists and stage is not SHIP', async ({ page, request , projectId }) => {
+    const { owner: githubOwner, repo: githubRepo } = getProjectGithub(projectId);
+
     // Create ticket with branch in BUILD stage
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket with Branch',
         description: 'Test ticket with branch for branch link feature',
@@ -412,7 +415,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -429,7 +432,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     // Verify href attribute (compare URL format)
     await expect(branchLink).toHaveAttribute(
       'href',
-      'https://github.com/testorg/testrepo/compare/main...033-test-branch'
+      `https://github.com/${githubOwner}/${githubRepo}/compare/main...033-test-branch`
     );
 
     // Verify security attributes
@@ -440,9 +443,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T007: User Story 1 - opens GitHub in new tab when clicked
    */
-  test('opens GitHub in new tab when clicked', async ({ page, context, request }) => {
+  test('opens GitHub in new tab when clicked', async ({ page, context, request , projectId }) => {
     // Create ticket with branch
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket for New Tab Test',
         description: 'Test ticket for new tab functionality',
@@ -461,7 +464,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate to board and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -487,9 +490,11 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T008: User Story 1 - constructs correct GitHub URL with owner/repo/branch
    */
-  test('constructs correct GitHub URL with owner/repo/branch', async ({ page, request }) => {
+  test('constructs correct GitHub URL with owner/repo/branch', async ({ page, request , projectId }) => {
+    const { owner: githubOwner, repo: githubRepo } = getProjectGithub(projectId);
+
     // Create ticket with branch
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] URL Construction Test',
         description: 'Test URL construction',
@@ -508,7 +513,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -517,15 +522,15 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Verify complete URL structure (compare format)
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...033-url-test');
+    expect(href).toBe(`https://github.com/${githubOwner}/${githubRepo}/compare/main...033-url-test`);
   });
 
   /**
    * T017: User Story 2 - hides branch link when branch is null
    */
-  test('hides branch link when branch is null', async ({ page, request }) => {
+  test('hides branch link when branch is null', async ({ page, request , projectId }) => {
     // Create ticket without branch
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket Without Branch',
         description: 'Test ticket with null branch',
@@ -533,7 +538,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -548,9 +553,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T018: User Story 2 - hides branch link when branch is empty string
    */
-  test('hides branch link when branch is empty string', async ({ page, request }) => {
+  test('hides branch link when branch is empty string', async ({ page, request , projectId }) => {
     // Create ticket with empty branch
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket With Empty Branch',
         description: 'Test ticket with empty branch string',
@@ -568,7 +573,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -583,17 +588,17 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T019: User Story 2 - hides branch link when githubOwner is missing
    */
-  test('hides branch link when githubOwner is missing', async ({ page, request }) => {
+  test('hides branch link when githubOwner is missing', async ({ page, request , projectId }) => {
     // Update project to remove githubOwner
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
         githubOwner: '',
       },
     });
 
     // Create ticket with branch
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket Missing Owner',
         description: 'Test ticket with missing githubOwner',
@@ -611,7 +616,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -626,17 +631,17 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T020: User Story 2 - hides branch link when githubRepo is missing
    */
-  test('hides branch link when githubRepo is missing', async ({ page, request }) => {
+  test('hides branch link when githubRepo is missing', async ({ page, request , projectId }) => {
     // Update project to remove githubRepo
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
         githubRepo: '',
       },
     });
 
     // Create ticket with branch
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket Missing Repo',
         description: 'Test ticket with missing githubRepo',
@@ -654,7 +659,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -669,9 +674,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T025: User Story 3 - hides branch link when stage is SHIP
    */
-  test('hides branch link when stage is SHIP', async ({ page, request }) => {
+  test('hides branch link when stage is SHIP', async ({ page, request , projectId }) => {
     // Create ticket with branch in SHIP stage
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Shipped Ticket',
         description: 'Test ticket in SHIP stage',
@@ -690,7 +695,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -705,9 +710,9 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T026: User Story 3 - shows branch link when stage transitions from SHIP back to VERIFY
    */
-  test('shows branch link when stage transitions from SHIP back to VERIFY', async ({ page, request }) => {
+  test('shows branch link when stage transitions from SHIP back to VERIFY', async ({ page, request , projectId }) => {
     // Create ticket with branch in VERIFY stage (rollback scenario)
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Rolled Back Ticket',
         description: 'Test ticket rolled back from SHIP',
@@ -726,7 +731,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -741,9 +746,11 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
   /**
    * T029: Edge Case - encodes branch names with spaces
    */
-  test('encodes branch names with spaces', async ({ page, request }) => {
+  test('encodes branch names with spaces', async ({ page, request , projectId }) => {
+    const { owner: githubOwner, repo: githubRepo } = getProjectGithub(projectId);
+
     // Create ticket with branch containing spaces
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Branch With Spaces',
         description: 'Test URL encoding for spaces',
@@ -762,7 +769,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -771,15 +778,17 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Verify URL encoding (spaces become %20) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%20branch%20name');
+    expect(href).toBe(`https://github.com/${githubOwner}/${githubRepo}/compare/main...feature%20branch%20name`);
   });
 
   /**
    * T030: Edge Case - encodes branch names with slashes
    */
-  test('encodes branch names with slashes', async ({ page, request }) => {
+  test('encodes branch names with slashes', async ({ page, request , projectId }) => {
+    const { owner: githubOwner, repo: githubRepo } = getProjectGithub(projectId);
+
     // Create ticket with branch containing slashes
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Branch With Slashes',
         description: 'Test URL encoding for slashes',
@@ -798,7 +807,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -807,15 +816,17 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Verify URL encoding (slashes become %2F) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%2Flogin');
+    expect(href).toBe(`https://github.com/${githubOwner}/${githubRepo}/compare/main...feature%2Flogin`);
   });
 
   /**
    * T031: Edge Case - encodes branch names with special characters
    */
-  test('encodes branch names with special characters', async ({ page, request }) => {
+  test('encodes branch names with special characters', async ({ page, request , projectId }) => {
+    const { owner: githubOwner, repo: githubRepo } = getProjectGithub(projectId);
+
     // Create ticket with branch containing multiple special characters
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Branch With Special Chars',
         description: 'Test URL encoding for special characters',
@@ -834,7 +845,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
     });
 
     // Navigate and open modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -843,7 +854,7 @@ test.describe('Branch Link in Ticket Detail Modal', () => {
 
     // Verify URL encoding (all special chars encoded) in compare URL
     const href = await branchLink.getAttribute('href');
-    expect(href).toBe('https://github.com/testorg/testrepo/compare/main...feature%2Flogin%20page%232');
+    expect(href).toBe(`https://github.com/${githubOwner}/${githubRepo}/compare/main...feature%2Flogin%20page%232`);
   });
 });
 
@@ -861,9 +872,9 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ request , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test user
     const testUser = await prisma.user.upsert({
@@ -878,16 +889,16 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
       },
     });
 
-    // Update project 1
+    // Update worker project
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
         userId: testUser.id,
       },
     });
 
     // Create test ticket
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test Ticket for Footer',
         description: 'Test description for footer refactoring',
@@ -902,35 +913,35 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   /**
    * Test: Ticket ID displays in header before title
    */
-  test('displays ticket ID in header before title', async ({ page }) => {
+  test('displays ticket ID in header before title', async ({ page , projectId }) => {
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();
 
-    // Verify ticket ID is displayed (format: #<ticketId>)
-    const ticketId = dialog.locator('[data-testid="ticket-id"]');
-    await expect(ticketId).toBeVisible();
+    // Verify ticket key is displayed (format: PROJECT_KEY-NUMBER, e.g., E2E-1)
+    const ticketKey = dialog.locator('[data-testid="ticket-key"]');
+    await expect(ticketKey).toBeVisible();
 
     // Verify it has correct styling (font-mono text-muted-foreground)
-    const ticketIdClasses = await ticketId.getAttribute('class');
-    expect(ticketIdClasses).toContain('font-mono');
-    expect(ticketIdClasses).toContain('text-muted-foreground');
+    const ticketKeyClasses = await ticketKey.getAttribute('class');
+    expect(ticketKeyClasses).toContain('font-mono');
+    expect(ticketKeyClasses).toContain('text-muted-foreground');
 
-    // Verify text starts with #
-    const ticketIdText = await ticketId.textContent();
-    expect(ticketIdText).toMatch(/^#\d+$/);
+    // Verify text matches Jira-style format (e.g., E2E-1, ABC-123)
+    const ticketKeyText = await ticketKey.textContent();
+    expect(ticketKeyText).toMatch(/^[A-Z0-9]{1,3}-\d+$/);
   });
 
   /**
    * Test: Footer with relative dates appears in Details tab
    */
-  test('displays footer with relative dates in Details tab', async ({ page }) => {
+  test('displays footer with relative dates in Details tab', async ({ page , projectId }) => {
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -955,9 +966,9 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
     expect(footerClasses).toContain('text-xs');
     expect(footerClasses).toContain('text-muted-foreground');
 
-    // Verify footer contains ticket ID
+    // Verify footer contains ticket key in Jira-style format (e.g., E2E-1, ABC-123)
     const footerText = await footer.textContent();
-    expect(footerText).toMatch(/#\d+/);
+    expect(footerText).toMatch(/[A-Z0-9]{1,3}-\d+/);
 
     // Verify footer contains "Created" with relative time
     expect(footerText).toContain('Created');
@@ -973,9 +984,9 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   /**
    * Test: Old dates section is removed
    */
-  test('does not display old dates section in Details tab', async ({ page }) => {
+  test('does not display old dates section in Details tab', async ({ page , projectId }) => {
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -997,12 +1008,12 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   /**
    * Test: Footer is sticky on desktop viewport
    */
-  test('footer is sticky on desktop viewport', async ({ page }) => {
+  test('footer is sticky on desktop viewport', async ({ page , projectId }) => {
     // Set desktop viewport
     await page.setViewportSize({ width: 1280, height: 800 });
 
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -1025,12 +1036,12 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   /**
    * Test: Footer is NOT sticky on mobile viewport
    */
-  test('footer is not sticky on mobile viewport', async ({ page }) => {
+  test('footer is not sticky on mobile viewport', async ({ page , projectId }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Navigate to board and open ticket detail modal
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
     await page.locator('[data-testid="ticket-card"]').first().click();
 
@@ -1057,9 +1068,9 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
   /**
    * Test: Description is scrollable independently
    */
-  test('description section is scrollable independently in Details tab', async ({ page }) => {
+  test('description section is scrollable independently in Details tab', async ({ page , projectId }) => {
     // Clean database and create a ticket with a very long description directly via Prisma
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test user
     const testUser = await prisma.user.upsert({
@@ -1074,27 +1085,31 @@ test.describe('Ticket Detail Modal - Date Footer Refactoring', () => {
       },
     });
 
-    // Update project 1
+    // Update worker project
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
         userId: testUser.id,
       },
     });
 
     // Create ticket directly in DB with long description (max 1000 chars)
+    const ticketNumber = 1; // Hardcoded since this test is self-contained
+    const projectKey = getProjectKey(projectId);
     await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Ticket with Very Long Description',
         description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(15), // ~900 chars (under 1000 limit)
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board and open the ticket
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Click the first (and only) ticket
@@ -1137,9 +1152,9 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ request , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test user
     const testUser = await prisma.user.upsert({
@@ -1154,16 +1169,16 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
       },
     });
 
-    // Update project 1
+    // Update worker project
     await prisma.project.update({
-      where: { id: 1 },
+      where: { id: projectId },
       data: {
         userId: testUser.id,
       },
     });
 
     // Create ticket in INBOX stage
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket in INBOX',
         description: 'Test ticket in INBOX stage',
@@ -1171,7 +1186,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
     });
 
     // Create ticket in BUILD stage
-    const buildTicket = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const buildTicket = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket in BUILD',
         description: 'Test ticket in BUILD stage',
@@ -1189,7 +1204,7 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
     });
 
     // Create ticket in VERIFY stage
-    const verifyTicket = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const verifyTicket = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket in VERIFY',
         description: 'Test ticket in VERIFY stage',
@@ -1214,9 +1229,9 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   /**
    * Test: Ticket in VERIFY stage opens with Conversation tab active
    */
-  test('opens Conversation tab when clicking ticket in VERIFY stage', async ({ page }) => {
+  test('opens Conversation tab when clicking ticket in VERIFY stage', async ({ page , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the VERIFY column
@@ -1247,9 +1262,9 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   /**
    * Test: Ticket in INBOX stage opens with Details tab active
    */
-  test('opens Details tab when clicking ticket in INBOX stage', async ({ page }) => {
+  test('opens Details tab when clicking ticket in INBOX stage', async ({ page , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the INBOX column
@@ -1280,9 +1295,9 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   /**
    * Test: Ticket in BUILD stage opens with Details tab active
    */
-  test('opens Details tab when clicking ticket in BUILD stage', async ({ page }) => {
+  test('opens Details tab when clicking ticket in BUILD stage', async ({ page , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find the BUILD column
@@ -1309,9 +1324,9 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
   /**
    * Test: Modal resets to correct initial tab when reopening ticket
    */
-  test('resets to correct initial tab when reopening same ticket', async ({ page }) => {
+  test('resets to correct initial tab when reopening same ticket', async ({ page , projectId }) => {
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
 
     // Find and click VERIFY ticket

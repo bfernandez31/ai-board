@@ -4,11 +4,11 @@
  * This test verifies the complete end-to-end ticket creation workflow.
  * Expected to FAIL initially (RED state) - modal and API integration not implemented yet.
  *
- * Run: npx playwright test tests/ticket-creation-success.spec.ts
+ * Run: npx playwright test tests/e2e/tickets/creation-success.spec.ts
  */
 
-import { test, expect, Page } from "@playwright/test";
-import { cleanupDatabase } from './helpers/db-cleanup';
+import { test, expect, Page } from "../../helpers/worker-isolation";
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 // Helper: Wait for ticket to appear in column after board refresh
 async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 10000) {
@@ -17,9 +17,9 @@ async function waitForTicketInColumn(page: Page, ticketTitle: string, timeout = 
 }
 
 test.describe("Ticket Creation Modal - Successful Creation", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Mock SSE endpoint to prevent connection timeouts
     await page.route('**/api/sse**', async (route) => {
@@ -31,11 +31,11 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     });
 
     // Navigate to board page
-    await page.goto("/projects/1/board");
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForLoadState("domcontentloaded");
   });
 
-  test("should create ticket and display it in INBOX column", async ({ page }) => {
+  test("should create ticket and display it in INBOX column", async ({ page , projectId }) => {
     // Step 1: Navigate to board page (already done in beforeEach)
     const testId = Date.now();
     const testTitle = `E2E Test Ticket ${testId}`;
@@ -70,7 +70,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await waitForTicketInColumn(page, testTitle);
   });
 
-  test("should create ticket with minimum valid input (1 char each)", async ({ page }) => {
+  test("should create ticket with minimum valid input (1 char each)", async ({ page , projectId }) => {
     const testId = Date.now();
     const testTitle = `A ${testId}`;
 
@@ -96,7 +96,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(ticketCards).toHaveCount(await ticketCards.count());
   });
 
-  test("should create ticket with maximum length title (100 chars)", async ({ page }) => {
+  test("should create ticket with maximum length title (100 chars)", async ({ page , projectId }) => {
     const testId = Date.now();
     const maxTitle = `${"a".repeat(85)} ${testId}`;
 
@@ -120,7 +120,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(newTicket.first()).toBeVisible({ timeout: 3000 });
   });
 
-  test("should create ticket with maximum length description (2500 chars)", async ({ page }) => {
+  test("should create ticket with maximum length description (2500 chars)", async ({ page , projectId }) => {
     const testId = Date.now();
     const testTitle = `Test with long description ${testId}`;
     const maxDescription = "b".repeat(2500);
@@ -143,7 +143,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await waitForTicketInColumn(page, testTitle);
   });
 
-  test("should create ticket with allowed punctuation", async ({ page }) => {
+  test("should create ticket with allowed punctuation", async ({ page , projectId }) => {
     const testId = Date.now();
     const titleWithPunctuation = `Test, ticket! How? Yes-it works. ${testId}`;
     const descriptionWithPunctuation = "This description has periods, commas, hyphens, question marks!";
@@ -166,7 +166,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await waitForTicketInColumn(page, titleWithPunctuation);
   });
 
-  test("should show loading state during ticket creation", async ({ page }) => {
+  test("should show loading state during ticket creation", async ({ page , projectId }) => {
     const testId = Date.now();
     const testTitle = `Loading state test ticket ${testId}`;
 
@@ -194,7 +194,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(modalTitle).not.toBeVisible({ timeout: 2000 });
   });
 
-  test("should refresh board automatically after ticket creation", async ({ page }) => {
+  test("should refresh board automatically after ticket creation", async ({ page , projectId }) => {
     const uniqueTitle = `Auto-refresh test ${Date.now()}`;
 
     // Get INBOX column
@@ -218,7 +218,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
-  test("should create multiple tickets in sequence", async ({ page }) => {
+  test("should create multiple tickets in sequence", async ({ page , projectId }) => {
     const testId = Date.now();
     const tickets = [
       { title: `First sequential ticket ${testId}`, description: "First description" },
@@ -253,7 +253,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     }
   });
 
-  test("should handle network delay gracefully (within timeout)", async ({ page }) => {
+  test("should handle network delay gracefully (within timeout)", async ({ page , projectId }) => {
     const testId = Date.now();
     const testTitle = `Network delay test ${testId}`;
 
@@ -282,7 +282,7 @@ test.describe("Ticket Creation Modal - Successful Creation", () => {
     await expect(newTicket).toBeVisible({ timeout: 3000 });
   });
 
-  test("should display new ticket with correct stage (INBOX)", async ({ page }) => {
+  test("should display new ticket with correct stage (INBOX)", async ({ page , projectId }) => {
     const testTitle = `Stage verification ${Date.now()}`;
 
     // Create ticket

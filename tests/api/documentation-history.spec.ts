@@ -17,24 +17,31 @@
  * - Test user authenticated via global-setup
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 const BASE_URL = 'http://localhost:3000';
 
 // Helper to create test ticket with required fields
-async function createTestTicket(overrides: {
-  stage: 'SPECIFY' | 'PLAN' | 'BUILD';
-  branch: string;
-}) {
+let nextTicketNumber = 1;
+async function createTestTicket(
+  projectId: number,
+  overrides: {
+    stage: 'SPECIFY' | 'PLAN' | 'BUILD';
+    branch: string;
+  }
+) {
+  const ticketNumber = nextTicketNumber++;
   return await prisma.ticket.create({
     data: {
+      ticketNumber,
+      ticketKey: `E2E${projectId}-${ticketNumber}`,
       title: '[e2e] History API Test Ticket',
       description: 'Testing commit history API',
       stage: overrides.stage,
       branch: overrides.branch,
-      projectId: 1,
+      projectId,
       workflowType: 'FULL',
       updatedAt: new Date(),
     },
@@ -42,15 +49,18 @@ async function createTestTicket(overrides: {
 }
 
 // Helper to create test job
-async function createTestJob(data: {
-  ticketId: number;
-  command: 'specify' | 'plan' | 'tasks';
-  status: 'COMPLETED' | 'RUNNING' | 'FAILED';
-}) {
+async function createTestJob(
+  projectId: number,
+  data: {
+    ticketId: number;
+    command: 'specify' | 'plan' | 'tasks';
+    status: 'COMPLETED' | 'RUNNING' | 'FAILED';
+  }
+) {
   return await prisma.job.create({
     data: {
       ticketId: data.ticketId,
-      projectId: 1,
+      projectId,
       command: data.command,
       status: data.status,
       createdAt: new Date(),
@@ -60,19 +70,20 @@ async function createTestJob(data: {
 }
 
 test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1; // Reset ticket number counter
   });
 
-  test('returns 200 with commit history when ticket has valid branch', async ({ request }) => {
+  test('returns 200 with commit history when ticket has valid branch', async ({ request, projectId }) => {
     // Create ticket with branch
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us3-api-history-test',
     });
 
     // Create completed job (ticket progressed through SPECIFY)
-    await createTestJob({
+    await createTestJob(projectId, {
       ticketId: ticket.id,
       command: 'specify',
       status: 'COMPLETED',
@@ -80,7 +91,7 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
 
     // Make API request
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/history?ticketId=${ticket.id}&docType=spec`
+      `${BASE_URL}/api/projects/${projectId}/docs/history?ticketId=${ticket.id}&docType=spec`
     );
 
     // Assert response (mocked GitHub API always succeeds in test mode)
@@ -111,16 +122,16 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
     expect(commit.author.date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 
-  test('returns 400 for invalid docType', async ({ request }) => {
+  test('returns 400 for invalid docType', async ({ request, projectId }) => {
     // Create ticket with branch
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us3-api-invalid-doctype',
     });
 
     // Make API request with invalid docType
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/history?ticketId=${ticket.id}&docType=invalid`
+      `${BASE_URL}/api/projects/${projectId}/docs/history?ticketId=${ticket.id}&docType=invalid`
     );
 
     // Should fail validation before GitHub API call
@@ -129,32 +140,35 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
     expect(data.code).toBe('VALIDATION_ERROR');
   });
 
-  test('returns 400 for missing query parameters', async ({ request }) => {
+  test('returns 400 for missing query parameters', async ({ request, projectId }) => {
     // Missing ticketId
-    let response = await request.get(`${BASE_URL}/api/projects/1/docs/history?docType=spec`);
+    let response = await request.get(`${BASE_URL}/api/projects/${projectId}/docs/history?docType=spec`);
     expect(response.status()).toBe(400);
 
     // Missing docType
-    response = await request.get(`${BASE_URL}/api/projects/1/docs/history?ticketId=1`);
+    response = await request.get(`${BASE_URL}/api/projects/${projectId}/docs/history?ticketId=1`);
     expect(response.status()).toBe(400);
   });
 
-  test('returns 404 when ticket has no branch', async ({ request }) => {
+  test('returns 404 when ticket has no branch', async ({ request, projectId }) => {
     // Create ticket without branch
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] No Branch Ticket',
         description: 'Testing 404 for missing branch',
         stage: 'INBOX',
         branch: null, // No branch
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
     });
 
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/history?ticketId=${ticket.id}&docType=spec`
+      `${BASE_URL}/api/projects/${projectId}/docs/history?ticketId=${ticket.id}&docType=spec`
     );
 
     expect(response.status()).toBe(404);
@@ -162,9 +176,9 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
     expect(data.code).toBe('BRANCH_NOT_FOUND');
   });
 
-  test('returns 404 when ticket does not exist', async ({ request }) => {
+  test('returns 404 when ticket does not exist', async ({ request, projectId }) => {
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/history?ticketId=99999&docType=spec`
+      `${BASE_URL}/api/projects/${projectId}/docs/history?ticketId=99999&docType=spec`
     );
 
     expect(response.status()).toBe(404);
@@ -172,19 +186,20 @@ test.describe('GET /api/projects/:projectId/docs/history - API Contract (T034)',
 });
 
 test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1; // Reset ticket number counter
   });
 
-  test('returns 200 with diff when valid commit SHA provided', async ({ request }) => {
+  test('returns 200 with diff when valid commit SHA provided', async ({ request, projectId }) => {
     // Create ticket with branch
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us3-api-diff-test',
     });
 
     // Create completed job
-    await createTestJob({
+    await createTestJob(projectId, {
       ticketId: ticket.id,
       command: 'specify',
       status: 'COMPLETED',
@@ -194,7 +209,7 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
     const validSha = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/diff?ticketId=${ticket.id}&docType=spec&sha=${validSha}`
+      `${BASE_URL}/api/projects/${projectId}/docs/diff?ticketId=${ticket.id}&docType=spec&sha=${validSha}`
     );
 
     // Assert response (mocked GitHub API always succeeds in test mode)
@@ -223,16 +238,16 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
     expect(file.filename).toMatch(/^specs\//);
   });
 
-  test('returns 400 for invalid SHA format', async ({ request }) => {
+  test('returns 400 for invalid SHA format', async ({ request, projectId }) => {
     // Create ticket with branch
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us3-api-invalid-sha',
     });
 
     // Invalid SHA (too short)
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/diff?ticketId=${ticket.id}&docType=spec&sha=invalid`
+      `${BASE_URL}/api/projects/${projectId}/docs/diff?ticketId=${ticket.id}&docType=spec&sha=invalid`
     );
 
     // Should fail validation before GitHub API call
@@ -241,15 +256,15 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
     expect(data.code).toBe('VALIDATION_ERROR');
   });
 
-  test('returns 400 for missing SHA parameter', async ({ request }) => {
+  test('returns 400 for missing SHA parameter', async ({ request, projectId }) => {
     // Create ticket with branch
-    const ticket = await createTestTicket({
+    const ticket = await createTestTicket(projectId, {
       stage: 'SPECIFY',
       branch: '036-us3-api-missing-sha',
     });
 
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/diff?ticketId=${ticket.id}&docType=spec`
+      `${BASE_URL}/api/projects/${projectId}/docs/diff?ticketId=${ticket.id}&docType=spec`
     );
 
     expect(response.status()).toBe(400);
@@ -257,15 +272,18 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
     expect(data.code).toBe('VALIDATION_ERROR');
   });
 
-  test('returns 404 when ticket has no branch', async ({ request }) => {
+  test('returns 404 when ticket has no branch', async ({ request, projectId }) => {
     // Create ticket without branch
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] No Branch Diff Test',
         description: 'Testing 404 for missing branch',
         stage: 'INBOX',
         branch: null,
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -273,7 +291,7 @@ test.describe('GET /api/projects/:projectId/docs/diff - API Contract', () => {
 
     const validSha = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
     const response = await request.get(
-      `${BASE_URL}/api/projects/1/docs/diff?ticketId=${ticket.id}&docType=spec&sha=${validSha}`
+      `${BASE_URL}/api/projects/${projectId}/docs/diff?ticketId=${ticket.id}&docType=spec&sha=${validSha}`
     );
 
     expect(response.status()).toBe(404);

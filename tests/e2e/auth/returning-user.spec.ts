@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 test.describe('Returning User Sign-In (User Story 2)', () => {
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Create test user for E2E authentication
     await prisma.user.upsert({
@@ -26,7 +26,7 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
     const userId = crypto.randomUUID();
     const initialUser = await prisma.user.create({
       data: {
-        id: `test-returning-${userId}`,
+        id: `auth-returning-${userId}`,
         email: `returning-${userId}@github.com`,
         name: 'Old Name',
         image: 'https://github.com/old-avatar.png',
@@ -101,7 +101,7 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
     const userId = crypto.randomUUID();
     const initialUser = await prisma.user.create({
       data: {
-        id: `test-namechange-${userId}`,
+        id: `auth-namechange-${userId}`,
         email: `namechange-${userId}@github.com`,
         name: 'Original Name',
         image: 'https://github.com/avatar.png',
@@ -163,7 +163,7 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
     const userId = crypto.randomUUID();
     const existingUser = await prisma.user.create({
       data: {
-        id: `test-projectowner-${userId}`,
+        id: `auth-projectowner-${userId}`,
         email: `projectowner-${userId}@github.com`,
         name: 'Project Owner',
         emailVerified: new Date(),
@@ -192,6 +192,7 @@ test.describe('Returning User Sign-In (User Story 2)', () => {
         githubOwner: 'projectowner',
         githubRepo: 'my-repo',
         userId: existingUser.id,
+        key: 'RET',
         updatedAt: new Date(),
       },
     });

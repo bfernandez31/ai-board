@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
@@ -9,39 +9,34 @@ import { prisma } from '@/lib/db/client';
 
 test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
+  let testTicketId: number;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
 
-    // Create test user
-    await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id',
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(),
-      },
-    });
+    // Ensure worker project exists
+    const { ensureProjectExists } = await import('../../helpers/db-cleanup');
+    await ensureProjectExists(projectId);
 
-    // Create test ticket
-    await prisma.ticket.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
+    // Create test ticket using worker-specific project
+    const { getProjectKey } = await import('../../helpers/db-cleanup');
+    const projectKey = getProjectKey(projectId);
+
+    const testTicket = await prisma.ticket.create({
+      data: {
         title: '[e2e] Test Ticket',
         description: 'Test ticket for timeline',
-        projectId: 1,
+        projectId,
+        ticketNumber: 1,
+        ticketKey: `${projectKey}-1`,
         updatedAt: new Date(),
       },
     });
+    testTicketId = testTicket.id;
   });
 
-  test('should return 200 with empty timeline for ticket with no events', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+  test('should return 200 with empty timeline for ticket with no events', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
 
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toContain('application/json');
@@ -53,20 +48,18 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.timeline.length).toBe(0);
   });
 
-  test('should return comments and jobs in reverse chronological order (newest first)', async ({
-    request,
-  }) => {
+  test('should return comments and jobs in reverse chronological order (newest first)', async ({ request, projectId }) => {
     // Create comments with different timestamps
     await prisma.comment.createMany({
       data: [
         {
-          ticketId: 1,
+          ticketId: testTicketId,
           userId: 'test-user-id',
           content: 'First comment',
           createdAt: new Date('2025-01-22T10:00:00Z'),
         },
         {
-          ticketId: 1,
+          ticketId: testTicketId,
           userId: 'test-user-id',
           content: 'Second comment',
           createdAt: new Date('2025-01-22T11:00:00Z'),
@@ -77,8 +70,8 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     // Create job with different timestamps
     await prisma.job.create({
       data: {
-        ticketId: 1,
-        projectId: 1,
+        ticketId: testTicketId,
+        projectId,
         command: 'specify',
         status: 'COMPLETED',
         startedAt: new Date('2025-01-22T09:00:00Z'),
@@ -88,7 +81,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
       },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -110,12 +103,12 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.timeline[3].eventType).toBe('start');
   });
 
-  test('should include job events with start and complete types', async ({ request }) => {
+  test('should include job events with start and complete types', async ({ request , projectId }) => {
     // Create completed job
     await prisma.job.create({
       data: {
-        ticketId: 1,
-        projectId: 1,
+        ticketId: testTicketId,
+        projectId,
         command: 'specify',
         status: 'COMPLETED',
         startedAt: new Date('2025-01-22T10:00:00Z'),
@@ -125,7 +118,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
       },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
     const body = await response.json();
 
     // Should have 2 job events: start + complete
@@ -147,12 +140,12 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(completeEvent.data.status).toBe('COMPLETED');
   });
 
-  test('should only include start event for running jobs (no completedAt)', async ({ request }) => {
+  test('should only include start event for running jobs (no completedAt)', async ({ request , projectId }) => {
     // Create running job (no completedAt)
     await prisma.job.create({
       data: {
-        ticketId: 1,
-        projectId: 1,
+        ticketId: testTicketId,
+        projectId,
         command: 'implement',
         status: 'RUNNING',
         startedAt: new Date('2025-01-22T10:00:00Z'),
@@ -161,7 +154,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
       },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
     const body = await response.json();
 
     // Should have only 1 job event: start (no complete)
@@ -171,16 +164,16 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.timeline[0].data.status).toBe('RUNNING');
   });
 
-  test('should include user data in comment events', async ({ request }) => {
+  test('should include user data in comment events', async ({ request , projectId }) => {
     await prisma.comment.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicketId,
         userId: 'test-user-id',
         content: 'Test comment with user data',
       },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
     const body = await response.json();
 
     expect(body.timeline.length).toBe(1);
@@ -190,7 +183,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.timeline[0].data.user.email).toBe('test@e2e.local');
   });
 
-  test('should return 400 for invalid project ID', async ({ request }) => {
+  test('should return 400 for invalid project ID', async ({ request , projectId }) => {
     const response = await request.get(`${BASE_URL}/api/projects/abc/tickets/1/timeline`);
 
     expect(response.status()).toBe(400);
@@ -199,8 +192,8 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.error).toContain('Invalid project ID');
   });
 
-  test('should return 400 for invalid ticket ID', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/abc/timeline`);
+  test('should return 400 for invalid ticket ID', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/abc/timeline`);
 
     expect(response.status()).toBe(400);
     const body = await response.json();
@@ -208,21 +201,21 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(body.error).toContain('Invalid');
   });
 
-  test('should return 404 for non-existent ticket', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/999999/timeline`);
+  test('should return 404 for non-existent ticket', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/999999/timeline`);
 
     expect(response.status()).toBe(404);
     const body = await response.json();
     expect(body.error).toContain('Ticket not found');
   });
 
-  test('should include VERIFY jobs but exclude SHIP stage jobs from timeline', async ({ request }) => {
+  test('should include VERIFY jobs but exclude SHIP stage jobs from timeline', async ({ request , projectId }) => {
     // Create jobs for different stages
     await prisma.job.createMany({
       data: [
         {
-          ticketId: 1,
-          projectId: 1,
+          ticketId: testTicketId,
+          projectId,
           command: 'specify',
           status: 'COMPLETED',
           startedAt: new Date('2025-01-22T10:00:00Z'),
@@ -231,8 +224,8 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
           updatedAt: new Date(),
         },
         {
-          ticketId: 1,
-          projectId: 1,
+          ticketId: testTicketId,
+          projectId,
           command: 'verify',
           status: 'COMPLETED',
           startedAt: new Date('2025-01-22T11:00:00Z'),
@@ -241,8 +234,8 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
           updatedAt: new Date(),
         },
         {
-          ticketId: 1,
-          projectId: 1,
+          ticketId: testTicketId,
+          projectId,
           command: 'ship',
           status: 'COMPLETED',
           startedAt: new Date('2025-01-22T12:00:00Z'),
@@ -253,7 +246,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
       ],
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
     const body = await response.json();
 
     // Should include specify + verify job events (4 events: 2 start + 2 complete)
@@ -268,7 +261,7 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     expect(commands.includes('ship')).toBe(false);
   });
 
-  test('should include mentionedUsers map for @mentions in comments', async ({ request }) => {
+  test('should include mentionedUsers map for @mentions in comments', async ({ request , projectId }) => {
     // Create another user to mention
     await prisma.user.upsert({
       where: { id: 'mentioned-user-id' },
@@ -285,13 +278,13 @@ test.describe('GET /api/projects/[projectId]/tickets/[id]/timeline - Contract Va
     // Create comment with mention
     await prisma.comment.create({
       data: {
-        ticketId: 1,
+        ticketId: testTicketId,
         userId: 'test-user-id',
         content: 'Hey @[mentioned-user-id:Mentioned User], check this out!',
       },
     });
 
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets/1/timeline`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/timeline`);
     const body = await response.json();
 
     expect(body.mentionedUsers).toBeDefined();

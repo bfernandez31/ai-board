@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { getPrismaClient, getProjectKey, cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
  * E2E Tests: Documentation Editor Component
@@ -18,16 +18,19 @@ import { getPrismaClient } from '../helpers/db-cleanup';
 
 const prisma = getPrismaClient();
 
+let nextTicketNumber = 1;
+
 // Helper to create job for ticket
 async function createTestJob(data: {
   ticketId: number;
+  projectId: number;
   command: string;
   status: string;
 }) {
   return prisma.job.create({
     data: {
       ticketId: data.ticketId,
-      projectId: 1,
+      projectId: data.projectId,
       command: data.command,
       status: data.status as any,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,
@@ -39,10 +42,10 @@ async function createTestJob(data: {
 test.describe('Documentation Editor - Edit Mode Toggle', () => {
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
@@ -53,15 +56,19 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
    * T010: Edit button appears for spec.md in SPECIFY stage
    * T013: Permission-based button visibility
    */
-  test('shows Edit button for spec.md when ticket is in SPECIFY stage', async ({ page }) => {
+  test('shows Edit button for spec.md when ticket is in SPECIFY stage', async ({ page , projectId }) => {
     // Setup: Create ticket in SPECIFY stage with branch
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Documentation Editor Test',
         description: 'Test ticket for edit mode',
         stage: 'SPECIFY',
         branch: '036-edit-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -70,12 +77,13 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
     // Create completed specify job so "View Spec" button appears
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -98,14 +106,18 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
   /**
    * T013: Edit button hidden for plan.md in SPECIFY stage (permission denied)
    */
-  test('hides Edit button for plan.md when ticket is in SPECIFY stage', async ({ page }) => {
+  test('hides Edit button for plan.md when ticket is in SPECIFY stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Permission Test',
         description: 'Test permission denial',
         stage: 'SPECIFY',
         branch: '036-permission-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -114,16 +126,18 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
     // Create both jobs so Plan button appears (ticket would have progressed through stages)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -140,14 +154,18 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
   /**
    * T010: Clicking Edit button toggles to editor mode
    */
-  test('toggles to editor mode when Edit button is clicked', async ({ page }) => {
+  test('toggles to editor mode when Edit button is clicked', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Edit Toggle Test',
         description: 'Test edit mode toggle',
         stage: 'SPECIFY',
         branch: '036-toggle-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -156,11 +174,12 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -185,10 +204,10 @@ test.describe('Documentation Editor - Edit Mode Toggle', () => {
 test.describe('Documentation Editor - Save Workflow', () => {
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
@@ -198,14 +217,18 @@ test.describe('Documentation Editor - Save Workflow', () => {
   /**
    * T011: Save operation with success feedback
    */
-  test('saves content changes and shows success toast', async ({ page }) => {
+  test('saves content changes and shows success toast', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Save Test',
         description: 'Test save workflow',
         stage: 'SPECIFY',
         branch: '036-save-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -214,12 +237,13 @@ test.describe('Documentation Editor - Save Workflow', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     // Mock GitHub API response to avoid real API calls
-    await page.route('**/api/projects/1/docs', (route) => {
+    await page.route(`**/api/projects/${projectId}/docs`, (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -232,7 +256,7 @@ test.describe('Documentation Editor - Save Workflow', () => {
       });
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -265,14 +289,18 @@ test.describe('Documentation Editor - Save Workflow', () => {
   /**
    * T011: Save operation with error handling
    */
-  test('shows error toast when save fails', async ({ page }) => {
+  test('shows error toast when save fails', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Save Error Test',
         description: 'Test save error handling',
         stage: 'SPECIFY',
         branch: '036-save-error-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -281,12 +309,13 @@ test.describe('Documentation Editor - Save Workflow', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
     // Mock GitHub API error response
-    await page.route('**/api/projects/1/docs', (route) => {
+    await page.route(`**/api/projects/${projectId}/docs`, (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -298,7 +327,7 @@ test.describe('Documentation Editor - Save Workflow', () => {
       });
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -327,10 +356,10 @@ test.describe('Documentation Editor - Save Workflow', () => {
 test.describe('Documentation Editor - Cancel Workflow', () => {
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
@@ -340,14 +369,18 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
   /**
    * T012: Cancel operation returns to viewer mode without saving
    */
-  test('cancels edit and returns to viewer mode without saving changes', async ({ page }) => {
+  test('cancels edit and returns to viewer mode without saving changes', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Cancel Test',
         description: 'Test cancel workflow',
         stage: 'SPECIFY',
         branch: '036-cancel-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -356,11 +389,12 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -395,14 +429,18 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
   /**
    * T012: Cancel with confirmation dialog when content is dirty
    */
-  test('shows confirmation dialog when canceling with unsaved changes', async ({ page }) => {
+  test('shows confirmation dialog when canceling with unsaved changes', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Cancel Confirmation Test',
         description: 'Test cancel confirmation dialog',
         stage: 'SPECIFY',
         branch: '036-cancel-confirm-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -411,11 +449,12 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -443,10 +482,10 @@ test.describe('Documentation Editor - Cancel Workflow', () => {
 test.describe('Documentation Editor - Permission Edge Cases', () => {
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] Doc' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] Doc' } } });
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
@@ -456,14 +495,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
   /**
    * T013: Edit button visible for plan.md in PLAN stage
    */
-  test('shows Edit button for plan.md when ticket is in PLAN stage', async ({ page }) => {
+  test('shows Edit button for plan.md when ticket is in PLAN stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] PLAN Stage Test',
         description: 'Test PLAN stage permissions',
         stage: 'PLAN',
         branch: '036-plan-stage-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -472,16 +515,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
     // Create both specify and plan jobs (ticket would have progressed through stages)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -498,14 +543,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
   /**
    * T013: Edit button visible for tasks.md in PLAN stage
    */
-  test('shows Edit button for tasks.md when ticket is in PLAN stage', async ({ page }) => {
+  test('shows Edit button for tasks.md when ticket is in PLAN stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] PLAN Stage Tasks Test',
         description: 'Test PLAN stage tasks permissions',
         stage: 'PLAN',
         branch: '036-plan-tasks-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -514,16 +563,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
     // Create both specify and plan jobs (ticket would have progressed through stages)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -540,14 +591,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
   /**
    * T013: Edit button hidden for spec.md in PLAN stage
    */
-  test('hides Edit button for spec.md when ticket is in PLAN stage', async ({ page }) => {
+  test('hides Edit button for spec.md when ticket is in PLAN stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] PLAN Stage Spec Test',
         description: 'Test spec permission in PLAN stage',
         stage: 'PLAN',
         branch: '036-plan-spec-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -556,16 +611,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
     // Create both specify and plan jobs (ticket would have progressed through stages)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -582,14 +639,18 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
   /**
    * T013: Edit button hidden in BUILD stage (no editing allowed)
    */
-  test('hides Edit button for all doc types when ticket is in BUILD stage', async ({ page }) => {
+  test('hides Edit button for all doc types when ticket is in BUILD stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] BUILD Stage Test',
         description: 'Test BUILD stage permissions',
         stage: 'BUILD',
         branch: '036-build-stage-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -598,11 +659,12 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
     // Create completed job so documentation buttons appear
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -624,10 +686,12 @@ test.describe('Documentation Editor - Permission Edge Cases', () => {
 test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
-    // Cleanup before each test
-    await prisma.job.deleteMany({ where: { ticket: { title: { startsWith: '[e2e] US2' } } } });
-    await prisma.ticket.deleteMany({ where: { title: { startsWith: '[e2e] US2' } } });
+  test.beforeEach(async ({ projectId }) => {
+    // Comprehensive cleanup of all test data
+    await cleanupDatabase(projectId);
+
+    // Reset ticket counter
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
@@ -637,15 +701,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
   /**
    * T022: Edit button appears and save works for plan.md in PLAN stage
    */
-  test('allows editing plan.md when ticket is in PLAN stage', async ({ page }) => {
+  test('allows editing plan.md when ticket is in PLAN stage', async ({ page , projectId }) => {
     // Setup: Create ticket in PLAN stage with branch
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] US2 Plan Edit Test',
         description: 'Test ticket for plan.md editing',
         stage: 'PLAN',
         branch: '036-us2-plan-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -654,17 +722,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Create completed specify and plan jobs (ticket progressed through stages)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
     // Mock GitHub API responses
-    await page.route('**/api/projects/1/docs', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs`, async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -680,7 +750,7 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     });
 
     // Navigate and open plan.md viewer
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -719,15 +789,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
   /**
    * T023: Edit button appears and save works for tasks.md in PLAN stage
    */
-  test('allows editing tasks.md when ticket is in PLAN stage', async ({ page }) => {
+  test('allows editing tasks.md when ticket is in PLAN stage', async ({ page , projectId }) => {
     // Setup: Create ticket in PLAN stage with branch
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] US2 Tasks Edit Test',
         description: 'Test ticket for tasks.md editing',
         stage: 'PLAN',
         branch: '036-us2-tasks-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -736,17 +810,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Create completed jobs
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'COMPLETED',
     });
 
     // Mock GitHub API responses
-    await page.route('**/api/projects/1/docs', async (route) => {
+    await page.route(`**/api/projects/${projectId}/docs`, async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -762,7 +838,7 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     });
 
     // Navigate and open tasks.md viewer
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open
@@ -801,15 +877,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
   /**
    * T024: Edit button hidden for plan/tasks when ticket in SPECIFY stage (permission denial)
    */
-  test('hides Edit button for plan.md when ticket is in SPECIFY stage', async ({ page }) => {
+  test('hides Edit button for plan.md when ticket is in SPECIFY stage', async ({ page , projectId }) => {
     // Setup: Create ticket in SPECIFY stage
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] US2 Permission Test',
         description: 'Test ticket for permission denial',
         stage: 'SPECIFY',
         branch: '036-us2-permission-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -818,6 +898,7 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Create completed specify job
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
@@ -825,12 +906,13 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Create plan job to make Plan button visible (even though not completed)
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'plan',
       status: 'PENDING',
     });
 
     // Navigate and try to open plan.md viewer
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Note: Plan button might not be visible in SPECIFY stage
@@ -845,15 +927,19 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     await expect(editButton).toBeVisible(); // Spec should be editable in SPECIFY
   });
 
-  test('hides Edit button for tasks.md when ticket is in SPECIFY stage', async ({ page }) => {
+  test('hides Edit button for tasks.md when ticket is in SPECIFY stage', async ({ page , projectId }) => {
     // Setup: Create ticket in SPECIFY stage
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] US2 Tasks Permission Test',
         description: 'Test ticket for tasks.md permission denial',
         stage: 'SPECIFY',
         branch: '036-us2-tasks-permission-test',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -862,11 +948,12 @@ test.describe('Documentation Editor - User Story 2: Plan/Tasks Editing', () => {
     // Create completed specify job
     await createTestJob({
       ticketId: ticket.id,
+      projectId,
       command: 'specify',
       status: 'COMPLETED',
     });
 
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.click(`[data-ticket-id="${ticket.id}"]`);
 
     // Wait for modal to open

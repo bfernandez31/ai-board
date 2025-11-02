@@ -1,64 +1,46 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase, getPrismaClient } from '../../../helpers/db-cleanup';
+import { test, expect } from '../../../helpers/worker-isolation';
+import { cleanupDatabase, getPrismaClient, getProjectKey } from '../../../helpers/db-cleanup';
 
 test.describe('Selective Ticket Cleanup Contract', () => {
   const prisma = getPrismaClient();
+  let nextTicketNumber = 1;
 
-  test.beforeEach(async () => {
-    // Start with clean database for each test
-    await prisma.ticket.deleteMany({});
-
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Ensure project 1 exists with [e2e] prefix (matches real test usage)
-    await prisma.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project', // Use [e2e] prefix as real tests will
-        description: 'Project for contract tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
+  test.beforeEach(async ({ projectId }) => {
+    // Worker-specific cleanup only
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1;
   });
 
-  test('should delete ALL tickets from test projects 1 and 2', async () => {
-    // Arrange - Create test tickets in project 1 (test project)
-    await prisma.ticket.createMany({
-      data: [
-        { title: '[e2e] Test 1', description: 'Test', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
-        { title: '[e2e] Test 2', description: 'Test', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
-        { title: 'Manual Ticket', description: 'Manual', stage: 'INBOX', projectId: 1, updatedAt: new Date() },
-      ],
-    });
+  test('should delete ALL tickets from test projects 1 and 2', async ({ projectId }) => {
+    // Arrange - Create test tickets in worker-specific test project
+    const projectKey = getProjectKey(projectId);
+    const tickets = [
+      { title: '[e2e] Test 1', description: 'Test', stage: 'INBOX' as const, projectId },
+      { title: '[e2e] Test 2', description: 'Test', stage: 'INBOX' as const, projectId },
+      { title: 'Manual Ticket', description: 'Manual', stage: 'INBOX' as const, projectId },
+    ];
+
+    for (const ticket of tickets) {
+      const ticketNumber = nextTicketNumber++;
+      await prisma.ticket.create({
+        data: {
+          ...ticket,
+          ticketNumber,
+          ticketKey: `${projectKey}-${ticketNumber}`, // Worker-specific ticketKey
+          updatedAt: new Date(),
+        },
+      });
+    }
 
     // Act
     await cleanupDatabase();
 
-    // Assert - ALL tickets from project 1 should be deleted
-    const remaining = await prisma.ticket.findMany({ where: { projectId: 1 } });
+    // Assert - ALL tickets from worker-specific test project should be deleted
+    const remaining = await prisma.ticket.findMany({ where: { projectId } });
     expect(remaining).toHaveLength(0);
   });
 
-  test('should preserve tickets without [e2e] prefix in non-test projects', async () => {
+  test('should preserve tickets without [e2e] prefix in non-test projects', async ({ projectId }) => {
     // REQUIRED pattern: Create test user before any project operations
     const testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -72,13 +54,16 @@ test.describe('Selective Ticket Cleanup Contract', () => {
       },
     });
 
-    // Arrange - Create a non-test project (project ID > 2)
+    // Arrange - Create a worker-isolated non-test project using high project ID (1000 + projectId)
+    const nonTestProjectId = 1000 + projectId;
+    const nonTestProjectKey = `PRD${projectId}`;
     const project = await prisma.project.create({
       data: {
-        name: 'Production Project',
+        name: `Production Project ${projectId}`, // Worker-specific name
         description: 'Non-test project',
-        githubOwner: 'prod',
-        githubRepo: 'prod-repo',
+        githubOwner: `prod-owner-${projectId}`, // Worker-specific owner
+        githubRepo: `prod-repo-${projectId}`, // Worker-specific repo
+        key: nonTestProjectKey, // Worker-specific key
         userId: testUser.id,
         updatedAt: new Date(), // Required field
         createdAt: new Date(), // Required field
@@ -92,9 +77,19 @@ test.describe('Selective Ticket Cleanup Contract', () => {
       'Suffix [e2e] position',
     ];
 
+    let projectTicketNumber = 1;
     for (const title of tickets) {
+      const ticketNumber = projectTicketNumber++;
       await prisma.ticket.create({
-        data: { title, description: 'Test', stage: 'INBOX', projectId: project.id, updatedAt: new Date() },
+        data: {
+          title,
+          description: 'Test',
+          stage: 'INBOX',
+          projectId: project.id,
+          ticketNumber,
+          ticketKey: `${nonTestProjectKey}-${ticketNumber}`, // Worker-specific ticketKey
+          updatedAt: new Date(),
+        },
       });
     }
 
@@ -119,16 +114,23 @@ test.describe('Selective Ticket Cleanup Contract', () => {
     await expect(cleanupDatabase()).resolves.not.toThrow();
   });
 
-  test('should complete in <500ms for 100 tickets', async () => {
-    // Arrange: Create 100 test tickets
-    const tickets = Array.from({ length: 100 }, (_, i) => ({
-      title: `[e2e] Test Ticket ${i}`,
-      description: 'Test',
-      stage: 'INBOX' as const,
-      projectId: 1,
-      updatedAt: new Date(),
-    }));
-    await prisma.ticket.createMany({ data: tickets });
+  test('should complete in <500ms for 100 tickets', async ({ projectId }) => {
+    // Arrange: Create 100 test tickets in worker-specific project
+    const projectKey = getProjectKey(projectId);
+    for (let i = 0; i < 100; i++) {
+      const ticketNumber = nextTicketNumber++;
+      await prisma.ticket.create({
+        data: {
+          title: `[e2e] Test Ticket ${i}`,
+          description: 'Test',
+          stage: 'INBOX',
+          projectId,
+          ticketNumber,
+          ticketKey: `${projectKey}-${ticketNumber}`, // Worker-specific ticketKey
+          updatedAt: new Date(),
+        },
+      });
+    }
 
     // Act
     const startTime = Date.now();
@@ -138,8 +140,8 @@ test.describe('Selective Ticket Cleanup Contract', () => {
     // Assert
     expect(duration).toBeLessThan(500);
 
-    // Verify cleanup worked
-    const remaining = await prisma.ticket.findMany();
+    // Verify cleanup worked for worker-specific project
+    const remaining = await prisma.ticket.findMany({ where: { projectId } });
     expect(remaining).toHaveLength(0);
   });
 });

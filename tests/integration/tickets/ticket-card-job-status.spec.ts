@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { PrismaClient } from '@prisma/client';
-import { cleanupDatabase } from '../../helpers/db-cleanup';
+import { cleanupDatabase, getProjectKey } from '../../helpers/db-cleanup';
 
 const prisma = new PrismaClient();
 
@@ -16,30 +16,36 @@ const prisma = new PrismaClient();
  * - JobStatusIndicator receives correct props (status, command)
  */
 test.describe('Integration: JobStatusIndicator in TicketCard', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  let nextTicketNumber = 1;
+
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  test('should display JobStatusIndicator for ticket with RUNNING job', async ({ page }) => {
+  test('should display JobStatusIndicator for ticket with RUNNING job', async ({ page , projectId }) => {
     // Create ticket with a RUNNING job
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test ticket with job',
         description: 'Ticket for testing job status indicator',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'RUNNING',
         branch: '020-test-branch',
@@ -48,7 +54,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     });
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Find ticket card by title text
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -63,31 +69,31 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     expect(ariaLabel).toContain('specify');
     expect(ariaLabel?.toLowerCase()).toContain('writing');
 
-    // Clean up
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test.skip('should display JobStatusIndicator for ticket with PENDING job', async ({ page }) => {
+  test.skip('should display JobStatusIndicator for ticket with PENDING job', async ({ page , projectId }) => {
     // SKIPPED: Test requires waiting for React Query staleTime + polling interval
     // Load board page first
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Create ticket with a PENDING job after page is loaded
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test ticket with pending job',
         description: 'Ticket for testing pending job status',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'PENDING',
         branch: null,
@@ -110,27 +116,27 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toLowerCase()).toContain('pending');
 
-    // Clean up
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display JobStatusIndicator for ticket with COMPLETED job', async ({ page }) => {
+  test('should display JobStatusIndicator for ticket with COMPLETED job', async ({ page , projectId }) => {
     // Create ticket with a COMPLETED job
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test ticket with completed job',
         description: 'Ticket for testing completed job status',
         stage: 'PLAN',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'plan',
         status: 'COMPLETED',
         branch: '020-test-branch',
@@ -140,7 +146,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     });
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Find ticket card by title text
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -154,25 +160,25 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toLowerCase()).toContain('completed');
 
-    // Clean up
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should NOT display JobStatusIndicator for ticket with no jobs', async ({ page }) => {
+  test('should NOT display JobStatusIndicator for ticket with no jobs', async ({ page , projectId }) => {
     // Create ticket without any jobs
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test ticket without job',
         description: 'Ticket for testing no job status indicator',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(), // Required field
       },
     });
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Find ticket card by title text
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -186,11 +192,9 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ticketTitle = ticketCard.locator('h3').filter({ hasText: '[e2e] Test ticket without job' });
     await expect(ticketTitle).toBeVisible();
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display correct command and status in indicator', async ({ page }) => {
+  test('should display correct command and status in indicator', async ({ page , projectId }) => {
     // Create tickets with different job commands
     const testCases = [
       { command: 'specify', status: 'RUNNING' as const, stage: 'SPECIFY' as const },
@@ -199,24 +203,27 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     ];
 
     const ticketIds: number[] = [];
-    const jobIds: number[] = [];
+    
 
     for (const testCase of testCases) {
+      const ticketNumber = nextTicketNumber++;
       const ticket = await prisma.ticket.create({
         data: {
+          ticketNumber,
+          ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
           title: `[e2e] Test ${testCase.command} command`,
           description: `Testing ${testCase.command} job indicator`,
           stage: testCase.stage,
-          projectId: 1,
+          projectId,
           updatedAt: new Date(), // Required field
         },
       });
       ticketIds.push(ticket.id);
 
-      const job = await prisma.job.create({
+      await prisma.job.create({
         data: {
           ticketId: ticket.id,
-          projectId: 1,
+          projectId,
           command: testCase.command,
           status: testCase.status,
           branch: testCase.status === 'PENDING' ? null : '020-test-branch',
@@ -224,11 +231,10 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
           updatedAt: new Date(), // Required field
         },
       });
-      jobIds.push(job.id);
     }
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Verify each ticket shows correct job status indicator
     for (let i = 0; i < testCases.length; i++) {
@@ -255,30 +261,30 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
       }
     }
 
-    // Clean up
-    await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
-    await prisma.ticket.deleteMany({ where: { id: { in: ticketIds } } });
   });
 
   /**
    * T011: Integration test for workflow job visual indicator
    */
-  test('should display simplified workflow status for specify command', async ({ page }) => {
+  test('should display simplified workflow status for specify command', async ({ page , projectId }) => {
     // Create ticket with workflow job
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test workflow job type',
         description: 'Testing workflow job type visual indicator',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'RUNNING',
         branch: '045-test-branch',
@@ -287,7 +293,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     });
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Find ticket card
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -304,30 +310,30 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('WRITING');
 
-    // Clean up
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
   /**
    * T012: Integration test for AI-BOARD job visual indicator
    */
-  test('should display compact AI-BOARD icon for comment-specify command', async ({ page }) => {
+  test('should display compact AI-BOARD icon for comment-specify command', async ({ page , projectId }) => {
     // Create ticket with AI-BOARD job
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD job type',
         description: 'Testing AI-BOARD job type visual indicator',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-specify',
         status: 'RUNNING',
         branch: '045-test-branch',
@@ -336,7 +342,7 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     });
 
     // Load board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Find ticket card
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -353,9 +359,6 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    // Clean up
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });
 
@@ -368,29 +371,35 @@ test.describe('Integration: JobStatusIndicator in TicketCard', () => {
  * - Original status for non-RUNNING states (COMPLETED, FAILED, CANCELLED)
  */
 test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  let nextTicketNumber = 1;
+
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  test('should display WRITING label for specify command with RUNNING status', async ({ page }) => {
+  test('should display WRITING label for specify command with RUNNING status', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test WRITING label for specify',
         description: 'Testing contextual WRITING label',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -398,7 +407,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -410,25 +419,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('WRITING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display WRITING label for plan command with RUNNING status', async ({ page }) => {
+  test('should display WRITING label for plan command with RUNNING status', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test WRITING label for plan',
         description: 'Testing contextual WRITING label for plan',
         stage: 'PLAN',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'plan',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -436,7 +446,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -447,25 +457,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('WRITING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display CODING label for implement command with RUNNING status', async ({ page }) => {
+  test('should display CODING label for implement command with RUNNING status', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test CODING label for implement',
         description: 'Testing contextual CODING label',
         stage: 'BUILD',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'implement',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -473,7 +484,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -484,25 +495,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('CODING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display CODING label for quick-impl command with RUNNING status', async ({ page }) => {
+  test('should display CODING label for quick-impl command with RUNNING status', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test CODING label for quick-impl',
         description: 'Testing contextual CODING label for quick-impl',
         stage: 'BUILD',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -510,7 +522,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -521,25 +533,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('CODING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display original COMPLETED status for workflow jobs', async ({ page }) => {
+  test('should display original COMPLETED status for workflow jobs', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test COMPLETED status preserved',
         description: 'Testing that COMPLETED status is not transformed',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'COMPLETED',
         branch: '046-test-branch',
@@ -548,7 +561,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -562,25 +575,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     expect(ariaLabel?.toUpperCase()).not.toContain('WRITING');
     expect(ariaLabel?.toUpperCase()).not.toContain('CODING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display original FAILED status prominently for workflow jobs', async ({ page }) => {
+  test('should display original FAILED status prominently for workflow jobs', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test FAILED status preserved',
         description: 'Testing that FAILED status is displayed prominently',
         stage: 'PLAN',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'plan',
         status: 'FAILED',
         branch: '046-test-branch',
@@ -589,7 +603,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -602,25 +616,26 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     // Should NOT contain WRITING/CODING
     expect(ariaLabel?.toUpperCase()).not.toContain('WRITING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display original CANCELLED status for workflow jobs', async ({ page }) => {
+  test('should display original CANCELLED status for workflow jobs', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test CANCELLED status preserved',
         description: 'Testing that CANCELLED status is not transformed',
         stage: 'BUILD',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'implement',
         status: 'CANCELLED',
         branch: '046-test-branch',
@@ -629,7 +644,7 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -642,8 +657,6 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
     // Should NOT contain CODING
     expect(ariaLabel?.toUpperCase()).not.toContain('CODING');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });
 
@@ -656,29 +669,35 @@ test.describe('Integration: Workflow Job Contextual Labels (US1)', () => {
  * - ASSISTING label displayed correctly
  */
 test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  let nextTicketNumber = 1;
+
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1;
   });
 
   test.afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  test('should display AI-BOARD job when stage matches (comment-specify in SPECIFY)', async ({ page }) => {
+  test('should display AI-BOARD job when stage matches (comment-specify in SPECIFY)', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD stage match',
         description: 'Testing AI-BOARD job visibility with stage match',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-specify',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -686,7 +705,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -698,25 +717,26 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should NOT display AI-BOARD job when stage mismatches (comment-specify in PLAN)', async ({ page }) => {
+  test('should NOT display AI-BOARD job when stage mismatches (comment-specify in PLAN)', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD stage mismatch',
         description: 'Testing AI-BOARD job hidden when stage does not match',
         stage: 'PLAN', // Ticket in PLAN stage
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-specify', // Job is comment-specify (should only show in SPECIFY)
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -724,7 +744,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -733,25 +753,26 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(statusIndicator).not.toBeVisible();
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display AI-BOARD job for comment-plan in PLAN stage', async ({ page }) => {
+  test('should display AI-BOARD job for comment-plan in PLAN stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD plan stage',
         description: 'Testing AI-BOARD job in PLAN stage',
         stage: 'PLAN',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-plan',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -759,7 +780,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -770,25 +791,26 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display AI-BOARD job for comment-build in BUILD stage', async ({ page }) => {
+  test('should display AI-BOARD job for comment-build in BUILD stage', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD build stage',
         description: 'Testing AI-BOARD job in BUILD stage',
         stage: 'BUILD',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-build',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -796,7 +818,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -807,26 +829,27 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test.skip('should hide old AI-BOARD job when ticket moves to different stage', async ({ page }) => {
+  test.skip('should hide old AI-BOARD job when ticket moves to different stage', async ({ page , projectId }) => {
     // SKIPPED: Test requires waiting for React Query staleTime + polling interval after stage change
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD stage transition',
         description: 'Testing AI-BOARD job visibility after stage change',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-specify',
         status: 'COMPLETED',
         branch: '046-test-branch',
@@ -835,7 +858,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Initially in SPECIFY stage with comment-specify job
     let ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
@@ -862,25 +885,26 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(statusIndicator).not.toBeVisible();
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should display ASSISTING label with compact AI-BOARD icon', async ({ page }) => {
+  test('should display ASSISTING label with compact AI-BOARD icon', async ({ page , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
         title: '[e2e] Test AI-BOARD job type indicator',
         description: 'Testing AI-BOARD job type visual indicator',
         stage: 'VERIFY',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
 
-    const job = await prisma.job.create({
+    await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-verify',
         status: 'RUNNING',
         branch: '046-test-branch',
@@ -888,7 +912,7 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
       },
     });
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
@@ -904,7 +928,5 @@ test.describe('Integration: AI-BOARD Job Stage Filtering (US2)', () => {
     const ariaLabel = await statusIndicator.getAttribute('aria-label');
     expect(ariaLabel?.toUpperCase()).toContain('AI-BOARD');
 
-    await prisma.job.delete({ where: { id: job.id } });
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });

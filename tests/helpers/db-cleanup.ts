@@ -27,6 +27,41 @@ export async function getTestUserId(): Promise<string> {
 }
 
 /**
+ * Get the correct project key for a given projectId
+ * Ensures consistency with global setup project keys
+ */
+export function getProjectKey(projectId: number): string {
+  const keyMap: Record<number, string> = {
+    1: 'E2E',
+    2: 'TE2',
+    4: 'TE4',
+    5: 'TE5',
+    6: 'TE6',
+    7: 'TE7',
+  };
+  return keyMap[projectId] || `TE${projectId}`;
+}
+
+/**
+ * Get worker-specific GitHub repo name for a given projectId
+ * Returns unique repo names to avoid unique constraint violations
+ */
+export function getProjectGithub(projectId: number): { owner: string; repo: string } {
+  const repoMap: Record<number, string> = {
+    1: 'test',
+    2: 'test2',
+    4: 'test4',
+    5: 'test5',
+    6: 'test6',
+    7: 'test7',
+  };
+  return {
+    owner: 'test',
+    repo: repoMap[projectId] || `test${projectId}`,
+  };
+}
+
+/**
  * Ensure test user and projects exist (called once in global setup)
  */
 export async function ensureTestFixtures(): Promise<string> {
@@ -46,44 +81,39 @@ export async function ensureTestFixtures(): Promise<string> {
       },
     });
 
-    // Ensure test projects 1 and 2 exist with [e2e] prefix and assigned to test user
-    await client.project.upsert({
-      where: { id: 1 },
-      update: {
-        userId: testUser.id,
-        clarificationPolicy: 'AUTO', // Reset to default for test isolation
-      },
-      create: {
-        id: 1,
-        name: '[e2e] Test Project',
-        description: 'Project for automated tests',
-        githubOwner: 'test',
-        githubRepo: 'test',
-        userId: testUser.id,
-        clarificationPolicy: 'AUTO', // Default policy
-        updatedAt: new Date(), // Required: Project.updatedAt has no default
-      },
-    });
+    // Ensure test projects exist for workers (SKIP project 3 - reserved for dev!)
+    // Projects: 1, 2, 4, 5, 6, 7 for up to 6 parallel workers
+    const workerProjects = [
+      { id: 1, key: 'E2E', repo: 'test', name: '[e2e] Test Project' },
+      { id: 2, key: 'TE2', repo: 'test2', name: '[e2e] Test Project 2' },
+      { id: 4, key: 'TE4', repo: 'test4', name: '[e2e] Test Project 4' },
+      { id: 5, key: 'TE5', repo: 'test5', name: '[e2e] Test Project 5' },
+      { id: 6, key: 'TE6', repo: 'test6', name: '[e2e] Test Project 6' },
+      { id: 7, key: 'TE7', repo: 'test7', name: '[e2e] Test Project 7' },
+    ];
 
-    await client.project.upsert({
-      where: { id: 2 },
-      update: {
-        userId: testUser.id,
-        clarificationPolicy: 'AUTO', // Reset to default for test isolation
-      },
-      create: {
-        id: 2,
-        name: '[e2e] Test Project 2',
-        description: 'Second project for cross-project tests',
-        githubOwner: 'test',
-        githubRepo: 'test2',
-        userId: testUser.id,
-        clarificationPolicy: 'AUTO', // Default policy
-        updatedAt: new Date(), // Required: Project.updatedAt has no default
-      },
-    });
+    for (const project of workerProjects) {
+      await client.project.upsert({
+        where: { id: project.id },
+        update: {
+          userId: testUser.id,
+          clarificationPolicy: 'AUTO', // Reset to default for test isolation
+        },
+        create: {
+          id: project.id,
+          key: project.key,
+          name: project.name,
+          description: `Worker project for parallel test execution`,
+          githubOwner: 'test',
+          githubRepo: project.repo,
+          userId: testUser.id,
+          clarificationPolicy: 'AUTO',
+          updatedAt: new Date(),
+        },
+      });
+    }
 
-    console.error('✓ Test fixtures ensured (user + 2 projects)');
+    console.error(`✓ Test fixtures ensured (user + ${workerProjects.length} worker projects)`);
     return testUser.id;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -105,32 +135,39 @@ export async function ensureTestFixtures(): Promise<string> {
 /**
  * Clean test data (called before each test)
  * Fast operation - deletes tickets and resets project policies
+ *
+ * @param projectId Optional project ID for worker-specific cleanup (multi-worker safety)
  */
-export async function cleanupDatabase(): Promise<void> {
+export async function cleanupDatabase(projectId?: number): Promise<void> {
   const client = getPrismaClient();
 
   try {
-    // Delete all tickets from test projects 1 and 2
+    // If projectId specified, only clean that project (worker-specific cleanup)
+    // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7) - SKIP project 3 (dev)
     await client.ticket.deleteMany({
-      where: {
-        projectId: {
-          in: [1, 2],
-        },
-      },
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
     });
 
-    // Delete all ProjectMembers from test projects 1 and 2
+    // Delete all ProjectMembers from worker test projects (or specific project if provided)
     // Will be recreated in test beforeEach hooks
     await client.projectMember.deleteMany({
-      where: {
-        projectId: {
-          in: [1, 2],
-        },
-      },
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
     });
 
     // Delete all accounts before deleting users (foreign key constraint)
-    // Only delete accounts for test users (not preserved users)
+    // Only delete accounts for users that will be deleted (safer deletion strategy)
     const preservedUserIds = [
       'test-user-id', // E2E Test User (global beforeEach)
       'user-alice', // Alice Smith (global beforeEach)
@@ -138,10 +175,42 @@ export async function cleanupDatabase(): Promise<void> {
       'ai-board-system-user', // AI-BOARD system user (always present)
     ];
 
+    // Delete accounts ONLY for users that match deletion criteria (not all non-preserved users)
+    // This prevents deleting accounts mid-test for users created by other workers
     await client.account.deleteMany({
       where: {
-        userId: {
-          notIn: preservedUserIds,
+        user: {
+          AND: [
+            {
+              id: {
+                notIn: preservedUserIds,
+              },
+            },
+            {
+              OR: [
+                {
+                  email: {
+                    contains: '@test.com', // API test users
+                  },
+                },
+                {
+                  email: {
+                    contains: '@github.com', // Auth test users
+                  },
+                },
+                {
+                  id: {
+                    startsWith: 'test-', // Legacy test users with test- prefix
+                  },
+                },
+                {
+                  id: {
+                    startsWith: 'auth-', // Auth test users with auth- prefix
+                  },
+                },
+              ],
+            },
+          ],
         },
       },
     });
@@ -170,7 +239,12 @@ export async function cleanupDatabase(): Promise<void> {
               },
               {
                 id: {
-                  startsWith: 'test-', // Auth test users with test- prefix
+                  startsWith: 'test-', // Legacy test users with test- prefix
+                },
+              },
+              {
+                id: {
+                  startsWith: 'auth-', // Auth test users with auth- prefix
                 },
               },
             ],
@@ -179,13 +253,13 @@ export async function cleanupDatabase(): Promise<void> {
       },
     });
 
-    // Delete [e2e] tickets from projects 4+
+    // Delete [e2e] tickets from projects 8+ (non-worker test projects)
     await client.ticket.deleteMany({
       where: {
         AND: [
           {
             projectId: {
-              gte: 4,
+              gte: 8,
             },
           },
           {
@@ -197,13 +271,15 @@ export async function cleanupDatabase(): Promise<void> {
       },
     });
 
-    // Delete [e2e] projects (except 1, 2, 3)
+    // Delete [e2e] projects (except 1, 2, 3, 4, 5, 6, 7)
+    // Projects 1-7 are protected (1,2,4,5,6,7 for workers, 3 for dev)
+    // This includes dynamic projects created by project-cascade.spec.ts tests
     await client.project.deleteMany({
       where: {
         AND: [
           {
             id: {
-              notIn: [1, 2, 3],
+              notIn: [1, 2, 3, 4, 5, 6, 7],
             },
           },
           {
@@ -217,15 +293,26 @@ export async function cleanupDatabase(): Promise<void> {
 
     // Reset test project policies to AUTO for test isolation
     await client.project.updateMany({
-      where: {
-        id: {
-          in: [1, 2],
-        },
-      },
+      where: projectId
+        ? { id: projectId }
+        : {
+            id: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
       data: {
         clarificationPolicy: 'AUTO',
       },
     });
+
+    // Reset ticket number sequences for worker projects (or specific project if provided)
+    // This prevents unique constraint violations on (projectId, ticketNumber)
+    const projectsToReset = projectId ? [projectId] : [1, 2, 4, 5, 6, 7];
+    for (const pid of projectsToReset) {
+      await client.$executeRawUnsafe(`
+        DROP SEQUENCE IF EXISTS project_${pid}_ticket_seq CASCADE;
+      `);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const reachable =
@@ -241,6 +328,97 @@ export async function cleanupDatabase(): Promise<void> {
     console.error('✗ Database cleanup failed:', error);
     throw error;
   }
+}
+
+/**
+ * Ensure a specific worker project exists with correct setup
+ * Useful after cleanupDatabase() which may remove ProjectMembers
+ *
+ * @param projectId Worker project ID (1, 2, 4, 5, 6, 7)
+ */
+export async function ensureProjectExists(projectId: number): Promise<void> {
+  const client = getPrismaClient();
+
+  const projectKey = getProjectKey(projectId);
+  const github = getProjectGithub(projectId);
+
+  // Ensure test user exists
+  const testUser = await client.user.upsert({
+    where: { email: 'test@e2e.local' },
+    update: {},
+    create: {
+      id: 'test-user-id',
+      email: 'test@e2e.local',
+      name: 'E2E Test User',
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Ensure project exists
+  await client.project.upsert({
+    where: { id: projectId },
+    update: {
+      userId: testUser.id,
+      clarificationPolicy: 'AUTO',
+    },
+    create: {
+      id: projectId,
+      key: projectKey,
+      name: `[e2e] Test Project ${projectKey}`,
+      description: 'Worker project for parallel test execution',
+      githubOwner: github.owner,
+      githubRepo: github.repo,
+      userId: testUser.id,
+      clarificationPolicy: 'AUTO',
+      updatedAt: new Date(),
+    },
+  });
+
+  // Ensure AI-BOARD system user exists and is a project member
+  const aiBoardUser = await client.user.upsert({
+    where: { email: 'ai-board@system.local' },
+    update: {},
+    create: {
+      id: 'ai-board-system-user',
+      email: 'ai-board@system.local',
+      name: 'AI-BOARD',
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Ensure test user is a project member
+  await client.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId: testUser.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId,
+      userId: testUser.id,
+      role: 'member',
+    },
+  });
+
+  // Ensure AI-BOARD is a project member
+  await client.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId: aiBoardUser.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId,
+      userId: aiBoardUser.id,
+      role: 'member',
+    },
+  });
 }
 
 export async function disconnectPrisma(): Promise<void> {

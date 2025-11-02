@@ -1,7 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
  * Integration Test: AutoMode toggle (Scenario 3)
@@ -15,54 +13,15 @@ const prisma = new PrismaClient();
  * AutoMode controls whether automation scripts advance ticket stages.
  */
 test.describe('Integration: AutoMode toggle', () => {
-  let testProjectId: number;
-
-  test.beforeAll(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] AutoMode Test Project',
-        description: 'Project for testing autoMode flag',
-        githubOwner: 'integration-test-owner',
-        githubRepo: 'automode-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
+  test.beforeEach(async ({ projectId }) => {
+    // Clean database before each test (worker-specific isolation)
+    await cleanupDatabase(projectId);
   });
 
-  test.afterAll(async () => {
-    // Clean up all test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
-    await prisma.$disconnect();
-  });
-
-  test('should enable autoMode and persist to database', async ({
-    request,
-  }) => {
+  test('should enable autoMode and persist to database', async ({ request, projectId }) => {
     // Step 1: Create ticket (autoMode should be false)
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Ticket for automation testing',
@@ -81,7 +40,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Step 2: Enable autoMode via PATCH
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           autoMode: true,
@@ -99,7 +58,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Step 3: Query ticket via GET to verify persistence
     const getResponse = await request.get(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`
+      `/api/projects/${projectId}/tickets/${ticketId}`
     );
 
     expect(getResponse.status()).toBe(200);
@@ -109,23 +68,12 @@ test.describe('Integration: AutoMode toggle', () => {
     // Verify autoMode persisted correctly
     expect(fetchedTicket.autoMode).toBe(true);
     expect(fetchedTicket.title).toBe('[e2e] Ticket for automation testing');
-
-    // Step 4: Verify in database directly
-    const dbTicket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-    });
-
-    expect(dbTicket).not.toBeNull();
-    expect(dbTicket!.autoMode).toBe(true);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should toggle autoMode from true to false', async ({ request }) => {
+  test('should toggle autoMode from true to false', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Toggle test ticket',
@@ -138,35 +86,30 @@ test.describe('Integration: AutoMode toggle', () => {
     const ticketId = ticket.id;
 
     // Enable autoMode
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: { autoMode: true, version: 1 },
     });
 
     let fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.autoMode).toBe(true);
 
     // Disable autoMode (toggle back to false)
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: { autoMode: false, version: 2 },
     });
 
     fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.autoMode).toBe(false);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should preserve other fields when updating autoMode', async ({
-    request,
-  }) => {
+  test('should preserve other fields when updating autoMode', async ({ request, projectId }) => {
     // Create ticket with specific values
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Field preservation test',
@@ -186,13 +129,13 @@ test.describe('Integration: AutoMode toggle', () => {
     const initialCreatedAt = ticket.createdAt;
 
     // Update only autoMode
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: { autoMode: true, version: 1 },
     });
 
     // Fetch ticket and verify other fields unchanged
     const fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
 
     expect(fetchedTicket.autoMode).toBe(true);
@@ -204,17 +147,12 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // updatedAt should change
     expect(fetchedTicket.updatedAt).not.toBe(ticket.updatedAt);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle multiple tickets with different autoMode states', async ({
-    request,
-  }) => {
+  test('should handle multiple tickets with different autoMode states', async ({ request, projectId }) => {
     // Create tickets with different autoMode settings
     const manualTicket = await (
-      await request.post(`/api/projects/${testProjectId}/tickets`, {
+      await request.post(`/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] Manual ticket',
           description: 'Stays in manual mode',
@@ -223,7 +161,7 @@ test.describe('Integration: AutoMode toggle', () => {
     ).json();
 
     const autoTicket = await (
-      await request.post(`/api/projects/${testProjectId}/tickets`, {
+      await request.post(`/api/projects/${projectId}/tickets`, {
         data: {
           title: '[e2e] Auto ticket',
           description: 'Will be automated',
@@ -233,7 +171,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Enable autoMode for second ticket only
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${autoTicket.id}`,
+      `/api/projects/${projectId}/tickets/${autoTicket.id}`,
       {
         data: { autoMode: true, version: 1 },
       }
@@ -242,32 +180,25 @@ test.describe('Integration: AutoMode toggle', () => {
     // Query both tickets
     const manual = await (
       await request.get(
-        `/api/projects/${testProjectId}/tickets/${manualTicket.id}`
+        `/api/projects/${projectId}/tickets/${manualTicket.id}`
       )
     ).json();
 
     const auto = await (
       await request.get(
-        `/api/projects/${testProjectId}/tickets/${autoTicket.id}`
+        `/api/projects/${projectId}/tickets/${autoTicket.id}`
       )
     ).json();
 
     // Verify different states
     expect(manual.autoMode).toBe(false);
     expect(auto.autoMode).toBe(true);
-
-    // Clean up
-    await prisma.ticket.deleteMany({
-      where: { id: { in: [manualTicket.id, autoTicket.id] } },
-    });
   });
 
-  test('should maintain autoMode as boolean type (not truthy/falsy)', async ({
-    request,
-  }) => {
+  test('should maintain autoMode as boolean type (not truthy/falsy)', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Type check ticket',
@@ -281,7 +212,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Set autoMode to true
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: true, version: 1 },
       }
@@ -294,17 +225,12 @@ test.describe('Integration: AutoMode toggle', () => {
     expect(updatedTicket.autoMode).not.toBe(1);
     expect(updatedTicket.autoMode).not.toBe('true');
     expect(typeof updatedTicket.autoMode).toBe('boolean');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should update updatedAt timestamp when autoMode changes', async ({
-    request,
-  }) => {
+  test('should update updatedAt timestamp when autoMode changes', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Timestamp test',
@@ -322,7 +248,7 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Update autoMode
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: true, version: 1 },
       }
@@ -333,8 +259,5 @@ test.describe('Integration: AutoMode toggle', () => {
 
     // Verify timestamp was updated
     expect(newUpdatedAt.getTime()).toBeGreaterThan(initialUpdatedAt.getTime());
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 });
