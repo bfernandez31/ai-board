@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('Landing Page Animated Background', () => {
   // Override the test context to remove authentication headers
@@ -6,14 +6,14 @@ test.describe('Landing Page Animated Background', () => {
     extraHTTPHeaders: {}, // Remove x-test-user-id header for landing page tests
   });
 
-  test('renders 18 ticket cards on landing page', async ({ page }) => {
+  test('renders 18 ticket cards on landing page', async ({ page , projectId }) => {
     await page.goto('/');
 
     const ticketCards = page.locator('.ticket-card');
     await expect(ticketCards).toHaveCount(18);
   });
 
-  test('shows 18 tickets on desktop viewport', async ({ page }) => {
+  test('shows 18 tickets on desktop viewport', async ({ page , projectId }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/');
 
@@ -21,7 +21,7 @@ test.describe('Landing Page Animated Background', () => {
     await expect(visibleTickets).toHaveCount(18);
   });
 
-  test('shows 12 tickets on tablet viewport', async ({ page }) => {
+  test('shows 12 tickets on tablet viewport', async ({ page , projectId }) => {
     await page.setViewportSize({ width: 800, height: 1024 });
     await page.goto('/');
 
@@ -29,7 +29,7 @@ test.describe('Landing Page Animated Background', () => {
     await expect(visibleTickets).toHaveCount(12);
   });
 
-  test('shows 8 tickets on mobile viewport', async ({ page }) => {
+  test('shows 8 tickets on mobile viewport', async ({ page , projectId }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
 
@@ -37,7 +37,7 @@ test.describe('Landing Page Animated Background', () => {
     await expect(visibleTickets).toHaveCount(8);
   });
 
-  test('tickets have pointer-events disabled', async ({ page }) => {
+  test('tickets have pointer-events disabled', async ({ page , projectId }) => {
     await page.goto('/');
 
     const firstTicket = page.locator('.ticket-card').first();
@@ -48,14 +48,14 @@ test.describe('Landing Page Animated Background', () => {
     expect(pointerEvents).toBe('none');
   });
 
-  test('tickets are hidden from screen readers', async ({ page }) => {
+  test('tickets are hidden from screen readers', async ({ page , projectId }) => {
     await page.goto('/');
 
     const firstTicket = page.locator('.ticket-card').first();
     await expect(firstTicket).toHaveAttribute('aria-hidden', 'true');
   });
 
-  test('respects prefers-reduced-motion setting', async ({ page }) => {
+  test('respects prefers-reduced-motion setting', async ({ page , projectId }) => {
     // Emulate user preference for reduced motion
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');

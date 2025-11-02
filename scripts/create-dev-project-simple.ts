@@ -37,6 +37,7 @@ async function main() {
   const project = await prisma.project.create({
     data: {
       id: 3,
+      key: 'DEV', // Development project key
       name: 'AI Board Development',
       description: 'Main development project for AI Board kanban application',
       githubOwner: 'bfernandez31',

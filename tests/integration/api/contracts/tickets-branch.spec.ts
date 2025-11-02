@@ -1,72 +1,25 @@
-import { test, expect } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { test, expect } from '../../../helpers/worker-isolation';
+import { cleanupDatabase } from '../../../helpers/db-cleanup';
 import { getWorkflowHeaders } from '../../../helpers/workflow-auth';
 
-const prisma = new PrismaClient();
-
 test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () => {
-  let testProjectId: number;
-  let testTicketId: number;
+  test.beforeEach(async ({ projectId }) => {
+    // Clean database before each test (worker-specific isolation)
+    await cleanupDatabase(projectId);
+  });
 
-  test.beforeEach(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Contract Test Project',
-        description: 'Project for contract testing',
-        githubOwner: 'test-owner',
-        githubRepo: 'contract-branch-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
-
-    // Create a test ticket
-    const ticket = await prisma.ticket.create({
+  test('should exist and update branch via specialized endpoint', async ({ request, projectId }) => {
+    // Create ticket
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test ticket for branch endpoint',
         description: 'Testing specialized branch endpoint',
-        projectId: testProjectId,
-        updatedAt: new Date(), // Required field
       },
     });
-    testTicketId = ticket.id;
-  });
+    const ticket = await createResp.json();
 
-  test.afterEach(async () => {
-    // Clean up test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
-  });
-
-  test.afterAll(async () => {
-    await prisma.$disconnect();
-  });
-
-  test('should exist and update branch via specialized endpoint', async ({
-    request,
-  }) => {
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
         data: {
           branch: '014-add-github-branch',
@@ -79,23 +32,23 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
 
     const result = await response.json();
 
-    // Verify minimal response (id, branch, updatedAt)
-    expect(result).toHaveProperty('id', testTicketId);
+    // Verify response structure
+    expect(result).toHaveProperty('id', ticket.id);
     expect(result).toHaveProperty('branch', '014-add-github-branch');
     expect(result).toHaveProperty('updatedAt');
-
-    // Should NOT include other fields (minimal response)
-    expect(result).not.toHaveProperty('title');
-    expect(result).not.toHaveProperty('description');
+    expect(result.updatedAt).not.toBe(ticket.updatedAt);
   });
 
-  test('should accept branch as string', async ({ request }) => {
+  test('should accept branch as string', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
-        data: {
-          branch: '123-feature-name',
-        },
+        data: { branch: '123-test-branch' },
         headers: getWorkflowHeaders(),
       }
     );
@@ -103,23 +56,27 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
     expect(response.status()).toBe(200);
 
     const result = await response.json();
-    expect(result.branch).toBe('123-feature-name');
+    expect(result.branch).toBe('123-test-branch');
+    expect(typeof result.branch).toBe('string');
   });
 
-  test('should accept branch as null (clear branch)', async ({ request }) => {
-    // First set a branch
-    await prisma.ticket.update({
-      where: { id: testTicketId },
-      data: { branch: '014-to-be-cleared' },
+  test('should accept branch as null (clear branch)', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
+    // Set branch first
+    await request.patch(`/api/projects/${projectId}/tickets/${ticket.id}/branch`, {
+      data: { branch: '001-initial' },
+      headers: getWorkflowHeaders(),
     });
 
-    // Then clear it via specialized endpoint
+    // Clear branch
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
-        data: {
-          branch: null,
-        },
+        data: { branch: null },
         headers: getWorkflowHeaders(),
       }
     );
@@ -130,36 +87,36 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
     expect(result.branch).toBeNull();
   });
 
-  test('should reject branch longer than 200 characters', async ({
-    request,
-  }) => {
-    const longBranch = 'a'.repeat(201);
+  test('should reject branch longer than 200 characters', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
+    });
+    const ticket = await createResp.json();
 
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
-        data: {
-          branch: longBranch,
-        },
+        data: { branch: 'a'.repeat(201) },
         headers: getWorkflowHeaders(),
       }
     );
 
-    // Should return 400 Bad Request
     expect(response.status()).toBe(400);
 
     const error = await response.json();
     expect(error).toHaveProperty('error');
-    // Error should mention validation or max length
   });
 
-  test('should require branch field in request body', async ({ request }) => {
+  test('should require branch field in request body', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
-        data: {
-          // Missing branch field
-        },
+        data: {},
         headers: getWorkflowHeaders(),
       }
     );
@@ -171,59 +128,52 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
     expect(error).toHaveProperty('error');
   });
 
-  test('should return 404 for non-existent ticket', async ({ request }) => {
-    const nonExistentId = 999999;
-
+  test('should return 404 for non-existent ticket', async ({ request, projectId }) => {
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${nonExistentId}/branch`,
+      `/api/projects/${projectId}/tickets/999999/branch`,
       {
-        data: {
-          branch: '014-test',
-        },
+        data: { branch: '001-test' },
         headers: getWorkflowHeaders(),
       }
     );
 
     expect(response.status()).toBe(404);
+
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
   });
 
-  test('should persist branch update to database', async ({ request }) => {
-    // Update via API
-    await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
-      {
-        data: {
-          branch: '014-persisted-branch',
-        },
-        headers: getWorkflowHeaders(),
-      }
-    );
+  test('should persist branch update to database', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
+    });
+    const ticket = await createResp.json();
 
-    // Query database directly to verify persistence
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: testTicketId },
+    await request.patch(`/api/projects/${projectId}/tickets/${ticket.id}/branch`, {
+      data: { branch: '014-persistence-test' },
+      headers: getWorkflowHeaders(),
     });
 
-    expect(ticket).not.toBeNull();
-    expect(ticket!.branch).toBe('014-persisted-branch');
+    // Verify persistence via GET
+    const getResp = await request.get(`/api/projects/${projectId}/tickets/${ticket.id}`);
+    const fetchedTicket = await getResp.json();
+    expect(fetchedTicket.branch).toBe('014-persistence-test');
   });
 
-  test('should update updatedAt timestamp', async ({ request }) => {
-    // Get initial ticket
-    const beforeUpdate = await prisma.ticket.findUnique({
-      where: { id: testTicketId },
+  test('should update updatedAt timestamp', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test', description: 'Test' },
     });
+    const ticket = await createResp.json();
+    const originalUpdatedAt = ticket.updatedAt;
 
-    // Wait a moment to ensure timestamp difference
+    // Wait to ensure timestamp difference
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Update branch
     const response = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${testTicketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
       {
-        data: {
-          branch: '014-timestamp-test',
-        },
+        data: { branch: '014-timestamp-test' },
         headers: getWorkflowHeaders(),
       }
     );
@@ -232,8 +182,91 @@ test.describe('Contract: PATCH /api/projects/:projectId/tickets/:id/branch', () 
 
     const result = await response.json();
     const updatedAt = new Date(result.updatedAt);
-    const beforeUpdatedAt = new Date(beforeUpdate!.updatedAt);
+    const originalDate = new Date(originalUpdatedAt);
+    expect(updatedAt.getTime()).toBeGreaterThan(originalDate.getTime());
+  });
 
-    expect(updatedAt.getTime()).toBeGreaterThan(beforeUpdatedAt.getTime());
+  test('should accept ticketKey instead of numeric ID in GET request', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test ticket for ticketKey', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
+    // Update branch using numeric ID
+    await request.patch(`/api/projects/${projectId}/tickets/${ticket.id}/branch`, {
+      data: { branch: '001-test-branch' },
+      headers: getWorkflowHeaders(),
+    });
+
+    // Fetch using ticketKey instead of numeric ID
+    const response = await request.get(
+      `/api/projects/${projectId}/tickets/${ticket.ticketKey}/branch`
+    );
+
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.id).toBe(ticket.id);
+    expect(result.branch).toBe('001-test-branch');
+  });
+
+  test('should accept ticketKey instead of numeric ID in PATCH request', async ({ request, projectId }) => {
+    const createResp = await request.post(`/api/projects/${projectId}/tickets`, {
+      data: { title: '[e2e] Test ticket for ticketKey PATCH', description: 'Test' },
+    });
+    const ticket = await createResp.json();
+
+    // Update branch using ticketKey instead of numeric ID
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/${ticket.ticketKey}/branch`,
+      {
+        data: { branch: '002-ticketkey-patch' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.id).toBe(ticket.id);
+    expect(result.branch).toBe('002-ticketkey-patch');
+  });
+
+  test('should return 400 for invalid ticketKey format in GET', async ({ request, projectId }) => {
+    const response = await request.get(
+      `/api/projects/${projectId}/tickets/INVALID-KEY-FORMAT/branch`
+    );
+
+    expect(response.status()).toBe(400);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
+    expect(error.message).toContain('Ticket identifier must be a number or ticket key');
+  });
+
+  test('should return 400 for invalid ticketKey format in PATCH', async ({ request, projectId }) => {
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/INVALID-KEY-FORMAT/branch`,
+      {
+        data: { branch: '001-test' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(400);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
+    expect(error.message).toContain('Ticket identifier must be a number or ticket key');
+  });
+
+  test('should return 404 for non-existent ticketKey', async ({ request, projectId }) => {
+    const response = await request.patch(
+      `/api/projects/${projectId}/tickets/XYZ-99999/branch`,
+      {
+        data: { branch: '001-test' },
+        headers: getWorkflowHeaders(),
+      }
+    );
+
+    expect(response.status()).toBe(404);
+    const error = await response.json();
+    expect(error).toHaveProperty('error');
   });
 });

@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('Application Header', () => {
-  test('should display header on all pages', async ({ page }) => {
+  test('should display header on all pages', async ({ page , projectId }) => {
     // Test 1: Header visibility on home page
     await page.goto('/');
     const header = page.locator('header').first();
@@ -22,9 +22,9 @@ test.describe('Application Header', () => {
     await expect(page.locator('header').getByText('AI-BOARD')).toBeVisible();
   });
 
-  test('should display project info in header on project pages', async ({ page }) => {
+  test('should display project info in header on project pages', async ({ page , projectId }) => {
     // Navigate to a project board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     const header = page.locator('header');
 
@@ -39,10 +39,10 @@ test.describe('Application Header', () => {
     await expect(specsLink).toBeVisible();
   });
 
-  test('should show only logo on mobile, full header on desktop', async ({ page }) => {
+  test('should show only logo on mobile, full header on desktop', async ({ page , projectId }) => {
     // Test mobile viewport (375px width - iPhone SE)
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     const header = page.locator('header');
 
@@ -74,10 +74,10 @@ test.describe('Application Header', () => {
     await expect(mobileProjectName).toBeHidden();
   });
 
-  test('should show specs link in mobile menu', async ({ page }) => {
+  test('should show specs link in mobile menu', async ({ page , projectId }) => {
     // Test mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Open mobile menu
     const menuButton = page.locator('button[aria-label="Toggle menu"], button:has(svg):has-text("Toggle menu")').first();

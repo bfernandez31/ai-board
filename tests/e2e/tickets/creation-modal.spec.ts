@@ -7,13 +7,13 @@
  * Run: npx playwright test tests/ticket-creation-modal-open.spec.ts
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../helpers/worker-isolation";
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Mock SSE endpoint to prevent connection timeouts
     await page.route('**/api/sse**', async (route) => {
@@ -25,11 +25,11 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     });
 
     // Navigate to the board page before each test
-    await page.goto("/projects/1/board");
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForLoadState("domcontentloaded");
   });
 
-  test("should open modal when clicking + New Ticket button", async ({ page }) => {
+  test("should open modal when clicking + New Ticket button", async ({ page , projectId }) => {
     // Find and click the "+ New Ticket" button
     const newTicketButton = page.getByRole("button", { name: /new ticket/i });
     await expect(newTicketButton).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(createButton).toBeVisible();
   });
 
-  test("should close modal when clicking Cancel button", async ({ page }) => {
+  test("should close modal when clicking Cancel button", async ({ page , projectId }) => {
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
@@ -80,7 +80,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(testTicket).not.toBeVisible();
   });
 
-  test("should close modal when pressing Escape key", async ({ page }) => {
+  test("should close modal when pressing Escape key", async ({ page , projectId }) => {
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
@@ -102,7 +102,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(testTicket).not.toBeVisible();
   });
 
-  test("should close modal when clicking backdrop (outside modal)", async ({ page }) => {
+  test("should close modal when clicking backdrop (outside modal)", async ({ page , projectId }) => {
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
@@ -130,7 +130,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(testTicket).not.toBeVisible();
   });
 
-  test("should focus title field automatically when modal opens", async ({ page }) => {
+  test("should focus title field automatically when modal opens", async ({ page , projectId }) => {
     // Open modal
     await page.getByRole("button", { name: /new ticket/i }).click();
 
@@ -143,7 +143,7 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
     await expect(titleInput).toBeFocused();
   });
 
-  test("should not create ticket after canceling via any method", async ({ page }) => {
+  test("should not create ticket after canceling via any method", async ({ page , projectId }) => {
     // Get initial ticket count in INBOX column
     const idleColumn = page.locator('[data-column="INBOX"], [data-stage="INBOX"]').first();
     const initialTickets = await idleColumn.locator('[data-testid="ticket-card"]').count();

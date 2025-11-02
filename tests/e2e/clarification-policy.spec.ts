@@ -1,10 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
+import { getProjectGithub, getProjectKey } from '../helpers/db-cleanup';
 
 test.describe('Clarification Policy - User Story 1', () => {
   let testProjectId: number;
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
+    // Get worker-specific github values
+    const github = getProjectGithub(projectId);
+
     // Create test user
     const testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -18,17 +22,23 @@ test.describe('Clarification Policy - User Story 1', () => {
       },
     });
 
-    // Create test project with AUTO policy (default)
-    const project = await prisma.project.create({
-      data: {
+    // Upsert test project with AUTO policy (default)
+    const project = await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        userId: testUser.id,
+        clarificationPolicy: 'AUTO', // Reset to AUTO for test isolation
+      },
+      create: {
+        id: projectId,
         name: '[e2e] Policy Test Project',
         description: 'Test project for clarification policy',
-        githubOwner: 'test',
-        githubRepo: 'test-policy',
+        githubOwner: github.owner,
+        githubRepo: github.repo,
         userId: testUser.id,
+        key: `PO${projectId}`, // Worker-specific key
         clarificationPolicy: 'AUTO', // Explicit default
         updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
       },
     });
 
@@ -44,7 +54,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     }
   });
 
-  test('T023: Setting project policy persists to database', async ({ page }) => {
+  test('T023: Setting project policy persists to database', async ({ page , projectId: _projectId }) => {
     // Navigate to project settings
     await page.goto(`http://localhost:3000/projects/${testProjectId}/settings`);
 
@@ -87,6 +97,8 @@ test.describe('Clarification Policy - User Story 1', () => {
         description: 'Test ticket to verify policy inheritance',
         stage: 'INBOX',
         projectId: testProjectId,
+        ticketNumber: 1,
+        ticketKey: 'POL-1',
         updatedAt: new Date(), // Required field
         // clarificationPolicy: null (inherited from project)
       },
@@ -108,7 +120,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('GET /api/projects/:id returns clarificationPolicy', async ({ request }) => {
+  test('GET /api/projects/:id returns clarificationPolicy', async ({ request , projectId: _projectId }) => {
     // Update project policy to PRAGMATIC
     await prisma.project.update({
       where: { id: testProjectId },
@@ -127,7 +139,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     expect(project.clarificationPolicy).toBe('PRAGMATIC');
   });
 
-  test('PATCH /api/projects/:id updates clarificationPolicy', async ({ request }) => {
+  test('PATCH /api/projects/:id updates clarificationPolicy', async ({ request , projectId: _projectId }) => {
     // Verify initial policy is AUTO
     let project = await prisma.project.findUnique({
       where: { id: testProjectId },
@@ -154,7 +166,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     expect(project?.clarificationPolicy).toBe('CONSERVATIVE');
   });
 
-  test('PATCH /api/projects/:id rejects invalid policy with 400', async ({ request }) => {
+  test('PATCH /api/projects/:id rejects invalid policy with 400', async ({ request , projectId: _projectId }) => {
     // Attempt to set invalid policy
     const response = await request.patch(`http://localhost:3000/api/projects/${testProjectId}`, {
       headers: { 'Content-Type': 'application/json' },
@@ -169,7 +181,7 @@ test.describe('Clarification Policy - User Story 1', () => {
     expect(error).toHaveProperty('issues'); // Changed from 'details' to 'issues'
   });
 
-  test('Project settings page displays policy options with icons', async ({ page }) => {
+  test('Project settings page displays policy options with icons', async ({ page , projectId: _projectId }) => {
     await page.goto(`http://localhost:3000/projects/${testProjectId}/settings`);
 
     // Wait for settings page to load
@@ -198,7 +210,10 @@ test.describe('Clarification Policy - User Story 2', () => {
   let testProjectId: number;
   let testTicketId: number;
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
+    // Get worker-specific github values
+    const github = getProjectGithub(projectId);
+
     // Create test user
     const testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -212,29 +227,38 @@ test.describe('Clarification Policy - User Story 2', () => {
       },
     });
 
-    // Create test project with CONSERVATIVE policy
-    const project = await prisma.project.create({
-      data: {
+    // Upsert test project with CONSERVATIVE policy
+    const project = await prisma.project.upsert({
+      where: { id: projectId },
+      update: {
+        userId: testUser.id,
+        clarificationPolicy: 'CONSERVATIVE', // Reset to CONSERVATIVE for test isolation
+      },
+      create: {
+        id: projectId,
         name: '[e2e] Policy Override Test Project',
         description: 'Test project for ticket policy overrides',
-        githubOwner: 'test',
-        githubRepo: 'test-override',
+        githubOwner: github.owner,
+        githubRepo: `${github.repo}-override`,
         userId: testUser.id,
+        key: `OV${projectId}`, // Worker-specific key
         clarificationPolicy: 'CONSERVATIVE', // Project default
         updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
       },
     });
 
     testProjectId = project.id;
 
     // Create test ticket without policy override (inherits CONSERVATIVE)
+    const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
       data: {
         title: '[e2e] Test Ticket for Override',
         description: 'Test ticket for policy override',
         stage: 'INBOX',
         projectId: testProjectId,
+        ticketNumber: 1,
+        ticketKey: `${projectKey}-1`, // Worker-specific ticketKey
         clarificationPolicy: null, // Inherit from project
         updatedAt: new Date(), // Required field
       },
@@ -252,7 +276,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     }
   });
 
-  test('T032: User can override ticket policy via edit dialog', async ({ page }) => {
+  test('T032: User can override ticket policy via edit dialog', async ({ page , projectId: _projectId }) => {
     // Navigate to project board
     await page.goto(`http://localhost:3000/projects/${testProjectId}/board`);
 
@@ -311,7 +335,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     expect(updatedTicket?.clarificationPolicy).toBe('PRAGMATIC');
   });
 
-  test('T033: User can reset ticket policy to null (revert to project default)', async ({ page }) => {
+  test('T033: User can reset ticket policy to null (revert to project default)', async ({ page , projectId: _projectId }) => {
     // First, set ticket policy to PRAGMATIC (override)
     await prisma.ticket.update({
       where: { id: testTicketId },
@@ -376,7 +400,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     expect(updatedTicket?.clarificationPolicy).toBeNull();
   });
 
-  test('PATCH /api/projects/:projectId/tickets/:id accepts null clarificationPolicy', async ({ request }) => {
+  test('PATCH /api/projects/:projectId/tickets/:id accepts null clarificationPolicy', async ({ request , projectId: _projectId }) => {
     // First, set ticket policy to PRAGMATIC
     await prisma.ticket.update({
       where: { id: testTicketId },
@@ -405,7 +429,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     expect(ticket?.clarificationPolicy).toBeNull();
   });
 
-  test('PATCH /api/projects/:projectId/tickets/:id updates clarificationPolicy', async ({ request }) => {
+  test('PATCH /api/projects/:projectId/tickets/:id updates clarificationPolicy', async ({ request , projectId: _projectId }) => {
     // Verify initial policy is null (inherited)
     let ticket = await prisma.ticket.findUnique({
       where: { id: testTicketId },
@@ -435,7 +459,7 @@ test.describe('Clarification Policy - User Story 2', () => {
     expect(ticket?.clarificationPolicy).toBe('PRAGMATIC');
   });
 
-  test('Ticket creation modal allows setting optional policy', async ({ page }) => {
+  test('Ticket creation modal allows setting optional policy', async ({ page , projectId: _projectId }) => {
     // Navigate to project board
     await page.goto(`http://localhost:3000/projects/${testProjectId}/board`);
 

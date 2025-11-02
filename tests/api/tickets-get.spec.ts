@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
@@ -11,13 +11,13 @@ import { cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('GET /api/tickets - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
-  test('should return 200 with TicketsByStage schema', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+  test('should return 200 with TicketsByStage schema', async ({ request , projectId }) => {
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
 
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toContain('application/json');
@@ -39,9 +39,9 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(Array.isArray(body.SHIP)).toBe(true);
   });
 
-  test('should return tickets with correct schema when tickets exist', async ({ request }) => {
+  test('should return tickets with correct schema when tickets exist', async ({ request , projectId }) => {
     // First, create a test ticket
-    const createResponse = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const createResponse = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test ticket for GET contract validation',
         description: 'This ticket validates the GET endpoint contract'
@@ -51,7 +51,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(createResponse.status()).toBe(201);
 
     // Now fetch all tickets
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -97,9 +97,9 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(new Date(foundTicket.updatedAt).toISOString()).toBe(foundTicket.updatedAt);
   });
 
-  test('should return empty arrays for all stages when no tickets exist', async ({ request }) => {
+  test('should return empty arrays for all stages when no tickets exist', async ({ request , projectId }) => {
     // This test assumes a clean database or handles existing tickets
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
 
     expect(response.status()).toBe(200);
 
@@ -113,14 +113,14 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     expect(Array.isArray(body.SHIP)).toBe(true);
   });
 
-  test('should return 500 with ErrorResponse schema on database error', async ({ request }) => {
+  test('should return 500 with ErrorResponse schema on database error', async ({ request , projectId }) => {
     // This test is challenging to trigger without database manipulation
     // Documented for completeness per OpenAPI spec
     // Implementation may require database connection mocking
 
     // For now, we validate that successful responses work
     // Error case testing will be added with proper test infrastructure
-    const response = await request.get(`${BASE_URL}/api/projects/1/tickets`);
+    const response = await request.get(`${BASE_URL}/api/projects/${projectId}/tickets`);
 
     // If response is error (unlikely in normal operation)
     if (response.status() === 500) {
@@ -138,10 +138,10 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     }
   });
 
-  test('should handle concurrent requests correctly', async ({ request }) => {
+  test('should handle concurrent requests correctly', async ({ request , projectId }) => {
     // Test that multiple simultaneous requests work correctly
     const requests = Array.from({ length: 5 }, () =>
-      request.get(`${BASE_URL}/api/projects/1/tickets`)
+      request.get(`${BASE_URL}/api/projects/${projectId}/tickets`)
     );
 
     const responses = await Promise.all(requests);

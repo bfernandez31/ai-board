@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
@@ -10,9 +10,10 @@ import { prisma } from '@/lib/db/client';
 test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD Mention Detection', () => {
   const BASE_URL = 'http://localhost:3000';
   let aiBoardUserId: string;
+  let testTicket: { id: number };
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
 
     // Create test user
     await prisma.user.upsert({
@@ -46,36 +47,35 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     await prisma.projectMember.upsert({
       where: {
         projectId_userId: {
-          projectId: 1,
+          projectId,
           userId: aiBoardUserId,
         },
       },
       update: {},
       create: {
-        projectId: 1,
+        projectId,
         userId: aiBoardUserId,
         role: 'member',
       },
     });
 
     // Create test ticket in SPECIFY stage (valid for AI-BOARD)
-    await prisma.ticket.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
+    testTicket = await prisma.ticket.create({
+      data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] Test Ticket',
         description: 'Test ticket for AI-BOARD mentions',
         stage: 'SPECIFY',
         branch: '001-test-ticket', // Required for AI-BOARD workflow dispatch
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
   });
 
-  test('should create Job when @ai-board is mentioned in valid stage', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should create Job when @ai-board is mentioned in valid stage', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `Hey @[${aiBoardUserId}:AI-BOARD Assistant] can you update the spec?`,
       },
@@ -91,19 +91,19 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     });
 
     expect(job).not.toBeNull();
-    expect(job?.ticketId).toBe(1);
+    expect(job?.ticketId).toBe(testTicket.id);
     expect(job?.command).toBe('comment-specify');
     expect(job?.status).toBe('PENDING');
   });
 
-  test('should return 400 when @ai-board mentioned in INBOX stage', async ({ request }) => {
+  test('should return 400 when @ai-board mentioned in INBOX stage', async ({ request , projectId }) => {
     // Change ticket to INBOX stage
     await prisma.ticket.update({
-      where: { id: 1 },
+      where: { id: testTicket.id },
       data: { stage: 'INBOX' },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `Hey @[${aiBoardUserId}:AI-BOARD Assistant] can you help?`,
       },
@@ -116,12 +116,12 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(body.error).toContain('INBOX');
   });
 
-  test('should return 400 when @ai-board mentioned while job is RUNNING', async ({ request }) => {
+  test('should return 400 when @ai-board mentioned while job is RUNNING', async ({ request , projectId }) => {
     // Create RUNNING job
     await prisma.job.create({
       data: {
-        ticketId: 1,
-        projectId: 1,
+        ticketId: testTicket.id,
+        projectId,
         command: 'comment-specify',
         status: 'RUNNING',
         startedAt: new Date(),
@@ -129,7 +129,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `Hey @[${aiBoardUserId}:AI-BOARD Assistant] can you help?`,
       },
@@ -141,8 +141,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(body.error).toContain('already processing');
   });
 
-  test('should create comment normally when AI-BOARD not mentioned', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should create comment normally when AI-BOARD not mentioned', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: 'Regular comment without mentions',
       },
@@ -154,14 +154,14 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(body.content).toBe('Regular comment without mentions');
   });
 
-  test('should create Job for PLAN stage mention', async ({ request }) => {
+  test('should create Job for PLAN stage mention', async ({ request , projectId }) => {
     // Change ticket to PLAN stage
     await prisma.ticket.update({
-      where: { id: 1 },
+      where: { id: testTicket.id },
       data: { stage: 'PLAN' },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `@[${aiBoardUserId}:AI-BOARD Assistant] update the plan please`,
       },
@@ -178,14 +178,14 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(job?.command).toBe('comment-plan');
   });
 
-  test('should create Job for BUILD stage mention', async ({ request }) => {
+  test('should create Job for BUILD stage mention', async ({ request , projectId }) => {
     // Change ticket to BUILD stage
     await prisma.ticket.update({
-      where: { id: 1 },
+      where: { id: testTicket.id },
       data: { stage: 'BUILD' },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `@[${aiBoardUserId}:AI-BOARD Assistant] help with implementation`,
       },
@@ -202,14 +202,14 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(job?.command).toBe('comment-build');
   });
 
-  test('should create Job for VERIFY stage mention', async ({ request }) => {
+  test('should create Job for VERIFY stage mention', async ({ request , projectId }) => {
     // Change ticket to VERIFY stage
     await prisma.ticket.update({
-      where: { id: 1 },
+      where: { id: testTicket.id },
       data: { stage: 'VERIFY' },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `@[${aiBoardUserId}:AI-BOARD Assistant] help verify this`,
       },
@@ -226,7 +226,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
     expect(job?.command).toBe('comment-verify');
   });
 
-  test('should handle mention with other users in same comment', async ({ request }) => {
+  test('should handle mention with other users in same comment', async ({ request , projectId }) => {
     // Create another test user
     const otherUser = await prisma.user.create({
       data: {
@@ -240,13 +240,13 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/comments - AI-BOARD M
 
     await prisma.projectMember.create({
       data: {
-        projectId: 1,
+        projectId,
         userId: otherUser.id,
         role: 'member',
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicket.id}/comments`, {
       data: {
         content: `Hey @[${otherUser.id}:Other User] and @[${aiBoardUserId}:AI-BOARD Assistant], check this`,
       },

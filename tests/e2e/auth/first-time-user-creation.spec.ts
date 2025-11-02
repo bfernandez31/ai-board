@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
 
 /**
@@ -18,7 +18,7 @@ test.describe('First-Time User Creation', () => {
   const testEmail = 'new-user-test@e2e.local';
   const testUserId = 'test-user-new-' + Date.now();
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean up test user if exists
     await prisma.account.deleteMany({
       where: { userId: testUserId },
@@ -126,7 +126,9 @@ test.describe('First-Time User Creation', () => {
         githubOwner: 'test-owner',
         githubRepo: 'test-repo-' + Date.now(),
         userId: testUserId,
+        key: 'NEW',
         updatedAt: new Date(),
+        createdAt: new Date(),
       },
     });
 
@@ -174,7 +176,7 @@ test.describe('Returning User Updates', () => {
   const testEmail = 'returning-user@e2e.local';
   const testUserId = 'test-user-returning-' + Date.now();
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Create existing user
     await prisma.user.upsert({
       where: { email: testEmail },
@@ -231,7 +233,9 @@ test.describe('Returning User Updates', () => {
         githubOwner: 'test-owner',
         githubRepo: 'existing-repo-' + Date.now(),
         userId: testUserId,
+        key: 'RET',
         updatedAt: new Date(),
+        createdAt: new Date(),
       },
     });
 

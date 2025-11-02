@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
 
 /**
@@ -14,9 +14,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   const BASE_URL = 'http://localhost:3000';
   const prisma = getPrismaClient();
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
     // Clean database before each test - protects project 3
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
@@ -28,10 +28,11 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    */
   const createTicket = async (
     request: any,
+    projectId: number,
     title: string = 'Test Ticket',
     description: string = 'Test description'
   ): Promise<{ id: number; version: number; title: string; description: string }> => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: { title, description },
     });
     const ticket = await response.json();
@@ -53,12 +54,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T010: User can click title to enter inline edit mode
    */
-  test('user can click title to enter inline edit mode', async ({ page, request }) => {
+  test('user can click title to enter inline edit mode', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate to board and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     const ticketCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
     await ticketCard.click();
 
@@ -93,12 +94,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T011: User can save title by pressing Enter
    */
-  test('user can save title with Enter key', async ({ page, request }) => {
+  test('user can save title with Enter key', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
@@ -133,12 +134,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T012: User can cancel title edit with ESC
    */
-  test('user can cancel title edit with ESC', async ({ page, request }) => {
+  test('user can cancel title edit with ESC', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and change it
@@ -162,12 +163,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T013: User can click description to enter edit mode with counter
    */
-  test('user can click description to enter edit mode with character counter', async ({ page, request }) => {
+  test('user can click description to enter edit mode with character counter', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Test Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Test Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Hover over description to verify pencil icon
@@ -197,12 +198,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T014: User can save description via Save button
    */
-  test('user can save description via Save button', async ({ page, request }) => {
+  test('user can save description via Save button', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Test Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Test Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -238,12 +239,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T015: Empty title validation shows error and prevents save
    */
-  test('empty title validation shows error and prevents save', async ({ page, request }) => {
+  test('empty title validation shows error and prevents save', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title and delete all text
@@ -270,12 +271,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T016: Title max length is enforced (100 characters)
    */
-  test('title max length enforcement prevents exceeding 100 characters', async ({ page, request }) => {
+  test('title max length enforcement prevents exceeding 100 characters', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title
@@ -302,12 +303,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T017: Description character counter shows warning at 90%
    */
-  test('description character counter shows warning at 90%', async ({ page, request }) => {
+  test('description character counter shows warning at 90%', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description
@@ -351,12 +352,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T018: Empty description validation shows error and prevents save
    */
-  test('empty description validation shows error and prevents save', async ({ page, request }) => {
+  test('empty description validation shows error and prevents save', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description and delete all text
@@ -387,12 +388,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T019: Optimistic update rolls back on network error
    */
-  test('optimistic update rolls back on network failure', async ({ page, context, request }) => {
+  test('optimistic update rolls back on network failure', async ({ page, context, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit
@@ -406,6 +407,9 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     const titleInput = page.getByTestId('title-input');
     await titleInput.fill('Updated Title');
     await titleInput.press('Enter');
+
+    // Wait for edit mode to close (input disappears)
+    await expect(titleInput).not.toBeVisible({ timeout: 1000 });
 
     // Assert: title updates immediately in UI (optimistic)
     await expect(titleElement).toContainText('Updated Title', { timeout: 1000 });
@@ -425,12 +429,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T020: Concurrent edit conflict shows 409 error
    */
-  test('concurrent edit conflict shows error and prompts refresh', async ({ page, request }) => {
+  test('concurrent edit conflict shows error and prompts refresh', async ({ page, request , projectId }) => {
     // Create ticket (version = 1)
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click title to edit (but don't save yet)
@@ -467,12 +471,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   /**
    * T021: Board refreshes after successful save
    */
-  test('board refreshes after successful save', async ({ page, request }) => {
+  test('board refreshes after successful save', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Original Title', 'Original description');
+    const ticket = await createTicket(request, projectId, 'Original Title', 'Original description');
 
     // Navigate to board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
     // Verify board shows original title
     const boardCard = page.locator(`[data-ticket-id="${ticket.id}"]`);
@@ -500,18 +504,18 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // User's scroll position/context preserved (difficult to test, but verify no full page reload)
     const url = page.url();
-    expect(url).toContain('/projects/1/board');
+    expect(url).toContain(`/projects/${projectId}/board`);
   });
 
   /**
    * T022: Save button disabled when unchanged
    */
-  test('save button disabled when content is unchanged', async ({ page, request }) => {
+  test('save button disabled when content is unchanged', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, 'Test Title', 'Test description');
+    const ticket = await createTicket(request, projectId, 'Test Title', 'Test description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -542,12 +546,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    * T023: Inline edit description with [e2e] prefix succeeds
    * Feature: 024-16204-description-validation
    */
-  test('inline edit description with [e2e] prefix succeeds', async ({ page, request }) => {
+  test('inline edit description with [e2e] prefix succeeds', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request, '[e2e] Test', 'Original description');
+    const ticket = await createTicket(request, projectId, '[e2e] Test', 'Original description');
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -575,12 +579,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    * T024: Inline edit description with special characters succeeds
    * Feature: 024-16204-description-validation
    */
-  test('inline edit description with special characters succeeds', async ({ page, request }) => {
+  test('inline edit description with special characters succeeds', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -608,12 +612,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    * T025: Inline edit description with emoji shows validation error
    * Feature: 024-16204-description-validation
    */
-  test('inline edit description with emoji shows validation error', async ({ page, request }) => {
+  test('inline edit description with emoji shows validation error', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit
@@ -645,12 +649,12 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    * T026: Validation error message is clear and actionable
    * Feature: 024-16204-description-validation
    */
-  test('validation error message is clear and actionable', async ({ page, request }) => {
+  test('validation error message is clear and actionable', async ({ page, request , projectId }) => {
     // Create ticket
-    const ticket = await createTicket(request);
+    const ticket = await createTicket(request, projectId);
 
     // Navigate and open modal
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
     // Click description to edit

@@ -1,13 +1,18 @@
-import { test, expect } from '@playwright/test';
-import { cleanupDatabase } from '../helpers/db-cleanup';
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase, getProjectKey } from '../helpers/db-cleanup';
 
 test.describe('Projects List Page', () => {
-  test.beforeEach(async () => {
+  let nextTicketNumber = 1;
+
+  test.beforeEach(async ({ projectId }) => {
     // IMPORTANT: Only clean up test data, preserve existing projects
-    await cleanupDatabase(); // This function preserves non-[e2e] prefixed data
+    // Reset ticket counter
+    nextTicketNumber = 1;
+
+    await cleanupDatabase(projectId); // This function preserves non-[e2e] prefixed data
   });
 
-  test('displays all projects with correct information', async ({ page }) => {
+  test('displays all projects with correct information', async ({ page , projectId }) => {
     // Navigate to projects page
     await page.goto('http://localhost:3000/projects');
 
@@ -46,7 +51,7 @@ test.describe('Projects List Page', () => {
     await expect(page).toHaveURL(`/projects/${projectId}/board`);
   });
 
-  test('shows hover effect on project cards', async ({ page }) => {
+  test('shows hover effect on project cards', async ({ page , projectId }) => {
     await page.goto('http://localhost:3000/projects');
     await page.waitForSelector('[data-testid="project-card"]');
 
@@ -64,19 +69,23 @@ test.describe('Projects List Page', () => {
     expect(filter).toContain('brightness');
   });
 
-  test('displays shipped ticket metadata below ticket title', async ({ page }) => {
+  test('displays shipped ticket metadata below ticket title', async ({ page , projectId }) => {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
 
     try {
       // Create a shipped ticket for testing the layout
+      const ticketNumber = nextTicketNumber++;
+      const projectKey = getProjectKey(projectId);
       await prisma.ticket.create({
         data: {
+          ticketNumber,
+          ticketKey: `${projectKey}-${ticketNumber}`,
           id: 999,
           title: '[e2e] Test Shipped Ticket',
           description: 'Test ticket for layout verification',
           stage: 'SHIP',
-          projectId: 1,
+          projectId,
           updatedAt: new Date(),
         },
       });
@@ -84,8 +93,8 @@ test.describe('Projects List Page', () => {
       await page.goto('http://localhost:3000/projects');
       await page.waitForSelector('[data-testid="project-card"]');
 
-      // Find the card for project 1 (which now has a shipped ticket)
-      const cardWithShippedTicket = page.locator('[data-testid="project-card"][data-project-id="1"]');
+      // Find the card for this worker's project (which now has a shipped ticket)
+      const cardWithShippedTicket = page.locator(`[data-testid="project-card"][data-project-id="${projectId}"]`);
 
       // Verify the metadata (timestamp and count) is on a separate line below the title
       const metadata = cardWithShippedTicket.locator('[data-testid="shipped-ticket-metadata"]');
@@ -99,7 +108,7 @@ test.describe('Projects List Page', () => {
     }
   });
 
-  test('displays Import and Create Project buttons as disabled when projects exist', async ({ page }) => {
+  test('displays Import and Create Project buttons as disabled when projects exist', async ({ page , projectId }) => {
     await page.goto('http://localhost:3000/projects');
 
     // Wait for projects to load
@@ -116,15 +125,27 @@ test.describe('Projects List Page', () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test('displays Empty component when no projects exist', async ({ page }) => {
+  test('displays Empty component when no projects exist', async ({ page , projectId }) => {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
 
     try {
-      // Temporarily delete all test projects to test empty state
-      await prisma.ticket.deleteMany({ where: { projectId: { in: [1, 2] } } });
-      await prisma.projectMember.deleteMany({ where: { projectId: { in: [1, 2] } } });
-      await prisma.project.deleteMany({ where: { id: { in: [1, 2] } } });
+      // Create ISOLATED user for this test only (no projects)
+      const isolatedUserId = `empty-projects-user-${Date.now()}`;
+      await prisma.user.create({
+        data: {
+          id: isolatedUserId,
+          email: `empty-projects-${Date.now()}@e2e.local`,
+          name: 'Empty Projects User',
+          emailVerified: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Set auth header to use isolated user
+      await page.context().setExtraHTTPHeaders({
+        'x-test-user-id': isolatedUserId,
+      });
 
       await page.goto('http://localhost:3000/projects');
 
@@ -144,10 +165,10 @@ test.describe('Projects List Page', () => {
       // Verify header action buttons are NOT shown when empty
       const headerButtons = page.locator('h1:has-text("Projects") ~ div button');
       await expect(headerButtons.first()).not.toBeVisible();
+
+      // Cleanup: Delete isolated user (auto-cleanup handles this in global-teardown via email pattern)
+      await prisma.user.delete({ where: { id: isolatedUserId } });
     } finally {
-      // Restore test projects for other tests
-      const { ensureTestFixtures } = await import('../helpers/db-cleanup');
-      await ensureTestFixtures();
       await prisma.$disconnect();
     }
   });

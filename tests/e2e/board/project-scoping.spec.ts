@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -12,9 +12,9 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
 test.describe('Project-Scoped Board Access', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page , projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Mock SSE endpoint to prevent connection timeouts
     await page.route('**/api/sse**', async (route) => {
@@ -26,9 +26,9 @@ test.describe('Project-Scoped Board Access', () => {
     });
   });
 
-  test('should display only project 1 tickets on /projects/1/board', async ({ page, request }) => {
+  test('should display only project 1 tickets on /projects/1/board', async ({ page, request , projectId }) => {
     // Create ticket in project 1
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket in project 1',
         description: 'Should be visible'
@@ -36,16 +36,16 @@ test.describe('Project-Scoped Board Access', () => {
     });
 
     // Navigate to project 1 board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
     // Verify ticket is visible
     await expect(page.getByText('Ticket in project 1')).toBeVisible();
   });
 
-  test('should show all stages on project board', async ({ page }) => {
+  test('should show all stages on project board', async ({ page , projectId }) => {
     // Navigate to project board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
     // Verify all 6 stages are visible
     const stages = ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
@@ -56,35 +56,39 @@ test.describe('Project-Scoped Board Access', () => {
     }
   });
 
-  test('should not display tickets from other projects', async ({ page, request }) => {
-    // Create ticket in project 1
-    await request.post(`${BASE_URL}/api/projects/1/tickets`, {
+  test('should not display tickets from other projects', async ({ page, request , projectId }) => {
+    // Create ticket in this worker's project
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Ticket in project 1',
         description: 'Should be visible'
       }
     });
 
-    // Try to create ticket in project 2 (may fail if project doesn't exist, that's ok)
+    // Use a different project for the "other" ticket (project 3 is always available - dev project)
+    // But we need to skip this test if projectId is 3, or use a different safe project
+    const otherProjectId = projectId === 3 ? 8 : 3; // Use project 8 if we're on project 3, otherwise use 3
+
+    // Try to create ticket in the other project (may fail if project doesn't exist, that's ok)
     try {
-      await request.post(`${BASE_URL}/api/projects/2/tickets`, {
+      await request.post(`${BASE_URL}/api/projects/${otherProjectId}/tickets`, {
         data: {
           title: '[e2e] Ticket in project 2',
           description: 'Should NOT be visible on project 1 board'
         }
       });
     } catch {
-      // If project 2 doesn't exist, that's fine for this test
+      // If the other project doesn't exist, that's fine for this test
     }
 
-    // Navigate to project 1 board
-    await page.goto(`${BASE_URL}/projects/1/board`);
+    // Navigate to this worker's project board
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Verify project 1 ticket is visible
+    // Verify this project's ticket is visible
     await expect(page.getByText('Ticket in project 1')).toBeVisible();
 
-    // Verify project 2 ticket is NOT visible
+    // Verify other project's ticket is NOT visible
     await expect(page.getByText('Ticket in project 2')).not.toBeVisible();
   });
 });

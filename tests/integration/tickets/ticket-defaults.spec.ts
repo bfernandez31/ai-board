@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { PrismaClient } from '@prisma/client';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 const prisma = new PrismaClient();
 
@@ -13,54 +14,18 @@ const prisma = new PrismaClient();
  * This verifies the database schema defaults and API response format.
  */
 test.describe('Integration: Ticket creation with default values', () => {
-  let testProjectId: number;
-
-  test.beforeAll(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Integration Test Project',
-        description: 'Project for integration testing default values',
-        githubOwner: 'integration-test-owner',
-        githubRepo: 'ticket-defaults-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
-    // Clean up all test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
     await prisma.$disconnect();
   });
 
-  test('should create ticket with branch=null and autoMode=false by default', async ({
-    request,
-  }) => {
+  test('should create ticket with branch=null and autoMode=false by default', async ({ request, projectId }) => {
     // Create a new ticket via API
     const response = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Add branch tracking feature',
@@ -82,7 +47,7 @@ test.describe('Integration: Ticket creation with default values', () => {
     );
     expect(ticket).toHaveProperty('stage', 'INBOX');
     expect(ticket).toHaveProperty('version', 1);
-    expect(ticket).toHaveProperty('projectId', testProjectId);
+    expect(ticket).toHaveProperty('projectId', projectId);
     expect(ticket).toHaveProperty('createdAt');
     expect(ticket).toHaveProperty('updatedAt');
 
@@ -102,20 +67,15 @@ test.describe('Integration: Ticket creation with default values', () => {
     expect(dbTicket).not.toBeNull();
     expect(dbTicket!.branch).toBeNull();
     expect(dbTicket!.autoMode).toBe(false);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should maintain default values across multiple ticket creations', async ({
-    request,
-  }) => {
+  test('should maintain default values across multiple ticket creations', async ({ request, projectId }) => {
     // Create multiple tickets to ensure defaults are consistent
     const ticketIds: number[] = [];
 
     for (let i = 0; i < 3; i++) {
       const response = await request.post(
-        `/api/projects/${testProjectId}/tickets`,
+        `/api/projects/${projectId}/tickets`,
         {
           data: {
             title: `Test ticket ${i + 1}`,
@@ -144,19 +104,12 @@ test.describe('Integration: Ticket creation with default values', () => {
       expect(ticket.branch).toBeNull();
       expect(ticket.autoMode).toBe(false);
     });
-
-    // Clean up
-    await prisma.ticket.deleteMany({
-      where: { id: { in: ticketIds } },
-    });
   });
 
-  test('should not change other existing fields when adding new defaults', async ({
-    request,
-  }) => {
+  test('should not change other existing fields when adding new defaults', async ({ request, projectId }) => {
     // Create a ticket and verify other fields are unchanged
     const response = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Verify existing fields',
@@ -175,21 +128,16 @@ test.describe('Integration: Ticket creation with default values', () => {
     expect(ticket.description).toBe('Ensure existing fields work correctly');
     expect(ticket.stage).toBe('INBOX');
     expect(ticket.version).toBe(1);
-    expect(ticket.projectId).toBe(testProjectId);
+    expect(ticket.projectId).toBe(projectId);
 
     // Verify timestamps are valid dates
     expect(new Date(ticket.createdAt).getTime()).toBeGreaterThan(0);
     expect(new Date(ticket.updatedAt).getTime()).toBeGreaterThan(0);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should have null branch (not undefined or empty string)', async ({
-    request,
-  }) => {
+  test('should have null branch (not undefined or empty string)', async ({ request, projectId }) => {
     const response = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Test branch null type',
@@ -210,16 +158,11 @@ test.describe('Integration: Ticket creation with default values', () => {
 
     // Type verification
     expect(ticket.branch === null).toBe(true);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('should have autoMode as boolean false (not 0 or falsy)', async ({
-    request,
-  }) => {
+  test('should have autoMode as boolean false (not 0 or falsy)', async ({ request, projectId }) => {
     const response = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Test autoMode type',
@@ -243,8 +186,5 @@ test.describe('Integration: Ticket creation with default values', () => {
     // Type verification
     expect(typeof ticket.autoMode).toBe('boolean');
     expect(ticket.autoMode === false).toBe(true);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });

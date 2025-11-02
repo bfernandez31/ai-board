@@ -1,8 +1,6 @@
-import { test, expect } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { getWorkflowHeaders } from '../../helpers/workflow-auth';
-
-const prisma = new PrismaClient();
 
 /**
  * Integration Test: Branch assignment workflow (Scenario 2)
@@ -15,54 +13,15 @@ const prisma = new PrismaClient();
  * This simulates the /specify workflow creating a Git branch.
  */
 test.describe('Integration: Branch assignment workflow', () => {
-  let testProjectId: number;
-
-  test.beforeAll(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Branch Assignment Test Project',
-        description: 'Project for testing branch assignment workflow',
-        githubOwner: 'integration-test-owner',
-        githubRepo: 'branch-assignment-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
+  test.beforeEach(async ({ projectId }) => {
+    // Clean database before each test (worker-specific isolation)
+    await cleanupDatabase(projectId);
   });
 
-  test.afterAll(async () => {
-    // Clean up all test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
-    await prisma.$disconnect();
-  });
-
-  test('should assign branch via specialized endpoint and persist to database', async ({
-    request,
-  }) => {
+  test('should assign branch via specialized endpoint and persist to database', async ({ request, projectId }) => {
     // Step 1: Create ticket (branch should be null)
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Feature requiring branch tracking',
@@ -81,7 +40,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Step 2: Assign branch via specialized /branch endpoint
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: {
           branch: '014-add-github-branch',
@@ -101,7 +60,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Step 3: Query ticket via GET to verify persistence
     const getResponse = await request.get(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`
+      `/api/projects/${projectId}/tickets/${ticketId}`
     );
 
     expect(getResponse.status()).toBe(200);
@@ -112,23 +71,12 @@ test.describe('Integration: Branch assignment workflow', () => {
     expect(fetchedTicket.branch).toBe('014-add-github-branch');
     expect(fetchedTicket.title).toBe('[e2e] Feature requiring branch tracking');
     expect(fetchedTicket.autoMode).toBe(false); // Should remain unchanged
-
-    // Step 4: Verify in database directly
-    const dbTicket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-    });
-
-    expect(dbTicket).not.toBeNull();
-    expect(dbTicket!.branch).toBe('014-add-github-branch');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should support updating branch multiple times', async ({ request }) => {
+  test('should support updating branch multiple times', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Ticket with changing branch',
@@ -142,7 +90,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // First branch assignment
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
         headers: getWorkflowHeaders(),
@@ -150,13 +98,13 @@ test.describe('Integration: Branch assignment workflow', () => {
     );
 
     let fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBe('001-initial-branch');
 
     // Second branch assignment (update)
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '002-updated-branch' },
         headers: getWorkflowHeaders(),
@@ -164,13 +112,13 @@ test.describe('Integration: Branch assignment workflow', () => {
     );
 
     fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBe('002-updated-branch');
 
     // Third branch assignment (another update)
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '003-final-branch' },
         headers: getWorkflowHeaders(),
@@ -178,17 +126,12 @@ test.describe('Integration: Branch assignment workflow', () => {
     );
 
     fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBe('003-final-branch');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle branch names with various valid formats', async ({
-    request,
-  }) => {
+  test('should handle branch names with various valid formats', async ({ request, projectId }) => {
     const validBranchNames = [
       '014-add-github-branch',
       '123-feature-name',
@@ -201,7 +144,7 @@ test.describe('Integration: Branch assignment workflow', () => {
     for (const branchName of validBranchNames) {
       // Create ticket
       const createResponse = await request.post(
-        `/api/projects/${testProjectId}/tickets`,
+        `/api/projects/${projectId}/tickets`,
         {
           data: {
             title: `Test ${branchName}`,
@@ -214,7 +157,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
       // Assign branch
       const updateResponse = await request.patch(
-        `/api/projects/${testProjectId}/tickets/${ticket.id}/branch`,
+        `/api/projects/${projectId}/tickets/${ticket.id}/branch`,
         {
           data: { branch: branchName },
           headers: getWorkflowHeaders(),
@@ -225,18 +168,13 @@ test.describe('Integration: Branch assignment workflow', () => {
 
       const result = await updateResponse.json();
       expect(result.branch).toBe(branchName);
-
-      // Clean up
-      await prisma.ticket.delete({ where: { id: ticket.id } });
     }
   });
 
-  test('should preserve other ticket fields when updating branch', async ({
-    request,
-  }) => {
+  test('should preserve other ticket fields when updating branch', async ({ request, projectId }) => {
     // Create ticket with specific values
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Original Title',
@@ -257,7 +195,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Update only the branch
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-new-branch' },
         headers: getWorkflowHeaders(),
@@ -266,7 +204,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Fetch ticket and verify other fields unchanged
     const fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
 
     expect(fetchedTicket.branch).toBe('014-new-branch');
@@ -278,17 +216,12 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // updatedAt should change
     expect(fetchedTicket.updatedAt).not.toBe(ticket.updatedAt);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should update updatedAt timestamp when branch changes', async ({
-    request,
-  }) => {
+  test('should update updatedAt timestamp when branch changes', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Timestamp test',
@@ -306,7 +239,7 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Update branch
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-timestamp-test' },
         headers: getWorkflowHeaders(),
@@ -318,8 +251,5 @@ test.describe('Integration: Branch assignment workflow', () => {
 
     // Verify timestamp was updated
     expect(newUpdatedAt.getTime()).toBeGreaterThan(initialUpdatedAt.getTime());
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 });

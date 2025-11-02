@@ -1,4 +1,5 @@
 import { getPrismaClient } from './db-cleanup';
+import { createTicket } from '@/lib/db/tickets';
 
 /**
  * Database setup utilities for testing project-ticket relationships
@@ -10,6 +11,7 @@ export interface TestProject {
   description: string;
   githubOwner: string;
   githubRepo: string;
+  key?: string;
 }
 
 export interface TestTicket {
@@ -19,6 +21,8 @@ export interface TestTicket {
   projectId: number;
   stage: string;
   version: number;
+  ticketNumber?: number;
+  ticketKey?: string;
 }
 
 /**
@@ -26,7 +30,7 @@ export interface TestTicket {
  * Automatically prefixes project names with [e2e] for test isolation
  */
 export async function createTestProject(
-  data?: Partial<Pick<TestProject, 'name' | 'description' | 'githubOwner' | 'githubRepo'>>
+  data?: Partial<Pick<TestProject, 'name' | 'description' | 'githubOwner' | 'githubRepo' | 'key'>>
 ): Promise<TestProject> {
   const prisma = getPrismaClient();
 
@@ -47,47 +51,87 @@ export async function createTestProject(
   const projectName = data?.name ?? 'Test Project';
   const prefixedName = projectName.startsWith('[e2e]') ? projectName : `[e2e] ${projectName}`;
 
+  // Generate unique key from project name if not provided
+  const generateKeyFromRepo = (owner: string, repo: string): string => {
+    // Use owner + repo for uniqueness
+    const combined = `${owner}${repo}`.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    // Take first 3 characters
+    const key = combined.substring(0, 3).padEnd(3, 'X');
+    return key;
+  };
+
+  const githubOwner = data?.githubOwner ?? 'test-owner';
+  const githubRepo = data?.githubRepo ?? `test-repo-${Date.now()}`;
+  const projectKey = data?.key ?? generateKeyFromRepo(githubOwner, githubRepo);
+
+  // Use create - each test should have unique owner/repo combination
   const project = await prisma.project.create({
     data: {
       name: prefixedName,
+      key: projectKey,
       description: data?.description ?? 'Test project description',
-      githubOwner: data?.githubOwner ?? 'test-owner',
-      githubRepo: data?.githubRepo ?? `test-repo-${Date.now()}`,
+      githubOwner,
+      githubRepo,
       userId: testUser.id,
       updatedAt: new Date(),
     },
   });
 
-  return project;
+  return { ...project, key: project.key ?? data?.key };  // Ensure key is returned
 }
 
 /**
  * Create a test ticket with projectId
+ * Uses createTicket helper to ensure ticketNumber and ticketKey are generated
+ * Allows overriding ticketNumber and ticketKey for test-specific keys
  */
 export async function createTestTicket(
   projectId: number,
-  data?: Partial<Pick<TestTicket, 'title' | 'description' | 'stage'>>
+  data?: Partial<Pick<TestTicket, 'title' | 'description' | 'stage' | 'ticketNumber' | 'ticketKey'>>
 ): Promise<TestTicket> {
-  const prisma = getPrismaClient();
+  // If ticketNumber and ticketKey provided, use direct creation
+  if (data?.ticketNumber !== undefined && data?.ticketKey !== undefined) {
+    const prisma = getPrismaClient();
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: data?.title ?? 'Test Ticket',
+        description: data?.description ?? 'Test ticket description',
+        stage: (data?.stage ?? 'INBOX') as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP',
+        projectId,
+        ticketNumber: data.ticketNumber,
+        ticketKey: data.ticketKey,
+        updatedAt: new Date(),
+      },
+    });
+    return ticket as TestTicket;
+  }
 
-  const ticket = await prisma.ticket.create({
-    data: {
-      title: data?.title ?? 'Test Ticket',
-      description: data?.description ?? 'Test ticket description',
-      projectId,
-      stage: (data?.stage ?? 'INBOX') as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP',
-      updatedAt: new Date(),
-    },
+  // Otherwise use createTicket helper which auto-generates ticketNumber and ticketKey
+  const prisma = getPrismaClient();
+  const ticket = await createTicket(projectId, {
+    title: data?.title ?? 'Test Ticket',
+    description: data?.description ?? 'Test ticket description',
+    clarificationPolicy: undefined,
+    attachments: undefined,
   });
 
-  return ticket;
+  // If stage specified and not INBOX, update it
+  if (data?.stage && data.stage !== 'INBOX') {
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { stage: data.stage as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP' },
+    });
+    return updatedTicket as TestTicket;
+  }
+
+  return ticket as TestTicket;
 }
 
 /**
  * Creates test project and ticket in INBOX stage (for transition API tests)
- * Uses standard test project 1 from db-cleanup pattern
+ * Supports worker isolation by accepting projectId parameter
  */
-export async function setupTestData(): Promise<{ project: TestProject; ticket: TestTicket }> {
+export async function setupTestData(projectId?: number): Promise<{ project: TestProject; ticket: TestTicket }> {
   const prisma = getPrismaClient();
 
   // Ensure test user exists (matches db-cleanup.ts pattern)
@@ -103,35 +147,37 @@ export async function setupTestData(): Promise<{ project: TestProject; ticket: T
     },
   });
 
-  // Ensure test project 1 exists with test user (follows db-cleanup.ts pattern)
+  // Use provided projectId or default to 1 for backward compatibility
+  const targetProjectId = projectId ?? 1;
+  const projectKey = `E2E${targetProjectId}`;
+
+  // Ensure test project exists with test user (follows db-cleanup.ts pattern)
   const project = await prisma.project.upsert({
-    where: { id: 1 },
+    where: { id: targetProjectId },
     update: {
       userId: testUser.id,
     },
     create: {
-      id: 1,
-      name: '[e2e] Test Project',
-      description: 'Project for automated tests',
+      id: targetProjectId,
+      key: projectKey,
+      name: `[e2e] Test Project ${targetProjectId}`,
+      description: `Project ${targetProjectId} for automated tests`,
       githubOwner: 'test',
-      githubRepo: 'test',
+      githubRepo: `test${targetProjectId}`,
       userId: testUser.id,
       updatedAt: new Date(),
     },
   });
 
   // Create a fresh ticket in INBOX stage
-  const ticket = await prisma.ticket.create({
-    data: {
-      title: '[e2e] Test Ticket for Transition',
-      description: 'Test ticket for transition API E2E tests',
-      stage: 'INBOX',
-      projectId: project.id,
-      updatedAt: new Date(),
-    },
+  const ticket = await createTicket(project.id, {
+    title: '[e2e] Test Ticket for Transition',
+    description: 'Test ticket for transition API E2E tests',
+    clarificationPolicy: undefined,
+    attachments: undefined,
   });
 
-  return { project, ticket };
+  return { project, ticket: ticket as TestTicket };
 }
 
 /**
@@ -169,6 +215,7 @@ export async function createTicketWithJob(
     },
     create: {
       id: 1,
+      key: 'E2E', // Test project 1 key
       name: '[e2e] Test Project',
       description: 'Project for automated tests',
       githubOwner: 'test',
@@ -179,15 +226,20 @@ export async function createTicketWithJob(
   });
 
   // Create ticket
-  const ticket = await prisma.ticket.create({
-    data: {
-      title: data.title ?? `[e2e] Test Ticket in ${data.stage}`,
-      description: data.description ?? 'Test ticket for job validation',
-      stage: data.stage,
-      projectId: project.id,
-      updatedAt: new Date(),
-    },
+  const ticket = await createTicket(project.id, {
+    title: data.title ?? `[e2e] Test Ticket in ${data.stage}`,
+    description: data.description ?? 'Test ticket for job validation',
+    clarificationPolicy: undefined,
+    attachments: undefined,
   });
+
+  // Update stage if not INBOX
+  if (data.stage !== 'INBOX') {
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { stage: data.stage },
+    });
+  }
 
   // Create job with specified status
   const job = await prisma.job.create({
@@ -202,7 +254,7 @@ export async function createTicketWithJob(
     },
   });
 
-  return { ticket, jobId: job.id };
+  return { ticket: ticket as TestTicket, jobId: job.id };
 }
 
 /**
@@ -304,6 +356,7 @@ export async function setupMemberAuthTestData(): Promise<{
     },
     create: {
       id: 1,
+      key: 'E2E', // Test project 1 key
       name: '[e2e] Test Project',
       description: 'Project for automated tests',
       githubOwner: 'test',

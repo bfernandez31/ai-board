@@ -8,17 +8,19 @@
  * - Combined markdown with mentions
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { prisma } from '@/lib/db/client';
+import { getProjectKey, getProjectGithub } from '../../helpers/db-cleanup';
 
 const TEST_USER_EMAIL = 'test@e2e.local';
-const TEST_PROJECT_ID = 1;
-const TEST_TICKET_ID = 1;
 
 /**
  * Setup: Create test user, project, and ticket before each test
  */
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page , projectId }) => {
+  const github = getProjectGithub(projectId);
+  const projectKey = getProjectKey(projectId);
+
   // Create test user (project owner)
   const testUser = await prisma.user.upsert({
     where: { email: TEST_USER_EMAIL },
@@ -37,15 +39,16 @@ test.beforeEach(async ({ page }) => {
 
   // Ensure test project exists
   await prisma.project.upsert({
-    where: { id: TEST_PROJECT_ID },
+    where: { id: projectId },
     update: { userId: testUser.id },
     create: {
-      id: TEST_PROJECT_ID,
+      id: projectId,
       name: '[e2e] Test Project',
       description: 'Test project for E2E tests',
-      githubOwner: 'test',
-      githubRepo: 'test',
+      githubOwner: github.owner,
+      githubRepo: github.repo,
       userId: testUser.id,
+      key: projectKey,
       updatedAt: new Date(),
     },
   });
@@ -54,42 +57,48 @@ test.beforeEach(async ({ page }) => {
   await prisma.projectMember.upsert({
     where: {
       projectId_userId: {
-        projectId: TEST_PROJECT_ID,
+        projectId,
         userId: testUser.id,
       },
     },
     update: {},
     create: {
-      projectId: TEST_PROJECT_ID,
+      projectId,
       userId: testUser.id,
       role: 'owner',
     },
   });
 
   // Ensure test ticket exists
-  await prisma.ticket.upsert({
-    where: { id: TEST_TICKET_ID },
-    update: { projectId: TEST_PROJECT_ID },
+  const testTicket = await prisma.ticket.upsert({
+    where: {
+      projectId_ticketNumber: {
+        projectId,
+        ticketNumber: 1,
+      }
+    },
+    update: {},
     create: {
-      id: TEST_TICKET_ID,
       title: '[e2e] Test Ticket for Markdown Comments',
       description: 'Ticket for testing markdown rendering in comments',
       stage: 'INBOX',
-      projectId: TEST_PROJECT_ID,
+      projectId,
+      ticketNumber: 1,
+      ticketKey: `${projectKey}-1`,
       updatedAt: new Date(),
     },
   });
 
   // Clean up existing comments
   await prisma.comment.deleteMany({
-    where: { ticketId: TEST_TICKET_ID },
+    where: { ticketId: testTicket.id },
   });
 
   // Navigate to board and open ticket modal
-  await page.goto(`/projects/${TEST_PROJECT_ID}/board`);
+  await page.goto(`/projects/${projectId}/board`);
 
   // Click ticket to open detail modal
-  await page.click(`[data-ticket-id="${TEST_TICKET_ID}"]`);
+  await page.click(`[data-ticket-id="${testTicket.id}"]`);
   await page.waitForSelector('[role="dialog"]');
 
   // Click Conversation tab and wait for tab content to be visible
@@ -99,12 +108,8 @@ test.beforeEach(async ({ page }) => {
 
 /**
  * Cleanup: Remove test data after each test
+ * Note: Comments are already cleaned up in beforeEach via cleanupDatabase
  */
-test.afterEach(async () => {
-  await prisma.comment.deleteMany({
-    where: { ticketId: TEST_TICKET_ID },
-  });
-});
 
 /**
  * ======================
@@ -113,7 +118,7 @@ test.afterEach(async () => {
  */
 
 test.describe('Markdown Rendering', () => {
-  test('T001: Bold text should render with strong styling', async ({ page }) => {
+  test('T001: Bold text should render with strong styling', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     // Type comment with bold markdown
@@ -136,7 +141,7 @@ test.describe('Markdown Rendering', () => {
     await expect(newComment).not.toContainText('**');
   });
 
-  test('T002: Italic text should render with em styling', async ({ page }) => {
+  test('T002: Italic text should render with em styling', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('This is *italic text* in a comment');
@@ -152,7 +157,7 @@ test.describe('Markdown Rendering', () => {
     await expect(emElement).toHaveText('italic text');
   });
 
-  test('T003: Inline code should render with code element', async ({ page }) => {
+  test('T003: Inline code should render with code element', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('Use the `console.log()` function');
@@ -171,7 +176,7 @@ test.describe('Markdown Rendering', () => {
     await expect(newComment.getByText('console.log()')).toBeVisible();
   });
 
-  test('T004: Links should be clickable', async ({ page }) => {
+  test('T004: Links should be clickable', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('Check this [link](https://example.com)');
@@ -188,7 +193,7 @@ test.describe('Markdown Rendering', () => {
     await expect(linkElement).toHaveAttribute('target', '_blank');
   });
 
-  test('T005: Unordered lists should render properly', async ({ page }) => {
+  test('T005: Unordered lists should render properly', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('List:\n- Item 1\n- Item 2\n- Item 3');
@@ -209,7 +214,7 @@ test.describe('Markdown Rendering', () => {
     await expect(listItems.nth(2)).toHaveText('Item 3');
   });
 
-  test('T006: Ordered lists should render properly', async ({ page }) => {
+  test('T006: Ordered lists should render properly', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('Steps:\n1. First step\n2. Second step\n3. Third step');
@@ -230,7 +235,7 @@ test.describe('Markdown Rendering', () => {
     await expect(listItems.nth(2)).toHaveText('Third step');
   });
 
-  test('T007: Blockquotes should render with proper styling', async ({ page }) => {
+  test('T007: Blockquotes should render with proper styling', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('> This is a quote\n> Second line');
@@ -246,7 +251,7 @@ test.describe('Markdown Rendering', () => {
     await expect(blockquoteElement).toContainText('This is a quote');
   });
 
-  test('T008: Combined markdown formats should work together', async ({ page }) => {
+  test('T008: Combined markdown formats should work together', async ({ page , projectId }) => {
     const commentInput = page.locator('textarea[placeholder*="Write a comment"]');
 
     await commentInput.fill('This has **bold** and *italic* and `code`');

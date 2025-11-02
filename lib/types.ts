@@ -77,6 +77,8 @@ export interface BoardProps {
  */
 export interface TicketWithVersion {
   id: number;
+  ticketNumber: number;
+  ticketKey: string;
   title: string;
   description: string | null;
   stage: Stage;

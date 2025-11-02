@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -10,15 +10,15 @@ import { cleanupDatabase } from '../../helpers/db-cleanup';
  */
 
 test.describe('Empty Board Display', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, projectId }) => {
     // Clean database before each test
-    await cleanupDatabase();
+    await cleanupDatabase(projectId);
 
     // Navigate to board page
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
   });
 
-  test('should display 6 columns with correct labels', async ({ page }) => {
+  test('should display 6 columns with correct labels', async ({ page , projectId }) => {
     // Check for all 6 stage columns
     const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
@@ -32,7 +32,7 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should display badge with 0 in each empty column', async ({ page }) => {
+  test('should display badge with 0 in each empty column', async ({ page , projectId }) => {
     const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
@@ -48,7 +48,7 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should have color-coded columns', async ({ page }) => {
+  test('should have color-coded columns', async ({ page , projectId }) => {
     // Color mappings from data-model.md
     const stageColors = {
       INBOX: 'gray',
@@ -88,7 +88,7 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should apply dark theme', async ({ page }) => {
+  test('should apply dark theme', async ({ page , projectId }) => {
     // Check for dark theme on main element (where bg-black is applied)
     const main = page.locator('main');
 
@@ -111,7 +111,7 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should display columns side-by-side on desktop', async ({ page }) => {
+  test('should display columns side-by-side on desktop', async ({ page , projectId }) => {
     // Set desktop viewport
     await page.setViewportSize({ width: 1920, height: 1080 });
 
@@ -133,7 +133,7 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should be responsive on mobile', async ({ page }) => {
+  test('should be responsive on mobile', async ({ page , projectId }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -146,7 +146,7 @@ test.describe('Empty Board Display', () => {
     await expect(firstColumn).toBeVisible();
   });
 
-  test('should have accessible column headers', async ({ page }) => {
+  test('should have accessible column headers', async ({ page , projectId }) => {
     const stages = ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP'];
 
     for (const stage of stages) {
@@ -159,10 +159,10 @@ test.describe('Empty Board Display', () => {
     }
   });
 
-  test('should load within performance budget (<2s)', async ({ page }) => {
+  test('should load within performance budget (<2s)', async ({ page, projectId }) => {
     const startTime = Date.now();
 
-    await page.goto('http://localhost:3000/projects/1/board');
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Wait for board to be visible
     const board = page.locator('main').or(page.locator('[data-testid="board"]'));
@@ -174,8 +174,8 @@ test.describe('Empty Board Display', () => {
     expect(loadTime).toBeLessThan(2000);
   });
 
-  test('should have correct page title', async ({ page }) => {
-    await page.goto('http://localhost:3000/projects/1/board');
+  test('should have correct page title', async ({ page, projectId }) => {
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
 
     // Check page title includes "Board" or "Kanban"
     const title = await page.title();

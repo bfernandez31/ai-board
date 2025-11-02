@@ -2,6 +2,7 @@ import { prisma } from './client';
 import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
+import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 
 /**
  * Fetch all tickets for a specific project, grouped by stage
@@ -16,6 +17,8 @@ export async function getTicketsByStage(
     where: { projectId },
     select: {
       id: true,
+      ticketNumber: true,
+      ticketKey: true,
       title: true,
       description: true,
       stage: true,
@@ -52,6 +55,8 @@ export async function getTicketsByStage(
     if (ticket.stage in grouped) {
       grouped[ticket.stage as Stage].push({
         id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        ticketKey: ticket.ticketKey,
         title: ticket.title,
         description: ticket.description,
         stage: ticket.stage as Stage,
@@ -85,12 +90,28 @@ export async function createTicket(
   projectId: number,
   input: CreateTicketInput
 ) {
+  // Fetch project to get key
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { key: true },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  // Generate ticket number using PostgreSQL sequence
+  const ticketNumber = await getNextTicketNumber(projectId);
+  const ticketKey = `${project.key}-${ticketNumber}`;
+
   // Build data object conditionally to satisfy exactOptionalPropertyTypes
   const baseData = {
     title: input.title,
     description: input.description,
     stage: 'INBOX' as const,
     projectId: projectId,
+    ticketNumber,
+    ticketKey,
     updatedAt: new Date(),
   };
 
@@ -122,6 +143,8 @@ export async function getTicketsWithJobs(projectId: number) {
     where: { projectId },
     select: {
       id: true,
+      ticketNumber: true,
+      ticketKey: true,
       title: true,
       description: true,
       stage: true,
@@ -170,6 +193,8 @@ export async function getTicketsWithJobs(projectId: number) {
     if (ticket.stage in groupedTickets) {
       groupedTickets[ticket.stage as Stage].push({
         id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        ticketKey: ticket.ticketKey,
         title: ticket.title,
         description: ticket.description,
         stage: ticket.stage as Stage,

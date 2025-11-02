@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
@@ -9,9 +9,10 @@ import { prisma } from '@/lib/db/client';
 
 test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Contract Validation', () => {
   const BASE_URL = 'http://localhost:3000';
+  let testTicketId: number;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
 
     // Create test user
     await prisma.user.upsert({
@@ -27,21 +28,21 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     });
 
     // Create test ticket
-    await prisma.ticket.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
+    const testTicket = await prisma.ticket.create({
+      data: {
+        ticketNumber: 1,
+        ticketKey: `E2E${projectId}-1`,
         title: '[e2e] Test Ticket',
         description: 'Test ticket for comments',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
+    testTicketId = testTicket.id;
   });
 
-  test('should return 201 with created comment for valid request', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should return 201 with created comment for valid request', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {
         content: 'This is a test comment',
       },
@@ -52,7 +53,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
 
     const body = await response.json();
     expect(body).toHaveProperty('id');
-    expect(body).toHaveProperty('ticketId', 1);
+    expect(body).toHaveProperty('ticketId', testTicketId);
     expect(body).toHaveProperty('userId');
     expect(body).toHaveProperty('content', 'This is a test comment');
     expect(body).toHaveProperty('createdAt');
@@ -62,8 +63,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(body.user).toHaveProperty('image');
   });
 
-  test('should return 400 for empty content', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should return 400 for empty content', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {
         content: '',
       },
@@ -76,10 +77,10 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  test('should return 400 for content exceeding 2000 characters', async ({ request }) => {
+  test('should return 400 for content exceeding 2000 characters', async ({ request , projectId }) => {
     const longContent = 'a'.repeat(2001);
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {
         content: longContent,
       },
@@ -95,8 +96,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(contentIssue.message).toContain('2000');
   });
 
-  test('should return 400 for missing content field', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should return 400 for missing content field', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {},
     });
 
@@ -106,8 +107,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(body).toHaveProperty('issues');
   });
 
-  test('should return 400 for whitespace-only content', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should return 400 for whitespace-only content', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {
         content: '   ',
       },
@@ -118,8 +119,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(body).toHaveProperty('error', 'Validation failed');
   });
 
-  test('should return 404 for non-existent ticket', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/999999/comments`, {
+  test('should return 404 for non-existent ticket', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/999999/comments`, {
       data: {
         content: 'Comment on non-existent ticket',
       },
@@ -130,8 +131,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[ticketId]/comments - Cont
     expect(body.error).toContain('Ticket not found');
   });
 
-  test('should trim whitespace from content', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/1/comments`, {
+  test('should trim whitespace from content', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${testTicketId}/comments`, {
       data: {
         content: '  Test comment with whitespace  ',
       },

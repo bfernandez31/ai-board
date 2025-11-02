@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 /**
@@ -11,11 +11,11 @@ import { cleanupDatabase } from '../helpers/db-cleanup';
 test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only', () => {
   const BASE_URL = 'http://localhost:3000';
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  async function createTestTicket(request: any, projectId: number = 1) {
+  async function createTestTicket(request: any, projectId: number) {
     const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
       data: {
         title: '[e2e] Test ticket',
@@ -26,10 +26,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     return await response.json();
   }
 
-  test('should return 400 when trying to update stage via PATCH (use /transition instead)', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 400 when trying to update stage via PATCH (use /transition instead)', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         stage: 'SPECIFY',
         version: 1
@@ -46,10 +46,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body.message).toContain('/transition');
   });
 
-  test('should return 200 for valid inline edit (title)', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 200 for valid inline edit (title)', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: 'Updated title',
         version: 1
@@ -62,10 +62,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('version', 2);
   });
 
-  test('should return 200 for valid inline edit (description)', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 200 for valid inline edit (description)', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         description: 'Updated description',
         version: 1
@@ -78,11 +78,11 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('version', 2);
   });
 
-  test('should increment version on successful inline edit', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should increment version on successful inline edit', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
     // First update
-    const response1 = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response1 = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: 'Updated title',
         version: 1
@@ -93,7 +93,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body1.version).toBe(2);
 
     // Second update
-    const response2 = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response2 = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         description: 'Updated description',
         version: 2
@@ -104,8 +104,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body2.version).toBe(3);
   });
 
-  test('should return 404 for non-existent project', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 404 for non-existent project', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
     const response = await request.patch(`${BASE_URL}/api/projects/999999/tickets/${ticket.id}`, {
       data: {
@@ -120,8 +120,8 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body.error).toContain('Project not found');
   });
 
-  test('should return 404 for non-existent ticket', async ({ request }) => {
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/999999`, {
+  test('should return 404 for non-existent ticket', async ({ request , projectId }) => {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/999999`, {
       data: {
         version: 1
       }
@@ -133,11 +133,11 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body.error).toContain('Ticket not found');
   });
 
-  test('should return 409 for version mismatch', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 409 for version mismatch', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
     // Update ticket to increment version
-    await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: 'First update',
         version: 1
@@ -145,7 +145,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     });
 
     // Try to update with old version
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: 'Second update',
         version: 1 // Should be 2 now
@@ -160,7 +160,7 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body.error.toLowerCase()).toMatch(/conflict|modified|version/);
   });
 
-  test('should return 400 for invalid projectId format', async ({ request }) => {
+  test('should return 400 for invalid projectId format', async ({ request , projectId }) => {
     const response = await request.patch(`${BASE_URL}/api/projects/abc/tickets/1`, {
       data: {
         title: 'Updated',
@@ -173,23 +173,24 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('error');
   });
 
-  test('should return 400 for invalid ticketId format', async ({ request }) => {
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/xyz`, {
+  test('should return 404 for invalid ticketId format', async ({ request , projectId }) => {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/xyz`, {
       data: {
         title: 'Updated',
         version: 1
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(404);
     const body = await response.json();
     expect(body).toHaveProperty('error');
+    expect(body.error).toContain('Ticket not found');
   });
 
-  test('should return 400 for title exceeding 100 characters', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 400 for title exceeding 100 characters', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: 'a'.repeat(101),
         version: 1
@@ -201,10 +202,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('error');
   });
 
-  test('should return 400 for description exceeding 2500 characters', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should return 400 for description exceeding 2500 characters', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         description: 'a'.repeat(2501),
         version: 1
@@ -216,10 +217,10 @@ test.describe('PATCH /api/projects/[projectId]/tickets/[id] - Inline Edit Only',
     expect(body).toHaveProperty('error');
   });
 
-  test('should trim title and description', async ({ request }) => {
-    const ticket = await createTestTicket(request);
+  test('should trim title and description', async ({ request , projectId }) => {
+    const ticket = await createTestTicket(request, projectId);
 
-    const response = await request.patch(`${BASE_URL}/api/projects/1/tickets/${ticket.id}`, {
+    const response = await request.patch(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}`, {
       data: {
         title: '  Trimmed Title  ',
         description: '  Trimmed Description  ',

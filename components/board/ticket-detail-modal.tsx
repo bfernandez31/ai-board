@@ -41,6 +41,8 @@ import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions'
  */
 interface TicketData {
   id: number;
+  ticketNumber: number;
+  ticketKey: string;
   title: string;
   description: string | null;
   stage: string;
@@ -296,6 +298,9 @@ export function TicketDetailModal({
           updatedAt: new Date(serverTicket.updatedAt),
           // Preserve project field (API doesn't return it)
           project: localTicket.project,
+          // Ensure ticket number and key are included from server response (with fallback)
+          ticketNumber: serverTicket.ticketNumber ?? localTicket.ticketNumber,
+          ticketKey: serverTicket.ticketKey ?? localTicket.ticketKey,
         };
         setLocalTicket(normalizedTicket);
         if (onUpdate) {
@@ -386,6 +391,9 @@ export function TicketDetailModal({
         // Preserve fields that API doesn't return on updates
         project: localTicket.project,
         attachments: localTicket.attachments,
+        // Ensure ticket number and key are preserved (from response or fallback to current)
+        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
+        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
       };
 
       // Update local ticket with all fields including new version
@@ -491,6 +499,9 @@ export function TicketDetailModal({
         // Preserve fields that API doesn't return on updates
         project: localTicket.project,
         attachments: localTicket.attachments,
+        // Ensure ticket number and key are preserved (from response or fallback to current)
+        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
+        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
       };
 
       // Update local ticket with all fields including new version
@@ -608,6 +619,9 @@ export function TicketDetailModal({
         // Preserve fields that API doesn't return on updates
         project: localTicket.project,
         attachments: localTicket.attachments,
+        // Ensure ticket number and key are preserved (from response or fallback to current)
+        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
+        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
       };
 
       // Update local ticket with all fields including new version
@@ -696,11 +710,11 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Compact metadata row - ticket ID, badges and branch link */}
+          {/* Compact metadata row - ticket key, badges and branch link */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {/* Ticket ID - at the start */}
-            <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-id">
-              #{ticket.id}
+            {/* Ticket Key - at the start */}
+            <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
+              {localTicket?.ticketKey || ticket.ticketKey}
             </span>
 
             <Badge
@@ -1036,7 +1050,7 @@ export function TicketDetailModal({
               data-testid="details-footer"
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono">#{ticket.id}</span>
+                <span className="font-mono">{localTicket?.ticketKey || ticket.ticketKey}</span>
                 <span>·</span>
                 <span>📅 Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</span>
                 <span>·</span>

@@ -20,10 +20,10 @@ try {
 const config = defineConfig({
   testDir: './tests',
   testMatch: ['**/*.spec.ts', '!**/unit/**'], // Run .spec.ts files but exclude unit tests
-  fullyParallel: false, // Disabled to prevent race conditions with database
+  fullyParallel: true, // ✅ Enabled: All tests now use worker-isolation helper
   forbidOnly: !!process.env.CI,
   retries: 0, // No retries for faster feedback during auth setup
-  workers: 1, // Single worker to ensure database consistency
+  workers: 4, // ✅ Parallel execution: Tests use getWorkerProjectId() for isolation (projects 1,2,4,5,6,7)
   reporter: 'html',
   globalSetup: './tests/global-setup.ts',
   globalTeardown: './tests/global-teardown.ts',

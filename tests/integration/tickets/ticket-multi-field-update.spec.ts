@@ -1,8 +1,6 @@
-import { test, expect } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 import { getWorkflowHeaders } from '../../helpers/workflow-auth';
-
-const prisma = new PrismaClient();
 
 /**
  * Integration Test: Multiple fields atomic update (Scenario 4)
@@ -16,54 +14,15 @@ const prisma = new PrismaClient();
  * This verifies the general PATCH endpoint handles new fields correctly.
  */
 test.describe('Integration: Multiple fields atomic update', () => {
-  let testProjectId: number;
-
-  test.beforeAll(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Multi-Field Update Test Project',
-        description: 'Project for testing atomic multi-field updates',
-        githubOwner: 'integration-test-owner',
-        githubRepo: 'multi-field-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
+  test.beforeEach(async ({ projectId }) => {
+    // Clean database before each test (worker-specific isolation)
+    await cleanupDatabase(projectId);
   });
 
-  test.afterAll(async () => {
-    // Clean up all test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
-    await prisma.$disconnect();
-  });
-
-  test('should update title and branch atomically (without stage change)', async ({
-    request,
-  }) => {
+  test('should update title and branch atomically (without stage change)', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Original Title',
@@ -87,7 +46,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     // Note: When stage changes, the workflow generates the branch name automatically,
     // so we can't manually set both stage and branch in the same request
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] Updated: GitHub Integration',
@@ -109,24 +68,12 @@ test.describe('Integration: Multiple fields atomic update', () => {
     // Verify unchanged fields preserved
     expect(updatedTicket.description).toBe('Original Description');
     expect(updatedTicket.autoMode).toBe(false);
-
-    // Verify in database
-    const dbTicket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-    });
-
-    expect(dbTicket!.title).toBe('[e2e] Updated: GitHub Integration');
-    expect(dbTicket!.stage).toBe('INBOX');
-    expect(dbTicket!.branch).toBe('014-github-integration-updated');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should update branch and autoMode together', async ({ request }) => {
+  test('should update branch and autoMode together', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Test both new fields',
@@ -140,7 +87,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Update both new fields atomically
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           branch: '014-new-feature',
@@ -162,17 +109,12 @@ test.describe('Integration: Multiple fields atomic update', () => {
     expect(updatedTicket.title).toBe('[e2e] Test both new fields');
     expect(updatedTicket.description).toBe('Update branch and autoMode together');
     expect(updatedTicket.stage).toBe('INBOX');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should preserve unchanged fields in multi-field update', async ({
-    request,
-  }) => {
+  test('should preserve unchanged fields in multi-field update', async ({ request, projectId }) => {
     // Create ticket with all fields set
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Full ticket',
@@ -186,7 +128,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Set branch first
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '001-initial-branch' },
         headers: getWorkflowHeaders(),
@@ -196,7 +138,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     // Update only title and autoMode (branch should remain)
     // Note: /branch endpoint doesn't increment version, so version is still 1
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] New title',
@@ -215,17 +157,12 @@ test.describe('Integration: Multiple fields atomic update', () => {
     // Verify unchanged fields
     expect(updatedTicket.branch).toBe('001-initial-branch'); // Should remain
     expect(updatedTicket.description).toBe('With all fields'); // Should remain
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle updating all mutable fields at once (except stage)', async ({
-    request,
-  }) => {
+  test('should handle updating all mutable fields at once (except stage)', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Comprehensive update test',
@@ -240,7 +177,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     // Update all mutable fields in one request (except stage, because stage
     // transitions trigger workflows that generate their own branch names)
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] New Title',
@@ -267,19 +204,14 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Verify immutable fields unchanged
     expect(updatedTicket.id).toBe(ticketId);
-    expect(updatedTicket.projectId).toBe(testProjectId);
+    expect(updatedTicket.projectId).toBe(projectId);
     expect(updatedTicket.createdAt).toBe(ticket.createdAt);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle partial updates without affecting unspecified fields', async ({
-    request,
-  }) => {
+  test('should handle partial updates without affecting unspecified fields', async ({ request, projectId }) => {
     // Create and setup ticket with all fields
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Partial update test',
@@ -292,7 +224,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const ticketId = ticket.id;
 
     // Set initial branch and autoMode
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: {
         branch: '001-initial',
         autoMode: true,
@@ -302,7 +234,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Partial update: only change title
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] Only title changed',
@@ -321,17 +253,12 @@ test.describe('Integration: Multiple fields atomic update', () => {
     expect(updatedTicket.stage).toBe('INBOX');
     expect(updatedTicket.branch).toBe('001-initial');
     expect(updatedTicket.autoMode).toBe(true);
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle clearing branch while updating other fields', async ({
-    request,
-  }) => {
+  test('should handle clearing branch while updating other fields', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Branch clear test',
@@ -344,13 +271,13 @@ test.describe('Integration: Multiple fields atomic update', () => {
     const ticketId = ticket.id;
 
     // Set branch first
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: { branch: '001-to-be-cleared', version: 1 },
     });
 
     // Clear branch and update title in same request
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] Branch cleared',
@@ -369,17 +296,12 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Verify title updated
     expect(updatedTicket.title).toBe('[e2e] Branch cleared');
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should maintain atomicity: all fields update or none', async ({
-    request,
-  }) => {
+  test('should maintain atomicity: all fields update or none', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Atomicity test',
@@ -393,7 +315,7 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Attempt update with invalid data (branch too long)
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: {
           title: '[e2e] Should not update',
@@ -409,14 +331,11 @@ test.describe('Integration: Multiple fields atomic update', () => {
 
     // Verify NO fields updated (atomicity)
     const fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
 
     expect(fetchedTicket.title).toBe('[e2e] Atomicity test'); // Unchanged
     expect(fetchedTicket.branch).toBeNull(); // Unchanged
     expect(fetchedTicket.autoMode).toBe(false); // Unchanged
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 });

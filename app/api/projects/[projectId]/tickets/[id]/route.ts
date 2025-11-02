@@ -26,61 +26,78 @@ export async function GET(
     }
 
     const projectId = parseInt(projectIdString, 10);
-    const ticketId = parseInt(ticketIdString, 10);
-
-    if (isNaN(ticketId)) {
-      return NextResponse.json({ error: 'Invalid ticket ID' }, { status: 400 });
-    }
+    const identifier = ticketIdString;
 
     // First verify project access (this will throw if project not found or no access)
     await verifyProjectAccess(projectId);
 
-    // Then verify ticket access (owner OR member via project)
-    const ticketAuth = await verifyTicketAccess(ticketId);
+    // Detect if identifier is numeric ID or ticket key
+    const isNumericId = /^\d+$/.test(identifier);
 
-    // Validate ticket belongs to correct project
-    if (ticketAuth.projectId !== projectId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    let ticket;
 
-    // Fetch ticket with project validation (include project for clarificationPolicy)
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-            clarificationPolicy: true,
-            githubOwner: true,
-            githubRepo: true,
-          },
-        },
-      },
-    });
+    if (isNumericId) {
+      // Lookup by numeric ID (backward compatibility)
+      const ticketId = parseInt(identifier, 10);
 
-    if (!ticket) {
-      // Check if ticket exists in different project
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, projectId: true },
-      });
+      // Verify ticket access (owner OR member via project)
+      const ticketAuth = await verifyTicketAccess(ticketId);
 
-      if (!ticketExists) {
-        return NextResponse.json(
-          { error: 'Ticket not found' },
-          { status: 404 }
-        );
-      } else {
+      // Validate ticket belongs to correct project
+      if (ticketAuth.projectId !== projectId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
+
+      // Fetch ticket with project validation
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+          projectId: projectId,
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              clarificationPolicy: true,
+              githubOwner: true,
+              githubRepo: true,
+            },
+          },
+        },
+      });
+    } else {
+      // Lookup by ticket key (new approach)
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          ticketKey: identifier,
+          projectId: projectId,
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              clarificationPolicy: true,
+              githubOwner: true,
+              githubRepo: true,
+            },
+          },
+        },
+      });
+    }
+
+    if (!ticket) {
+      return NextResponse.json(
+        { error: 'Ticket not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
       id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      ticketKey: ticket.ticketKey,
       title: ticket.title,
       description: ticket.description,
       stage: ticket.stage,
@@ -190,25 +207,45 @@ export async function PATCH(
     }
 
     const projectId = parseInt(projectIdString, 10);
-
-    // Validate ticket ID
-    const ticketId = parseInt(ticketIdString, 10);
-    if (isNaN(ticketId)) {
-      return NextResponse.json(
-        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
-        { status: 400 }
-      );
-    }
+    const identifier = ticketIdString;
 
     // First verify project access (this will throw if project not found or no access)
     await verifyProjectAccess(projectId);
 
-    // Then verify ticket access (owner OR member via project)
-    const ticketAuth = await verifyTicketAccess(ticketId);
+    // Detect if identifier is numeric ID or ticket key
+    const isNumericId = /^\d+$/.test(identifier);
 
-    // Validate ticket belongs to correct project
-    if (ticketAuth.projectId !== projectId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Resolve ticket ID from identifier
+    let ticketId: number;
+
+    if (isNumericId) {
+      ticketId = parseInt(identifier, 10);
+
+      // Verify ticket access (owner OR member via project)
+      const ticketAuth = await verifyTicketAccess(ticketId);
+
+      // Validate ticket belongs to correct project
+      if (ticketAuth.projectId !== projectId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else {
+      // Lookup ticket by key to get numeric ID
+      const ticket = await prisma.ticket.findFirst({
+        where: {
+          ticketKey: identifier,
+          projectId: projectId,
+        },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
+          { status: 404 }
+        );
+      }
+
+      ticketId = ticket.id;
     }
 
     // Parse request body
@@ -329,6 +366,8 @@ export async function PATCH(
         return NextResponse.json(
           {
             id: updatedTicket.id,
+            ticketNumber: updatedTicket.ticketNumber,
+            ticketKey: updatedTicket.ticketKey,
             title: updatedTicket.title,
             description: updatedTicket.description,
             stage: updatedTicket.stage,

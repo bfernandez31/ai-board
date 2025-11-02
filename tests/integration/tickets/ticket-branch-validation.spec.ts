@@ -1,6 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../helpers/worker-isolation';
 import { PrismaClient } from '@prisma/client';
 import { getWorkflowHeaders } from '../../helpers/workflow-auth';
+import { cleanupDatabase } from '../../helpers/db-cleanup';
 
 const prisma = new PrismaClient();
 
@@ -16,52 +17,19 @@ const prisma = new PrismaClient();
  * This ensures validation works correctly at API and database layers.
  */
 test.describe('Integration: Branch validation edge cases', () => {
-  let testProjectId: number;
-
-  test.beforeAll(async () => {
-    // REQUIRED pattern: Create test user before any project operations
-    const testUser = await prisma.user.upsert({
-      where: { email: 'test@e2e.local' },
-      update: {},
-      create: {
-        id: 'test-user-id', // Required: User.id is String (not auto-generated)
-        email: 'test@e2e.local',
-        name: 'E2E Test User',
-        emailVerified: new Date(),
-        updatedAt: new Date(), // Required: User.updatedAt has no default
-      },
-    });
-
-    // Create a test project with [e2e] prefix for automatic cleanup
-    const project = await prisma.project.create({
-      data: {
-        name: '[e2e] Validation Test Project',
-        description: 'Project for testing validation edge cases',
-        githubOwner: 'integration-test-owner',
-        githubRepo: 'validation-test',
-        userId: testUser.id,
-        updatedAt: new Date(), // Required field
-        createdAt: new Date(), // Required field
-      },
-    });
-    testProjectId = project.id;
+  test.beforeEach(async ({ projectId }) => {
+    // Clean up test data before each test for worker isolation
+    await cleanupDatabase(projectId);
   });
 
   test.afterAll(async () => {
-    // Clean up all test data
-    await prisma.ticket.deleteMany({
-      where: { projectId: testProjectId },
-    });
-    await prisma.project.delete({
-      where: { id: testProjectId },
-    });
     await prisma.$disconnect();
   });
 
-  test('should clear branch by setting to null', async ({ request }) => {
+  test('should clear branch by setting to null', async ({ request , projectId }) => {
     // Create ticket with branch
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Ticket with branch to clear',
@@ -74,19 +42,19 @@ test.describe('Integration: Branch validation edge cases', () => {
     const ticketId = ticket.id;
 
     // Set branch
-    await request.patch(`/api/projects/${testProjectId}/tickets/${ticketId}`, {
+    await request.patch(`/api/projects/${projectId}/tickets/${ticketId}`, {
       data: { branch: '014-to-be-cleared', version: 1 },
     });
 
     // Verify branch is set
     let fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBe('014-to-be-cleared');
 
     // Clear branch via general PATCH endpoint
     const clearResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { branch: null, version: 2 },
       }
@@ -99,18 +67,15 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Verify persistence
     fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBeNull();
-
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should clear branch via /branch endpoint', async ({ request }) => {
+  test('should clear branch via /branch endpoint', async ({ request , projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Ticket for branch endpoint clear',
@@ -124,7 +89,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Set branch via specialized endpoint
     await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: '014-to-clear' },
         headers: getWorkflowHeaders(),
@@ -133,7 +98,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Clear branch via specialized endpoint
     const clearResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: null },
         headers: getWorkflowHeaders(),
@@ -145,16 +110,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     const result = await clearResponse.json();
     expect(result.branch).toBeNull();
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should reject branch longer than 200 characters via PATCH', async ({
-    request,
-  }) => {
+  test('should reject branch longer than 200 characters via PATCH', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Max length test',
@@ -170,7 +131,7 @@ test.describe('Integration: Branch validation edge cases', () => {
     const longBranch = 'a'.repeat(201);
 
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { branch: longBranch, version: 1 },
       }
@@ -184,20 +145,16 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Verify branch was NOT updated
     const fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.branch).toBeNull();
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should reject branch longer than 200 characters via /branch endpoint', async ({
-    request,
-  }) => {
+  test('should reject branch longer than 200 characters via /branch endpoint', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Branch endpoint max length test',
@@ -213,7 +170,7 @@ test.describe('Integration: Branch validation edge cases', () => {
     const longBranch = 'b'.repeat(201);
 
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}/branch`,
+      `/api/projects/${projectId}/tickets/${ticketId}/branch`,
       {
         data: { branch: longBranch },
         headers: getWorkflowHeaders(),
@@ -226,16 +183,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     const error = await updateResponse.json();
     expect(error).toHaveProperty('error');
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should accept branch exactly 200 characters (boundary test)', async ({
-    request,
-  }) => {
+  test('should accept branch exactly 200 characters (boundary test)', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Boundary test',
@@ -251,7 +204,7 @@ test.describe('Integration: Branch validation edge cases', () => {
     const exactlyMaxBranch = 'a'.repeat(200);
 
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { branch: exactlyMaxBranch, version: 1 },
       }
@@ -264,14 +217,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     expect(updatedTicket.branch).toBe(exactlyMaxBranch);
     expect(updatedTicket.branch.length).toBe(200);
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should reject invalid autoMode type (string)', async ({ request }) => {
+  test('should reject invalid autoMode type (string)', async ({ request , projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] AutoMode type validation',
@@ -285,7 +236,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Attempt to set autoMode to string "true" instead of boolean true
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: 'yes' as any, version: 1 },
       }
@@ -299,18 +250,16 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Verify autoMode was NOT updated
     const fetchedTicket = await (
-      await request.get(`/api/projects/${testProjectId}/tickets/${ticketId}`)
+      await request.get(`/api/projects/${projectId}/tickets/${ticketId}`)
     ).json();
     expect(fetchedTicket.autoMode).toBe(false);
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should reject invalid autoMode type (number)', async ({ request }) => {
+  test('should reject invalid autoMode type (number)', async ({ request , projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] AutoMode number type test',
@@ -324,7 +273,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Attempt to set autoMode to number 1 instead of boolean true
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: 1 as any, version: 1 },
       }
@@ -336,14 +285,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     const error = await updateResponse.json();
     expect(error).toHaveProperty('error');
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should reject invalid autoMode type (null)', async ({ request }) => {
+  test('should reject invalid autoMode type (null)', async ({ request , projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] AutoMode null test',
@@ -357,7 +304,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Attempt to set autoMode to null (should be boolean, not nullable)
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: null as any, version: 1 },
       }
@@ -369,16 +316,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     const error = await updateResponse.json();
     expect(error).toHaveProperty('error');
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should provide clear error message for validation failures', async ({
-    request,
-  }) => {
+  test('should provide clear error message for validation failures', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Error message test',
@@ -392,7 +335,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Test branch too long
     const longBranchResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { branch: 'a'.repeat(201), version: 1 },
       }
@@ -406,7 +349,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Test invalid autoMode type
     const invalidAutoModeResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { autoMode: 'invalid' as any, version: 1 },
       }
@@ -417,16 +360,12 @@ test.describe('Integration: Branch validation edge cases', () => {
     const autoModeError = await invalidAutoModeResponse.json();
     expect(autoModeError.error).toBeTruthy();
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 
-  test('should handle empty string branch (different from null)', async ({
-    request,
-  }) => {
+  test('should handle empty string branch (different from null)', async ({ request, projectId }) => {
     // Create ticket
     const createResponse = await request.post(
-      `/api/projects/${testProjectId}/tickets`,
+      `/api/projects/${projectId}/tickets`,
       {
         data: {
           title: '[e2e] Empty string test',
@@ -440,7 +379,7 @@ test.describe('Integration: Branch validation edge cases', () => {
 
     // Set branch to empty string (should be allowed)
     const updateResponse = await request.patch(
-      `/api/projects/${testProjectId}/tickets/${ticketId}`,
+      `/api/projects/${projectId}/tickets/${ticketId}`,
       {
         data: { branch: '', version: 1 },
       }
@@ -453,7 +392,5 @@ test.describe('Integration: Branch validation edge cases', () => {
     expect(updatedTicket.branch).toBe('');
     expect(updatedTicket.branch).not.toBeNull();
 
-    // Clean up
-    await prisma.ticket.delete({ where: { id: ticketId } });
   });
 });

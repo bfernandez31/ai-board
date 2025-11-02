@@ -1,19 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('Sign-In Page Redesign', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page , projectId }) => {
     await page.goto('/auth/signin');
   });
 
   // User Story 1: GitHub OAuth Sign-In Tests
   test.describe('User Story 1: GitHub OAuth Sign-In', () => {
-    test('displays GitHub OAuth button', async ({ page }) => {
+    test('displays GitHub OAuth button', async ({ page , projectId }) => {
       const githubButton = page.getByRole('button', { name: /continue with github/i });
       await expect(githubButton).toBeVisible();
       await expect(githubButton).toBeEnabled();
     });
 
-    test('GitHub button has proper icon', async ({ page }) => {
+    test('GitHub button has proper icon', async ({ page , projectId }) => {
       const githubButton = page.getByRole('button', { name: /continue with github/i });
 
       // Icon should be present (check for svg element)
@@ -29,7 +29,7 @@ test.describe('Sign-In Page Redesign', () => {
       expect(iconSize.height).toBe(20);
     });
 
-    test('preserves callbackUrl parameter', async ({ page }) => {
+    test('preserves callbackUrl parameter', async ({ page , projectId }) => {
       await page.goto('/auth/signin?callbackUrl=/projects/3/board');
 
       const githubButton = page.getByRole('button', { name: /continue with github/i });
@@ -42,7 +42,7 @@ test.describe('Sign-In Page Redesign', () => {
 
   // User Story 2: Visual Consistency Tests
   test.describe('User Story 2: Visual Consistency with Site Theme', () => {
-    test('displays header on sign-in page', async ({ page }) => {
+    test('displays header on sign-in page', async ({ page , projectId }) => {
       // Header should be visible
       const header = page.locator('header');
       await expect(header).toBeVisible();
@@ -55,7 +55,7 @@ test.describe('Sign-In Page Redesign', () => {
       await expect(page.getByText('AI-BOARD')).toBeVisible();
     });
 
-    test('displays dark theme background', async ({ page }) => {
+    test('displays dark theme background', async ({ page , projectId }) => {
       // Get the auth layout element with dark background
       const authLayout = page.locator('div.bg-\\[\\#1e1e2e\\]').first();
       await expect(authLayout).toBeVisible();
@@ -68,7 +68,7 @@ test.describe('Sign-In Page Redesign', () => {
       expect(bgColor).toBe('rgb(30, 30, 46)');
     });
 
-    test('displays card with violet border', async ({ page }) => {
+    test('displays card with violet border', async ({ page , projectId }) => {
       // Find the card element with violet border class
       const card = page.locator('[class*="border"]').first();
       await expect(card).toBeVisible();
@@ -82,14 +82,14 @@ test.describe('Sign-In Page Redesign', () => {
       expect(borderColor).toBe('rgb(139, 92, 246)');
     });
 
-    test('uses Catppuccin theme text colors', async ({ page }) => {
+    test('uses Catppuccin theme text colors', async ({ page , projectId }) => {
       const cardDescription = page.locator('[class*="text-\\[hsl"]').first();
 
       // CardDescription should exist with theme color
       await expect(cardDescription).toBeVisible();
     });
 
-    test('is responsive on mobile viewport', async ({ page }) => {
+    test('is responsive on mobile viewport', async ({ page , projectId }) => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
 
@@ -104,7 +104,7 @@ test.describe('Sign-In Page Redesign', () => {
 
   // User Story 3: Multiple OAuth Provider Options Tests
   test.describe('User Story 3: Multiple OAuth Provider Options Display', () => {
-    test('displays three OAuth provider buttons', async ({ page }) => {
+    test('displays three OAuth provider buttons', async ({ page , projectId }) => {
       // GitHub button - active
       const githubButton = page.getByRole('button', { name: /continue with github/i });
       await expect(githubButton).toBeVisible();
@@ -121,12 +121,12 @@ test.describe('Sign-In Page Redesign', () => {
       await expect(bitbucketButton).toBeDisabled();
     });
 
-    test('displays "Coming soon" text for disabled providers', async ({ page }) => {
+    test('displays "Coming soon" text for disabled providers', async ({ page , projectId }) => {
       const comingSoonLabels = page.getByText('Coming soon');
       await expect(comingSoonLabels).toHaveCount(2); // GitLab + BitBucket
     });
 
-    test('disabled providers have proper visual styling', async ({ page }) => {
+    test('disabled providers have proper visual styling', async ({ page , projectId }) => {
       // GitLab button should have opacity and cursor styling
       const gitlabButton = page.getByRole('button', { name: /continue with gitlab/i });
 
@@ -138,7 +138,7 @@ test.describe('Sign-In Page Redesign', () => {
       expect(parseFloat(opacity)).toBeLessThan(1.0);
     });
 
-    test('all provider buttons have proper icons', async ({ page }) => {
+    test('all provider buttons have proper icons', async ({ page , projectId }) => {
       // GitHub icon (lucide-react)
       const githubButton = page.getByRole('button', { name: /continue with github/i });
       const githubIcon = githubButton.locator('svg').first();
@@ -158,13 +158,13 @@ test.describe('Sign-In Page Redesign', () => {
 
   // Cross-Story Integration Tests
   test.describe('Integration Tests', () => {
-    test('page structure is semantically correct', async ({ page }) => {
+    test('page structure is semantically correct', async ({ page , projectId }) => {
       // Should have a card with title and description
       await expect(page.getByText(/welcome to ai board/i)).toBeVisible();
       await expect(page.getByText(/sign in with/i)).toBeVisible();
     });
 
-    test('all interactive elements are keyboard accessible', async ({ page }) => {
+    test('all interactive elements are keyboard accessible', async ({ page , projectId }) => {
       // Focus the GitHub button (first interactive element in the form)
       const githubButton = page.getByRole('button', { name: /continue with github/i });
 
@@ -181,7 +181,7 @@ test.describe('Sign-In Page Redesign', () => {
       await expect(githubButton).toBeFocused();
     });
 
-    test('layout is centered on desktop', async ({ page }) => {
+    test('layout is centered on desktop', async ({ page , projectId }) => {
       // Set desktop viewport
       await page.setViewportSize({ width: 1920, height: 1080 });
 

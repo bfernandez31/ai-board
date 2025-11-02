@@ -4,15 +4,15 @@
  * Following TDD approach: tests written before implementation
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 
 test.describe('Landing Page - User Story 4: Authenticated User Redirection', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  test('T008: authenticated user visits / and redirects to /projects', async ({ page }) => {
+  test('T008: authenticated user visits / and redirects to /projects', async ({ page , projectId }) => {
     // Given: User is authenticated (test mode auto-login)
     // When: User visits root page
     await page.goto('/');
@@ -26,7 +26,7 @@ test.describe('Landing Page - User Story 4: Authenticated User Redirection', () 
   });
 
   // TODO: Fix session loading timing issue with useSession() in header
-  test.skip('T009: authenticated user sees application header variant (not marketing header)', async ({ page }) => {
+  test.skip('T009: authenticated user sees application header variant (not marketing header)', async ({ page , projectId }) => {
     // Given: User is authenticated (test mode auto-login)
     // When: User visits root page (redirected to /projects)
     await page.goto('/');
@@ -50,11 +50,11 @@ test.describe('Landing Page - User Story 4: Authenticated User Redirection', () 
 });
 
 test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  test('T013: unauthenticated visitor sees hero section with headline and CTAs', async ({ browser }) => {
+  test('T013: unauthenticated visitor sees hero section with headline and CTAs', async ({ browser , projectId }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
       extraHTTPHeaders: {},
@@ -79,7 +79,7 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     await context.close();
   });
 
-  test('T014: unauthenticated visitor sees 6 feature cards in grid layout', async ({ browser }) => {
+  test('T014: unauthenticated visitor sees 6 feature cards in grid layout', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -102,7 +102,7 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     await context.close();
   });
 
-  test('T015: unauthenticated visitor sees workflow timeline with 5 stages', async ({ browser }) => {
+  test('T015: unauthenticated visitor sees workflow timeline with 5 stages', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -133,7 +133,7 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
     await context.close();
   });
 
-  test('T016: unauthenticated visitor sees final CTA section at bottom', async ({ browser }) => {
+  test('T016: unauthenticated visitor sees final CTA section at bottom', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -154,11 +154,11 @@ test.describe('Landing Page - User Story 1: Unauthenticated Visitor Discovery', 
 });
 
 test.describe('Landing Page - User Story 3: Section Navigation', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  test('T035: clicking "Features" link scrolls to features section', async ({ browser }) => {
+  test('T035: clicking "Features" link scrolls to features section', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -180,7 +180,7 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
     await context.close();
   });
 
-  test('T036: clicking "Workflow" link scrolls to workflow section', async ({ browser }) => {
+  test('T036: clicking "Workflow" link scrolls to workflow section', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -202,7 +202,7 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
     await context.close();
   });
 
-  test('T037: hovering over navigation links shows color transition', async ({ browser }) => {
+  test('T037: hovering over navigation links shows color transition', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -229,11 +229,11 @@ test.describe('Landing Page - User Story 3: Section Navigation', () => {
 });
 
 test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  test('T043: mobile viewport (< 768px) shows hero title scaled to text-6xl', async ({ browser }) => {
+  test('T043: mobile viewport (< 768px) shows hero title scaled to text-6xl', async ({ browser , projectId }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
       extraHTTPHeaders: {},
@@ -255,7 +255,7 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
     await context.close();
   });
 
-  test('T044: mobile viewport shows features grid in single column', async ({ browser }) => {
+  test('T044: mobile viewport shows features grid in single column', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
@@ -280,7 +280,7 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
     await context.close();
   });
 
-  test('T045: mobile viewport shows workflow timeline vertically', async ({ browser }) => {
+  test('T045: mobile viewport shows workflow timeline vertically', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
@@ -305,7 +305,7 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
     await context.close();
   });
 
-  test('T046: mobile viewport CTA buttons meet 44x44px touch target size', async ({ browser }) => {
+  test('T046: mobile viewport CTA buttons meet 44x44px touch target size', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
       viewport: { width: 375, height: 667 },
@@ -341,11 +341,11 @@ test.describe('Landing Page - User Story 5: Responsive Mobile Experience', () =>
 });
 
 test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
   });
 
-  test('T053: keyboard navigation works through all CTAs and links', async ({ browser }) => {
+  test('T053: keyboard navigation works through all CTAs and links', async ({ browser , projectId }) => {
     // Given: User is NOT authenticated
     const context = await browser.newContext({
       extraHTTPHeaders: {},
@@ -377,7 +377,7 @@ test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
     await context.close();
   });
 
-  test('T054: focus indicators visible on interactive elements', async ({ browser }) => {
+  test('T054: focus indicators visible on interactive elements', async ({ browser , projectId }) => {
     const context = await browser.newContext({
       extraHTTPHeaders: {},
     });
@@ -399,7 +399,7 @@ test.describe('Landing Page - Phase 8: Polish & Accessibility', () => {
     await context.close();
   });
 
-  test('T056: landing page renders with JavaScript disabled', async ({ browser }) => {
+  test('T056: landing page renders with JavaScript disabled', async ({ browser , projectId }) => {
     // Given: Browser with JavaScript disabled
     const context = await browser.newContext({
       extraHTTPHeaders: {},

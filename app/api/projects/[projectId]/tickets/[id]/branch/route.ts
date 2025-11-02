@@ -35,15 +35,6 @@ export async function GET(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Validate ticket ID
-    const ticketId = parseInt(ticketIdString, 10);
-    if (isNaN(ticketId)) {
-      return NextResponse.json(
-        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
-        { status: 400 }
-      );
-    }
-
     // Check if project exists
     const project = await getProjectById(projectId);
     if (!project) {
@@ -56,13 +47,34 @@ export async function GET(
       );
     }
 
-    // Check if ticket exists
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-    });
+    // Support both numeric ID and ticketKey (e.g., ABC-123)
+    const ticketKeyRegex = /^[A-Z0-9]{3,6}-\d+$/;
+    let ticket;
+
+    if (ticketKeyRegex.test(ticketIdString)) {
+      // Query by ticketKey
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          ticketKey: ticketIdString,
+          projectId: projectId,
+        },
+      });
+    } else {
+      // Query by numeric ID (backward compatibility)
+      const ticketId = parseInt(ticketIdString, 10);
+      if (isNaN(ticketId)) {
+        return NextResponse.json(
+          { error: 'Invalid ticket identifier', message: 'Ticket identifier must be a number or ticket key (e.g., ABC-123)' },
+          { status: 400 }
+        );
+      }
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+          projectId: projectId,
+        },
+      });
+    }
 
     if (!ticket) {
       return NextResponse.json(
@@ -144,15 +156,6 @@ export async function PATCH(
 
     const projectId = parseInt(projectIdString, 10);
 
-    // Validate ticket ID
-    const ticketId = parseInt(ticketIdString, 10);
-    if (isNaN(ticketId)) {
-      return NextResponse.json(
-        { error: 'Invalid ticket ID', message: 'Ticket ID must be a number' },
-        { status: 400 }
-      );
-    }
-
     // Check if project exists
     const project = await getProjectById(projectId);
     if (!project) {
@@ -184,20 +187,52 @@ export async function PATCH(
 
     const { branch } = parseResult.data;
 
-    // Check if ticket exists with project validation
-    const currentTicket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-    });
+    // Support both numeric ID and ticketKey (e.g., ABC-123)
+    const ticketKeyRegex = /^[A-Z0-9]{3,6}-\d+$/;
+    let currentTicket;
+    let ticketId: number | undefined;
 
-    if (!currentTicket) {
-      // Distinguish between 404 (ticket doesn't exist) and 403 (wrong project)
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, projectId: true },
+    if (ticketKeyRegex.test(ticketIdString)) {
+      // Query by ticketKey
+      currentTicket = await prisma.ticket.findFirst({
+        where: {
+          ticketKey: ticketIdString,
+          projectId: projectId,
+        },
       });
+      ticketId = currentTicket?.id;
+    } else {
+      // Query by numeric ID (backward compatibility)
+      ticketId = parseInt(ticketIdString, 10);
+      if (isNaN(ticketId)) {
+        return NextResponse.json(
+          { error: 'Invalid ticket identifier', message: 'Ticket identifier must be a number or ticket key (e.g., ABC-123)' },
+          { status: 400 }
+        );
+      }
+      currentTicket = await prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+          projectId: projectId,
+        },
+      });
+    }
+
+    if (!currentTicket || !ticketId) {
+      // Distinguish between 404 (ticket doesn't exist) and 403 (wrong project)
+      let ticketExists;
+
+      if (ticketKeyRegex.test(ticketIdString)) {
+        ticketExists = await prisma.ticket.findUnique({
+          where: { ticketKey: ticketIdString },
+          select: { id: true, projectId: true },
+        });
+      } else if (ticketId) {
+        ticketExists = await prisma.ticket.findUnique({
+          where: { id: ticketId },
+          select: { id: true, projectId: true },
+        });
+      }
 
       if (!ticketExists) {
         return NextResponse.json(

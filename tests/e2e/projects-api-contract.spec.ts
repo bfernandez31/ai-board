@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('GET /api/projects Contract', () => {
-  test('returns projects array matching contract', async ({ request }) => {
+  test('returns projects array matching contract', async ({ request , projectId }) => {
     const response = await request.get('http://localhost:3000/api/projects');
 
     // Validate status
@@ -57,13 +57,13 @@ test.describe('GET /api/projects Contract', () => {
       }
 
       // Ensure no extra fields (security check)
-      const allowedKeys = ['id', 'name', 'description', 'githubOwner', 'githubRepo', 'deploymentUrl', 'updatedAt', 'ticketCount', 'lastShippedTicket'];
+      const allowedKeys = ['id', 'name', 'description', 'githubOwner', 'githubRepo', 'deploymentUrl', 'updatedAt', 'ticketCount', 'lastShippedTicket', 'key'];
       const actualKeys = Object.keys(project);
       expect(actualKeys.sort()).toEqual(allowedKeys.sort());
     }
   });
 
-  test('returns empty array when no projects exist', async ({ request }) => {
+  test('returns empty array when no projects exist', async ({ request , projectId }) => {
     // This test assumes a scenario where no projects exist
     // May need database cleanup for this specific test case
     const response = await request.get('http://localhost:3000/api/projects');

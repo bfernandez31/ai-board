@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 import { cleanupDatabase } from '../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
@@ -9,9 +9,11 @@ import { prisma } from '@/lib/db/client';
 
 test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback Contract', () => {
   const BASE_URL = 'http://localhost:3000';
+  let nextTicketNumber = 1;
 
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+    nextTicketNumber = 1; // Reset ticket number counter
 
     // Create test user
     await prisma.user.upsert({
@@ -27,17 +29,20 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     });
   });
 
-  test('should return 200 and reset state for BUILD → INBOX with FAILED job', async ({ request }) => {
+  test('should return 200 and reset state for BUILD → INBOX with FAILED job', async ({ request , projectId }) => {
     // Setup: Create ticket in BUILD stage with FAILED job
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - FAILED',
         description: 'Test ticket for rollback with FAILED job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '123-test-branch',
         version: 5,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -45,7 +50,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'FAILED',
         branch: '123-test-branch',
@@ -55,7 +60,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     });
 
     // Execute rollback
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -88,17 +93,20 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(jobs).toHaveLength(0);
   });
 
-  test('should return 200 and reset state for BUILD → INBOX with CANCELLED job', async ({ request }) => {
+  test('should return 200 and reset state for BUILD → INBOX with CANCELLED job', async ({ request , projectId }) => {
     // Setup: Create ticket in BUILD stage with CANCELLED job (QUICK workflow)
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - CANCELLED',
         description: 'Test ticket for rollback with CANCELLED job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '456-cancelled-branch',
         version: 3,
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -106,7 +114,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'CANCELLED',
         branch: '456-cancelled-branch',
@@ -116,7 +124,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     });
 
     // Execute rollback
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -133,15 +141,18 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     });
   });
 
-  test('should return 400 when job is RUNNING', async ({ request }) => {
+  test('should return 400 when job is RUNNING', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - RUNNING',
         description: 'Test ticket with RUNNING job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '789-running-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -149,7 +160,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'RUNNING',
         branch: '789-running-branch',
@@ -158,7 +169,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -170,15 +181,18 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(body.error).toContain('workflow is still running');
   });
 
-  test('should return 400 when job is COMPLETED', async ({ request }) => {
+  test('should return 400 when job is COMPLETED', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - COMPLETED',
         description: 'Test ticket with COMPLETED job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '101-completed-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -186,7 +200,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'COMPLETED',
         branch: '101-completed-branch',
@@ -196,7 +210,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -208,15 +222,18 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(body.error).toContain('completed successfully');
   });
 
-  test('should return 400 when job is PENDING', async ({ request }) => {
+  test('should return 400 when job is PENDING', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - PENDING',
         description: 'Test ticket with PENDING job',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '102-pending-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -224,7 +241,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'PENDING',
         branch: '102-pending-branch',
@@ -233,7 +250,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -245,15 +262,18 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(body.error).toContain('pending');
   });
 
-  test('should return 400 when workflowType is FULL (not QUICK)', async ({ request }) => {
+  test('should return 400 when workflowType is FULL (not QUICK)', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - FULL Workflow',
         description: 'Test ticket with FULL workflow type',
         stage: 'BUILD',
         workflowType: 'FULL',
         branch: '105-full-workflow-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -261,7 +281,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'implement',
         status: 'FAILED',
         branch: '105-full-workflow-branch',
@@ -270,7 +290,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -282,14 +302,17 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(body.error).toContain('Rollback only available for quick-impl workflows');
   });
 
-  test('should return 400 for SPECIFY → INBOX transition (invalid stage)', async ({ request }) => {
+  test('should return 400 for SPECIFY → INBOX transition (invalid stage)', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - Wrong Stage',
         description: 'Test ticket in SPECIFY stage',
         stage: 'SPECIFY',
         workflowType: 'FULL',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -297,7 +320,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'specify',
         status: 'FAILED',
         branch: '103-specify-branch',
@@ -306,7 +329,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
       },
     });
 
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -320,15 +343,18 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(body.error).toContain('must progress sequentially');
   });
 
-  test('should ignore AI-BOARD jobs and use most recent workflow job', async ({ request }) => {
+  test('should ignore AI-BOARD jobs and use most recent workflow job', async ({ request , projectId }) => {
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `E2E${projectId}-${ticketNumber}`,
         title: '[e2e] Rollback Test - Multiple Jobs',
         description: 'Test ticket with workflow and AI-BOARD jobs',
         stage: 'BUILD',
         workflowType: 'QUICK',
         branch: '104-multi-job-branch',
-        projectId: 1,
+        projectId,
         updatedAt: new Date(),
       },
     });
@@ -337,7 +363,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'quick-impl',
         status: 'FAILED',
         branch: '104-multi-job-branch',
@@ -350,7 +376,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'comment-build',
         status: 'COMPLETED',
         branch: '104-multi-job-branch',
@@ -360,7 +386,7 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     });
 
     // Rollback should succeed (uses FAILED workflow job, ignores AI-BOARD job)
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/${ticket.id}/transition`, {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/${ticket.id}/transition`, {
       data: {
         targetStage: 'INBOX',
       },
@@ -381,8 +407,8 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Rollback
     expect(remainingJobs[0]?.command).toBe('comment-build');
   });
 
-  test('should return 404 when ticket does not exist', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/projects/1/tickets/99999/transition`, {
+  test('should return 404 when ticket does not exist', async ({ request , projectId }) => {
+    const response = await request.post(`${BASE_URL}/api/projects/${projectId}/tickets/99999/transition`, {
       data: {
         targetStage: 'INBOX',
       },

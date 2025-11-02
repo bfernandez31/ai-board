@@ -18,6 +18,7 @@ async function getProjects(): Promise<ProjectsListResponse> {
     // Transform to API response shape
     return projects.map((project) => ({
       id: project.id,
+      key: project.key,
       name: project.name,
       description: project.description,
       githubOwner: project.githubOwner,

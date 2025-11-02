@@ -442,6 +442,8 @@ function BoardContent({
   // Handle ticket update from modal
   type UpdatedModalTicket = {
     id: number;
+    ticketNumber?: number;
+    ticketKey?: string;
     title: string;
     description: string | null;
     stage: Stage | string;
@@ -467,6 +469,9 @@ function BoardContent({
 
       const normalizedTicket: TicketWithVersion = {
         id: updatedTicket.id,
+        // Preserve ticketNumber and ticketKey (from update or fallback to existing)
+        ticketNumber: updatedTicket.ticketNumber ?? existingTicket?.ticketNumber ?? 0,
+        ticketKey: updatedTicket.ticketKey ?? existingTicket?.ticketKey ?? '',
         title: updatedTicket.title,
         description: updatedTicket.description,
         stage: updatedTicket.stage as Stage,

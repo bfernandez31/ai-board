@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noUnusedParameters": false
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.spec.ts"
+  ]
+}

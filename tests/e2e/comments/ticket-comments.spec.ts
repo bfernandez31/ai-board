@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { getPrismaClient } from '../../helpers/db-cleanup';
+import { test, expect } from '../../helpers/worker-isolation';
+import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
 
 /**
  * E2E Tests: Ticket Comments Feature
@@ -19,8 +19,24 @@ import { getPrismaClient } from '../../helpers/db-cleanup';
 
 const prisma = getPrismaClient();
 
+let nextTicketNumber = 1;
+let projectKey = '';
+
 test.describe('Ticket Comments - User Stories', () => {
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
+    // Comprehensive cleanup of all test data
+    await cleanupDatabase(projectId);
+
+    // Reset ticket counter
+    nextTicketNumber = 1;
+
+    // Fetch project key for ticketKey generation
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { key: true },
+    });
+    projectKey = project!.key;
+
     // Create test user (required for comment.userId foreign key)
     await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -46,23 +62,6 @@ test.describe('Ticket Comments - User Stories', () => {
         updatedAt: new Date(),
       },
     });
-
-    // Clean up comments from test tickets
-    await prisma.comment.deleteMany({
-      where: {
-        ticket: {
-          projectId: 1,
-        },
-      },
-    });
-
-    // Clean up test tickets
-    await prisma.ticket.deleteMany({
-      where: {
-        title: { startsWith: '[e2e] Comments' },
-        projectId: 1,
-      },
-    });
   });
 
   test.afterAll(async () => {
@@ -73,21 +72,24 @@ test.describe('Ticket Comments - User Stories', () => {
    * TASK-026: User creates comment
    * User Story: As a user, I want to add comments to tickets so I can communicate with my team
    */
-  test('user can create a comment on a ticket', async ({ page }) => {
+  test('user can create a comment on a ticket', async ({ page , projectId }) => {
     // Setup: Create test ticket
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Create',
         description: 'Test ticket for comment creation',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -115,7 +117,7 @@ test.describe('Ticket Comments - User Stories', () => {
     const [response] = await Promise.all([
       page.waitForResponse(
         (resp) =>
-          resp.url().includes(`/api/projects/1/tickets/${ticket.id}/comments`) &&
+          resp.url().includes(`/api/projects/${projectId}/tickets/${ticket.id}/comments`) &&
           resp.request().method() === 'POST'
       ),
       submitButton.click(),
@@ -142,14 +144,17 @@ test.describe('Ticket Comments - User Stories', () => {
    * TASK-027: User views comments with markdown rendering
    * User Story: As a user, I want to see formatted comments so I can read structured information
    */
-  test('user can view comments with markdown formatting', async ({ page }) => {
+  test('user can view comments with markdown formatting', async ({ page , projectId }) => {
     // Setup: Create ticket with markdown comment
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Markdown',
         description: 'Test ticket for markdown rendering',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -167,7 +172,7 @@ Multi-line content is preserved.`;
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -187,14 +192,17 @@ Multi-line content is preserved.`;
    * TASK-028: User deletes own comment
    * User Story: As a user, I want to delete my own comments so I can remove mistakes
    */
-  test('user can delete their own comment', async ({ page }) => {
+  test('user can delete their own comment', async ({ page , projectId }) => {
     // Setup: Create ticket with user's comment
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Delete Own',
         description: 'Test ticket for deleting own comment',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -209,7 +217,7 @@ Multi-line content is preserved.`;
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -246,7 +254,7 @@ Multi-line content is preserved.`;
     // Wait for DELETE request to complete
     await page.waitForResponse(
       (resp) =>
-        resp.url().includes(`/api/projects/1/tickets/${ticket.id}/comments/${comment.id}`) &&
+        resp.url().includes(`/api/projects/${projectId}/tickets/${ticket.id}/comments/${comment.id}`) &&
         resp.request().method() === 'DELETE'
     );
 
@@ -264,14 +272,17 @@ Multi-line content is preserved.`;
    * TASK-029: User cannot delete another user's comment
    * User Story: As a user, I should not be able to delete others' comments for data integrity
    */
-  test('user cannot delete another user\'s comment', async ({ page }) => {
+  test('user cannot delete another user\'s comment', async ({ page , projectId }) => {
     // Setup: Create ticket with another user's comment
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Delete Others',
         description: 'Test ticket for permission check',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
@@ -286,7 +297,7 @@ Multi-line content is preserved.`;
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -310,21 +321,24 @@ Multi-line content is preserved.`;
    * TASK-030: Tab navigation with keyboard shortcuts
    * User Story: As a user, I want keyboard shortcuts to quickly switch between tabs
    */
-  test('user can navigate tabs with keyboard shortcuts', async ({ page }) => {
+  test('user can navigate tabs with keyboard shortcuts', async ({ page , projectId }) => {
     // Setup: Create ticket
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Keyboard Nav',
         description: 'Test ticket for keyboard navigation',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
@@ -350,21 +364,24 @@ Multi-line content is preserved.`;
    * TASK-031: Existing functionality preserved in tabs
    * User Story: As a user, I want all existing ticket features to work in the new tabs layout
    */
-  test('existing ticket features work in Details tab', async ({ page }) => {
+  test('existing ticket features work in Details tab', async ({ page , projectId }) => {
     // Setup: Create ticket
+    const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
         title: '[e2e] Comments Test - Existing Features',
         description: 'Original description',
         stage: 'SPECIFY',
-        projectId: 1,
+        projectId,
         workflowType: 'FULL',
         updatedAt: new Date(),
       },
     });
 
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
 
     // Click ticket to open detail modal
     await page.click(`[data-ticket-id="${ticket.id}"]`);
