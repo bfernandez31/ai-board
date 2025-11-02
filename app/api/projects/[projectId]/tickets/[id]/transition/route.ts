@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Stage } from '@prisma/client';
+import { Stage, type Job } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
+import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 
 // Zod schema for request validation
 const TransitionRequestSchema = z.object({
@@ -36,15 +37,14 @@ export async function POST(
   try {
     // Await params in Next.js 15
     const params = await context.params;
-    const { projectId: projectIdString, id: ticketIdString } = params;
+    const { projectId: projectIdString, id: ticketIdentifier } = params;
 
-    // Parse IDs
+    // Parse project ID
     const projectId = parseInt(projectIdString, 10);
-    const ticketId = parseInt(ticketIdString, 10);
 
-    if (isNaN(projectId) || isNaN(ticketId)) {
+    if (isNaN(projectId)) {
       return NextResponse.json(
-        { error: 'Invalid project ID or ticket ID' },
+        { error: 'Invalid project ID' },
         { status: 400 }
       );
     }
@@ -72,41 +72,25 @@ export async function POST(
     // Workflow authentication uses Bearer token, not session
     // Authorization is enforced by checking ticket.projectId matches requested projectId
 
-    // Fetch ticket with workflow jobs
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId,
-      },
-      include: {
-        jobs: {
-          where: {
-            command: {
-              not: {
-                startsWith: 'comment-',
-              },
+    // Fetch ticket with workflow jobs (supports both numeric ID and ticketKey)
+    const ticket = await resolveTicketWithRelations(projectId, ticketIdentifier, {
+      jobs: {
+        where: {
+          command: {
+            not: {
+              startsWith: 'comment-',
             },
           },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          take: 1,
         },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        take: 1,
       },
     });
 
     if (!ticket) {
-      // Check if ticket exists in a different project
-      const ticketExists = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, projectId: true },
-      });
-
-      if (!ticketExists) {
-        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-      } else {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
     // Detect rollback attempt (BUILD → INBOX)
@@ -114,7 +98,8 @@ export async function POST(
 
     if (isRollbackAttempt) {
       // Get most recent workflow job
-      const mostRecentJob = ticket.jobs[0] || null;
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
 
       // Validate rollback eligibility (only for quick-impl workflows)
       const validation = canRollbackToInbox(
@@ -132,7 +117,7 @@ export async function POST(
       const updatedTicket = await prisma.$transaction(async (tx) => {
         // Reset ticket state
         const updated = await tx.ticket.update({
-          where: { id: ticketId },
+          where: { id: ticket.id },
           data: {
             stage: 'INBOX',
             workflowType: 'FULL',
@@ -164,7 +149,7 @@ export async function POST(
     // Handle normal transitions
     // Fetch ticket with project relation for workflow dispatch
     const ticketWithProject = await prisma.ticket.findUnique({
-      where: { id: ticketId },
+      where: { id: ticket.id },
       include: { project: true },
     });
 
@@ -199,7 +184,7 @@ export async function POST(
     let currentVersion = ticket.version;
     if (isQuickImpl) {
       const refreshedTicket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         select: { version: true },
       });
       currentVersion = refreshedTicket?.version || ticket.version;
@@ -211,7 +196,7 @@ export async function POST(
     try {
       const updatedTicket = await prisma.ticket.update({
         where: {
-          id: ticketId,
+          id: ticket.id,
           version: currentVersion,
         },
         data: {

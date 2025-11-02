@@ -3,6 +3,7 @@ import { updateBranchSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
 
 /**
  * GET /api/projects/[projectId]/tickets/[id]/branch
@@ -19,7 +20,7 @@ export async function GET(
   try {
     // Await params in Next.js 15
     const params = await context.params;
-    const { projectId: projectIdString, id: ticketIdString } = params;
+    const { projectId: projectIdString, id: ticketIdentifier } = params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
@@ -48,33 +49,7 @@ export async function GET(
     }
 
     // Support both numeric ID and ticketKey (e.g., ABC-123)
-    const ticketKeyRegex = /^[A-Z0-9]{3,6}-\d+$/;
-    let ticket;
-
-    if (ticketKeyRegex.test(ticketIdString)) {
-      // Query by ticketKey
-      ticket = await prisma.ticket.findFirst({
-        where: {
-          ticketKey: ticketIdString,
-          projectId: projectId,
-        },
-      });
-    } else {
-      // Query by numeric ID (backward compatibility)
-      const ticketId = parseInt(ticketIdString, 10);
-      if (isNaN(ticketId)) {
-        return NextResponse.json(
-          { error: 'Invalid ticket identifier', message: 'Ticket identifier must be a number or ticket key (e.g., ABC-123)' },
-          { status: 400 }
-        );
-      }
-      ticket = await prisma.ticket.findFirst({
-        where: {
-          id: ticketId,
-          projectId: projectId,
-        },
-      });
-    }
+    const ticket = await resolveTicket(projectId, ticketIdentifier);
 
     if (!ticket) {
       return NextResponse.json(
@@ -140,7 +115,7 @@ export async function PATCH(
 
     // Await params in Next.js 15
     const params = await context.params;
-    const { projectId: projectIdString, id: ticketIdString } = params;
+    const { projectId: projectIdString, id: ticketIdentifier } = params;
 
     // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
@@ -188,66 +163,18 @@ export async function PATCH(
     const { branch } = parseResult.data;
 
     // Support both numeric ID and ticketKey (e.g., ABC-123)
-    const ticketKeyRegex = /^[A-Z0-9]{3,6}-\d+$/;
-    let currentTicket;
-    let ticketId: number | undefined;
+    const currentTicket = await resolveTicket(projectId, ticketIdentifier);
 
-    if (ticketKeyRegex.test(ticketIdString)) {
-      // Query by ticketKey
-      currentTicket = await prisma.ticket.findFirst({
-        where: {
-          ticketKey: ticketIdString,
-          projectId: projectId,
-        },
-      });
-      ticketId = currentTicket?.id;
-    } else {
-      // Query by numeric ID (backward compatibility)
-      ticketId = parseInt(ticketIdString, 10);
-      if (isNaN(ticketId)) {
-        return NextResponse.json(
-          { error: 'Invalid ticket identifier', message: 'Ticket identifier must be a number or ticket key (e.g., ABC-123)' },
-          { status: 400 }
-        );
-      }
-      currentTicket = await prisma.ticket.findFirst({
-        where: {
-          id: ticketId,
-          projectId: projectId,
-        },
-      });
-    }
-
-    if (!currentTicket || !ticketId) {
-      // Distinguish between 404 (ticket doesn't exist) and 403 (wrong project)
-      let ticketExists;
-
-      if (ticketKeyRegex.test(ticketIdString)) {
-        ticketExists = await prisma.ticket.findUnique({
-          where: { ticketKey: ticketIdString },
-          select: { id: true, projectId: true },
-        });
-      } else if (ticketId) {
-        ticketExists = await prisma.ticket.findUnique({
-          where: { id: ticketId },
-          select: { id: true, projectId: true },
-        });
-      }
-
-      if (!ticketExists) {
-        return NextResponse.json(
-          { error: 'Ticket not found' },
-          { status: 404 }
-        );
-      } else {
-        // Ticket exists but belongs to different project
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    if (!currentTicket) {
+      return NextResponse.json(
+        { error: 'Ticket not found' },
+        { status: 404 }
+      );
     }
 
     // Update branch
     const updatedTicket = await prisma.ticket.update({
-      where: { id: ticketId },
+      where: { id: currentTicket.id },
       data: {
         branch,
         updatedAt: new Date(), // Explicitly update timestamp
