@@ -51,19 +51,16 @@ export function DemoTicketCard({
       role="article"
       aria-label={`Demo ticket: ${ticket.title}`}
     >
-      {/* Header: ID and Badge */}
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-xs text-[#a6adc8] font-mono font-semibold">
-          #{ticket.id}
-        </span>
+      {/* Header: Badge */}
+      <div className="flex items-start justify-end mb-3">
         <Badge className="bg-[#89b4fa]/20 text-[#89b4fa] border-[#89b4fa]/50 hover:bg-[#89b4fa]/30 text-xs px-2 py-0.5 font-semibold">
           SONNET
         </Badge>
       </div>
 
-      {/* Title */}
+      {/* Title with ID */}
       <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden">
-        {ticket.title}
+        <span className="text-[#89b4fa]">#{ticket.id}</span> - {ticket.title}
       </h3>
     </Card>
   );
