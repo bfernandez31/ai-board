@@ -7,13 +7,15 @@ import {
 } from '@/app/lib/schemas/ai-board-comment';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
+import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
 
 /**
  * Schema for route parameters
+ * Supports both numeric ID and ticketKey (e.g., "ABC-123")
  */
 const RouteParamsSchema = z.object({
   projectId: z.string().regex(/^\d+$/),
-  id: z.string().regex(/^\d+$/),
+  id: z.string().min(1), // Accept both numeric ID and ticketKey
 });
 
 /**
@@ -54,7 +56,13 @@ export async function POST(
     }
 
     const projectId = parseInt(projectIdString, 10);
-    const ticketId = parseInt(ticketIdString, 10);
+
+    if (isNaN(projectId)) {
+      return NextResponse.json(
+        { error: 'Invalid project ID' },
+        { status: 400 }
+      );
+    }
 
     // Parse and validate request body
     const body = await request.json();
@@ -81,14 +89,8 @@ export async function POST(
       );
     }
 
-    // Verify ticket exists and belongs to project
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId: projectId,
-      },
-      select: { id: true },
-    });
+    // Resolve ticket (supports both numeric ID and ticketKey)
+    const ticket = await resolveTicket(projectId, ticketIdString);
 
     if (!ticket) {
       return NextResponse.json(
@@ -96,6 +98,8 @@ export async function POST(
         { status: 404 }
       );
     }
+
+    const ticketId = ticket.id;
 
     // Create comment with AI-BOARD authorship
     const comment = await prisma.comment.create({
