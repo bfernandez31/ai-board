@@ -189,10 +189,6 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         run: npx playwright install chromium --with-deps
 
-      - name: Install Playwright OS Dependencies
-        if: ${{ env.SKIP_EXECUTION != 'true' && steps.playwright-cache.outputs.cache-hit == 'true' }}
-        run: npx playwright install-deps
-
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
