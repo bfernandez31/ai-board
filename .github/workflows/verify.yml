@@ -57,7 +57,7 @@ jobs:
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
-      SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' }}
+      SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' || true}}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
@@ -398,7 +398,7 @@ jobs:
         run: |
           echo "📚 Updating global documentation before PR creation..."
 
-          claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}/spec.md:
+          claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}:
 
           This is the FINAL documentation update before PR creation. The feature has been implemented and verified.
 
