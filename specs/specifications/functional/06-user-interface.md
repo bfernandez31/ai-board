@@ -260,7 +260,8 @@ The user interface provides an intuitive, modern experience for managing tickets
 ### Project Cards
 
 **Information Display**:
-- Shipped ticket title with checkmark icon (truncated with ellipsis)
+- Shipped ticket key (bold, e.g., "ABC-123") followed by title with checkmark icon
+- Full text (key + title) truncated with ellipsis if too long
 - Metadata line displayed below ticket title:
   - Relative timestamp ("Shipped 2h ago")
   - Total ticket count ("· 5 total")
@@ -274,8 +275,8 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Hover tooltips for truncated ticket titles
 
 **Text Truncation**:
-- Long ticket titles truncated with ellipsis
-- Full titles visible on hover via tooltip
+- Long ticket key + title text truncated with ellipsis
+- Full text (key + title) visible on hover via tooltip
 - Maintains consistent card layout
 - Prevents breaking fixed-width containers
 
