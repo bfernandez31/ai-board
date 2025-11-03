@@ -174,6 +174,11 @@ model Ticket {
 - `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects)
+- `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
+  - Set when manual deployment triggered from VERIFY stage
+  - Clickable icon appears on ticket card when URL is set
+  - Only one ticket per project can have preview URL at a time
+  - Cleared when new deployment initiated (single-preview enforcement)
 - `version`: Optimistic concurrency control (incremented on each update)
 - `createdAt`: Creation timestamp (set once on creation)
 - `updatedAt`: Last modification timestamp (automatically updated by Prisma on any field change via `@updatedAt` directive)
@@ -244,7 +249,7 @@ model Job {
 - `id`: Auto-incrementing unique identifier
 - `ticketId`: Associated ticket (required foreign key)
 - `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|task|implement|clarify|quick-impl, max 50 chars)
+- `command`: Spec-kit command executed (specify|plan|task|implement|clarify|quick-impl|deploy-preview, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)

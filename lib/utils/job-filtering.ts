@@ -6,7 +6,7 @@ import { matchesStage } from './stage-matcher';
  * getWorkflowJob Function
  *
  * Filters and returns the most recent workflow job for a ticket.
- * Workflow jobs are those where command does NOT start with 'comment-'.
+ * Workflow jobs are those where command does NOT start with 'comment-' and is NOT 'deploy-preview'.
  *
  * @param jobs - Array of Job objects associated with a ticket
  * @param currentStage - Current ticket stage (used to filter out jobs for INBOX and SHIP stages)
@@ -15,12 +15,14 @@ import { matchesStage } from './stage-matcher';
  * Filtering Rules:
  * - Return null if stage is INBOX or SHIP (no workflow jobs in these stages)
  * - Exclude jobs where command starts with 'comment-' (AI-BOARD jobs)
+ * - Exclude jobs where command is 'deploy-preview' (Deploy jobs)
  * - Sort remaining jobs by startedAt DESC (most recent first)
  * - Return first job or null if array is empty
  *
  * Examples:
  * - Workflow commands: specify, plan, implement, quick-impl, verify
  * - AI-BOARD commands (excluded): comment-specify, comment-plan, comment-build, comment-verify
+ * - Deploy commands (excluded): deploy-preview
  */
 export function getWorkflowJob(jobs: Job[], currentStage: Stage): Job | null {
   // INBOX and SHIP stages never have workflow jobs
@@ -29,7 +31,7 @@ export function getWorkflowJob(jobs: Job[], currentStage: Stage): Job | null {
   }
 
   const workflowJobs = jobs
-    .filter((job) => !job.command.startsWith('comment-'))
+    .filter((job) => !job.command.startsWith('comment-') && job.command !== 'deploy-preview')
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
   return workflowJobs[0] || null;
@@ -73,4 +75,34 @@ export function getAIBoardJob(jobs: Job[], currentStage: Stage): Job | null {
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
   return aiBoardJobs[0] || null;
+}
+
+/**
+ * T029: getDeployJob - Deploy preview job filtering
+ *
+ * Filters and returns the most recent deploy preview job for a ticket.
+ * Deploy jobs are those where command equals 'deploy-preview'.
+ *
+ * @param jobs - Array of Job objects associated with a ticket
+ * @returns Job | null - Most recent deploy job sorted by startedAt DESC, or null if none exist
+ *
+ * Filtering Rules:
+ * - Include only jobs where command is 'deploy-preview'
+ * - Sort remaining jobs by startedAt DESC (most recent first)
+ * - Return first job or null if array is empty
+ *
+ * @example
+ * // Ticket with deploy job
+ * const jobs = [
+ *   { command: 'deploy-preview', status: 'RUNNING', startedAt: new Date('2024-01-02') },
+ *   { command: 'specify', status: 'COMPLETED', startedAt: new Date('2024-01-01') }
+ * ];
+ * getDeployJob(jobs) // => { command: 'deploy-preview', status: 'RUNNING', ... }
+ */
+export function getDeployJob(jobs: Job[]): Job | null {
+  const deployJobs = jobs
+    .filter((job) => job.command === 'deploy-preview')
+    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+  return deployJobs[0] || null;
 }

@@ -104,6 +104,7 @@ model Ticket {
   ticketNumber        Int
   ticketKey           String               @unique @db.VarChar(20)
   branch              String?              @db.VarChar(200)
+  previewUrl          String?              @db.VarChar(500)
   autoMode            Boolean              @default(false)
   workflowType        WorkflowType         @default(FULL)
   attachments         Json?                @default("[]")

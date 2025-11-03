@@ -36,17 +36,14 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 - **title**: Required, 1-100 characters, alphanumeric + basic punctuation only
 - **description**: Required, 1-2500 characters, all UTF-8 characters allowed
 
-**Title Restrictions**:
-- Allowed: Alphanumeric (a-z, A-Z, 0-9)
-- Allowed: Basic punctuation (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
-- Rejected: Emojis (🚀, 😀, etc.)
-- Rejected: Extended Unicode beyond basic punctuation
-- Rejected: Control characters
+**Rejected Characters (title)**:
+- Emojis (🚀, 😀, etc.)
+- Extended Unicode beyond basic punctuation
+- Control characters
 
-**Description Flexibility**:
-- All UTF-8 characters allowed: emoji, Chinese (中文), Arabic (العربية), Japanese (日本語), etc.
-- No character restrictions (validation only checks length and non-empty)
-- Feature updated in ticket #AIB-50 to remove frontend character restrictions during editing
+**Allowed Characters (description)**:
+- All UTF-8: emoji, Chinese (中文), Arabic (العربية), Japanese (日本語), etc.
+- Feature added in ticket #048
 
 ### UpdateTicketSchema
 
@@ -101,6 +98,26 @@ export const updateBranchSchema = z.object({
 
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 ```
+
+### UpdatePreviewUrlSchema
+
+```typescript
+const vercelDomainPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/;
+
+export const updatePreviewUrlSchema = z.object({
+  previewUrl: z.string()
+    .max(500, 'Preview URL must be 500 characters or less')
+    .regex(vercelDomainPattern, 'Preview URL must be a valid Vercel domain (HTTPS only)')
+    .nullable(),
+});
+
+export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
+```
+
+**Validation Rules**:
+- **previewUrl**: Max 500 characters, HTTPS-only, Vercel domain pattern (`https://*.vercel.app`)
+- **Pattern**: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
+- Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
 
 **Validation**:
 - **branch**: Max 200 characters or null

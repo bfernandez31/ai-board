@@ -1,0 +1,384 @@
+openapi: 3.1.0
+info:
+  title: Deploy Preview API
+  version: 1.0.0
+  description: |
+    API endpoints for manual Vercel preview deployment functionality.
+    Enables users to trigger, track, and access preview deployments for tickets in VERIFY stage.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://ai-board.vercel.app
+    description: Production
+
+paths:
+  /api/projects/{projectId}/tickets/{id}/deploy:
+    post:
+      summary: Trigger preview deployment
+      description: |
+        Initiates a Vercel preview deployment for the specified ticket.
+        Enforces single active preview per project by clearing existing preview URLs.
+        Creates a Job record and dispatches GitHub Actions workflow.
+      operationId: triggerDeployPreview
+      tags:
+        - Deploy Preview
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Project ID (must be owned by authenticated user)
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Ticket ID
+      security:
+        - sessionAuth: []
+      responses:
+        '201':
+          description: Deployment job created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: '#/components/schemas/Job'
+                  message:
+                    type: string
+                    example: "Deployment job created and workflow dispatched"
+              example:
+                job:
+                  id: 123
+                  ticketId: 42
+                  projectId: 1
+                  command: "deploy-preview"
+                  status: "PENDING"
+                  branch: "080-1490-deploy-preview"
+                  completedAt: null
+                  createdAt: "2025-11-03T14:30:00Z"
+                  updatedAt: "2025-11-03T14:30:00Z"
+                message: "Deployment job created and workflow dispatched"
+        '400':
+          description: Invalid request (ticket not deployable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notInVerify:
+                  summary: Ticket not in VERIFY stage
+                  value:
+                    error: "Ticket must be in VERIFY stage to deploy"
+                noBranch:
+                  summary: Ticket has no branch
+                  value:
+                    error: "Ticket must have an associated branch"
+                noCompletedJob:
+                  summary: No completed job
+                  value:
+                    error: "Ticket must have a COMPLETED job before deployment"
+        '401':
+          description: Unauthorized (no session)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+        '403':
+          description: Forbidden (user not project owner/member)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have access to this project"
+        '404':
+          description: Ticket or project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+        '500':
+          description: Internal server error (workflow dispatch failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to dispatch deployment workflow"
+
+  /api/projects/{projectId}/tickets/{id}/preview-url:
+    patch:
+      summary: Update preview URL (workflow-only)
+      description: |
+        Updates the preview URL for a ticket after successful deployment.
+        This endpoint is ONLY accessible by GitHub Actions workflows using Bearer token authentication.
+        NOT exposed to frontend clients.
+      operationId: updatePreviewUrl
+      tags:
+        - Deploy Preview (Internal)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      security:
+        - workflowToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - previewUrl
+              properties:
+                previewUrl:
+                  type: string
+                  format: uri
+                  pattern: '^https://[a-z0-9-]+\.vercel\.app$'
+                  maxLength: 500
+                  description: Vercel preview deployment URL (HTTPS only)
+            example:
+              previewUrl: "https://ai-board-080-preview.vercel.app"
+      responses:
+        '200':
+          description: Preview URL updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  previewUrl:
+                    type: string
+                    format: uri
+                  updatedAt:
+                    type: string
+                    format: date-time
+              example:
+                id: 42
+                previewUrl: "https://ai-board-080-preview.vercel.app"
+                updatedAt: "2025-11-03T14:35:00Z"
+        '400':
+          description: Invalid preview URL format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Must be a valid Vercel preview URL"
+        '401':
+          description: Unauthorized (invalid workflow token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized: Invalid workflow token"
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to update preview URL"
+
+  /api/jobs/{id}/status:
+    patch:
+      summary: Update job status (existing endpoint, reused)
+      description: |
+        Updates job status when GitHub Actions workflow completes.
+        Existing endpoint - no changes required for deploy preview feature.
+        Documented here for completeness.
+      operationId: updateJobStatus
+      tags:
+        - Jobs (Existing)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Job ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [COMPLETED, FAILED, CANCELLED]
+                  description: Terminal job status
+            example:
+              status: "COMPLETED"
+      responses:
+        '200':
+          description: Job status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+                  completedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+              example:
+                id: 123
+                status: "COMPLETED"
+                completedAt: "2025-11-03T14:35:00Z"
+        '400':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid transition: COMPLETED -> RUNNING"
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Job not found"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie (HTTP-only)
+    workflowToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: GitHub workflow API token (WORKFLOW_API_TOKEN secret)
+
+  schemas:
+    Job:
+      type: object
+      required:
+        - id
+        - ticketId
+        - projectId
+        - command
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          description: Unique job identifier
+        ticketId:
+          type: integer
+          description: Associated ticket ID
+        projectId:
+          type: integer
+          description: Associated project ID
+        command:
+          type: string
+          description: Job command type
+          enum:
+            - specify
+            - plan
+            - implement
+            - deploy-preview
+            - comment-specify
+            - comment-plan
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+          description: Current job status
+        branch:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Git branch associated with job
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when job reached terminal state
+        createdAt:
+          type: string
+          format: date-time
+          description: Job creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+      example:
+        id: 123
+        ticketId: 42
+        projectId: 1
+        command: "deploy-preview"
+        status: "PENDING"
+        branch: "080-1490-deploy-preview"
+        completedAt: null
+        createdAt: "2025-11-03T14:30:00Z"
+        updatedAt: "2025-11-03T14:30:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Optional error code for client handling
+      example:
+        error: "Ticket must be in VERIFY stage to deploy"
+        code: "INVALID_STAGE"
+
+tags:
+  - name: Deploy Preview
+    description: User-facing endpoints for triggering preview deployments
+  - name: Deploy Preview (Internal)
+    description: Workflow-only endpoints for updating deployment state
+  - name: Jobs (Existing)
+    description: Existing job status endpoints reused by deploy preview feature

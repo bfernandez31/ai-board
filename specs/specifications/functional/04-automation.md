@@ -484,3 +484,81 @@ Test workflows maintain separation:
 - Test tickets identified by [e2e] prefix
 - Production workflows unaffected by test execution
 - API credits not consumed for test tickets
+
+## Deploy Preview (VERIFY Stage)
+
+### Manual Deployment Trigger
+
+Users can manually deploy ticket branches to Vercel preview environment from VERIFY stage:
+
+**Deployment Eligibility**:
+- Ticket must be in VERIFY stage
+- Must have an associated branch
+- Latest job must have COMPLETED status
+- No other deployment currently in progress
+
+**Trigger Method**:
+- Deploy icon appears on ticket cards meeting eligibility criteria
+- Clicking icon opens confirmation modal
+- User confirms deployment or cancels operation
+
+### Single-Preview Enforcement
+
+Only one preview deployment can be active across all project tickets:
+
+**Enforcement Mechanism**:
+- Database transaction clears existing preview URLs atomically
+- Confirmation modal warns when existing preview will be replaced
+- User must explicitly confirm replacement
+
+**Business Rule**:
+- New deployment always replaces existing preview
+- Previous preview URL becomes inaccessible
+- Only most recent deployment remains active
+
+### Deployment Progress
+
+Users monitor deployment status through visual indicators:
+
+**Job Status Indicator**:
+- Rocket icon with bounce animation during PENDING/RUNNING
+- Updated automatically via job polling (2-second intervals)
+- Becomes clickable preview link when COMPLETED
+- Disappears when deployment fails (replaced by retry button)
+
+**Preview Access**:
+- Preview icon appears when deployment completes successfully
+- Clicking icon opens preview URL in new browser tab
+- Icon positioned next to AI-BOARD assistance icon
+
+### Deployment Failures
+
+When deployments fail, users can retry:
+
+**Failure Indicators**:
+- Error indicator appears next to deploy button
+- Tooltip shows failure message
+- Deploy button remains visible for retry
+
+**Retry Process**:
+- Click deploy button to trigger retry
+- Confirmation modal shows "Retry Preview" messaging
+- New job created, previous failed job remains in history
+- No limit on retry attempts
+
+### Deployment Workflow
+
+Automated GitHub Actions workflow handles deployment:
+
+**Workflow Steps**:
+1. Checkout feature branch
+2. Deploy to Vercel using Vercel CLI
+3. Capture preview URL from deployment
+4. Update ticket with preview URL via API
+5. Update job status to COMPLETED or FAILED
+6. Log deployment details for debugging
+
+**Authentication**:
+- Workflow uses VERCEL_TOKEN for Vercel API
+- Workflow uses WORKFLOW_API_TOKEN for updating ticket
+- All credentials stored securely in GitHub secrets

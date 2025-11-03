@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, Pen, CheckCircle2, XCircle, Ban, Cog, MessageSquare, BotMessageSquare } from 'lucide-react'
+import { Clock, Pen, CheckCircle2, XCircle, Ban, Cog, MessageSquare, BotMessageSquare, Rocket } from 'lucide-react'
 import { JobStatus } from '@prisma/client'
 import { cn } from '@/lib/utils'
 import { JobType } from '@/lib/types/job-types'
@@ -122,6 +122,65 @@ function getAIBoardAriaLabel(status: JobStatus): string {
 }
 
 /**
+ * Get Deploy icon color based on status
+ * Blue for pending/running/completed, red for failed
+ */
+function getDeployColor(status: JobStatus): string {
+  switch (status) {
+    case 'PENDING':
+    case 'RUNNING':
+    case 'COMPLETED':
+      return 'text-blue-500'
+    case 'FAILED':
+      return 'text-red-500'
+    case 'CANCELLED':
+      return 'text-gray-500'
+    default:
+      return 'text-blue-500'
+  }
+}
+
+/**
+ * Get Deploy tooltip text based on status
+ */
+function getDeployTooltip(status: JobStatus, completedAt?: Date | string | null): string {
+  switch (status) {
+    case 'PENDING':
+      return 'Deploy preview is preparing...'
+    case 'RUNNING':
+      return 'Deploying preview to Vercel...'
+    case 'COMPLETED':
+      return `Deploy completed on ${formatTimestamp(completedAt || null)}`
+    case 'FAILED':
+      return 'Deploy preview failed'
+    case 'CANCELLED':
+      return 'Deploy preview cancelled'
+    default:
+      return 'Deploy status unknown'
+  }
+}
+
+/**
+ * Get Deploy ARIA label based on status
+ */
+function getDeployAriaLabel(status: JobStatus): string {
+  switch (status) {
+    case 'PENDING':
+      return 'Deploy preview is preparing'
+    case 'RUNNING':
+      return 'Deploying preview to Vercel'
+    case 'COMPLETED':
+      return 'Deploy preview completed'
+    case 'FAILED':
+      return 'Deploy preview failed'
+    case 'CANCELLED':
+      return 'Deploy preview cancelled'
+    default:
+      return 'Deploy status unknown'
+  }
+}
+
+/**
  * JobStatusIndicator Component
  *
  * Displays job status with animated visual indicators.
@@ -168,6 +227,8 @@ export function JobStatusIndicator({
   const JobTypeIcon = jobTypeConfig
     ? jobTypeConfig.iconName === 'Cog'
       ? Cog
+      : jobTypeConfig.iconName === 'Rocket'
+      ? Rocket
       : MessageSquare
     : null
 
@@ -196,6 +257,42 @@ export function JobStatusIndicator({
               aria-label={aiAriaLabel}
             >
               <BotMessageSquare
+                className={cn(
+                  'h-5 w-5',
+                  iconColor,
+                  shouldBounce && 'animate-bounce'
+                )}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  // DEPLOY compact mode: Icon-only with tooltip (same as AI-BOARD)
+  if (jobType === JobType.DEPLOY) {
+    const iconColor = getDeployColor(status)
+    const tooltipText = getDeployTooltip(status, completedAt)
+    const deployAriaLabel = getDeployAriaLabel(status)
+
+    // Apply bounce animation for PENDING/RUNNING states
+    const shouldBounce = status === 'PENDING' || status === 'RUNNING'
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              data-testid="job-status-indicator"
+              className={cn('cursor-help', className)}
+              role="img"
+              aria-label={deployAriaLabel}
+            >
+              <Rocket
                 className={cn(
                   'h-5 w-5',
                   iconColor,

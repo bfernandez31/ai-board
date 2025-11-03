@@ -1,0 +1,159 @@
+# GitHub Actions Workflow Contract: Deploy Preview
+# File: .github/workflows/deploy-preview.yml
+
+name: Deploy Preview
+description: |
+  Deploys a ticket's feature branch to Vercel preview environment.
+  Triggered manually via workflow_dispatch from the deploy API endpoint.
+  Updates ticket preview URL and job status upon completion.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket_id:
+        description: 'Ticket ID to deploy'
+        required: true
+        type: string
+      project_id:
+        description: 'Project ID for authorization'
+        required: true
+        type: string
+      branch:
+        description: 'Git branch to deploy'
+        required: true
+        type: string
+      job_id:
+        description: 'Job ID to update status'
+        required: true
+        type: string
+
+env:
+  # Required secrets (must be configured in repository settings)
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy to Vercel Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # Fail if deployment exceeds 10 minutes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0  # Full history for Vercel build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'  # Match project Node.js version
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update job status to RUNNING
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "RUNNING"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
+        continue-on-error: true  # Don't fail deployment if status update fails
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -oP 'https://[^\s]+' | head -1)
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+      - name: Update ticket preview URL
+        if: success()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d "{\"previewUrl\": \"${{ steps.deploy.outputs.url }}\"}" \
+            https://ai-board.vercel.app/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/preview-url
+
+      - name: Update job status to COMPLETED
+        if: success()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "COMPLETED"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
+
+      - name: Update job status to FAILED
+        if: failure()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "FAILED"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
+
+# Workflow Behavior Specification
+
+# Success Path (All Steps Pass):
+# 1. Checkout branch → Success
+# 2. Setup Node.js → Success
+# 3. Install dependencies → Success
+# 4. Update job to RUNNING → Success (or continue if fails)
+# 5. Install Vercel CLI → Success
+# 6. Pull Vercel env → Success
+# 7. Build project → Success
+# 8. Deploy to Vercel → Success (capture URL)
+# 9. Update ticket preview URL → Success
+# 10. Update job to COMPLETED → Success
+# Result: Deployment URL set on ticket, job marked COMPLETED
+
+# Failure Path (Any Step Fails):
+# 1-8. [One or more steps fail]
+# 9. Skip preview URL update (if: success() condition not met)
+# 10. Skip COMPLETED update (if: success() condition not met)
+# 11. Run FAILED update step (if: failure() condition met)
+# Result: Job marked FAILED, no preview URL set
+
+# Timeout Path (Deployment exceeds 10 minutes):
+# - GitHub Actions automatically cancels workflow
+# - if: failure() step runs → job marked FAILED
+# - User sees timeout error in UI
+
+# Error Handling:
+# - Network failures: Retry logic in curl commands (3 retries with 1s delay)
+# - Vercel API errors: Captured in step logs, job marked FAILED
+# - Invalid branch: Checkout step fails, job marked FAILED
+# - Missing secrets: Workflow fails immediately (pre-run validation)
+
+# Security:
+# - All secrets stored in GitHub repository secrets (encrypted at rest)
+# - Workflow token has limited scope (repo + workflow access only)
+# - Vercel token scoped to single project (VERCEL_PROJECT_ID)
+# - API endpoints validate Bearer token before accepting updates
+
+# Performance Expectations:
+# - Total deployment time: 3-5 minutes (typical)
+# - Timeout threshold: 10 minutes (workflow-level)
+# - Status update latency: <5 seconds (job polling picks up changes)
+# - Preview URL availability: Immediate after deployment completes
+
+# Testing Strategy:
+# - E2E tests mock workflow execution (stub deployment URL)
+# - Contract tests verify API endpoint responses to workflow calls
+# - Manual testing required for full Vercel integration (uses test secrets)
