@@ -199,10 +199,19 @@ export function TicketDetailModal({
     if (!open) {
       setPolicyEditOpen(false);
       setActiveTab(initialTab); // Reset to initial tab when modal closes
+      // Only cancel edit if user is actively editing (not during save/rollback flow)
+      // This preserves optimistic updates during save operations
+      if (titleEdit.isEditing && !titleEdit.isSaving) {
+        titleEdit.cancelEdit();
+      }
+      if (descriptionEdit.isEditing && !descriptionEdit.isSaving) {
+        descriptionEdit.cancelEdit();
+      }
     } else {
       // Set to initial tab when opening
       setActiveTab(initialTab);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialTab]);
 
   // Fetch jobs for the ticket to check for completed specify job
@@ -416,8 +425,10 @@ export function TicketDetailModal({
         description: 'Failed to save changes while offline. Changes reverted.',
       });
 
-      // Rollback on error
-      setLocalTicket(originalTicket);
+      // Rollback after short delay to allow optimistic state to show
+      setTimeout(() => {
+        setLocalTicket(originalTicket);
+      }, 500);
     }
   };
 
@@ -644,8 +655,10 @@ export function TicketDetailModal({
         description: 'Failed to save changes while offline. Changes reverted.',
       });
 
-      // Rollback on error
-      setLocalTicket(originalTicket);
+      // Rollback after short delay to allow optimistic state to show
+      setTimeout(() => {
+        setLocalTicket(originalTicket);
+      }, 500);
     }
   };
 
@@ -709,6 +722,9 @@ export function TicketDetailModal({
       >
         {/* Header with editable title */}
         <DialogHeader className="flex-shrink-0 pb-2 sm:pb-4 space-y-1 sm:space-y-1.5 text-left">
+          <DialogTitle className="sr-only">
+            {localTicket?.title || ticket.title}
+          </DialogTitle>
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
@@ -839,9 +855,9 @@ export function TicketDetailModal({
                 tabIndex={0}
                 aria-label="Edit ticket title"
               >
-                <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
+                <h2 className="text-2xl font-bold text-[#cdd6f4] flex-1">
                   {localTicket?.title || ticket.title}
-                </DialogTitle>
+                </h2>
                 <Pencil
                   className="w-5 h-5 text-[#a6adc8] opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   data-testid="edit-icon-title"
