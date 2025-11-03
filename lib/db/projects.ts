@@ -52,6 +52,7 @@ export async function getUserProjects() {
         take: 1,                               // Only last shipped ticket
         select: {
           id: true,
+          ticketKey: true,
           title: true,
           updatedAt: true,
         }

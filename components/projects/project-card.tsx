@@ -107,8 +107,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
               <span
                 className="text-[#cdd6f4] truncate"
                 data-testid="shipped-ticket-title"
-                title={project.lastShippedTicket.title}
+                title={`${project.lastShippedTicket.ticketKey} ${project.lastShippedTicket.title}`}
               >
+                <span className="font-semibold" data-testid="shipped-ticket-key">
+                  {project.lastShippedTicket.ticketKey}
+                </span>
+                {' '}
                 {project.lastShippedTicket.title}
               </span>
             </div>
