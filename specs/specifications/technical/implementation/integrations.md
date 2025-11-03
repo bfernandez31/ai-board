@@ -64,6 +64,13 @@ export async function dispatchWorkflow(params: {
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
 
+**Deploy Preview** (`.github/workflows/deploy-preview.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**: `ticket_id`, `project_id`, `branch`, `job_id`
+- **Action**: Deploy feature branch to Vercel preview environment
+- **Output**: Preview URL stored in ticket.previewUrl field
+- **Method**: Vercel CLI deployment with project/org scoping
+
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event
 - **Conditions**: Vercel production deployment success
@@ -110,6 +117,9 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 **GitHub Secrets**:
 - `ANTHROPIC_API_KEY`: Claude API key
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
+- `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
+- `VERCEL_ORG_ID`: Vercel organization/team ID
+- `VERCEL_PROJECT_ID`: Vercel project ID
 - `GITHUB_TOKEN`: Automatic (provided by GitHub)
 
 **Repository Variables**:

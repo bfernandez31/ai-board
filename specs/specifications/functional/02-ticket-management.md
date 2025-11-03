@@ -212,3 +212,9 @@ Timestamps display in user-friendly formats:
   - Can inherit from project default
   - Can be overridden for specific tickets
   - Values: AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE
+
+- **Preview URL**: Vercel deployment URL for testing
+  - Set when manual deployment is triggered from VERIFY stage
+  - Accessible via clickable icon on ticket card
+  - Opens preview application in new browser tab
+  - Only one active preview allowed per project at a time

@@ -99,6 +99,26 @@ export const updateBranchSchema = z.object({
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 ```
 
+### UpdatePreviewUrlSchema
+
+```typescript
+const vercelDomainPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/;
+
+export const updatePreviewUrlSchema = z.object({
+  previewUrl: z.string()
+    .max(500, 'Preview URL must be 500 characters or less')
+    .regex(vercelDomainPattern, 'Preview URL must be a valid Vercel domain (HTTPS only)')
+    .nullable(),
+});
+
+export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
+```
+
+**Validation Rules**:
+- **previewUrl**: Max 500 characters, HTTPS-only, Vercel domain pattern (`https://*.vercel.app`)
+- **Pattern**: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
+- Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
+
 **Validation**:
 - **branch**: Max 200 characters or null
 - No version checking (workflow-only endpoint)

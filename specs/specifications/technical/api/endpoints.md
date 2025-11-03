@@ -453,6 +453,84 @@ Update ticket branch name (workflow-only endpoint).
 
 **Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
 
+### POST /api/projects/:projectId/tickets/:id/deploy
+
+Trigger manual Vercel preview deployment (user-initiated).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "jobId": 125,
+  "message": "Deploy preview workflow dispatched"
+}
+```
+
+**Eligibility Requirements**:
+- Ticket must be in VERIFY stage
+- Ticket must have a branch
+- Latest job must have COMPLETED status
+
+**Workflow Behavior**:
+- Creates new Job record with command="deploy-preview", status=PENDING
+- Clears any existing preview URL in project (single-preview enforcement)
+- Dispatches GitHub Actions workflow (deploy-preview.yml)
+- Workflow deploys branch to Vercel and updates ticket with preview URL
+
+**Errors**:
+- `400`: Ticket not eligible for deployment (wrong stage, no branch, job not completed)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: Workflow dispatch error
+
+### PATCH /api/projects/:projectId/tickets/:id/preview-url
+
+Update ticket preview URL (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**:
+```json
+{
+  "previewUrl": "https://ai-board-080-1490-deploy-preview.vercel.app"
+}
+```
+
+**Validation**:
+- `previewUrl`: Required, max 500 characters, HTTPS-only, Vercel domain pattern
+- Pattern: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "previewUrl": "https://ai-board-080-1490-deploy-preview.vercel.app",
+  "updatedAt": "2025-01-15T10:40:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid preview URL (non-HTTPS, invalid domain, exceeds 500 characters)
+- `401`: Invalid or missing workflow token
+- `404`: Ticket or project not found
+
+**Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
+
 ### POST /api/projects/:projectId/tickets/:id/transition
 
 Transition ticket to target stage with workflow dispatch.

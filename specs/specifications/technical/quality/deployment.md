@@ -11,6 +11,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `speckit.yml` | workflow_dispatch | Main spec-kit execution | 120 min |
 | `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
+| `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
@@ -184,6 +185,82 @@ steps:
   --description="${{ inputs.ticketDescription }}"
 ```
 
+### Deploy Preview Workflow
+
+**File**: `.github/workflows/deploy-preview.yml`
+
+**Inputs**:
+- `ticket_id`: Ticket identifier
+- `project_id`: Project identifier
+- `branch`: Feature branch name to deploy
+- `job_id`: Job record ID for status tracking
+
+**Environment Setup**:
+
+```yaml
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
+    with:
+      ref: ${{ inputs.branch }}
+
+  - name: Install Vercel CLI
+    run: npm install --global vercel@latest
+```
+
+**Deployment Execution**:
+
+```yaml
+  - name: Deploy to Vercel Preview
+    id: deploy
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    run: |
+      # Deploy to Vercel and capture preview URL
+      vercel deploy --token="${VERCEL_TOKEN}" \
+        --yes \
+        --scope="${VERCEL_ORG_ID}" \
+        --meta branch="${{ inputs.branch }}" \
+        --meta ticketId="${{ inputs.ticket_id }}" > deployment-url.txt
+
+      PREVIEW_URL=$(cat deployment-url.txt)
+      echo "preview_url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+```
+
+**Update Ticket**:
+
+```yaml
+  - name: Update Ticket Preview URL
+    if: success()
+    run: |
+      curl -X PATCH "${{ vars.APP_URL }}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/preview-url" \
+        -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+        -H "Content-Type: application/json" \
+        -d "{\"previewUrl\":\"${{ steps.deploy.outputs.preview_url }}\"}"
+```
+
+**Status Updates**:
+
+```yaml
+  - name: Update Job Status (Success)
+    if: success()
+    run: |
+      curl -X PATCH "${{ vars.APP_URL }}/api/jobs/${{ inputs.job_id }}/status" \
+        -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+        -H "Content-Type: application/json" \
+        -d '{"status":"COMPLETED"}'
+
+  - name: Update Job Status (Failure)
+    if: failure()
+    run: |
+      curl -X PATCH "${{ vars.APP_URL }}/api/jobs/${{ inputs.job_id }}/status" \
+        -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+        -H "Content-Type: application/json" \
+        -d '{"status":"FAILED","logs":"Deployment failed. Check workflow logs for details."}'
+```
+
 ### Auto-Ship Workflow
 
 **File**: `.github/workflows/auto-ship.yml`
@@ -290,6 +367,9 @@ Required secrets in repository settings:
 |--------|---------|---------|
 | `ANTHROPIC_API_KEY` | Claude Code API key | `sk-ant-api03-...` |
 | `WORKFLOW_API_TOKEN` | Workflow authentication | Random 32-char string |
+| `VERCEL_TOKEN` | Vercel API authentication | `vercel_api_token_...` |
+| `VERCEL_ORG_ID` | Vercel organization ID | `team_abc123...` |
+| `VERCEL_PROJECT_ID` | Vercel project ID | `prj_xyz789...` |
 | `GITHUB_TOKEN` | Automatic (GitHub provides) | N/A |
 
 ### GitHub Variables
