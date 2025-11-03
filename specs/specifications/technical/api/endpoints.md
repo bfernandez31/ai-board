@@ -82,8 +82,14 @@ Fetch all projects for the authenticated user with shipping status.
 - `ticketCount`: Total number of tickets across all stages
 - `lastShippedTicket`: Most recent ticket in SHIP stage (null if no shipped tickets)
   - `id`: Ticket ID
-  - `title`: Ticket title (truncated on frontend if needed)
+  - `ticketKey`: Unique ticket identifier (e.g., "ABC-5")
+  - `title`: Ticket title
   - `updatedAt`: When ticket was moved to SHIP stage (used for relative time display)
+
+**Frontend Display**:
+- Project cards display ticketKey (bold) followed by title
+- Full text "ticketKey + title" truncated with ellipsis if too long
+- Tooltip on hover shows complete "ticketKey + title" text
 
 **Errors**:
 - `401`: Not authenticated

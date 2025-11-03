@@ -48,9 +48,11 @@ test.describe('GET /api/projects Contract', () => {
       // Validate lastShippedTicket structure if present
       if (project.lastShippedTicket) {
         expect(project.lastShippedTicket).toHaveProperty('id');
+        expect(project.lastShippedTicket).toHaveProperty('ticketKey');
         expect(project.lastShippedTicket).toHaveProperty('title');
         expect(project.lastShippedTicket).toHaveProperty('updatedAt');
         expect(typeof project.lastShippedTicket.id).toBe('number');
+        expect(typeof project.lastShippedTicket.ticketKey).toBe('string');
         expect(typeof project.lastShippedTicket.title).toBe('string');
         expect(typeof project.lastShippedTicket.updatedAt).toBe('string');
         expect(new Date(project.lastShippedTicket.updatedAt).toISOString()).toBe(project.lastShippedTicket.updatedAt);

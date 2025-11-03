@@ -14,6 +14,7 @@ export interface ProjectWithCount {
   ticketCount: number;
   lastShippedTicket: {
     id: number;
+    ticketKey: string;
     title: string;
     updatedAt: string; // ISO 8601 timestamp
   } | null;

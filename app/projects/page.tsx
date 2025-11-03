@@ -28,6 +28,7 @@ async function getProjects(): Promise<ProjectsListResponse> {
       ticketCount: project._count.tickets,
       lastShippedTicket: project.tickets[0] ? {
         id: project.tickets[0].id,
+        ticketKey: project.tickets[0].ticketKey,
         title: project.tickets[0].title,
         updatedAt: project.tickets[0].updatedAt.toISOString(),
       } : null,
