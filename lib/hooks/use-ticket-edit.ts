@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react';
 
 // Regex pattern for allowed characters (same as backend validation)
+// Only applied to title field, not description
 const ALLOWED_CHARS_PATTERN = /^(?=.*\S)[a-zA-Z0-9\s.,?!\-:;'"\(\)\[\]\{\}\/\\@#$%&*+=_~`|]+$/;
 
 interface UseTicketEditParams {
   initialValue: string;
   onSave: (value: string) => Promise<void>;
   maxLength: number;
+  fieldType?: 'title' | 'description'; // Type of field being edited (default: 'title')
 }
 
 interface UseTicketEditReturn {
@@ -30,6 +32,7 @@ export function useTicketEdit({
   initialValue,
   onSave,
   maxLength,
+  fieldType = 'title', // Default to 'title' for backward compatibility
 }: UseTicketEditParams): UseTicketEditReturn {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [value, setValue] = useState<string>(initialValue);
@@ -80,8 +83,8 @@ export function useTicketEdit({
       return;
     }
 
-    // Validate character set
-    if (!ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
+    // Validate character set (only for title, description accepts all UTF-8)
+    if (fieldType === 'title' && !ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
       setError('can only contain letters, numbers, spaces, and common special characters');
       return;
     }
@@ -122,7 +125,7 @@ export function useTicketEdit({
       setError(null); // Don't show error while typing if empty
     } else if (trimmedValue.length > maxLength) {
       setError(`Value must be ${maxLength} characters or less`);
-    } else if (!ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
+    } else if (fieldType === 'title' && !ALLOWED_CHARS_PATTERN.test(trimmedValue)) {
       setError('can only contain letters, numbers, spaces, and common special characters');
     } else {
       setError(null);
