@@ -171,7 +171,7 @@ All ticket data persists automatically:
 
 The system tracks two timestamps for each ticket:
 - **Created**: When the ticket was first created (never changes)
-- **Last Updated**: When the ticket was last modified (updates on any change)
+- **Last Updated**: When the ticket was last modified (automatically updates on any change, including stage transitions)
 
 Timestamps display in user-friendly formats:
 - Relative time for recent updates (e.g., "2 hours ago")
