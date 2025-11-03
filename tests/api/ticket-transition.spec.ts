@@ -488,6 +488,52 @@ test.describe('POST /api/projects/:projectId/tickets/:id/transition', () => {
   });
 
   /**
+   * Test Scenario 12: UpdatedAt Field Updates on Transition
+   * Feature: AIB-48
+   * Given: Ticket in any stage
+   * When: POST transition to next stage
+   * Then: updatedAt field is updated to current timestamp
+   */
+  test('should update updatedAt timestamp when ticket transitions', async ({ request, projectId }) => {
+    // Arrange
+    const { ticket } = await setupTestData(projectId);
+    const prisma = getPrismaClient();
+
+    // Get initial updatedAt timestamp
+    const initialTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+      select: { updatedAt: true },
+    });
+
+    // Wait a bit to ensure timestamp difference
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Act - Transition to SPECIFY
+    const response = await request.post(
+      `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
+      {
+        data: { targetStage: 'SPECIFY' },
+      }
+    );
+
+    // Assert - Response success
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.updatedAt).toBeDefined();
+
+    // Assert - updatedAt was updated
+    const updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticket.id },
+      select: { updatedAt: true, stage: true },
+    });
+
+    expect(updatedTicket?.stage).toBe('SPECIFY');
+    expect(updatedTicket?.updatedAt).toBeDefined();
+    expect(updatedTicket?.updatedAt.getTime()).toBeGreaterThan(initialTicket!.updatedAt.getTime());
+  });
+
+
+  /**
    * Job Completion Validation Tests
    * Feature: 030-should-not-be
    *
