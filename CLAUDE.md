@@ -689,14 +689,22 @@ const job = await prisma.$transaction(async (tx) => {
 
 ### Ticket Title and Description
 
-The ticket validation schema allows the following characters:
+**Title Validation** (restricted character set):
 
 - Letters: `a-z`, `A-Z`
 - Numbers: `0-9`
 - Spaces
 - Special characters: `. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`
+- Maximum length: 100 characters
+- Prevents emojis and control characters
+- Allows test prefixes like `[e2e]`
 
-This allows for test prefixes like `[e2e]` and other common formatting needs while preventing emojis and control characters.
+**Description Validation** (unrestricted, all UTF-8):
+
+- All UTF-8 characters allowed (emojis, multilingual text, special characters)
+- Maximum length: 2500 characters
+- No character restrictions (only checks non-empty and length)
+- Both backend schema and frontend editing support full UTF-8
 
 ## E2E Test Data Isolation
 

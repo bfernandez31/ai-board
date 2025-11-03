@@ -36,14 +36,17 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 - **title**: Required, 1-100 characters, alphanumeric + basic punctuation only
 - **description**: Required, 1-2500 characters, all UTF-8 characters allowed
 
-**Rejected Characters (title)**:
-- Emojis (🚀, 😀, etc.)
-- Extended Unicode beyond basic punctuation
-- Control characters
+**Title Restrictions**:
+- Allowed: Alphanumeric (a-z, A-Z, 0-9)
+- Allowed: Basic punctuation (`. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`)
+- Rejected: Emojis (🚀, 😀, etc.)
+- Rejected: Extended Unicode beyond basic punctuation
+- Rejected: Control characters
 
-**Allowed Characters (description)**:
-- All UTF-8: emoji, Chinese (中文), Arabic (العربية), Japanese (日本語), etc.
-- Feature added in ticket #048
+**Description Flexibility**:
+- All UTF-8 characters allowed: emoji, Chinese (中文), Arabic (العربية), Japanese (日本語), etc.
+- No character restrictions (validation only checks length and non-empty)
+- Feature updated in ticket #AIB-50 to remove frontend character restrictions during editing
 
 ### UpdateTicketSchema
 
