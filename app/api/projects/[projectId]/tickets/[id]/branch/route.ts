@@ -177,7 +177,7 @@ export async function PATCH(
       where: { id: currentTicket.id },
       data: {
         branch,
-        updatedAt: new Date(), // Explicitly update timestamp
+        // updatedAt automatically updated by @updatedAt directive
       },
       select: {
         id: true,

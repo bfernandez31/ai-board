@@ -108,7 +108,7 @@ model Ticket {
   workflowType        WorkflowType         @default(FULL)
   attachments         Json?                @default("[]")
   createdAt           DateTime             @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime             @default(now()) @updatedAt
   clarificationPolicy ClarificationPolicy?
   comments            Comment[]
   jobs                Job[]

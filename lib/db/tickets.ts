@@ -112,7 +112,7 @@ export async function createTicket(
     projectId: projectId,
     ticketNumber,
     ticketKey,
-    updatedAt: new Date(),
+    // updatedAt automatically set by Prisma (@default(now()) on createdAt, then @updatedAt on updates)
   };
 
   // Add optional fields only if they are defined

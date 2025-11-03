@@ -175,8 +175,8 @@ model Ticket {
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects)
 - `version`: Optimistic concurrency control (incremented on each update)
-- `createdAt`: Creation timestamp
-- `updatedAt`: Last modification timestamp
+- `createdAt`: Creation timestamp (set once on creation)
+- `updatedAt`: Last modification timestamp (automatically updated by Prisma on any field change via `@updatedAt` directive)
 
 **Relationships**:
 - Belongs to Project (required, cascade delete)
