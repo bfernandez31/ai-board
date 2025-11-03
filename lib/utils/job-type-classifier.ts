@@ -22,6 +22,15 @@ export const JOB_TYPE_CONFIG: Record<JobType, JobTypeConfig> = {
     bgColor: 'bg-purple-100/10',
     ariaLabel: 'AI-BOARD assistance job',
   },
+  [JobType.DEPLOY]: {
+    type: JobType.DEPLOY,
+    label: 'Deploy',
+    iconName: 'Rocket',
+    iconColor: 'text-blue-600',
+    textColor: 'text-blue-600',
+    bgColor: 'bg-blue-100/10',
+    ariaLabel: 'Vercel preview deployment job',
+  },
 };
 
 /**
@@ -31,6 +40,7 @@ export const JOB_TYPE_CONFIG: Record<JobType, JobTypeConfig> = {
  *
  * Rules:
  * - Commands starting with "comment-" → AI_BOARD
+ * - Command "deploy-preview" → DEPLOY
  * - All other commands → WORKFLOW (conservative default)
  *
  * @param command - Job command string from database
@@ -39,12 +49,16 @@ export const JOB_TYPE_CONFIG: Record<JobType, JobTypeConfig> = {
  * @example
  * classifyJobType('specify') // → JobType.WORKFLOW
  * classifyJobType('comment-specify') // → JobType.AI_BOARD
+ * classifyJobType('deploy-preview') // → JobType.DEPLOY
  * classifyJobType('quick-impl') // → JobType.WORKFLOW
  * classifyJobType('comment-build') // → JobType.AI_BOARD
  */
 export function classifyJobType(command: string): JobType {
   if (command.startsWith('comment-')) {
     return JobType.AI_BOARD;
+  }
+  if (command === 'deploy-preview') {
+    return JobType.DEPLOY;
   }
   return JobType.WORKFLOW;
 }

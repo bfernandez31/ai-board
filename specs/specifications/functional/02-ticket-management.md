@@ -20,10 +20,10 @@ All tickets must include:
   - Restricted to alphanumeric characters and basic punctuation
   - No special characters or emojis allowed
 
-- **Description**: Detailed context (maximum 2500 characters)
+- **Description**: Detailed context (maximum 2000 characters)
   - Required field - cannot be empty or whitespace-only
-  - Supports all UTF-8 characters including emojis, multilingual text, and special characters
-  - No character restrictions (unlike title field)
+  - Restricted to alphanumeric characters and basic punctuation
+  - No special characters or emojis allowed
 
 ### Validation Behavior
 

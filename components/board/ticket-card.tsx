@@ -8,22 +8,51 @@ import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
+import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
+import { DeployConfirmationModal } from './deploy-confirmation-modal';
+import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
+import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   currentJob?: Job | null; // Legacy: kept for backward compatibility
   workflowJob?: Job | null; // User Story 1: Workflow job display
   aiBoardJob?: Job | null; // User Story 2: AI-BOARD job display
+  deployJob?: Job | null; // User Story: Deploy preview job display
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
+  /** Ticket with active preview (for single-preview warning) */
+  activePreviewTicket?: { ticketKey: string } | null;
 }
 
 /**
  * TicketCard Component - Original Design with Drag-and-Drop
  */
 export const TicketCard = React.memo(
-  ({ ticket, workflowJob, aiBoardJob, isDraggable = true, onTicketClick }: DraggableTicketCardProps) => {
+  ({
+    ticket,
+    workflowJob,
+    aiBoardJob,
+    deployJob,
+    isDraggable = true,
+    onTicketClick,
+    activePreviewTicket
+  }: DraggableTicketCardProps) => {
     const [isMounted, setIsMounted] = useState(false);
+    const [showDeployModal, setShowDeployModal] = useState(false);
+
+    // Deploy preview mutation
+    const { mutate: deployPreview } = useDeployPreview(ticket.projectId);
+
+    // Check if ticket is deployable
+    const isDeployable = React.useMemo(() => {
+      return isTicketDeployable({
+        stage: ticket.stage,
+        branch: ticket.branch,
+        jobs: ticket.jobs || [],
+      });
+    }, [ticket.stage, ticket.branch, ticket.jobs]);
+
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
       useDraggable({
@@ -95,6 +124,20 @@ export const TicketCard = React.memo(
             </div>
           </div>
 
+          {/* Deploy Confirmation Modal */}
+          <DeployConfirmationModal
+            open={showDeployModal}
+            onOpenChange={setShowDeployModal}
+            onConfirm={() => {
+              deployPreview({ ticketId: ticket.id });
+              setShowDeployModal(false);
+            }}
+            ticketKey={ticket.ticketKey}
+            hasExistingPreview={activePreviewTicket ? true : false}
+            existingPreviewTicket={activePreviewTicket?.ticketKey || undefined}
+            isRetry={deployJob?.status === 'FAILED' || deployJob?.status === 'CANCELLED'}
+          />
+
           {/* Title */}
           <h3
             className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden mb-3"
@@ -103,8 +146,8 @@ export const TicketCard = React.memo(
             {ticket.title}
           </h3>
 
-          {/* Job Status Indicators (Single-line layout with right-aligned AI-BOARD) */}
-          {(workflowJob || aiBoardJob) && (
+          {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
+          {(workflowJob || aiBoardJob || deployJob || (isDeployable && !ticket.previewUrl)) && (
             <div className="border-t border-[#313244] pt-3">
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Workflow Job Indicator (simplified display) */}
@@ -119,17 +162,61 @@ export const TicketCard = React.memo(
                   />
                 )}
 
-                {/* Right: AI-BOARD Job Indicator (compact icon-only) */}
-                {aiBoardJob && (
-                  <JobStatusIndicator
-                    status={aiBoardJob.status}
-                    command={aiBoardJob.command}
-                    jobType={classifyJobType(aiBoardJob.command)}
-                    stage={ticket.stage}
-                    animated={true}
-                    completedAt={aiBoardJob.completedAt}
-                  />
-                )}
+                {/* Right: Compact icon indicators (Deploy + AI-BOARD) */}
+                <div className="flex items-center gap-3">
+                  {/* Deploy Icon: Show job status OR deploy button when deployable */}
+                  {deployJob ? (
+                    deployJob.status === 'FAILED' || deployJob.status === 'CANCELLED' ? (
+                      // Show retry button for failed/cancelled deploys
+                      <TicketCardDeployIcon
+                        onDeploy={() => setShowDeployModal(true)}
+                        ticketKey={ticket.ticketKey}
+                        isDeploying={false}
+                      />
+                    ) : (
+                      // Show deploy job status indicator for pending/running/completed
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Open preview URL in new tab when deploy is completed
+                          if (deployJob.status === 'COMPLETED' && ticket.previewUrl) {
+                            window.open(ticket.previewUrl, '_blank', 'noopener,noreferrer');
+                          }
+                        }}
+                        className={deployJob.status === 'COMPLETED' && ticket.previewUrl ? '[&_*]:!cursor-pointer' : ''}
+                        title={deployJob.status === 'COMPLETED' && ticket.previewUrl ? 'Click to open preview' : undefined}
+                      >
+                        <JobStatusIndicator
+                          status={deployJob.status}
+                          command={deployJob.command}
+                          jobType={classifyJobType(deployJob.command)}
+                          stage={ticket.stage}
+                          animated={true}
+                          completedAt={deployJob.completedAt}
+                        />
+                      </div>
+                    )
+                  ) : isDeployable && !ticket.previewUrl ? (
+                    // Show deploy button when deployable but no job running
+                    <TicketCardDeployIcon
+                      onDeploy={() => setShowDeployModal(true)}
+                      ticketKey={ticket.ticketKey}
+                      isDeploying={false}
+                    />
+                  ) : null}
+
+                  {/* AI-BOARD Job Indicator (compact icon-only) */}
+                  {aiBoardJob && (
+                    <JobStatusIndicator
+                      status={aiBoardJob.status}
+                      command={aiBoardJob.command}
+                      jobType={classifyJobType(aiBoardJob.command)}
+                      stage={ticket.stage}
+                      animated={true}
+                      completedAt={aiBoardJob.completedAt}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           )}

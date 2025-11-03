@@ -689,22 +689,14 @@ const job = await prisma.$transaction(async (tx) => {
 
 ### Ticket Title and Description
 
-**Title Validation** (restricted character set):
+The ticket validation schema allows the following characters:
 
 - Letters: `a-z`, `A-Z`
 - Numbers: `0-9`
 - Spaces
 - Special characters: `. , ? ! - : ; ' " ( ) [ ] { } / \ @ # $ % & * + = _ ~ \` |`
-- Maximum length: 100 characters
-- Prevents emojis and control characters
-- Allows test prefixes like `[e2e]`
 
-**Description Validation** (unrestricted, all UTF-8):
-
-- All UTF-8 characters allowed (emojis, multilingual text, special characters)
-- Maximum length: 2500 characters
-- No character restrictions (only checks non-empty and length)
-- Both backend schema and frontend editing support full UTF-8
+This allows for test prefixes like `[e2e]` and other common formatting needs while preventing emojis and control characters.
 
 ## E2E Test Data Isolation
 
@@ -938,5 +930,164 @@ TanStack Query v5.90.5 is used for server state management with intelligent cach
 **Mutation Pattern**: All mutations must implement optimistic updates with onMutate/onError/onSuccess.
 
 See constitution.md for state management requirements and patterns.
+
+## Deploy Preview System
+
+### Overview
+
+The deploy preview system enables manual Vercel preview deployments for tickets in the VERIFY stage. Features include:
+
+- **Manual Deployment**: One-click deployment trigger from ticket cards
+- **Single-Preview Enforcement**: Only one preview can be active per project at a time
+- **Real-Time Status**: Loading indicators and job polling for deployment progress
+- **Failure Handling**: Error indicators with tooltips for failed deployments
+- **Retry Capability**: Deploy icon remains visible after failures to allow retry
+
+### Architecture
+
+**Components**:
+- `TicketCardPreviewIcon`: Clickable ExternalLink icon for active previews
+- `TicketCardDeployIcon`: Rocket icon to trigger deployments (with loading state)
+- `DeployConfirmationModal`: AlertDialog for deployment confirmation with single-preview warning
+- Failure indicator: AlertCircle icon with tooltip showing error message
+
+**API Endpoints**:
+- `POST /api/projects/:projectId/tickets/:id/deploy`: Trigger deployment (session auth)
+- `PATCH /api/projects/:projectId/tickets/:id/preview-url`: Update preview URL (workflow token auth)
+
+**GitHub Workflow**:
+- `.github/workflows/deploy-preview.yml`: Deploys to Vercel and updates ticket
+- Uses `VERCEL_TOKEN` and `WORKFLOW_API_TOKEN` secrets
+- Updates Job status: PENDING → RUNNING → COMPLETED/FAILED
+
+**Job Tracking**:
+- Deploy jobs use command: "deploy-preview"
+- Job polling automatically detects completion and triggers ticket refetch
+- Preview icon auto-displays when `ticket.previewUrl` is set
+
+### Deployment Eligibility
+
+Tickets must meet all requirements:
+1. Stage must be VERIFY
+2. Must have a branch (created by workflow)
+3. Latest job must have COMPLETED status
+
+**Validation**: `isTicketDeployable()` function in `app/lib/utils/deploy-preview-eligibility.ts`
+
+### Single-Preview Enforcement
+
+**Database Transaction Pattern**:
+```typescript
+await prisma.$transaction(async (tx) => {
+  // Clear all existing preview URLs in project
+  await tx.ticket.updateMany({
+    where: { projectId, previewUrl: { not: null } },
+    data: { previewUrl: null },
+  });
+
+  // Create new deployment job
+  const job = await tx.job.create({
+    data: { ticketId, projectId, command: 'deploy-preview', status: 'PENDING', branch },
+  });
+
+  return job;
+});
+```
+
+**UI Feedback**: Confirmation modal warns when existing preview will be replaced
+
+### Job Polling Integration
+
+Deploy preview jobs integrate seamlessly with existing job polling infrastructure:
+
+**Polling Flow**:
+1. useJobPolling hook polls `/api/projects/:projectId/jobs/status` every 2 seconds
+2. getTicketJobs() merges polled updates with initial job data
+3. getDeployJob() filters jobs by command="deploy-preview"
+4. TicketCard receives deployJob prop via StageColumn
+5. Loading indicator shows when deployJob.status = PENDING/RUNNING
+6. When job reaches COMPLETED, useJobPolling invalidates tickets query
+7. Board refetches tickets with updated previewUrl
+8. Preview icon automatically appears
+
+**No Modifications Needed**: Existing polling infrastructure handles deploy jobs automatically
+
+### Failure Handling
+
+**Detection**: `deployJob?.status === 'FAILED'`
+
+**UI Components**:
+- Error indicator: Red circular badge with AlertCircle icon
+- Tooltip: Shows error message from `Job.logs` field or fallback message
+- Deploy icon: Remains visible alongside error indicator for retry
+
+**User Flow**:
+1. Deploy job fails (workflow sets status = FAILED)
+2. Error indicator appears next to deploy icon
+3. User hovers to see error message
+4. User clicks deploy icon to retry deployment
+5. New job created, old job status persists in history
+
+### Workflow Authentication
+
+**Workflow Token Pattern**:
+```bash
+curl -X PATCH \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+  -d '{"status": "COMPLETED"}' \
+  https://ai-board.vercel.app/api/jobs/:jobId/status
+```
+
+**Validation**: `validateWorkflowAuth()` function checks Bearer token on workflow-only endpoints
+
+### Security Considerations
+
+**Preview URL Validation**:
+- HTTPS-only protocol enforced
+- Vercel domain pattern: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
+- Maximum 500 characters
+- Zod schema: `previewUrlSchema` in `app/lib/schemas/deploy-preview.ts`
+
+**Secrets Management**:
+- `VERCEL_TOKEN`: Vercel API token (GitHub secret)
+- `WORKFLOW_API_TOKEN`: Workflow-to-API authentication (GitHub secret)
+- Never committed to repository (.env files gitignored)
+
+### Implementation Files
+
+**Core Files**:
+- Database schema: `prisma/schema.prisma` (Ticket.previewUrl field)
+- Validation schemas: `app/lib/schemas/deploy-preview.ts`
+- API endpoints: `app/api/projects/[projectId]/tickets/[id]/deploy/route.ts`, `preview-url/route.ts`
+- Workflow: `.github/workflows/deploy-preview.yml`
+
+**UI Components**:
+- `components/board/ticket-card-preview-icon.tsx`
+- `components/board/ticket-card-deploy-icon.tsx`
+- `components/board/deploy-confirmation-modal.tsx`
+- `components/board/ticket-card.tsx` (failure indicator)
+
+**Utilities**:
+- Eligibility: `app/lib/utils/deploy-preview-eligibility.ts`
+- Job filtering: `lib/utils/job-filtering.ts` (getDeployJob function)
+- Workflow dispatch: `app/lib/workflows/dispatch-deploy-preview.ts`
+
+**Mutation Hooks**:
+- `app/lib/hooks/mutations/useDeployPreview.ts`
+
+### Testing Strategy
+
+**Test Coverage**:
+- Deployment eligibility validation (6 scenarios)
+- API contract tests (201 success, 400 validation, 403 forbidden)
+- UI integration tests (icon visibility, modal flow, job polling)
+- E2E workflow tests (full deployment cycle, single-preview enforcement)
+
+**Key Test Scenarios**:
+- Eligible ticket → deploy → job created → workflow triggered
+- Ineligible ticket (wrong stage, no branch, no completed job) → 400 error
+- Existing preview → deploy new ticket → confirmation modal → old preview cleared
+- Deploy failure → error indicator → hover tooltip → retry → new job created
 
 <!-- MANUAL ADDITIONS END -->

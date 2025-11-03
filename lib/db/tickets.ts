@@ -25,6 +25,7 @@ export async function getTicketsByStage(
       version: true,
       projectId: true,
       branch: true,
+      previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
       workflowType: true,
@@ -63,6 +64,7 @@ export async function getTicketsByStage(
         version: ticket.version,
         projectId: ticket.projectId,
         branch: ticket.branch,
+        previewUrl: ticket.previewUrl,
         autoMode: ticket.autoMode,
         clarificationPolicy: ticket.clarificationPolicy,
         workflowType: ticket.workflowType,
@@ -151,6 +153,7 @@ export async function getTicketsWithJobs(projectId: number) {
       version: true,
       projectId: true,
       branch: true,
+      previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
       workflowType: true,
@@ -180,7 +183,7 @@ export async function getTicketsWithJobs(projectId: number) {
     {} as Record<Stage, typeof tickets>
   );
 
-  // Transform tickets to TicketWithVersion format (without jobs)
+  // Transform tickets to TicketWithVersion format (with jobs for deployment eligibility)
   const groupedTickets = getAllStages().reduce(
     (acc, stage) => {
       acc[stage] = [];
@@ -201,6 +204,7 @@ export async function getTicketsWithJobs(projectId: number) {
         version: ticket.version,
         projectId: ticket.projectId,
         branch: ticket.branch,
+        previewUrl: ticket.previewUrl,
         autoMode: ticket.autoMode,
         clarificationPolicy: ticket.clarificationPolicy,
         workflowType: ticket.workflowType,
@@ -208,6 +212,12 @@ export async function getTicketsWithJobs(projectId: number) {
         createdAt: ticket.createdAt.toISOString(),
         updatedAt: ticket.updatedAt.toISOString(),
         project: ticket.project,
+        // Add jobs for deployment eligibility check
+        jobs: ticket.jobs.map((job) => ({
+          status: job.status,
+          command: job.command,
+          createdAt: job.createdAt,
+        })),
       });
       // Keep original tickets with jobs for job map
       grouped[ticket.stage as Stage].push(ticket);

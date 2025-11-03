@@ -22,6 +22,7 @@ interface StageColumnProps {
   getTicketJobs?: (ticketId: number) => DualJobState;
   dropZoneStyle?: string;
   isBlockedByJob?: boolean;
+  activePreviewTicket?: { ticketKey: string } | null;
 }
 
 // Stage configuration matching original design
@@ -128,6 +129,7 @@ export const StageColumn = React.memo(
     getTicketJobs,
     dropZoneStyle,
     isBlockedByJob = false,
+    activePreviewTicket,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -244,7 +246,9 @@ export const StageColumn = React.memo(
                     currentJob={getTicketJob?.(ticket.id) || null}
                     workflowJob={dualJobs?.workflow || null}
                     aiBoardJob={dualJobs?.aiBoard || null}
+                    deployJob={dualJobs?.deployJob || null}
                     isDraggable={isDraggable}
+                    activePreviewTicket={activePreviewTicket || null}
                     {...(onTicketClick && { onTicketClick })}
                   />
                 );

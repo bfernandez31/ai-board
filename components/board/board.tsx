@@ -30,7 +30,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
-import { getWorkflowJob, getAIBoardJob } from '@/lib/utils/job-filtering';
+import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
 import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
 
 /**
@@ -72,7 +72,12 @@ function BoardContent({
   projectId,
   initialJobs = new Map(),
 }: BoardProps) {
-  // Poll for job status updates (replaces SSE)
+  // T030: Job polling integration for real-time job status updates
+  // - Polls /api/projects/:projectId/jobs/status every 2 seconds
+  // - Auto-stops when all jobs reach terminal state (COMPLETED/FAILED/CANCELLED)
+  // - Merges polled updates with initial job data in getTicketJobs()
+  // - Used for workflow, AI-BOARD, and deploy preview job tracking
+  // - No modifications needed for deploy preview feature (reuses existing infrastructure)
   const { jobs: polledJobs } = useJobPolling(projectId, 2000);
   const queryClient = useQueryClient();
   const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
@@ -155,6 +160,12 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
+  // Find the ticket with active preview URL (for single-preview warning)
+  const activePreviewTicket = useMemo(() => {
+    const ticketWithPreview = allTickets.find(t => t.previewUrl !== null && t.previewUrl !== undefined);
+    return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
+  }, [allTickets]);
+
   // Get most recent job for a specific ticket (merges initial + polled data)
   // Used for drag-and-drop validation to check if ticket has active job
   const getTicketJob = useCallback(
@@ -196,8 +207,15 @@ function BoardContent({
     [polledJobs, initialJobs]
   );
 
-  // Get dual job state for a ticket (workflow + AI-BOARD jobs)
-  // T022: Updated to include AI-BOARD job filtering with stage matching
+  // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
+  // Merges polled job updates with initial job data for real-time status display
+  // - workflow: Latest workflow job (specify, plan, implement, quick-impl, verify)
+  // - aiBoard: Latest AI-BOARD job matching current stage (comment-specify, comment-plan, etc.)
+  // - deployJob: Latest deploy preview job (deploy-preview command)
+  // Polling integration:
+  // - Initial render: Uses initialJobs from server-side data
+  // - Subsequent renders: Merges polled status updates with initial job data
+  // - Creates minimal Job objects for new jobs created during session
   const getTicketJobs = useCallback(
     (ticketId: number): DualJobState => {
       // Get initial jobs array for this ticket
@@ -208,7 +226,7 @@ function BoardContent({
 
       // If no jobs at all, return null state
       if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
-        return { workflow: null, aiBoard: null };
+        return { workflow: null, aiBoard: null, deployJob: null };
       }
 
       // If no polled jobs yet, use initial jobs (first render)
@@ -217,6 +235,7 @@ function BoardContent({
         return {
           workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
           aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
+          deployJob: getDeployJob(ticketInitialJobs),
         };
       }
 
@@ -255,10 +274,11 @@ function BoardContent({
       // Find the ticket to get current stage for AI-BOARD filtering
       const ticket = allTickets.find(t => t.id === ticketId);
 
-      // Use filtering functions to get workflow and AI-BOARD jobs
+      // Use filtering functions to get workflow, AI-BOARD, and deploy jobs
       return {
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
+        deployJob: getDeployJob(fullJobs),
       };
     },
     [polledJobs, initialJobs, projectId, allTickets]
@@ -740,6 +760,7 @@ function BoardContent({
                   getTicketJobs={getTicketJobs}
                   dropZoneStyle={getDropZoneStyle(stage)}
                   isBlockedByJob={isBlocked}
+                  activePreviewTicket={activePreviewTicket}
                 />
               );
             })}

@@ -609,10 +609,10 @@ test.describe('Inline Ticket Editing - User Interface', () => {
   });
 
   /**
-   * T025: Inline edit description with emoji succeeds (UTF-8 support)
-   * Feature: AIB-50 - Description now accepts all UTF-8 characters
+   * T025: Inline edit description with emoji shows validation error
+   * Feature: 024-16204-description-validation
    */
-  test('inline edit description with emoji succeeds', async ({ page, request , projectId }) => {
+  test('inline edit description with emoji shows validation error', async ({ page, request , projectId }) => {
     // Create ticket
     const ticket = await createTicket(request, projectId);
 
@@ -625,37 +625,31 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await descriptionElement.click();
     const textarea = page.getByTestId('description-textarea');
 
-    // Type description with emoji (now valid)
-    await textarea.fill('Bug with emoji 😀 and more unicode: 你好 🎉');
+    // Type invalid character (emoji)
+    await textarea.fill('Bug with emoji 😀');
 
     // Wait for validation to run (optimized)
     await page.waitForTimeout(50);
 
-    // Verify NO error message appears
+    // Verify error message appears
     const errorMessage = page.getByTestId('description-error');
-    await expect(errorMessage).not.toBeVisible();
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).toContainText('can only contain letters, numbers, spaces, and common special characters');
 
-    // Verify Save button is enabled
+    // Verify Save button is disabled
     const saveButton = page.locator('button:has-text("Save")');
-    await expect(saveButton).toBeEnabled();
+    await expect(saveButton).toBeDisabled();
 
-    // Save the description
-    await saveButton.click();
-
-    // Wait for success toast
-    const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
-    await expect(toast).toBeVisible({ timeout: 2000 });
-
-    // Verify database was updated with UTF-8 characters
+    // Verify database not updated
     const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.description).toBe('Bug with emoji 😀 and more unicode: 你好 🎉');
+    expect(dbTicket?.version).toBe(1);
   });
 
   /**
-   * T026: Title validation error message is clear and actionable
-   * Feature: AIB-50 - Title still has character restrictions, description does not
+   * T026: Validation error message is clear and actionable
+   * Feature: 024-16204-description-validation
    */
-  test('title validation error message is clear and actionable', async ({ page, request , projectId }) => {
+  test('validation error message is clear and actionable', async ({ page, request , projectId }) => {
     // Create ticket
     const ticket = await createTicket(request, projectId);
 
@@ -663,43 +657,45 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
 
-    // Click title to edit (not description - title has character restrictions)
-    const titleElement = page.getByTestId('ticket-title');
-    await titleElement.click();
-    const titleInput = page.getByTestId('title-input');
+    // Click description to edit
+    const descriptionElement = page.getByTestId('ticket-description');
+    await descriptionElement.click();
+    const textarea = page.getByTestId('description-textarea');
 
-    // Type invalid character (emoji) - not allowed in title
-    await titleInput.fill('Bug 🚀');
+    // Type invalid characters (newline - but this is actually allowed by \s in the regex)
+    // Use emoji instead which is definitely invalid
+    await textarea.fill('Bug 🚀');
 
     // Wait for validation to run (optimized)
     await page.waitForTimeout(50);
 
     // Wait for error message
-    const errorMessage = page.getByTestId('title-error');
+    const errorMessage = page.getByTestId('description-error');
     await expect(errorMessage).toBeVisible({ timeout: 2000 });
 
     // Assert: Error message is clear
     await expect(errorMessage).toContainText('can only contain letters, numbers, spaces, and common special characters');
 
+    // Assert: Save button is disabled
+    const saveButton = page.locator('button:has-text("Save")');
+    await expect(saveButton).toBeDisabled();
+
     // Assert: textarea remains in edit mode (not saved)
-    await expect(titleInput).toBeVisible();
+    await expect(textarea).toBeVisible();
 
     // Verify: User can fix the error and save
-    await titleInput.fill('Bug fixed'); // Remove emoji
+    await textarea.fill('Bug fixed'); // Remove emoji
     await page.waitForTimeout(50);
 
-    // Error should be gone
+    // Error should be gone and Save button enabled
     await expect(errorMessage).not.toBeVisible();
+    await expect(saveButton).toBeEnabled();
 
     // Now save
-    await titleInput.press('Enter');
+    await saveButton.click();
 
     // Success toast appears
     const toast = page.getByTestId('toast').filter({ hasText: 'Ticket updated' }).first();
     await expect(toast).toBeVisible({ timeout: 2000 });
-
-    // Verify database was updated
-    const dbTicket = await getTicket(ticket.id);
-    expect(dbTicket?.title).toBe('Bug fixed');
   });
 });

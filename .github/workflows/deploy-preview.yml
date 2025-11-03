@@ -1,0 +1,92 @@
+name: Deploy Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket_id:
+        description: 'Ticket ID to deploy'
+        required: true
+        type: string
+      project_id:
+        description: 'Project ID for authorization'
+        required: true
+        type: string
+      branch:
+        description: 'Git branch to deploy'
+        required: true
+        type: string
+      job_id:
+        description: 'Job ID to update status'
+        required: true
+        type: string
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy to Vercel Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Update job status to RUNNING
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "RUNNING"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
+        continue-on-error: true
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel Preview
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy \
+            --yes \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }} \
+            --git-branch=${{ inputs.branch }} \
+            2>&1 | tee /tmp/deploy.log | grep -oP 'https://[^\s]+' | head -1)
+
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "Failed to extract deployment URL from Vercel output"
+            cat /tmp/deploy.log
+            exit 1
+          fi
+
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+      - name: Update ticket preview URL
+        if: success()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d "{\"previewUrl\": \"${{ steps.deploy.outputs.url }}\"}" \
+            https://ai-board.vercel.app/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/preview-url
+
+      - name: Update job status to COMPLETED
+        if: success()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "COMPLETED"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
+
+      - name: Update job status to FAILED
+        if: failure()
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
+            -d '{"status": "FAILED"}' \
+            https://ai-board.vercel.app/api/jobs/${{ inputs.job_id }}/status
