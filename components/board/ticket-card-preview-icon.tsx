@@ -41,7 +41,7 @@ export const TicketCardPreviewIcon = React.memo(
         className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4]"
         onClick={handleClick}
         aria-label={`Open preview deployment for ${ticketKey}`}
-        title="Open preview deployment"
+        title="Preview deployment completed"
         data-testid="preview-icon"
       >
         <ExternalLink className="h-4 w-4" />
