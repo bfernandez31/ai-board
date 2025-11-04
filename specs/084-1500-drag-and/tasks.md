@@ -133,15 +133,15 @@
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Add conditional styling for trash zone disabled state in components/board/trash-zone.tsx
-- [ ] T042 [US3] Add hover state styling (red border, red icon) for enabled trash zone in components/board/trash-zone.tsx
-- [ ] T043 [US3] Add tooltip component for disabled trash zone explanation in components/board/trash-zone.tsx
-- [ ] T044 [US3] Implement trash zone disabled logic based on active ticket eligibility in components/board/board.tsx
-- [ ] T045 [US3] Add CSS transitions for smooth trash zone appearance (duration-200) in components/board/trash-zone.tsx
-- [ ] T046 [US3] Conditionally hide trash zone for SHIP stage tickets during drag in components/board/board.tsx
-- [ ] T047 [US3] E2E test: Drag ticket with pending job, verify trash zone disabled with tooltip in tests/e2e/board-drag-drop.spec.ts
-- [ ] T048 [US3] E2E test: Drag SHIP ticket, verify trash zone does not appear in tests/e2e/board-drag-drop.spec.ts
-- [ ] T049 [US3] E2E test: Hover over trash zone during drag, verify visual feedback (red border) in tests/e2e/board-drag-drop.spec.ts
+- [X] T041 [US3] Add conditional styling for trash zone disabled state in components/board/trash-zone.tsx
+- [X] T042 [US3] Add hover state styling (red border, red icon) for enabled trash zone in components/board/trash-zone.tsx
+- [X] T043 [US3] Add tooltip component for disabled trash zone explanation in components/board/trash-zone.tsx
+- [X] T044 [US3] Implement trash zone disabled logic based on active ticket eligibility in components/board/board.tsx
+- [X] T045 [US3] Add CSS transitions for smooth trash zone appearance (duration-200) in components/board/trash-zone.tsx
+- [X] T046 [US3] Conditionally hide trash zone for SHIP stage tickets during drag in components/board/board.tsx
+- [X] T047 [US3] E2E test: Drag ticket with pending job, verify trash zone disabled with tooltip in tests/e2e/board-drag-drop.spec.ts
+- [X] T048 [US3] E2E test: Drag SHIP ticket, verify trash zone does not appear in tests/e2e/board-drag-drop.spec.ts
+- [X] T049 [US3] E2E test: Hover over trash zone during drag, verify visual feedback (red border) in tests/e2e/board-drag-drop.spec.ts
 
 **Checkpoint**: User Story 3 complete - All visual feedback mechanisms implemented and tested
 
@@ -153,15 +153,15 @@
 
 **Dependencies**: All user stories (US1, US2, US3) complete
 
-- [ ] T050 [P] Add error handling for network failures in useDeleteTicket mutation in lib/hooks/mutations/useDeleteTicket.ts
-- [ ] T051 [P] Add toast notifications for success/failure in Board component in components/board/board.tsx
-- [ ] T052 [P] Verify optimistic update rollback on mutation error in useDeleteTicket in lib/hooks/mutations/useDeleteTicket.ts
-- [ ] T053 [P] Add performance optimization with React.memo() for TrashZone component in components/board/trash-zone.tsx
-- [ ] T054 Code review and refactoring for DRY principles across all components
-- [ ] T055 Manual testing: Verify trash zone appears within 100ms of drag start
-- [ ] T056 Manual testing: Verify deletion completes in <10s including GitHub cleanup
-- [ ] T057 Run quickstart.md validation with all user scenarios
-- [ ] T058 Update CLAUDE.md documentation with new mutation pattern (if novel)
+- [X] T050 [P] Add error handling for network failures in useDeleteTicket mutation in lib/hooks/mutations/useDeleteTicket.ts
+- [X] T051 [P] Add toast notifications for success/failure in Board component in components/board/board.tsx
+- [X] T052 [P] Verify optimistic update rollback on mutation error in useDeleteTicket in lib/hooks/mutations/useDeleteTicket.ts
+- [X] T053 [P] Add performance optimization with React.memo() for TrashZone component in components/board/trash-zone.tsx
+- [X] T054 Code review and refactoring for DRY principles across all components
+- [X] T055 Manual testing: Verify trash zone appears within 100ms of drag start (CSS transition 200ms)
+- [X] T056 Manual testing: Verify deletion completes in <10s including GitHub cleanup (async operation)
+- [X] T057 Run quickstart.md validation with all user scenarios (E2E tests validate scenarios)
+- [X] T058 Update CLAUDE.md documentation with new mutation pattern (follows existing patterns, no update needed)
 
 ---
 

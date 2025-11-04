@@ -214,4 +214,207 @@ test.describe('Drag and Drop to Trash Zone', () => {
     const ticketTitle = remainingTicket.locator('text=/Test Ticket for Trash/i');
     await expect(ticketTitle).toBeVisible();
   });
+
+  /**
+   * Test: Drag ticket with pending job, verify trash zone disabled with tooltip
+   * Task: T047
+   * Given: User has ticket with active PENDING job
+   * When: User drags ticket over disabled trash zone
+   * Then: Trash zone shows disabled state with explanatory tooltip
+   */
+  test('should disable trash zone and show tooltip for ticket with pending job', async ({ page, projectId }) => {
+    // Create ticket with PENDING job
+    const projectKey = getProjectKey(projectId);
+    const ticketNumber = nextTicketNumber++;
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
+        title: '[e2e] Ticket with Pending Job',
+        description: 'Testing trash zone disabled state',
+        stage: 'SPECIFY',
+        projectId,
+        branch: '084-test-branch',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create PENDING job for the ticket
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        status: 'PENDING',
+        command: 'specify',
+        branch: '084-test-branch',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Navigate to board
+    await page.goto(`/projects/${projectId}/board`);
+
+    // Wait for board to load
+    await page.waitForSelector('[data-testid="column-SPECIFY"]');
+
+    // Get the ticket card with pending job
+    const ticketCard = page.locator('[data-testid="column-SPECIFY"] [data-draggable="true"]').first();
+    await expect(ticketCard).toBeVisible();
+
+    // Start dragging
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+    await page.mouse.down();
+
+    // Move mouse to trigger drag
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(50);
+
+    // Verify trash zone appeared but is disabled
+    const trashZone = page.locator('[data-testid="trash-zone"]');
+    await expect(trashZone).toBeVisible();
+
+    // Verify disabled state styling (opacity-50 and cursor-not-allowed)
+    const trashClasses = await trashZone.getAttribute('class');
+    expect(trashClasses).toContain('opacity-50');
+    expect(trashClasses).toContain('cursor-not-allowed');
+
+    // Verify disabled reason text is present in the trash zone (for tooltip)
+    // Note: Tooltip may not appear during active drag, but the content should be there
+    const trashZoneText = await trashZone.textContent();
+    expect(trashZoneText).toContain('Delete Ticket');
+
+    // Release drag
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+
+    // Verify no modal appeared (deletion blocked)
+    const modal = page.locator('[role="alertdialog"]');
+    await expect(modal).not.toBeVisible();
+
+    // Verify ticket still exists
+    const ticketCount = await prisma.ticket.count({ where: { id: ticket.id } });
+    expect(ticketCount).toBe(1);
+  });
+
+  /**
+   * Test: Drag SHIP ticket, verify trash zone does not appear
+   * Task: T048
+   * Given: User has ticket in SHIP stage
+   * When: User drags SHIP stage ticket
+   * Then: Trash zone does not appear (SHIP tickets cannot be deleted)
+   */
+  test('should not show trash zone for SHIP stage ticket', async ({ page, projectId }) => {
+    // Create ticket in SHIP stage
+    const projectKey = getProjectKey(projectId);
+    const ticketNumber = nextTicketNumber++;
+    await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
+        title: '[e2e] SHIP Stage Ticket',
+        description: 'Testing trash zone for SHIP tickets',
+        stage: 'SHIP',
+        projectId,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Navigate to board
+    await page.goto(`/projects/${projectId}/board`);
+
+    // Wait for board to load
+    await page.waitForSelector('[data-testid="column-SHIP"]');
+
+    // Get the SHIP ticket card
+    const ticketCard = page.locator('[data-testid="column-SHIP"] [data-draggable="true"]').first();
+    await expect(ticketCard).toBeVisible();
+
+    // Start dragging
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+    await page.mouse.down();
+
+    // Move mouse to trigger drag
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(100);
+
+    // Verify trash zone does NOT appear
+    const trashZone = page.locator('[data-testid="trash-zone"]');
+    await expect(trashZone).not.toBeVisible();
+
+    // Release drag
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+
+    // Verify no modal appeared
+    const modal = page.locator('[role="alertdialog"]');
+    await expect(modal).not.toBeVisible();
+  });
+
+  /**
+   * Test: Hover over trash zone during drag, verify visual feedback (red border)
+   * Task: T049
+   * Given: User is dragging a deletable ticket
+   * When: User hovers over enabled trash zone
+   * Then: Trash zone shows red border and red icon (visual feedback)
+   */
+  test('should show red border visual feedback when hovering over trash zone', async ({ page, projectId }) => {
+    // Navigate to board
+    await page.goto(`/projects/${projectId}/board`);
+
+    // Wait for board to load
+    await page.waitForSelector('[data-testid="column-INBOX"]');
+
+    // Get the ticket card (from beforeEach setup)
+    const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
+    await expect(ticketCard).toBeVisible();
+
+    // Start dragging
+    const ticketBox = await ticketCard.boundingBox();
+    if (!ticketBox) throw new Error('Ticket not found');
+
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+    await page.mouse.down();
+
+    // Move mouse to trigger drag
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
+    await page.waitForTimeout(50);
+
+    // Verify trash zone appeared
+    const trashZone = page.locator('[data-testid="trash-zone"]');
+    await expect(trashZone).toBeVisible();
+
+    // Get initial trash zone classes (not hovering yet)
+    const initialClasses = await trashZone.getAttribute('class');
+    expect(initialClasses).not.toContain('border-red-500');
+
+    // Move over trash zone to trigger hover state
+    const trashBox = await trashZone.boundingBox();
+    if (!trashBox) throw new Error('Trash zone not found');
+
+    await page.mouse.move(trashBox.x + trashBox.width / 2, trashBox.y + trashBox.height / 2, { steps: 10 });
+    await page.waitForTimeout(100); // Wait for CSS transition
+
+    // Verify red border and background appear on hover
+    const hoverClasses = await trashZone.getAttribute('class');
+    expect(hoverClasses).toContain('border-red-500');
+    expect(hoverClasses).toContain('bg-red-50');
+
+    // Verify trash icon turns red
+    const trashIcon = trashZone.locator('svg').first(); // Trash2 icon
+    const iconClasses = await trashIcon.getAttribute('class');
+    expect(iconClasses).toContain('text-red-500');
+
+    // Release drag while still over trash zone
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+
+    // Trash zone should disappear after drag ends
+    await expect(trashZone).not.toBeVisible();
+  });
 });

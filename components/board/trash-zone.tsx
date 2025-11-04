@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,7 +53,7 @@ export interface TrashZoneProps {
  * />
  * ```
  */
-export function TrashZone({ isVisible, isDisabled, disabledReason }: TrashZoneProps) {
+export const TrashZone = React.memo(function TrashZone({ isVisible, isDisabled, disabledReason }: TrashZoneProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: 'trash-zone',
     disabled: isDisabled,
@@ -108,4 +109,4 @@ export function TrashZone({ isVisible, isDisabled, disabledReason }: TrashZonePr
   }
 
   return trashZoneContent;
-}
+});
