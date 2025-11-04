@@ -32,12 +32,15 @@ The Comments tab displays a unified timeline that interleaves comments with work
 - Comments and job events clearly differentiated visually
 - Job status indicators: success (green), failure (red), cancelled (gray)
 
-**Included Job Stages**:
-- SPECIFY: Specification generation workflows
-- PLAN: Planning and task breakdown workflows
-- BUILD: Implementation workflows
-- VERIFY: Verification workflows
-- SHIP: Deployment workflows
+**Included Job Types**:
+- **Workflow Stages**:
+  - SPECIFY: Specification generation workflows
+  - PLAN: Planning and task breakdown workflows
+  - BUILD: Implementation workflows
+  - VERIFY: Verification workflows
+  - SHIP: Deployment workflows
+- **Deploy Previews**: Preview deployment jobs
+- **AI-BOARD Assistance**: AI-powered collaboration requests
 
 ### Creating Comments
 

@@ -38,6 +38,12 @@ describe('getJobDisplayName', () => {
     });
   });
 
+  describe('Deploy preview command', () => {
+    it('should return "Preview deployment" for deploy-preview command', () => {
+      expect(getJobDisplayName('deploy-preview')).toBe('Preview deployment');
+    });
+  });
+
   describe('AI-BOARD assistance commands', () => {
     it('should return "Specification assistance" for comment-specify', () => {
       expect(getJobDisplayName('comment-specify')).toBe('Specification assistance');

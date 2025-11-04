@@ -21,6 +21,9 @@ export const JOB_COMMAND_DISPLAY_NAMES: Record<string, string> = {
   // Quick-impl workflow command (QUICK workflowType)
   'quick-impl': 'Quick implementation',
 
+  // Deploy preview command
+  'deploy-preview': 'Preview deployment',
+
   // AI-BOARD assistance commands (comment-* pattern)
   'comment-specify': 'Specification assistance',
   'comment-plan': 'Planning assistance',
@@ -43,6 +46,7 @@ export const JOB_COMMAND_DISPLAY_NAMES: Record<string, string> = {
  * getJobDisplayName('specify') // → "Specification generation"
  * getJobDisplayName('comment-plan') // → "Planning assistance"
  * getJobDisplayName('verify') // → "Verification"
+ * getJobDisplayName('deploy-preview') // → "Preview deployment"
  * getJobDisplayName('comment-ship') // → "Deployment assistance"
  * getJobDisplayName('unknown-cmd') // → "Unknown command (unknown-cmd)"
  */
