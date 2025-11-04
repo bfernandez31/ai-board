@@ -104,7 +104,7 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     await expect(rocketIcon).toHaveClass(/text-blue-500/);
   });
 
-  test('should display green color for COMPLETED deploy job', async ({ page, projectId }) => {
+  test('should display preview icon and deploy button for COMPLETED deploy job', async ({ page, projectId }) => {
     const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
@@ -137,12 +137,13 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
-    await expect(statusIndicator).toBeVisible();
+    // Verify preview icon is visible (ExternalLink icon)
+    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
+    await expect(previewIcon).toBeVisible();
 
-    // Verify the icon has green color (text-green-500) for COMPLETED status
-    const rocketIcon = statusIndicator.locator('svg').first();
-    await expect(rocketIcon).toHaveClass(/text-green-500/);
+    // Verify deploy button is visible (for redeployment)
+    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
+    await expect(deployIcon).toBeVisible();
   });
 
   test('should display red color for FAILED deploy job', async ({ page, projectId }) => {
@@ -217,5 +218,133 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     // For CANCELLED status, the deploy icon (retry button) should be visible
     const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
     await expect(deployIcon).toBeVisible();
+  });
+
+  test('should NOT show preview icon when previewUrl is null', async ({ page, projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
+        title: '[e2e] Test no preview icon',
+        description: 'Testing that preview icon is not shown when previewUrl is null',
+        stage: 'VERIFY',
+        projectId,
+        branch: '081-test-branch',
+        previewUrl: null, // Explicitly null
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create a completed verify job to make ticket deployable
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '081-test-branch',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible();
+
+    // Verify preview icon is NOT visible
+    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
+    await expect(previewIcon).not.toBeVisible();
+
+    // Verify deploy button IS visible (since ticket is deployable)
+    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
+    await expect(deployIcon).toBeVisible();
+  });
+
+  test('should show only preview icon for ticket with previewUrl but no current deploy job', async ({ page, projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
+        title: '[e2e] Test preview icon only',
+        description: 'Testing that preview icon is shown when previewUrl exists',
+        stage: 'VERIFY',
+        projectId,
+        branch: '081-test-branch',
+        previewUrl: 'https://test-preview.vercel.app',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create a completed verify job to make ticket deployable
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '081-test-branch',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible();
+
+    // Verify preview icon IS visible
+    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
+    await expect(previewIcon).toBeVisible();
+
+    // Verify deploy button IS visible (for redeployment)
+    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
+    await expect(deployIcon).toBeVisible();
+  });
+
+  test('should disable deploy button when deploy job is PENDING or RUNNING', async ({ page, projectId }) => {
+    const ticketNumber = nextTicketNumber++;
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
+        title: '[e2e] Test deploy button disabled',
+        description: 'Testing that deploy button is disabled during active deployment',
+        stage: 'VERIFY',
+        projectId,
+        branch: '081-test-branch',
+        previewUrl: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create a PENDING deploy job
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        command: 'deploy-preview',
+        status: 'PENDING',
+        branch: '081-test-branch',
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
+    await expect(ticketCard).toBeVisible();
+
+    // Verify deploy button (rocket icon) is NOT visible (replaced by status indicator)
+    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
+    await expect(deployIcon).not.toBeVisible();
+
+    // Verify job status indicator IS visible
+    const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
+    await expect(statusIndicator).toBeVisible();
   });
 });
