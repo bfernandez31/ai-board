@@ -123,14 +123,15 @@ function getAIBoardAriaLabel(status: JobStatus): string {
 
 /**
  * Get Deploy icon color based on status
- * Blue for pending/running/completed, red for failed
+ * Blue for pending/running, green for completed, red for failed
  */
 function getDeployColor(status: JobStatus): string {
   switch (status) {
     case 'PENDING':
     case 'RUNNING':
-    case 'COMPLETED':
       return 'text-blue-500'
+    case 'COMPLETED':
+      return 'text-green-500'
     case 'FAILED':
       return 'text-red-500'
     case 'CANCELLED':

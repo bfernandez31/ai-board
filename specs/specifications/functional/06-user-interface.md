@@ -80,6 +80,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Warnings: Orange highlights
 - Errors: Red messaging
 - Information: Blue accents
+- In-progress operations: Blue indicators (pending/running states)
 
 ## Interactive Elements
 
@@ -320,6 +321,16 @@ The user interface provides an intuitive, modern experience for managing tickets
   - RUNNING: Progress animation
   - COMPLETED: Success checkmark
   - FAILED: Error icon
+
+**Deploy Preview Status**:
+- Rocket icon displays deployment status with color coding:
+  - Blue: Deployment pending or in progress (PENDING/RUNNING states)
+  - Green: Deployment completed successfully (matches standard job completion color)
+  - Red: Deployment failed
+  - Gray: Deployment cancelled
+- Icon includes bounce animation during PENDING/RUNNING states
+- Tooltip provides detailed status message
+- Color transitions automatically via job polling
 
 ## Empty States
 
