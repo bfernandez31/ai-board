@@ -99,6 +99,31 @@ export const updateBranchSchema = z.object({
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 ```
 
+**Validation**:
+- **branch**: Max 200 characters or null
+- No version checking (workflow-only endpoint)
+
+### DeleteTicketSchema
+
+```typescript
+export const deleteTicketParamsSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  id: z.coerce.number().int().positive(),
+});
+
+export type DeleteTicketParams = z.infer<typeof deleteTicketParamsSchema>;
+```
+
+**Validation**:
+- **projectId**: Positive integer (path parameter)
+- **id**: Positive integer (path parameter)
+- No request body required
+
+**Business Validation** (performed in API route, not schema):
+- Ticket cannot be in SHIP stage
+- Ticket cannot have PENDING or RUNNING jobs
+- GitHub artifacts (PRs, branch) must be deleted before database deletion
+
 ### UpdatePreviewUrlSchema
 
 ```typescript
@@ -118,10 +143,6 @@ export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
 - **previewUrl**: Max 500 characters, HTTPS-only, Vercel domain pattern (`https://*.vercel.app`)
 - **Pattern**: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
 - Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
-
-**Validation**:
-- **branch**: Max 200 characters or null
-- No version checking (workflow-only endpoint)
 
 ## Comment Schemas
 
@@ -417,7 +438,8 @@ try {
 
 ```
 app/lib/schemas/
-├── ticket.ts           # Ticket-related schemas
+├── ticket.ts           # Ticket-related schemas (create, update, transition, branch, preview URL)
+├── ticket-delete.ts    # Ticket deletion schemas
 ├── comment.ts          # Comment schemas
 ├── job.ts              # Job status schemas
 ├── project.ts          # Project schemas

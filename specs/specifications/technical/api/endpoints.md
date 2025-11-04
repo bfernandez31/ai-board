@@ -531,6 +531,54 @@ Update ticket preview URL (workflow-only endpoint).
 
 **Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
 
+### DELETE /api/projects/:projectId/tickets/:id
+
+Delete ticket with GitHub cleanup (permanent deletion).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (204 No Content)
+
+**Deletion Behavior**:
+- **Transactional**: All GitHub artifacts must be deleted successfully before database deletion
+- **GitHub Cleanup** (in order):
+  1. Close all pull requests where head branch matches ticket branch
+  2. Delete Git branch from repository
+- **Database Cleanup** (cascade):
+  1. Delete all associated jobs
+  2. Delete all associated comments
+  3. Delete ticket record
+- **Failure Handling**: If any GitHub operation fails, ticket remains unchanged in database
+
+**Validation**:
+- Ticket cannot be in SHIP stage (400 error)
+- Ticket cannot have PENDING or RUNNING jobs (400 error)
+
+**Errors**:
+- `400`: Invalid deletion (SHIP stage or active job)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: GitHub API error or database error
+
+**GitHub API Errors**:
+- 404 errors (branch/PR not found) are ignored (idempotent operation)
+- Other GitHub API errors abort the deletion and preserve ticket
+
+**Notes**:
+- Pull requests are identified by matching head branch name
+- All PRs with matching head branch are closed (handles multiple PRs scenario)
+- Workflow artifacts (spec.md, plan.md, tasks.md) are deleted when branch is deleted
+- Preview deployments become orphaned (Vercel cleanup is manual)
+- TanStack Query optimistic update removes ticket immediately from UI
+
 ### POST /api/projects/:projectId/tickets/:id/transition
 
 Transition ticket to target stage with workflow dispatch.
