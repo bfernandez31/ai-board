@@ -328,6 +328,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Appears ONLY on tickets with active preview deployment (non-null previewUrl)
 - Only one ticket shows preview icon at a time (single-preview enforcement)
 - Clicking opens preview URL in new browser tab
+- Tooltip displays "Preview deployment completed" when hovering over icon
 - Remains visible until replaced by new deployment on different ticket
 - Positioned in ticket status bar with other indicators
 
