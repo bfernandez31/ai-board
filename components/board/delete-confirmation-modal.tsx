@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { getConfirmationMessage } from '@/lib/utils/stage-confirmation-messages';
-import { Ticket } from '@prisma/client';
+import { TicketWithVersion } from '@/lib/types';
 
 /**
  * Props for DeleteConfirmationModal component
@@ -20,7 +20,7 @@ export interface DeleteConfirmationModalProps {
   /**
    * Ticket to be deleted (null when modal closed)
    */
-  ticket: Ticket | null;
+  ticket: TicketWithVersion | null;
 
   /**
    * Whether the modal is open
@@ -78,8 +78,8 @@ export function DeleteConfirmationModal({
 }: DeleteConfirmationModalProps) {
   if (!ticket) return null;
 
-  // Get stage-specific confirmation message
-  const message = getConfirmationMessage(ticket);
+  // Get stage-specific confirmation message (cast to expected type)
+  const message = getConfirmationMessage(ticket as any);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -87,12 +87,11 @@ export function DeleteConfirmationModal({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Ticket?</AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
-            <p>
-              You are about to permanently delete{' '}
-              <strong className="text-foreground">{ticket.ticketKey}</strong>:{' '}
-              <span className="text-foreground">{ticket.title}</span>
-            </p>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{message}</p>
+            <span className="block">
+              You are about to permanently delete ticket{' '}
+              <strong className="text-foreground">{ticket.ticketKey}</strong>.
+            </span>
+            <span className="block text-sm text-muted-foreground whitespace-pre-line">{message}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

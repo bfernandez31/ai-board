@@ -62,26 +62,26 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Unit test for isTicketDeletable() with SHIP stage in tests/unit/trash-zone-eligibility.test.ts
-- [ ] T011 [P] [US1] Unit test for isTicketDeletable() with active jobs in tests/unit/trash-zone-eligibility.test.ts
-- [ ] T012 [P] [US1] Unit test for isTicketDeletable() with valid tickets in tests/unit/trash-zone-eligibility.test.ts
-- [ ] T013 [P] [US1] Unit test for getConfirmationMessage() INBOX stage in tests/unit/stage-confirmation-messages.test.ts
-- [ ] T014 [P] [US1] API contract test for DELETE success (INBOX ticket) in tests/api/tickets-delete.spec.ts
-- [ ] T015 [P] [US1] API contract test for DELETE rejected (SHIP stage) in tests/api/tickets-delete.spec.ts
-- [ ] T016 [P] [US1] API contract test for DELETE rejected (active job) in tests/api/tickets-delete.spec.ts
+- [X] T010 [P] [US1] Unit test for isTicketDeletable() with SHIP stage in tests/unit/trash-zone-eligibility.test.ts
+- [X] T011 [P] [US1] Unit test for isTicketDeletable() with active jobs in tests/unit/trash-zone-eligibility.test.ts
+- [X] T012 [P] [US1] Unit test for isTicketDeletable() with valid tickets in tests/unit/trash-zone-eligibility.test.ts
+- [X] T013 [P] [US1] Unit test for getConfirmationMessage() INBOX stage in tests/unit/stage-confirmation-messages.test.ts
+- [X] T014 [P] [US1] API contract test for DELETE success (INBOX ticket) in tests/api/tickets-delete.spec.ts
+- [X] T015 [P] [US1] API contract test for DELETE rejected (SHIP stage) in tests/api/tickets-delete.spec.ts
+- [X] T016 [P] [US1] API contract test for DELETE rejected (active job) in tests/api/tickets-delete.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Create TrashZone component with conditional rendering in components/board/trash-zone.tsx
-- [ ] T018 [P] [US1] Create DeleteConfirmationModal component using shadcn/ui AlertDialog in components/board/delete-confirmation-modal.tsx
-- [ ] T019 [US1] Create TanStack Query mutation hook useDeleteTicket() with optimistic updates in lib/hooks/mutations/useDeleteTicket.ts (depends on T017, T018)
-- [ ] T020 [US1] Extend Board component with trash zone integration in components/board/board.tsx (depends on T017, T018, T019)
-- [ ] T021 [US1] Implement onDragStart handler to show trash zone in components/board/board.tsx
-- [ ] T022 [US1] Implement onDragEnd handler for trash zone drop detection in components/board/board.tsx
-- [ ] T023 [US1] Implement delete confirmation flow with modal state management in components/board/board.tsx
-- [ ] T024 [US1] Add trash zone visibility logic (activeId tracking) in components/board/board.tsx
-- [ ] T025 [US1] E2E test: Drag INBOX ticket to trash, confirm, verify deleted in tests/e2e/board-drag-drop.spec.ts
-- [ ] T026 [US1] E2E test: Drag to trash, cancel modal, verify ticket remains in tests/e2e/board-drag-drop.spec.ts
+- [X] T017 [P] [US1] Create TrashZone component with conditional rendering in components/board/trash-zone.tsx
+- [X] T018 [P] [US1] Create DeleteConfirmationModal component using shadcn/ui AlertDialog in components/board/delete-confirmation-modal.tsx
+- [X] T019 [US1] Create TanStack Query mutation hook useDeleteTicket() with optimistic updates in lib/hooks/mutations/useDeleteTicket.ts (depends on T017, T018)
+- [X] T020 [US1] Extend Board component with trash zone integration in components/board/board.tsx (depends on T017, T018, T019)
+- [X] T021 [US1] Implement onDragStart handler to show trash zone in components/board/board.tsx
+- [X] T022 [US1] Implement onDragEnd handler for trash zone drop detection in components/board/board.tsx
+- [X] T023 [US1] Implement delete confirmation flow with modal state management in components/board/board.tsx
+- [X] T024 [US1] Add trash zone visibility logic (activeId tracking) in components/board/board.tsx
+- [X] T025 [US1] E2E test: Drag INBOX ticket to trash, confirm, verify deleted in tests/e2e/board-drag-drop.spec.ts
+- [X] T026 [US1] E2E test: Drag to trash, cancel modal, verify ticket remains in tests/e2e/board-drag-drop.spec.ts
 
 **Checkpoint**: User Story 1 complete - INBOX tickets can be deleted via drag-and-drop with confirmation
 

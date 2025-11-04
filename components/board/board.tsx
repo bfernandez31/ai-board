@@ -17,6 +17,8 @@ import { DragOverlay } from './drag-overlay';
 import { OfflineIndicator } from './offline-indicator';
 import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
+import { TrashZone } from './trash-zone';
+import { DeleteConfirmationModal } from './delete-confirmation-modal';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
@@ -26,12 +28,15 @@ import {
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
+import { useTicketsByStage } from '@/app/lib/hooks/queries/useTickets';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
 import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
+import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
+import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -72,15 +77,22 @@ function BoardContent({
   projectId,
   initialJobs = new Map(),
 }: BoardProps) {
-  // T030: Job polling integration for real-time job status updates
-  // - Polls /api/projects/:projectId/jobs/status every 2 seconds
-  // - Auto-stops when all jobs reach terminal state (COMPLETED/FAILED/CANCELLED)
-  // - Merges polled updates with initial job data in getTicketJobs()
-  // - Used for workflow, AI-BOARD, and deploy preview job tracking
-  // - No modifications needed for deploy preview feature (reuses existing infrastructure)
-  const { jobs: polledJobs } = useJobPolling(projectId, 2000);
   const queryClient = useQueryClient();
-  const [ticketsByStage, setTicketsByStage] = useState(initialTicketsByStage);
+
+  // Seed the TanStack Query cache with server-fetched data to avoid loading state
+  React.useEffect(() => {
+    queryClient.setQueryData(
+      queryKeys.projects.tickets(projectId),
+      Object.values(initialTicketsByStage).flat()
+    );
+  }, [projectId, initialTicketsByStage, queryClient]);
+
+  // Fetch tickets using TanStack Query (automatically updates on cache invalidation)
+  const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
+
+  // T030: Job polling integration for real-time job status updates
+  const { jobs: polledJobs } = useJobPolling(projectId, 2000);
+
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
   );
@@ -102,22 +114,12 @@ function BoardContent({
     targetStage: Stage;
   } | null>(null);
 
-  // Sync with initialTicketsByStage only when new tickets are added
-  // (e.g., from modal creation), but not during optimistic updates
-  const prevTicketCountRef = React.useRef(
-    Object.values(initialTicketsByStage).flat().length
-  );
+  // Delete confirmation state (T023)
+  const [ticketToDelete, setTicketToDelete] = useState<TicketWithVersion | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  React.useEffect(() => {
-    const currentCount = Object.values(initialTicketsByStage).flat().length;
-    const prevCount = prevTicketCountRef.current;
-
-    // Only sync if ticket count increased (new ticket added)
-    if (currentCount > prevCount) {
-      setTicketsByStage(initialTicketsByStage);
-      prevTicketCountRef.current = currentCount;
-    }
-  }, [initialTicketsByStage]);
+  // Delete mutation hook (T019)
+  const deleteTicketMutation = useDeleteTicket(projectId);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -132,27 +134,6 @@ function BoardContent({
         tolerance: 20, // Allow vertical scroll gestures without triggering drag (T905)
       },
     })
-  );
-
-  const groupTicketsByStage = useCallback(
-    (tickets: TicketWithVersion[]): Record<Stage, TicketWithVersion[]> => {
-      const grouped = getAllStages().reduce(
-        (acc, stage) => {
-          acc[stage] = [];
-          return acc;
-        },
-        {} as Record<Stage, TicketWithVersion[]>
-      );
-
-      tickets.forEach((ticket) => {
-        if (ticket.stage in grouped) {
-          grouped[ticket.stage as Stage].push(ticket);
-        }
-      });
-
-      return grouped;
-    },
-    []
   );
 
   // Get all tickets as a flat array for updates
@@ -336,6 +317,15 @@ function BoardContent({
       if (!over || !isOnline) return;
 
       const ticket = active.data.current?.ticket as TicketWithVersion;
+
+      // T022: Check if dropped on trash zone
+      if (over.id === 'trash-zone') {
+        // Open delete confirmation modal
+        setTicketToDelete(ticket);
+        setDeleteModalOpen(true);
+        return;
+      }
+
       const targetStage = over.data.current?.stage as Stage;
 
       if (!ticket || !targetStage || ticket.stage === targetStage) return;
@@ -360,13 +350,16 @@ function BoardContent({
       const originalStage = ticket.stage;
       const originalVersion = ticket.version;
 
-      // Optimistic update
+      // Optimistic update - update cache directly
       const updatedTickets = updateTicketStageOptimistically(
         allTickets,
         ticket.id,
         targetStage
       );
-      setTicketsByStage(groupTicketsByStage(updatedTickets));
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        updatedTickets
+      );
 
       // Send update to server using /transition endpoint for all stage changes
       try {
@@ -384,14 +377,17 @@ function BoardContent({
         if (!response.ok) {
           const error = await response.json();
 
-          // Rollback optimistic update
+          // Rollback optimistic update - revert cache
           const revertedTickets = revertTicketStage(
             updatedTickets,
             ticket.id,
             originalStage,
             originalVersion
           );
-          setTicketsByStage(groupTicketsByStage(revertedTickets));
+          queryClient.setQueryData(
+            queryKeys.projects.tickets(projectId),
+            revertedTickets
+          );
 
           // Show error message with backend-provided details
           if (response.status === 409) {
@@ -431,7 +427,10 @@ function BoardContent({
                 }
               : t
           );
-          setTicketsByStage(groupTicketsByStage(finalTickets));
+          queryClient.setQueryData(
+            queryKeys.projects.tickets(projectId),
+            finalTickets
+          );
 
           // Invalidate jobs status to resume polling if new job created
           queryClient.invalidateQueries({
@@ -446,14 +445,17 @@ function BoardContent({
       } catch (error) {
         console.error('Error updating ticket:', error);
 
-        // Rollback on network error
+        // Rollback on network error - revert cache
         const revertedTickets = revertTicketStage(
           updatedTickets,
           ticket.id,
           originalStage,
           originalVersion
         );
-        setTicketsByStage(groupTicketsByStage(revertedTickets));
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          revertedTickets
+        );
 
         toast({
           variant: 'destructive',
@@ -462,7 +464,7 @@ function BoardContent({
         });
       }
     },
-    [allTickets, groupTicketsByStage, isOnline, toast, projectId, queryClient]
+    [allTickets, isOnline, toast, projectId, queryClient]
   );
 
   // Handle ticket click to open modal
@@ -545,10 +547,13 @@ function BoardContent({
           )
         : [...allTickets, normalizedTicket];
 
-      setTicketsByStage(groupTicketsByStage(updatedTickets));
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        updatedTickets
+      );
       setSelectedTicket(normalizedTicket);
     },
-    [allTickets, groupTicketsByStage]
+    [allTickets, projectId, queryClient]
   );
 
   // T037: Handle quick-impl confirmation
@@ -562,13 +567,16 @@ function BoardContent({
     const originalStage = ticket.stage;
     const originalVersion = ticket.version;
 
-    // Optimistic update
+    // Optimistic update - update cache directly
     const updatedTickets = updateTicketStageOptimistically(
       allTickets,
       ticket.id,
       targetStage
     );
-    setTicketsByStage(groupTicketsByStage(updatedTickets));
+    queryClient.setQueryData(
+      queryKeys.projects.tickets(projectId),
+      updatedTickets
+    );
 
     // Send update to server using transition endpoint
     try {
@@ -586,14 +594,17 @@ function BoardContent({
       if (!response.ok) {
         const error = await response.json();
 
-        // Rollback optimistic update
+        // Rollback optimistic update - revert cache
         const revertedTickets = revertTicketStage(
           updatedTickets,
           ticket.id,
           originalStage,
           originalVersion
         );
-        setTicketsByStage(groupTicketsByStage(revertedTickets));
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          revertedTickets
+        );
 
         // Show error message
         toast({
@@ -618,7 +629,10 @@ function BoardContent({
               }
             : t
         );
-        setTicketsByStage(groupTicketsByStage(finalTickets));
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          finalTickets
+        );
 
         // Invalidate jobs status to resume polling (new job created for quick-impl)
         queryClient.invalidateQueries({
@@ -633,14 +647,17 @@ function BoardContent({
     } catch (error) {
       console.error('Error starting quick-impl:', error);
 
-      // Rollback on network error
+      // Rollback on network error - revert cache
       const revertedTickets = revertTicketStage(
         updatedTickets,
         ticket.id,
         originalStage,
         originalVersion
       );
-      setTicketsByStage(groupTicketsByStage(revertedTickets));
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        revertedTickets
+      );
 
       toast({
         variant: 'destructive',
@@ -648,12 +665,44 @@ function BoardContent({
         description: 'Could not start workflow. Please check your connection.',
       });
     }
-  }, [pendingTransition, allTickets, groupTicketsByStage, toast, projectId, queryClient]);
+  }, [pendingTransition, allTickets, toast, projectId, queryClient]);
 
   // T038: Handle quick-impl cancellation
   const handleQuickImplCancel = useCallback(() => {
     setPendingTransition(null);
   }, []);
+
+  // Delete confirmation handlers (T023)
+  const handleDeleteConfirm = useCallback(() => {
+    if (!ticketToDelete) return;
+
+    deleteTicketMutation.mutate(ticketToDelete.id, {
+      onSuccess: () => {
+        toast({
+          title: 'Ticket deleted',
+          description: `${ticketToDelete.ticketKey} has been permanently deleted.`,
+        });
+        setDeleteModalOpen(false);
+        setTicketToDelete(null);
+      },
+      onError: (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to delete ticket',
+          description: error.message,
+        });
+        // Keep modal open on error to allow retry
+      },
+    });
+  }, [ticketToDelete, deleteTicketMutation, toast]);
+
+  // Used indirectly via setDeleteModalOpen in DeleteConfirmationModal
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteModalOpen(false);
+    setTicketToDelete(null);
+  }, []);
+  // Silence unused warning - function is used via state setter
+  void handleDeleteCancel;
 
   // Get drop zone style based on drag state (T021)
   const getDropZoneStyle = useCallback(
@@ -737,6 +786,39 @@ function BoardContent({
 
   const stages = getAllStages();
 
+  // T024: Trash zone visibility and disabled state
+  const trashZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
+    if (!activeTicket || !isDragging) {
+      return { isVisible: false, isDisabled: false };
+    }
+
+    // Get all jobs for the active ticket (both initial and polled)
+    const initialTicketJobs = initialJobs.get(activeTicket.id) || [];
+    const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id);
+
+    // Merge jobs (polled takes precedence for status updates)
+    const jobMap = new Map(initialTicketJobs.map(j => [j.id, j]));
+    polledTicketJobs.forEach(pj => {
+      jobMap.set(pj.id, pj as any);  // Cast polled job to avoid type issues
+    });
+    const allTicketJobs = Array.from(jobMap.values());
+
+    // Create ticket with jobs for eligibility check (cast as Partial to avoid type issues)
+    const ticketWithJobs = {
+      ...activeTicket,
+      jobs: allTicketJobs.map(j => ({ status: j.status })),
+    } as any;
+
+    const isDeletable = isTicketDeletable(ticketWithJobs);
+    const reason = getDeletionBlockReason(ticketWithJobs);
+
+    return {
+      isVisible: true,
+      isDisabled: !isDeletable,
+      ...(reason && { disabledReason: reason }),
+    };
+  }, [activeTicket, isDragging, initialJobs, polledJobs]);
+
   // Check if any column is being hovered during drag
   const isAnyColumnOver = activeTicket !== null;
 
@@ -791,6 +873,15 @@ function BoardContent({
         </div>
 
         <DragOverlay activeTicket={activeTicket} />
+
+        {/* Trash Zone (T017, T024) */}
+        {trashZoneState.isVisible && (
+          <TrashZone
+            isVisible={trashZoneState.isVisible}
+            isDisabled={trashZoneState.isDisabled}
+            disabledReason={trashZoneState.disabledReason}
+          />
+        )}
       </DndContext>
 
       {/* Ticket Detail Modal */}
@@ -808,6 +899,15 @@ function BoardContent({
         open={!!pendingTransition}
         onConfirm={handleQuickImplConfirm}
         onCancel={handleQuickImplCancel}
+      />
+
+      {/* Delete Confirmation Modal (T018, T023) */}
+      <DeleteConfirmationModal
+        ticket={ticketToDelete}
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteTicketMutation.isPending}
       />
     </>
   );

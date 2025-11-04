@@ -27,7 +27,7 @@ export interface TrashZoneProps {
   /**
    * Optional reason why trash zone is disabled (for tooltip)
    */
-  disabledReason?: string;
+  disabledReason?: string | undefined;
 }
 
 /**
