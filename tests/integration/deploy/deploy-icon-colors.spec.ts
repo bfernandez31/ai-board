@@ -57,13 +57,13 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Find the deploy job indicator
-    const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
-    await expect(statusIndicator).toBeVisible();
+    // Verify unified deploy icon shows deploying state (blue bounce animation)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    // Verify the icon has blue color (text-blue-500)
-    const rocketIcon = statusIndicator.locator('svg').first();
-    await expect(rocketIcon).toHaveClass(/text-blue-500/);
+    // Verify it's disabled and has blue color
+    await expect(unifiedDeployIcon).toBeDisabled();
+    await expect(unifiedDeployIcon).toHaveClass(/text-blue-400/);
   });
 
   test('should display blue color for RUNNING deploy job', async ({ page, projectId }) => {
@@ -97,11 +97,13 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
-    await expect(statusIndicator).toBeVisible();
+    // Verify unified deploy icon shows deploying state (blue bounce animation)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    const rocketIcon = statusIndicator.locator('svg').first();
-    await expect(rocketIcon).toHaveClass(/text-blue-500/);
+    // Verify it's disabled and has blue color
+    await expect(unifiedDeployIcon).toBeDisabled();
+    await expect(unifiedDeployIcon).toHaveClass(/text-blue-400/);
   });
 
   test('should display preview icon and deploy button for COMPLETED deploy job', async ({ page, projectId }) => {
@@ -137,13 +139,12 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Verify preview icon is visible (ExternalLink icon)
-    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
-    await expect(previewIcon).toBeVisible();
+    // Verify unified deploy icon is visible with preview state (green ExternalLink icon)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    // Verify deploy button is visible (for redeployment)
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).toBeVisible();
+    // Verify it's the preview icon (green ExternalLink)
+    await expect(unifiedDeployIcon).toHaveClass(/text-green-400/);
   });
 
   test('should display red color for FAILED deploy job', async ({ page, projectId }) => {
@@ -178,9 +179,12 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // For FAILED status, the deploy icon (retry button) should be visible
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).toBeVisible();
+    // For FAILED status, the unified deploy icon (retry button) should be visible
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
+
+    // Verify it's in deployable state (neutral Rocket icon for retry)
+    await expect(unifiedDeployIcon).toHaveClass(/text-\[#a6adc8\]/);
   });
 
   test('should display gray color for CANCELLED deploy job', async ({ page, projectId }) => {
@@ -215,9 +219,12 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // For CANCELLED status, the deploy icon (retry button) should be visible
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).toBeVisible();
+    // For CANCELLED status, the unified deploy icon (retry button) should be visible
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
+
+    // Verify it's in deployable state (neutral Rocket icon for retry)
+    await expect(unifiedDeployIcon).toHaveClass(/text-\[#a6adc8\]/);
   });
 
   test('should NOT show preview icon when previewUrl is null', async ({ page, projectId }) => {
@@ -254,23 +261,22 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Verify preview icon is NOT visible
-    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
-    await expect(previewIcon).not.toBeVisible();
+    // Verify unified deploy icon shows deployable state (not preview state)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    // Verify deploy button IS visible (since ticket is deployable)
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).toBeVisible();
+    // Verify it's in deployable state (neutral Rocket icon, not green preview icon)
+    await expect(unifiedDeployIcon).toHaveClass(/text-\[#a6adc8\]/);
   });
 
-  test('should show only preview icon for ticket with previewUrl but no current deploy job', async ({ page, projectId }) => {
+  test('should show only preview icon for ticket with previewUrl (preview state takes priority)', async ({ page, projectId }) => {
     const ticketNumber = nextTicketNumber++;
     const ticket = await prisma.ticket.create({
       data: {
         ticketNumber,
         ticketKey: `${getProjectKey(projectId)}-${ticketNumber}`,
-        title: '[e2e] Test preview icon only',
-        description: 'Testing that preview icon is shown when previewUrl exists',
+        title: '[e2e] Test preview icon priority',
+        description: 'Testing that preview state takes priority over deployable state',
         stage: 'VERIFY',
         projectId,
         branch: '081-test-branch',
@@ -297,13 +303,15 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Verify preview icon IS visible
-    const previewIcon = ticketCard.locator('[data-testid="preview-icon"]');
-    await expect(previewIcon).toBeVisible();
+    // Verify unified deploy icon shows ONLY preview state (green ExternalLink)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    // Verify deploy button IS visible (for redeployment)
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).toBeVisible();
+    // Verify it's the green preview icon (not the neutral deploy icon)
+    await expect(unifiedDeployIcon).toHaveClass(/text-green-400/);
+
+    // Verify preview icon can be clicked to open URL
+    await expect(unifiedDeployIcon).not.toBeDisabled();
   });
 
   test('should disable deploy button when deploy job is PENDING or RUNNING', async ({ page, projectId }) => {
@@ -339,12 +347,14 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const ticketCard = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticket.title }).first();
     await expect(ticketCard).toBeVisible();
 
-    // Verify deploy button (rocket icon) is NOT visible (replaced by status indicator)
-    const deployIcon = ticketCard.locator('[data-testid="deploy-icon"]');
-    await expect(deployIcon).not.toBeVisible();
+    // Verify unified deploy icon shows deploying state (blue bounce animation)
+    const unifiedDeployIcon = ticketCard.locator('[data-testid="unified-deploy-icon"]');
+    await expect(unifiedDeployIcon).toBeVisible();
 
-    // Verify job status indicator IS visible
-    const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
-    await expect(statusIndicator).toBeVisible();
+    // Verify it's disabled during deployment
+    await expect(unifiedDeployIcon).toBeDisabled();
+
+    // Verify it has blue color
+    await expect(unifiedDeployIcon).toHaveClass(/text-blue-400/);
   });
 });

@@ -23,10 +23,10 @@
 
 **Purpose**: Search for existing tests and validate refactor scope
 
-- [ ] T001 Search for existing tests referencing TicketCardPreviewIcon or TicketCardDeployIcon using Grep tool in tests/ directory
-- [ ] T002 Read existing test file tests/integration/deploy/deploy-icon-colors.spec.ts to understand current test coverage
-- [ ] T003 Verify no other components import ticket-card-preview-icon.tsx or ticket-card-deploy-icon.tsx using Grep tool
-- [ ] T004 Read components/board/ticket-card.tsx lines 167-203 to understand current icon rendering logic
+- [X] T001 Search for existing tests referencing TicketCardPreviewIcon or TicketCardDeployIcon using Grep tool in tests/ directory
+- [X] T002 Read existing test file tests/integration/deploy/deploy-icon-colors.spec.ts to understand current test coverage
+- [X] T003 Verify no other components import ticket-card-preview-icon.tsx or ticket-card-deploy-icon.tsx using Grep tool
+- [X] T004 Read components/board/ticket-card.tsx lines 167-203 to understand current icon rendering logic
 
 ---
 
@@ -36,9 +36,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create getDeployIconState() utility function in specs/084-1499-fix-deploy/contracts/component-interface.ts (already exists, verify imports work)
-- [ ] T006 Verify DeployIconState type, DEPLOY_ICON_CONFIG_MAP, and type guards are exported from specs/084-1499-fix-deploy/contracts/component-interface.ts
-- [ ] T007 Add lucide-react ExternalLink and Rocket icon imports to components/board/ticket-card.tsx
+- [X] T005 Create getDeployIconState() utility function in specs/084-1499-fix-deploy/contracts/component-interface.ts (already exists, verify imports work)
+- [X] T006 Verify DeployIconState type, DEPLOY_ICON_CONFIG_MAP, and type guards are exported from specs/084-1499-fix-deploy/contracts/component-interface.ts
+- [X] T007 Add lucide-react ExternalLink and Rocket icon imports to components/board/ticket-card.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -56,16 +56,16 @@
 
 - [ ] T008 [P] [US1] Create unit test for preview state priority in tests/unit/unified-deploy-icon.test.ts - test that previewUrl !== null returns 'preview' state
 - [ ] T009 [P] [US1] Create unit test for preview state with deployable ticket in tests/unit/unified-deploy-icon.test.ts - test that preview state takes precedence over deployable
-- [ ] T010 [US1] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to use unified icon testid 'unified-deploy-icon' instead of separate 'preview-icon' (lines 141-142)
-- [ ] T011 [US1] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify green icon opens URL in new tab (add click test to lines 266-307)
+- [X] T010 [US1] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to use unified icon testid 'unified-deploy-icon' instead of separate 'preview-icon' (lines 141-142)
+- [X] T011 [US1] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify green icon opens URL in new tab (add click test to lines 266-307)
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add React.useMemo() hook in components/board/ticket-card.tsx to compute deployIconState using getDeployIconState(ticket, deployJob, isDeployable)
-- [ ] T013 [US1] Implement preview state rendering in components/board/ticket-card.tsx - green ExternalLink button with text-green-400 class
-- [ ] T014 [US1] Add onClick handler for preview state in components/board/ticket-card.tsx - window.open(ticket.previewUrl, '_blank', 'noopener,noreferrer')
-- [ ] T015 [US1] Add accessibility labels for preview state in components/board/ticket-card.tsx - aria-label="Open preview deployment for {ticketKey}" and title="Open preview deployment"
-- [ ] T016 [US1] Add data-testid="unified-deploy-icon" to preview state button in components/board/ticket-card.tsx
+- [X] T012 [US1] Add React.useMemo() hook in components/board/ticket-card.tsx to compute deployIconState using getDeployIconState(ticket, deployJob, isDeployable)
+- [X] T013 [US1] Implement preview state rendering in components/board/ticket-card.tsx - green ExternalLink button with text-green-400 class
+- [X] T014 [US1] Add onClick handler for preview state in components/board/ticket-card.tsx - window.open(ticket.previewUrl, '_blank', 'noopener,noreferrer')
+- [X] T015 [US1] Add accessibility labels for preview state in components/board/ticket-card.tsx - aria-label="Open preview deployment for {ticketKey}" and title="Open preview deployment"
+- [X] T016 [US1] Add data-testid="unified-deploy-icon" to preview state button in components/board/ticket-card.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently - green icon shows for tickets with preview URLs and opens them in new tabs
 
@@ -81,16 +81,16 @@
 
 - [ ] T017 [P] [US2] Create unit test for deployable state in tests/unit/unified-deploy-icon.test.ts - test that isDeployable === true returns 'deployable' state
 - [ ] T018 [P] [US2] Create unit test for deployable state with no preview in tests/unit/unified-deploy-icon.test.ts - test that deployable state shows when previewUrl is null
-- [ ] T019 [US2] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows Rocket icon for deployable ticket (lines 223-264)
+- [X] T019 [US2] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows Rocket icon for deployable ticket (lines 223-264)
 - [ ] T020 [US2] Create integration test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify clicking deployable icon opens DeployConfirmationModal
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement deployable state rendering in components/board/ticket-card.tsx - neutral Rocket button with text-[#a6adc8] class
-- [ ] T022 [US2] Add onClick handler for deployable state in components/board/ticket-card.tsx - setShowDeployModal(true) with e.stopPropagation()
-- [ ] T023 [US2] Add accessibility labels for deployable state in components/board/ticket-card.tsx - aria-label="Deploy preview for {ticketKey}" and dynamic title
-- [ ] T024 [US2] Add conditional tooltip text for deployable state in components/board/ticket-card.tsx - "Retry deployment" if deployJob?.status === FAILED/CANCELLED, else "Deploy preview"
-- [ ] T025 [US2] Verify deployable state only shows when preview state is NOT active (state priority logic already in getDeployIconState)
+- [X] T021 [US2] Implement deployable state rendering in components/board/ticket-card.tsx - neutral Rocket button with text-[#a6adc8] class
+- [X] T022 [US2] Add onClick handler for deployable state in components/board/ticket-card.tsx - setShowDeployModal(true) with e.stopPropagation()
+- [X] T023 [US2] Add accessibility labels for deployable state in components/board/ticket-card.tsx - aria-label="Deploy preview for {ticketKey}" and dynamic title
+- [X] T024 [US2] Add conditional tooltip text for deployable state in components/board/ticket-card.tsx - "Retry deployment" if deployJob?.status === FAILED/CANCELLED, else "Deploy preview"
+- [X] T025 [US2] Verify deployable state only shows when preview state is NOT active (state priority logic already in getDeployIconState)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - preview icon for deployed tickets, deploy icon for deployable tickets
 
@@ -106,15 +106,15 @@
 
 - [ ] T026 [P] [US3] Create unit test for deploying state with PENDING job in tests/unit/unified-deploy-icon.test.ts - test that deployJob.status === 'PENDING' returns 'deploying' state
 - [ ] T027 [P] [US3] Create unit test for deploying state with RUNNING job in tests/unit/unified-deploy-icon.test.ts - test that deployJob.status === 'RUNNING' returns 'deploying' state
-- [ ] T028 [US3] Update existing tests in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows blue bounce animation for PENDING/RUNNING (lines 29-67, 69-105)
-- [ ] T029 [US3] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify icon is disabled during deployment (lines 309-349)
+- [X] T028 [US3] Update existing tests in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows blue bounce animation for PENDING/RUNNING (lines 29-67, 69-105)
+- [X] T029 [US3] Update existing test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify icon is disabled during deployment (lines 309-349)
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Implement deploying state rendering in components/board/ticket-card.tsx - blue Rocket button with text-blue-400 and animate-bounce classes
-- [ ] T031 [US3] Add disabled attribute to deploying state button in components/board/ticket-card.tsx - disabled={true} and cursor-not-allowed class
-- [ ] T032 [US3] Add accessibility labels for deploying state in components/board/ticket-card.tsx - aria-label="Deployment in progress" and title="Deployment in progress..."
-- [ ] T033 [US3] Verify deploying state takes precedence over deployable state but NOT over preview state (state priority logic already in getDeployIconState)
+- [X] T030 [US3] Implement deploying state rendering in components/board/ticket-card.tsx - blue Rocket button with text-blue-400 and animate-bounce classes
+- [X] T031 [US3] Add disabled attribute to deploying state button in components/board/ticket-card.tsx - disabled={true} and cursor-not-allowed class
+- [X] T032 [US3] Add accessibility labels for deploying state in components/board/ticket-card.tsx - aria-label="Deployment in progress" and title="Deployment in progress..."
+- [X] T033 [US3] Verify deploying state takes precedence over deployable state but NOT over preview state (state priority logic already in getDeployIconState)
 
 **Checkpoint**: All three states now work independently - preview (green), deploying (blue bounce), deployable (neutral)
 
@@ -130,14 +130,14 @@
 
 - [ ] T034 [P] [US4] Create unit test for deployable state with FAILED job in tests/unit/unified-deploy-icon.test.ts - test that deployJob.status === 'FAILED' returns 'deployable' state
 - [ ] T035 [P] [US4] Create unit test for deployable state with CANCELLED job in tests/unit/unified-deploy-icon.test.ts - test that deployJob.status === 'CANCELLED' returns 'deployable' state
-- [ ] T036 [US4] Update existing tests in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows deploy icon for FAILED/CANCELLED (lines 149-184, 186-221)
+- [X] T036 [US4] Update existing tests in tests/integration/deploy/deploy-icon-colors.spec.ts to verify unified icon shows deploy icon for FAILED/CANCELLED (lines 149-184, 186-221)
 - [ ] T037 [US4] Create integration test in tests/integration/deploy/deploy-icon-colors.spec.ts to verify clicking retry icon after failure opens modal and creates new job
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Verify deployable state rendering already handles FAILED/CANCELLED jobs (reuses T021-T024 implementation)
-- [ ] T039 [US4] Verify tooltip shows "Retry deployment" when deployJob?.status === FAILED or CANCELLED (implemented in T024)
-- [ ] T040 [US4] Test manual retry flow: FAILED job → click icon → modal opens → confirm → new job created
+- [X] T038 [US4] Verify deployable state rendering already handles FAILED/CANCELLED jobs (reuses T021-T024 implementation)
+- [X] T039 [US4] Verify tooltip shows "Retry deployment" when deployJob?.status === FAILED or CANCELLED (implemented in T024)
+- [X] T040 [US4] Test manual retry flow: FAILED job → click icon → modal opens → confirm → new job created
 
 **Checkpoint**: All four icon states now work independently with proper error recovery
 
@@ -147,13 +147,13 @@
 
 **Purpose**: Remove deprecated components, update tests, and verify all edge cases
 
-- [ ] T041 [P] Remove deprecated file components/board/ticket-card-preview-icon.tsx
-- [ ] T042 [P] Remove deprecated file components/board/ticket-card-deploy-icon.tsx
-- [ ] T043 Remove import statements for TicketCardPreviewIcon and TicketCardDeployIcon from components/board/ticket-card.tsx
+- [X] T041 [P] Remove deprecated file components/board/ticket-card-preview-icon.tsx
+- [X] T042 [P] Remove deprecated file components/board/ticket-card-deploy-icon.tsx
+- [X] T043 Remove import statements for TicketCardPreviewIcon and TicketCardDeployIcon from components/board/ticket-card.tsx
 - [ ] T044 [P] Create unit test for hidden state in tests/unit/unified-deploy-icon.test.ts - test that no conditions met returns 'hidden' state
 - [ ] T045 [P] Create unit test for edge cases in tests/unit/unified-deploy-icon.test.ts - test null values, undefined jobs, empty strings
 - [ ] T046 Run all unit tests with bun run test:unit to verify state logic correctness
-- [ ] T047 Run all integration tests with bun run test:e2e tests/integration/deploy/ to verify rendering and interactions
+- [X] T047 Run all integration tests with bun run test:e2e tests/integration/deploy/ to verify rendering and interactions
 - [ ] T048 Manual testing: Create ticket with preview URL, verify green icon works across all stages (INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP)
 - [ ] T049 Manual testing: Verify icon respects stage transitions (BUILD → VERIFY shows deploy icon if deployable)
 - [ ] T050 Manual testing: Verify keyboard navigation works (Tab to icon, Enter/Space activates)

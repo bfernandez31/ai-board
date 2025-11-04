@@ -8,11 +8,12 @@ import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
-import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
-import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
+import { getDeployIconState } from '@/specs/084-1499-fix-deploy/contracts/component-interface';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Rocket } from 'lucide-react';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
@@ -54,6 +55,10 @@ export const TicketCard = React.memo(
       });
     }, [ticket.stage, ticket.branch, ticket.jobs]);
 
+    // Compute unified deploy icon state
+    const deployIconState = React.useMemo(() => {
+      return getDeployIconState(ticket, deployJob, isDeployable);
+    }, [ticket.previewUrl, deployJob?.status, isDeployable]);
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
       useDraggable({
@@ -163,44 +168,58 @@ export const TicketCard = React.memo(
                   />
                 )}
 
-                {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}
+                {/* Right: Compact icon indicators (Unified Deploy + AI-BOARD) */}
                 <div className="flex items-center gap-3">
-                  {/* Preview Icon: Show only when ticket has active preview URL */}
-                  {ticket.previewUrl && (
-                    <TicketCardPreviewIcon
-                      previewUrl={ticket.previewUrl}
-                      ticketKey={ticket.ticketKey}
-                    />
+                  {/* Unified Deploy Icon: Single stateful icon with priority-based state resolution */}
+                  {deployIconState === 'preview' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-[#313244] text-green-400 hover:text-green-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(ticket.previewUrl!, '_blank', 'noopener,noreferrer');
+                      }}
+                      aria-label={`Open preview deployment for ${ticket.ticketKey}`}
+                      title="Open preview deployment"
+                      data-testid="unified-deploy-icon"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   )}
 
-                  {/* Deploy Icon: Show job status OR deploy button when deployable */}
-                  {deployJob ? (
-                    (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING') ? (
-                      // Show deploy job status indicator for pending/running
-                      <JobStatusIndicator
-                        status={deployJob.status}
-                        command={deployJob.command}
-                        jobType={classifyJobType(deployJob.command)}
-                        stage={ticket.stage}
-                        animated={true}
-                        completedAt={deployJob.completedAt}
-                      />
-                    ) : (
-                      // Show retry button for failed/cancelled/completed deploys
-                      <TicketCardDeployIcon
-                        onDeploy={() => setShowDeployModal(true)}
-                        ticketKey={ticket.ticketKey}
-                        isDeploying={false}
-                      />
-                    )
-                  ) : isDeployable ? (
-                    // Show deploy button when deployable but no job running
-                    <TicketCardDeployIcon
-                      onDeploy={() => setShowDeployModal(true)}
-                      ticketKey={ticket.ticketKey}
-                      isDeploying={false}
-                    />
-                  ) : null}
+                  {deployIconState === 'deploying' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-blue-400 cursor-not-allowed"
+                      disabled
+                      aria-label="Deployment in progress"
+                      title="Deployment in progress..."
+                      data-testid="unified-deploy-icon"
+                    >
+                      <Rocket className="h-4 w-4 animate-bounce" />
+                    </Button>
+                  )}
+
+                  {deployIconState === 'deployable' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeployModal(true);
+                      }}
+                      aria-label={`Deploy preview for ${ticket.ticketKey}`}
+                      title={deployJob?.status === 'FAILED' || deployJob?.status === 'CANCELLED'
+                        ? 'Retry deployment'
+                        : 'Deploy preview'}
+                      data-testid="unified-deploy-icon"
+                    >
+                      <Rocket className="h-4 w-4" />
+                    </Button>
+                  )}
 
                   {/* AI-BOARD Job Indicator (compact icon-only) */}
                   {aiBoardJob && (
