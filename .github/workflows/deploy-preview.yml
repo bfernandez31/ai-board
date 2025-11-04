@@ -59,22 +59,47 @@ jobs:
         run: |
           echo "🚀 Deploying branch '${{ inputs.branch }}' to Vercel Preview..."
 
-          DEPLOYMENT_URL=$(vercel deploy \
+          # Deploy and capture the output
+          DEPLOY_OUTPUT=$(vercel deploy \
             --yes \
             --token=${{ secrets.VERCEL_TOKEN }} \
             --scope=${{ secrets.VERCEL_ORG_ID }} \
-            --pre \
-            --name=${{ env.VERCEL_PROJECT_ID }} \
-            2>&1 | tee /tmp/deploy.log | grep -oP 'https://[^\s]+' | head -1)
+            2>&1 | tee /tmp/deploy.log)
+
+          # Extract the preview URL (last line starting with https://)
+          DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[a-z0-9-]+\.vercel\.app' | tail -1)
 
           if [ -z "$DEPLOYMENT_URL" ]; then
             echo "❌ Failed to extract deployment URL from Vercel output"
+            echo "Full output:"
             cat /tmp/deploy.log
             exit 1
           fi
 
-          echo "✅ Deployed to: $DEPLOYMENT_URL"
-          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployment initiated: $DEPLOYMENT_URL"
+          echo "⏳ Waiting for build to complete..."
+
+          # Wait for the deployment to be ready (max 10 minutes)
+          TIMEOUT=600
+          ELAPSED=0
+          INTERVAL=10
+
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Deployment is ready and accessible!"
+              echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "⏳ Build in progress... (HTTP $HTTP_CODE) - ${ELAPSED}s elapsed"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo "❌ Deployment timed out after ${TIMEOUT}s"
+          exit 1
 
       # --- Update ticket with preview URL ---
       - name: Update ticket preview URL
