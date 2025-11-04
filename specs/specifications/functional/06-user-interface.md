@@ -322,27 +322,32 @@ The user interface provides an intuitive, modern experience for managing tickets
   - COMPLETED: Success checkmark
   - FAILED: Error icon
 
-**Deploy Preview Indicators**:
+**Deploy Preview Icon** (Unified Stateful Icon):
 
-*Preview Icon (External Link)*:
-- Appears ONLY on tickets with active preview deployment (non-null previewUrl)
-- Only one ticket shows preview icon at a time (single-preview enforcement)
-- Clicking opens preview URL in new browser tab
-- Remains visible until replaced by new deployment on different ticket
-- Positioned in ticket status bar with other indicators
+The deploy preview system uses a single icon that adapts its appearance and behavior based on deployment state. The icon follows a priority-based state resolution system:
 
-*Deploy Job Status (Rocket Icon)*:
-- Shows ONLY during PENDING/RUNNING deployment states
-- Blue color with bounce animation indicates deployment in progress
-- Disappears automatically when deployment reaches terminal state
-- Replaced by deploy icon (for retry) or preview icon (on success)
+*State Priority* (Highest to Lowest):
+1. **Preview State** (Green ExternalLink Icon)
+   - Appears when ticket has active preview deployment (previewUrl exists)
+   - Takes precedence over all other states
+   - Clicking opens preview URL in new browser tab
+   - Remains visible across all stages until replaced by new deployment
+   - Only one ticket shows preview state at a time (single-preview enforcement)
 
-*Deploy Icon (Rocket, Static)*:
-- Appears when ticket is eligible for deployment
-- Remains visible after deployments complete (allows re-deployment)
-- Disabled only while deployment job is PENDING/RUNNING
-- Clicking opens deployment confirmation modal
-- Always available for triggering new deployments
+2. **Deploying State** (Blue Rocket Icon, Animated)
+   - Shows when deploy job status is PENDING or RUNNING
+   - Blue color with bounce animation indicates deployment in progress
+   - Icon is disabled (no click interaction)
+   - Automatically transitions to preview or deployable state when job completes
+
+3. **Deployable State** (Neutral Rocket Icon)
+   - Appears when ticket is eligible for deployment (VERIFY stage, has branch, completed job)
+   - Also shown for failed/cancelled deployments (allows retry)
+   - Clicking opens deployment confirmation modal
+   - Tooltip indicates "Deploy preview" or "Retry deployment" based on previous job status
+
+4. **Hidden State**
+   - No icon displayed when none of the above conditions are met
 
 ## Empty States
 

@@ -405,3 +405,153 @@ Date formatting and manipulation using `date-fns` library.
 - UTC conversion
 
 See [architecture/stack.md](../architecture/stack.md#date-utilities) for date-fns integration details.
+
+## Deploy Preview Icon State
+
+### Purpose
+
+Provides unified icon state resolution logic for the deploy preview feature, consolidating preview access, deployment triggering, and deployment status into a single stateful icon.
+
+### File Location
+
+`/specs/084-1499-fix-deploy/contracts/component-interface.ts`
+
+### State Resolution
+
+**Function**: `getDeployIconState(ticket: TicketWithVersion, deployJob: Job | null | undefined, isDeployable: boolean): DeployIconState`
+
+Resolves the unified deploy icon state using priority-based logic.
+
+**Parameters**:
+- `ticket` (TicketWithVersion): Ticket record with preview URL and jobs
+- `deployJob` (Job | null | undefined): Deploy job record (command: "deploy-preview")
+- `isDeployable` (boolean): Result from `isTicketDeployable()` eligibility check
+
+**Returns**: One of four possible states: `'preview' | 'deploying' | 'deployable' | 'hidden'`
+
+**State Priority Logic** (evaluated in order):
+
+```typescript
+// 1. Preview State (Highest Priority)
+if (ticket.previewUrl) {
+  return 'preview';
+}
+
+// 2. Deploying State
+if (deployJob?.status === 'PENDING' || deployJob?.status === 'RUNNING') {
+  return 'deploying';
+}
+
+// 3. Deployable State
+if (isDeployable || deployJob?.status === 'FAILED' || deployJob?.status === 'CANCELLED') {
+  return 'deployable';
+}
+
+// 4. Hidden State (Default)
+return 'hidden';
+```
+
+### Icon Configuration
+
+**Constant**: `DEPLOY_ICON_CONFIG_MAP`
+
+Maps each state to visual properties (icon type, color, animation, interaction behavior).
+
+**Configuration Table**:
+
+| State | Icon | Color | Clickable | Animated | Tooltip | Click Action |
+|-------|------|-------|-----------|----------|---------|--------------|
+| `preview` | ExternalLink | Green (text-green-400) | ✅ Yes | ❌ No | "Open preview deployment" | Opens `ticket.previewUrl` in new tab |
+| `deploying` | Rocket | Blue (text-blue-400) | ❌ No (disabled) | ✅ Yes (bounce) | "Deployment in progress..." | None |
+| `deployable` | Rocket | Neutral (text-[#a6adc8]) | ✅ Yes | ❌ No | "Deploy preview" / "Retry deployment" | Opens deploy confirmation modal |
+| `hidden` | None | N/A | N/A | N/A | N/A | N/A |
+
+### Usage Pattern
+
+**Component Integration** (`components/board/ticket-card.tsx`):
+
+```typescript
+import { getDeployIconState } from '@/specs/084-1499-fix-deploy/contracts/component-interface';
+
+// Compute state (memoized)
+const deployIconState = React.useMemo(() => {
+  return getDeployIconState(ticket, deployJob, isDeployable);
+}, [ticket, deployJob, isDeployable]);
+
+// Conditional rendering based on state
+{deployIconState === 'preview' && (
+  <Button onClick={() => window.open(ticket.previewUrl!, '_blank')}>
+    <ExternalLink className="h-4 w-4 text-green-400" />
+  </Button>
+)}
+
+{deployIconState === 'deploying' && (
+  <Button disabled>
+    <Rocket className="h-4 w-4 text-blue-400 animate-bounce" />
+  </Button>
+)}
+
+{deployIconState === 'deployable' && (
+  <Button onClick={() => setShowDeployModal(true)}>
+    <Rocket className="h-4 w-4 text-[#a6adc8]" />
+  </Button>
+)}
+```
+
+### Design Rationale
+
+**Single Icon Pattern**:
+- Eliminates UI clutter from multiple deploy-related icons
+- Provides clear visual feedback at each stage of deployment lifecycle
+- Reduces cognitive load for users (one icon location to monitor)
+
+**Priority-Based Resolution**:
+- Ensures unambiguous state display when multiple conditions are true
+- Preview state always takes precedence (primary user need is accessing active deployment)
+- Deploying state overrides deployable (real-time feedback during operations)
+- Failed/cancelled jobs fall back to deployable state (enables retry)
+
+**State Immutability**:
+- Icon state is derived (computed from ticket/job data)
+- No internal state management required
+- React.useMemo() optimizes recomputation
+
+### Performance
+
+**State Computation**: O(1) - Simple conditional checks (4-5 comparisons maximum)
+
+**Memoization**: React.useMemo() prevents unnecessary recalculations
+
+**Target Response**: <1ms for state resolution
+
+**Memory**: Minimal (no persistent state, computed on-demand)
+
+### Testing
+
+**Unit Tests**: `tests/unit/unified-deploy-icon.test.ts`
+
+Test coverage (state resolution logic):
+- Preview state takes precedence over all others
+- Deploying state for PENDING/RUNNING jobs
+- Deployable state for eligible tickets and failed/cancelled jobs
+- Hidden state as default fallback
+- State priority enforcement (15 test scenarios)
+
+**Integration Tests**: `tests/integration/board/unified-deploy-icon.spec.ts`
+
+Test coverage (component rendering and interaction):
+- Icon rendering for each state
+- Click handlers (preview URL open, deploy modal trigger)
+- Disabled state during deployment
+- Tooltip text accuracy
+- State transitions via job polling
+
+### Related Utilities
+
+**Deploy Eligibility Checker**: `isTicketDeployable()` (see section above)
+- Used as input parameter to `getDeployIconState()`
+- Validates deployment preconditions (stage, branch, job status)
+
+**Job Filtering**: `getDeployJob()` (`lib/utils/job-filtering.ts`)
+- Extracts deploy job from ticket's job array
+- Filters by command: "deploy-preview"
