@@ -12,9 +12,9 @@
 - **Confidence**: High (netScore +1, clear feature context, no conflicting signals)
 - **Fallback Triggered?**: No
 - **Trade-offs**:
-  1. Green color provides clear visual feedback that deployment is active and clickable
-  2. May require additional testing to ensure color choice meets accessibility standards
-- **Reviewer Notes**: Validate that green color (#10b981 or similar) has sufficient contrast against dark background (WCAG AA compliance)
+  1. Reuse existing green color from completed status badge (text-green-400) for consistency
+  2. Already meets accessibility standards as validated in existing UI components
+- **Reviewer Notes**: Use the same green color class (text-green-400) as the completed status badge to maintain visual consistency across the application
 
 ---
 
@@ -156,3 +156,19 @@
 - **SC-004**: Users can distinguish between preview-ready and deployable states at a glance (green vs neutral icon coloring)
 - **SC-005**: System prevents duplicate deployments through disabled state when job is already running
 - **SC-006**: Users can retry failed deployments with same interaction pattern as initial deployment (deploy icon visible after FAILED/CANCELLED)
+
+## Testing Strategy
+
+### Test Coverage Requirements
+
+- **Unit Tests**: Component-level tests for icon state logic and rendering
+  - Test icon state priority logic (preview > deploying > deployable > hidden)
+  - Test color application (text-green-400 for preview state)
+  - Test disabled state behavior during deployment
+  - Test click handlers for each state
+- **Integration Tests**: Component integration with job polling and ticket data
+  - Test icon state changes as deploy job status updates
+  - Test preview URL click behavior (opens new tab)
+  - Test confirmation modal integration for deploy trigger
+  - Test icon behavior across different ticket stages and conditions
+- **E2E Tests**: Not required for this feature (sufficient coverage via unit and integration tests)
