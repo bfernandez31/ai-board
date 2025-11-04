@@ -520,36 +520,45 @@ Only one preview deployment can be active across all project tickets:
 
 Users monitor deployment status through visual indicators:
 
-**Job Status Indicator**:
-- Rocket icon with bounce animation during PENDING/RUNNING
+**Deploy Job Status Indicator**:
+- Rocket icon with bounce animation during PENDING/RUNNING states only
 - Icon color indicates status:
   - PENDING/RUNNING: Blue (text-blue-500)
-  - COMPLETED: Green (text-green-500) - matches standard job completion color
-  - FAILED: Red (text-red-500)
-  - CANCELLED: Gray (text-gray-500)
 - Updated automatically via job polling (2-second intervals)
-- Becomes clickable preview link when COMPLETED
-- Disappears when deployment fails (replaced by retry button)
+- Disappears when deployment reaches terminal state (COMPLETED/FAILED/CANCELLED)
+- Replaced by deploy icon (for retry) or preview icon (for successful deployments)
 
-**Preview Access**:
-- Preview icon appears when deployment completes successfully
+**Preview Icon Display**:
+- External link icon appears ONLY on tickets with active preview deployment
+- Visible when ticket has non-null `previewUrl` field
+- Only one ticket can show preview icon at a time (single-preview enforcement)
 - Clicking icon opens preview URL in new browser tab
-- Icon positioned next to AI-BOARD assistance icon
+- Icon positioned in status bar with other job indicators
+- Remains visible until new preview deployment replaces it
 
-### Deployment Failures
+**Deploy Icon Availability**:
+- Deploy icon (rocket) appears when ticket is eligible for deployment
+- Shows during PENDING/RUNNING states with loading animation
+- After deployment completes/fails, deploy icon remains visible for re-deployment
+- Allows users to trigger new deployments even after successful previews
+- Deploy icon disabled only while deployment job is PENDING/RUNNING
 
-When deployments fail, users can retry:
+### Re-Deployment
 
-**Failure Indicators**:
-- Error indicator appears next to deploy button
-- Tooltip shows failure message
-- Deploy button remains visible for retry
+Users can trigger new deployments at any time after a deployment completes:
 
-**Retry Process**:
-- Click deploy button to trigger retry
-- Confirmation modal shows "Retry Preview" messaging
-- New job created, previous failed job remains in history
-- No limit on retry attempts
+**Re-Deployment Scenarios**:
+- After successful deployment (COMPLETED) - deploy new version with changes
+- After failed deployment (FAILED) - retry after fixing issues
+- After cancelled deployment (CANCELLED) - retry deployment
+
+**Re-Deployment Behavior**:
+- Deploy icon remains visible after any terminal state
+- Clicking deploy icon opens confirmation modal
+- Confirmation modal warns existing preview will be replaced
+- New job created, previous job remains in history
+- No limit on deployment attempts
+- Previous preview URL cleared when new deployment starts
 
 ### Deployment Workflow
 
