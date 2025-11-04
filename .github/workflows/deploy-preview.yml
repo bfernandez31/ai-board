@@ -24,8 +24,6 @@ env:
   APP_URL: ${{ vars.APP_URL }}
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   deploy:
@@ -63,7 +61,6 @@ jobs:
           DEPLOY_OUTPUT=$(vercel deploy \
             --yes \
             --token=${{ secrets.VERCEL_TOKEN }} \
-            --scope=${{ secrets.VERCEL_ORG_ID }} \
             2>&1 | tee /tmp/deploy.log)
 
           # Extract the preview URL (last line starting with https://)
