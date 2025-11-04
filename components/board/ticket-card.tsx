@@ -58,7 +58,7 @@ export const TicketCard = React.memo(
     // Compute unified deploy icon state
     const deployIconState = React.useMemo(() => {
       return getDeployIconState(ticket, deployJob, isDeployable);
-    }, [ticket.previewUrl, deployJob?.status, isDeployable]);
+    }, [ticket, deployJob, isDeployable]);
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
       useDraggable({
