@@ -60,7 +60,7 @@ export function useUpdateTicket(projectId: number) {
       queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) =>
         (old || []).map((ticket) =>
           ticket.id === variables.ticketId
-            ? { ...ticket, ...variables.updates, updatedAt: new Date() }
+            ? { ...ticket, ...variables.updates, updatedAt: new Date().toISOString() }
             : ticket
         )
       );

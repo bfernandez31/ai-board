@@ -61,7 +61,7 @@ export function useStageTransition(projectId: number) {
       queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) =>
         (old || []).map((ticket) =>
           ticket.id === variables.ticketId
-            ? { ...ticket, stage: variables.targetStage, updatedAt: new Date() }
+            ? { ...ticket, stage: variables.targetStage, updatedAt: new Date().toISOString() }
             : ticket
         )
       );
