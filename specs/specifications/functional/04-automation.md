@@ -522,6 +522,11 @@ Users monitor deployment status through visual indicators:
 
 **Job Status Indicator**:
 - Rocket icon with bounce animation during PENDING/RUNNING
+- Icon color indicates status:
+  - PENDING/RUNNING: Blue (text-blue-500)
+  - COMPLETED: Green (text-green-500) - matches standard job completion color
+  - FAILED: Red (text-red-500)
+  - CANCELLED: Gray (text-gray-500)
 - Updated automatically via job polling (2-second intervals)
 - Becomes clickable preview link when COMPLETED
 - Disappears when deployment fails (replaced by retry button)
