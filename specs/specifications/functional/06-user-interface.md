@@ -322,15 +322,27 @@ The user interface provides an intuitive, modern experience for managing tickets
   - COMPLETED: Success checkmark
   - FAILED: Error icon
 
-**Deploy Preview Status**:
-- Rocket icon displays deployment status with color coding:
-  - Blue: Deployment pending or in progress (PENDING/RUNNING states)
-  - Green: Deployment completed successfully (matches standard job completion color)
-  - Red: Deployment failed
-  - Gray: Deployment cancelled
-- Icon includes bounce animation during PENDING/RUNNING states
-- Tooltip provides detailed status message
-- Color transitions automatically via job polling
+**Deploy Preview Indicators**:
+
+*Preview Icon (External Link)*:
+- Appears ONLY on tickets with active preview deployment (non-null previewUrl)
+- Only one ticket shows preview icon at a time (single-preview enforcement)
+- Clicking opens preview URL in new browser tab
+- Remains visible until replaced by new deployment on different ticket
+- Positioned in ticket status bar with other indicators
+
+*Deploy Job Status (Rocket Icon)*:
+- Shows ONLY during PENDING/RUNNING deployment states
+- Blue color with bounce animation indicates deployment in progress
+- Disappears automatically when deployment reaches terminal state
+- Replaced by deploy icon (for retry) or preview icon (on success)
+
+*Deploy Icon (Rocket, Static)*:
+- Appears when ticket is eligible for deployment
+- Remains visible after deployments complete (allows re-deployment)
+- Disabled only while deployment job is PENDING/RUNNING
+- Clicking opens deployment confirmation modal
+- Always available for triggering new deployments
 
 ## Empty States
 

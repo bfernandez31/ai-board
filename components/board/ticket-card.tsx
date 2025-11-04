@@ -9,6 +9,7 @@ import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
+import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
@@ -147,7 +148,7 @@ export const TicketCard = React.memo(
           </h3>
 
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
-          {(workflowJob || aiBoardJob || deployJob || (isDeployable && !ticket.previewUrl)) && (
+          {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
             <div className="border-t border-[#313244] pt-3">
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Workflow Job Indicator (simplified display) */}
@@ -162,41 +163,37 @@ export const TicketCard = React.memo(
                   />
                 )}
 
-                {/* Right: Compact icon indicators (Deploy + AI-BOARD) */}
+                {/* Right: Compact icon indicators (Preview + Deploy + AI-BOARD) */}
                 <div className="flex items-center gap-3">
+                  {/* Preview Icon: Show only when ticket has active preview URL */}
+                  {ticket.previewUrl && (
+                    <TicketCardPreviewIcon
+                      previewUrl={ticket.previewUrl}
+                      ticketKey={ticket.ticketKey}
+                    />
+                  )}
+
                   {/* Deploy Icon: Show job status OR deploy button when deployable */}
                   {deployJob ? (
-                    deployJob.status === 'FAILED' || deployJob.status === 'CANCELLED' ? (
-                      // Show retry button for failed/cancelled deploys
+                    (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING') ? (
+                      // Show deploy job status indicator for pending/running
+                      <JobStatusIndicator
+                        status={deployJob.status}
+                        command={deployJob.command}
+                        jobType={classifyJobType(deployJob.command)}
+                        stage={ticket.stage}
+                        animated={true}
+                        completedAt={deployJob.completedAt}
+                      />
+                    ) : (
+                      // Show retry button for failed/cancelled/completed deploys
                       <TicketCardDeployIcon
                         onDeploy={() => setShowDeployModal(true)}
                         ticketKey={ticket.ticketKey}
                         isDeploying={false}
                       />
-                    ) : (
-                      // Show deploy job status indicator for pending/running/completed
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Open preview URL in new tab when deploy is completed
-                          if (deployJob.status === 'COMPLETED' && ticket.previewUrl) {
-                            window.open(ticket.previewUrl, '_blank', 'noopener,noreferrer');
-                          }
-                        }}
-                        className={deployJob.status === 'COMPLETED' && ticket.previewUrl ? '[&_*]:!cursor-pointer' : ''}
-                        title={deployJob.status === 'COMPLETED' && ticket.previewUrl ? 'Click to open preview' : undefined}
-                      >
-                        <JobStatusIndicator
-                          status={deployJob.status}
-                          command={deployJob.command}
-                          jobType={classifyJobType(deployJob.command)}
-                          stage={ticket.stage}
-                          animated={true}
-                          completedAt={deployJob.completedAt}
-                        />
-                      </div>
                     )
-                  ) : isDeployable && !ticket.previewUrl ? (
+                  ) : isDeployable ? (
                     // Show deploy button when deployable but no job running
                     <TicketCardDeployIcon
                       onDeploy={() => setShowDeployModal(true)}
