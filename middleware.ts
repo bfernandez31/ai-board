@@ -11,6 +11,7 @@ export default authEdge((req) => {
   const isTicketBranchApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/branch$/) !== null
   const isTransitionApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/transition$/) !== null
   const isVerifyTicketsApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/verify$/) !== null
+  const isPreviewUrlApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/preview-url$/) !== null
   const isLandingPage = req.nextUrl.pathname === '/'
 
   // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
@@ -25,7 +26,7 @@ export default authEdge((req) => {
   }
 
   // Allow public pages, auth pages, public APIs, and workflow APIs
-  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi) {
+  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi || isPreviewUrlApi) {
     return NextResponse.next()
   }
 
