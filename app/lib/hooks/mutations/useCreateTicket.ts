@@ -54,19 +54,24 @@ export function useCreateTicket() {
         queryClient.getQueryData<TicketWithVersion[]>(queryKey) || [];
 
       // Optimistically create a temporary ticket
+      const tempId = Date.now();
+      const now = new Date().toISOString();
       const optimisticTicket: TicketWithVersion = {
-        id: Date.now(), // Temporary ID (will be replaced by server)
+        id: tempId, // Temporary ID (will be replaced by server)
+        ticketNumber: tempId, // Temporary ticket number (will be replaced by server)
+        ticketKey: `TEMP-${tempId}`, // Temporary ticket key (will be replaced by server)
         title: variables.title,
         description: variables.description,
         stage: variables.stage,
         projectId: variables.projectId,
         version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
         branch: null,
         autoMode: variables.autoMode || false,
         workflowType: 'FULL',
         clarificationPolicy: variables.clarificationPolicy || null,
+        attachments: [],
       };
 
       // Update cache with optimistic ticket

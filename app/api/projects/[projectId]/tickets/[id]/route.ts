@@ -3,6 +3,10 @@ import { patchTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { verifyTicketAccess, verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import { deleteTicketParamsSchema } from '@/lib/schemas/ticket-delete';
+import { deleteBranchAndPRs } from '@/lib/github/delete-branch-and-prs';
+import { Octokit } from '@octokit/rest';
+import { Stage, JobStatus } from '@prisma/client';
 
 /**
  * GET /api/projects/[projectId]/tickets/[id]
@@ -467,6 +471,223 @@ export async function PATCH(
 
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/projects/[projectId]/tickets/[id]
+ * Delete a ticket and clean up associated GitHub artifacts (branch, PRs)
+ *
+ * Business Rules:
+ * - SHIP stage tickets cannot be deleted
+ * - Tickets with active jobs (PENDING/RUNNING) cannot be deleted
+ * - User must be project owner OR member
+ *
+ * Deletion Sequence:
+ * 1. Validate authorization and business rules
+ * 2. GitHub cleanup (if branch exists): Close PRs → Delete branch
+ * 3. Database deletion (transactional, cascade to Jobs/Comments)
+ *
+ * Success Response (200):
+ * {
+ *   "success": true,
+ *   "deleted": {
+ *     "ticketId": 42,
+ *     "ticketKey": "MOB-42",
+ *     "branch": "084-feature",
+ *     "prsClosed": 1
+ *   }
+ * }
+ *
+ * Error Responses:
+ * - 400: Invalid stage (SHIP) or active job exists
+ * - 401: Unauthorized (no session)
+ * - 403: Forbidden (not project owner/member)
+ * - 404: Ticket not found
+ * - 500: GitHub API failure or database error
+ */
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ projectId: string; id: string }> }
+): Promise<NextResponse> {
+  try {
+    // Await params in Next.js 15
+    const params = await context.params;
+    const { projectId: projectIdString, id: idString } = params;
+
+    // Validate path parameters
+    const parseResult = deleteTicketParamsSchema.safeParse({
+      projectId: projectIdString,
+      id: idString,
+    });
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid request parameters',
+          code: 'VALIDATION_ERROR',
+          issues: parseResult.error.issues,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { projectId, id: ticketId } = parseResult.data;
+
+    // Step 1: Authorization check
+    // This verifies user is authenticated and has access to the ticket
+    const ticket = await verifyTicketAccess(ticketId);
+
+    // Validate ticket belongs to the specified project
+    if (ticket.projectId !== projectId) {
+      return NextResponse.json(
+        {
+          error: 'Forbidden',
+          code: 'FORBIDDEN',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Step 2: Business rule validation - SHIP stage check
+    if (ticket.stage === Stage.SHIP) {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete SHIP stage tickets',
+          code: 'INVALID_STAGE',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Step 3: Business rule validation - Active job check
+    const hasActiveJob = await prisma.job.findFirst({
+      where: {
+        ticketId: ticket.id,
+        status: { in: [JobStatus.PENDING, JobStatus.RUNNING] },
+      },
+    });
+
+    if (hasActiveJob) {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete ticket while job is in progress',
+          code: 'ACTIVE_JOB',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Step 4: GitHub cleanup (if branch exists)
+    let prsClosed = 0;
+
+    if (ticket.branch) {
+      // Get project GitHub info
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          githubOwner: true,
+          githubRepo: true,
+        },
+      });
+
+      if (!project) {
+        return NextResponse.json(
+          { error: 'Project not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+
+      // Initialize GitHub client
+      const githubToken = process.env.GITHUB_TOKEN;
+      if (!githubToken) {
+        console.error('GITHUB_TOKEN environment variable not set');
+        return NextResponse.json(
+          {
+            error: 'GitHub integration not configured',
+            code: 'GITHUB_CONFIG_ERROR',
+          },
+          { status: 500 }
+        );
+      }
+
+      const octokit = new Octokit({ auth: githubToken });
+
+      // Delete branch and close PRs (sequential operations)
+      try {
+        const result = await deleteBranchAndPRs(
+          octokit,
+          project.githubOwner,
+          project.githubRepo,
+          ticket.branch
+        );
+
+        prsClosed = result.prsClosed;
+      } catch (error) {
+        // GitHub API failure - DO NOT delete ticket from database
+        // Preserve transactional integrity
+        console.error('GitHub cleanup failed:', error);
+
+        return NextResponse.json(
+          {
+            error: 'Failed to delete GitHub artifacts. Please try again.',
+            code: 'GITHUB_API_ERROR',
+            details: {
+              operation: 'delete_branch_and_prs',
+              message: error instanceof Error ? error.message : 'Unknown error',
+            },
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Step 5: Database deletion (cascade to Jobs, Comments via FK constraints)
+    await prisma.ticket.delete({
+      where: { id: ticketId },
+    });
+
+    // Step 6: Success response
+    return NextResponse.json(
+      {
+        success: true,
+        deleted: {
+          ticketId: ticket.id,
+          ticketKey: ticket.ticketKey,
+          branch: ticket.branch,
+          prsClosed,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Ticket deletion failed:', error);
+
+    // Handle authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized. Please sign in.', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Ticket not found') {
+        return NextResponse.json(
+          { error: 'Ticket not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Generic error response
+    return NextResponse.json(
+      {
+        error: 'Failed to delete ticket',
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

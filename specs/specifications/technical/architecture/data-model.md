@@ -213,6 +213,12 @@ model Ticket {
 - Description editable only in INBOX stage (frozen after SPECIFY)
 - Clarification policy overrides project default when set
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
+- **Deletion**:
+  - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP)
+  - Deletion blocked when ticket has PENDING or RUNNING jobs
+  - Deletion is transactional: GitHub cleanup (PRs, branch) must succeed before database deletion
+  - On success: Ticket, Jobs, Comments cascade deleted from database
+  - On failure: Ticket remains unchanged (no partial deletion)
 
 ### Job
 

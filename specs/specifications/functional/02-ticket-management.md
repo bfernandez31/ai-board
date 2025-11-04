@@ -143,6 +143,52 @@ Users can close the detail modal by:
 - Pressing the Escape key
 - Clicking outside the modal content area
 
+## Ticket Deletion
+
+### Drag-to-Trash Feature
+
+Users can delete tickets by dragging them to a trash zone that appears during drag operations:
+
+**Trash Zone Visibility**:
+- Appears at the bottom of the board only during active drag operations
+- Available for tickets in INBOX, SPECIFY, PLAN, BUILD, and VERIFY stages
+- Not available for SHIP stage tickets (completed work cannot be deleted)
+- Hidden when no drag operation is active
+
+**Deletion Eligibility**:
+- Tickets with pending or running jobs cannot be deleted
+- Trash zone appears but shows disabled state (reduced opacity, strikethrough)
+- Tooltip explains: "Cannot delete ticket while job is in progress"
+- Only tickets with completed, failed, or cancelled jobs can be deleted
+
+**Deletion Process**:
+1. User drags ticket card to trash zone at bottom of board
+2. Confirmation modal appears before any deletion occurs
+3. Modal displays stage-specific information about what will be deleted:
+   - **INBOX**: "This ticket has no workflow artifacts and will be permanently deleted"
+   - **SPECIFY**: Lists branch name and spec.md file
+   - **PLAN**: Lists branch name, spec.md, plan.md, and tasks.md files
+   - **BUILD**: Lists branch name, implementation artifacts, and any open pull requests
+   - **VERIFY**: Lists branch name, preview deployment (if active), pull requests, and all workflow artifacts
+4. User confirms or cancels the deletion
+5. If confirmed, ticket is permanently deleted along with:
+   - Database record (ticket, jobs, comments)
+   - Git branch from repository
+   - All open pull requests where head branch matches ticket branch
+   - Workflow artifact files (spec.md, plan.md, tasks.md)
+
+**Visual Feedback**:
+- Trash zone highlights when valid ticket is dragged over it
+- Disabled state shown for tickets with active jobs
+- Immediate removal from board upon successful deletion
+- Error message displayed if deletion fails (ticket remains unchanged)
+
+**Deletion Behavior**:
+- Deletion is transactional: all GitHub artifacts must be deleted successfully before database deletion
+- If GitHub API fails, ticket remains in database (no partial deletion)
+- Orphaned branches or pull requests are prevented through this transactional approach
+- Preview deployments become orphaned after deletion (Vercel cleanup is manual)
+
 ## Data Persistence
 
 ### Automatic Saving

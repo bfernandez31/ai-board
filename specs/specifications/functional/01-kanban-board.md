@@ -67,6 +67,13 @@ Each ticket appears as a card within its current stage column. Cards display:
 - Columns with no tickets display an empty state message
 - Message follows consistent pattern across all columns
 
+**Trash Zone**:
+- Appears at the bottom of the board during active drag operations
+- Only visible when dragging tickets from non-SHIP stages
+- Shows enabled state for tickets without active jobs
+- Shows disabled state (reduced opacity, strikethrough) for tickets with pending or running jobs
+- Hidden when no drag operation is active
+
 ## Responsive Behavior
 
 - **Desktop** (≥1024px): All columns visible side-by-side

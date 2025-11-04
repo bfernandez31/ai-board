@@ -1,4 +1,5 @@
-import type { Stage, WorkflowType, ClarificationPolicy } from '@prisma/client';
+import type { WorkflowType, ClarificationPolicy, JobStatus, Prisma } from '@prisma/client';
+import type { Stage } from '@/lib/stage-transitions';
 
 /**
  * Query-specific type definitions for TanStack Query
@@ -13,17 +14,31 @@ import type { Stage, WorkflowType, ClarificationPolicy } from '@prisma/client';
  */
 export interface TicketWithVersion {
   id: number;
+  ticketNumber: number;
+  ticketKey: string;
   title: string;
   description: string | null;
   stage: Stage;
   projectId: number;
   version: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   branch: string | null;
+  previewUrl?: string | null;
   autoMode: boolean;
   workflowType: WorkflowType;
   clarificationPolicy: ClarificationPolicy | null;
+  attachments: Prisma.JsonValue;
+  project?: {
+    clarificationPolicy: ClarificationPolicy;
+    githubOwner?: string;
+    githubRepo?: string;
+  };
+  jobs?: Array<{
+    status: JobStatus;
+    command: string;
+    createdAt: Date;
+  }>;
 }
 
 /**
@@ -111,8 +126,8 @@ export interface Project {
   githubRepo: string | null;
   clarificationPolicy: ClarificationPolicy;
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
