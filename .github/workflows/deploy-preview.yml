@@ -51,13 +51,13 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      # --- Deploy manually using CLI ---
+      # --- Deploy to Vercel Preview ---
       - name: Deploy to Vercel Preview
         id: deploy
         run: |
           echo "🚀 Deploying branch '${{ inputs.branch }}' to Vercel Preview..."
 
-          # Deploy and capture the output
+          # Deploy and capture the output (vercel CLI waits for deployment to complete)
           DEPLOY_OUTPUT=$(vercel deploy \
             --yes \
             --token=${{ secrets.VERCEL_TOKEN }} \
@@ -73,30 +73,8 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Deployment initiated: $DEPLOYMENT_URL"
-          echo "⏳ Waiting for build to complete..."
-
-          # Wait for the deployment to be ready (max 10 minutes)
-          TIMEOUT=600
-          ELAPSED=0
-          INTERVAL=10
-
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL")
-
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Deployment is ready and accessible!"
-              echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            echo "⏳ Build in progress... (HTTP $HTTP_CODE) - ${ELAPSED}s elapsed"
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-
-          echo "❌ Deployment timed out after ${TIMEOUT}s"
-          exit 1
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
 
       # --- Update ticket with preview URL ---
       - name: Update ticket preview URL
