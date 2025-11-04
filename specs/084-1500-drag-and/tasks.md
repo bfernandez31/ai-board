@@ -99,23 +99,23 @@
 
 ### Tests for User Story 2
 
-- [ ] T027 [P] [US2] Unit test for getConfirmationMessage() SPECIFY stage in tests/unit/stage-confirmation-messages.test.ts
-- [ ] T028 [P] [US2] Unit test for getConfirmationMessage() PLAN stage in tests/unit/stage-confirmation-messages.test.ts
-- [ ] T029 [P] [US2] Unit test for getConfirmationMessage() BUILD stage in tests/unit/stage-confirmation-messages.test.ts
-- [ ] T030 [P] [US2] Unit test for getConfirmationMessage() VERIFY stage in tests/unit/stage-confirmation-messages.test.ts
-- [ ] T031 [P] [US2] API contract test for DELETE with branch and PR in tests/api/tickets-delete.spec.ts
-- [ ] T032 [P] [US2] API contract test for DELETE with GitHub API failure (500 error) in tests/api/tickets-delete.spec.ts
+- [X] T027 [P] [US2] Unit test for getConfirmationMessage() SPECIFY stage in tests/unit/stage-confirmation-messages.test.ts
+- [X] T028 [P] [US2] Unit test for getConfirmationMessage() PLAN stage in tests/unit/stage-confirmation-messages.test.ts
+- [X] T029 [P] [US2] Unit test for getConfirmationMessage() BUILD stage in tests/unit/stage-confirmation-messages.test.ts
+- [X] T030 [P] [US2] Unit test for getConfirmationMessage() VERIFY stage in tests/unit/stage-confirmation-messages.test.ts
+- [ ] T031 [P] [US2] API contract test for DELETE with branch and PR in tests/api/tickets-delete.spec.ts (DEFERRED: requires GitHub API mocking)
+- [ ] T032 [P] [US2] API contract test for DELETE with GitHub API failure (500 error) in tests/api/tickets-delete.spec.ts (DEFERRED: requires GitHub API mocking)
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Update DeleteConfirmationModal to display branch name in modal content in components/board/delete-confirmation-modal.tsx
-- [ ] T034 [US2] Update getConfirmationMessage() for SPECIFY stage (branch + spec.md) in lib/utils/stage-confirmation-messages.ts
-- [ ] T035 [US2] Update getConfirmationMessage() for PLAN stage (branch + plan.md + tasks.md) in lib/utils/stage-confirmation-messages.ts
-- [ ] T036 [US2] Update getConfirmationMessage() for BUILD stage (branch + PR) in lib/utils/stage-confirmation-messages.ts
-- [ ] T037 [US2] Update getConfirmationMessage() for VERIFY stage (branch + preview + PR + all artifacts) in lib/utils/stage-confirmation-messages.ts
-- [ ] T038 [US2] E2E test: Drag SPECIFY ticket to trash, verify branch deleted from GitHub in tests/e2e/board-drag-drop.spec.ts
-- [ ] T039 [US2] E2E test: Drag BUILD ticket with PR to trash, verify PR closed in tests/e2e/board-drag-drop.spec.ts
-- [ ] T040 [US2] E2E test: GitHub API failure returns error, ticket remains on board in tests/e2e/board-drag-drop.spec.ts
+- [X] T033 [US2] Update DeleteConfirmationModal to display branch name in modal content in components/board/delete-confirmation-modal.tsx
+- [X] T034 [US2] Update getConfirmationMessage() for SPECIFY stage (branch + spec.md) in lib/utils/stage-confirmation-messages.ts
+- [X] T035 [US2] Update getConfirmationMessage() for PLAN stage (branch + plan.md + tasks.md) in lib/utils/stage-confirmation-messages.ts
+- [X] T036 [US2] Update getConfirmationMessage() for BUILD stage (branch + PR) in lib/utils/stage-confirmation-messages.ts
+- [X] T037 [US2] Update getConfirmationMessage() for VERIFY stage (branch + preview + PR + all artifacts) in lib/utils/stage-confirmation-messages.ts
+- [ ] T038 [US2] E2E test: Drag SPECIFY ticket to trash, verify branch deleted from GitHub in tests/e2e/board-drag-drop.spec.ts (DEFERRED: requires GitHub test repository)
+- [ ] T039 [US2] E2E test: Drag BUILD ticket with PR to trash, verify PR closed in tests/e2e/board-drag-drop.spec.ts (DEFERRED: requires GitHub test repository)
+- [ ] T040 [US2] E2E test: GitHub API failure returns error, ticket remains on board in tests/e2e/board-drag-drop.spec.ts (DEFERRED: requires GitHub API mocking)
 
 **Checkpoint**: User Story 2 complete - All workflow stage tickets can be deleted with GitHub cleanup
 

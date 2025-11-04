@@ -19,7 +19,9 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     // Create test user for all tests
     testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
-      update: {},
+      update: {
+        updatedAt: new Date(),
+      },
       create: {
         id: 'test-user-id',
         email: 'test@e2e.local',
