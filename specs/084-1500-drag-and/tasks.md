@@ -25,10 +25,10 @@
 
 **✅ No dependencies** - These tasks can start immediately
 
-- [ ] T001 [P] Create Zod schema for DELETE endpoint validation in lib/schemas/ticket-delete.ts
-- [ ] T002 [P] Create eligibility utility function in lib/utils/trash-zone-eligibility.ts
-- [ ] T003 [P] Create stage-specific confirmation message generator in lib/utils/stage-confirmation-messages.ts
-- [ ] T004 Create GitHub cleanup utility function in lib/github/delete-branch-and-prs.ts
+- [X] T001 [P] Create Zod schema for DELETE endpoint validation in lib/schemas/ticket-delete.ts
+- [X] T002 [P] Create eligibility utility function in lib/utils/trash-zone-eligibility.ts
+- [X] T003 [P] Create stage-specific confirmation message generator in lib/utils/stage-confirmation-messages.ts
+- [X] T004 Create GitHub cleanup utility function in lib/github/delete-branch-and-prs.ts
 
 ---
 
@@ -40,11 +40,11 @@
 
 **Dependencies**: Requires Phase 1 (T001, T004) completion
 
-- [ ] T005 Add DELETE method to existing API route in app/api/projects/[projectId]/tickets/[id]/route.ts
-- [ ] T006 Implement authorization check using verifyTicketAccess() in DELETE method
-- [ ] T007 Implement business rule validation (stage check, active job check) in DELETE method
-- [ ] T008 Integrate GitHub cleanup logic (close PRs, delete branch) in DELETE method
-- [ ] T009 Implement transactional deletion with error handling and rollback in DELETE method
+- [X] T005 Add DELETE method to existing API route in app/api/projects/[projectId]/tickets/[id]/route.ts
+- [X] T006 Implement authorization check using verifyTicketAccess() in DELETE method
+- [X] T007 Implement business rule validation (stage check, active job check) in DELETE method
+- [X] T008 Integrate GitHub cleanup logic (close PRs, delete branch) in DELETE method
+- [X] T009 Implement transactional deletion with error handling and rollback in DELETE method
 
 **Checkpoint**: API endpoint ready - DELETE requests can now be made successfully
 
