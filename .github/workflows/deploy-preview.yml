@@ -25,8 +25,6 @@ env:
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-  GITHUB_USER: bfernandez31
-  GITHUB_REPO: ai-board
 
 jobs:
   deploy:
@@ -55,7 +53,7 @@ jobs:
               \"name\": \"${{ env.VERCEL_PROJECT_ID }}\",
               \"gitSource\": {
                 \"type\": \"github\",
-                \"repoId\": \"${{ env.GITHUB_USER }}/${{ env.GITHUB_REPO }}\",
+                \"repoId\": \"github:1066765872\",
                 \"ref\": \"${{ inputs.branch }}\"
               },
               \"target\": \"preview\"
