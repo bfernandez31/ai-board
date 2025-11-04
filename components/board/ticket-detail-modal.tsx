@@ -654,12 +654,14 @@ export function TicketDetailModal({
     initialValue: localTicket?.title || '',
     onSave: handleSaveTitle,
     maxLength: 100,
+    fieldType: 'title',
   });
 
   const descriptionEdit = useTicketEdit({
     initialValue: localTicket?.description || '',
     onSave: handleSaveDescription,
     maxLength: 2500,
+    fieldType: 'description',
   });
 
   // Don't render content if no ticket is selected (after all hooks)
