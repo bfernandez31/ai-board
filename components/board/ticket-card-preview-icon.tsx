@@ -3,6 +3,12 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TicketCardPreviewIconProps {
   /** Vercel preview URL */
@@ -35,17 +41,25 @@ export const TicketCardPreviewIcon = React.memo(
     };
 
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4]"
-        onClick={handleClick}
-        aria-label={`Open preview deployment for ${ticketKey}`}
-        title="Open preview deployment"
-        data-testid="preview-icon"
-      >
-        <ExternalLink className="h-4 w-4" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-[#313244]"
+              onClick={handleClick}
+              aria-label={`Open preview deployment for ${ticketKey}`}
+              data-testid="preview-icon"
+            >
+              <ExternalLink className="h-4 w-4 text-green-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">Open preview deployment</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 );

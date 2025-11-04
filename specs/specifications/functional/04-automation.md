@@ -495,26 +495,40 @@ Users can manually deploy ticket branches to Vercel preview environment from VER
 - Ticket must be in VERIFY stage
 - Must have an associated branch
 - Latest job must have COMPLETED status
-- No other deployment currently in progress
+- No other deployment currently in progress (PENDING/RUNNING state)
 
 **Trigger Method**:
-- Deploy icon appears on ticket cards meeting eligibility criteria
+- Deploy icon (rocket) appears on ticket cards meeting eligibility criteria
+- Hovering over icon shows tooltip: "Deploy preview to Vercel"
 - Clicking icon opens confirmation modal
 - User confirms deployment or cancels operation
+
+**Concurrency Control**:
+- During active deployment (PENDING/RUNNING), deploy icons on all other tickets are disabled
+- Disabled icons show tooltip: "Another deployment is in progress"
+- Disabled icons have reduced opacity (50%) and are non-clickable
+- Icons re-enable automatically when deployment completes (COMPLETED/FAILED/CANCELLED)
 
 ### Single-Preview Enforcement
 
 Only one preview deployment can be active across all project tickets:
 
 **Enforcement Mechanism**:
-- Database transaction clears existing preview URLs atomically
+- Previous preview URL remains visible until new deployment succeeds
+- Database transaction atomically clears old preview and sets new preview when workflow completes
 - Confirmation modal warns when existing preview will be replaced
 - User must explicitly confirm replacement
 
 **Business Rule**:
 - New deployment always replaces existing preview
-- Previous preview URL becomes inaccessible
+- Old preview remains accessible during new deployment (seamless transition)
+- Previous preview URL cleared only when new preview URL is set
 - Only most recent deployment remains active
+
+**User Experience**:
+- Old preview icon remains visible while new deployment is in progress
+- When new deployment completes, old preview disappears and new preview appears atomically
+- No gap period where no preview is available
 
 ### Deployment Progress
 
@@ -529,12 +543,13 @@ Users monitor deployment status through visual indicators:
 - Replaced by deploy icon (for retry) or preview icon (for successful deployments)
 
 **Preview Icon Display**:
-- External link icon appears ONLY on tickets with active preview deployment
+- External link icon (green) appears ONLY on tickets with active preview deployment
 - Visible when ticket has non-null `previewUrl` field
 - Only one ticket can show preview icon at a time (single-preview enforcement)
+- Hovering over icon shows tooltip: "Open preview deployment"
 - Clicking icon opens preview URL in new browser tab
 - Icon positioned in status bar with other job indicators
-- Remains visible until new preview deployment replaces it
+- Remains visible until new preview deployment replaces it (seamless transition)
 
 **Deploy Icon Availability**:
 - Deploy icon (rocket) appears when ticket is eligible for deployment
@@ -558,7 +573,8 @@ Users can trigger new deployments at any time after a deployment completes:
 - Confirmation modal warns existing preview will be replaced
 - New job created, previous job remains in history
 - No limit on deployment attempts
-- Previous preview URL cleared when new deployment starts
+- Previous preview URL cleared when new deployment succeeds (not at start)
+- During deployment, previous preview remains accessible (seamless transition)
 
 ### Deployment Workflow
 

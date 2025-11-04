@@ -24,6 +24,8 @@ interface DraggableTicketCardProps {
   onTicketClick?: (ticket: TicketWithVersion) => void;
   /** Ticket with active preview (for single-preview warning) */
   activePreviewTicket?: { ticketKey: string } | null;
+  /** Ticket ID with active deployment (PENDING/RUNNING deploy job) */
+  activeDeploymentTicket?: number | null;
 }
 
 /**
@@ -37,7 +39,8 @@ export const TicketCard = React.memo(
     deployJob,
     isDraggable = true,
     onTicketClick,
-    activePreviewTicket
+    activePreviewTicket,
+    activeDeploymentTicket
   }: DraggableTicketCardProps) => {
     const [isMounted, setIsMounted] = useState(false);
     const [showDeployModal, setShowDeployModal] = useState(false);
@@ -53,6 +56,14 @@ export const TicketCard = React.memo(
         jobs: ticket.jobs || [],
       });
     }, [ticket.stage, ticket.branch, ticket.jobs]);
+
+    // Check if deploy is disabled due to another ticket's active deployment
+    // Deploy is disabled when:
+    // 1. Another ticket has a PENDING or RUNNING deployment
+    // 2. This ticket is NOT the one with the active deployment
+    const isDeployDisabled = React.useMemo(() => {
+      return activeDeploymentTicket !== null && activeDeploymentTicket !== ticket.id;
+    }, [activeDeploymentTicket, ticket.id]);
 
 
     const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -191,6 +202,7 @@ export const TicketCard = React.memo(
                         onDeploy={() => setShowDeployModal(true)}
                         ticketKey={ticket.ticketKey}
                         isDeploying={false}
+                        isDisabled={isDeployDisabled}
                       />
                     )
                   ) : isDeployable ? (
@@ -199,6 +211,7 @@ export const TicketCard = React.memo(
                       onDeploy={() => setShowDeployModal(true)}
                       ticketKey={ticket.ticketKey}
                       isDeploying={false}
+                      isDisabled={isDeployDisabled}
                     />
                   ) : null}
 

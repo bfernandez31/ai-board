@@ -347,4 +347,217 @@ test.describe('Integration: Deploy Preview Icon Colors', () => {
     const statusIndicator = ticketCard.locator('[data-testid="job-status-indicator"]');
     await expect(statusIndicator).toBeVisible();
   });
+
+  test('should disable deploy icons on other tickets when one ticket has PENDING deployment', async ({ page, projectId }) => {
+    // Create ticket A with PENDING deployment
+    const ticketNumberA = nextTicketNumber++;
+    const ticketA = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberA,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberA}`,
+        title: '[e2e] Ticket A with PENDING deployment',
+        description: 'Ticket with active deployment',
+        stage: 'VERIFY',
+        projectId,
+        branch: '081-test-branch-a',
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticketA.id,
+        projectId,
+        command: 'deploy-preview',
+        status: 'PENDING',
+        branch: '081-test-branch-a',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create ticket B (deployable, but should be disabled)
+    const ticketNumberB = nextTicketNumber++;
+    const ticketB = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberB,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberB}`,
+        title: '[e2e] Ticket B should be disabled',
+        description: 'Ticket that should have disabled deploy icon',
+        stage: 'VERIFY',
+        projectId,
+        branch: '082-test-branch-b',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Make ticket B deployable
+    await prisma.job.create({
+      data: {
+        ticketId: ticketB.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '082-test-branch-b',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    // Verify ticket B's deploy icon is visible but disabled
+    const ticketCardB = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticketB.title }).first();
+    await expect(ticketCardB).toBeVisible();
+
+    const deployIconB = ticketCardB.locator('[data-testid="deploy-icon"]');
+    await expect(deployIconB).toBeVisible();
+    await expect(deployIconB).toBeDisabled();
+  });
+
+  test('should re-enable deploy icons when deployment completes', async ({ page, projectId }) => {
+    // Create ticket A with RUNNING deployment
+    const ticketNumberA = nextTicketNumber++;
+    const ticketA = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberA,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberA}`,
+        title: '[e2e] Ticket A deployment completes',
+        description: 'Ticket with deployment that will complete',
+        stage: 'VERIFY',
+        projectId,
+        branch: '083-test-branch-a',
+        updatedAt: new Date(),
+      },
+    });
+
+    const jobA = await prisma.job.create({
+      data: {
+        ticketId: ticketA.id,
+        projectId,
+        command: 'deploy-preview',
+        status: 'RUNNING',
+        branch: '083-test-branch-a',
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create ticket B (deployable)
+    const ticketNumberB = nextTicketNumber++;
+    const ticketB = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberB,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberB}`,
+        title: '[e2e] Ticket B should re-enable',
+        description: 'Ticket that should have re-enabled deploy icon',
+        stage: 'VERIFY',
+        projectId,
+        branch: '084-test-branch-b',
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticketB.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '084-test-branch-b',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    // Verify ticket B is initially disabled
+    const ticketCardB = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticketB.title }).first();
+    const deployIconB = ticketCardB.locator('[data-testid="deploy-icon"]');
+    await expect(deployIconB).toBeDisabled();
+
+    // Complete the deployment on ticket A
+    await prisma.job.update({
+      where: { id: jobA.id },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Wait for polling to detect the change (2 second polling interval + buffer)
+    await page.waitForTimeout(3000);
+
+    // Verify ticket B's deploy icon is now enabled
+    await expect(deployIconB).not.toBeDisabled();
+  });
+
+  test('should keep old preview icon visible during new deployment (seamless transition)', async ({ page, projectId }) => {
+    // Create ticket A with existing preview
+    const ticketNumberA = nextTicketNumber++;
+    const ticketA = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberA,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberA}`,
+        title: '[e2e] Ticket A with old preview',
+        description: 'Ticket with existing preview URL',
+        stage: 'VERIFY',
+        projectId,
+        branch: '085-test-branch-a',
+        previewUrl: 'https://old-preview.vercel.app',
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticketA.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '085-test-branch-a',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create ticket B with PENDING deployment
+    const ticketNumberB = nextTicketNumber++;
+    const ticketB = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumberB,
+        ticketKey: `${getProjectKey(projectId)}-${ticketNumberB}`,
+        title: '[e2e] Ticket B new deployment',
+        description: 'Ticket with new deployment in progress',
+        stage: 'VERIFY',
+        projectId,
+        branch: '086-test-branch-b',
+        previewUrl: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticketB.id,
+        projectId,
+        command: 'deploy-preview',
+        status: 'PENDING',
+        branch: '086-test-branch-b',
+        updatedAt: new Date(),
+      },
+    });
+
+    await page.goto(`http://localhost:3000/projects/${projectId}/board`);
+
+    // Verify old preview icon is still visible on ticket A
+    const ticketCardA = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticketA.title }).first();
+    const previewIconA = ticketCardA.locator('[data-testid="preview-icon"]');
+    await expect(previewIconA).toBeVisible();
+
+    // Verify ticket B shows loading indicator (no preview yet)
+    const ticketCardB = page.locator('[data-testid="ticket-card"]').filter({ hasText: ticketB.title }).first();
+    const previewIconB = ticketCardB.locator('[data-testid="preview-icon"]');
+    await expect(previewIconB).not.toBeVisible();
+  });
 });

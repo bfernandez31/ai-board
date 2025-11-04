@@ -113,18 +113,36 @@ export async function PATCH(
       );
     }
 
-    // Update preview URL
-    const updatedTicket = await prisma.ticket.update({
-      where: { id: currentTicket.id },
-      data: {
-        previewUrl,
-        // updatedAt automatically updated by @updatedAt directive
-      },
-      select: {
-        id: true,
-        previewUrl: true,
-        updatedAt: true,
-      },
+    // Transaction: Clear existing previews + Set new preview URL
+    const updatedTicket = await prisma.$transaction(async (tx) => {
+      // Clear all existing preview URLs in this project (single-preview enforcement)
+      await tx.ticket.updateMany({
+        where: {
+          projectId,
+          previewUrl: { not: null },
+        },
+        data: {
+          previewUrl: null,
+        },
+      });
+
+      console.log('[Preview URL Update] Cleared existing preview URLs for project:', projectId);
+
+      // Set new preview URL on current ticket
+      const updated = await tx.ticket.update({
+        where: { id: currentTicket.id },
+        data: {
+          previewUrl,
+          // updatedAt automatically updated by @updatedAt directive
+        },
+        select: {
+          id: true,
+          previewUrl: true,
+          updatedAt: true,
+        },
+      });
+
+      return updated;
     });
 
     console.log('[Preview URL Update] Success:', {

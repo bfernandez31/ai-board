@@ -284,6 +284,28 @@ function BoardContent({
     [polledJobs, initialJobs, projectId, allTickets]
   );
 
+  // Find the ticket with active deployment (PENDING or RUNNING deploy job)
+  // Used to disable deploy buttons on other tickets during deployment
+  const activeDeploymentTicket = useMemo(() => {
+    // Get all unique ticket IDs from both sources
+    const ticketIds = new Set([
+      ...allTickets.map(t => t.id),
+      ...Array.from(initialJobs.keys())
+    ]);
+
+    // Check each ticket for active deployment using merged job data
+    for (const ticketId of ticketIds) {
+      const jobs = getTicketJobs(ticketId);
+      const deployJob = jobs.deployJob;
+
+      if (deployJob && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING')) {
+        return ticketId;
+      }
+    }
+
+    return null;
+  }, [allTickets, initialJobs, getTicketJobs]);
+
   // Handle drag start (T020 - Add drag state)
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const ticket = event.active.data.current?.ticket as TicketWithVersion;
@@ -761,6 +783,7 @@ function BoardContent({
                   dropZoneStyle={getDropZoneStyle(stage)}
                   isBlockedByJob={isBlocked}
                   activePreviewTicket={activePreviewTicket}
+                  activeDeploymentTicket={activeDeploymentTicket}
                 />
               );
             })}

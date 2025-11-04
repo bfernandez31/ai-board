@@ -137,34 +137,16 @@ export async function POST(
       );
     }
 
-    // Transaction: Clear existing previews + Create job
-    const job = await prisma.$transaction(async (tx) => {
-      // Clear all existing preview URLs in this project
-      await tx.ticket.updateMany({
-        where: {
-          projectId,
-          previewUrl: { not: null },
-        },
-        data: {
-          previewUrl: null,
-        },
-      });
-
-      console.log('[Deploy] Cleared existing preview URLs for project:', projectId);
-
-      // Create deployment job
-      const newJob = await tx.job.create({
-        data: {
-          ticketId,
-          projectId,
-          command: 'deploy-preview',
-          status: 'PENDING',
-          branch: ticketWithJobs.branch,
-          updatedAt: new Date(),
-        },
-      });
-
-      return newJob;
+    // Create deployment job (preview URL clearing happens when new URL is set)
+    const job = await prisma.job.create({
+      data: {
+        ticketId,
+        projectId,
+        command: 'deploy-preview',
+        status: 'PENDING',
+        branch: ticketWithJobs.branch,
+        updatedAt: new Date(),
+      },
     });
 
     console.log('[Deploy] Job created:', {
