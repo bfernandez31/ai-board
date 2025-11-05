@@ -155,6 +155,10 @@ The user interface provides an intuitive, modern experience for managing tickets
 **Drop Zones**:
 - Green highlighting: Quick implementation path (INBOX → BUILD)
 - Blue highlighting: Normal workflow path (INBOX → SPECIFY)
+- Red highlighting: Trash zone (delete ticket)
+  - Border, icon, and text all turn red when valid ticket is dragged over
+  - Smooth color transitions (200ms duration)
+  - Consistent red color across all visual elements
 - Gray with prohibited icon: Invalid transitions
 - Badge text explains special transitions
 

@@ -88,7 +88,13 @@ export const TrashZone = React.memo(function TrashZone({ isVisible, isDisabled, 
           isDisabled && 'text-gray-400'
         )}
       />
-      <span className={cn('font-medium', isDisabled && 'text-gray-400')}>
+      <span
+        className={cn(
+          'font-medium transition-colors duration-200',
+          isOver && !isDisabled && 'text-red-500',
+          isDisabled && 'text-gray-400'
+        )}
+      >
         Delete Ticket
       </span>
     </div>
