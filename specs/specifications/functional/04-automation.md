@@ -552,11 +552,12 @@ Users monitor deployment status through visual indicators:
 - Remains visible until new preview deployment replaces it (seamless transition)
 
 **Deploy Icon Availability**:
-- Deploy icon (rocket) appears when ticket is eligible for deployment
+- Deploy icon (rocket) appears ONLY on tickets in VERIFY stage meeting eligibility criteria
 - Shows during PENDING/RUNNING states with loading animation
-- After deployment completes/fails, deploy icon remains visible for re-deployment
+- After deployment completes/fails, deploy icon remains visible for re-deployment (in VERIFY stage only)
 - Allows users to trigger new deployments even after successful previews
 - Deploy icon disabled only while deployment job is PENDING/RUNNING
+- **Stage Restriction**: Deploy icon is never shown on tickets outside VERIFY stage (including SHIP)
 
 ### Re-Deployment
 
@@ -568,13 +569,14 @@ Users can trigger new deployments at any time after a deployment completes:
 - After cancelled deployment (CANCELLED) - retry deployment
 
 **Re-Deployment Behavior**:
-- Deploy icon remains visible after any terminal state
+- Deploy icon remains visible after any terminal state (VERIFY stage only)
 - Clicking deploy icon opens confirmation modal
 - Confirmation modal warns existing preview will be replaced
 - New job created, previous job remains in history
-- No limit on deployment attempts
+- No limit on deployment attempts (while ticket remains in VERIFY stage)
 - Previous preview URL cleared when new deployment succeeds (not at start)
 - During deployment, previous preview remains accessible (seamless transition)
+- **Stage Change**: If ticket moves from VERIFY to SHIP, deploy icon is hidden (preview icon may remain if deployment exists)
 
 ### Deployment Workflow
 

@@ -1019,7 +1019,7 @@ Deploy preview jobs integrate seamlessly with existing job polling infrastructur
 **UI Components**:
 - Error indicator: Red circular badge with AlertCircle icon
 - Tooltip: Shows error message from `Job.logs` field or fallback message
-- Deploy icon: Remains visible alongside error indicator for retry
+- Deploy icon: Remains visible alongside error indicator for retry (VERIFY stage only)
 
 **User Flow**:
 1. Deploy job fails (workflow sets status = FAILED)
@@ -1027,6 +1027,11 @@ Deploy preview jobs integrate seamlessly with existing job polling infrastructur
 3. User hovers to see error message
 4. User clicks deploy icon to retry deployment
 5. New job created, old job status persists in history
+
+**Stage Restriction**:
+- Deploy icon (initial deployment and retry) is ONLY visible on tickets in VERIFY stage
+- If ticket moves from VERIFY to SHIP, deploy icon is hidden
+- Preview icon remains visible on any stage if previewUrl exists
 
 ### Workflow Authentication
 

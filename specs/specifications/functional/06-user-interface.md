@@ -330,6 +330,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 *Preview Icon (External Link)*:
 - Appears ONLY on tickets with active preview deployment (non-null previewUrl)
+- Visible on tickets in any stage (VERIFY, SHIP, etc.) as long as previewUrl exists
 - Only one ticket shows preview icon at a time (single-preview enforcement)
 - Clicking opens preview URL in new browser tab
 - Remains visible until replaced by new deployment on different ticket
@@ -342,11 +343,12 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Replaced by deploy icon (for retry) or preview icon (on success)
 
 *Deploy Icon (Rocket, Static)*:
-- Appears when ticket is eligible for deployment
-- Remains visible after deployments complete (allows re-deployment)
+- Appears ONLY on tickets in VERIFY stage that are eligible for deployment
+- Remains visible after deployments complete (allows re-deployment in VERIFY stage)
 - Disabled only while deployment job is PENDING/RUNNING
 - Clicking opens deployment confirmation modal
-- Always available for triggering new deployments
+- Available for triggering new deployments while ticket remains in VERIFY stage
+- **Stage Restriction**: Hidden on all tickets outside VERIFY stage (including SHIP)
 
 ## Empty States
 
