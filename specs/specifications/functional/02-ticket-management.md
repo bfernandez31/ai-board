@@ -193,6 +193,13 @@ Users can delete tickets by dragging them to a trash zone that appears during dr
 - Orphaned branches or pull requests are prevented through this transactional approach
 - Preview deployments become orphaned after deletion (Vercel cleanup is manual)
 
+**Branch Already Deleted Handling**:
+- If the Git branch has already been deleted from GitHub (manual cleanup, another process)
+- System treats this as successful deletion (idempotent operation)
+- Ticket deletion proceeds normally without error
+- GitHub API returns 404 (not found) or 422 (reference does not exist)
+- Both responses indicate branch is already deleted and are handled gracefully
+
 ## Data Persistence
 
 ### Automatic Saving
