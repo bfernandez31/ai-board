@@ -410,6 +410,11 @@ test.describe('Drag and Drop to Trash Zone', () => {
     const iconClasses = await trashIcon.getAttribute('class');
     expect(iconClasses).toContain('text-red-500');
 
+    // Verify text turns red
+    const trashText = trashZone.locator('span').filter({ hasText: 'Delete Ticket' });
+    const textClasses = await trashText.getAttribute('class');
+    expect(textClasses).toContain('text-red-500');
+
     // Release drag while still over trash zone
     await page.mouse.up();
     await page.waitForTimeout(100);
