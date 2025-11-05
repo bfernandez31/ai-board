@@ -91,8 +91,16 @@ export async function deleteBranchAndPRs(
       // 404 errors are acceptable (branch already deleted) - idempotent operation
       if (error.status === 404) {
         branchDeleted = false; // Branch was already deleted
+      } else if (
+        error.status === 422 &&
+        error.message &&
+        error.message.toLowerCase().includes('reference does not exist')
+      ) {
+        // 422 errors with "reference does not exist" message mean branch is already deleted
+        // This is acceptable - treat as successful deletion (idempotent)
+        branchDeleted = false;
       } else {
-        // Re-throw other errors (permissions, rate limit, network)
+        // Re-throw other errors (permissions, rate limit, network, protected branches)
         throw error;
       }
     }
