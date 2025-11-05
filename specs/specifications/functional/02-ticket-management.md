@@ -178,8 +178,12 @@ Users can delete tickets by dragging them to a trash zone that appears during dr
    - Workflow artifact files (spec.md, plan.md, tasks.md)
 
 **Visual Feedback**:
-- Trash zone highlights when valid ticket is dragged over it
-- Disabled state shown for tickets with active jobs
+- Trash zone highlights when valid ticket is dragged over it:
+  - Border turns red (dashed)
+  - Background changes to light red (red-50)
+  - Trash icon turns red
+  - "Delete Ticket" text turns red
+- Disabled state shown for tickets with active jobs (grayed out with reduced opacity)
 - Immediate removal from board upon successful deletion
 - Error message displayed if deletion fails (ticket remains unchanged)
 
