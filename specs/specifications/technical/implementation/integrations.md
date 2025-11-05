@@ -125,6 +125,53 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 **Repository Variables**:
 - `APP_URL`: Application URL for API calls (e.g., `https://ai-board.vercel.app`)
 
+### Branch Deletion
+
+**Function**: `deleteBranchAndPRs` (`lib/github/delete-branch-and-prs.ts`)
+
+**Purpose**: Delete Git branches and close associated pull requests during ticket deletion.
+
+**Sequence**:
+1. Find all open PRs with matching head branch
+2. Close all matching PRs (required before branch deletion)
+3. Delete the Git branch
+
+**Idempotent Operations**:
+- 404 errors (branch already deleted) are acceptable
+- 422 errors with "reference does not exist" message are acceptable (branch already deleted)
+- Returns success even if branch was already deleted
+
+**Usage**:
+```typescript
+import { Octokit } from '@octokit/rest';
+import { deleteBranchAndPRs } from '@/lib/github/delete-branch-and-prs';
+
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+const result = await deleteBranchAndPRs(
+  octokit,
+  'bfernandez31',
+  'ai-board',
+  '084-drag-and-drop'
+);
+
+console.log(`Closed ${result.prsClosed} PRs, deleted branch: ${result.branchDeleted}`);
+```
+
+**Return Type**:
+```typescript
+interface GitHubCleanupResult {
+  prsClosed: number;        // Number of PRs closed
+  branchDeleted: boolean;   // False if branch was already deleted
+}
+```
+
+**Error Handling**:
+- 403 errors: Permission denied (check token scope includes 'repo' access)
+- 422 errors (non-reference-not-found): Protected branch (remove protection in GitHub settings)
+- 429 errors: Rate limit exceeded (includes reset timestamp)
+- Other errors: Re-thrown with descriptive message
+
 ### Error Handling
 
 ```typescript

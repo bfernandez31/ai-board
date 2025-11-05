@@ -556,6 +556,7 @@ Delete ticket with GitHub cleanup (permanent deletion).
   2. Delete all associated comments
   3. Delete ticket record
 - **Failure Handling**: If any GitHub operation fails, ticket remains unchanged in database
+- **Idempotent Branch Deletion**: If branch already deleted (404 or 422 "reference does not exist"), operation continues successfully
 
 **Validation**:
 - Ticket cannot be in SHIP stage (400 error)
@@ -570,6 +571,7 @@ Delete ticket with GitHub cleanup (permanent deletion).
 
 **GitHub API Errors**:
 - 404 errors (branch/PR not found) are ignored (idempotent operation)
+- 422 errors with "reference does not exist" message are ignored (branch already deleted)
 - Other GitHub API errors abort the deletion and preserve ticket
 
 **Notes**:
