@@ -196,15 +196,15 @@ export const TicketCard = React.memo(
                         animated={true}
                         completedAt={deployJob.completedAt}
                       />
-                    ) : (
-                      // Show retry button for failed/cancelled/completed deploys
+                    ) : ticket.stage === 'VERIFY' ? (
+                      // Show retry button for failed/cancelled/completed deploys (only in VERIFY stage)
                       <TicketCardDeployIcon
                         onDeploy={() => setShowDeployModal(true)}
                         ticketKey={ticket.ticketKey}
                         isDeploying={false}
                         isDisabled={isDeployDisabled}
                       />
-                    )
+                    ) : null
                   ) : isDeployable ? (
                     // Show deploy button when deployable but no job running
                     <TicketCardDeployIcon
