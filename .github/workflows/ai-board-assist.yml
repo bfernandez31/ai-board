@@ -44,6 +44,16 @@ on:
         required: true
         type: string
 
+      githubOwner:
+        description: 'GitHub repository owner (organization or user)'
+        required: true
+        type: string
+
+      githubRepo:
+        description: 'GitHub repository name'
+        required: true
+        type: string
+
 jobs:
   ai-board-assist:
     runs-on: ubuntu-latest
@@ -112,7 +122,10 @@ jobs:
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         uses: actions/checkout@v4
         with:
+          # Checkout external project repository
+          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
           ref: ${{ inputs.branch }}
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - name: Setup Bun

@@ -81,7 +81,7 @@ export async function POST(
       );
     }
 
-    // Fetch ticket with jobs for eligibility check
+    // Fetch ticket with jobs and project for eligibility check and workflow dispatch
     const ticketWithJobs = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -93,6 +93,12 @@ export async function POST(
           },
           orderBy: {
             createdAt: 'desc',
+          },
+        },
+        project: {
+          select: {
+            githubOwner: true,
+            githubRepo: true,
           },
         },
       },
@@ -162,6 +168,8 @@ export async function POST(
         project_id: projectId.toString(),
         branch: job.branch!,
         job_id: job.id.toString(),
+        githubOwner: ticketWithJobs.project.githubOwner,
+        githubRepo: ticketWithJobs.project.githubRepo,
       });
 
       console.log('[Deploy] Workflow dispatched successfully:', {

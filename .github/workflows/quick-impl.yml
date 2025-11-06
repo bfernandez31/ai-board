@@ -37,6 +37,16 @@ on:
         required: true
         type: string
 
+      githubOwner:
+        description: 'GitHub repository owner (organization or user)'
+        required: true
+        type: string
+
+      githubRepo:
+        description: 'GitHub repository name'
+        required: true
+        type: string
+
 jobs:
   quick-impl:
     runs-on: ubuntu-latest
@@ -98,7 +108,10 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
+          # Checkout external project repository
+          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
           ref: main  # Always start from main for quick-impl
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - name: Setup Bun

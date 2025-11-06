@@ -56,6 +56,26 @@ Documentation is **automatically updated** during the feature development workfl
 - ✅ **Living Documents**: Updated automatically with every feature
 - ✅ **Single Update**: Documentation updated once before PR (not during iterations)
 
+## 🌐 Multi-Repository Support
+
+AI-Board supports managing tickets for **external GitHub repositories**:
+
+### Key Capabilities
+- **Centralized Workflows**: All GitHub Actions workflows remain in ai-board repository
+- **External Repository Execution**: Workflows checkout and execute against external project repositories
+- **Unified Management**: Single interface to manage multiple projects across different repositories
+- **Automated Workflows**: Same automation (spec generation, testing, deployment) for all projects
+
+### Quick Setup
+1. Configure GitHub repository (owner + repo name) during project creation
+2. Ensure external project has required structure (`.claude/commands/`, `.specify/scripts/`)
+3. Configure `GH_PAT` secret in ai-board repository with `repo` scope
+4. Start creating tickets - workflows automatically execute against external repository
+
+**Learn More**:
+- [Functional: External Repository Support](./functional/05-projects.md#external-repository-support)
+- [Technical: Multi-Repository Architecture](./technical/implementation/integrations.md#multi-repository-workflow-architecture)
+
 ## 🗂️ Quick Navigation
 
 ### By Feature Area

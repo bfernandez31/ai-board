@@ -45,7 +45,10 @@ export async function dispatchWorkflow(params: {
 
 **Main Workflow** (`.github/workflows/speckit.yml`):
 - **Trigger**: `workflow_dispatch` (manual dispatch only)
-- **Inputs**: `ticket_id`, `ticketTitle`, `ticketDescription`, `branch`, `command`, `job_id`, `project_id`
+- **Inputs**:
+  - `ticket_id`, `ticketTitle`, `ticketDescription`, `branch`, `command`, `job_id`, `project_id`
+  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+- **Repository Checkout**: Checks out external project repository using `repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}`
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
 - **Services**: PostgreSQL for implement command
@@ -54,19 +57,37 @@ export async function dispatchWorkflow(params: {
 
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
 - **Trigger**: `workflow_dispatch`
-- **Inputs**: `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
+- **Inputs**:
+  - `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
+  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+- **Repository Checkout**: Checks out external project repository
 - **Differences**: Skips full spec generation, executes `/quick-impl` command
 - **Same**: Environment setup, branch management, job status updates
 
+**Verify Workflow** (`.github/workflows/verify.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**:
+  - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
+  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+- **Repository Checkout**: Checks out external project repository at specified branch
+- **Actions**: Runs tests and creates pull request
+- **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
-- **Inputs**: `ticket_id`, `stage`, `comment_content`, `job_id`, `project_id`
+- **Inputs**:
+  - `ticket_id`, `stage`, `comment_content`, `job_id`, `project_id`
+  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+- **Repository Checkout**: Checks out external project repository
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
 
 **Deploy Preview** (`.github/workflows/deploy-preview.yml`):
 - **Trigger**: `workflow_dispatch`
-- **Inputs**: `ticket_id`, `project_id`, `branch`, `job_id`
+- **Inputs**:
+  - `ticket_id`, `project_id`, `branch`, `job_id`
+  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+- **Repository Checkout**: Checks out external project repository at specified branch
 - **Action**: Deploy feature branch to Vercel preview environment
 - **Output**: Preview URL stored in ticket.previewUrl field
 - **Method**: Vercel CLI deployment with project/org scoping
@@ -82,11 +103,19 @@ export async function dispatchWorkflow(params: {
 **GitHub Token** (Automatic):
 - Provided by GitHub Actions (`GITHUB_TOKEN` secret)
 - Permissions: Read repository, create workflow dispatches
-- Scope: Current repository only
+- Scope: Current repository only (ai-board)
+- Used for dispatching workflows in ai-board repository
+
+**GitHub Personal Access Token** (Custom):
+- Stored as `GH_PAT` repository secret
+- **Purpose**: Access external project repositories from workflows
+- **Required Scope**: `repo` (full control of private repositories)
+- **Usage**: Checkout external repositories in workflow steps
+- **Security**: Centralized in ai-board, shared across all external projects
 
 **Workflow API Token** (Custom):
 - Stored as `WORKFLOW_API_TOKEN` repository secret
-- Used for API authentication from workflows
+- Used for API authentication from workflows back to ai-board API
 - Bearer token format: `Authorization: Bearer <token>`
 - Validated via constant-time comparison
 
@@ -117,13 +146,65 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 **GitHub Secrets**:
 - `ANTHROPIC_API_KEY`: Claude API key
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
+- `GH_PAT`: GitHub Personal Access Token with `repo` scope (for external repository access)
 - `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
 - `VERCEL_ORG_ID`: Vercel organization/team ID
 - `VERCEL_PROJECT_ID`: Vercel project ID
-- `GITHUB_TOKEN`: Automatic (provided by GitHub)
+- `GITHUB_TOKEN`: Automatic (provided by GitHub, ai-board repository only)
 
 **Repository Variables**:
 - `APP_URL`: Application URL for API calls (e.g., `https://ai-board.vercel.app`)
+
+### Multi-Repository Workflow Architecture
+
+**Centralized Workflow Management**:
+- All GitHub Actions workflows stored in ai-board repository (`.github/workflows/`)
+- Workflows dispatch from ai-board but execute against external project repositories
+- External projects do not need workflow configuration (workflows-as-a-service)
+
+**External Repository Checkout Pattern**:
+
+```yaml
+- name: Checkout repository
+  uses: actions/checkout@v4
+  with:
+    # Checkout external project repository
+    repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
+    ref: ${{ inputs.branch }}
+    token: ${{ secrets.GH_PAT }}
+    fetch-depth: 0
+```
+
+**Workflow Dispatch Pattern**:
+
+```typescript
+// API dispatches workflow with project repository information
+await octokit.actions.createWorkflowDispatch({
+  owner: 'ai-board-org',  // ai-board repository
+  repo: 'ai-board',
+  workflow_id: 'speckit.yml',
+  ref: 'main',
+  inputs: {
+    ticket_id: '123',
+    command: 'specify',
+    githubOwner: 'bfernandez31',      // External project owner
+    githubRepo: 'my-external-project', // External project repo
+    // ... other inputs
+  },
+});
+```
+
+**External Project Requirements**:
+- `.claude/commands/` directory with Claude command definitions
+- `.specify/scripts/bash/` directory with automation scripts
+- Test configuration (if using verify workflow)
+- Standard project structure compatible with ai-board commands
+
+**Benefits**:
+- Single source of truth for workflow definitions
+- Easy updates and maintenance (change once, applies to all projects)
+- No workflow configuration burden on external projects
+- Consistent automation behavior across all managed projects
 
 ### Branch Deletion
 

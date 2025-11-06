@@ -66,6 +66,16 @@ on:
         type: string
         default: ''
 
+      githubOwner:
+        description: 'GitHub repository owner (organization or user)'
+        required: true
+        type: string
+
+      githubRepo:
+        description: 'GitHub repository name'
+        required: true
+        type: string
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest
@@ -128,9 +138,12 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
+          # Checkout external project repository
+          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
           # For specify command, always checkout main (branch will be created later)
           # For other commands, checkout the provided branch
           ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - name: Setup Bun

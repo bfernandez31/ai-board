@@ -18,7 +18,11 @@ Each project contains:
   - Immutable after project creation
 - **Description**: Brief explanation of project purpose (stored but not displayed on cards)
 - **Deployment URL**: Optional URL for deployed project (with quick-copy functionality)
-- **GitHub Repository**: GitHub owner and repository name
+- **GitHub Repository**: Required GitHub owner and repository name
+  - **GitHub Owner**: Organization or user name (e.g., "bfernandez31")
+  - **GitHub Repo**: Repository name (e.g., "ai-board", "my-project")
+  - Used for workflow automation and code management
+  - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
@@ -224,3 +228,40 @@ Projects track activity across all tickets:
 - Last updated reflects most recent ticket change
 - Ticket count shows total across all stages
 - Activity visible in project list view
+
+## External Repository Support
+
+### Multi-Repository Architecture
+
+AI-Board supports managing tickets for external GitHub repositories:
+
+**Repository Configuration**:
+- Each project linked to a specific GitHub repository
+- GitHub owner and repository name required during project creation
+- Workflows execute against the configured external repository
+- AI-Board workflows centralized in ai-board repository
+
+**Workflow Execution**:
+- GitHub Actions workflows defined in ai-board repository
+- Workflows checkout external project repository for operations
+- Claude executes commands in context of external project
+- Changes committed and pushed to external project branches
+
+**Requirements**:
+- External projects must contain required AI-Board configuration:
+  - `.claude/commands/` directory with Claude command definitions
+  - `.specify/scripts/bash/` directory with automation scripts
+  - Test configuration files (if workflows use tests)
+- GitHub Personal Access Token (PAT) with repo access
+- PAT configured as `GH_PAT` secret in ai-board repository
+
+**Workflow Authentication**:
+- AI-Board uses GitHub PAT to access external repositories
+- PAT must have `repo` scope for full repository access
+- Same PAT used for all external projects (centralized secrets)
+
+**Benefits**:
+- Centralized workflow management in ai-board
+- No need to configure workflows in each project
+- Consistent automation across all managed projects
+- Easy onboarding of new projects

@@ -20,6 +20,16 @@ on:
         required: true
         type: string
 
+      githubOwner:
+        description: 'GitHub repository owner (organization or user)'
+        required: true
+        type: string
+
+      githubRepo:
+        description: 'GitHub repository name'
+        required: true
+        type: string
+
 env:
   APP_URL: ${{ vars.APP_URL }}
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -45,7 +55,10 @@ jobs:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
+          # Checkout external project repository
+          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
           ref: ${{ inputs.branch }}
+          token: ${{ secrets.GH_PAT }}
 
       # --- Install Vercel CLI ---
       - name: Install Vercel CLI
