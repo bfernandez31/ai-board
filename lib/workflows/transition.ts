@@ -297,8 +297,6 @@ export async function handleTicketTransition(
           // Quick-impl mode: Use quick-impl.yml input schema
           workflowInputs = {
             ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
-            ticketTitle: ticket.title,
-            ticketDescription: ticket.description,
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
@@ -330,7 +328,6 @@ export async function handleTicketTransition(
             branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
-            ticketTitle: ticket.title, // Include for all commands (used in debug output)
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
@@ -352,9 +349,6 @@ export async function handleTicketTransition(
             if (ticket.attachments) {
               workflowInputs.attachments = JSON.stringify(ticket.attachments);
             }
-
-            // Legacy ticketDescription field for backward compatibility (deprecated)
-            workflowInputs.ticketDescription = ticket.description;
           }
 
           workflowFile = 'speckit.yml';

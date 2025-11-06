@@ -9,16 +9,6 @@ on:
         required: true
         type: string
 
-      ticketTitle:
-        description: 'Ticket title for context (required for specify command)'
-        required: false
-        type: string
-
-      ticketDescription:
-        description: 'Detailed ticket description (required for specify command)'
-        required: false
-        type: string
-
       attachments:
         description: 'JSON array of ticket attachments (images for Claude context)'
         required: false
@@ -99,7 +89,7 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticketTitle, '[e2e]') }}
+      SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Database connection string for test environment
@@ -113,7 +103,7 @@ jobs:
           echo "  project_id: ${{ inputs.project_id }}"
           echo "  job_id: ${{ inputs.job_id }}"
           echo "  command: ${{ inputs.command }}"
-          echo "  ticketTitle: ${{ inputs.ticketTitle }}"
+          echo "  githubRepository: ${{ inputs.githubRepository }}"
 
       - name: Report E2E Skip
         if: ${{ env.SKIP_SPECKIT_EXECUTION == 'true' }}
@@ -249,42 +239,22 @@ jobs:
 
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
-        env:
-          TICKET_ID: ${{ inputs.ticket_id }}
-          TICKET_TITLE: ${{ inputs.ticketTitle }}
-          TICKET_DESCRIPTION: ${{ inputs.ticketDescription }}
         run: |
           set -e
 
           case "${{ inputs.command }}" in
             specify)
-              # Check if JSON payload file exists (new format with clarificationPolicy)
-              if [ -f "${SPECIFY_PAYLOAD_FILE:-/nonexistent}" ]; then
-                echo "📦 Using JSON payload with clarification policy"
+              echo "📦 Using JSON payload with clarification policy"
 
-                # Read payload from file
-                payload=$(cat "$SPECIFY_PAYLOAD_FILE")
+              # Read payload from file
+              payload=$(cat "$SPECIFY_PAYLOAD_FILE")
 
-                # Add image paths if available
-                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
-                  echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                  claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
-                else
-                  claude --dangerously-skip-permissions "/speckit.specify $payload"
-                fi
+              # Add image paths if available
+              if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
+                echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
+                claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
               else
-                # Legacy format: construct prompt from separate fields
-                echo "📝 Using legacy text format (no policy)"
-
-                printf -v prompt '/speckit.specify #%s %s\n%s\n' "$TICKET_ID" "$TICKET_TITLE" "$TICKET_DESCRIPTION"
-
-                # Add image paths if available
-                if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
-                  echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                  claude --dangerously-skip-permissions "$prompt" $IMAGE_PATHS
-                else
-                  claude --dangerously-skip-permissions "$prompt"
-                fi
+                claude --dangerously-skip-permissions "/speckit.specify $payload"
               fi
               ;;
             plan)
