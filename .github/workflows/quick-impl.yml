@@ -37,13 +37,8 @@ on:
         required: true
         type: string
 
-      githubOwner:
-        description: 'GitHub repository owner (organization or user)'
-        required: true
-        type: string
-
-      githubRepo:
-        description: 'GitHub repository name'
+      githubRepository:
+        description: 'GitHub repository in format owner/repo (e.g., bfernandez31/ai-board)'
         required: true
         type: string
 
@@ -108,8 +103,8 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository
-          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
+          # Checkout external project repository (format: owner/repo)
+          repository: ${{ inputs.githubRepository }}
           ref: main  # Always start from main for quick-impl
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0

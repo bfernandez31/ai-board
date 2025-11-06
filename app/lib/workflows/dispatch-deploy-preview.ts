@@ -12,10 +12,8 @@ export interface DeployPreviewWorkflowInputs {
   branch: string;
   /** Job ID for status tracking */
   job_id: string;
-  /** GitHub repository owner */
-  githubOwner: string;
-  /** GitHub repository name */
-  githubRepo: string;
+  /** GitHub repository in format owner/repo */
+  githubRepository: string;
 }
 
 /**
@@ -82,8 +80,7 @@ export async function dispatchDeployPreviewWorkflow(
         project_id: inputs.project_id,
         branch: inputs.branch,
         job_id: inputs.job_id,
-        githubOwner: inputs.githubOwner,
-        githubRepo: inputs.githubRepo,
+        githubRepository: inputs.githubRepository,
       },
     });
   } catch (error) {

@@ -286,8 +286,7 @@ export async function handleTicketTransition(
             ticketDescription: ticket.description,
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
-            githubOwner: ticket.project.githubOwner,
-            githubRepo: ticket.project.githubRepo,
+            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
           // Add attachments for image context (if present)
@@ -304,8 +303,7 @@ export async function handleTicketTransition(
             project_id: ticket.projectId.toString(),
             branch: ticket.branch || '', // Branch must exist for VERIFY stage
             workflowType: ticket.workflowType, // FULL or QUICK determines if tests should run
-            githubOwner: ticket.project.githubOwner,
-            githubRepo: ticket.project.githubRepo,
+            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
           workflowFile = 'verify.yml';
@@ -318,8 +316,7 @@ export async function handleTicketTransition(
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             ticketTitle: ticket.title, // Include for all commands (used in debug output)
-            githubOwner: ticket.project.githubOwner,
-            githubRepo: ticket.project.githubRepo,
+            githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
           // Add SPECIFY-specific inputs

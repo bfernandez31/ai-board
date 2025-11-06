@@ -168,8 +168,7 @@ export async function POST(
         project_id: projectId.toString(),
         branch: job.branch!,
         job_id: job.id.toString(),
-        githubOwner: ticketWithJobs.project.githubOwner,
-        githubRepo: ticketWithJobs.project.githubRepo,
+        githubRepository: `${ticketWithJobs.project.githubOwner}/${ticketWithJobs.project.githubRepo}`,
       });
 
       console.log('[Deploy] Workflow dispatched successfully:', {

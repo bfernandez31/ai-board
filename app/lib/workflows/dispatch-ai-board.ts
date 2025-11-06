@@ -20,10 +20,8 @@ export interface AIBoardWorkflowInputs {
   job_id: string;
   /** Project ID */
   project_id: string;
-  /** GitHub repository owner */
-  githubOwner: string;
-  /** GitHub repository name */
-  githubRepo: string;
+  /** GitHub repository in format owner/repo */
+  githubRepository: string;
 }
 
 /**
@@ -98,8 +96,7 @@ export async function dispatchAIBoardWorkflow(
         comment: inputs.comment,
         job_id: inputs.job_id,
         project_id: inputs.project_id,
-        githubOwner: inputs.githubOwner,
-        githubRepo: inputs.githubRepo,
+        githubRepository: inputs.githubRepository,
       },
     });
   } catch (error) {

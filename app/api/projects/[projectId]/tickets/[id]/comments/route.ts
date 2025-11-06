@@ -332,8 +332,7 @@ export async function POST(
           comment: content,
           job_id: job.id.toString(),
           project_id: projectId.toString(),
-          githubOwner: fullTicket.project.githubOwner,
-          githubRepo: fullTicket.project.githubRepo,
+          githubRepository: `${fullTicket.project.githubOwner}/${fullTicket.project.githubRepo}`,
         });
       } catch (workflowError) {
         console.error(

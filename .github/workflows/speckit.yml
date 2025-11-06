@@ -66,13 +66,8 @@ on:
         type: string
         default: ''
 
-      githubOwner:
-        description: 'GitHub repository owner (organization or user)'
-        required: true
-        type: string
-
-      githubRepo:
-        description: 'GitHub repository name'
+      githubRepository:
+        description: 'GitHub repository in format owner/repo (e.g., bfernandez31/ai-board)'
         required: true
         type: string
 
@@ -138,8 +133,8 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository
-          repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}
+          # Checkout external project repository (format: owner/repo)
+          repository: ${{ inputs.githubRepository }}
           # For specify command, always checkout main (branch will be created later)
           # For other commands, checkout the provided branch
           ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
