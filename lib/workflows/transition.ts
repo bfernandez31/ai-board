@@ -259,6 +259,19 @@ export async function handleTicketTransition(
     // Initialize Octokit with GitHub token
     const githubToken = process.env.GITHUB_TOKEN;
 
+    // Always dispatch workflows on ai-board repository
+    // The workflow will clone the target repository (githubRepository input)
+    const aiboardOwner = process.env.GITHUB_OWNER;
+    const aiboardRepo = process.env.GITHUB_REPO;
+
+    if (!aiboardOwner || !aiboardRepo) {
+      return {
+        success: false,
+        error: 'GITHUB_OWNER and GITHUB_REPO environment variables must be set',
+        errorCode: 'GITHUB_ERROR',
+      };
+    }
+
     // Skip GitHub API call in test mode
     // Priority: TEST_MODE env var > NODE_ENV check > token inspection
     // This ensures Playwright tests with TEST_MODE=true never make real API calls,
@@ -269,6 +282,9 @@ export async function handleTicketTransition(
       (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
 
     if (!isTestMode) {
+      // Determine workflow file outside try block for error handling
+      let workflowFile: string = '';
+
       try {
         const octokit = new Octokit({
           auth: githubToken,
@@ -276,7 +292,6 @@ export async function handleTicketTransition(
 
         // Prepare workflow inputs based on mode
         let workflowInputs: Record<string, string>;
-        let workflowFile: string;
 
         if (isQuickImpl) {
           // Quick-impl mode: Use quick-impl.yml input schema
@@ -346,9 +361,18 @@ export async function handleTicketTransition(
         }
 
         // Dispatch GitHub Actions workflow
+        // Always dispatch on ai-board repository (workflows clone the target repo)
+        console.log('[Workflow Dispatch]', {
+          aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
+          targetRepo: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+          workflow: workflowFile,
+          command,
+          ticketKey: ticket.ticketKey,
+        });
+
         await octokit.actions.createWorkflowDispatch({
-          owner: ticket.project.githubOwner,
-          repo: ticket.project.githubRepo,
+          owner: aiboardOwner,
+          repo: aiboardRepo,
           workflow_id: workflowFile,
           ref: 'main',
           inputs: workflowInputs,
@@ -370,11 +394,11 @@ export async function handleTicketTransition(
 
           let errorMessage = 'GitHub workflow dispatch failed';
           if (githubError.status === 401) {
-            errorMessage = 'GitHub authentication failed';
+            errorMessage = 'GitHub authentication failed. Check GITHUB_TOKEN in .env';
           } else if (githubError.status === 403) {
             errorMessage = 'GitHub rate limit exceeded';
           } else if (githubError.status === 404) {
-            errorMessage = 'Workflow file not found';
+            errorMessage = `Workflow file '${workflowFile}' not found in ai-board repository (${aiboardOwner}/${aiboardRepo}). Check .github/workflows/`;
           } else {
             errorMessage = githubError.message;
           }

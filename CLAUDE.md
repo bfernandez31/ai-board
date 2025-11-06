@@ -23,10 +23,11 @@ bun run type-check   # TypeScript check
 
 ### Multi-Repository Support
 
-- Workflows in ai-board dispatch to external project repositories
-- External repos must have `.claude/commands/` and `.specify/scripts/bash/`
-- Uses `githubRepository` input format: `owner/repo` (GitHub 10-input limit)
-- Requires `GH_PAT` secret for cross-repo access
+- **Centralized Workflow Execution**: All workflows execute on ai-board repository
+- Workflows clone target repository via `githubRepository` input (format: `owner/repo`)
+- **No workflow files required in external projects** - only `.claude/commands/` and `.specify/scripts/bash/`
+- Target repos need `GH_PAT` secret for cross-repo access
+- Supports both self-management (ai-board managing itself) and external projects
 
 ### Stage Transitions
 
