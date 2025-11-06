@@ -63,8 +63,8 @@ This command implements simple features directly from ticket context without for
 
 7. **Validate implementation**:
    - Run relevant tests and verify they PASS (green phase)
-   - Perform type checking: `npm run type-check`
-   - Run linter: `npm run lint`
+   - Perform type checking
+   - Run linter
    - Fix any type errors or lint warnings
 
 8. **Refactor if needed**:
@@ -84,8 +84,8 @@ This command implements simple features directly from ticket context without for
 10. **Completion checklist**:
 
 - ✓ Tests written and passing
-- ✓ Type check passes (`npm run type-check`)
-- ✓ Linter passes (`npm run lint`)
+- ✓ Type check passes
+- ✓ Linter passes
 - ✓ Code follows project conventions
 - ✓ No breaking changes to existing functionality
 - ✓ Implementation matches ticket requirements
@@ -95,7 +95,6 @@ This command implements simple features directly from ticket context without for
     - Summarize changes made (files modified, tests added)
     - Confirm all validation checks passed
     - Note any deviations from ticket description
-    - Suggest next steps (create PR, manual testing areas)
 
 ## Important Notes
 
