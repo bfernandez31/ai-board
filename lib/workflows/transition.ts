@@ -295,8 +295,15 @@ export async function handleTicketTransition(
 
         if (isQuickImpl) {
           // Quick-impl mode: Use quick-impl.yml input schema
+          // Construct JSON payload with title and description
+          const quickImplPayload = {
+            title: ticket.title,
+            description: ticket.description,
+          };
+
           workflowInputs = {
             ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
+            quickImplPayload: JSON.stringify(quickImplPayload),
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,

@@ -325,7 +325,6 @@ export async function POST(
       try {
         await dispatchAIBoardWorkflow({
           ticket_id: fullTicket.id.toString(),
-          ticketTitle: fullTicket.title,
           stage: fullTicket.stage.toLowerCase(),
           branch: fullTicket.branch || '',
           user: comment.user.name || userId, // Use name or fallback to userId

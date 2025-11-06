@@ -6,8 +6,6 @@ import { Octokit } from '@octokit/rest';
 export interface AIBoardWorkflowInputs {
   /** Ticket ID */
   ticket_id: string;
-  /** Ticket title */
-  ticketTitle: string;
   /** Current stage */
   stage: string;
   /** Git branch name */
@@ -36,13 +34,13 @@ export interface AIBoardWorkflowInputs {
  * @example
  * await dispatchAIBoardWorkflow({
  *   ticket_id: '123',
- *   ticketTitle: 'Add error handling',
  *   stage: 'specify',
  *   branch: '123-add-error-handling',
  *   user: 'john-doe',
  *   comment: '@ai-board please add network timeout handling',
  *   job_id: '456',
  *   project_id: '1',
+ *   githubRepository: 'owner/repo',
  * });
  */
 export async function dispatchAIBoardWorkflow(
@@ -89,7 +87,6 @@ export async function dispatchAIBoardWorkflow(
       ref: 'main', // Workflow runs on main branch
       inputs: {
         ticket_id: inputs.ticket_id,
-        ticketTitle: inputs.ticketTitle,
         stage: inputs.stage,
         branch: inputs.branch,
         user: inputs.user,

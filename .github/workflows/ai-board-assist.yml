@@ -9,11 +9,6 @@ on:
         required: true
         type: string
 
-      ticketTitle:
-        description: 'Ticket title'
-        required: true
-        type: string
-
       stage:
         description: 'Current ticket stage (specify, plan, build, verify)'
         required: true
@@ -59,7 +54,7 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      SKIP_CLAUDE: ${{ contains(inputs.ticketTitle, '[e2e]') || inputs.stage == 'build' || inputs.stage == 'verify' }}
+      SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') || inputs.stage == 'build' || inputs.stage == 'verify' }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
@@ -71,7 +66,7 @@ jobs:
           echo "  job_id: ${{ inputs.job_id }}"
           echo "  stage: ${{ inputs.stage }}"
           echo "  user: ${{ inputs.user }}"
-          echo "  ticketTitle: ${{ inputs.ticketTitle }}"
+          echo "  githubRepository: ${{ inputs.githubRepository }}"
           echo "  SKIP_CLAUDE: ${{ env.SKIP_CLAUDE }}"
 
       - name: Update Job Status - Running
@@ -88,7 +83,7 @@ jobs:
           echo "ℹ️ Skipping Claude execution"
 
           # Determine skip message
-          if [[ "${{ inputs.ticketTitle }}" == *"[e2e]"* ]]; then
+          if [[ "${{ inputs.ticket_id }}" == *"[e2e]"* ]]; then
             MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
             echo "📝 Skip reason: E2E test ticket"
           else
@@ -161,7 +156,6 @@ jobs:
         id: claude
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
-          TICKET_TITLE: ${{ inputs.ticketTitle }}
           STAGE: ${{ inputs.stage }}
           BRANCH: ${{ inputs.branch }}
           USER: ${{ inputs.user }}
@@ -170,7 +164,7 @@ jobs:
           echo "🤖 Executing AI-BOARD assist command..."
 
           echo "📦 Request details:"
-          echo "  Ticket: #$TICKET_ID - $TICKET_TITLE"
+          echo "  Ticket: #$TICKET_ID"
           echo "  Stage: $STAGE"
           echo "  Branch: $BRANCH"
           echo "  User: @$USER"
