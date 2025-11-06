@@ -162,6 +162,35 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
         run: bun install --frozen-lockfile
 
+      - name: Detect Project Dependencies
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        run: |
+          echo "🔍 Detecting project dependencies..."
+
+          # Check for Prisma
+          if [ -f "package.json" ] && grep -q '"prisma"' package.json; then
+            echo "✅ Prisma detected in package.json"
+            echo "HAS_PRISMA=true" >> $GITHUB_ENV
+          elif [ -f "prisma/schema.prisma" ]; then
+            echo "✅ Prisma detected (schema.prisma exists)"
+            echo "HAS_PRISMA=true" >> $GITHUB_ENV
+          else
+            echo "ℹ️ Prisma not detected - skipping database setup"
+            echo "HAS_PRISMA=false" >> $GITHUB_ENV
+          fi
+
+          # Check for Playwright
+          if [ -f "package.json" ] && grep -q '"@playwright/test"' package.json; then
+            echo "✅ Playwright detected in package.json"
+            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
+          elif [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then
+            echo "✅ Playwright detected (config file exists)"
+            echo "HAS_PLAYWRIGHT=true" >> $GITHUB_ENV
+          else
+            echo "ℹ️ Playwright not detected - skipping E2E setup"
+            echo "HAS_PLAYWRIGHT=false" >> $GITHUB_ENV
+          fi
+
       - name: Install Claude Code CLI
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         run: bun add -g @anthropic-ai/claude-code
@@ -208,25 +237,25 @@ jobs:
 
       # Database setup steps (implement command only)
       - name: Generate Prisma Client
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         run: npx prisma generate
 
       - name: Apply Database Migrations
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         run: npx prisma migrate deploy
 
       - name: Seed Test Database
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
         run: npx tsx tests/global-setup.ts
 
       # Playwright setup steps (implement command only)
       - name: Get Playwright Version
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PLAYWRIGHT == 'true' }}
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PLAYWRIGHT == 'true' }}
         uses: actions/cache@v4
         id: playwright-cache
         with:
@@ -234,7 +263,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PLAYWRIGHT == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
         run: npx playwright install chromium --with-deps
 
       - name: Execute Spec-Kit Command
