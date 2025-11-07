@@ -349,60 +349,28 @@ jobs:
         run: |
           set -e
 
-          echo "🔍 Checking implementation completion status..."
+          FEATURE_DIR="specs/$(git rev-parse --abbrev-ref HEAD)"
 
-          # Determine feature directory (branch-based or ticket-based)
-          FEATURE_DIR=""
-          current_branch="$(git rev-parse --abbrev-ref HEAD)"
-
-          # Try branch-based directory first (e.g., specs/045-visual-distinction-between)
-          if [[ "$current_branch" =~ ^[0-9]+-(.+)$ ]]; then
-            branch_dir="specs/$current_branch"
-            if [[ -d "$branch_dir" ]]; then
-              FEATURE_DIR="$branch_dir"
-            fi
-          fi
-
-          # Fallback to ticket-based directory (e.g., specs/045-*/)
-          if [[ -z "$FEATURE_DIR" && "${{ inputs.ticket_id }}" =~ ^([0-9]+) ]]; then
-            ticket_num="${BASH_REMATCH[1]}"
-            matching_dir=$(find specs -maxdepth 1 -type d -name "${ticket_num}-*" | head -1)
-            if [[ -n "$matching_dir" ]]; then
-              FEATURE_DIR="$matching_dir"
-            fi
-          fi
-
-          if [[ -z "$FEATURE_DIR" || ! -d "$FEATURE_DIR" ]]; then
-            echo "⚠️  Could not find feature directory for ticket ${{ inputs.ticket_id }}"
-            echo "   Skipping completion detection"
+          if [[ ! -d "$FEATURE_DIR" ]]; then
+            echo "⚠️  Feature directory not found: $FEATURE_DIR"
             echo "needs_continue=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "📁 Feature directory: $FEATURE_DIR"
+          echo "🔍 Checking: $FEATURE_DIR"
 
-          # Run detection script
-          if ! .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection-result.json; then
-            # Script returned non-zero (incomplete or error)
-            cat /tmp/detection-result.json
-
-            # Parse JSON result
-            needs_continue=$(jq -r '.needs_continue' /tmp/detection-result.json)
-            incomplete_count=$(jq -r '.incomplete_tasks' /tmp/detection-result.json)
-            reason=$(jq -r '.reason' /tmp/detection-result.json)
+          if ! .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
+            cat /tmp/detection.json
+            needs_continue=$(jq -r '.needs_continue' /tmp/detection.json)
+            incomplete=$(jq -r '.incomplete_tasks' /tmp/detection.json)
 
             echo "needs_continue=$needs_continue" >> $GITHUB_OUTPUT
-            echo "incomplete_count=$incomplete_count" >> $GITHUB_OUTPUT
-            echo "reason=$reason" >> $GITHUB_OUTPUT
 
             if [[ "$needs_continue" == "true" ]]; then
-              echo "⚠️  Implementation incomplete: $reason"
-              echo "   Incomplete tasks: $incomplete_count"
-              echo "   Will retry with --continue flag"
+              echo "⚠️  Incomplete: $incomplete tasks remaining"
             fi
           else
-            # Script returned zero (complete)
-            echo "✅ Implementation complete!"
+            echo "✅ Complete"
             echo "needs_continue=false" >> $GITHUB_OUTPUT
           fi
 
@@ -410,88 +378,29 @@ jobs:
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.detect-incomplete.outputs.needs_continue == 'true' }}
         run: |
           set -e
-
           MAX_RETRIES=2
-          retry_count=0
+          FEATURE_DIR="specs/$(git rev-parse --abbrev-ref HEAD)"
 
-          echo "🔄 Starting implementation continuation loop (max $MAX_RETRIES retries)"
+          for retry in $(seq 1 $MAX_RETRIES); do
+            echo "🔄 Retry $retry/$MAX_RETRIES"
 
-          while [[ $retry_count -lt $MAX_RETRIES ]]; do
-            retry_count=$((retry_count + 1))
+            claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. Do the commit and push, continue fix if needed" || true
 
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "🔄 Retry $retry_count / $MAX_RETRIES"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-
-            # Run implement with --continue flag
-            echo "📦 Executing: /speckit.implement --continue"
-            if claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. Do the commit and push, continue fix if needed"; then
-              echo "✅ Implementation retry succeeded"
-            else
-              echo "⚠️  Implementation retry failed (exit code: $?)"
-            fi
-
-            # Determine feature directory again
-            FEATURE_DIR=""
-            current_branch="$(git rev-parse --abbrev-ref HEAD)"
-
-            if [[ "$current_branch" =~ ^[0-9]+-(.+)$ ]]; then
-              branch_dir="specs/$current_branch"
-              if [[ -d "$branch_dir" ]]; then
-                FEATURE_DIR="$branch_dir"
-              fi
-            fi
-
-            if [[ -z "$FEATURE_DIR" && "${{ inputs.ticket_id }}" =~ ^([0-9]+) ]]; then
-              ticket_num="${BASH_REMATCH[1]}"
-              matching_dir=$(find specs -maxdepth 1 -type d -name "${ticket_num}-*" | head -1)
-              if [[ -n "$matching_dir" ]]; then
-                FEATURE_DIR="$matching_dir"
-              fi
-            fi
-
-            if [[ -z "$FEATURE_DIR" ]]; then
-              echo "⚠️  Could not find feature directory, stopping retries"
+            if .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
+              echo "✅ Complete after $retry retries"
               break
             fi
 
-            # Check completion status again
-            echo ""
-            echo "🔍 Re-checking implementation completion status..."
-
-            if .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry-detection-result.json; then
-              # Complete!
-              echo "✅ Implementation now complete after retry $retry_count"
-              cat /tmp/retry-detection-result.json
+            needs_continue=$(jq -r '.needs_continue' /tmp/retry.json)
+            if [[ "$needs_continue" != "true" ]]; then
+              echo "✅ Intentionally scoped"
               break
-            else
-              # Still incomplete
-              needs_continue=$(jq -r '.needs_continue' /tmp/retry-detection-result.json)
-              incomplete_count=$(jq -r '.incomplete_tasks' /tmp/retry-detection-result.json)
+            fi
 
-              cat /tmp/retry-detection-result.json
-
-              if [[ "$needs_continue" != "true" ]]; then
-                echo "✅ Implementation intentionally scoped (not all tasks needed)"
-                break
-              fi
-
-              if [[ $retry_count -ge $MAX_RETRIES ]]; then
-                echo "⚠️  Max retries reached with $incomplete_count tasks still incomplete"
-                echo "   Manual intervention may be required"
-                break
-              fi
-
-              echo "⏳ Still $incomplete_count tasks incomplete, continuing..."
+            if [[ $retry -eq $MAX_RETRIES ]]; then
+              echo "⚠️  Max retries reached"
             fi
           done
-
-          echo ""
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🏁 Implementation continuation complete (after $retry_count retries)"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Capture Current Branch
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
