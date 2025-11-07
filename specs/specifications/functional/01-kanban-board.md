@@ -57,6 +57,20 @@ Each ticket appears as a card within its current stage column. Cards display:
 - **Stage Badge**: Current workflow stage with appropriate color
 - **Timestamp**: Last updated time in relative format ("2 hours ago") for recent updates or absolute format ("2025-09-30 14:30") for older updates
 
+### Ticket Ordering
+
+Tickets are ordered differently depending on their stage:
+
+- **INBOX**: Tickets are sorted by ticket number in ascending order (oldest first, newest last)
+  - Provides a natural FIFO (First In, First Out) queue
+  - Newly created tickets appear at the bottom of the INBOX column
+  - Helps teams process work in the order it was submitted
+
+- **All Other Stages** (SPECIFY, PLAN, BUILD, VERIFY, SHIP): Tickets are sorted by last updated time in descending order (most recently updated first)
+  - Recently modified tickets appear at the top
+  - Helps teams focus on active work
+  - Provides visibility into stale tickets at the bottom
+
 ### Visual Feedback
 
 **Hover States**:
