@@ -40,7 +40,7 @@ export async function getTicketsByStage(
         },
       },
     },
-    orderBy: { updatedAt: 'desc' },
+    // No orderBy here - we'll sort per-stage after grouping
   });
 
   // Group tickets by stage with new stage names
@@ -76,6 +76,19 @@ export async function getTicketsByStage(
           githubOwner: ticket.project.githubOwner,
           githubRepo: ticket.project.githubRepo,
         },
+      });
+    }
+  });
+
+  // Sort tickets per stage: INBOX by ticketNumber ASC, others by updatedAt DESC
+  getAllStages().forEach((stage) => {
+    if (stage === 'INBOX') {
+      // INBOX: sort by ticketNumber ascending (oldest first, newest last)
+      grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+    } else {
+      // Other stages: sort by updatedAt descending (most recently updated first)
+      grouped[stage].sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
     }
   });
@@ -171,7 +184,7 @@ export async function getTicketsWithJobs(projectId: number) {
         orderBy: { startedAt: 'desc' },
       },
     },
-    orderBy: { updatedAt: 'desc' },
+    // No orderBy here - we'll sort per-stage after grouping
   });
 
   // Group tickets by stage with new stage names
@@ -221,6 +234,23 @@ export async function getTicketsWithJobs(projectId: number) {
       });
       // Keep original tickets with jobs for job map
       grouped[ticket.stage as Stage].push(ticket);
+    }
+  });
+
+  // Sort tickets per stage: INBOX by ticketNumber ASC, others by updatedAt DESC
+  getAllStages().forEach((stage) => {
+    if (stage === 'INBOX') {
+      // INBOX: sort by ticketNumber ascending (oldest first, newest last)
+      groupedTickets[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+      grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+    } else {
+      // Other stages: sort by updatedAt descending (most recently updated first)
+      groupedTickets[stage].sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      grouped[stage].sort((a, b) => {
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      });
     }
   });
 
