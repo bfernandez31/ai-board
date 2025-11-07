@@ -65,7 +65,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
     }
   });
 
-  test('should sort tickets by most recently updated first', async ({ page, request , projectId }) => {
+  test('should sort INBOX tickets by ticketNumber ascending (oldest first, newest last)', async ({ page, request , projectId }) => {
     // Create tickets with delays to ensure different timestamps
     await createTicket(request, projectId, { title: '[e2e] First Ticket', description: 'Created first' });
 
@@ -79,7 +79,7 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
 
-    // Get all ticket cards in IDLE column
+    // Get all ticket cards in INBOX column
     const idleColumn = page.locator('[data-testid="column-INBOX"]').first();
     const ticketCards = await idleColumn
       .locator('[data-testid^="ticket-"]').or(idleColumn.locator('.ticket-card, [class*="ticket"]'))
@@ -104,8 +104,9 @@ test.describe('Multiple Tickets Display and Sorting', () => {
 
       const { first, second, third } = positions;
       if (first !== undefined && second !== undefined && third !== undefined) {
-        expect(third).toBeLessThan(second);
-        expect(second).toBeLessThan(first);
+        // In INBOX: tickets ordered by ticketNumber ASC (first created appears first, last created appears last)
+        expect(first).toBeLessThan(second);
+        expect(second).toBeLessThan(third);
       }
     }
   });

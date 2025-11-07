@@ -179,7 +179,7 @@ Update project details including clarification policy.
 
 ### GET /api/projects/:projectId/tickets
 
-Fetch all tickets for a project.
+Fetch all tickets for a project, grouped by stage.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
@@ -213,6 +213,11 @@ Fetch all tickets for a project.
   ]
 }
 ```
+
+**Sorting Behavior**:
+- **INBOX**: Tickets sorted by `ticketNumber` ascending (oldest first, newest last)
+- **All Other Stages**: Tickets sorted by `updatedAt` descending (most recently updated first)
+- Sorting applied per-stage after grouping
 
 **Errors**:
 - `401`: Not authenticated
