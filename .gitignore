@@ -55,5 +55,13 @@ unit-results.json
 unit-results-full.json
 test-failures.json
 
+# temporary test/debug files
+*.log
+test-*.sh
+test-*.json
+cleanup-results.txt
+*-duplication-report.json
+fix-*.py
+
 # temporary ticket assets (uploaded to Cloudinary)
 ticket-assets/
