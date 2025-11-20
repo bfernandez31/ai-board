@@ -99,6 +99,17 @@ When no projects exist:
 - "Create Project" button (with icon)
 - Buttons visible but functionality varies by implementation
 
+**Responsive Layout**:
+- **Desktop** (≥640px): Page header displays title and action buttons in a horizontal row
+  - Title aligned left
+  - Buttons aligned right
+  - All elements share same horizontal line
+- **Mobile** (<640px): Page header stacks vertically
+  - Title appears first (full width)
+  - Action buttons stack below title
+  - Buttons arrange vertically for easy thumb access
+  - Maintains consistent spacing and readability
+
 ## Project Settings
 
 ### Clarification Policy Configuration

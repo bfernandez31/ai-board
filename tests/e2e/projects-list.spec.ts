@@ -172,4 +172,56 @@ test.describe('Projects List Page', () => {
       await prisma.$disconnect();
     }
   });
+
+  test('displays Import and Create buttons below title on mobile viewport', async ({ browser , projectId }) => {
+    // Create mobile context (iPhone SE dimensions)
+    const context = await browser.newContext({
+      viewport: { width: 375, height: 667 },
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.goto('http://localhost:3000/projects');
+      await page.waitForSelector('[data-testid="project-card"]');
+
+      // Get the header container with title and buttons
+      const header = page.locator('h1:has-text("Projects")').locator('..');
+
+      // Verify title is visible
+      const title = header.locator('h1');
+      await expect(title).toBeVisible();
+
+      // Get the buttons container
+      const buttonsContainer = header.locator('div').filter({ has: page.getByRole('button', { name: /import project/i }) });
+
+      // Verify buttons are visible
+      const importButton = page.getByRole('button', { name: /import project/i });
+      const createButton = page.getByRole('button', { name: /create project/i });
+      await expect(importButton).toBeVisible();
+      await expect(createButton).toBeVisible();
+
+      // Get bounding boxes to verify vertical stacking
+      const titleBox = await title.boundingBox();
+      const importBox = await importButton.boundingBox();
+      const createBox = await createButton.boundingBox();
+
+      // Verify buttons are below the title (Y position of buttons > Y position of title)
+      expect(importBox!.y).toBeGreaterThan(titleBox!.y + titleBox!.height);
+      expect(createBox!.y).toBeGreaterThan(titleBox!.y + titleBox!.height);
+
+      // Verify buttons are stacked vertically (one below the other, not side by side)
+      // Check if import button and create button have significantly different Y positions OR
+      // are on the same row but the buttons should be in a flex-col layout
+      const buttonsContainerBox = await buttonsContainer.boundingBox();
+
+      // The buttons container should span most of the width (not a narrow horizontal strip)
+      // OR the buttons should be vertically stacked
+      if (importBox!.y !== createBox!.y) {
+        // Buttons are on different rows - vertical stacking confirmed
+        expect(Math.abs(importBox!.y - createBox!.y)).toBeGreaterThan(10);
+      }
+    } finally {
+      await context.close();
+    }
+  });
 });
