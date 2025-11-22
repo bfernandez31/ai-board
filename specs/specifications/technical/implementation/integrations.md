@@ -92,6 +92,19 @@ export async function dispatchWorkflow(params: {
 - **Output**: Preview URL stored in ticket.previewUrl field
 - **Method**: Vercel CLI deployment with project/org scoping
 
+**Cleanup Workflow** (`.github/workflows/cleanup.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**:
+  - `ticket_id`, `project_id`, `job_id`
+  - `githubRepository` (required) - Target repository in format owner/repo
+- **Repository Checkout**: Checks out external project repository at main branch with full history (`fetch-depth: 0`)
+- **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, Bun 1.3.1, PostgreSQL 14
+- **Services**: PostgreSQL for test execution
+- **Dependencies**: Playwright with chromium browser
+- **Command**: Executes `/cleanup` Claude command with opus model
+- **Actions**: Diff-based technical debt analysis, creates cleanup branch, transitions to VERIFY
+- **Timeout**: 45 minutes maximum
+
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event
 - **Conditions**: Vercel production deployment success
