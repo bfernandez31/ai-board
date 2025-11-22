@@ -123,33 +123,47 @@ export async function POST(
       return { ticket: cleanupTicket, job };
     });
 
-    // Dispatch cleanup workflow
+    // Dispatch cleanup workflow on ai-board repository (centralized workflows)
     try {
-      const githubRepository = `${project.githubOwner}/${project.githubRepo}`;
-      const dispatchUrl = `https://api.github.com/repos/${githubRepository}/actions/workflows/cleanup.yml/dispatches`;
+      const aiboardOwner = process.env.GITHUB_OWNER;
+      const aiboardRepo = process.env.GITHUB_REPO;
+      const targetRepository = `${project.githubOwner}/${project.githubRepo}`;
 
-      const dispatchResponse = await fetch(dispatchUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GH_PAT}`,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ref: 'main',
-          inputs: {
-            ticket_id: result.ticket.ticketKey,
-            project_id: projectId.toString(),
-            job_id: result.job.id.toString(),
-            githubRepository,
+      if (!aiboardOwner || !aiboardRepo) {
+        console.error('Missing GITHUB_OWNER or GITHUB_REPO environment variables');
+      } else {
+        const dispatchUrl = `https://api.github.com/repos/${aiboardOwner}/${aiboardRepo}/actions/workflows/cleanup.yml/dispatches`;
+
+        console.log('[Cleanup Workflow Dispatch]', {
+          aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
+          targetRepo: targetRepository,
+          ticketKey: result.ticket.ticketKey,
+        });
+
+        const dispatchResponse = await fetch(dispatchUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GH_PAT}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json',
           },
-        }),
-      });
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              ticket_id: result.ticket.ticketKey,
+              project_id: projectId.toString(),
+              job_id: result.job.id.toString(),
+              githubRepository: targetRepository,
+            },
+          }),
+        });
 
-      if (!dispatchResponse.ok) {
-        console.error('Failed to dispatch cleanup workflow:', await dispatchResponse.text());
-        // Don't fail the request - workflow can be manually triggered
+        if (!dispatchResponse.ok) {
+          const errorText = await dispatchResponse.text();
+          console.error('Failed to dispatch cleanup workflow:', errorText);
+          // Don't fail the request - workflow can be manually triggered
+        }
       }
     } catch (dispatchError) {
       console.error('Error dispatching cleanup workflow:', dispatchError);
