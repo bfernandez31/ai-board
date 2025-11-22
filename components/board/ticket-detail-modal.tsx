@@ -51,7 +51,7 @@ interface TicketData {
   branch: string | null;
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
-  workflowType: 'FULL' | 'QUICK';
+  workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
   updatedAt: Date | string;

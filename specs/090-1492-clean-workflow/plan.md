@@ -7,7 +7,7 @@
 
 ## Summary
 
-This feature adds a new "Clean Workflow" to automatically analyze and fix technical debt accumulated from recently shipped features. The system provides a menu option to trigger cleanup, creates a specialized CLEAN ticket type, and executes automated analysis of code, tests, and documentation changes while preventing stage transitions during execution to avoid conflicts.
+This feature adds a new "Clean Workflow" using a **diff-based approach** to automatically analyze and fix technical debt. Instead of analyzing individual branches, it examines all changes since the last cleanup merge point. The system provides a menu option to trigger cleanup, creates a specialized CLEAN ticket type with `cleanup-tasks.md` for progress tracking, and executes automated analysis of code, tests, and documentation. The workflow is **project-agnostic** (reads CLAUDE.md and constitution for context) and **only runs impacted tests** (never the full test suite). Stage transitions are prevented during execution via `activeCleanupJobId` lock.
 
 ## Technical Context
 
@@ -172,38 +172,37 @@ app/
 │           └── tickets/
 │               └── [ticketId]/
 │                   └── transition/
-│                       └── route.ts   # PATCH endpoint (add lock check)
-├── (dashboard)/
-│   └── projects/
-│       └── [id]/
-│           └── components/
-│               ├── ProjectMenu.tsx     # Add "Clean Project" option
-│               └── TicketCard.tsx      # Show transition lock indicator
+│                       └── route.ts   # PATCH endpoint (add lock check - 423 Locked)
 
 components/
-└── tickets/
-    └── TicketTransitionControls.tsx    # Update to show lock message
+├── cleanup/
+│   ├── CleanupConfirmDialog.tsx      # Confirmation dialog for cleanup trigger
+│   └── CleanupInProgressBanner.tsx   # Warning banner during cleanup
+├── project/
+│   └── ProjectMenu.tsx               # Dropdown menu with "Clean Project" option
+└── ui/
+    └── alert.tsx                     # Alert component (warning variant)
 
 lib/
-├── transition-lock.ts                  # Utility functions for lock management
-└── cleanup-workflow.ts                 # Workflow dispatch and branch analysis
+├── db/
+│   └── cleanup-analysis.ts           # Utilities: shouldRunCleanup, getLastCleanupInfo
+└── transition-lock.ts                # Utility functions for lock management
 
 prisma/
-├── schema.prisma                       # Add WorkflowType.CLEAN enum
-└── migrations/
-    └── [timestamp]_add_clean_workflow/ # Migration for schema changes
+└── schema.prisma                     # WorkflowType.CLEAN enum, activeCleanupJobId field
 
 .github/
 └── workflows/
-    └── clean-workflow.yml              # New workflow for cleanup execution
+    └── cleanup.yml                   # Cleanup workflow (diff-based)
 
-tests/
-├── unit/
-│   └── transition-lock.test.ts         # Unit tests for lock utilities
-├── integration/
-│   └── clean-workflow.spec.ts          # Integration tests for workflow
-└── e2e/
-    └── cleanup-feature.spec.ts          # E2E tests for user flow
+.specify/
+└── scripts/
+    └── bash/
+        └── create-new-feature.sh     # Updated with --mode=cleanup
+
+.claude/
+└── commands/
+    └── cleanup.md                    # Claude command for cleanup execution
 ```
 
 **Structure Decision**: Web application structure (Option 2). Feature adds new API routes, UI components, GitHub workflow, and database schema changes. Follows Next.js App Router conventions with feature-based organization.

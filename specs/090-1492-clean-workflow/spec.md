@@ -118,23 +118,27 @@ While cleanup workflow executes, the system prevents stage transitions on all ti
 - **FR-004**: System MUST place newly created cleanup ticket directly in BUILD stage (bypassing INBOX and SPECIFY stages)
 - **FR-005**: System MUST create job record and dispatch automated cleanup workflow when cleanup ticket is created
 - **FR-006**: System MUST support new workflow type "CLEAN" distinct from existing "QUICK" and "FULL" types
-- **FR-007**: Cleanup workflow MUST perform comprehensive analysis using advanced reasoning capabilities to ensure thorough debt identification
-- **FR-008**: Cleanup analysis process MUST receive list of shipped branch names as input parameter
+- **FR-007**: Cleanup workflow MUST perform diff-based analysis of all changes since last cleanup merge
+- **FR-008**: Cleanup analysis MUST discover context from CLAUDE.md and `.specify/memory/constitution.md` (project-agnostic)
 - **FR-009**: Cleanup analysis MUST examine code, tests, and documentation (specifications and CLAUDE.md files)
 - **FR-010**: System MUST identify and fix technical debt while ensuring no breaking changes
 - **FR-011**: System MUST ensure no behavior modifications occur during cleanup fixes
-- **FR-012**: System MUST automatically transition cleanup ticket to VERIFY stage upon successful completion
-- **FR-013**: System MUST prevent all stage transitions on all tickets while cleanup workflow is executing
-- **FR-014**: System MUST allow users to modify ticket descriptions, documents, and preview deployments during cleanup execution
-- **FR-015**: System MUST re-enable stage transitions for all tickets when cleanup workflow completes or fails
+- **FR-012**: Cleanup MUST only run impacted tests, NEVER the full test suite
+- **FR-013**: System MUST transition cleanup ticket to VERIFY stage (via transition-to-verify.sh) for PR creation
+- **FR-014**: System MUST prevent all stage transitions on all tickets while cleanup workflow is executing
+- **FR-015**: System MUST allow users to modify ticket descriptions, documents, and preview deployments during cleanup execution
+- **FR-016**: System MUST re-enable stage transitions for all tickets when cleanup workflow completes or fails
+- **FR-017**: Cleanup branch MUST be created using `create-new-feature.sh --mode=cleanup` script
+- **FR-018**: Cleanup MUST track progress via `cleanup-tasks.md` file in spec directory
 
 ### Key Entities
 
-- **Clean Ticket**: Special ticket type that triggers and tracks cleanup workflow execution; contains list of shipped branches to analyze; always starts in BUILD stage
+- **Clean Ticket**: Special ticket type that triggers and tracks cleanup workflow execution; always starts in BUILD stage; uses diff-based analysis
 - **Workflow Type**: Enumeration extended to include CLEAN alongside existing QUICK and FULL types; determines which automated workflow process is dispatched
 - **Job**: Tracks cleanup workflow execution status (PENDING → RUNNING → COMPLETED/FAILED/CANCELLED); linked to clean ticket
-- **Shipped Branch**: Branches from tickets that have reached SHIP stage since last cleanup; input data for cleanup analysis
-- **Transition Lock**: System-wide state that blocks stage transitions during cleanup workflow execution
+- **Merge Point**: Git commit SHA of last cleanup merge; discovered via `git log --merges --grep="cleanup-"`; starting point for diff analysis
+- **Cleanup Tasks**: `cleanup-tasks.md` file in spec directory; tracks discovery, analysis, fixes, and validation progress
+- **Transition Lock**: Project-level state via `activeCleanupJobId` that blocks stage transitions during cleanup workflow execution
 
 ## Success Criteria
 

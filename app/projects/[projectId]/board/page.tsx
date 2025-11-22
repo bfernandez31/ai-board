@@ -32,7 +32,8 @@ export default async function ProjectBoardPage({
 
   // Fetch project and tickets+jobs in parallel (validation + data)
   // Single optimized query for tickets with jobs included
-  const [, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
+  // T065: Include activeCleanupJobId in project data fetching
+  const [project, { ticketsByStage, ticketsWithJobs }] = await Promise.all([
     getProject(projectId).catch((error) => {
       if (
         error instanceof Error &&
@@ -58,6 +59,7 @@ export default async function ProjectBoardPage({
         ticketsByStage={ticketsByStage}
         projectId={projectId}
         initialJobs={initialJobs}
+        activeCleanupJobId={project.activeCleanupJobId}
       />
     </main>
   );

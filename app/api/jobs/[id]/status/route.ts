@@ -206,6 +206,22 @@ export async function PATCH(
       elapsedMs: elapsedTime,
     });
 
+    // T053-T056: Release cleanup lock when job reaches terminal state
+    if (isTerminalState) {
+      const project = await prisma.project.findFirst({
+        where: { activeCleanupJobId: jobId },
+        select: { id: true },
+      });
+
+      if (project) {
+        await prisma.project.update({
+          where: { id: project.id },
+          data: { activeCleanupJobId: null },
+        });
+        console.log(`[Job Status Update] Released cleanup lock for project ${project.id}`);
+      }
+    }
+
     // Return minimal response (id, status, completedAt)
     return NextResponse.json(
       {

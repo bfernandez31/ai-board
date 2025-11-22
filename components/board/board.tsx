@@ -19,6 +19,7 @@ import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
 import { TrashZone } from './trash-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
+import { CleanupInProgressBanner } from '@/components/cleanup/CleanupInProgressBanner';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
@@ -59,6 +60,7 @@ interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
   initialJobs?: Map<number, Job[]>; // Array of jobs per ticket for dual job display
+  activeCleanupJobId?: number | null; // T063-T064: Active cleanup job ID for lock banner
 }
 
 /**
@@ -76,6 +78,7 @@ function BoardContent({
   ticketsByStage: initialTicketsByStage,
   projectId,
   initialJobs = new Map(),
+  activeCleanupJobId,
 }: BoardProps) {
   const queryClient = useQueryClient();
 
@@ -390,7 +393,14 @@ function BoardContent({
           );
 
           // Show error message with backend-provided details
-          if (response.status === 409) {
+          // T068-T069: Handle 423 Locked response for cleanup in progress
+          if (response.status === 423) {
+            toast({
+              variant: 'destructive',
+              title: 'Transition blocked',
+              description: 'Project cleanup is in progress. Please wait for it to complete. You can still update ticket descriptions, documents, and preview deployments.',
+            });
+          } else if (response.status === 409) {
             toast({
               variant: 'destructive',
               title: 'Ticket modified by another user',
@@ -496,7 +506,7 @@ function BoardContent({
     branch: string | null;
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
-    workflowType: 'FULL' | 'QUICK';
+    workflowType: 'FULL' | 'QUICK' | 'CLEAN';
     attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
     createdAt: string | Date;
     updatedAt: string | Date;
@@ -825,6 +835,17 @@ function BoardContent({
   return (
     <>
       <OfflineIndicator />
+
+      {/* T063: Render CleanupInProgressBanner component at top of board */}
+      {/* T064: Conditional rendering - show banner only when activeCleanupJobId is not null */}
+      {activeCleanupJobId && (
+        <div className="px-4 pt-4">
+          <CleanupInProgressBanner
+            projectId={projectId}
+            jobId={activeCleanupJobId}
+          />
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}
