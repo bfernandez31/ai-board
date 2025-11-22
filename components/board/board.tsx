@@ -833,7 +833,7 @@ function BoardContent({
   const isAnyColumnOver = activeTicket !== null;
 
   return (
-    <>
+    <div className="w-full h-full bg-[#1e1e2e]">
       <OfflineIndicator />
 
       {/* T063: Render CleanupInProgressBanner component at top of board */}
@@ -853,7 +853,7 @@ function BoardContent({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="w-full h-full bg-[#1e1e2e] relative">
+        <div className="w-full h-full relative">
           {/* Drop Zone Visual Feedback - Full Board */}
           {isAnyColumnOver && (
             <div className="absolute inset-0 border-4 border-dashed border-blue-500 pointer-events-none bg-blue-500/5 z-10" />
@@ -930,7 +930,7 @@ function BoardContent({
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteTicketMutation.isPending}
       />
-    </>
+    </div>
   );
 }
 
