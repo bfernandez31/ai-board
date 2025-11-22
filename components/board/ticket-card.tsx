@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
@@ -130,8 +131,17 @@ export const TicketCard = React.memo(
                   ⚡ Quick
                 </Badge>
               )}
+              {ticket.workflowType === 'CLEAN' && (
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 shrink-0 px-1.5 py-0.5 font-semibold flex items-center gap-1"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Clean
+                </Badge>
+              )}
               <Badge className="bg-[#89b4fa]/20 text-[#89b4fa] border-[#89b4fa]/50 hover:bg-[#89b4fa]/30 text-xs px-2 py-0.5 font-semibold">
-                SONNET
+                {ticket.workflowType === 'CLEAN' ? 'OPUS' : 'SONNET'}
               </Badge>
             </div>
           </div>

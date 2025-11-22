@@ -125,7 +125,8 @@ Clicking any ticket card opens a detail modal displaying:
   - Creation date
   - Last updated date
   - Branch name (when available)
-  - Workflow type indicator (⚡ for quick implementation)
+  - Workflow type indicator (⚡ for quick implementation, ✨ for cleanup)
+  - AI model badge (SONNET for standard workflows, OPUS for cleanup workflows)
 
 ### Modal Behavior
 
@@ -260,8 +261,12 @@ Timestamps display in user-friendly formats:
 - **Workflow Type**: Indicates which workflow path was used
   - FULL: Normal workflow (INBOX → SPECIFY → PLAN → BUILD)
   - QUICK: Quick implementation (INBOX → BUILD)
+  - CLEAN: Cleanup workflow (automated technical debt cleanup)
   - Set once during first BUILD transition
   - Immutable after being set
+  - Visual badges distinguish workflow types on ticket cards:
+    - QUICK: ⚡ Quick badge (amber styling)
+    - CLEAN: ✨ Clean badge with sparkles icon (purple styling)
 
 ### Optional Configuration
 
