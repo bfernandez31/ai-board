@@ -57,13 +57,14 @@ Projects represent GitHub repositories with workflow automation.
 model Project {
   id                   Int                  @id @default(autoincrement())
   name                 String
-  key                  String               @unique @db.VarChar(3)
+  key                  String               @unique @db.VarChar(6)
   description          String?
   deploymentUrl        String?
   githubOwner          String
   githubRepo           String
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
+  activeCleanupJobId   Int?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -76,6 +77,7 @@ model Project {
   @@index([githubOwner, githubRepo])
   @@index([userId])
   @@index([key])
+  @@index([activeCleanupJobId])
 }
 ```
 
@@ -95,6 +97,11 @@ model Project {
 - `githubRepo`: GitHub repository name
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
+- `activeCleanupJobId`: Reference to currently active cleanup job (nullable)
+  - Used for project-level transition locking during cleanup
+  - Set when cleanup workflow triggered
+  - Cleared when cleanup job reaches terminal state (COMPLETED/FAILED/CANCELLED)
+  - Index for efficient lock status queries
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -255,7 +262,7 @@ model Job {
 - `id`: Auto-incrementing unique identifier
 - `ticketId`: Associated ticket (required foreign key)
 - `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|task|implement|clarify|quick-impl|deploy-preview, max 50 chars)
+- `command`: Spec-kit command executed (specify|plan|task|implement|clarify|quick-impl|clean|deploy-preview, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)
@@ -444,13 +451,16 @@ Workflow path tracking.
 enum WorkflowType {
   FULL  // Standard workflow (INBOX → SPECIFY → PLAN → BUILD)
   QUICK // Quick-implementation (INBOX → BUILD)
+  CLEAN // Cleanup workflow (triggered → BUILD)
 }
 ```
 
 **Usage**:
 - Set during first BUILD transition
 - Immutable after initial setting
-- Determines visual badge (⚡ Quick)
+- Determines visual badge (⚡ Quick, 🧹 Clean)
+- CLEAN type created via project menu "Clean Project" action
+- CLEAN tickets bypass INBOX, SPECIFY, PLAN stages
 
 ### ClarificationPolicy
 

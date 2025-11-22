@@ -1,0 +1,141 @@
+openapi: 3.0.3
+info:
+  title: Cleanup Workflow Dispatch Contract
+  description: |
+    GitHub Actions workflow_dispatch input specification for the cleanup workflow.
+    This defines the contract between the AI Board application and the cleanup.yml workflow.
+  version: 1.0.0
+
+servers:
+  - url: https://api.github.com/repos/{owner}/{repo}/actions/workflows/cleanup.yml/dispatches
+    description: GitHub Actions workflow dispatch endpoint
+    variables:
+      owner:
+        default: bfernandez31
+        description: GitHub repository owner
+      repo:
+        default: ai-board
+        description: GitHub repository name
+
+paths:
+  /:
+    post:
+      summary: Dispatch cleanup workflow
+      description: |
+        Triggers the cleanup.yml GitHub Actions workflow via repository_dispatch event.
+
+        **Called by**: `/api/projects/{projectId}/clean` endpoint after creating cleanup ticket and job
+
+        **Workflow**: `.github/workflows/cleanup.yml`
+
+        **Authentication**: Requires GH_PAT secret with `repo` and `workflow` scopes
+
+      operationId: dispatchCleanupWorkflow
+      tags:
+        - Workflow Dispatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDispatchRequest'
+            examples:
+              typicalCleanup:
+                value:
+                  ref: "main"
+                  inputs:
+                    ticket_id: "AIB-123"
+                    project_id: "1"
+                    job_id: "456"
+                    shipped_branches: '["090-feature-a","091-feature-b","092-feature-c"]'
+                    githubRepository: "bfernandez31/ai-board"
+
+      responses:
+        '204':
+          description: Workflow dispatched successfully (no content)
+
+        '401':
+          description: GitHub authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubError'
+
+        '404':
+          description: Workflow file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubError'
+
+        '422':
+          description: Validation failed (invalid inputs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubError'
+
+components:
+  schemas:
+    WorkflowDispatchRequest:
+      type: object
+      required:
+        - ref
+        - inputs
+      properties:
+        ref:
+          type: string
+          description: Git ref to run workflow on (branch, tag, or SHA)
+          example: "main"
+        inputs:
+          type: object
+          description: Workflow inputs (defined in cleanup.yml)
+          required:
+            - ticket_id
+            - project_id
+            - job_id
+            - shipped_branches
+            - githubRepository
+          properties:
+            ticket_id:
+              type: string
+              description: Cleanup ticket identifier (ID or key)
+              example: "AIB-123"
+            project_id:
+              type: string
+              description: Project ID (as string for workflow compatibility)
+              example: "1"
+            job_id:
+              type: string
+              description: Job ID for status tracking
+              example: "456"
+            shipped_branches:
+              type: string
+              description: JSON-encoded array of branch names to analyze
+              example: '["090-feature-a","091-feature-b","092-feature-c"]'
+            githubRepository:
+              type: string
+              description: Target repository in owner/repo format
+              pattern: '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$'
+              example: "bfernandez31/ai-board"
+
+    GitHubError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message from GitHub API
+          example: "Workflow file not found"
+        documentation_url:
+          type: string
+          description: Link to GitHub API documentation
+          example: "https://docs.github.com/rest/actions/workflows"
+
+  securitySchemes:
+    githubToken:
+      type: http
+      scheme: bearer
+      description: GitHub Personal Access Token (PAT) with repo and workflow scopes
+
+security:
+  - githubToken: []

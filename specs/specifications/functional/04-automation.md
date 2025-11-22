@@ -15,6 +15,7 @@ A job is created each time a ticket transitions between stages:
 - **PLAN → BUILD**: Creates implementation job
 - **BUILD → VERIFY**: Creates test verification job
 - **INBOX → BUILD**: Creates quick implementation job (bypasses specification and planning)
+- **(triggered) → BUILD**: Creates cleanup job via project menu (diff-based technical debt cleanup)
 
 ### Job Status Lifecycle
 
@@ -38,6 +39,7 @@ Users can monitor job progress:
   - Implementation jobs: "CODING" when running
   - Verification jobs: "TESTING" when running
   - AI-BOARD jobs: "ASSISTING" when running
+  - Cleanup jobs: "CLEANING" when running
 - Polling stops automatically when job reaches terminal state
 - Board automatically refreshes when job completes and ticket stage changes
 
@@ -402,6 +404,7 @@ Workflows execute on GitHub Actions infrastructure:
 **Workflow Files**:
 - `.github/workflows/speckit.yml`: Normal workflow (SPECIFY → PLAN → BUILD)
 - `.github/workflows/quick-impl.yml`: Quick implementation (INBOX → BUILD)
+- `.github/workflows/cleanup.yml`: Cleanup workflow (diff-based technical debt cleanup)
 - `.github/workflows/verify.yml`: Test verification and PR creation (BUILD → VERIFY)
 - `.github/workflows/ai-board-assist.yml`: AI-BOARD comment responses
 
@@ -594,3 +597,135 @@ Automated GitHub Actions workflow handles deployment:
 - Workflow uses VERCEL_TOKEN for Vercel API
 - Workflow uses WORKFLOW_API_TOKEN for updating ticket
 - All credentials stored securely in GitHub secrets
+
+## Cleanup Workflow
+
+### Purpose
+
+The cleanup workflow provides automated technical debt cleanup by analyzing all code changes since the last cleanup operation. It performs holistic diff-based analysis to detect dead code, assess project-wide impact, and synchronize specifications.
+
+### Triggering Cleanup
+
+**Menu Trigger**:
+- Project menu contains "Clean Project" option (Sparkles icon)
+- Available to project owners and members
+- Clicking opens confirmation dialog
+
+**Prerequisites**:
+- At least one ticket must have been shipped since last cleanup
+- No cleanup workflow currently in progress
+- System validates using `shouldRunCleanup` analysis
+
+**Blocked States**:
+- If cleanup already running: 409 Conflict error
+- If no changes to clean: 400 Bad Request with explanation
+- Shows last cleanup date and reason when blocked
+
+### Cleanup Ticket Creation
+
+When cleanup is triggered, the system creates a specialized ticket:
+
+**Ticket Properties**:
+- **Title**: "Clean YYYY-MM-DD" (current date)
+- **Stage**: BUILD (bypasses INBOX, SPECIFY, PLAN)
+- **WorkflowType**: CLEAN (distinct from FULL and QUICK)
+- **Description**: Auto-generated summary of shipped tickets since last cleanup
+
+**Atomic Creation**:
+- Ticket, job, and transition lock created in single transaction
+- No partial states possible
+- Rollback on any failure
+
+### Transition Locking
+
+During cleanup execution, the system prevents ticket stage transitions:
+
+**Lock Mechanism**:
+- Project stores `activeCleanupJobId` pointing to running cleanup job
+- All transition requests check for active cleanup lock
+- Lock applies to ALL tickets in the project (not just cleanup ticket)
+
+**Blocked Operations**:
+- Drag-and-drop stage transitions
+- API-based stage transitions
+- Returns HTTP 423 Locked with informative message
+
+**Allowed Operations**:
+- Updating ticket descriptions
+- Updating ticket documents
+- Triggering preview deployments
+- Adding comments to tickets
+- Viewing ticket details
+
+**Lock Release**:
+- Automatically released when cleanup job completes (COMPLETED, FAILED, CANCELLED)
+- Released within 5 seconds of workflow completion
+- Self-healing: orphaned locks cleared if job is in terminal state
+
+### User Feedback During Cleanup
+
+**Banner Display**:
+- Warning banner appears at top of project board
+- Shows cleanup ticket key and link
+- Indicates transitions are temporarily disabled
+- Explains when lock will be released
+
+**Transition Attempts**:
+- Blocked transitions show toast notification
+- Message explains cleanup is in progress
+- Provides link to cleanup ticket for status
+
+### Cleanup Analysis
+
+The cleanup workflow performs diff-based analysis:
+
+**Merge Point Discovery**:
+- Finds last cleanup merge commit via `git log --merges --grep="cleanup-"`
+- Falls back to project creation date if first cleanup
+- Uses merge point as starting point for diff analysis
+
+**Analysis Scope**:
+- All code changes since last cleanup merge
+- Dead code detection from recent changes
+- Project-wide impact assessment
+- Specification synchronization check
+
+**Cleanup Targets**:
+- **Code**: Remove obsolete code, fix inconsistencies
+- **Tests**: Update tests affected by changes
+- **Documentation**: Synchronize spec.md, plan.md, CLAUDE.md
+
+### Cleanup Execution
+
+**Workflow Steps**:
+1. Create cleanup branch (`cleanup-YYYYMMDD`)
+2. Analyze diff since last cleanup merge
+3. Execute `/cleanup` Claude command
+4. Apply fixes without breaking changes
+5. Run impacted tests only (not full suite)
+6. Create pull request with validated fixes
+7. Transition ticket to VERIFY stage
+
+**Success Behavior**:
+- Ticket moves to VERIFY stage
+- Pull request created for review
+- Comment posted with PR link
+- Transition lock released
+
+**Failure Behavior**:
+- Ticket remains in BUILD stage
+- Job status set to FAILED
+- Error details in workflow logs
+- Transition lock released (allows retry)
+
+### Cleanup Workflow Type Behavior
+
+**BUILD → VERIFY for CLEAN Workflow**:
+- Same verification process as FULL workflow
+- Runs tests and creates PR
+- No special treatment based on workflowType
+
+**Branch Pattern**:
+- Cleanup branches named `cleanup-YYYYMMDD`
+- Follows project branch naming conventions
+- Branch stored in ticket.branch field

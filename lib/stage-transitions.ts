@@ -75,7 +75,7 @@ export function getNextStage(currentStage: Stage): Stage | null {
 export function isValidTransition(
   fromStage: Stage,
   toStage: Stage,
-  workflowType?: 'QUICK' | 'FULL'
+  workflowType?: 'QUICK' | 'FULL' | 'CLEAN'
 ): boolean {
   // Special case: Quick-impl allows INBOX → BUILD
   if (fromStage === Stage.INBOX && toStage === Stage.BUILD) {

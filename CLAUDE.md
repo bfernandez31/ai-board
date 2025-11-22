@@ -33,6 +33,7 @@ bun run type-check   # TypeScript check
 
 **Normal**: INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 **Quick**: INBOX → BUILD (for simple fixes, bypasses spec/plan)
+**Clean**: (triggered) → BUILD → VERIFY → SHIP (automated technical debt cleanup)
 
 ### Authentication & Authorization
 
@@ -56,12 +57,12 @@ bun run type-check   # TypeScript check
 ### Ticket
 - `ticketKey`: Format `{PROJECT_KEY}-{NUMBER}` (e.g., "ABC-123")
 - `branch`: Git branch (created by workflow, not transition)
-- `workflowType`: FULL|QUICK (tracks which path was used)
+- `workflowType`: FULL|QUICK|CLEAN (tracks which path was used)
 - `previewUrl`: Vercel deployment URL (VERIFY stage)
 
 ### Job
 - Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED
-- Commands: `specify`, `plan`, `implement`, `quick-impl`, `deploy-preview`, `comment-*`
+- Commands: `specify`, `plan`, `implement`, `quick-impl`, `clean`, `deploy-preview`, `comment-*`
 
 ## API Patterns
 
@@ -89,9 +90,10 @@ workflowInputs = {
 
 1. **speckit.yml**: SPECIFY/PLAN/BUILD stages
 2. **quick-impl.yml**: Direct INBOX→BUILD
-3. **verify.yml**: Test execution and PR creation
-4. **deploy-preview.yml**: Vercel deployment
-5. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
+3. **cleanup.yml**: Automated technical debt cleanup (CLEAN workflow)
+4. **verify.yml**: Test execution and PR creation
+5. **deploy-preview.yml**: Vercel deployment
+6. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
 
 ## Deploy Preview System
 
@@ -99,6 +101,59 @@ workflowInputs = {
 - Single preview per project (auto-replaces)
 - Requires: branch exists, latest job COMPLETED
 - Updates `ticket.previewUrl` on success
+
+## Cleanup Workflow
+
+**Purpose**: Holistic diff-based technical debt cleanup analyzing all changes since last cleanup
+
+**Trigger**: Project menu → "Clean Project" button (Sparkles icon)
+
+**Approach**: Diff-based analysis (not branch-by-branch)
+- Finds the merge point of the last cleanup
+- Analyzes ALL changes since that point holistically
+- Detects dead/obsolete code introduced by recent changes
+- Assesses project-wide impact of accumulated changes
+- Ensures functional and technical specs are synchronized
+
+**Process**:
+1. Checks if tickets have shipped since last cleanup (via `shouldRunCleanup`)
+2. Creates cleanup ticket in BUILD stage with workflowType=CLEAN
+3. Applies project-level transition lock (blocks all ticket transitions)
+4. Dispatches `cleanup.yml` workflow with cleanup context:
+   - `lastCleanupBranch`: Branch name of last cleanup
+   - `isFirstCleanup`: Boolean for first-time cleanup
+   - `ticketsShipped`: Count of shipped tickets
+5. Workflow finds merge point and analyzes full diff
+6. Claude `/cleanup` command performs holistic analysis:
+   - Dead code detection
+   - Project impact assessment
+   - Spec synchronization
+7. Workflow creates PR with all validated fixes
+8. Ticket moves to VERIFY stage for review
+9. Lock automatically released when workflow completes
+
+**Analysis Scope**:
+- **Diff Analysis**: All code changes since last cleanup merge
+- **Dead Code**: Identify obsolete code from recent changes
+- **Project Impact**: Check ripple effects across codebase
+- **Spec Sync**: Ensure `.specify/*/spec.md`, `plan.md`, and CLAUDE.md are current
+
+**Lock Behavior**:
+- Stage transitions disabled during cleanup (HTTP 423 Locked)
+- Content updates still allowed (descriptions, docs, previews)
+- Banner shown at top of board during cleanup
+- Self-healing: orphaned locks cleared automatically
+
+**Commands**:
+- API: POST `/api/projects/{projectId}/clean`
+- Workflow: `cleanup.yml` with `/cleanup` Claude command
+- Branch pattern: `cleanup-YYYYMMDD`
+
+**Key Files**:
+- `lib/db/cleanup-analysis.ts`: Cleanup analysis utilities
+- `lib/transition-lock.ts`: Lock management
+- `components/cleanup/`: UI components
+- `.claude/commands/cleanup.md`: Claude cleanup command
 
 ## AI-BOARD Assistant
 

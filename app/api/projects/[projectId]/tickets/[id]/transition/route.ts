@@ -93,6 +93,45 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
+    // T048-T051: Check for active cleanup job that locks transitions
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { activeCleanupJobId: true },
+    });
+
+    if (project?.activeCleanupJobId) {
+      const cleanupJob = await prisma.job.findUnique({
+        where: { id: project.activeCleanupJobId },
+        select: { status: true, ticket: { select: { ticketKey: true } } },
+      });
+
+      // T050: Return 423 Locked if cleanup job is PENDING or RUNNING
+      if (cleanupJob && ['PENDING', 'RUNNING'].includes(cleanupJob.status)) {
+        return NextResponse.json(
+          {
+            error: 'Project cleanup is in progress. Stage transitions are temporarily disabled.',
+            code: 'CLEANUP_IN_PROGRESS',
+            details: {
+              activeCleanupJobId: project.activeCleanupJobId,
+              jobStatus: cleanupJob.status,
+              ticketKey: cleanupJob.ticket.ticketKey,
+              message: 'You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes.',
+            },
+          },
+          { status: 423 }
+        );
+      }
+
+      // T051: Self-healing logic - clear lock if job is in terminal state
+      if (cleanupJob && ['COMPLETED', 'FAILED', 'CANCELLED'].includes(cleanupJob.status)) {
+        await prisma.project.update({
+          where: { id: projectId },
+          data: { activeCleanupJobId: null },
+        });
+        console.log(`[Transition] Cleared orphaned cleanup lock for project ${projectId}`);
+      }
+    }
+
     // Detect rollback attempt (BUILD → INBOX)
     const isRollbackAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
 

@@ -1,0 +1,439 @@
+openapi: 3.0.3
+info:
+  title: Clean Workflow API
+  description: API endpoints for triggering and managing project cleanup workflows
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://ai-board.app
+    description: Production
+
+paths:
+  /api/projects/{projectId}/clean:
+    post:
+      summary: Trigger project cleanup workflow
+      description: |
+        Creates a cleanup ticket and dispatches automated cleanup workflow to analyze
+        and fix technical debt from recently shipped features.
+
+        **Workflow**:
+        1. Validates no active cleanup is already running
+        2. Finds all tickets shipped since last cleanup
+        3. Creates cleanup ticket in BUILD stage with workflowType=CLEAN
+        4. Creates cleanup job and applies project-level transition lock
+        5. Dispatches cleanup.yml GitHub workflow with shipped branch list
+        6. Returns ticket and job details
+
+        **Authorization**: Requires project owner or member access
+
+      operationId: triggerCleanup
+      tags:
+        - Cleanup Workflow
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '201':
+          description: Cleanup workflow triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupTriggerResponse'
+              examples:
+                success:
+                  value:
+                    ticket:
+                      id: 123
+                      ticketKey: "AIB-123"
+                      title: "Clean 2025-11-21"
+                      description: "Analyzing branches shipped since 2025-11-14:\n- 090-feature-a (AIB-90)\n- 091-feature-b (AIB-91)\n- 092-feature-c (AIB-92)"
+                      stage: "BUILD"
+                      workflowType: "CLEAN"
+                      branch: null
+                      projectId: 1
+                      createdAt: "2025-11-21T10:30:00Z"
+                    job:
+                      id: 456
+                      ticketId: 123
+                      command: "clean"
+                      status: "PENDING"
+                      branch: null
+                      startedAt: "2025-11-21T10:30:00Z"
+                      projectId: 1
+                    shippedBranches:
+                      - "090-feature-a"
+                      - "091-feature-b"
+                      - "092-feature-c"
+                    lastCleanDate: "2025-11-14T08:00:00Z"
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Cleanup already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                cleanupInProgress:
+                  value:
+                    error: "Cleanup workflow already in progress"
+                    code: "CLEANUP_ALREADY_RUNNING"
+                    details:
+                      activeJobId: 455
+                      activeJobStatus: "RUNNING"
+
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/projects/{projectId}/tickets/{ticketId}/transition:
+    patch:
+      summary: Transition ticket to new stage (with cleanup lock check)
+      description: |
+        Transitions a ticket to a new stage. This endpoint is MODIFIED to check for
+        active cleanup workflows before allowing transitions.
+
+        **Cleanup Lock Behavior**:
+        - If project has active cleanup (activeCleanupJobId != NULL with PENDING/RUNNING status),
+          transition is blocked with HTTP 423 Locked status
+        - User can still update ticket descriptions, documents, and preview deployments
+        - Lock is automatically released when cleanup job reaches terminal state
+
+        **Authorization**: Requires project owner or member access
+
+      operationId: transitionTicket
+      tags:
+        - Tickets
+        - Cleanup Workflow
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID or ticket key (e.g., "123" or "AIB-123")
+          schema:
+            type: string
+          example: "AIB-90"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+            examples:
+              normal:
+                value:
+                  newStage: "PLAN"
+                  autoMode: false
+                  version: 3
+      responses:
+        '200':
+          description: Transition successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransitionResponse'
+
+        '400':
+          description: Invalid transition request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+        '423':
+          description: Project cleanup in progress (transitions locked)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupLockError'
+              examples:
+                cleanupInProgress:
+                  value:
+                    error: "Project cleanup is in progress. Stage transitions are temporarily disabled."
+                    code: "CLEANUP_IN_PROGRESS"
+                    details:
+                      activeCleanupJobId: 456
+                      jobStatus: "RUNNING"
+                      message: "You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes."
+
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    CleanupTriggerResponse:
+      type: object
+      required:
+        - ticket
+        - job
+        - shippedBranches
+      properties:
+        ticket:
+          $ref: '#/components/schemas/CleanupTicket'
+        job:
+          $ref: '#/components/schemas/Job'
+        shippedBranches:
+          type: array
+          description: List of branch names to be analyzed in cleanup
+          items:
+            type: string
+          example: ["090-feature-a", "091-feature-b", "092-feature-c"]
+        lastCleanDate:
+          type: string
+          format: date-time
+          description: Date of last cleanup (or epoch if first cleanup)
+          example: "2025-11-14T08:00:00Z"
+
+    CleanupTicket:
+      type: object
+      required:
+        - id
+        - ticketKey
+        - title
+        - description
+        - stage
+        - workflowType
+        - projectId
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: Unique ticket identifier
+          example: 123
+        ticketKey:
+          type: string
+          description: Human-readable ticket key (format: PROJECT-NUMBER)
+          example: "AIB-123"
+        title:
+          type: string
+          description: Cleanup ticket title (format: "Clean YYYY-MM-DD")
+          pattern: '^Clean \d{4}-\d{2}-\d{2}$'
+          example: "Clean 2025-11-21"
+        description:
+          type: string
+          description: List of shipped branches being analyzed
+          example: "Analyzing branches shipped since 2025-11-14:\n- 090-feature-a (AIB-90)\n- 091-feature-b (AIB-91)"
+        stage:
+          type: string
+          enum: [BUILD]
+          description: Cleanup tickets always start in BUILD stage
+          example: "BUILD"
+        workflowType:
+          type: string
+          enum: [CLEAN]
+          description: Workflow type identifier
+          example: "CLEAN"
+        branch:
+          type: string
+          nullable: true
+          description: Git branch (created by cleanup workflow, initially null)
+          example: "cleanup-20251121"
+        projectId:
+          type: integer
+          description: Parent project ID
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          description: Ticket creation timestamp
+          example: "2025-11-21T10:30:00Z"
+
+    Job:
+      type: object
+      required:
+        - id
+        - ticketId
+        - command
+        - status
+        - startedAt
+        - projectId
+      properties:
+        id:
+          type: integer
+          description: Unique job identifier
+          example: 456
+        ticketId:
+          type: integer
+          description: Associated ticket ID
+          example: 123
+        command:
+          type: string
+          description: Command being executed
+          enum: [specify, plan, task, implement, clean, deploy-preview, comment-specify, comment-plan, comment-build, comment-verify]
+          example: "clean"
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+          description: Current job status
+          example: "PENDING"
+        branch:
+          type: string
+          nullable: true
+          description: Git branch (set by workflow during execution)
+          example: "cleanup-20251121"
+        commitSha:
+          type: string
+          nullable: true
+          description: Latest commit SHA (set by workflow)
+          example: "a1b2c3d4e5f6"
+        logs:
+          type: string
+          nullable: true
+          description: Job execution logs
+        startedAt:
+          type: string
+          format: date-time
+          description: Job start timestamp
+          example: "2025-11-21T10:30:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Job completion timestamp
+          example: "2025-11-21T11:15:00Z"
+        projectId:
+          type: integer
+          description: Parent project ID
+          example: 1
+
+    TransitionRequest:
+      type: object
+      required:
+        - newStage
+      properties:
+        newStage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+          description: Target stage for transition
+          example: "VERIFY"
+        autoMode:
+          type: boolean
+          description: Enable auto-mode for ticket
+          default: false
+        version:
+          type: integer
+          description: Optimistic concurrency control version
+          example: 5
+
+    TransitionResponse:
+      type: object
+      required:
+        - ticket
+      properties:
+        ticket:
+          type: object
+          description: Updated ticket after transition
+        job:
+          type: object
+          nullable: true
+          description: Created job if transition triggers workflow
+
+    CleanupLockError:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Project cleanup is in progress. Stage transitions are temporarily disabled."
+        code:
+          type: string
+          enum: [CLEANUP_IN_PROGRESS]
+          description: Machine-readable error code
+          example: "CLEANUP_IN_PROGRESS"
+        details:
+          type: object
+          description: Additional context about the lock
+          properties:
+            activeCleanupJobId:
+              type: integer
+              description: ID of active cleanup job
+              example: 456
+            jobStatus:
+              type: string
+              enum: [PENDING, RUNNING]
+              description: Current status of cleanup job
+              example: "RUNNING"
+            message:
+              type: string
+              description: Helpful message for user
+              example: "You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes."
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Invalid transition: cannot move from BUILD to SHIP"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "INVALID_TRANSITION"
+        details:
+          type: object
+          description: Additional error context
+          nullable: true
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Authentication required"
+            code: "UNAUTHORIZED"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "You do not have access to this project"
+            code: "FORBIDDEN"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "An unexpected error occurred"
+            code: "INTERNAL_SERVER_ERROR"
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
