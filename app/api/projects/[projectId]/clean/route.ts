@@ -6,6 +6,7 @@ import {
   generateCleanupDescription,
 } from '@/lib/db/cleanup-analysis';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
+import { Octokit } from '@octokit/rest';
 
 /**
  * POST /api/projects/[projectId]/clean
@@ -124,15 +125,16 @@ export async function POST(
     });
 
     // Dispatch cleanup workflow on ai-board repository (centralized workflows)
-    try {
-      const aiboardOwner = process.env.GITHUB_OWNER;
-      const aiboardRepo = process.env.GITHUB_REPO;
-      const targetRepository = `${project.githubOwner}/${project.githubRepo}`;
+    const githubToken = process.env.GITHUB_TOKEN;
+    const aiboardOwner = process.env.GITHUB_OWNER;
+    const aiboardRepo = process.env.GITHUB_REPO;
+    const targetRepository = `${project.githubOwner}/${project.githubRepo}`;
 
-      if (!aiboardOwner || !aiboardRepo) {
-        console.error('Missing GITHUB_OWNER or GITHUB_REPO environment variables');
-      } else {
-        const dispatchUrl = `https://api.github.com/repos/${aiboardOwner}/${aiboardRepo}/actions/workflows/cleanup.yml/dispatches`;
+    if (!aiboardOwner || !aiboardRepo) {
+      console.error('Missing GITHUB_OWNER or GITHUB_REPO environment variables');
+    } else if (githubToken && !githubToken.includes('test') && !githubToken.includes('placeholder')) {
+      try {
+        const octokit = new Octokit({ auth: githubToken });
 
         console.log('[Cleanup Workflow Dispatch]', {
           aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
@@ -140,34 +142,22 @@ export async function POST(
           ticketKey: result.ticket.ticketKey,
         });
 
-        const dispatchResponse = await fetch(dispatchUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.GH_PAT}`,
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-            'Content-Type': 'application/json',
+        await octokit.actions.createWorkflowDispatch({
+          owner: aiboardOwner,
+          repo: aiboardRepo,
+          workflow_id: 'cleanup.yml',
+          ref: 'main',
+          inputs: {
+            ticket_id: result.ticket.ticketKey,
+            project_id: projectId.toString(),
+            job_id: result.job.id.toString(),
+            githubRepository: targetRepository,
           },
-          body: JSON.stringify({
-            ref: 'main',
-            inputs: {
-              ticket_id: result.ticket.ticketKey,
-              project_id: projectId.toString(),
-              job_id: result.job.id.toString(),
-              githubRepository: targetRepository,
-            },
-          }),
         });
-
-        if (!dispatchResponse.ok) {
-          const errorText = await dispatchResponse.text();
-          console.error('Failed to dispatch cleanup workflow:', errorText);
-          // Don't fail the request - workflow can be manually triggered
-        }
+      } catch (dispatchError) {
+        console.error('Error dispatching cleanup workflow:', dispatchError);
+        // Don't fail the request - workflow can be manually triggered
       }
-    } catch (dispatchError) {
-      console.error('Error dispatching cleanup workflow:', dispatchError);
-      // Don't fail the request - workflow can be manually triggered
     }
 
     // Return success response
