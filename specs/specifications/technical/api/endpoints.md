@@ -1130,6 +1130,9 @@ All error responses follow a consistent structure:
 | `VERSION_CONFLICT` | Optimistic concurrency control conflict |
 | `INVALID_TOKEN` | Workflow authentication failed |
 | `VALIDATION_ERROR` | Zod schema validation failed |
+| `CLEANUP_IN_PROGRESS` | Transitions blocked during cleanup (423) |
+| `CLEANUP_ALREADY_RUNNING` | Cleanup workflow already in progress (409) |
+| `NO_CHANGES` | No shipped tickets to clean up (400) |
 
 ### HTTP Status Codes
 
@@ -1142,9 +1145,165 @@ All error responses follow a consistent structure:
 | `401` | Unauthorized (authentication failed) |
 | `403` | Forbidden (authorization failed) |
 | `404` | Not Found (resource doesn't exist) |
-| `409` | Conflict (version mismatch) |
+| `409` | Conflict (version mismatch, cleanup already running) |
 | `413` | Payload Too Large (file upload) |
+| `423` | Locked (cleanup in progress, transitions blocked) |
 | `500` | Internal Server Error |
+
+## Project Cleanup Endpoints
+
+### POST /api/projects/:projectId/clean
+
+Trigger cleanup workflow for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**: Empty
+
+**Response** (201 Created):
+```json
+{
+  "ticket": {
+    "id": 150,
+    "ticketKey": "ABC-42",
+    "title": "Clean 2025-01-15",
+    "description": "Cleanup of shipped tickets since last cleanup...",
+    "stage": "BUILD",
+    "workflowType": "CLEAN",
+    "branch": null,
+    "projectId": 1,
+    "createdAt": "2025-01-15T10:00:00.000Z"
+  },
+  "job": {
+    "id": 300,
+    "ticketId": 150,
+    "command": "clean",
+    "status": "PENDING",
+    "branch": null,
+    "startedAt": "2025-01-15T10:00:00.000Z",
+    "projectId": 1
+  },
+  "analysis": {
+    "lastCleanup": {
+      "ticketKey": "ABC-30",
+      "date": "2025-01-01T00:00:00.000Z"
+    },
+    "changes": {
+      "ticketsShipped": 12,
+      "ticketKeys": ["ABC-31", "ABC-32", "..."]
+    }
+  }
+}
+```
+
+**Cleanup Process**:
+1. Validates no cleanup already in progress
+2. Checks if shipped tickets exist since last cleanup
+3. Creates cleanup ticket in BUILD stage with workflowType=CLEAN
+4. Creates cleanup job with command="clean"
+5. Sets project.activeCleanupJobId (enables transition lock)
+6. Dispatches cleanup.yml GitHub workflow
+7. Returns ticket and job details
+
+**Errors**:
+- `400`: No changes to clean (no shipped tickets since last cleanup)
+  ```json
+  {
+    "error": "No changes to clean up",
+    "code": "NO_CHANGES",
+    "details": {
+      "lastCleanupDate": "2025-01-01T00:00:00.000Z",
+      "lastCleanupTicket": "ABC-30",
+      "message": "No tickets shipped since last cleanup"
+    }
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `409`: Cleanup already in progress
+  ```json
+  {
+    "error": "Cleanup workflow already in progress",
+    "code": "CLEANUP_ALREADY_RUNNING",
+    "details": {
+      "activeJobId": 299,
+      "activeJobStatus": "RUNNING"
+    }
+  }
+  ```
+- `500`: Workflow dispatch error or database error
+
+**Note**: Workflow dispatch errors are logged but don't fail the request (workflow can be manually triggered).
+
+### GET /api/projects/:projectId/cleanup-status
+
+Fetch cleanup lock status for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "isLocked": true,
+  "lock": {
+    "jobId": 300,
+    "jobStatus": "RUNNING",
+    "ticketKey": "ABC-42"
+  }
+}
+```
+
+**Response** (200 OK - Not Locked):
+```json
+{
+  "isLocked": false,
+  "lock": null
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+
+## Transition Lock Behavior
+
+### HTTP 423 Locked Response
+
+When a project has an active cleanup job, all ticket transition requests return 423:
+
+**Request**: POST /api/projects/:projectId/tickets/:id/transition
+
+**Response** (423 Locked):
+```json
+{
+  "error": "Project cleanup in progress",
+  "code": "CLEANUP_IN_PROGRESS",
+  "details": {
+    "cleanupTicketKey": "ABC-42",
+    "jobStatus": "RUNNING",
+    "message": "You can still update ticket descriptions, documents, and preview deployments. Transitions will be re-enabled when cleanup completes."
+  }
+}
+```
+
+**Affected Endpoints**:
+- POST /api/projects/:projectId/tickets/:id/transition
+
+**Unaffected Endpoints** (still work during cleanup):
+- PATCH /api/projects/:projectId/tickets/:id (update title, description)
+- POST /api/projects/:projectId/tickets/:id/deploy (trigger preview)
+- POST /api/projects/:projectId/tickets/:id/comments (add comments)
+- All GET endpoints
 
 ## Rate Limiting
 

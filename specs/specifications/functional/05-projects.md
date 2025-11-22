@@ -240,6 +240,39 @@ Projects track activity across all tickets:
 - Ticket count shows total across all stages
 - Activity visible in project list view
 
+## Project Actions
+
+### Clean Project
+
+Users can trigger automated cleanup of technical debt accumulated from shipped features:
+
+**Menu Access**:
+- Project menu contains "Clean Project" option (Sparkles icon)
+- Available to project owners and members
+
+**Cleanup Prerequisites**:
+- At least one ticket shipped since last cleanup
+- No cleanup currently in progress
+- System validates prerequisites before allowing trigger
+
+**Cleanup Behavior**:
+- Creates cleanup ticket directly in BUILD stage
+- Ticket title format: "Clean YYYY-MM-DD"
+- Ticket workflowType set to CLEAN
+- Applies project-level transition lock
+
+**Transition Lock During Cleanup**:
+- All ticket stage transitions blocked during cleanup
+- Content updates still allowed (descriptions, comments, previews)
+- Warning banner displayed at top of board
+- Lock automatically released when cleanup completes
+
+**Blocked Cleanup**:
+- Already running: Shows error about active cleanup
+- No changes: Shows last cleanup date and explains nothing to clean
+
+For detailed cleanup workflow behavior, see [Automation - Cleanup Workflow](./04-automation.md#cleanup-workflow).
+
 ## External Repository Support
 
 ### Multi-Repository Architecture
