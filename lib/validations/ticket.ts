@@ -84,23 +84,6 @@ export const CreateTicketSchema = z
     path: ['description'],
   });
 
-/**
- * Validation schema for a complete ticket entity
- */
-export const TicketSchema = z.object({
-  id: z.number().int().positive(),
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(100, 'Title must be 100 characters or less'),
-  description: z
-    .string()
-    .min(1, 'Description is required')
-    .max(2500, 'Description must be 2500 characters or less'),
-  stage: StageSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
 
 /**
  * Validation schemas for inline ticket editing (PATCH operations)
@@ -186,7 +169,6 @@ export const ticketResponseSchema = z.object({
  */
 export type Stage = z.infer<typeof StageSchema>;
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
-export type TicketValidation = z.infer<typeof TicketSchema>;
 export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;

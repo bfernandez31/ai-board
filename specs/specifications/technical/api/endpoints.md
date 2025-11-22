@@ -117,10 +117,16 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
+  "activeCleanupJobId": null,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
 }
 ```
+
+**Fields**:
+- `activeCleanupJobId`: ID of active cleanup job (null if no cleanup in progress)
+  - Used by frontend to show cleanup lock banner
+  - Lock automatically cleared when cleanup job reaches terminal state
 
 **Errors**:
 - `401`: Not authenticated
@@ -1239,41 +1245,6 @@ Trigger cleanup workflow for a project.
 - `500`: Workflow dispatch error or database error
 
 **Note**: Workflow dispatch errors are logged but don't fail the request (workflow can be manually triggered).
-
-### GET /api/projects/:projectId/cleanup-status
-
-Fetch cleanup lock status for a project.
-
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
-
-**Path Parameters**:
-- `projectId` (number, required): Project ID
-
-**Response** (200 OK):
-```json
-{
-  "isLocked": true,
-  "lock": {
-    "jobId": 300,
-    "jobStatus": "RUNNING",
-    "ticketKey": "ABC-42"
-  }
-}
-```
-
-**Response** (200 OK - Not Locked):
-```json
-{
-  "isLocked": false,
-  "lock": null
-}
-```
-
-**Errors**:
-- `401`: Not authenticated
-- `403`: User is neither project owner nor member
-- `404`: Project not found
 
 ## Transition Lock Behavior
 
