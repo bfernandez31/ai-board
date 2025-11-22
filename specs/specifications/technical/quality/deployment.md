@@ -10,6 +10,8 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 |----------|---------|---------|---------|
 | `speckit.yml` | workflow_dispatch | Main spec-kit execution | 120 min |
 | `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
+| `cleanup.yml` | workflow_dispatch | Diff-based technical debt cleanup | 45 min |
+| `verify.yml` | workflow_dispatch | Test verification and PR creation | 45 min |
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
@@ -184,6 +186,63 @@ steps:
   --title="${{ inputs.ticketTitle }}" \
   --description="${{ inputs.ticketDescription }}"
 ```
+
+### Cleanup Workflow
+
+**File**: `.github/workflows/cleanup.yml`
+
+**Inputs**:
+- `ticket_id`: Cleanup ticket identifier
+- `project_id`: Project identifier
+- `job_id`: Job record ID for status tracking
+- `githubRepository`: Target repository (format: owner/repo)
+
+**Environment Setup**:
+- Full history checkout (`fetch-depth: 0`) for diff analysis
+- PostgreSQL service container for test execution
+- Bun, Node.js, Python installed for tooling
+- Playwright installed for E2E tests
+
+**Execution Flow**:
+
+```yaml
+steps:
+  - name: Find Last Cleanup Merge Point
+    run: |
+      # Find previous cleanup merge commit
+      MERGE_SHA=$(git log --merges --grep="cleanup-" --format="%H" -1)
+
+      # Fall back to initial commit if first cleanup
+      if [ -z "$MERGE_SHA" ]; then
+        MERGE_SHA=$(git rev-list --max-parents=0 HEAD | tail -1)
+      fi
+
+  - name: Create Cleanup Branch
+    run: |
+      # Uses create-new-feature.sh with cleanup mode
+      .specify/scripts/bash/create-new-feature.sh \
+        --json --mode=cleanup "Clean $(date +%Y-%m-%d)"
+
+  - name: Execute Cleanup Analysis
+    run: |
+      # Claude reads CLAUDE.md and constitution for context
+      # Uses cleanup-tasks.md to track progress
+      claude --dangerously-skip-permissions --model opus \
+        "/cleanup ultrathink IMPORTANT: never run the full test suite, only impacted tests"
+
+  - name: Transition to VERIFY
+    run: |
+      # Triggers verify workflow for tests and PR creation
+      .specify/scripts/bash/transition-to-verify.sh \
+        "${{ inputs.ticket_id }}" \
+        "${{ inputs.project_id }}"
+```
+
+**Key Features**:
+- **Diff-Based Analysis**: Analyzes all changes since last cleanup merge
+- **Project-Agnostic**: Reads CLAUDE.md and constitution.md for project context
+- **Impacted Tests Only**: Never runs full test suite, only affected tests
+- **Self-Healing Locks**: Transition lock cleared on job completion
 
 ### Deploy Preview Workflow
 

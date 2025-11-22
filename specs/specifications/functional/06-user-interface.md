@@ -142,6 +142,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Cancel and Proceed/Confirm buttons
 - Mandatory for quick implementation workflow
 
+**Cleanup Confirmation Dialog**:
+- Triggered when "Clean Project" menu option selected
+- Title: "Clean Project"
+- Description explains cleanup will analyze changes since last cleanup
+- Shows list of shipped tickets that will be analyzed
+- Warning that stage transitions will be blocked during cleanup
+- Cancel and "Start Cleanup" buttons
+- Loading state while cleanup job is being created
+
 ## Drag-and-Drop
 
 ### Visual Feedback
@@ -278,6 +287,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Non-blocking interactions (clicking URL/GitHub/copy doesn't trigger card navigation)
 - Visual feedback for copy action (icon change or tooltip)
 - Hover tooltips for truncated ticket titles
+- Project menu (three-dot icon) with project-level actions
+
+**Project Menu**:
+- Dropdown menu triggered by three-dot icon (⋮) in card header
+- Available actions:
+  - **Clean Project**: Opens cleanup confirmation dialog (Sparkles icon)
+  - **Settings**: Navigates to project settings page (Settings icon)
+- Menu positioned to right of project name
+- Click on menu does not trigger card navigation
 
 **Text Truncation**:
 - Long ticket key + title text truncated with ellipsis
@@ -325,6 +343,20 @@ The user interface provides an intuitive, modern experience for managing tickets
   - RUNNING: Progress animation
   - COMPLETED: Success checkmark
   - FAILED: Error icon
+
+**Cleanup In Progress Banner**:
+- Warning banner displayed at top of project board during cleanup
+- Yellow/amber alert styling with warning icon
+- Message: "Cleanup in progress - Stage transitions are temporarily disabled"
+- Lists allowed operations: descriptions, documents, preview deployments
+- Indicates lock will release when cleanup completes
+- Auto-hides via polling when cleanup job reaches terminal state (2-second intervals)
+- Only visible when project has active cleanup job (activeCleanupJobId set)
+
+**Cleanup Job Status**:
+- Cleanup ticket shows "CLEANING" status label during execution
+- Status indicator updates via job polling (2-second intervals)
+- Visual feedback matches other job types (pending, running, completed, failed)
 
 **Deploy Preview Indicators**:
 
