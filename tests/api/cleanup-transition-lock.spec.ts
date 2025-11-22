@@ -1,6 +1,6 @@
 import { test, expect } from '../helpers/worker-isolation';
-import { cleanupDatabase, getPrismaClient, getProjectKey } from '../helpers/db-cleanup';
-import { setupTestData } from '../helpers/db-setup';
+import { cleanupDatabase, getPrismaClient } from '../helpers/db-cleanup';
+import { setupTestData, createTestTicket } from '../helpers/db-setup';
 
 /**
  * Contract Test: Cleanup Transition Lock (HTTP 423 Locked)
@@ -27,24 +27,20 @@ test.describe('POST /api/projects/[projectId]/tickets/[id]/transition - Cleanup 
   });
 
   /**
-   * Helper: Create a cleanup ticket with unique ticket number
-   * Uses timestamp + random suffix to avoid conflicts in parallel tests
+   * Helper: Create a cleanup ticket using worker-isolated project
+   * Uses createTestTicket which auto-generates unique ticketNumber via PostgreSQL sequence
    */
   async function createCleanupTicket(projectId: number, stage: 'BUILD' | 'VERIFY' = 'BUILD') {
-    const uniqueSuffix = Date.now() % 100000 + Math.floor(Math.random() * 1000);
-    const projectKey = getProjectKey(projectId);
+    const ticket = await createTestTicket(projectId, {
+      title: '[e2e] Clean 2025-01-01',
+      description: '[e2e] Cleanup ticket',
+      stage,
+    });
 
-    return prisma.ticket.create({
-      data: {
-        title: '[e2e] Clean 2025-01-01',
-        description: '[e2e] Cleanup ticket',
-        stage,
-        workflowType: 'CLEAN',
-        projectId,
-        ticketNumber: uniqueSuffix,
-        ticketKey: `${projectKey}-${uniqueSuffix}`,
-        updatedAt: new Date(),
-      },
+    // Update workflowType to CLEAN (createTestTicket doesn't support this field)
+    return prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { workflowType: 'CLEAN' },
     });
   }
 
