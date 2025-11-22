@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Copy, Check, Github } from 'lucide-react';
 import { formatTimestamp } from '@/lib/utils/format-timestamp';
 import { useCopyToClipboard } from '@/app/lib/hooks/useCopyToClipboard';
+import { ProjectMenu } from '@/components/project/ProjectMenu';
 import type { ProjectWithCount } from '@/app/lib/types/project';
 
 interface ProjectCardProps {
@@ -51,9 +52,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
       data-project-id={project.id}
     >
       <CardHeader className="space-y-3">
-        <CardTitle className="text-[#cdd6f4]" data-testid="project-name">
-          {project.name}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-[#cdd6f4]" data-testid="project-name">
+            {project.name}
+          </CardTitle>
+          <div onClick={(e) => e.stopPropagation()}>
+            <ProjectMenu projectId={project.id} />
+          </div>
+        </div>
 
         {/* GitHub Repository Link (User Story 3) */}
         <a
