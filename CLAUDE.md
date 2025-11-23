@@ -62,7 +62,7 @@ bun run type-check   # TypeScript check
 
 ### Job
 - Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED
-- Commands: `specify`, `plan`, `implement`, `quick-impl`, `clean`, `deploy-preview`, `comment-*`
+- Commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
 
 ## API Patterns
 

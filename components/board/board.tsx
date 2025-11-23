@@ -160,46 +160,6 @@ function BoardContent({
     return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
   }, [allTickets]);
 
-  // Get most recent job for a specific ticket (merges initial + polled data)
-  // Used for drag-and-drop validation to check if ticket has active job
-  const getTicketJob = useCallback(
-    (ticketId: number): Job | null => {
-      const ticketInitialJobs = initialJobs.get(ticketId) || [];
-      const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
-
-      // If we have polled updates, merge them with initial data
-      if (ticketPolledJobs.length > 0) {
-        // Find most recent polled job
-        const mostRecentPolled = ticketPolledJobs.reduce((latest, current) =>
-          new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
-        );
-
-        // Find matching initial job by ID
-        const baseJob = ticketInitialJobs.find(j => j.id === mostRecentPolled.id);
-        if (baseJob) {
-          return {
-            ...baseJob,
-            status: mostRecentPolled.status,
-            updatedAt: new Date(mostRecentPolled.updatedAt),
-          };
-        }
-
-        // Create minimal Job object from polled data (for new jobs created during session)
-        return {
-          id: mostRecentPolled.id,
-          ticketId: mostRecentPolled.ticketId,
-          status: mostRecentPolled.status,
-          command: mostRecentPolled.command,
-          startedAt: new Date(mostRecentPolled.updatedAt),
-          completedAt: null,
-        } as Job;
-      }
-
-      // Fall back to most recent initial job (sorted by startedAt desc in query)
-      return ticketInitialJobs[0] || null;
-    },
-    [polledJobs, initialJobs]
-  );
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display
@@ -899,7 +859,6 @@ function BoardContent({
                   isDraggable={isOnline}
                   onTicketClick={handleTicketClick}
                   projectId={projectId}
-                  getTicketJob={getTicketJob}
                   getTicketJobs={getTicketJobs}
                   dropZoneStyle={getDropZoneStyle(stage)}
                   isBlockedByJob={isBlocked}

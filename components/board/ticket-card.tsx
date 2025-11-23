@@ -17,7 +17,6 @@ import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
-  currentJob?: Job | null; // Legacy: kept for backward compatibility
   workflowJob?: Job | null; // User Story 1: Workflow job display
   aiBoardJob?: Job | null; // User Story 2: AI-BOARD job display
   deployJob?: Job | null; // User Story: Deploy preview job display
