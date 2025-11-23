@@ -54,7 +54,7 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') || inputs.stage == 'build' || inputs.stage == 'verify' }}
+      SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
@@ -82,14 +82,9 @@ jobs:
         run: |
           echo "ℹ️ Skipping Claude execution"
 
-          # Determine skip message
-          if [[ "${{ inputs.ticket_id }}" == *"[e2e]"* ]]; then
-            MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
-            echo "📝 Skip reason: E2E test ticket"
-          else
-            MESSAGE="@${{ inputs.user }} This feature is not yet implemented for ${{ inputs.stage }} stage."
-            echo "📝 Skip reason: BUILD/VERIFY stage not implemented"
-          fi
+          # E2E test ticket skip
+          MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
+          echo "📝 Skip reason: E2E test ticket"
 
           # Post skip message as AI-BOARD comment
           curl -L -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
@@ -205,6 +200,11 @@ jobs:
             # Extract files modified for tracking
             FILES_SECTION=$(sed -n '/^## Files Modified/,/^##/p' "$RESULT_FILE" | grep "^- " | sed 's/^- //' | tr '\n' ',' | sed 's/,$//')
 
+            # Extract issues to fix if ITERATE_REQUIRED
+            if [ "$STATUS" = "ITERATE_REQUIRED" ]; then
+              ISSUES_SECTION=$(sed -n '/^## Issues To Fix/,/^##/p' "$RESULT_FILE" | grep "^- " | sed 's/^- //')
+            fi
+
             # Create JSON output based on status
             if [ "$STATUS" = "SUCCESS" ]; then
               JSON_OUTPUT=$(jq -n \
@@ -212,6 +212,13 @@ jobs:
                 --arg message "$CLAUDE_MESSAGE" \
                 --arg files "$FILES_SECTION" \
                 '{"status": $status, "message": $message, "filesModified": ($files | split(","))}'
+              )
+            elif [ "$STATUS" = "ITERATE_REQUIRED" ]; then
+              JSON_OUTPUT=$(jq -n \
+                --arg status "iterate_required" \
+                --arg message "$CLAUDE_MESSAGE" \
+                --arg issues "$ISSUES_SECTION" \
+                '{"status": $status, "message": $message, "issuesToFix": ($issues | split("\n") | map(select(. != ""))), "filesModified": []}'
               )
             elif [ "$STATUS" = "NOT_IMPLEMENTED" ]; then
               JSON_OUTPUT=$(jq -n \
@@ -336,16 +343,67 @@ jobs:
             -d "{\"content\": ${MESSAGE_JSON}, \"userId\": \"ai-board-system-user\"}" \
             -f -s -S || echo "⚠️ Failed to post AI-BOARD comment"
 
+      - name: Dispatch Iterate Workflow if Required
+        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'iterate_required' }}
+        id: iterate
+        env:
+          RESULT_FILE: specs/${{ inputs.branch }}/.ai-board-result.md
+        run: |
+          echo "🔄 Preparing to dispatch iterate.yml workflow..."
+
+          # Extract issues to fix from result file
+          ISSUES_JSON="[]"
+          if [ -f "$RESULT_FILE" ]; then
+            ISSUES=$(sed -n '/^## Issues To Fix/,/^##/p' "$RESULT_FILE" | grep "^- " | sed 's/^- //' | jq -Rs 'split("\n") | map(select(. != ""))')
+            ISSUES_JSON="$ISSUES"
+          fi
+
+          # Create iterate job via API
+          echo "📝 Creating iterate job..."
+          JOB_RESPONSE=$(curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/jobs" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "{
+              \"ticketId\": ${{ inputs.ticket_id }},
+              \"command\": \"iterate\",
+              \"branch\": \"${{ inputs.branch }}\"
+            }" \
+            -f -s -S)
+
+          JOB_ID=$(echo "$JOB_RESPONSE" | jq -r '.id')
+          echo "✅ Created iterate job: $JOB_ID"
+
+          # Dispatch iterate workflow
+          echo "🚀 Dispatching iterate.yml workflow..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/iterate.yml/dispatches" \
+            -d "{
+              \"ref\": \"main\",
+              \"inputs\": {
+                \"ticket_id\": \"${{ inputs.ticket_id }}\",
+                \"job_id\": \"$JOB_ID\",
+                \"project_id\": \"${{ inputs.project_id }}\",
+                \"branch\": \"${{ inputs.branch }}\",
+                \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c .),
+                \"githubRepository\": \"${{ inputs.githubRepository }}\"
+              }
+            }"
+
+          echo "✅ Iterate workflow dispatched successfully"
+
       - name: Debug Status Check
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         run: |
           echo "🔍 Debug Job Status Update"
           echo "  Parse status output: '${{ steps.parse.outputs.status }}'"
           echo "  Is success?: ${{ steps.parse.outputs.status == 'success' }}"
+          echo "  Is iterate_required?: ${{ steps.parse.outputs.status == 'iterate_required' }}"
           echo "  Files output: '${{ steps.parse.outputs.files }}'"
 
       - name: Update Job Status - Success
-        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
+        if: ${{ env.SKIP_CLAUDE != 'true' && (steps.parse.outputs.status == 'success' || steps.parse.outputs.status == 'iterate_required') }}
         run: |
           echo "✅ Updating job status to COMPLETED"
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
@@ -355,7 +413,7 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update job status"
 
       - name: Update Job Status - Failure
-        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' }}
+        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' && steps.parse.outputs.status != 'iterate_required' }}
         run: |
           echo "❌ Updating job status to FAILED (status was: '${{ steps.parse.outputs.status }}')"
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \

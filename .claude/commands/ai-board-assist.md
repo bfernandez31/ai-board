@@ -159,6 +159,124 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 **Example Request**: "@ai-board update database approach to use read replicas"
 **Action**: Update ALL relevant artifacts - plan.md (strategy), tasks.md (new tasks), spec.md (NFRs), data-model.md (schema)
 
+### BUILD Stage
+
+**Goal**: Provide guidance and clarification during implementation phase.
+
+**⚠️ CRITICAL RESTRICTIONS**:
+- ❌ **DO NOT** modify code files directly - developers handle implementation
+- ❌ **DO NOT** modify CLAUDE.md, constitution.md, or project documentation
+- ✅ **CAN** update specs/$BRANCH/ files if clarifications affect requirements
+- ✅ **CAN** provide code snippets and guidance in response
+
+**Process**:
+1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
+2. **READ SPECS**: Read all specs/$BRANCH/ files for context
+3. **ANALYZE REQUEST**: Understand what guidance is needed
+4. **PROVIDE GUIDANCE**: Offer implementation suggestions, code examples, clarifications
+5. **UPDATE SPECS IF NEEDED**: Only if the clarification changes requirements
+6. **CREATE RESULT**: Write `.ai-board-result.md` with status
+7. **OUTPUT**: Provide helpful guidance to the developer
+
+**Example Request**: "@ai-board how should I handle the database connection pooling?"
+**Action**: Provide code examples and best practices, update data-model.md if needed
+
+### VERIFY Stage
+
+**Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for minor fixes.
+
+**⚠️ CRITICAL APPROACH**:
+- **QUANTIFY FIRST**: Assess the size and impact of needed changes
+- **AUTOMATE MINOR**: Launch iterate job for small fixes (< 30% divergence)
+- **INFORM MAJOR**: Explain options for larger changes
+
+**Process for VERIFY**:
+1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
+2. **READ ALL SPECS**: Read specs/$BRANCH/ files and understand current state
+3. **ANALYZE ISSUES**: Parse the user's request to understand what's not working
+4. **QUANTIFY IMPACT**: Calculate the divergence percentage and effort required:
+   - Count affected files
+   - Estimate lines of code to change
+   - Check if architectural changes needed
+   - Calculate divergence from original spec
+5. **DECIDE ACTION**:
+   - **MINOR (< 30% divergence)**: Auto-launch iterate job
+   - **MODERATE (30-60%)**: Inform user of options
+   - **MAJOR (> 60%)**: Recommend requalification
+
+**Quantification Formula**:
+```
+divergence = (
+  files_to_change * 0.3 +
+  spec_changes_needed * 0.4 +
+  architecture_impact * 0.3
+) / total_scope
+```
+
+**Response Templates**:
+
+#### MINOR - Auto Iterate
+```markdown
+@[user:user] ✅ **Minor adjustments detected - Auto-fixing**
+
+Issues identified (estimated: 1-2h):
+- Missing email validation
+- Button alignment on mobile
+- Error message formatting
+
+**Action**: Launching iteration job #[JOB_ID] to fix these automatically.
+These changes align with the original specification.
+
+The ticket will remain in VERIFY while fixes are applied.
+```
+
+#### MODERATE - Manual Decision
+```markdown
+@[user:user] ⚠️ **Moderate changes required - Decision needed**
+
+The requested changes differ from specifications (35% divergence):
+- New validation rules not in original spec
+- API response format needs adjustment
+- Additional UI components required
+
+**Estimated effort**: 4-6 hours
+
+**Available options**:
+1. **Move to PLAN** - Adjust specifications and implementation approach
+2. **Move to INBOX** - Full requalification if requirements changed
+3. **Ship & Create New** - Deliver current version, new ticket for enhancements
+
+Please move the ticket to your preferred stage.
+```
+
+#### MAJOR - Requalification
+```markdown
+@[user:user] 🔴 **Major misalignment detected**
+
+The implementation fundamentally differs from requirements (75% divergence):
+- Different workflow than specified
+- Data model doesn't support required features
+- Performance cannot meet NFRs
+
+**This exceeds VERIFY stage scope.**
+
+**Recommendations**:
+1. **Move to INBOX** - Requirements have changed significantly
+2. **Ship MVP + New Feature** - Deliver basic version, iterate in new ticket
+
+Automatic fixes are not possible for changes of this magnitude.
+```
+
+**Integration with iterate.yml**:
+When divergence < 30%, automatically:
+1. Create job with command='iterate'
+2. Dispatch iterate.yml workflow with issues_to_fix
+3. Workflow will fix code and sync all documentation
+4. Ticket stays in VERIFY throughout
+
+**Example Request**: "@ai-board the validation isn't working correctly on the form"
+**Action**: Quantify the issue, if minor launch iterate job, if major inform user
+
 ## Output Format
 
 Your main output should be a clean Markdown summary that will be posted directly as a comment on the ticket. This should be user-friendly and well-formatted.
@@ -169,7 +287,7 @@ Additionally, create a file `specs/$BRANCH/.ai-board-result.md` for workflow sta
 # AI-BOARD Assist Result
 
 ## Status
-[SUCCESS|ERROR|NOT_IMPLEMENTED]
+[SUCCESS|ERROR|NOT_IMPLEMENTED|ITERATE_REQUIRED]
 
 ## Message
 @{USER} [Your human-readable message here]
@@ -230,6 +348,29 @@ Holistically updated all artifacts for read replica approach:
 - **data-model.md**: Added connection pooling patterns, replica configuration schema
 ```
 
+
+### Iterate Required Result (VERIFY Stage)
+
+```markdown
+# AI-BOARD Assist Result
+
+## Status
+ITERATE_REQUIRED
+
+## Message
+@john.doe Minor issues detected - launching automatic iteration job to fix them.
+
+## Files Modified
+None (will be updated by iterate job)
+
+## Issues To Fix
+- Missing email validation
+- Button alignment on mobile
+- Error message formatting
+
+## Summary
+Minor adjustments needed (< 30% divergence). Launching iterate workflow automatically.
+```
 
 ### Error Result
 

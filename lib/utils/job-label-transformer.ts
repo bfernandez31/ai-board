@@ -60,6 +60,11 @@ export function getContextualLabel(
     return 'TESTING';
   }
 
+  // Iterate command (minor fixes during VERIFY) shows "TESTING"
+  if (command === 'iterate') {
+    return 'TESTING';
+  }
+
   if (command.startsWith('comment-')) {
     return 'ASSISTING';
   }
