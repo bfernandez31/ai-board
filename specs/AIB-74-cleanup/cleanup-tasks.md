@@ -14,7 +14,7 @@
 
 ## Fixes
 ### Dead Code Removal (Safe)
-- [ ] T006: Remove lib/utils/time.ts (unused duplicate of format-timestamp.ts)
+- [x] T006: Remove lib/utils/time.ts (unused duplicate of format-timestamp.ts)
 - [ ] T007: Remove tests/unit/use-job-status.test.ts.skip (references non-existent modules)
 - [ ] T008: Remove lib/schemas/demo-data.ts (unused schema file)
 - [ ] T009: Remove currentJob prop from ticket-card.tsx and stage-column.tsx
