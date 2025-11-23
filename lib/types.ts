@@ -22,51 +22,6 @@ export interface TicketsByStage {
   SHIP: Ticket[];
 }
 
-/**
- * Response type for POST /api/tickets - created ticket
- */
-export interface CreateTicketResponse {
-  id: number;
-  title: string;
-  description: string | null;
-  stage: Stage;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Error response structure for API endpoints
- */
-export interface ErrorResponse {
-  error: string;
-  code?: 'VALIDATION_ERROR' | 'DATABASE_ERROR' | 'INTERNAL_ERROR';
-}
-
-/**
- * UI Component Props
- */
-
-/**
- * Props for TicketCard component
- */
-export interface TicketCardProps {
-  ticket: Ticket;
-}
-
-/**
- * Props for Column component
- */
-export interface ColumnProps {
-  stage: Stage;
-  tickets: Ticket[];
-}
-
-/**
- * Props for Board component
- */
-export interface BoardProps {
-  ticketsByStage: TicketsByStage;
-}
 
 /**
  * Drag-and-Drop Types
@@ -104,29 +59,3 @@ export interface TicketWithVersion {
   }>;
 }
 
-/**
- * Request body for updating ticket stage
- */
-export interface UpdateStageRequest {
-  stage: Stage;
-  version: number;
-}
-
-/**
- * Response body for successful stage update
- */
-export interface UpdateStageResponse {
-  id: number;
-  stage: Stage;
-  version: number;
-  updatedAt: string;
-}
-
-/**
- * Error response when ticket was modified by another user (409 Conflict)
- */
-export interface StageConflictError {
-  error: string;
-  currentStage: Stage;
-  currentVersion: number;
-}

@@ -17,7 +17,7 @@
 - [x] T006: Remove lib/utils/time.ts (unused duplicate of format-timestamp.ts)
 - [x] T007: Remove tests/unit/use-job-status.test.ts.skip (references non-existent modules)
 - [x] T008: Remove lib/schemas/demo-data.ts (unused schema file)
-- [ ] T009: Remove currentJob prop from ticket-card.tsx and stage-column.tsx
+- [x] T009: Remove currentJob prop from ticket-card.tsx and stage-column.tsx
 - [ ] T010: Remove unused type exports from lib/types.ts (CreateTicketResponse, TicketCardProps, ColumnProps, UpdateStageRequest, UpdateStageResponse, StageConflictError)
 - [ ] T011: Remove unused exports from lib/optimistic-updates.ts (confirmTicketUpdate)
 - [ ] T012: Remove unused export from lib/stage-transitions.ts (isTerminalStage)
