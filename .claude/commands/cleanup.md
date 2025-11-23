@@ -12,32 +12,46 @@ allowed-tools: ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "TodoWrite"]
 
 Automated technical debt cleanup analyzing all changes since last cleanup.
 
+## Input Payload
+
+`$ARGUMENTS` contains a JSON payload with ticket info:
+```json
+{
+  "ticketKey": "ABC-123"    // required: ticket identifier for branch naming
+}
+```
+
+The `MERGE_POINT` environment variable contains the git SHA of the last cleanup merge point.
+
 ## Context Discovery
 
 1. **CLAUDE.md** (auto-loaded) → Project stack, commands, conventions
 2. **Read `.specify/memory/constitution.md`** → Project principles, non-negotiable rules
-3. **Find merge point** → `git log --merges --grep="cleanup-" -1` or use `$MERGE_POINT` env var
-4. **Locate cleanup-tasks.md** → In the specs directory created by the workflow
+3. **Get merge point** → Use `$MERGE_POINT` env var (set by workflow)
+4. **Locate cleanup-tasks.md** → In the specs directory (created by Phase 0)
 
 ## Workflow
+
+### Phase 0: Branch Creation
+
+1. Parse `$ARGUMENTS` JSON to extract `TICKET_KEY`
+2. Create cleanup branch:
+   ```bash
+   .specify/scripts/bash/create-new-feature.sh --json --mode=cleanup --ticket-key="$TICKET_KEY" "Cleanup"
+   ```
+3. Parse JSON output for `BRANCH_NAME` and `SPEC_FILE`
+4. Verify branch was created and cleanup-tasks.md exists in the spec directory
 
 ### Phase 1: Discovery
 
 ```bash
-# Find last cleanup merge point
-MERGE_POINT=$(git log --merges --grep="cleanup-" --format="%H" -1)
-
-# If no previous cleanup, use first commit
-if [ -z "$MERGE_POINT" ]; then
-  MERGE_POINT=$(git rev-list --max-parents=0 HEAD | tail -1)
-fi
-
-# Get full diff
+# Use MERGE_POINT from environment (set by workflow)
+# Get full diff since merge point
 git diff --name-only "$MERGE_POINT"..HEAD
 ```
 
 Update `cleanup-tasks.md`:
-- [x] T001: Find last cleanup merge point
+- [x] T001: Merge point received from workflow
 - [x] T002: Analyze diff since last cleanup
 
 ### Phase 2: Analysis

@@ -37,23 +37,32 @@ The text the user typed after `/speckit.specify` in the triggering message **is*
 
 Given that feature description, do this:
 
-1. Parse the command payload to extract the feature description and the effective clarification policy:
+1. Parse the command payload to extract ticket info and the effective clarification policy:
    - If `$ARGUMENTS` is empty ➜ ERROR "No feature description provided".
    - Trim leading whitespace; if the first non-blank character is `{`, treat `$ARGUMENTS` as JSON with shape:
      ```json
      {
-       "featureDescription": "...",        // required string
-       "clarificationPolicy": "..."        // optional enum: AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE
+       "ticketKey": "...",              // required string (e.g., "ABC-123")
+       "title": "...",                  // required string
+       "description": "...",            // optional string
+       "clarificationPolicy": "..."     // optional enum: AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE
      }
      ```
-   - Use `jq` (or `python - json`) to parse the payload safely. Enforce string output for `featureDescription`; ERROR if missing/empty.
+   - Use `jq` (or `python - json`) to parse the payload safely. Enforce string output for `ticketKey` and `title`; ERROR if missing/empty.
    - Set `PAYLOAD_KIND = 'JSON'` when parsing succeeds (else leave as `'TEXT'`).
+   - Store `TICKET_KEY` for branch naming, `TITLE` for branch naming and spec header.
+   - Combine `title` and `description` into `FEATURE_DESCRIPTION` for spec content.
    - Capture `clarificationPolicy` (normalize to uppercase enum; strip surrounding quotes/spaces). If absent or null, leave unset.
-   - If payload is not JSON, treat `$ARGUMENTS` as the raw feature description, set `PAYLOAD_KIND = 'TEXT'`, and leave `clarificationPolicy` unset.
+   - If payload is not JSON, treat `$ARGUMENTS` as the raw feature description, set `PAYLOAD_KIND = 'TEXT'`, leave `TICKET_KEY` unset, and leave `clarificationPolicy` unset.
    - Store the cleaned description in `FEATURE_DESCRIPTION` and the parsed policy in `POLICY_INPUT` for later steps.
 
-2. Run the script `.specify/scripts/bash/create-new-feature.sh --json "$FEATURE_DESCRIPTION"` from repo root and parse its JSON output for BRANCH_NAME and SPEC_FILE. When the description comes from JSON, use a helper (e.g., `python - <<'PY'`) to emit a safely escaped string before invoking the script. All file paths must be absolute.
-  **IMPORTANT** You must only ever run this script once. The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+2. Run the script to create the branch:
+   - If `TICKET_KEY` is set (JSON mode from ai-board):
+     `.specify/scripts/bash/create-new-feature.sh --json --ticket-key="$TICKET_KEY" "$TITLE"`
+   - Else (CLI mode):
+     `.specify/scripts/bash/create-new-feature.sh --json "$FEATURE_DESCRIPTION"`
+   - Parse JSON output for BRANCH_NAME and SPEC_FILE. When values come from JSON, use a helper (e.g., `python - <<'PY'`) to emit a safely escaped string before invoking the script. All file paths must be absolute.
+   **IMPORTANT** You must only ever run this script once. The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 3. Load `.specify/templates/spec-template.md` to understand required sections.
 
 4. Follow this execution flow:

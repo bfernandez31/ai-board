@@ -92,9 +92,11 @@ steps:
     run: |
       if [[ "${{ inputs.command }}" == "specify" ]]; then
         JSON_PAYLOAD=$(jq -n \
+          --arg tk "${{ inputs.ticketKey }}" \
+          --arg title "${{ inputs.ticketTitle }}" \
           --arg desc "${{ inputs.ticketDescription }}" \
           --arg policy "$EFFECTIVE_POLICY" \
-          '{featureDescription: $desc, clarificationPolicy: $policy}')
+          '{ticketKey: $tk, title: $title, description: $desc, clarificationPolicy: $policy}')
 
         claude --dangerously-skip-permissions "/speckit.specify '${JSON_PAYLOAD}'"
 

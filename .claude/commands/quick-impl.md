@@ -24,11 +24,19 @@ This command implements simple features directly from ticket context without for
 ## Outline
 
 1. **Create feature branch and minimal spec**:
-   - `$ARGUMENTS` contains the full feature description: `#<ticket_id> <ticket_title>\n<ticket_description>`
-   - Store the entire content as `FEATURE_DESCRIPTION` (do not parse or extract ticket ID separately)
-   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl "$FEATURE_DESCRIPTION"` from repo root
-   - Script generates branch name from full feature description (e.g., `#123 Fix login bug` → `032-123-fix-login`)
-   - Script creates: branch, specs/<num>-<slug>/ directory, and spec.md with feature description
+   - `$ARGUMENTS` contains a JSON payload with ticket info:
+     ```json
+     {
+       "ticketKey": "ABC-123",    // required: ticket identifier for branch naming
+       "title": "...",            // required: ticket title
+       "description": "..."       // optional: ticket description
+     }
+     ```
+   - Parse JSON: extract `TICKET_KEY`, `TITLE`, and `DESCRIPTION`
+   - Combine `TITLE` and `DESCRIPTION` into `FEATURE_DESCRIPTION` for spec content
+   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
+   - Script generates branch name: `{ticketKey}-{3-words}` (e.g., `ABC-123-fix-login-bug`)
+   - Script creates: branch, specs/{branch}/ directory, and spec.md with feature description
    - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)
    - Verify branch was created and spec.md exists
 

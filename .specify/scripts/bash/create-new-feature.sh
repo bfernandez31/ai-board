@@ -4,12 +4,14 @@ set -e
 
 JSON_MODE=false
 MODE="specify"  # Default mode: full spec template
+TICKET_KEY=""   # Optional: ticket key for branch naming (e.g., ABC-123)
 ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --json) JSON_MODE=true ;;
         --mode=*) MODE="${arg#--mode=}" ;;
-        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] <feature_description>"; exit 0 ;;
+        --ticket-key=*) TICKET_KEY="${arg#--ticket-key=}" ;;
+        --help|-h) echo "Usage: $0 [--json] [--mode=specify|quick-impl|cleanup] [--ticket-key=ABC-123] <feature_description>"; exit 0 ;;
         *) ARGS+=("$arg") ;;
     esac
 done
@@ -75,15 +77,28 @@ fi
 NEXT=$((HIGHEST + 1))
 FEATURE_NUM=$(printf "%03d" "$NEXT")
 
-# Branch naming depends on mode
-if [ "$MODE" = "cleanup" ]; then
-    # Cleanup mode: use date-based naming
-    BRANCH_NAME="cleanup-$(date +%Y%m%d)"
+# Branch naming logic
+# - JSON mode with ticket-key: {ticketKey}-{words} or {ticketKey}-cleanup
+# - CLI mode (no ticket-key): {FEATURE_NUM}-{words} or cleanup-{date}
+
+# First, compute WORDS from description (used by both modes)
+SLUG=$(echo "$FEATURE_DESCRIPTION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
+WORDS=$(echo "$SLUG" | tr '-' '\n' | grep -v '^$' | head -3 | tr '\n' '-' | sed 's/-$//')
+
+if [ "$JSON_MODE" = true ] && [ -n "$TICKET_KEY" ]; then
+    # AI-Board mode: use ticketKey prefix
+    if [ "$MODE" = "cleanup" ]; then
+        BRANCH_NAME="${TICKET_KEY}-cleanup"
+    else
+        BRANCH_NAME="${TICKET_KEY}-${WORDS}"
+    fi
 else
-    # Standard modes: use numbered naming
-    BRANCH_NAME=$(echo "$FEATURE_DESCRIPTION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
-    WORDS=$(echo "$BRANCH_NAME" | tr '-' '\n' | grep -v '^$' | head -3 | tr '\n' '-' | sed 's/-$//')
-    BRANCH_NAME="${FEATURE_NUM}-${WORDS}"
+    # CLI mode: use FEATURE_NUM prefix (original behavior)
+    if [ "$MODE" = "cleanup" ]; then
+        BRANCH_NAME="cleanup-$(date +%Y%m%d)"
+    else
+        BRANCH_NAME="${FEATURE_NUM}-${WORDS}"
+    fi
 fi
 
 if [ "$HAS_GIT" = true ]; then

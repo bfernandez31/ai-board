@@ -295,10 +295,11 @@ export async function handleTicketTransition(
 
         if (isQuickImpl) {
           // Quick-impl mode: Use quick-impl.yml input schema
-          // Construct JSON payload with title and description
+          // Construct JSON payload with separated fields (harmonized with specifyPayload)
           const quickImplPayload = {
+            ticketKey: ticket.ticketKey,
             title: ticket.title,
-            description: ticket.description,
+            description: ticket.description || '',
           };
 
           workflowInputs = {
@@ -343,9 +344,11 @@ export async function handleTicketTransition(
             // Resolve effective clarification policy (ticket ?? project)
             const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
 
-            // Construct JSON payload with feature description and policy
+            // Construct JSON payload with separated fields
             const specifyPayload = {
-              featureDescription: `#${ticket.id} ${ticket.title}\n${ticket.description}`,
+              ticketKey: ticket.ticketKey,
+              title: ticket.title,
+              description: ticket.description || '',
               clarificationPolicy: effectivePolicy,
             };
 

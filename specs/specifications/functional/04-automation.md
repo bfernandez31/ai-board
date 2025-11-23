@@ -66,7 +66,7 @@ When ticket moves from INBOX to SPECIFY stage:
 2. GitHub Actions workflow dispatches
 3. Workflow creates Git feature branch
 4. AI generates specification based on ticket title and description
-5. Specification written to specs/{num}-{description}/spec.md
+5. Specification written to specs/{branch-name}/spec.md (e.g., specs/AIB-42-add-feature/spec.md)
 6. Changes committed and pushed to branch
 7. Ticket branch field updated with branch name
 8. Job status updates to COMPLETED
@@ -369,10 +369,11 @@ When tests cannot be fixed automatically:
 Workflows automatically create Git feature branches:
 
 **Branch Naming**:
-- Format: `{num}-{description}`
-- Example: `042-ticket-comments-context`
-- Number: Zero-padded 3-digit ticket number
+- Format: `{ticketKey}-{description}` (ai-board workflows)
+- Example: `AIB-42-ticket-comments-context`
+- ticketKey: Project-specific ticket identifier (e.g., AIB-42)
 - Description: Kebab-case slug from ticket title (first 3 words)
+- CLI fallback: `{num}-{description}` when not invoked via ai-board
 
 **Branch Lifecycle**:
 1. Workflow checks out main branch
@@ -384,7 +385,7 @@ Workflows automatically create Git feature branches:
 ### Branch Updates
 
 Each workflow stage adds to the same branch:
-- SPECIFY: Creates specs/{num}-{description}/spec.md
+- SPECIFY: Creates specs/{branch-name}/spec.md
 - PLAN: Adds plan.md and tasks.md to specs directory
 - BUILD: Adds implementation code to project
 - AI-BOARD comments: Modifies existing spec/plan files
@@ -698,9 +699,9 @@ The cleanup workflow performs diff-based analysis:
 ### Cleanup Execution
 
 **Workflow Steps**:
-1. Create cleanup branch (`cleanup-YYYYMMDD`)
-2. Analyze diff since last cleanup merge
-3. Execute `/cleanup` Claude command
+1. Find last cleanup merge point from git history
+2. Execute `/cleanup` Claude command (creates branch `{ticketKey}-cleanup`)
+3. Analyze diff since last cleanup merge
 4. Apply fixes without breaking changes
 5. Run impacted tests only (not full suite)
 6. Create pull request with validated fixes
@@ -726,6 +727,6 @@ The cleanup workflow performs diff-based analysis:
 - No special treatment based on workflowType
 
 **Branch Pattern**:
-- Cleanup branches named `cleanup-YYYYMMDD`
-- Follows project branch naming conventions
+- Cleanup branches named `{ticketKey}-cleanup` (e.g., `AIB-42-cleanup`)
+- Follows project branch naming conventions (harmonized with other workflows)
 - Branch stored in ticket.branch field

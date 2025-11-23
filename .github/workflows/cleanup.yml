@@ -142,50 +142,44 @@ jobs:
 
           echo "merge_sha=$MERGE_SHA" >> $GITHUB_OUTPUT
 
-      # Create cleanup branch using the script
-      - name: Create Cleanup Branch
-        id: create-branch
-        run: |
-          MERGE_SHA="${{ steps.find-merge.outputs.merge_sha }}"
-
-          # Use the create-new-feature script with cleanup mode
-          RESULT=$(.specify/scripts/bash/create-new-feature.sh --json --mode=cleanup "Clean $(date +%Y-%m-%d)")
-
-          CLEANUP_BRANCH=$(echo "$RESULT" | jq -r '.BRANCH_NAME')
-          SPEC_DIR=$(dirname "$(echo "$RESULT" | jq -r '.SPEC_FILE')")
-
-          echo "branch=$CLEANUP_BRANCH" >> $GITHUB_OUTPUT
-          echo "spec_dir=$SPEC_DIR" >> $GITHUB_OUTPUT
-          echo "📋 Created cleanup branch: $CLEANUP_BRANCH"
-          echo "📁 Spec directory: $SPEC_DIR"
-
-          # Store merge point for Claude to discover
-          echo "MERGE_POINT=$MERGE_SHA" >> "$GITHUB_ENV"
-
-          # Show diff statistics for logging
-          echo "📊 Diff statistics since $MERGE_SHA:"
-          git diff --stat "$MERGE_SHA"..HEAD 2>/dev/null | head -20 || echo "Unable to get diff stats"
-
-      # Execute Claude cleanup command (no JSON - Claude reads context from CLAUDE.md)
+      # Execute Claude cleanup command (Claude creates branch via /cleanup command)
       - name: Execute Cleanup Analysis
         id: cleanup
+        env:
+          MERGE_POINT: ${{ steps.find-merge.outputs.merge_sha }}
         run: |
           echo "🧹 Starting cleanup analysis..."
           echo "📍 Merge point: $MERGE_POINT"
 
-          # Claude will read CLAUDE.md and constitution for project context
+          # Show diff statistics for logging
+          echo "📊 Diff statistics since $MERGE_POINT:"
+          git diff --stat "$MERGE_POINT"..HEAD 2>/dev/null | head -20 || echo "Unable to get diff stats"
+
+          # Build JSON payload with ticketKey
+          CLEANUP_PAYLOAD=$(jq -n --arg tk "${{ inputs.ticket_id }}" '{ticketKey: $tk}')
+          echo "📦 Payload: $CLEANUP_PAYLOAD"
+
+          # Claude will create the branch, read CLAUDE.md and constitution for project context
           # Claude will use cleanup-tasks.md to track progress
-          claude --dangerously-skip-permissions --model opus "/cleanup ultrathink IMPORTANT: never run the full test suite, only impacted tests" || {
+          claude --dangerously-skip-permissions --model opus "/cleanup $CLEANUP_PAYLOAD" || {
             echo "❌ Cleanup execution failed"
             exit 1
           }
 
           echo "✅ Cleanup analysis complete"
 
+      # Capture branch name after Claude execution (harmonized with speckit/quick-impl)
+      - name: Capture Branch Name
+        id: capture-branch
+        run: |
+          CLEANUP_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          echo "branch=$CLEANUP_BRANCH" >> $GITHUB_OUTPUT
+          echo "📋 Captured cleanup branch: $CLEANUP_BRANCH"
+
       # Commit and push changes
       - name: Commit and Push Changes
         run: |
-          CLEANUP_BRANCH="${{ steps.create-branch.outputs.branch }}"
+          CLEANUP_BRANCH="${{ steps.capture-branch.outputs.branch }}"
 
           git add .
 
@@ -208,7 +202,7 @@ jobs:
       - name: Update Ticket Branch
         if: success()
         run: |
-          CLEANUP_BRANCH="${{ steps.create-branch.outputs.branch }}"
+          CLEANUP_BRANCH="${{ steps.capture-branch.outputs.branch }}"
           curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/branch" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
