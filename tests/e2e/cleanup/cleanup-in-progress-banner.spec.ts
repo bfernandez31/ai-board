@@ -245,4 +245,126 @@ test.describe('CleanupInProgressBanner', () => {
     await expect(banner).toContainText(/preview deployments|previews/i);
     await expect(banner).toContainText(/unlock when cleanup completes|automatically/i);
   });
+
+  /**
+   * AIB-72: Test visual lock overlay on drag during cleanup
+   * Given: Project has activeCleanupJobId with RUNNING job
+   * When: User drags a ticket from INBOX
+   * Then: Columns show "Cleanup in progress" visual lock overlay
+   */
+  test('should show visual lock overlay when dragging during cleanup', async ({ page, projectId }) => {
+    // Arrange
+    await setupTestData(projectId);
+
+    // Create an INBOX ticket to drag
+    const inboxTicket = await createTestTicket(projectId, {
+      title: '[e2e] Test drag during cleanup',
+      description: '[e2e] Ticket to test visual lock',
+      stage: 'INBOX',
+    });
+
+    // Create a cleanup ticket and job
+    const cleanupTicket = await createCleanupTicket(projectId);
+
+    const cleanupJob = await prisma.job.create({
+      data: {
+        ticketId: cleanupTicket.id,
+        projectId,
+        command: 'clean',
+        status: 'RUNNING',
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Set activeCleanupJobId
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { activeCleanupJobId: cleanupJob.id },
+    });
+
+    // Act - Navigate to board page
+    await page.goto(`/projects/${projectId}/board`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Start dragging the ticket (but don't release)
+    const ticketCard = page.locator(`[data-ticket-id="${inboxTicket.id}"]`);
+    const ticketBox = await ticketCard.boundingBox();
+
+    if (ticketBox) {
+      // Start drag - mouse down and move slightly to trigger drag
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      // Move slightly to trigger drag
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 15, ticketBox.y + ticketBox.height / 2, { steps: 3 });
+
+      // Assert - Visual lock overlay should appear with cleanup message
+      // Multiple columns show the overlay, so use .first() to check one is visible
+      const lockOverlay = page.locator('text="Cleanup in progress"').first();
+      await expect(lockOverlay).toBeVisible({ timeout: 5000 });
+
+      // Release mouse
+      await page.mouse.up();
+    }
+  });
+
+  /**
+   * AIB-72: Test that drop zones are disabled during cleanup
+   * Given: Project has activeCleanupJobId with RUNNING job
+   * When: User views board during drag
+   * Then: Drop zone columns should have disabled visual style (opacity-50)
+   */
+  test('should disable drop zones during cleanup drag', async ({ page, projectId }) => {
+    // Arrange
+    await setupTestData(projectId);
+
+    // Create an INBOX ticket to drag
+    const inboxTicket = await createTestTicket(projectId, {
+      title: '[e2e] Test drop zone disable',
+      description: '[e2e] Ticket to test drop zone visual',
+      stage: 'INBOX',
+    });
+
+    // Create a cleanup ticket and job
+    const cleanupTicket = await createCleanupTicket(projectId);
+
+    const cleanupJob = await prisma.job.create({
+      data: {
+        ticketId: cleanupTicket.id,
+        projectId,
+        command: 'clean',
+        status: 'RUNNING',
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Set activeCleanupJobId
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { activeCleanupJobId: cleanupJob.id },
+    });
+
+    // Act - Navigate to board page
+    await page.goto(`/projects/${projectId}/board`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Start dragging the ticket
+    const ticketCard = page.locator(`[data-ticket-id="${inboxTicket.id}"]`);
+    const ticketBox = await ticketCard.boundingBox();
+
+    if (ticketBox) {
+      // Start drag
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 15, ticketBox.y + ticketBox.height / 2, { steps: 3 });
+
+      // Assert - SPECIFY column should have the cursor-not-allowed class during drag
+      const specifyColumn = page.locator('[data-stage="SPECIFY"]');
+      await expect(specifyColumn).toHaveClass(/cursor-not-allowed/);
+
+      // Release mouse
+      await page.mouse.up();
+    }
+  });
 });

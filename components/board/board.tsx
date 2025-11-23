@@ -111,6 +111,16 @@ function BoardContent({
   const [dragSource, setDragSource] = useState<Stage | null>(null);
   const [draggedTicketHasJob, setDraggedTicketHasJob] = useState(false);
 
+  // AIB-72: Track if cleanup lock is active (determines if transitions are blocked)
+  const isCleanupLockActive = useMemo(() => {
+    if (!activeCleanupJobId) return false;
+    // Check if the cleanup job is still in progress (PENDING or RUNNING)
+    const cleanupJob = polledJobs.find(job => job.id === activeCleanupJobId);
+    // If we don't have polled data yet, assume lock is active (initial render)
+    if (!cleanupJob) return true;
+    return ['PENDING', 'RUNNING'].includes(cleanupJob.status);
+  }, [activeCleanupJobId, polledJobs]);
+
   // Pending transition for quick-impl modal (T035)
   const [pendingTransition, setPendingTransition] = useState<{
     ticket: TicketWithVersion;
@@ -765,6 +775,11 @@ function BoardContent({
         }
       }
 
+      // AIB-72: If cleanup lock is active, disable all drop zones (same behavior as job lock)
+      if (isCleanupLockActive) {
+        return 'opacity-50 cursor-not-allowed';
+      }
+
       // If ticket has active job, disable all drop zones
       if (draggedTicketHasJob) {
         return 'opacity-50 cursor-not-allowed';
@@ -791,7 +806,7 @@ function BoardContent({
         return 'opacity-50 cursor-not-allowed';
       }
     },
-    [isDragging, dragSource, draggedTicketHasJob, activeTicket, initialJobs, polledJobs]
+    [isDragging, dragSource, draggedTicketHasJob, isCleanupLockActive, activeTicket, initialJobs, polledJobs]
   );
 
   const stages = getAllStages();
@@ -871,7 +886,10 @@ function BoardContent({
             {stages.map((stage) => {
               // Exception for rollback: INBOX is not blocked when dragging failed BUILD ticket
               const isRollbackToInbox = dragSource === Stage.BUILD && stage === Stage.INBOX;
-              const isBlocked = isDragging && draggedTicketHasJob && !isRollbackToInbox;
+              // AIB-72: Block transitions if either ticket has active job OR cleanup is in progress
+              const isBlocked = isDragging && (draggedTicketHasJob || isCleanupLockActive) && !isRollbackToInbox;
+              // AIB-72: Determine block reason for appropriate overlay message
+              const blockReason = isCleanupLockActive ? 'cleanup' as const : 'job' as const;
 
               return (
                 <StageColumn
@@ -885,6 +903,7 @@ function BoardContent({
                   getTicketJobs={getTicketJobs}
                   dropZoneStyle={getDropZoneStyle(stage)}
                   isBlockedByJob={isBlocked}
+                  blockReason={blockReason}
                   activePreviewTicket={activePreviewTicket}
                   activeDeploymentTicket={activeDeploymentTicket}
                 />

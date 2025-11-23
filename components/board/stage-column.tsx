@@ -22,6 +22,8 @@ interface StageColumnProps {
   getTicketJobs?: (ticketId: number) => DualJobState;
   dropZoneStyle?: string;
   isBlockedByJob?: boolean;
+  // AIB-72: Reason why transitions are blocked ('job' for ticket job, 'cleanup' for project cleanup)
+  blockReason?: 'job' | 'cleanup';
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
 }
@@ -130,6 +132,7 @@ export const StageColumn = React.memo(
     getTicketJobs,
     dropZoneStyle,
     isBlockedByJob = false,
+    blockReason = 'job',
     activePreviewTicket,
     activeDeploymentTicket,
   }: StageColumnProps) => {
@@ -276,12 +279,21 @@ export const StageColumn = React.memo(
           visible={canScrollDown}
         />
 
-        {/* Blocked by Job Overlay */}
+        {/* Blocked by Job or Cleanup Overlay */}
         {isBlockedByJob && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 pointer-events-none">
             <Ban className="w-16 h-16 text-red-400 mb-3" strokeWidth={2.5} />
-            <p className="text-red-300 font-semibold text-sm">Workflow in progress</p>
-            <p className="text-zinc-400 text-xs mt-1">Wait for job completion</p>
+            {blockReason === 'cleanup' ? (
+              <>
+                <p className="text-red-300 font-semibold text-sm">Cleanup in progress</p>
+                <p className="text-zinc-400 text-xs mt-1">Wait for cleanup completion</p>
+              </>
+            ) : (
+              <>
+                <p className="text-red-300 font-semibold text-sm">Workflow in progress</p>
+                <p className="text-zinc-400 text-xs mt-1">Wait for job completion</p>
+              </>
+            )}
           </div>
         )}
       </div>
