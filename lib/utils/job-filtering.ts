@@ -20,7 +20,7 @@ import { matchesStage } from './stage-matcher';
  * - Return first job or null if array is empty
  *
  * Examples:
- * - Workflow commands: specify, plan, implement, quick-impl, verify
+ * - Workflow commands: specify, plan, implement, quick-impl, verify, iterate
  * - AI-BOARD commands (excluded): comment-specify, comment-plan, comment-build, comment-verify
  * - Deploy commands (excluded): deploy-preview
  */

@@ -7,9 +7,10 @@ import type { JobStatus } from '@prisma/client';
  * - WRITING: Specification and planning operations (specify, plan)
  * - CODING: Implementation operations (implement, quick-impl)
  * - TESTING: Test execution and verification operations (verify)
+ * - FIXING: Iteration and minor fixes during VERIFY (iterate)
  * - ASSISTING: AI-BOARD assistance operations (comment-*)
  */
-export type ContextualLabel = 'WRITING' | 'CODING' | 'TESTING' | 'ASSISTING';
+export type ContextualLabel = 'WRITING' | 'CODING' | 'TESTING' | 'FIXING' | 'ASSISTING';
 
 /**
  * DisplayStatus Type
@@ -58,6 +59,11 @@ export function getContextualLabel(
   // NEW: verify command shows "TESTING" for RUNNING status
   if (command === 'verify') {
     return 'TESTING';
+  }
+
+  // Iterate command (minor fixes during VERIFY) shows "FIXING"
+  if (command === 'iterate') {
+    return 'FIXING';
   }
 
   if (command.startsWith('comment-')) {

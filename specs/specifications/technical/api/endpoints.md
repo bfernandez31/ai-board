@@ -1022,6 +1022,53 @@ Fetch all job statuses for a project (polling endpoint).
 
 **Performance**: <100ms p95 (indexed query on projectId)
 
+### POST /api/projects/:projectId/jobs
+
+Create a new job for a ticket (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no user session check)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "ticketId": 42,
+  "command": "iterate",
+  "branch": "AIB-42-fix-validation"
+}
+```
+
+**Validation**:
+- `ticketId`: Required, positive integer, must belong to projectId
+- `command`: Required, string (1-50 chars), e.g., "iterate", "comment-verify"
+- `branch`: Optional, string (uses ticket branch if not provided)
+
+**Response** (201 Created):
+```json
+{
+  "id": 125,
+  "ticketId": 42,
+  "projectId": 3,
+  "command": "iterate",
+  "status": "PENDING",
+  "branch": "AIB-42-fix-validation",
+  "startedAt": "2025-01-15T10:40:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Validation failed or ticket doesn't belong to project
+- `401`: Invalid or missing workflow token
+- `404`: Ticket not found
+
+**Use Cases**:
+- AI-BOARD Assistant creates iterate jobs during VERIFY stage
+- Workflow orchestration for multi-stage operations
+- Internal job creation by GitHub Actions workflows
+
 ### PATCH /api/jobs/:id/status
 
 Update job status (workflow-only endpoint).
