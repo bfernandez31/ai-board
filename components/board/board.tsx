@@ -621,7 +621,7 @@ function BoardContent({
 
         toast({
           title: 'Quick implementation started',
-          description: `Workflow dispatched for ticket #${ticket.id}`,
+          description: `Workflow dispatched for ticket ${ticket.ticketKey}`,
         });
       }
     } catch (error) {

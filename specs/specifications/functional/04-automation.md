@@ -182,6 +182,7 @@ When ticket moves directly from INBOX to BUILD:
 - Warning modal appears before transition
 - Modal explains trade-offs: speed vs. documentation
 - User must explicitly confirm or cancel
+- On confirmation, success toast displays: "Workflow dispatched for ticket {ticketKey}" (e.g., "AIB-73")
 
 **Workflow Differences**:
 - Bypasses specification and planning stages
@@ -241,6 +242,7 @@ When ticket moves from BUILD to VERIFY stage:
 - **Time**: ~2-5 minutes (minimal overhead)
 - **Use**: Simple changes where tests are unnecessary (typos, styling, docs)
 - **Risk**: No automated validation before PR
+- **Success Feedback**: Toast notification displays ticket key (e.g., "AIB-73"), not internal ID
 
 ### Test Execution Strategy (FULL Workflow Only)
 
