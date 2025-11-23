@@ -29,6 +29,11 @@ describe('getContextualLabel', () => {
       expect(result).toBe('TESTING');
     });
 
+    it('transforms "iterate" command to FIXING', () => {
+      const result = getContextualLabel('iterate', 'RUNNING');
+      expect(result).toBe('FIXING');
+    });
+
     it('transforms "comment-specify" to ASSISTING', () => {
       const result = getContextualLabel('comment-specify', 'RUNNING');
       expect(result).toBe('ASSISTING');
@@ -76,6 +81,11 @@ describe('getContextualLabel', () => {
 
       it(`returns ${status} unchanged for "verify" command`, () => {
         const result = getContextualLabel('verify', status);
+        expect(result).toBe(status);
+      });
+
+      it(`returns ${status} unchanged for "iterate" command`, () => {
+        const result = getContextualLabel('iterate', status);
         expect(result).toBe(status);
       });
     });
