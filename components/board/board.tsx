@@ -17,6 +17,7 @@ import { DragOverlay } from './drag-overlay';
 import { OfflineIndicator } from './offline-indicator';
 import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
+import { RollbackVerifyModal } from './rollback-verify-modal';
 import { TrashZone } from './trash-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
 import { CleanupInProgressBanner } from '@/components/cleanup/CleanupInProgressBanner';
@@ -35,7 +36,7 @@ import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
-import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
+import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 
@@ -123,6 +124,12 @@ function BoardContent({
 
   // Pending transition for quick-impl modal (T035)
   const [pendingTransition, setPendingTransition] = useState<{
+    ticket: TicketWithVersion;
+    targetStage: Stage;
+  } | null>(null);
+
+  // Pending transition for verify rollback modal (AIB-75)
+  const [pendingVerifyRollback, setPendingVerifyRollback] = useState<{
     ticket: TicketWithVersion;
     targetStage: Stage;
   } | null>(null);
@@ -316,6 +323,12 @@ function BoardContent({
       // T036: Detect INBOX → BUILD and show quick-impl modal
       if (ticket.stage === Stage.INBOX && targetStage === Stage.BUILD) {
         setPendingTransition({ ticket, targetStage });
+        return;
+      }
+
+      // AIB-75: Detect VERIFY → PLAN and show rollback modal
+      if (ticket.stage === Stage.VERIFY && targetStage === Stage.PLAN) {
+        setPendingVerifyRollback({ ticket, targetStage });
         return;
       }
 
@@ -652,6 +665,121 @@ function BoardContent({
     setPendingTransition(null);
   }, []);
 
+  // AIB-75: Handle VERIFY to PLAN rollback confirmation
+  const handleVerifyRollbackConfirm = useCallback(async () => {
+    if (!pendingVerifyRollback) return;
+
+    const { ticket, targetStage } = pendingVerifyRollback;
+    setPendingVerifyRollback(null);
+
+    // Store original state for rollback
+    const originalStage = ticket.stage;
+    const originalVersion = ticket.version;
+
+    // Optimistic update - update cache directly
+    const updatedTickets = updateTicketStageOptimistically(
+      allTickets,
+      ticket.id,
+      targetStage
+    );
+    queryClient.setQueryData(
+      queryKeys.projects.tickets(projectId),
+      updatedTickets
+    );
+
+    // Send update to server using transition endpoint
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetStage,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        // Rollback optimistic update - revert cache
+        const revertedTickets = revertTicketStage(
+          updatedTickets,
+          ticket.id,
+          originalStage,
+          originalVersion
+        );
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          revertedTickets
+        );
+
+        // Show error message
+        toast({
+          variant: 'destructive',
+          title: 'Failed to rollback to PLAN',
+          description:
+            error.error || 'An error occurred while rolling back the ticket.',
+        });
+      } else {
+        // Success - merge server response with optimistic update
+        const serverData = await response.json();
+
+        const finalTickets = updatedTickets.map((t) =>
+          t.id === ticket.id
+            ? {
+                ...t,
+                stage: serverData.stage || t.stage,
+                version: serverData.version || t.version,
+                previewUrl: serverData.previewUrl,
+                updatedAt: serverData.updatedAt || t.updatedAt,
+              }
+            : t
+        );
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          finalTickets
+        );
+
+        // Invalidate jobs status to update job list (job was deleted)
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.jobsStatus(projectId),
+        });
+
+        toast({
+          title: 'Ticket rolled back to PLAN',
+          description: `${ticket.ticketKey} has been moved to PLAN stage. Preview URL cleared.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error rolling back to PLAN:', error);
+
+      // Rollback on network error - revert cache
+      const revertedTickets = revertTicketStage(
+        updatedTickets,
+        ticket.id,
+        originalStage,
+        originalVersion
+      );
+      queryClient.setQueryData(
+        queryKeys.projects.tickets(projectId),
+        revertedTickets
+      );
+
+      toast({
+        variant: 'destructive',
+        title: 'Network error',
+        description: 'Could not rollback ticket. Please check your connection.',
+      });
+    }
+  }, [pendingVerifyRollback, allTickets, toast, projectId, queryClient]);
+
+  // AIB-75: Handle VERIFY to PLAN rollback cancellation
+  const handleVerifyRollbackCancel = useCallback(() => {
+    setPendingVerifyRollback(null);
+  }, []);
+
   // Delete confirmation handlers (T023)
   const handleDeleteConfirm = useCallback(() => {
     if (!ticketToDelete) return;
@@ -689,19 +817,16 @@ function BoardContent({
     (stage: Stage): string => {
       if (!isDragging || !dragSource || !activeTicket) return '';
 
-      // Rollback mode: Dragging from BUILD to INBOX
-      if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
-        // Get most recent workflow job for the dragged ticket
+      // Helper function to get most recent workflow job
+      const getMostRecentWorkflowJob = () => {
         const ticketJobs = initialJobs.get(activeTicket.id) || [];
         const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id && !job.command.startsWith('comment-'));
 
-        // Merge polled jobs with initial jobs to get the most recent workflow job
-        let mostRecentWorkflowJob = null;
         if (polledTicketJobs.length > 0) {
           const mostRecentPolled = polledTicketJobs.reduce((latest, current) =>
             new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
           );
-          mostRecentWorkflowJob = {
+          return {
             id: mostRecentPolled.id,
             status: mostRecentPolled.status,
             command: mostRecentPolled.command,
@@ -710,16 +835,43 @@ function BoardContent({
           const workflowJobs = ticketJobs.filter(job => job.command && !job.command.startsWith('comment-'));
           if (workflowJobs.length > 0 && workflowJobs[0]) {
             const firstJob = workflowJobs[0];
-            mostRecentWorkflowJob = {
+            return {
               id: firstJob.id,
               status: firstJob.status,
               command: firstJob.command,
             };
           }
         }
+        return null;
+      };
+
+      // Rollback mode: Dragging from BUILD to INBOX
+      if (dragSource === Stage.BUILD && stage === Stage.INBOX) {
+        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
 
         // Validate rollback eligibility (only for quick-impl workflows)
         const validation = canRollbackToInbox(
+          dragSource,
+          stage,
+          activeTicket.workflowType,
+          mostRecentWorkflowJob
+        );
+
+        if (validation.allowed) {
+          // Rollback eligible - amber border
+          return 'border-4 border-dashed border-amber-500 bg-amber-500/10';
+        } else {
+          // Rollback not allowed - disabled with tooltip hint
+          return 'opacity-50 cursor-not-allowed';
+        }
+      }
+
+      // Rollback mode: Dragging from VERIFY to PLAN (AIB-75)
+      if (dragSource === Stage.VERIFY && stage === Stage.PLAN) {
+        const mostRecentWorkflowJob = getMostRecentWorkflowJob();
+
+        // Validate rollback eligibility (only for FULL workflows)
+        const validation = canRollbackToPlan(
           dragSource,
           stage,
           activeTicket.workflowType,
@@ -846,8 +998,10 @@ function BoardContent({
             {stages.map((stage) => {
               // Exception for rollback: INBOX is not blocked when dragging failed BUILD ticket
               const isRollbackToInbox = dragSource === Stage.BUILD && stage === Stage.INBOX;
+              // Exception for rollback: PLAN is not blocked when dragging VERIFY ticket (AIB-75)
+              const isRollbackToPlan = dragSource === Stage.VERIFY && stage === Stage.PLAN;
               // AIB-72: Block transitions if either ticket has active job OR cleanup is in progress
-              const isBlocked = isDragging && (draggedTicketHasJob || isCleanupLockActive) && !isRollbackToInbox;
+              const isBlocked = isDragging && (draggedTicketHasJob || isCleanupLockActive) && !isRollbackToInbox && !isRollbackToPlan;
               // AIB-72: Determine block reason for appropriate overlay message
               const blockReason = isCleanupLockActive ? 'cleanup' as const : 'job' as const;
 
@@ -898,6 +1052,13 @@ function BoardContent({
         open={!!pendingTransition}
         onConfirm={handleQuickImplConfirm}
         onCancel={handleQuickImplCancel}
+      />
+
+      {/* Verify to Plan Rollback Modal (AIB-75) */}
+      <RollbackVerifyModal
+        open={!!pendingVerifyRollback}
+        onConfirm={handleVerifyRollbackConfirm}
+        onCancel={handleVerifyRollbackCancel}
       />
 
       {/* Delete Confirmation Modal (T018, T023) */}

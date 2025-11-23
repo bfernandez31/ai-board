@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Stage, type Job } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
-import { canRollbackToInbox } from '@/app/lib/workflows/rollback-validator';
+import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 
@@ -133,9 +133,12 @@ export async function POST(
     }
 
     // Detect rollback attempt (BUILD → INBOX)
-    const isRollbackAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
+    const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
 
-    if (isRollbackAttempt) {
+    // Detect rollback attempt (VERIFY → PLAN)
+    const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
+
+    if (isRollbackToInboxAttempt) {
       // Get most recent workflow job
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
       const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
@@ -181,6 +184,56 @@ export async function POST(
         workflowType: updatedTicket.workflowType,
         branch: updatedTicket.branch,
         version: updatedTicket.version,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      });
+    }
+
+    if (isRollbackToPlanAttempt) {
+      // Get most recent workflow job
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      // Validate rollback eligibility (only for FULL workflows)
+      const validation = canRollbackToPlan(
+        ticket.stage,
+        targetStage as Stage,
+        ticket.workflowType,
+        mostRecentJob
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      // Execute rollback transaction
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        // Reset ticket state - keep branch and workflowType, clear previewUrl, increment version
+        const updated = await tx.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            stage: 'PLAN',
+            previewUrl: null,
+            version: { increment: 1 },
+          },
+        });
+
+        // Delete the job (COMPLETED/FAILED/CANCELLED)
+        if (mostRecentJob) {
+          await tx.job.delete({
+            where: { id: mostRecentJob.id },
+          });
+        }
+
+        return updated;
+      });
+
+      return NextResponse.json({
+        id: updatedTicket.id,
+        stage: updatedTicket.stage,
+        workflowType: updatedTicket.workflowType,
+        branch: updatedTicket.branch,
+        version: updatedTicket.version,
+        previewUrl: updatedTicket.previewUrl,
         updatedAt: updatedTicket.updatedAt.toISOString(),
       });
     }

@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Rollback VERIFY to PLAN API
+  description: API contract for rolling back tickets from VERIFY to PLAN stage
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/transition:
+    post:
+      summary: Transition ticket to a new stage
+      description: |
+        Handles stage transitions including VERIFY to PLAN rollback.
+        For rollback, validates workflow type is FULL and latest job is COMPLETED, FAILED, or CANCELLED.
+      tags:
+        - Tickets
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: cuid
+          description: Project identifier
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: cuid
+          description: Ticket identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+            examples:
+              rollbackToPlan:
+                summary: Rollback from VERIFY to PLAN
+                value:
+                  targetStage: PLAN
+              normalTransition:
+                summary: Normal forward transition
+                value:
+                  targetStage: SHIP
+      responses:
+        '200':
+          description: Transition successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          description: Invalid transition or validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTransition:
+                  value:
+                    error: "Invalid transition from VERIFY to INBOX"
+                quickWorkflow:
+                  value:
+                    error: "Rollback not available for QUICK workflows"
+                jobRunning:
+                  value:
+                    error: "Cannot rollback while workflow is running"
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Version conflict (optimistic locking)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Version conflict - ticket was modified"
+        '423':
+          description: Project locked (cleanup in progress)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project is locked during cleanup"
+
+components:
+  schemas:
+    TransitionRequest:
+      type: object
+      required:
+        - targetStage
+      properties:
+        targetStage:
+          type: string
+          enum:
+            - INBOX
+            - SPECIFY
+            - PLAN
+            - BUILD
+            - VERIFY
+            - SHIP
+          description: Target stage for the transition
+
+    TicketResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        ticketKey:
+          type: string
+          example: "ABC-123"
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        branch:
+          type: string
+          nullable: true
+          description: Git branch name (preserved during rollback)
+        previewUrl:
+          type: string
+          nullable: true
+          description: Vercel preview URL (cleared during rollback)
+        version:
+          type: integer
+          description: Optimistic locking version (incremented during rollback)
+        projectId:
+          type: string
+          format: cuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code (optional)
+
+    RollbackValidation:
+      type: object
+      description: Internal validation result (not exposed via API)
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+          description: Present when allowed is false

@@ -82,6 +82,7 @@ Users move tickets between stages using drag-and-drop:
 
 **Special Behaviors**:
 - INBOX tickets can drop on SPECIFY (normal workflow, blue highlighting) or BUILD (quick implementation, green highlighting)
+- VERIFY tickets (workflowType=FULL, job COMPLETED/FAILED/CANCELLED) can drop on PLAN (rollback, amber/red dashed highlighting)
 - All other transitions show next sequential stage as valid drop zone
 
 ### Stage Transition Behavior
@@ -97,6 +98,18 @@ Users move tickets between stages using drag-and-drop:
 - Confirmation modal appears before transition
 - Modal explains trade-offs (speed vs. documentation)
 - User must confirm or cancel the operation
+
+**VERIFY to PLAN Rollback**:
+- When dropping VERIFY ticket on PLAN column (FULL workflows only)
+- Confirmation modal appears explaining consequences:
+  - Implementation changes will be reverted (git reset)
+  - Spec files in `.specify/` folder are preserved
+  - Preview URL will be cleared
+  - Workflow job record will be deleted
+- Available when latest workflow job is COMPLETED, FAILED, or CANCELLED
+- Not available for QUICK or CLEAN workflow types
+- Not available when job is RUNNING or PENDING
+- Blocked during project cleanup (HTTP 423 Locked)
 
 ### Performance
 

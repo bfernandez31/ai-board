@@ -186,6 +186,7 @@ model Ticket {
   - Clickable icon appears on ticket card when URL is set
   - Only one ticket per project can have preview URL at a time
   - Cleared when new deployment initiated (single-preview enforcement)
+  - Cleared when ticket rolls back from VERIFY to PLAN (preview becomes invalid)
 - `version`: Optimistic concurrency control (incremented on each update)
 - `createdAt`: Creation timestamp (set once on creation)
 - `updatedAt`: Last modification timestamp (automatically updated by Prisma on any field change via `@updatedAt` directive)
@@ -297,8 +298,9 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Terminal states cannot transition to other states
 - Idempotent updates allowed (same status returns 200)
 - Most recent job (by startedAt) used for transition validation
-- Jobs never deleted (indefinite retention for audit trail)
-- AI-BOARD jobs (command like 'comment-%') don't block transitions
+- Jobs retained indefinitely for audit trail, except:
+  - Deleted when VERIFY to PLAN rollback occurs (job record removed as part of rollback)
+- AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 
 ### Comment
 
@@ -420,7 +422,8 @@ enum Stage {
 
 **Transitions**:
 - Sequential progression only (one stage forward)
-- No skipping or backwards movement
+- Limited rollback: BUILD → INBOX (quick-impl failed), VERIFY → PLAN (full workflow re-implementation)
+- No skipping stages
 - Initial: INBOX
 - Terminal: SHIP
 

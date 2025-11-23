@@ -56,6 +56,7 @@ export function getNextStage(currentStage: Stage): Stage | null {
  * Special cases:
  * - Quick-impl allows INBOX → BUILD (skipping SPECIFY and PLAN)
  * - Rollback allows BUILD → INBOX (only for QUICK workflowType)
+ * - Rollback allows VERIFY → PLAN (only for FULL workflowType)
  *
  * @param fromStage - The current stage
  * @param toStage - The target stage
@@ -67,6 +68,8 @@ export function getNextStage(currentStage: Stage): Stage | null {
  * isValidTransition(Stage.INBOX, Stage.BUILD)    // true (valid: quick-impl special case)
  * isValidTransition(Stage.BUILD, Stage.INBOX, 'QUICK')  // true (valid: rollback for quick-impl)
  * isValidTransition(Stage.BUILD, Stage.INBOX, 'FULL')   // false (rollback not allowed for normal workflow)
+ * isValidTransition(Stage.VERIFY, Stage.PLAN, 'FULL')   // true (valid: rollback for FULL workflow)
+ * isValidTransition(Stage.VERIFY, Stage.PLAN, 'QUICK')  // false (rollback not allowed for quick-impl)
  * isValidTransition(Stage.INBOX, Stage.PLAN)    // false (invalid: skipping SPECIFY)
  * isValidTransition(Stage.SPECIFY, Stage.BUILD) // false (invalid: skipping PLAN)
  * isValidTransition(Stage.BUILD, Stage.PLAN)    // false (invalid: backwards)
@@ -85,6 +88,11 @@ export function isValidTransition(
   // Special case: Rollback allows BUILD → INBOX (only for QUICK workflow)
   if (fromStage === Stage.BUILD && toStage === Stage.INBOX) {
     return workflowType === 'QUICK';
+  }
+
+  // Special case: Rollback allows VERIFY → PLAN (only for FULL workflow)
+  if (fromStage === Stage.VERIFY && toStage === Stage.PLAN) {
+    return workflowType === 'FULL';
   }
 
   // Normal sequential validation
