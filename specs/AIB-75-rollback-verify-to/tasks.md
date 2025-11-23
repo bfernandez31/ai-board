@@ -24,7 +24,7 @@
 
 **Purpose**: Extend existing types and interfaces needed for rollback validation
 
-- [ ] T001 Create RollbackValidation TypeScript interface in lib/workflows/rollback-validator.ts
+- [X] T001 Create RollbackValidation TypeScript interface in lib/workflows/rollback-validator.ts ✅ DONE
 
 ---
 
@@ -34,9 +34,9 @@
 
 **CRITICAL**: User Story implementations cannot work without this phase
 
-- [ ] T002 Write unit test for canRollbackToPlan() function in tests/unit/rollback-validator.test.ts
-- [ ] T003 Implement canRollbackToPlan() function in lib/workflows/rollback-validator.ts (depends on T001, T002)
-- [ ] T004 Update isValidTransition() to recognize VERIFY to PLAN transition in lib/stage-transitions.ts
+- [X] T002 Write unit test for canRollbackToPlan() function in tests/unit/rollback-validator.test.ts ✅ DONE
+- [X] T003 Implement canRollbackToPlan() function in lib/workflows/rollback-validator.ts (depends on T001, T002) ✅ DONE
+- [X] T004 Update isValidTransition() to recognize VERIFY to PLAN transition in lib/stage-transitions.ts ✅ DONE
 
 **Checkpoint**: Foundation ready - canRollbackToPlan() exists and passes all unit tests
 
@@ -50,12 +50,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Create RollbackVerifyModal component in components/board/rollback-verify-modal.tsx
-- [ ] T006 [US1] Add VERIFY to PLAN rollback handling in API route app/api/projects/[projectId]/tickets/[id]/transition/route.ts
-- [ ] T007 [US1] Add pendingVerifyRollback state and modal rendering in components/board/board.tsx
-- [ ] T008 [US1] Add handleVerifyRollbackConfirm handler in components/board/board.tsx
-- [ ] T009 [US1] Update handleDragEnd to detect VERIFY to PLAN drag and show modal in components/board/board.tsx
-- [ ] T010 [US1] Write E2E test for VERIFY to PLAN rollback flow in tests/e2e/verify-rollback.spec.ts
+- [X] T005 [US1] Create RollbackVerifyModal component in components/board/rollback-verify-modal.tsx ✅ DONE
+- [X] T006 [US1] Add VERIFY to PLAN rollback handling in API route app/api/projects/[projectId]/tickets/[id]/transition/route.ts ✅ DONE
+- [X] T007 [US1] Add pendingVerifyRollback state and modal rendering in components/board/board.tsx ✅ DONE
+- [X] T008 [US1] Add handleVerifyRollbackConfirm handler in components/board/board.tsx ✅ DONE
+- [X] T009 [US1] Update handleDragEnd to detect VERIFY to PLAN drag and show modal in components/board/board.tsx ✅ DONE
+- [X] T010 [US1] Write E2E test for VERIFY to PLAN rollback flow in tests/e2e/verify-rollback.spec.ts ✅ DONE
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can drag VERIFY tickets to PLAN, see confirmation modal, and execute rollback
 
@@ -69,10 +69,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Write unit tests for edge cases (RUNNING/PENDING job, QUICK workflow, no job) in tests/unit/rollback-validator.test.ts
-- [ ] T012 [US2] Add early return with toast for non-FULL workflows in handleDragEnd in components/board/board.tsx
-- [ ] T013 [US2] Add frontend validation check before showing modal in components/board/board.tsx
-- [ ] T014 [US2] Write E2E test for blocked rollback scenarios in tests/e2e/verify-rollback.spec.ts
+- [X] T011 [P] [US2] Write unit tests for edge cases (RUNNING/PENDING job, QUICK workflow, no job) in tests/unit/rollback-validator.test.ts ✅ DONE
+- [X] T012 [US2] Add early return with toast for non-FULL workflows in handleDragEnd in components/board/board.tsx ✅ DONE (handled by isValidTransition and getDropZoneStyle)
+- [X] T013 [US2] Add frontend validation check before showing modal in components/board/board.tsx ✅ DONE (handled by getDropZoneStyle)
+- [X] T014 [US2] Write E2E test for blocked rollback scenarios in tests/e2e/verify-rollback.spec.ts ✅ DONE
 
 **Checkpoint**: At this point, both User Stories 1 AND 2 work - valid rollbacks succeed, invalid attempts are properly blocked
 
@@ -86,11 +86,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Add isVerifyToPlanRollback detection logic to stage-column.tsx in components/board/stage-column.tsx
-- [ ] T016 [US3] Add amber dashed border styling for rollback drop zone in components/board/stage-column.tsx
-- [ ] T017 [US3] Add disabled overlay styling when rollback not allowed in components/board/stage-column.tsx
-- [ ] T018 [US3] Pass draggedTicket prop from board.tsx to stage-column.tsx for rollback detection
-- [ ] T019 [US3] Write E2E test for visual feedback during drag in tests/e2e/verify-rollback.spec.ts
+- [X] T015 [US3] Add isVerifyToPlanRollback detection logic to stage-column.tsx in components/board/stage-column.tsx ✅ DONE (handled in board.tsx getDropZoneStyle)
+- [X] T016 [US3] Add amber dashed border styling for rollback drop zone in components/board/stage-column.tsx ✅ DONE (handled in board.tsx getDropZoneStyle)
+- [X] T017 [US3] Add disabled overlay styling when rollback not allowed in components/board/stage-column.tsx ✅ DONE (handled in board.tsx getDropZoneStyle)
+- [X] T018 [US3] Pass draggedTicket prop from board.tsx to stage-column.tsx for rollback detection ✅ DONE (handled via dropZoneStyle prop)
+- [X] T019 [US3] Write E2E test for visual feedback during drag in tests/e2e/verify-rollback.spec.ts ✅ DONE (covered in blocked rollback tests)
 
 **Checkpoint**: All user stories should now be independently functional with complete visual feedback
 
@@ -100,9 +100,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T020 Run all unit tests (bun run test:unit) and fix any failures
+- [X] T020 Run all unit tests (bun run test:unit) and fix any failures ✅ DONE
 - [ ] T021 Run all E2E tests (bun run test:e2e) and fix any failures
-- [ ] T022 Run type-check (bun run type-check) and fix any TypeScript errors
+- [X] T022 Run type-check (bun run type-check) and fix any TypeScript errors ✅ DONE
 - [ ] T023 Run quickstart.md verification checklist
 
 ---
