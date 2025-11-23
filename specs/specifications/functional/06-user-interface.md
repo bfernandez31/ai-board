@@ -366,6 +366,14 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Auto-hides via polling when cleanup job reaches terminal state (2-second intervals)
 - Only visible when project has active cleanup job (activeCleanupJobId set)
 
+**Cleanup Transition Lock Visual Feedback**:
+- During cleanup, all stage columns display blocked overlay when drag operations begin
+- Same visual treatment as job-in-progress lock (dark overlay with Ban icon)
+- Overlay shows "Cleanup in progress" message with "Wait for cleanup completion" subtitle
+- Prevents user confusion by clearly indicating why transitions are disabled
+- Drag cursor shows "not-allowed" state for all drop zones during cleanup
+- Columns appear with reduced opacity (50%) to indicate disabled state
+
 **Cleanup Job Status**:
 - Cleanup ticket shows "CLEANING" status label during execution
 - Status indicator updates via job polling (2-second intervals)

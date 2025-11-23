@@ -142,6 +142,7 @@ workflowInputs = {
 - Stage transitions disabled during cleanup (HTTP 423 Locked)
 - Content updates still allowed (descriptions, docs, previews)
 - Banner shown at top of board during cleanup
+- Visual lock feedback: drag-and-drop shows blocked overlay with "Cleanup in progress" message on all columns
 - Self-healing: orphaned locks cleared automatically
 
 **Commands**:
