@@ -8,7 +8,6 @@ import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Job } from '@prisma/client';
 import { Ban } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
@@ -18,7 +17,6 @@ interface StageColumnProps {
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
   projectId: number;
-  getTicketJob?: (ticketId: number) => Job | null;
   getTicketJobs?: (ticketId: number) => DualJobState;
   dropZoneStyle?: string;
   isBlockedByJob?: boolean;
@@ -128,7 +126,6 @@ export const StageColumn = React.memo(
     isDraggable = true,
     onTicketClick,
     projectId,
-    getTicketJob,
     getTicketJobs,
     dropZoneStyle,
     isBlockedByJob = false,
@@ -248,7 +245,6 @@ export const StageColumn = React.memo(
                   <TicketCard
                     key={ticket.id}
                     ticket={ticket}
-                    currentJob={getTicketJob?.(ticket.id) || null}
                     workflowJob={dualJobs?.workflow || null}
                     aiBoardJob={dualJobs?.aiBoard || null}
                     deployJob={dualJobs?.deployJob || null}
