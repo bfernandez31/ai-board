@@ -54,7 +54,7 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') || inputs.stage == 'build' }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
 
@@ -82,9 +82,14 @@ jobs:
         run: |
           echo "ℹ️ Skipping Claude execution"
 
-          # E2E test ticket skip
-          MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
-          echo "📝 Skip reason: E2E test ticket"
+          # Determine skip message
+          if [[ "${{ inputs.ticket_id }}" == *"[e2e]"* ]]; then
+            MESSAGE="AI-BOARD analysis skipped for test ticket [e2e]"
+            echo "📝 Skip reason: E2E test ticket"
+          else
+            MESSAGE="@${{ inputs.user }} This feature is not yet implemented for ${{ inputs.stage }} stage."
+            echo "📝 Skip reason: BUILD stage not implemented"
+          fi
 
           # Post skip message as AI-BOARD comment
           curl -L -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \

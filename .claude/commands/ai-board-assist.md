@@ -159,27 +159,25 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 **Example Request**: "@ai-board update database approach to use read replicas"
 **Action**: Update ALL relevant artifacts - plan.md (strategy), tasks.md (new tasks), spec.md (NFRs), data-model.md (schema)
 
-### BUILD Stage
+### BUILD Stage (Not Yet Implemented)
 
-**Goal**: Provide guidance and clarification during implementation phase.
+**⚠️ NOTE**: BUILD stage support is planned but not yet implemented.
+Currently, @ai-board mentions in BUILD stage will return a message that this feature is not available.
 
-**⚠️ CRITICAL RESTRICTIONS**:
-- ❌ **DO NOT** modify code files directly - developers handle implementation
-- ❌ **DO NOT** modify CLAUDE.md, constitution.md, or project documentation
-- ✅ **CAN** update specs/$BRANCH/ files if clarifications affect requirements
-- ✅ **CAN** provide code snippets and guidance in response
+**Future Goal**: Provide guidance and clarification during implementation phase.
 
+<!-- Future implementation placeholder:
 **Process**:
-1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
-2. **READ SPECS**: Read all specs/$BRANCH/ files for context
-3. **ANALYZE REQUEST**: Understand what guidance is needed
-4. **PROVIDE GUIDANCE**: Offer implementation suggestions, code examples, clarifications
-5. **UPDATE SPECS IF NEEDED**: Only if the clarification changes requirements
-6. **CREATE RESULT**: Write `.ai-board-result.md` with status
-7. **OUTPUT**: Provide helpful guidance to the developer
+1. READ CONSTITUTION and specs
+2. ANALYZE REQUEST for guidance needed
+3. PROVIDE GUIDANCE with code examples
+4. UPDATE SPECS if clarifications affect requirements
+5. CREATE RESULT file
+6. OUTPUT helpful guidance
 
-**Example Request**: "@ai-board how should I handle the database connection pooling?"
-**Action**: Provide code examples and best practices, update data-model.md if needed
+Example: "@ai-board how should I handle database pooling?"
+Action: Provide examples and best practices
+-->
 
 ### VERIFY Stage
 
