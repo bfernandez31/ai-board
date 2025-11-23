@@ -17,7 +17,7 @@ The board displays six columns representing distinct workflow phases:
 
 ### Stage Progression Rules
 
-Tickets must move through stages sequentially - they cannot skip stages or move backwards. The valid progression is:
+Tickets move through stages sequentially with limited rollback capabilities:
 
 ```
 INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
@@ -25,7 +25,7 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 
 **Sequential Movement**:
 - Tickets can only advance to the immediately next stage
-- Backward movement is prohibited (e.g., SPECIFY cannot return to INBOX)
+- Most backward movement is prohibited (e.g., SPECIFY cannot return to INBOX)
 - Skipping stages is not allowed (e.g., INBOX cannot jump directly to BUILD)
 
 **Quick Implementation Path**:
@@ -33,6 +33,15 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
 - This provides a fast-track workflow for simple tasks
 - A confirmation modal explains the trade-offs before proceeding
 - Quick implementation tickets are visually distinguished on the board
+
+**Rollback Capabilities**:
+- **BUILD to INBOX**: Quick-implementation tickets can return to INBOX if job failed/cancelled
+- **VERIFY to PLAN**: Full workflow tickets can return to PLAN to re-implement
+  - Available when: workflowType=FULL and latest workflow job is COMPLETED, FAILED, or CANCELLED
+  - Requires confirmation modal explaining consequences
+  - Reverts implementation changes while preserving spec files
+  - Clears preview URL and deletes the workflow job record
+  - Visual feedback: amber/red dashed border on PLAN column during drag
 
 ## Board Display
 

@@ -35,6 +35,10 @@ bun run type-check   # TypeScript check
 **Quick**: INBOX → BUILD (for simple fixes, bypasses spec/plan)
 **Clean**: (triggered) → BUILD → VERIFY → SHIP (automated technical debt cleanup)
 
+**Rollbacks**:
+- BUILD → INBOX: Quick-impl tickets with failed/cancelled jobs
+- VERIFY → PLAN: Full workflow tickets (COMPLETED/FAILED/CANCELLED job), reverts implementation, preserves specs
+
 ### Authentication & Authorization
 
 - Every project has an owner (`userId` foreign key)

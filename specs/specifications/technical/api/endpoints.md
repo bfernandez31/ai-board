@@ -629,6 +629,7 @@ Transition ticket to target stage with workflow dispatch.
 - **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
 - **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
 - **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
+- **VERIFY → PLAN**: Rollback for FULL workflows, clears previewUrl, deletes job, dispatches rollback workflow (git reset)
 - **VERIFY → SHIP**: Manual transition (no workflow)
 
 **Errors**:
@@ -1179,7 +1180,7 @@ All error responses follow a consistent structure:
 | `INVALID_TRANSITION` | Sequential stage transition violated |
 | `JOB_NOT_COMPLETED` | Job status blocks transition |
 | `MISSING_JOB` | Expected job not found (data integrity issue) |
-| `ROLLBACK_NOT_ALLOWED` | Quick-impl rollback conditions not met |
+| `ROLLBACK_NOT_ALLOWED` | Rollback conditions not met (wrong workflow type or job status) |
 | `VERSION_CONFLICT` | Optimistic concurrency control conflict |
 | `INVALID_TOKEN` | Workflow authentication failed |
 | `VALIDATION_ERROR` | Zod schema validation failed |
