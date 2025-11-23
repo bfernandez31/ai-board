@@ -18,12 +18,12 @@
 - [x] T007: Remove tests/unit/use-job-status.test.ts.skip (references non-existent modules)
 - [x] T008: Remove lib/schemas/demo-data.ts (unused schema file)
 - [x] T009: Remove currentJob prop from ticket-card.tsx and stage-column.tsx
-- [ ] T010: Remove unused type exports from lib/types.ts (CreateTicketResponse, TicketCardProps, ColumnProps, UpdateStageRequest, UpdateStageResponse, StageConflictError)
+- [x] T010: Remove unused type exports from lib/types.ts (CreateTicketResponse, TicketCardProps, ColumnProps, UpdateStageRequest, UpdateStageResponse, StageConflictError)
 - [ ] T011: Remove unused exports from lib/optimistic-updates.ts (confirmTicketUpdate)
 - [ ] T012: Remove unused export from lib/stage-transitions.ts (isTerminalStage)
 
 ### Documentation Updates
-- [ ] T013: Update data-model.md job command list (remove task/clarify, add verify and comment-* commands)
+- [x] T013: Update data-model.md job command list (remove task/clarify, add verify and comment-* commands)
 - [ ] T014: Update CLAUDE.md job commands section (add verify, expand comment-* notation)
 
 ## Validation
