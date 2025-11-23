@@ -56,8 +56,10 @@ The workflow provides context through environment variables and arguments:
 
 ## File Locations
 
-Ticket artifacts are in the `specs/$BRANCH/` directory (using the BRANCH environment variable):
+**Project Context** (read for understanding project standards):
+- **`.specify/memory/constitution.md`**: Project principles, standards, and guidelines - MUST READ on every stage
 
+**Ticket Artifacts** in `specs/$BRANCH/` directory (using the BRANCH environment variable):
 - **spec.md**: Feature specification (SPECIFY stage)
 - **plan.md**: Implementation plan (PLAN stage)
 - **tasks.md**: Task breakdown (PLAN stage)
@@ -75,12 +77,13 @@ Ticket artifacts are in the `specs/$BRANCH/` directory (using the BRANCH environ
 - ✅ **ONLY** modify `specs/$BRANCH/spec.md` and create `specs/$BRANCH/.ai-board-result.md`
 
 **MANDATORY Process** (you MUST do ALL these steps):
-1. **READ**: Use Read tool to read `specs/$BRANCH/spec.md`
-2. **ANALYZE**: Understand the user request from $ARGUMENTS
-3. **MODIFY**: Make the requested changes to the content
-4. **WRITE**: Use Write tool to save the modified `specs/$BRANCH/spec.md` (REQUIRED - NOT OPTIONAL)
-5. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
-6. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md` (project principles and standards)
+2. **READ SPEC**: Use Read tool to read `specs/$BRANCH/spec.md`
+3. **ANALYZE**: Understand the user request from $ARGUMENTS in context of project principles
+4. **MODIFY**: Make the requested changes to the content, respecting constitution guidelines
+5. **WRITE**: Use Write tool to save the modified `specs/$BRANCH/spec.md` (REQUIRED - NOT OPTIONAL)
+6. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
+7. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
 
 **⚠️ VERIFICATION STEP**:
 After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
@@ -98,7 +101,7 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 
 ### PLAN Stage
 
-**Goal**: Update plan.md and/or tasks.md while maintaining consistency with spec.md.
+**Goal**: Holistically update ALL feature documentation to maintain artifact consistency across spec, plan, tasks, and supporting files.
 
 **⚠️ CRITICAL RESTRICTIONS**:
 - ❌ **DO NOT** modify any files outside `specs/$BRANCH/` directory
@@ -106,28 +109,55 @@ After writing files, you MUST use Read tool to verify the changes were actually 
 - ❌ **DO NOT** modify code files, API routes, or components
 - ✅ **ONLY** modify files in `specs/$BRANCH/` and create `specs/$BRANCH/.ai-board-result.md`
 
+**Available Files in `specs/$BRANCH/`**:
+- `spec.md` - Feature specification (requirements, acceptance criteria, NFRs)
+- `plan.md` - Implementation plan (architecture, strategy, risks)
+- `tasks.md` - Task breakdown (phases, dependencies, estimates)
+- `quickstart.md` - Quick reference guide
+- `research.md` - Research notes and findings
+- `data-model.md` - Data model documentation
+- `contracts/` - API contracts and schemas (yaml, json, md)
+- Other custom files as needed
+
+**🔄 HOLISTIC UPDATE PRINCIPLE**:
+When a change is requested, you MUST analyze its impact across ALL artifacts and update them together to maintain consistency. For example:
+- Changing database approach → Update spec.md (NFRs), plan.md (architecture), tasks.md (new tasks), data-model.md (schema changes)
+- Adding a new requirement → Update spec.md (requirement), plan.md (implementation), tasks.md (work breakdown)
+- Modifying API contract → Update contracts/, spec.md (acceptance criteria), plan.md (integration points)
+
 **MANDATORY Process** (you MUST do ALL these steps):
-1. **READ SPEC**: Use Read tool to read `specs/$BRANCH/spec.md` (for context)
-2. **READ FILES**: Use Read tool to read `specs/$BRANCH/plan.md` and/or `specs/$BRANCH/tasks.md`
-3. **ANALYZE**: Understand the user request from $ARGUMENTS
-4. **MODIFY**: Make the requested changes to the content
-5. **WRITE**: Use Write tool to save the modified files (REQUIRED - NOT OPTIONAL)
-6. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
-7. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md` (project principles and standards)
+2. **DISCOVER**: Use Glob to list all files in `specs/$BRANCH/` directory
+3. **READ ALL**: Use Read tool to read ALL relevant files (spec.md, plan.md, tasks.md, and any others that might be impacted)
+4. **ANALYZE IMPACT**: Understand the user request from $ARGUMENTS in context of project principles, determine which files need updates
+5. **MODIFY HOLISTICALLY**: Make changes to ALL affected files, respecting constitution guidelines
+6. **SYNC SPEC**: Always ensure spec.md reflects any changes that impact requirements, acceptance criteria, or NFRs
+7. **WRITE ALL**: Use Write tool to save ALL modified files (REQUIRED - NOT OPTIONAL)
+8. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS listing ALL modified files
+9. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
 
 **⚠️ VERIFICATION STEP**:
 After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
 
-**Example**: If user asks "remove tasks T045 and T047", you MUST:
-- Read the actual tasks.md file
-- Find and remove those specific tasks
-- Write the modified content back to `specs/$BRANCH/tasks.md`
-- Create the result file at `specs/$BRANCH/.ai-board-result.md`
-- Verify the changes by reading both files again
-- Output the success message
+**Example 1**: If user asks "remove tasks T045 and T047":
+- Read spec.md, plan.md, tasks.md
+- Remove those specific tasks from tasks.md
+- Check if removing those tasks impacts plan.md phases or spec.md requirements
+- Update all affected files
+- Write all modified files
+- Create result file listing all changes
+
+**Example 2**: If user asks "change database approach to use read replicas":
+- Read ALL files in the specs folder
+- Update plan.md: architecture section, implementation strategy
+- Update tasks.md: add replica configuration tasks, adjust estimates
+- Update spec.md: NFRs (scalability, performance), acceptance criteria
+- Update data-model.md: connection patterns, replica configuration
+- Write all modified files
+- Create result file
 
 **Example Request**: "@ai-board update database approach to use read replicas"
-**Action**: Update plan.md implementation strategy and adjust tasks.md if needed
+**Action**: Update ALL relevant artifacts - plan.md (strategy), tasks.md (new tasks), spec.md (NFRs), data-model.md (schema)
 
 ## Output Format
 
@@ -184,18 +214,20 @@ Added rollback behavior requirements to data model changes section with the foll
 SUCCESS
 
 ## Message
-@jane-smith I've updated the plan to use PostgreSQL read replicas for query scaling, and adjusted the tasks to include replica configuration.
+@jane-smith I've updated all feature documentation to use PostgreSQL read replicas for query scaling, ensuring consistency across spec, plan, and tasks.
 
 ## Files Modified
+- spec.md
 - plan.md
 - tasks.md
+- data-model.md
 
 ## Summary
-Modified database architecture section and added 3 new tasks for replica setup:
-- Updated database architecture to include read replicas
-- Added task for replica configuration
-- Modified query routing strategy
-- Updated connection pooling settings
+Holistically updated all artifacts for read replica approach:
+- **spec.md**: Updated NFRs (scalability targets), added acceptance criteria for replica failover
+- **plan.md**: Modified database architecture section, added replica topology design
+- **tasks.md**: Added 3 new tasks for replica setup (T048-T050), adjusted phase estimates
+- **data-model.md**: Added connection pooling patterns, replica configuration schema
 ```
 
 
@@ -284,22 +316,28 @@ The specification now clearly defines the rollback behavior when a ticket moves 
 
 ### Success Output (PLAN)
 ```markdown
-@[jane.smith:jane.smith] ✅ **Plan and Tasks Updated**
+@[jane.smith:jane.smith] ✅ **All Feature Documentation Updated**
 
-I've modified the implementation approach to use PostgreSQL read replicas as requested.
+I've holistically updated all artifacts to use PostgreSQL read replicas, ensuring consistency across spec, plan, and tasks.
 
 ### Changes Made:
+- **spec.md**: Updated requirements and NFRs
+  - Added scalability targets for read replica architecture
+  - Updated acceptance criteria for failover scenarios
+  - Added performance NFRs for replica lag tolerance
 - **plan.md**: Updated database architecture section
-  - Added read replica configuration
+  - Added read replica topology design
   - Modified query routing strategy
-  - Updated connection pooling settings
+  - Updated connection pooling configuration
 - **tasks.md**: Added 3 new tasks
-  - T045: Configure read replicas
-  - T046: Implement query routing
-  - T047: Add monitoring for replica lag
+  - T048: Configure read replicas
+  - T049: Implement query routing
+  - T050: Add monitoring for replica lag
+- **data-model.md**: Updated data layer documentation
+  - Added replica connection patterns
 
 ### Summary:
-The plan now includes a scalable database architecture with read replicas for improved query performance.
+All feature documentation now reflects the read replica approach with consistent requirements, implementation strategy, and task breakdown.
 ```
 
 ### Error Output
