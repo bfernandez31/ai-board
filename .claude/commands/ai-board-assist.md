@@ -183,10 +183,25 @@ Action: Provide examples and best practices
 
 **Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for minor fixes.
 
+**✅ VERIFY STAGE CAPABILITIES** (different from SPECIFY/PLAN):
+- ✅ **CAN FIX CODE**: For minor issues (<30% divergence), launch iterate job to modify code files
+- ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md if needed
+- ✅ **AUTOMATED FIXES**: Small bugs, validation issues, UI adjustments can be auto-fixed
+- ❌ **CANNOT**: Make architectural changes, major refactoring, or changes exceeding 60% divergence
+
 **⚠️ CRITICAL APPROACH**:
 - **QUANTIFY FIRST**: Assess the size and impact of needed changes
 - **AUTOMATE MINOR**: Launch iterate job for small fixes (< 30% divergence)
 - **INFORM MAJOR**: Explain options for larger changes
+
+**What I Can Help With in VERIFY Stage**:
+- Fixing minor bugs in code (via iterate job)
+- Adjusting validation logic
+- UI/UX tweaks and alignments
+- Error message corrections
+- Small performance optimizations
+- Updating specifications to match implementation
+- Synchronizing documentation
 
 **Process for VERIFY**:
 1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
@@ -490,6 +505,27 @@ The file `specs/051-897-rollback-quick/spec.md` does not exist in the repository
 
 ### Suggestion:
 Please ensure the ticket has been through the SPECIFY stage first, or check if the branch name is correct.
+```
+
+### Refused Request Output (VERIFY Stage)
+```markdown
+@[benoit.fernandez31:benoit.fernandez31] ❌ **Request Refused**
+
+I cannot fulfill destructive requests like deleting all application code.
+
+### Why This Request Was Refused:
+1. **Destructive Action** - This would be catastrophic and irreversible
+2. **Unrelated to Ticket** - This request does not relate to the ticket's purpose
+3. **Out of Scope** - Even in VERIFY stage, changes must be proportional to the ticket scope
+
+### What I Can Help With in VERIFY Stage:
+- **Fix minor bugs** in code (via iterate job for <30% divergence)
+- **Adjust validation logic** that isn't working correctly
+- **UI/UX tweaks** like button alignment or error messages
+- **Update specifications** to match implementation decisions
+- **Synchronize documentation** across spec, plan, and tasks
+
+Please describe a specific issue you encountered during testing!
 ```
 
 ## Error Handling
