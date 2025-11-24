@@ -29,14 +29,15 @@ get_current_branch() {
     # For non-git repos, try to find the latest feature directory
     local repo_root=$(get_repo_root)
     local specs_dir="$repo_root/specs"
-    
+
     if [[ -d "$specs_dir" ]]; then
         local latest_feature=""
         local highest=0
-        
+
         for dir in "$specs_dir"/*; do
             if [[ -d "$dir" ]]; then
                 local dirname=$(basename "$dir")
+                # Support both conventions: 001-feature or AIB-123-feature
                 if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
                     local number=${BASH_REMATCH[1]}
                     number=$((10#$number))
@@ -44,10 +45,16 @@ get_current_branch() {
                         highest=$number
                         latest_feature=$dirname
                     fi
+                elif [[ "$dirname" =~ ^[A-Z]+-([0-9]+)- ]]; then
+                    local number=${BASH_REMATCH[1]}
+                    if [[ "$number" -gt "$highest" ]]; then
+                        highest=$number
+                        latest_feature=$dirname
+                    fi
                 fi
             fi
         done
-        
+
         if [[ -n "$latest_feature" ]]; then
             echo "$latest_feature"
             return
@@ -65,19 +72,22 @@ has_git() {
 check_feature_branch() {
     local branch="$1"
     local has_git_repo="$2"
-    
+
     # For non-git repos, we can't enforce branch naming but still provide output
     if [[ "$has_git_repo" != "true" ]]; then
         echo "[specify] Warning: Git repository not detected; skipped branch validation" >&2
         return 0
     fi
-    
-    if [[ ! "$branch" =~ ^[0-9]{3}- ]]; then
+
+    # Support both conventions:
+    # - CLI mode: 001-feature-name
+    # - AI-Board mode: AIB-123-feature-name
+    if [[ ! "$branch" =~ ^[0-9]{3}- ]] && [[ ! "$branch" =~ ^[A-Z]+-[0-9]+- ]]; then
         echo "ERROR: Not on a feature branch. Current branch: $branch" >&2
-        echo "Feature branches should be named like: 001-feature-name" >&2
+        echo "Feature branches should be named like: 001-feature-name or AIB-123-feature-name" >&2
         return 1
     fi
-    
+
     return 0
 }
 
