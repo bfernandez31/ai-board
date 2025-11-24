@@ -38,11 +38,11 @@ model User {
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
-- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers
+- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers, Notifications (as recipient and actor)
 
 **Constraints**:
 - Unique email address
-- Cascade delete: Comments, ProjectMembers
+- Cascade delete: Comments, ProjectMembers, Notifications
 
 **Business Rules**:
 - Every project must have a user (required userId)
@@ -354,6 +354,74 @@ model Comment {
 - Cascade delete when ticket or user deleted
 - Displayed in reverse chronological order (newest first)
 
+### Notification
+
+Notifications track @mentions in comments for real-time collaboration alerts.
+
+```prisma
+model Notification {
+  id          Int       @id @default(autoincrement())
+  recipientId String    // User receiving the notification
+  actorId     String    // User who created the mention
+  commentId   Int       // Source comment
+  ticketId    Int       // Source ticket (for navigation)
+  read        Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime? // Soft delete for 30-day retention policy
+
+  recipient User    @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, read, createdAt])
+  @@index([recipientId, deletedAt])
+  @@index([commentId])
+}
+```
+
+**Purpose**: Real-time mention notifications for collaboration
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `recipientId`: User who was mentioned (required foreign key)
+- `actorId`: User who posted the comment with mention (required foreign key)
+- `commentId`: Source comment containing the mention (required foreign key)
+- `ticketId`: Parent ticket for navigation (required foreign key)
+- `read`: Boolean indicating if notification has been viewed (default: false)
+- `readAt`: Timestamp when notification was marked as read (nullable)
+- `createdAt`: Notification creation timestamp
+- `deletedAt`: Soft delete timestamp for 30-day retention (nullable)
+
+**Relationships**:
+- Belongs to User (recipient, required, cascade delete)
+- References User (actor, required, cascade delete)
+- Belongs to Comment (required, cascade delete)
+- Belongs to Ticket (required, cascade delete)
+
+**Constraints**:
+- Composite index (recipientId, read, createdAt) for efficient unread notification queries
+- Composite index (recipientId, deletedAt) for soft-delete filtering
+- Index on commentId for notification lookup by comment
+
+**Features**:
+- Automatic creation when @mentions detected in comments
+- Soft delete with 30-day retention (deletedAt field)
+- Read status tracking with timestamp
+- Polling-based updates (15-second interval)
+- Optimistic UI updates for mark-as-read actions
+
+**Business Rules**:
+- Created when comment contains @mention of project member
+- No notification created for self-mentions
+- No notification created for non-project members
+- Notifications retained for 30 days before deletion
+- Deleted comments cascade delete notifications
+- Deleted users cascade delete their received and created notifications
+- Unread notifications count towards bell badge
+- Read notifications remain visible in dropdown until deleted
+
 ### ProjectMember
 
 Project collaboration with many-to-many user-project relationship.
@@ -491,11 +559,15 @@ User
 ├── projects (one-to-many) → Project
 │   ├── tickets (one-to-many) → Ticket
 │   │   ├── jobs (one-to-many) → Job
-│   │   └── comments (one-to-many) → Comment
+│   │   ├── comments (one-to-many) → Comment
+│   │   │   └── notifications (one-to-many) → Notification
+│   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
 │   └── projectMembers (one-to-many) → ProjectMember
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
+├── receivedNotifications (one-to-many) → Notification (as recipient)
+├── createdNotifications (one-to-many) → Notification (as actor)
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
@@ -522,6 +594,11 @@ User
 - `Comment(ticketId, createdAt)` - Chronological sorting
 - `Comment(userId)` - Author filtering
 
+**Notification Queries**:
+- `Notification(recipientId, read, createdAt)` - Unread notification sorting
+- `Notification(recipientId, deletedAt)` - Active notifications (soft-delete filtering)
+- `Notification(commentId)` - Notification lookup by source comment
+
 **Collaboration**:
 - `ProjectMember(projectId)` - Project members list
 - `ProjectMember(userId)` - User's projects
@@ -536,6 +613,8 @@ Used for multi-column queries with optimal performance:
 - `Ticket(projectId, workflowType)`: Workflow type filtering per project
 - `Comment(ticketId, createdAt)`: Comment timeline sorting
 - `ProjectMember(projectId, userId)`: Unique membership constraint
+- `Notification(recipientId, read, createdAt)`: Unread notification queries with sorting
+- `Notification(recipientId, deletedAt)`: Active notification filtering (soft delete)
 
 ## Data Types
 

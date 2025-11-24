@@ -249,6 +249,38 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Critical features accessible
 - Simplified presentation
 
+## Header Elements
+
+### Notification Bell
+
+The notification bell provides access to mention notifications:
+
+**Visual Presentation**:
+- Bell icon positioned in application header
+- Visible on all pages when authenticated
+- Badge displays unread count (1-9 or "9+" for overflow)
+- Badge hidden when no unread notifications
+
+**Dropdown Menu**:
+- Opens on bell icon click
+- Shows 5 most recent notifications
+- Displays actor avatar, name, and action text
+- Shows comment preview (80 character limit)
+- Provides relative timestamps
+- Includes "Mark all as read" and "View all" actions
+
+**Visual States**:
+- Unread: Blue dot or background highlight
+- Read: No highlight indicator
+- Empty: "No notifications" message
+- Loading: Skeleton or spinner during fetch
+
+**Polling Behavior**:
+- Updates every 15 seconds automatically
+- Continues while user is authenticated
+- Stops when user logs out
+- Syncs across open tabs/windows
+
 ## Navigation
 
 ### Tab Navigation
@@ -479,10 +511,12 @@ When user has no projects:
 - Modal opens in <100ms
 - Drag operations respond in <100ms
 - Page transitions in <500ms
+- Notification dropdown loads in <500ms
 
 **Polling Efficiency**:
 - 2-second interval for job status
 - 10-second interval for comments
+- 15-second interval for notifications
 - Automatic stop when updates complete
 - Minimal network overhead
 
