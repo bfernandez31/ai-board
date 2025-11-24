@@ -1,0 +1,164 @@
+# Rollback Reset Workflow Contract
+# GitHub Actions workflow for git reset during VERIFY→PLAN rollback
+
+name: Rollback Reset Workflow
+description: |
+  Executes git reset to remove implementation commits while preserving spec files.
+  Triggered after VERIFY→PLAN database transition completes.
+
+workflow_file: rollback-reset.yml
+
+# Workflow Inputs (all required)
+inputs:
+  ticket_id:
+    type: string
+    description: Ticket key (e.g., "ABC-123")
+    required: true
+    example: "AIB-76"
+
+  job_id:
+    type: string
+    description: Job ID for status tracking
+    required: true
+    example: "456"
+
+  project_id:
+    type: string
+    description: Project ID
+    required: true
+    example: "1"
+
+  branch:
+    type: string
+    description: Feature branch to reset
+    required: true
+    example: "AIB-76-fix-rollback-to"
+
+  githubRepository:
+    type: string
+    description: Target repository (owner/repo format)
+    required: true
+    example: "bfernandez31/ai-board"
+
+# Workflow Steps Contract
+steps:
+  - name: Update Job Status - Running
+    description: Mark job as RUNNING via API callback
+    api_call:
+      method: PATCH
+      path: /api/jobs/{job_id}/status
+      body:
+        status: RUNNING
+      auth: Bearer ${WORKFLOW_API_TOKEN}
+
+  - name: Checkout Repository
+    description: Clone target repository and checkout feature branch
+    uses: actions/checkout@v4
+    with:
+      repository: inputs.githubRepository
+      ref: inputs.branch
+      token: secrets.GH_PAT
+      fetch-depth: 0  # Full history needed for reset
+
+  - name: Configure Git
+    description: Set git user for commit operations
+    commands:
+      - git config --global user.name "ai-board[bot]"
+      - git config --global user.email "bot@ai-board.app"
+
+  - name: Identify Reset Target Commit
+    description: Find the commit to reset to (last commit before BUILD phase)
+    logic: |
+      1. Fetch implement job's startedAt time from API
+      2. Find commit before that timestamp: git log --before="$TIME" -1 --format="%H"
+      3. Fallback: Find last commit with "plan" or "tasks" in message
+      4. Store commit SHA in RESET_COMMIT env var
+
+  - name: Backup Spec Folder
+    description: Stash spec folder to preserve during reset
+    commands:
+      - SPEC_DIR="specs/${BRANCH_NAME}"
+      - |
+        if [ -d "$SPEC_DIR" ]; then
+          git stash push --include-untracked -- "$SPEC_DIR"
+          echo "SPEC_STASHED=true" >> $GITHUB_ENV
+        else
+          echo "SPEC_STASHED=false" >> $GITHUB_ENV
+        fi
+
+  - name: Execute Git Reset
+    description: Hard reset to pre-BUILD commit
+    commands:
+      - git reset --hard $RESET_COMMIT
+
+  - name: Restore Spec Folder
+    description: Restore stashed spec folder
+    commands:
+      - |
+        if [ "$SPEC_STASHED" = "true" ]; then
+          git stash pop
+          git add specs/
+          git commit -m "chore: preserve spec files during rollback"
+        fi
+
+  - name: Force Push Reset Branch
+    description: Update remote branch with reset state
+    commands:
+      - git push origin ${BRANCH_NAME} --force
+
+  - name: Update Job Status - Success
+    description: Mark job as COMPLETED
+    condition: success()
+    api_call:
+      method: PATCH
+      path: /api/jobs/{job_id}/status
+      body:
+        status: COMPLETED
+
+  - name: Update Job Status - Failure
+    description: Mark job as FAILED on error
+    condition: failure()
+    api_call:
+      method: PATCH
+      path: /api/jobs/{job_id}/status
+      body:
+        status: FAILED
+
+# Error Handling Contract
+error_handling:
+  branch_not_found:
+    action: Fail with descriptive error
+    job_status: FAILED
+
+  stash_failed:
+    action: Abort reset, preserve original state
+    job_status: FAILED
+
+  reset_failed:
+    action: Log error, do not push
+    job_status: FAILED
+
+  push_failed:
+    action: Retry once, then fail
+    job_status: FAILED
+
+  invalid_commit:
+    action: Use fallback commit identification
+    job_status: Continue with fallback
+
+# Environment Requirements
+environment:
+  secrets:
+    - CLAUDE_CODE_OAUTH_TOKEN  # Not needed for this workflow
+    - WORKFLOW_API_TOKEN       # For API callbacks
+    - GH_PAT                   # For cross-repo operations
+
+  variables:
+    - APP_URL                  # Base URL for API callbacks
+
+# Success Criteria
+success_criteria:
+  - Branch reset to pre-BUILD state
+  - All spec files preserved
+  - Job status updated to COMPLETED
+  - Implementation commits removed from branch
