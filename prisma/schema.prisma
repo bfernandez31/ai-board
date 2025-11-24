@@ -115,6 +115,7 @@ model Ticket {
   clarificationPolicy ClarificationPolicy?
   comments            Comment[]
   jobs                Job[]
+  notifications       Notification[]
   project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, ticketNumber])
@@ -126,35 +127,59 @@ model Ticket {
 }
 
 model User {
-  id            String    @id
-  name          String?
-  email         String          @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime
-  accounts      Account[]
-  comments      Comment[]
-  projects      Project[]
-  sessions      Session[]
-  memberships   ProjectMember[]
+  id                    String          @id
+  name                  String?
+  email                 String          @unique
+  emailVerified         DateTime?
+  image                 String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime
+  accounts              Account[]
+  comments              Comment[]
+  projects              Project[]
+  sessions              Session[]
+  memberships           ProjectMember[]
+  notificationsReceived Notification[]  @relation("NotificationRecipient")
+  notificationsCreated  Notification[]  @relation("NotificationActor")
 
   @@index([email])
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  ticketId  Int
-  userId    String
-  content   String   @db.VarChar(2000)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int            @id @default(autoincrement())
+  ticketId      Int
+  userId        String
+  content       String         @db.VarChar(2000)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
   @@index([userId])
+}
+
+model Notification {
+  id          Int       @id @default(autoincrement())
+  recipientId String
+  actorId     String
+  commentId   Int
+  ticketId    Int
+  read        Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  recipient User    @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, read])
+  @@index([createdAt])
 }
 
 model VerificationToken {

@@ -249,6 +249,46 @@ export async function POST(
       },
     });
 
+    // Create notifications for mentions (non-blocking)
+    try {
+      if (mentionedUserIds.length > 0) {
+        // Get project owner and members
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          include: {
+            members: { select: { userId: true } },
+          },
+        });
+
+        if (project) {
+          const projectMemberIds = [
+            project.userId, // Owner
+            ...project.members.map(m => m.userId), // Members
+          ];
+
+          // Filter valid recipients (project members, exclude self)
+          const validRecipients = mentionedUserIds.filter(
+            id => id !== userId && projectMemberIds.includes(id)
+          );
+
+          // Create notifications
+          if (validRecipients.length > 0) {
+            await prisma.notification.createMany({
+              data: validRecipients.map(recipientId => ({
+                recipientId,
+                actorId: userId,
+                commentId: comment.id,
+                ticketId,
+              })),
+            });
+          }
+        }
+      }
+    } catch (notificationError) {
+      // Log but don't block comment creation
+      console.error('[comments] Failed to create notifications:', notificationError);
+    }
+
     // Handle AI-BOARD mention if detected
     let jobId: number | undefined;
 

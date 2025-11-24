@@ -8,6 +8,7 @@ import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
+import { NotificationBell } from '@/app/components/notifications/notification-bell';
 
 interface ProjectInfo {
   id: number;
@@ -155,9 +156,10 @@ export function Header() {
             </div>
           )}
 
-          {/* Application variant: Show User Menu */}
+          {/* Application variant: Show Notification Bell + User Menu */}
           {!isMarketingVariant && !isSignInPage && (
             <div className="hidden md:flex items-center gap-3">
+              <NotificationBell />
               <UserMenu />
             </div>
           )}

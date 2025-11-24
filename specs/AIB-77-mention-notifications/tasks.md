@@ -22,14 +22,14 @@
 
 **Purpose**: Database schema and utility functions needed by all user stories
 
-- [ ] T001 Add Notification model to `prisma/schema.prisma` with fields (id, recipientId, actorId, commentId, ticketId, read, readAt, createdAt, deletedAt) and indexes
-- [ ] T002 Add notification relations to User model in `prisma/schema.prisma` (notificationsReceived, notificationsCreated)
-- [ ] T003 Add notifications relation to Comment model in `prisma/schema.prisma`
-- [ ] T004 Add notifications relation to Ticket model in `prisma/schema.prisma`
-- [ ] T005 Create and apply Prisma migration with `bun run npx prisma migrate dev --name add_notifications`
-- [ ] T006 [P] Create `lib/date-utils.ts` with `formatNotificationTime()` function (handles "just now", relative time, absolute dates)
-- [ ] T007 [P] Verify `lib/mention-parser.ts` exists with `extractMentionUserIds()` function (or create if missing)
-- [ ] T008 [P] Create `lib/db/notifications.ts` with database query functions (createNotificationForMention, getNotificationsForUser, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead)
+- [X] T001 Add Notification model to `prisma/schema.prisma` with fields (id, recipientId, actorId, commentId, ticketId, read, readAt, createdAt, deletedAt) and indexes
+- [X] T002 Add notification relations to User model in `prisma/schema.prisma` (notificationsReceived, notificationsCreated)
+- [X] T003 Add notifications relation to Comment model in `prisma/schema.prisma`
+- [X] T004 Add notifications relation to Ticket model in `prisma/schema.prisma`
+- [X] T005 Create and apply Prisma migration with `bun run npx prisma migrate dev --name add_notifications`
+- [X] T006 [P] Create `lib/date-utils.ts` with `formatNotificationTime()` function (handles "just now", relative time, absolute dates)
+- [X] T007 [P] Verify `lib/mention-parser.ts` exists with `extractMentionUserIds()` function (or create if missing)
+- [X] T008 [P] Create `lib/db/notifications.ts` with database query functions (createNotificationForMention, getNotificationsForUser, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead)
 
 **Checkpoint**: Database schema ready, utility functions available
 
@@ -41,10 +41,10 @@
 
 **⚠️ CRITICAL**: No user story UI work can begin until notification creation is working
 
-- [ ] T009 Create `app/api/notifications/route.ts` with GET handler (list notifications with limit/offset, returns NotificationsResponse)
-- [ ] T010 Create `app/api/notifications/[id]/mark-read/route.ts` with PATCH handler (mark single notification as read)
-- [ ] T011 Create `app/api/notifications/mark-all-read/route.ts` with POST handler (bulk mark as read)
-- [ ] T012 Enhance `app/api/comments/route.ts` POST handler to detect @mentions, filter valid recipients (project members, no self-mentions), create Notification records via Prisma transaction
+- [X] T009 Create `app/api/notifications/route.ts` with GET handler (list notifications with limit/offset, returns NotificationsResponse)
+- [X] T010 Create `app/api/notifications/[id]/mark-read/route.ts` with PATCH handler (mark single notification as read)
+- [X] T011 Create `app/api/notifications/mark-all-read/route.ts` with POST handler (bulk mark as read)
+- [X] T012 Enhance `app/api/comments/route.ts` POST handler to detect @mentions, filter valid recipients (project members, no self-mentions), create Notification records via Prisma transaction
 
 **Checkpoint**: Foundation ready - all API endpoints functional, notifications created on comment post
 
@@ -58,11 +58,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Create `components/notifications/use-notifications.ts` with TanStack Query hooks (useNotifications with 15s polling, useMarkNotificationRead, useMarkAllNotificationsRead)
-- [ ] T014 [P] [US1] Create `components/notifications/notification-bell.tsx` with Bell icon, Badge showing unread count (1-9 or "9+"), Popover trigger
-- [ ] T015 [US1] Create `components/notifications/notification-dropdown.tsx` with header (title + "Mark all as read" button), ScrollArea content, notification items list, footer with "View all" link
-- [ ] T016 [US1] Create `components/notifications/notification-item.tsx` component displaying actor avatar, actor name, action text ("mentioned you in [TICKET-KEY]"), comment preview (80 chars), relative timestamp, unread indicator (blue dot)
-- [ ] T017 [US1] Add NotificationBell component to dashboard layout header in `app/(dashboard)/layout.tsx`
+- [X] T013 [P] [US1] Create `components/notifications/use-notifications.ts` with TanStack Query hooks (useNotifications with 15s polling, useMarkNotificationRead, useMarkAllNotificationsRead)
+- [X] T014 [P] [US1] Create `components/notifications/notification-bell.tsx` with Bell icon, Badge showing unread count (1-9 or "9+"), Popover trigger
+- [X] T015 [US1] Create `components/notifications/notification-dropdown.tsx` with header (title + "Mark all as read" button), ScrollArea content, notification items list, footer with "View all" link
+- [X] T016 [US1] Create `components/notifications/notification-item.tsx` component displaying actor avatar, actor name, action text ("mentioned you in [TICKET-KEY]"), comment preview (80 chars), relative timestamp, unread indicator (blue dot)
+- [X] T017 [US1] Add NotificationBell component to dashboard layout header in `components/layout/header.tsx`
 
 **Checkpoint**: User Story 1 complete - users see notifications in bell dropdown within 15 seconds of being mentioned
 
@@ -76,9 +76,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Implement click handler in `components/notifications/notification-dropdown.tsx` that calls markAsRead mutation and navigates to ticket URL with comment anchor
-- [ ] T019 [US2] Verify ticket detail page `app/(dashboard)/projects/[projectId]/tickets/[ticketKey]/page.tsx` supports #comment-{id} anchor navigation (or implement if missing)
-- [ ] T020 [US2] Add scroll-to-comment behavior in ticket detail page (browser native or custom scroll + highlight)
+- [X] T018 [US2] Implement click handler in `components/notifications/notification-dropdown.tsx` that calls markAsRead mutation and navigates to ticket URL with comment anchor
+- [X] T019 [US2] Verify ticket detail page `app/(dashboard)/projects/[projectId]/tickets/[ticketKey]/page.tsx` supports #comment-{id} anchor navigation (or implement if missing)
+- [X] T020 [US2] Add scroll-to-comment behavior in ticket detail page (browser native or custom scroll + highlight)
 
 **Checkpoint**: User Story 2 complete - clicking notification navigates to correct comment and marks as read
 
@@ -92,10 +92,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Implement "Mark all as read" button handler in `components/notifications/notification-dropdown.tsx` (already created in T015, just needs wiring)
-- [ ] T022 [US3] Add optimistic updates to useMarkNotificationRead mutation in `components/notifications/use-notifications.ts` (update local cache before API response)
-- [ ] T023 [US3] Add optimistic updates to useMarkAllNotificationsRead mutation in `components/notifications/use-notifications.ts` (set all notifications read=true, unreadCount=0)
-- [ ] T024 [US3] Add error rollback to both mutations (restore previous data on API failure)
+- [X] T021 [US3] Implement "Mark all as read" button handler in `components/notifications/notification-dropdown.tsx` (already created in T015, just needs wiring)
+- [X] T022 [US3] Add optimistic updates to useMarkNotificationRead mutation in `components/notifications/use-notifications.ts` (update local cache before API response)
+- [X] T023 [US3] Add optimistic updates to useMarkAllNotificationsRead mutation in `components/notifications/use-notifications.ts` (set all notifications read=true, unreadCount=0)
+- [X] T024 [US3] Add error rollback to both mutations (restore previous data on API failure)
 
 **Checkpoint**: User Story 3 complete - users can manage read status with instant UI feedback
 
@@ -109,10 +109,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Configure TanStack Query polling in `components/notifications/use-notifications.ts` with `refetchInterval: 15000` and `refetchIntervalInBackground: true`
-- [ ] T026 [US4] Add dynamic polling interval logic (15s with unread notifications, 30s when all read for efficiency)
-- [ ] T027 [US4] Verify badge updates automatically when polling detects new notifications
-- [ ] T028 [US4] Verify dropdown content updates automatically when open during polling (new notifications appear at top)
+- [X] T025 [US4] Configure TanStack Query polling in `components/notifications/use-notifications.ts` with `refetchInterval: 15000` and `refetchIntervalInBackground: true`
+- [X] T026 [US4] Add dynamic polling interval logic (15s with unread notifications, 30s when all read for efficiency)
+- [X] T027 [US4] Verify badge updates automatically when polling detects new notifications
+- [X] T028 [US4] Verify dropdown content updates automatically when open during polling (new notifications appear at top)
 
 **Checkpoint**: User Story 4 complete - real-time-like experience via polling, all core functionality delivered
 
