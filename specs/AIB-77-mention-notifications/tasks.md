@@ -122,16 +122,16 @@
 
 **Purpose**: Final improvements affecting multiple user stories
 
-- [ ] T029 [P] Add data-testid attributes to notification components for E2E tests (`notification-bell`, `notification-badge`, `notification-item`, `notification-dropdown`)
-- [ ] T030 [P] Add error handling for API failures in notification components (toast notifications or error states)
-- [ ] T031 [P] Verify no self-mention notifications created (test in `app/api/comments/route.ts`)
-- [ ] T032 [P] Verify no notifications for non-project members (test in `app/api/comments/route.ts`)
-- [ ] T033 Add loading states to notification dropdown in `components/notifications/notification-dropdown.tsx` (skeleton or spinner)
-- [ ] T034 Add empty state to notification dropdown ("No notifications" message)
-- [ ] T035 Test multiple mentions in one comment (ensure deduplicated notifications)
-- [ ] T036 Test notification behavior when source comment is deleted (notification remains but shows graceful message on navigation)
-- [ ] T037 Add console logging for notification creation errors in `app/api/comments/route.ts` (don't block comment creation)
-- [ ] T038 Verify 30-day retention policy is documented (implementation deferred to future cleanup job)
+- [X] T029 [P] Add data-testid attributes to notification components for E2E tests (`notification-bell`, `notification-badge`, `notification-item`, `notification-dropdown`)
+- [X] T030 [P] Add error handling for API failures in notification components (toast notifications or error states)
+- [X] T031 [P] Verify no self-mention notifications created (test in `app/api/comments/route.ts`)
+- [X] T032 [P] Verify no notifications for non-project members (test in `app/api/comments/route.ts`)
+- [X] T033 Add loading states to notification dropdown in `components/notifications/notification-dropdown.tsx` (skeleton or spinner)
+- [X] T034 Add empty state to notification dropdown ("No notifications" message)
+- [X] T035 Test multiple mentions in one comment (ensure deduplicated notifications)
+- [X] T036 Test notification behavior when source comment is deleted (notification remains but shows graceful message on navigation)
+- [X] T037 Add console logging for notification creation errors in `app/api/comments/route.ts` (don't block comment creation)
+- [X] T038 Verify 30-day retention policy is documented (implementation deferred to future cleanup job)
 
 ---
 

@@ -3,6 +3,7 @@
 // TanStack Query hooks for notification management
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 export interface NotificationDisplay {
   id: number;
@@ -56,6 +57,7 @@ export function useNotifications() {
  */
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (notificationId: number) => {
@@ -91,11 +93,18 @@ export function useMarkNotificationRead() {
 
       return { previousData }; // Context for rollback
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['notifications'], context.previousData);
       }
+
+      // Show error toast
+      toast({
+        title: 'Failed to mark notification as read',
+        description: error instanceof Error ? error.message : 'Please try again later',
+        variant: 'destructive',
+      });
     },
     onSettled: () => {
       // Always refetch to ensure server sync
@@ -112,6 +121,7 @@ export function useMarkNotificationRead() {
  */
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async () => {
@@ -140,11 +150,18 @@ export function useMarkAllNotificationsRead() {
 
       return { previousData }; // Context for rollback
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['notifications'], context.previousData);
       }
+
+      // Show error toast
+      toast({
+        title: 'Failed to mark all notifications as read',
+        description: error instanceof Error ? error.message : 'Please try again later',
+        variant: 'destructive',
+      });
     },
     onSettled: () => {
       // Always refetch to ensure server sync

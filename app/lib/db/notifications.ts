@@ -1,4 +1,10 @@
 // Database query functions for notifications
+//
+// RETENTION POLICY: Notifications follow a 30-day soft delete retention policy.
+// - Active notifications have deletedAt = null
+// - Notifications older than 30 days should be soft-deleted via cleanup job
+// - See softDeleteOldNotifications() function for cleanup implementation
+// - Future: Schedule daily/weekly cron job to run cleanup
 
 import { prisma } from '@/lib/db/client';
 

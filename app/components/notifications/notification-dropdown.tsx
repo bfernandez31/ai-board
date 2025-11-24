@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertCircle } from 'lucide-react';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from './use-notifications';
 import { formatNotificationTime } from '@/app/lib/utils/date-utils';
 
 export function NotificationDropdown() {
   const router = useRouter();
-  const { data, isLoading } = useNotifications();
+  const { data, isLoading, error } = useNotifications();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
 
@@ -45,7 +46,15 @@ export function NotificationDropdown() {
       {/* Content */}
       <div className="max-h-[400px]">
         <ScrollArea className="h-full">
-          {isLoading ? (
+          {error ? (
+            <div className="p-4 flex flex-col items-center gap-2 text-center">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+              <div className="text-sm font-medium">Failed to load notifications</div>
+              <div className="text-xs text-muted-foreground">
+                {error instanceof Error ? error.message : 'Please try again later'}
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Loading...</div>
           ) : notifications.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">No notifications</div>

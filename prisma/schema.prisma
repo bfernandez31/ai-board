@@ -161,25 +161,28 @@ model Comment {
   @@index([userId])
 }
 
+// Notification model for @mention notifications
+// Retention policy: Soft delete after 30 days (deletedAt field)
+// Future: Implement cleanup job to set deletedAt for old notifications
 model Notification {
   id          Int       @id @default(autoincrement())
-  recipientId String
-  actorId     String
-  commentId   Int
-  ticketId    Int
+  recipientId String    // User receiving the notification
+  actorId     String    // User who created the mention
+  commentId   Int       // Source comment
+  ticketId    Int       // Source ticket (for navigation)
   read        Boolean   @default(false)
   readAt      DateTime?
   createdAt   DateTime  @default(now())
-  deletedAt   DateTime?
+  deletedAt   DateTime? // Soft delete for 30-day retention policy
 
   recipient User    @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   actor     User    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  @@index([recipientId, createdAt])
-  @@index([recipientId, read])
-  @@index([createdAt])
+  @@index([recipientId, createdAt]) // List notifications for user
+  @@index([recipientId, read])      // Count unread notifications
+  @@index([createdAt])              // Cleanup job (30-day retention)
 }
 
 model VerificationToken {
