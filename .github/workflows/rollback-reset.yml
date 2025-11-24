@@ -133,16 +133,10 @@ jobs:
           git add "$SPEC_DIR"
 
           # Commit with clear rollback message
-          git commit -m "$(cat <<EOF
-rollback(VERIFY→PLAN): preserve spec files for ${{ inputs.ticket_id }}
-
-Implementation removed due to VERIFY stage rollback.
-Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation.
-
-Triggered by: ai-board rollback workflow
-Ticket: ${{ inputs.ticket_id }}
-EOF
-)"
+          git commit \
+            -m "rollback(VERIFY→PLAN): preserve spec files for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to VERIFY stage rollback. Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation." \
+            -m "Triggered by: ai-board rollback workflow"
 
           echo "Spec files committed"
 
@@ -151,16 +145,10 @@ EOF
         if: steps.backup.outputs.has_specs != 'true'
         run: |
           # Create an empty commit to mark the rollback
-          git commit --allow-empty -m "$(cat <<EOF
-rollback(VERIFY→PLAN): reset branch for ${{ inputs.ticket_id }}
-
-Implementation removed due to VERIFY stage rollback.
-No spec files found to preserve.
-
-Triggered by: ai-board rollback workflow
-Ticket: ${{ inputs.ticket_id }}
-EOF
-)"
+          git commit --allow-empty \
+            -m "rollback(VERIFY→PLAN): reset branch for ${{ inputs.ticket_id }}" \
+            -m "Implementation removed due to VERIFY stage rollback. No spec files found to preserve." \
+            -m "Triggered by: ai-board rollback workflow"
 
           echo "Empty rollback commit created"
 
