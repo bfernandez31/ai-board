@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db/client';
 
 export async function PATCH(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -18,7 +18,8 @@ export async function PATCH(
       );
     }
 
-    const notificationId = parseInt(params.id);
+    const { id } = await params;
+    const notificationId = parseInt(id);
     if (isNaN(notificationId)) {
       return NextResponse.json(
         { error: 'Invalid notification ID', code: 'INVALID_ID' },
