@@ -263,7 +263,7 @@ model Job {
 - `id`: Auto-incrementing unique identifier
 - `ticketId`: Associated ticket (required foreign key)
 - `projectId`: Parent project (required foreign key, for polling queries)
-- `command`: Spec-kit command executed (specify|plan|implement|verify|quick-impl|clean|deploy-preview|comment-specify|comment-plan|comment-build|comment-verify, max 50 chars)
+- `command`: Spec-kit command executed (specify|plan|implement|verify|quick-impl|clean|deploy-preview|rollback-reset|comment-specify|comment-plan|comment-build|comment-verify, max 50 chars)
 - `status`: Current execution state (enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
 - `branch`: Git branch name (max 200 chars, nullable)
 - `commitSha`: Git commit hash (max 40 chars, nullable)

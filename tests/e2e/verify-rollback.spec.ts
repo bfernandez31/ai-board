@@ -558,4 +558,76 @@ test.describe('Rollback VERIFY to PLAN', () => {
     const ticketInBuild = buildColumn.locator(`[data-ticket-id="${ticket.id}"]`);
     await expect(ticketInBuild).toBeVisible();
   });
+
+  test('should dispatch rollback-reset workflow after rollback', async ({ page, projectId }) => {
+    // Setup: Create ticket in VERIFY stage with COMPLETED job (FULL workflow)
+    const ticketNumber = nextTicketNumber++;
+    const projectKey = getProjectKey(projectId);
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        ticketKey: `${projectKey}-${ticketNumber}`,
+        title: '[e2e] Verify Rollback Test - Reset Job',
+        description: 'Test ticket for rollback-reset job creation',
+        stage: 'VERIFY',
+        workflowType: 'FULL',
+        branch: '106-reset-job-branch',
+        version: 5,
+        projectId,
+        previewUrl: 'https://preview.example.com/reset-test',
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        updatedAt: new Date(),
+        command: 'verify',
+        status: 'COMPLETED',
+        branch: '106-reset-job-branch',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    // Navigate to board
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
+    await page.waitForLoadState('networkidle');
+
+    // Drag ticket from VERIFY to PLAN
+    await dragTicketToColumn(page, ticket.id, 'PLAN');
+
+    // Wait for and confirm rollback modal
+    const modal = page.locator('[data-testid="rollback-verify-modal"]');
+    await expect(modal).toBeVisible({ timeout: 2000 });
+    await modal.locator('button[data-action="confirm"]').click();
+
+    // Wait for API response
+    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+
+    // Verify API response includes resetJobId
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      id: ticket.id,
+      stage: 'PLAN',
+      branch: '106-reset-job-branch',
+    });
+    expect(body.resetJobId).toBeDefined();
+    expect(typeof body.resetJobId).toBe('number');
+
+    // Verify rollback-reset job was created
+    const resetJob = await prisma.job.findFirst({
+      where: {
+        ticketId: ticket.id,
+        command: 'rollback-reset',
+      },
+    });
+    expect(resetJob).toBeDefined();
+    expect(resetJob?.status).toBe('PENDING');
+    expect(resetJob?.branch).toBe('106-reset-job-branch');
+    expect(resetJob?.id).toBe(body.resetJobId);
+  });
 });

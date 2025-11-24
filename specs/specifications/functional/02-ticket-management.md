@@ -102,14 +102,21 @@ Users move tickets between stages using drag-and-drop:
 **VERIFY to PLAN Rollback**:
 - When dropping VERIFY ticket on PLAN column (FULL workflows only)
 - Confirmation modal appears explaining consequences:
-  - Implementation changes will be reverted (git reset)
-  - Spec files in `.specify/` folder are preserved
+  - Implementation commits will be removed (git reset to pre-BUILD state)
+  - Spec files in `specs/{branch}/` folder are preserved automatically
   - Preview URL will be cleared
-  - Workflow job record will be deleted
+  - Original implement job record will be deleted
+- Triggers rollback-reset workflow that:
+  - Identifies the last commit before BUILD phase began
+  - Backs up spec files using git stash
+  - Performs hard reset to pre-BUILD commit
+  - Restores spec files and commits them
+  - Force-pushes the reset branch
 - Available when latest workflow job is COMPLETED, FAILED, or CANCELLED
 - Not available for QUICK or CLEAN workflow types
 - Not available when job is RUNNING or PENDING
 - Blocked during project cleanup (HTTP 423 Locked)
+- Creates a `rollback-reset` job to track the git reset operation
 
 ### Performance
 

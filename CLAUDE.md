@@ -37,7 +37,7 @@ bun run type-check   # TypeScript check
 
 **Rollbacks**:
 - BUILD → INBOX: Quick-impl tickets with failed/cancelled jobs
-- VERIFY → PLAN: Full workflow tickets (COMPLETED/FAILED/CANCELLED job), reverts implementation, preserves specs
+- VERIFY → PLAN: Full workflow tickets (COMPLETED/FAILED/CANCELLED job), triggers rollback-reset workflow to git reset branch to pre-BUILD state while preserving spec files
 
 ### Authentication & Authorization
 
@@ -66,7 +66,7 @@ bun run type-check   # TypeScript check
 
 ### Job
 - Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED
-- Commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
+- Commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
 
 ## API Patterns
 
@@ -97,7 +97,8 @@ workflowInputs = {
 3. **cleanup.yml**: Automated technical debt cleanup (CLEAN workflow)
 4. **verify.yml**: Test execution and PR creation
 5. **deploy-preview.yml**: Vercel deployment
-6. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
+6. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
+7. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
 
 ## Deploy Preview System
 

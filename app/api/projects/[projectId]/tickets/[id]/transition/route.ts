@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/client';
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
+import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 
 // Zod schema for request validation
 const TransitionRequestSchema = z.object({
@@ -205,6 +206,16 @@ export async function POST(
         return NextResponse.json({ error: validation.reason }, { status: 400 });
       }
 
+      // Fetch project relation for workflow dispatch
+      const ticketWithProject = await prisma.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { project: true },
+      });
+
+      if (!ticketWithProject) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+      }
+
       // Execute rollback transaction
       const updatedTicket = await prisma.$transaction(async (tx) => {
         // Reset ticket state - keep branch and workflowType, clear previewUrl, increment version
@@ -227,6 +238,26 @@ export async function POST(
         return updated;
       });
 
+      // Dispatch rollback-reset workflow to reset git branch
+      // This runs after the transaction succeeds to ensure data consistency
+      let resetJobId: number | undefined;
+      if (updatedTicket.branch) {
+        try {
+          const dispatchResult = await dispatchRollbackResetWorkflow({
+            ticketId: updatedTicket.id,
+            ticketKey: ticket.ticketKey,
+            projectId: ticket.projectId,
+            branch: updatedTicket.branch,
+            githubOwner: ticketWithProject.project.githubOwner,
+            githubRepo: ticketWithProject.project.githubRepo,
+          });
+          resetJobId = dispatchResult.jobId;
+        } catch (dispatchError) {
+          // Log error but don't fail the rollback - database state is already correct
+          console.error('[Transition] Failed to dispatch rollback-reset workflow:', dispatchError);
+        }
+      }
+
       return NextResponse.json({
         id: updatedTicket.id,
         stage: updatedTicket.stage,
@@ -235,6 +266,7 @@ export async function POST(
         version: updatedTicket.version,
         previewUrl: updatedTicket.previewUrl,
         updatedAt: updatedTicket.updatedAt.toISOString(),
+        resetJobId,
       });
     }
 
