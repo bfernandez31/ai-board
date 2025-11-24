@@ -629,7 +629,13 @@ Transition ticket to target stage with workflow dispatch.
 - **PLAN → BUILD**: Validates plan job completed, creates job, dispatches workflow (implement command)
 - **BUILD → VERIFY**: Creates job, dispatches verify workflow with workflowType (FULL runs tests, QUICK skips to PR)
 - **BUILD → INBOX**: Rollback if job failed/cancelled, resets workflowType to FULL
-- **VERIFY → PLAN**: Rollback for FULL workflows, clears previewUrl, deletes job, dispatches rollback workflow (git reset)
+- **VERIFY → PLAN**: Rollback for FULL workflows only:
+  1. Validates latest job is COMPLETED, FAILED, or CANCELLED
+  2. Clears previewUrl on ticket
+  3. Deletes implement job record
+  4. Updates ticket stage to PLAN
+  5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
+  6. Creates rollback-reset job to track the git reset operation
 - **VERIFY → SHIP**: Manual transition (no workflow)
 
 **Errors**:
