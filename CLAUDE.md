@@ -5,7 +5,7 @@
 - **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 15 (App Router), React 18
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
-- **State**: TanStack Query v5.90.5, client-side polling (2s interval)
+- **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications)
 - **Testing**: Playwright (E2E), Vitest (unit)
 - **Auth**: NextAuth.js (session-based)
 
@@ -67,6 +67,13 @@ bun run type-check   # TypeScript check
 ### Job
 - Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED
 - Commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
+
+### Notification
+- `recipientId`, `actorId`: User who received/created the mention
+- `commentId`, `ticketId`: Source comment and ticket
+- `read`, `readAt`: Read status tracking
+- `deletedAt`: Soft delete for 30-day retention
+- Polling: 15-second interval for real-time updates
 
 ## API Patterns
 

@@ -119,7 +119,7 @@ Comments support @mentions to notify specific users:
 
 - Type @ symbol to see mention suggestion list
 - Select user from project members
-- Mentioned user receives notification (future feature)
+- Mentioned user receives real-time notification
 - Multiple users can be mentioned in one comment
 
 ### AI-BOARD Mentions
@@ -270,6 +270,89 @@ The ticket detail modal organizes content into tabs:
 - Currently selected tab visually highlighted
 - Clear indication of which content is displayed
 - Consistent styling across all tabs
+
+## Mention Notifications
+
+### Notification Bell
+
+The notification bell icon appears in the application header and provides access to mention notifications:
+
+**Bell Icon**:
+- Visible on all pages when user is authenticated
+- Displays unread count badge when notifications exist
+- Badge shows number (1-9) or "9+" for 10 or more unread notifications
+- No badge displayed when all notifications are read
+
+**Clicking Bell**:
+- Opens dropdown menu with recent notifications
+- Shows 5 most recent notifications by default
+- Displays notification details for each item
+- Provides "Mark all as read" and "View all" actions
+
+### Receiving Notifications
+
+When a user is mentioned in a comment:
+
+**Notification Creation**:
+- System detects @mentions in comment text when posted
+- Creates notification for each mentioned project member
+- Links notification to source comment, ticket, and actor
+- No notification created for self-mentions
+- No notification created for non-project members
+
+**Notification Delivery**:
+- Notifications appear within 15 seconds via polling
+- Bell badge updates automatically to show unread count
+- Dropdown content refreshes to show new notifications
+- Polling continues while user is authenticated
+
+### Viewing Notifications
+
+**Notification Details**:
+- Actor name and avatar (user who mentioned you)
+- Action text: "mentioned you in [TICKET-KEY]"
+- Comment preview (truncated to 80 characters)
+- Relative timestamp (e.g., "2 hours ago", "just now")
+- Visual indicator for unread status (blue dot or highlight)
+
+**Dropdown Display**:
+- Shows 5 most recent notifications
+- Unread notifications visually distinguished
+- Scrollable when more than 5 notifications
+- "View all" link in footer (for future full page)
+
+### Managing Notifications
+
+**Marking as Read**:
+- Click notification to mark as read and navigate to comment
+- Click "Mark all as read" button to clear all unread notifications
+- Read status updates immediately with optimistic UI
+- Changes sync across devices within 15 seconds
+
+**Navigation**:
+- Clicking notification opens ticket detail page
+- Comment is visible and highlighted on page load
+- URL includes comment anchor for direct scroll
+- Notification marked as read before navigation
+
+**Retention**:
+- Notifications retained for 30 days (read and unread)
+- Older notifications automatically deleted
+- Deleted comments still show notification with appropriate message
+
+### Notification States
+
+**Unread Notifications**:
+- Contribute to bell badge count
+- Display blue dot or background highlight
+- Appear at top of dropdown list
+- Count displayed as "9+" when exceeding 9
+
+**Read Notifications**:
+- No longer affect badge count
+- Remove visual highlight indicator
+- Timestamp shows when marked as read
+- Remain visible in dropdown until deleted or expired
 
 ## Authorization
 

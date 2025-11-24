@@ -802,6 +802,124 @@ Delete a comment (author only).
 - `403`: Not comment author
 - `404`: Comment, ticket, or project not found
 
+## Notification Endpoints
+
+### GET /api/notifications
+
+Fetch notifications for authenticated user with unread count.
+
+**Authentication**: Required (session)
+**Authorization**: User can only access their own notifications
+
+**Query Parameters**:
+- `limit` (optional): Maximum notifications to return (default: 5, max: 50)
+
+**Response** (200 OK):
+```json
+{
+  "notifications": [
+    {
+      "id": 1,
+      "actorName": "Alice Smith",
+      "actorImage": "https://...",
+      "ticketKey": "ABC-42",
+      "commentPreview": "Can you review the authentication logic in the login handler...",
+      "createdAt": "2025-01-20T14:30:00.000Z",
+      "read": false,
+      "commentId": 123,
+      "projectId": 1
+    },
+    {
+      "id": 2,
+      "actorName": "Bob Johnson",
+      "actorImage": null,
+      "ticketKey": "ABC-38",
+      "commentPreview": "Thanks for the feedback! I've updated the spec accordingly.",
+      "createdAt": "2025-01-19T10:15:00.000Z",
+      "read": true,
+      "commentId": 118,
+      "projectId": 1
+    }
+  ],
+  "unreadCount": 3,
+  "hasMore": false
+}
+```
+
+**Fields**:
+- `actorName`: Display name or email of user who created the mention
+- `actorImage`: Avatar URL (null if not available)
+- `ticketKey`: Human-readable ticket identifier for navigation
+- `commentPreview`: First 80 characters of comment content (truncated with "...")
+- `createdAt`: ISO 8601 timestamp of notification creation
+- `read`: Boolean indicating if notification has been read
+- `commentId`: ID for comment anchor navigation
+- `projectId`: Project ID for navigation URL construction
+- `unreadCount`: Total number of unread notifications for user
+- `hasMore`: Boolean indicating if more notifications exist beyond limit
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
+
+### PATCH /api/notifications/:id/mark-read
+
+Mark a single notification as read.
+
+**Authentication**: Required (session)
+**Authorization**: User can only mark their own notifications as read
+
+**Path Parameters**:
+- `id` (number, required): Notification ID
+
+**Request Body**: Empty
+
+**Response** (200 OK):
+```json
+{
+  "success": true
+}
+```
+
+**Errors**:
+- `400`: Invalid notification ID (non-numeric)
+- `401`: Not authenticated
+- `403`: Notification belongs to another user
+- `404`: Notification not found
+- `500`: Database error
+
+**Idempotency**: Marking an already-read notification returns 200 OK
+
+### POST /api/notifications/mark-all-read
+
+Mark all notifications as read for authenticated user.
+
+**Authentication**: Required (session)
+**Authorization**: Only affects current user's notifications
+
+**Request Body**: Empty
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "count": 5
+}
+```
+
+**Fields**:
+- `count`: Number of notifications marked as read
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
+
+**Behavior**:
+- Only marks unread notifications (read=false)
+- Sets read=true and readAt=current timestamp
+- Updates all unread notifications in single transaction
+- Returns count of affected notifications
+
 ## Timeline Endpoints
 
 ### GET /api/projects/:projectId/tickets/:id/timeline
