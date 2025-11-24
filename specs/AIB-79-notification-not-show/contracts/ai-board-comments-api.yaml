@@ -1,0 +1,298 @@
+openapi: 3.0.3
+info:
+  title: AI-Board Comments API (Extended with Notifications)
+  version: 1.1.0
+  description: |
+    API contract for AI-Board comment creation with mention notification support.
+
+    **Changes in v1.1.0** (AIB-79):
+    - Added automatic notification creation for user mentions in AI-board comments
+    - Notifications follow same validation rules as regular comment notifications
+    - Non-blocking notification creation (errors logged but don't block comment creation)
+
+servers:
+  - url: https://ai-board.vercel.app/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Local development server
+
+paths:
+  /projects/{projectId}/tickets/{ticketId}/comments/ai-board:
+    post:
+      summary: Create AI-Board comment with mention notifications
+      description: |
+        Create a comment authored by AI-Board system user. Extracts mentions from comment content
+        and creates notifications for mentioned project members.
+
+        **Notification Creation Logic**:
+        1. Extract user mentions using format `@[userId:displayName]`
+        2. Validate mentioned users are project members (owner or member)
+        3. Exclude AI-board user from receiving self-notifications
+        4. Create notifications in batch using `Notification.createMany()`
+        5. Log errors but do not block comment creation if notification creation fails
+
+        **Authentication**: Requires GitHub workflow token (Bearer token)
+
+        **Used by**: `.github/workflows/ai-board-assist.yml`
+      operationId: createAIBoardComment
+      tags:
+        - AI-Board Comments
+      security:
+        - WorkflowToken: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Numeric project ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 42
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID (numeric) or ticket key (e.g., "ABC-123")
+          schema:
+            type: string
+            minLength: 1
+            examples:
+              numeric:
+                value: "123"
+                summary: Numeric ticket ID
+              ticketKey:
+                value: "ABC-123"
+                summary: Ticket key format
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIBoardCommentRequest'
+            examples:
+              withMentions:
+                summary: Comment with user mentions
+                value:
+                  userId: "ai-board-system-user"
+                  content: "Hey @[user-123:Alice], I analyzed the issue and found @[user-456:Bob] might need to review the security implications."
+              withoutMentions:
+                summary: Comment without mentions
+                value:
+                  userId: "ai-board-system-user"
+                  content: "Analysis complete. No security issues detected in the latest changes."
+              selfMention:
+                summary: Comment mentioning AI-board itself (no notification created)
+                value:
+                  userId: "ai-board-system-user"
+                  content: "You can trigger @ai-board again by mentioning me in a new comment."
+      responses:
+        '201':
+          description: Comment created successfully (with or without notifications)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+              examples:
+                withNotifications:
+                  summary: Comment created with 2 notifications
+                  value:
+                    id: 789
+                    ticketId: 123
+                    userId: "ai-board-system-user"
+                    content: "Hey @[user-123:Alice], check @[user-456:Bob]'s implementation."
+                    createdAt: "2025-11-24T10:30:00.000Z"
+                    updatedAt: "2025-11-24T10:30:00.000Z"
+                withoutNotifications:
+                  summary: Comment created with no mentions
+                  value:
+                    id: 790
+                    ticketId: 123
+                    userId: "ai-board-system-user"
+                    content: "Analysis complete. No issues found."
+                    createdAt: "2025-11-24T10:31:00.000Z"
+                    updatedAt: "2025-11-24T10:31:00.000Z"
+        '400':
+          description: Invalid request (malformed project ID, ticket ID, or request body)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidProjectId:
+                  summary: Non-numeric project ID
+                  value:
+                    error: "Invalid project ID or ticket ID"
+                invalidBody:
+                  summary: Missing required field
+                  value:
+                    error: "Invalid request body"
+                    details:
+                      userId: ["Required"]
+                      content: ["Required"]
+        '401':
+          description: Unauthorized (missing or invalid workflow token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized - invalid or missing workflow token"
+        '403':
+          description: Forbidden (userId is not AI-board user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Forbidden - only AI-BOARD user can post via this endpoint"
+        '404':
+          description: Ticket not found or does not belong to project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Ticket not found or does not belong to this project"
+        '500':
+          description: Internal server error (including AI-board user not configured)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                aiBoardUserMissing:
+                  summary: AI-board user not seeded
+                  value:
+                    error: "AI-BOARD user not configured - run seed script"
+                genericError:
+                  summary: Unexpected server error
+                  value:
+                    error: "Internal server error"
+
+components:
+  schemas:
+    AIBoardCommentRequest:
+      type: object
+      required:
+        - userId
+        - content
+      properties:
+        userId:
+          type: string
+          description: Must be AI-board user ID (validated against `getAIBoardUserId()`)
+          example: "ai-board-system-user"
+        content:
+          type: string
+          minLength: 1
+          description: |
+            Comment content with optional user mentions in format `@[userId:displayName]`.
+            Mentions trigger notification creation for valid project members.
+          example: "Hey @[user-123:Alice], I found an issue in the authentication module."
+      additionalProperties: false
+
+    CommentResponse:
+      type: object
+      required:
+        - id
+        - ticketId
+        - userId
+        - content
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          description: Unique comment identifier
+          example: 789
+        ticketId:
+          type: integer
+          description: Parent ticket ID
+          example: 123
+        userId:
+          type: string
+          description: Comment author (AI-board user ID)
+          example: "ai-board-system-user"
+        content:
+          type: string
+          description: Comment content (includes mention markup)
+          example: "Hey @[user-123:Alice], I analyzed the issue."
+        createdAt:
+          type: string
+          format: date-time
+          description: Comment creation timestamp
+          example: "2025-11-24T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Comment last update timestamp
+          example: "2025-11-24T10:30:00.000Z"
+      additionalProperties: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Invalid request body"
+        details:
+          type: object
+          description: Optional validation error details (field-level errors)
+          additionalProperties: true
+          example:
+            userId: ["Required"]
+            content: ["Must be at least 1 character"]
+      additionalProperties: false
+
+  securitySchemes:
+    WorkflowToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        GitHub workflow token for authenticating AI-board workflow requests.
+        Validated via `verifyWorkflowToken()` utility.
+
+tags:
+  - name: AI-Board Comments
+    description: AI-Board automated comment operations with mention notification support
+
+# Side Effects Documentation
+x-side-effects:
+  notification-creation:
+    trigger: POST /projects/{projectId}/tickets/{ticketId}/comments/ai-board
+    condition: Comment content contains valid user mentions
+    operations:
+      - operation: Extract mentions
+        utility: extractMentionUserIds(content)
+        returns: Array of unique user IDs
+      - operation: Validate project membership
+        query: |
+          prisma.project.findUnique({
+            where: { id: projectId },
+            include: { members: { select: { userId: true } } }
+          })
+        validation: |
+          - Recipient must be in [project.userId, ...project.members.map(m => m.userId)]
+          - Recipient must not equal actorId (AI-board user ID)
+      - operation: Create notifications
+        mutation: |
+          prisma.notification.createMany({
+            data: validRecipients.map(recipientId => ({
+              recipientId,
+              actorId: aiBoardUserId,
+              commentId: comment.id,
+              ticketId: ticket.id
+            }))
+          })
+        error-handling: Non-blocking (try-catch with logging)
+    examples:
+      - input: "Hey @[user-123:Alice], check this."
+        output: "1 notification created for user-123"
+      - input: "Review by @[user-123:Alice] and @[user-456:Bob]."
+        output: "2 notifications created for user-123, user-456"
+      - input: "No mentions here."
+        output: "0 notifications created"
+      - input: "Self-mention: @[ai-board-system-user:AI Board]"
+        output: "0 notifications created (self-mention excluded)"
