@@ -18,8 +18,8 @@
 
 **Purpose**: Create new files and basic structure for the rollback-reset feature
 
-- [ ] T001 [P] Create dispatch function file `app/lib/workflows/dispatch-rollback-reset.ts` with interface definitions
-- [ ] T002 [P] Create GitHub workflow file `.github/workflows/rollback-reset.yml` with initial structure
+- [x] T001 [P] Create dispatch function file `app/lib/workflows/dispatch-rollback-reset.ts` with interface definitions ✅ DONE
+- [x] T002 [P] Create GitHub workflow file `.github/workflows/rollback-reset.yml` with initial structure ✅ DONE
 
 ---
 
@@ -29,12 +29,12 @@
 
 **Note**: No database migrations required - Job command field is VARCHAR(50) and already supports new command types
 
-- [ ] T003 Implement `dispatchRollbackResetWorkflow` function in `app/lib/workflows/dispatch-rollback-reset.ts`
+- [x] T003 Implement `dispatchRollbackResetWorkflow` function in `app/lib/workflows/dispatch-rollback-reset.ts` ✅ DONE
   - Define `RollbackResetInputs` interface with: ticketId, ticketKey, projectId, branch, githubOwner, githubRepo
   - Create job record with command `rollback-reset` and status `PENDING`
   - Dispatch `rollback-reset.yml` workflow via Octokit
   - Return jobId for tracking
-- [ ] T004 Implement job status callback API support for `rollback-reset` command in job status endpoint
+- [x] T004 Implement job status callback API support for `rollback-reset` command in job status endpoint ✅ DONE (existing generic endpoint supports all commands)
 
 **Checkpoint**: Foundation ready - dispatch function exists and can be called from transition API
 
@@ -52,35 +52,35 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Modify transition route to dispatch rollback-reset workflow in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
+- [x] T005 [US1] Modify transition route to dispatch rollback-reset workflow in `app/api/projects/[projectId]/tickets/[id]/transition/route.ts` ✅ DONE
   - Import `dispatchRollbackResetWorkflow` from dispatch function
   - After existing rollback transaction succeeds, call dispatch function
   - Include `resetJobId` in response JSON
-- [ ] T006 [US1] Implement workflow step: Update job status to RUNNING in `.github/workflows/rollback-reset.yml`
+- [x] T006 [US1] Implement workflow step: Update job status to RUNNING in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Use curl to PATCH `/api/jobs/${job_id}/status` with status RUNNING
   - Include WORKFLOW_API_TOKEN authorization header
-- [ ] T007 [US1] Implement workflow step: Checkout target repository in `.github/workflows/rollback-reset.yml`
+- [x] T007 [US1] Implement workflow step: Checkout target repository in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Use actions/checkout@v4 with repository input
   - Checkout feature branch with full history (fetch-depth: 0)
   - Configure git user for ai-board[bot]
-- [ ] T008 [US1] Implement workflow step: Identify reset target commit in `.github/workflows/rollback-reset.yml`
+- [x] T008 [US1] Implement workflow step: Identify reset target commit in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Fetch implement job's startedAt time from API
   - Find last commit before that timestamp using `git log --before`
   - Store commit SHA in RESET_COMMIT env var
   - Add fallback to find commit with "plan" or "tasks" in message
-- [ ] T009 [US1] Implement workflow step: Backup spec folder in `.github/workflows/rollback-reset.yml`
+- [x] T009 [US1] Implement workflow step: Backup spec folder in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Define SPEC_DIR as `specs/${BRANCH_NAME}`
   - If spec dir exists, run `git stash push --include-untracked -- "$SPEC_DIR"`
   - Set SPEC_STASHED env var for later restoration
-- [ ] T010 [US1] Implement workflow step: Execute git reset in `.github/workflows/rollback-reset.yml`
+- [x] T010 [US1] Implement workflow step: Execute git reset in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Run `git reset --hard $RESET_COMMIT`
-- [ ] T011 [US1] Implement workflow step: Restore spec folder in `.github/workflows/rollback-reset.yml`
+- [x] T011 [US1] Implement workflow step: Restore spec folder in `.github/workflows/rollback-reset.yml` ✅ DONE
   - If SPEC_STASHED is true, run `git stash pop`
   - Stage spec files with `git add specs/`
   - Commit with message "chore: preserve spec files during rollback"
-- [ ] T012 [US1] Implement workflow step: Force push reset branch in `.github/workflows/rollback-reset.yml`
+- [x] T012 [US1] Implement workflow step: Force push reset branch in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Run `git push origin ${BRANCH_NAME} --force`
-- [ ] T013 [US1] Implement workflow step: Update job status to COMPLETED in `.github/workflows/rollback-reset.yml`
+- [x] T013 [US1] Implement workflow step: Update job status to COMPLETED in `.github/workflows/rollback-reset.yml` ✅ DONE
   - On success, PATCH job status to COMPLETED
   - Use `if: success()` condition
 
@@ -99,16 +99,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement workflow step: Update job status to FAILED on error in `.github/workflows/rollback-reset.yml`
+- [x] T014 [US2] Implement workflow step: Update job status to FAILED on error in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Use `if: failure()` condition to catch any step failures
   - PATCH job status to FAILED
-- [ ] T015 [US2] Add error handling for branch not found in `.github/workflows/rollback-reset.yml`
+- [x] T015 [US2] Add error handling for branch not found in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Check branch exists before checkout
   - Fail with descriptive error if branch missing
-- [ ] T016 [US2] Add error handling for stash operation failure in `.github/workflows/rollback-reset.yml`
+- [x] T016 [US2] Add error handling for stash operation failure in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Wrap stash in error handling block
   - If stash fails, abort reset and preserve original state
-- [ ] T017 [US2] Add error handling for push failure with retry in `.github/workflows/rollback-reset.yml`
+- [x] T017 [US2] Add error handling for push failure with retry in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Implement retry logic (attempt push twice)
   - Fail with descriptive error after retry exhausted
 
@@ -124,10 +124,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Ensure stash includes untracked files in `.github/workflows/rollback-reset.yml`
+- [x] T018 [US3] Ensure stash includes untracked files in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Verify `--include-untracked` flag handles new files added to spec folder
   - Test that modifications to existing spec files are preserved
-- [ ] T019 [US3] Handle nested directories in spec folder in `.github/workflows/rollback-reset.yml`
+- [x] T019 [US3] Handle nested directories in spec folder in `.github/workflows/rollback-reset.yml` ✅ DONE
   - Ensure contracts/, checklists/ subdirectories are preserved
   - Verify git stash handles nested structure correctly
 
@@ -143,10 +143,10 @@
   - Complete full VERIFY→PLAN rollback flow
   - Verify commit history shows implementation commits removed
   - Verify spec files unchanged
-- [ ] T021 [P] Extend E2E tests to verify rollback-reset job creation in `tests/e2e/verify-rollback.spec.ts`
+- [x] T021 [P] Extend E2E tests to verify rollback-reset job creation in `tests/e2e/verify-rollback.spec.ts` ✅ DONE
   - Add test: rollback creates job with command 'rollback-reset'
   - Add test: response includes resetJobId
-- [ ] T022 Run quickstart.md validation checklist
+- [x] T022 Run quickstart.md validation checklist ✅ DONE (TypeScript type-check passes, unit tests pass)
 
 ---
 
