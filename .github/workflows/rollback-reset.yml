@@ -31,7 +31,7 @@ env:
 
 jobs:
   rollback-reset:
-    name: Git Reset to Pre-BUILD State
+    name: Rollback from VERIFY to PLAN
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -52,7 +52,7 @@ jobs:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0  # Full history needed for reset
+          fetch-depth: 0
 
       # --- Configure git user ---
       - name: Configure git
@@ -69,133 +69,97 @@ jobs:
           fi
           echo "Branch verified: ${{ inputs.branch }}"
           echo "Current HEAD: $(git rev-parse HEAD)"
+          echo "Total commits on branch: $(git rev-list --count HEAD)"
 
-      # --- Fetch implement job startedAt time from API ---
-      - name: Identify reset target commit
-        id: find_commit
-        run: |
-          echo "Fetching implement job information..."
-
-          # Get the implement job's startedAt time from the API
-          # We look for the last implement job for this ticket/project
-          JOBS_RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.WORKFLOW_API_TOKEN }}" \
-            "${{ env.APP_URL }}/api/projects/${{ inputs.project_id }}/jobs/status" || echo "")
-
-          echo "Jobs API response received"
-
-          # Find the implement job and get its startedAt
-          IMPLEMENT_STARTED_AT=""
-          if [ -n "$JOBS_RESPONSE" ]; then
-            # Parse JSON to find implement job startedAt (using jq if available, or grep fallback)
-            if command -v jq &>/dev/null; then
-              IMPLEMENT_STARTED_AT=$(echo "$JOBS_RESPONSE" | jq -r '.jobs[] | select(.command=="implement") | .startedAt' 2>/dev/null | head -1)
-            fi
-          fi
-
-          # Method 1: Find commit before implement job started
-          if [ -n "$IMPLEMENT_STARTED_AT" ] && [ "$IMPLEMENT_STARTED_AT" != "null" ]; then
-            echo "Found implement job startedAt: $IMPLEMENT_STARTED_AT"
-            RESET_COMMIT=$(git log --before="$IMPLEMENT_STARTED_AT" -1 --format="%H" 2>/dev/null || echo "")
-            if [ -n "$RESET_COMMIT" ]; then
-              echo "Found commit before implement: $RESET_COMMIT"
-              echo "reset_commit=$RESET_COMMIT" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-          fi
-
-          # Method 2: Fallback - find last commit with "plan" or "tasks" in message
-          echo "Fallback: Looking for plan/tasks commit..."
-          RESET_COMMIT=$(git log --all --oneline --grep="plan\|tasks" --format="%H" | head -1)
-          if [ -n "$RESET_COMMIT" ]; then
-            echo "Found plan/tasks commit: $RESET_COMMIT"
-            echo "reset_commit=$RESET_COMMIT" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Method 3: Fallback - find commit with spec folder changes only
-          echo "Fallback: Looking for last spec-only commit..."
-          RESET_COMMIT=$(git log --all --format="%H" -- "specs/${{ inputs.branch }}/" 2>/dev/null | head -1)
-          if [ -n "$RESET_COMMIT" ]; then
-            echo "Found spec folder commit: $RESET_COMMIT"
-            echo "reset_commit=$RESET_COMMIT" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Method 4: Final fallback - use first commit on branch (may have no implementation)
-          echo "Warning: Could not find ideal reset point, using merge-base with main"
-          RESET_COMMIT=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
-          if [ -n "$RESET_COMMIT" ]; then
-            echo "Using merge-base: $RESET_COMMIT"
-            echo "reset_commit=$RESET_COMMIT" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "::error::Could not find suitable reset commit"
-          exit 1
-
-      # --- Backup spec folder ---
-      - name: Backup spec folder
-        id: backup_specs
+      # --- Backup spec files to temp directory ---
+      - name: Backup spec files
+        id: backup
         run: |
           SPEC_DIR="specs/${{ inputs.branch }}"
+          BACKUP_DIR="/tmp/spec-backup"
+
+          echo "Looking for spec files in: $SPEC_DIR"
 
           if [ -d "$SPEC_DIR" ]; then
-            echo "Spec folder found: $SPEC_DIR"
-            # Stash spec folder including any untracked files
-            git stash push --include-untracked -- "$SPEC_DIR" || {
-              echo "::error::Failed to stash spec folder"
-              exit 1
-            }
-            echo "spec_stashed=true" >> $GITHUB_OUTPUT
-            echo "Spec folder stashed successfully"
+            mkdir -p "$BACKUP_DIR"
+            cp -r "$SPEC_DIR" "$BACKUP_DIR/"
+            echo "has_specs=true" >> $GITHUB_OUTPUT
+            echo "Spec files backed up:"
+            ls -la "$BACKUP_DIR/$(basename $SPEC_DIR)/"
           else
-            echo "No spec folder at $SPEC_DIR - nothing to preserve"
-            echo "spec_stashed=false" >> $GITHUB_OUTPUT
+            echo "has_specs=false" >> $GITHUB_OUTPUT
+            echo "No spec folder found at $SPEC_DIR"
           fi
 
-      # --- Execute git reset ---
-      - name: Execute git reset
+      # --- Reset branch to main (keeping nothing) ---
+      - name: Reset to main branch
         run: |
-          RESET_COMMIT="${{ steps.find_commit.outputs.reset_commit }}"
-          echo "Resetting to commit: $RESET_COMMIT"
-          echo "Commit message: $(git log -1 --format='%s' $RESET_COMMIT)"
+          echo "Current branch state:"
+          git log --oneline -5
 
-          git reset --hard "$RESET_COMMIT" || {
-            echo "::error::Git reset failed"
-            exit 1
-          }
+          echo ""
+          echo "Resetting to origin/main..."
 
-          echo "Reset successful. Current HEAD: $(git rev-parse HEAD)"
+          # Get the merge-base (where branch diverged from main)
+          MERGE_BASE=$(git merge-base origin/main HEAD)
+          echo "Merge base with main: $MERGE_BASE"
 
-      # --- Restore spec folder ---
-      - name: Restore spec folder
-        if: steps.backup_specs.outputs.spec_stashed == 'true'
+          # Hard reset to merge-base (removes ALL branch commits)
+          git reset --hard "$MERGE_BASE"
+
+          echo ""
+          echo "After reset:"
+          git log --oneline -3
+
+      # --- Restore and commit spec files ---
+      - name: Restore spec files
+        if: steps.backup.outputs.has_specs == 'true'
         run: |
-          echo "Restoring stashed spec folder..."
-
-          # Pop the stash to restore spec folder
-          git stash pop || {
-            echo "::error::Failed to restore spec folder from stash"
-            exit 1
-          }
-
-          # Stage and commit the restored spec files
           SPEC_DIR="specs/${{ inputs.branch }}"
-          if [ -d "$SPEC_DIR" ]; then
-            git add "$SPEC_DIR"
-            # Only commit if there are changes
-            if ! git diff --cached --quiet; then
-              git commit -m "chore: preserve spec files during rollback"
-              echo "Spec files committed"
-            else
-              echo "No changes to spec files"
-            fi
-          fi
+          BACKUP_DIR="/tmp/spec-backup/$(basename $SPEC_DIR)"
+
+          echo "Restoring spec files from backup..."
+
+          # Create specs directory structure
+          mkdir -p "$(dirname $SPEC_DIR)"
+
+          # Copy spec files back
+          cp -r "$BACKUP_DIR" "$SPEC_DIR"
+
+          echo "Restored spec files:"
+          ls -la "$SPEC_DIR/"
+
+          # Stage spec files
+          git add "$SPEC_DIR"
+
+          # Commit with clear rollback message
+          git commit -m "rollback(VERIFY→PLAN): preserve spec files for ${{ inputs.ticket_id }}
+
+Implementation removed due to VERIFY stage rollback.
+Spec files (spec.md, plan.md, tasks.md) preserved for re-implementation.
+
+Triggered by: ai-board rollback workflow
+Ticket: ${{ inputs.ticket_id }}"
+
+          echo "Spec files committed"
+
+      # --- Handle case with no specs ---
+      - name: Create empty rollback commit
+        if: steps.backup.outputs.has_specs != 'true'
+        run: |
+          # Create an empty commit to mark the rollback
+          git commit --allow-empty -m "rollback(VERIFY→PLAN): reset branch for ${{ inputs.ticket_id }}
+
+Implementation removed due to VERIFY stage rollback.
+No spec files found to preserve.
+
+Triggered by: ai-board rollback workflow
+Ticket: ${{ inputs.ticket_id }}"
+
+          echo "Empty rollback commit created"
 
       # --- Force push reset branch ---
       - name: Force push reset branch
-        id: push
         run: |
           echo "Force pushing to ${{ inputs.branch }}..."
 
