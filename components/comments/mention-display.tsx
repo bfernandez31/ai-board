@@ -38,13 +38,15 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
   const mentions = parseMentions(content);
 
   // Replace mentions with placeholder tokens that won't be affected by markdown parsing
+  // Using {{MENTION:userId:index}} format to avoid markdown interpretation
+  // (underscores like __MENTION__ get interpreted as bold/emphasis by markdown)
   let processedContent = content;
   const mentionMap = new Map<string, { user: User | undefined; displayName: string; userId: string; isDeleted: boolean }>();
 
   // Replace mentions with unique tokens (in reverse order to preserve indices)
   [...mentions].reverse().forEach((mention) => {
     const user = mentionedUsers[mention.userId];
-    const token = `__MENTION_${mention.userId}_${mention.startIndex}__`;
+    const token = `{{MENTION:${mention.userId}:${mention.startIndex}}}`;
     mentionMap.set(token, {
       user,
       displayName: user?.name || mention.displayName,
@@ -56,7 +58,7 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
 
   // Text component that handles mention tokens
   const TextWithMentions = ({ value }: { value: string }) => {
-    const mentionTokenRegex = /__MENTION_([^_]+)_(\d+)__/g;
+    const mentionTokenRegex = /\{\{MENTION:([^:]+):(\d+)\}\}/g;
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
