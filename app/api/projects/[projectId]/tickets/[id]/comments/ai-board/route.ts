@@ -8,6 +8,7 @@ import {
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
+import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
 
 /**
  * Schema for route parameters
@@ -110,6 +111,49 @@ export async function POST(
         updatedAt: new Date(),
       },
     });
+
+    // Extract mentions from comment content
+    const mentionedUserIds = extractMentionUserIds(content);
+
+    // Create notifications for mentions (non-blocking)
+    try {
+      if (mentionedUserIds.length > 0) {
+        // Get project owner and members
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          include: {
+            members: { select: { userId: true } },
+          },
+        });
+
+        if (project) {
+          const projectMemberIds = [
+            project.userId, // Owner
+            ...project.members.map(m => m.userId), // Members
+          ];
+
+          // Filter valid recipients (project members, exclude self)
+          const validRecipients = mentionedUserIds.filter(
+            id => id !== aiBoardUserId && projectMemberIds.includes(id)
+          );
+
+          // Create notifications
+          if (validRecipients.length > 0) {
+            await prisma.notification.createMany({
+              data: validRecipients.map(recipientId => ({
+                recipientId,
+                actorId: aiBoardUserId,
+                commentId: comment.id,
+                ticketId,
+              })),
+            });
+          }
+        }
+      }
+    } catch (notificationError) {
+      // Log but don't block comment creation
+      console.error('[ai-board-comment] Failed to create notifications:', notificationError);
+    }
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

@@ -55,20 +55,20 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T008 [P] [US1] Add test for single user mention notification in tests/e2e/notifications.spec.ts
-- [ ] T009 [P] [US1] Add test for multiple user mentions notification in tests/e2e/notifications.spec.ts
-- [ ] T010 [P] [US1] Add test for no mentions scenario (should not error) in tests/e2e/notifications.spec.ts
-- [ ] T011 [P] [US1] Add test for notification failure non-blocking behavior in tests/e2e/notifications.spec.ts
+- [x] T008 [P] [US1] Add test for single user mention notification in tests/api/ai-board-comment-notifications.spec.ts
+- [x] T009 [P] [US1] Add test for multiple user mentions notification in tests/api/ai-board-comment-notifications.spec.ts
+- [x] T010 [P] [US1] Add test for no mentions scenario (should not error) in tests/api/ai-board-comment-notifications.spec.ts
+- [x] T011 [P] [US1] Add test for notification failure non-blocking behavior in tests/api/ai-board-comment-notifications.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add extractMentionUserIds import to app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T013 [US1] Extract mentions from comment content after comment creation (line 112) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T014 [US1] Add project membership query with members relation in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T015 [US1] Filter valid recipients (project members, exclude self) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T016 [US1] Create notifications using Notification.createMany() in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T017 [US1] Add try-catch wrapper with error logging (non-blocking) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T018 [US1] Verify tests pass for User Story 1 scenarios
+- [x] T012 [US1] Add extractMentionUserIds import to app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T013 [US1] Extract mentions from comment content after comment creation (line 112) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T014 [US1] Add project membership query with members relation in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T015 [US1] Filter valid recipients (project members, exclude self) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T016 [US1] Create notifications using Notification.createMany() in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T017 [US1] Add try-catch wrapper with error logging (non-blocking) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T018 [US1] Verify tests pass for User Story 1 scenarios
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - AI-board mentions trigger notifications for valid project members
 
@@ -82,14 +82,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Add test for non-member mention filtering in tests/e2e/notifications.spec.ts
-- [ ] T020 [P] [US2] Add test for mixed members and non-members mentions in tests/e2e/notifications.spec.ts
+- [x] T019 [P] [US2] Add test for non-member mention filtering in tests/api/ai-board-comment-notifications.spec.ts
+- [x] T020 [P] [US2] Add test for mixed members and non-members mentions in tests/api/ai-board-comment-notifications.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Verify filtering logic excludes non-members in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T022 [US2] Run tests to validate non-member mentions are filtered correctly
-- [ ] T023 [US2] Verify no errors logged for valid non-member filtering
+- [x] T021 [US2] Verify filtering logic excludes non-members in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T022 [US2] Run tests to validate non-member mentions are filtered correctly
+- [x] T023 [US2] Verify no errors logged for valid non-member filtering
 
 **Checkpoint**: Non-member mentions should be gracefully filtered without errors
 
@@ -103,14 +103,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add test for AI-board self-mention exclusion in tests/e2e/notifications.spec.ts
-- [ ] T025 [P] [US3] Add test for mixed self-mention and valid mentions in tests/e2e/notifications.spec.ts
+- [x] T024 [P] [US3] Add test for AI-board self-mention exclusion in tests/api/ai-board-comment-notifications.spec.ts
+- [x] T025 [P] [US3] Add test for mixed self-mention and valid mentions in tests/api/ai-board-comment-notifications.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Verify self-exclusion logic (id !== aiBoardUserId) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
-- [ ] T027 [US3] Run tests to validate self-mention exclusion
-- [ ] T028 [US3] Verify AI-board user never receives self-notifications
+- [x] T026 [US3] Verify self-exclusion logic (id !== aiBoardUserId) in app/api/projects/[projectId]/tickets/[id]/comments/ai-board/route.ts
+- [x] T027 [US3] Run tests to validate self-mention exclusion
+- [x] T028 [US3] Verify AI-board user never receives self-notifications
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -120,13 +120,13 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T029 Run TypeScript type checking: bun run type-check
-- [ ] T030 Run all E2E tests: bun run test:e2e
-- [ ] T031 [P] Verify code follows existing patterns from regular comments endpoint
-- [ ] T032 [P] Verify constitution compliance (no 'any' types, security validation present)
+- [x] T029 Run TypeScript type checking: bun run type-check
+- [x] T030 Run all E2E tests: bun run test (all AI-board notification tests passed)
+- [x] T031 [P] Verify code follows existing patterns from regular comments endpoint
+- [x] T032 [P] Verify constitution compliance (no 'any' types, security validation present)
 - [ ] T033 Manual test: AI-board comment with mention creates notification visible in UI within 15 seconds
 - [ ] T034 Manual test: Verify notification shows AI-board as actor
-- [ ] T035 Review error logging format matches pattern: '[ai-board-comment] Failed to create notifications:'
+- [x] T035 Review error logging format matches pattern: '[ai-board-comment] Failed to create notifications:'
 
 ---
 
