@@ -863,10 +863,17 @@ Fetch notifications for authenticated user with unread count.
 - `commentPreview`: First 80 characters of comment content (truncated with "...")
 - `createdAt`: ISO 8601 timestamp of notification creation
 - `read`: Boolean indicating if notification has been read
-- `commentId`: ID for comment anchor navigation
-- `projectId`: Project ID for navigation URL construction
+- `commentId`: ID for comment anchor navigation and scroll targeting
+- `projectId`: Project ID for navigation URL construction and cross-project detection
 - `unreadCount`: Total number of unread notifications for user
 - `hasMore`: Boolean indicating if more notifications exist beyond limit
+
+**Navigation Context**:
+- `projectId` enables same-project vs cross-project detection
+- Same-project: Current window navigation when notification.projectId matches board projectId
+- Cross-project: New tab navigation when notification.projectId differs from board projectId
+- `commentId` used to construct comment anchor (#comment-{id}) for scroll targeting
+- `ticketKey` used to construct navigation URL (/projects/{projectId}?modal=open&ticketKey={ticketKey}&tab=comments#comment-{commentId})
 
 **Errors**:
 - `401`: Not authenticated
@@ -899,6 +906,13 @@ Mark a single notification as read.
 - `500`: Database error
 
 **Idempotency**: Marking an already-read notification returns 200 OK
+
+**Usage Pattern**:
+- Called by notification dropdown before navigation
+- Updates `read` to true and sets `readAt` timestamp
+- Triggers TanStack Query cache invalidation for notification list
+- Supports optimistic updates (UI updates before server confirms)
+- Navigation begins immediately after mutation call (non-blocking)
 
 ### POST /api/notifications/mark-all-read
 
