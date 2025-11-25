@@ -59,7 +59,7 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 **NOTE: Write tests FIRST, ensure they FAIL before implementation**
 
 - [X] T006 [P] [US1] Write unit tests for navigation-utils.ts in tests/unit/navigation-utils.test.ts (test isSameProject, buildNotificationUrl, createNavigationContext)
-- [ ] T007 [P] [US1] Write E2E test for same-project notification click in tests/e2e/notification-navigation.spec.ts
+- [X] T007 [P] [US1] Write E2E test for same-project notification click in tests/e2e/notification-navigation.spec.ts
 
 ### Implementation for User Story 1
 
@@ -82,8 +82,8 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Write E2E test for cross-project notification click (new tab) in tests/e2e/notification-navigation.spec.ts
-- [ ] T015 [P] [US2] Write E2E test verifying original tab remains unchanged after cross-project click in tests/e2e/notification-navigation.spec.ts
+- [X] T014 [P] [US2] Write E2E test for cross-project notification click (new tab) in tests/e2e/notification-navigation.spec.ts
+- [X] T015 [P] [US2] Write E2E test verifying original tab remains unchanged after cross-project click in tests/e2e/notification-navigation.spec.ts
 
 ### Implementation for User Story 2
 
@@ -103,16 +103,16 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Write E2E test verifying notification marked as read before modal opens in tests/e2e/notification-navigation.spec.ts
-- [ ] T020 [P] [US3] Write E2E test verifying unread count decrements immediately in tests/e2e/notification-navigation.spec.ts
-- [ ] T021 [P] [US3] Write E2E test for rapid click race condition prevention in tests/e2e/notification-navigation.spec.ts
+- [X] T019 [P] [US3] Write E2E test verifying notification marked as read before modal opens in tests/e2e/notification-navigation.spec.ts
+- [X] T020 [P] [US3] Write E2E test verifying unread count decrements immediately in tests/e2e/notification-navigation.spec.ts
+- [X] T021 [P] [US3] Write E2E test for rapid click race condition prevention in tests/e2e/notification-navigation.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Call markAsRead.mutate() before navigation in app/components/notifications/notification-dropdown.tsx
-- [ ] T023 [US3] Verify optimistic update behavior in TanStack Query mutation
-- [ ] T024 [US3] Add isPending state to disable notification items during navigation in app/components/notifications/notification-dropdown.tsx
-- [ ] T025 [US3] Add visual feedback (pointer-events: none, opacity) during navigation in app/components/notifications/notification-dropdown.tsx
+- [X] T022 [US3] Call markAsRead.mutate() before navigation in app/components/notifications/notification-dropdown.tsx
+- [X] T023 [US3] Verify optimistic update behavior in TanStack Query mutation
+- [X] T024 [US3] Add isPending state to disable notification items during navigation in app/components/notifications/notification-dropdown.tsx
+- [X] T025 [US3] Add visual feedback (pointer-events: none, opacity) during navigation in app/components/notifications/notification-dropdown.tsx
 
 **Checkpoint**: All user stories should now be independently functional - notifications mark as read, same-project and cross-project navigation work correctly
 
@@ -122,15 +122,15 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T026 [P] Add error handling for deleted tickets (FR-008) across all navigation scenarios
-- [ ] T027 [P] Add error handling for insufficient permissions (FR-009) across all navigation scenarios
-- [ ] T028 [P] Add accessibility improvements: keyboard navigation, screen reader announcements
-- [ ] T029 [P] Add TypeScript strict mode validation across all modified files
-- [ ] T030 [P] Add error handling for network failures in mark-as-read mutation
-- [ ] T031 Add loading states for async operations in notification dropdown
-- [ ] T032 [P] Run quickstart.md validation checklist
-- [ ] T033 [P] Performance testing: verify comment visible in viewport within 1 second (SC-005)
-- [ ] T034 [P] Performance testing: verify unread count updates within 200ms (SC-007)
+- [X] T026 [P] Add error handling for deleted tickets (FR-008) across all navigation scenarios
+- [X] T027 [P] Add error handling for insufficient permissions (FR-009) across all navigation scenarios
+- [X] T028 [P] Add accessibility improvements: keyboard navigation, screen reader announcements
+- [X] T029 [P] Add TypeScript strict mode validation across all modified files
+- [X] T030 [P] Add error handling for network failures in mark-as-read mutation
+- [X] T031 Add loading states for async operations in notification dropdown
+- [X] T032 [P] Run quickstart.md validation checklist
+- [X] T033 [P] Performance testing: verify comment visible in viewport within 1 second (SC-005)
+- [X] T034 [P] Performance testing: verify unread count updates within 200ms (SC-007)
 
 ---
 
