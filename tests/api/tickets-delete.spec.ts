@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase, getProjectKey } from '../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 import { JobStatus } from '@prisma/client';
 
@@ -14,8 +15,11 @@ import { JobStatus } from '@prisma/client';
 
 test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
   let testUser: { id: string };
+  let ticketCounter = 100; // Counter for unique ticket numbers
 
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+
     // Create test user for all tests
     testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
@@ -31,42 +35,46 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
       },
     });
 
-    // Ensure test projects exist
+    // Ensure test project exists with correct key for this worker
+    const projectKey = getProjectKey(projectId);
     await prisma.project.upsert({
-      where: { id: 1 },
+      where: { id: projectId },
       update: {
         userId: testUser.id,
         updatedAt: new Date(),
       },
       create: {
-        id: 1,
+        id: projectId,
         name: '[e2e] Test Project',
-        key: 'TST',
+        key: projectKey,
         description: 'Test project for DELETE endpoint',
         githubOwner: 'test',
-        githubRepo: 'test',
+        githubRepo: `test${projectId}`,
         userId: testUser.id,
         updatedAt: new Date(),
       },
     });
+
+    // Reset counter per test to avoid conflicts
+    ticketCounter = 100 + projectId * 100;
   });
 
   // T014: API contract test for DELETE success (INBOX ticket)
-  test('DELETE success - INBOX ticket (200 OK)', async ({ request }) => {
+  test('DELETE success - INBOX ticket (200 OK)', async ({ request, projectId }) => {
     // Create INBOX ticket
     const ticket = await prisma.ticket.create({
       data: {
         title: '[e2e] DELETE Test - INBOX',
         description: 'Test ticket for successful deletion',
         stage: 'INBOX',
-        projectId: 1,
+        projectId,
         ticketNumber: 100,
         ticketKey: 'TST-100',
       },
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(200);
@@ -88,7 +96,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(deletedTicket).toBeNull();
   });
 
-  test('DELETE success - SPECIFY ticket without branch (200 OK)', async ({ request }) => {
+  test('DELETE success - SPECIFY ticket without branch (200 OK)', async ({ request, projectId }) => {
     // Create SPECIFY ticket without branch (no GitHub cleanup needed)
     const ticket = await prisma.ticket.create({
       data: {
@@ -96,14 +104,14 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'Test ticket without branch',
         stage: 'SPECIFY',
         branch: null,
-        projectId: 1,
+        projectId,
         ticketNumber: 101,
         ticketKey: 'TST-101',
       },
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(200);
@@ -123,7 +131,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(deletedTicket).toBeNull();
   });
 
-  test('DELETE success - ticket with COMPLETED jobs (200 OK)', async ({ request }) => {
+  test('DELETE success - ticket with COMPLETED jobs (200 OK)', async ({ request, projectId }) => {
     // Create ticket with COMPLETED job (no branch to avoid GitHub dependencies)
     const ticket = await prisma.ticket.create({
       data: {
@@ -131,7 +139,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'Ticket with completed job',
         stage: 'INBOX',
         branch: null,
-        projectId: 1,
+        projectId,
         ticketNumber: 102,
         ticketKey: 'TST-102',
       },
@@ -141,7 +149,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'build',
         status: JobStatus.COMPLETED,
         branch: null,
@@ -150,7 +158,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(200);
@@ -172,7 +180,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
   });
 
   // T015: API contract test for DELETE rejected (SHIP stage)
-  test('DELETE rejected - SHIP stage ticket (400 Bad Request)', async ({ request }) => {
+  test('DELETE rejected - SHIP stage ticket (400 Bad Request)', async ({ request, projectId }) => {
     // Create SHIP ticket
     const ticket = await prisma.ticket.create({
       data: {
@@ -180,14 +188,14 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'SHIP stage ticket cannot be deleted',
         stage: 'SHIP',
         branch: '997-shipped',
-        projectId: 1,
+        projectId,
         ticketNumber: 103,
         ticketKey: 'TST-103',
       },
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(400);
@@ -209,7 +217,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
   });
 
   // T016: API contract test for DELETE rejected (active job)
-  test('DELETE rejected - ticket with PENDING job (400 Bad Request)', async ({ request }) => {
+  test('DELETE rejected - ticket with PENDING job (400 Bad Request)', async ({ request, projectId }) => {
     // Create ticket with PENDING job
     const ticket = await prisma.ticket.create({
       data: {
@@ -217,7 +225,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'Ticket with pending job',
         stage: 'BUILD',
         branch: '996-pending-job',
-        projectId: 1,
+        projectId,
         ticketNumber: 104,
         ticketKey: 'TST-104',
       },
@@ -227,7 +235,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'build',
         status: JobStatus.PENDING,
         branch: '996-pending-job',
@@ -236,7 +244,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(400);
@@ -257,7 +265,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('DELETE rejected - ticket with RUNNING job (400 Bad Request)', async ({ request }) => {
+  test('DELETE rejected - ticket with RUNNING job (400 Bad Request)', async ({ request, projectId }) => {
     // Create ticket with RUNNING job
     const ticket = await prisma.ticket.create({
       data: {
@@ -265,7 +273,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'Ticket with running job',
         stage: 'VERIFY',
         branch: '995-running-job',
-        projectId: 1,
+        projectId,
         ticketNumber: 105,
         ticketKey: 'TST-105',
       },
@@ -275,7 +283,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'verify',
         status: JobStatus.RUNNING,
         branch: '995-running-job',
@@ -284,7 +292,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     });
 
     // Send DELETE request
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(400);
@@ -305,11 +313,11 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('DELETE rejected - non-existent ticket (404 Not Found)', async ({ request }) => {
+  test('DELETE rejected - non-existent ticket (404 Not Found)', async ({ request, projectId }) => {
     const nonExistentId = 999999;
 
     // Send DELETE request for non-existent ticket
-    const response = await request.delete(`/api/projects/1/tickets/${nonExistentId}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${nonExistentId}`);
 
     // Verify response
     expect(response.status()).toBe(404);
@@ -320,40 +328,45 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(json).toHaveProperty('code', 'NOT_FOUND');
   });
 
-  test('DELETE rejected - ticket from different project (403 Forbidden)', async ({ request }) => {
+  test('DELETE rejected - ticket from different project (403 Forbidden)', async ({ request, projectId }) => {
+    // Use a different project ID (project 3 is reserved for dev, use it as "other")
+    // If current projectId is 3, skip this test (shouldn't happen with worker-isolation)
+    const otherProjectId = projectId === 3 ? 8 : 3;
+    const otherProjectKey = `OTH`;
+
     // Create second project
     await prisma.project.upsert({
-      where: { id: 2 },
+      where: { id: otherProjectId },
       update: {
         userId: testUser.id,
         updatedAt: new Date(),
       },
       create: {
-        id: 2,
-        name: '[e2e] Test Project 2',
-        key: 'TS2',
-        description: 'Test project 2 for cross-project tests',
+        id: otherProjectId,
+        name: '[e2e] Test Project Other',
+        key: otherProjectKey,
+        description: 'Test project for cross-project tests',
         githubOwner: 'test',
-        githubRepo: 'test2',
+        githubRepo: `test-other-${otherProjectId}`,
         userId: testUser.id,
         updatedAt: new Date(),
       },
     });
 
-    // Create ticket in project 2
+    // Create ticket in other project
     const ticket = await prisma.ticket.create({
       data: {
         title: '[e2e] DELETE Test - Wrong Project',
-        description: 'Ticket belongs to project 2',
+        description: 'Ticket belongs to other project',
         stage: 'INBOX',
-        projectId: 2, // Ticket belongs to project 2
+        projectId: otherProjectId,
         ticketNumber: 106,
-        ticketKey: 'TS2-106',
+        ticketKey: `${otherProjectKey}-106`,
       },
     });
 
-    // Try to delete via project 1 endpoint
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    // Try to delete via current project endpoint (should be forbidden)
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     // Verify response
     expect(response.status()).toBe(403);
@@ -367,13 +380,13 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
       where: { id: ticket.id },
     });
     expect(existingTicket).not.toBeNull();
-    expect(existingTicket?.projectId).toBe(2);
+    expect(existingTicket?.projectId).toBe(otherProjectId);
 
     // Cleanup
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 
-  test('DELETE with invalid project ID (400 Bad Request)', async ({ request }) => {
+  test('DELETE with invalid project ID (400 Bad Request)', async ({ request, projectId }) => {
     const response = await request.delete('/api/projects/invalid/tickets/1');
 
     expect(response.status()).toBe(400);
@@ -383,8 +396,8 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(json).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  test('DELETE with invalid ticket ID (400 Bad Request)', async ({ request }) => {
-    const response = await request.delete('/api/projects/1/tickets/invalid');
+  test('DELETE with invalid ticket ID (400 Bad Request)', async ({ request, projectId }) => {
+    const response = await request.delete('/api/projects/${projectId}/tickets/invalid');
 
     expect(response.status()).toBe(400);
 
@@ -393,7 +406,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(json).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  test('DELETE with negative project ID (400 Bad Request)', async ({ request }) => {
+  test('DELETE with negative project ID (400 Bad Request)', async ({ request, projectId }) => {
     const response = await request.delete('/api/projects/-1/tickets/1');
 
     expect(response.status()).toBe(400);
@@ -403,8 +416,8 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(json).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  test('DELETE with negative ticket ID (400 Bad Request)', async ({ request }) => {
-    const response = await request.delete('/api/projects/1/tickets/-1');
+  test('DELETE with negative ticket ID (400 Bad Request)', async ({ request, projectId }) => {
+    const response = await request.delete('/api/projects/${projectId}/tickets/-1');
 
     expect(response.status()).toBe(400);
 
@@ -413,7 +426,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     expect(json).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  test('DELETE cascades to related Jobs and Comments', async ({ request }) => {
+  test('DELETE cascades to related Jobs and Comments', async ({ request, projectId }) => {
     // Create ticket with job and comment (no branch to avoid GitHub dependencies)
     const ticket = await prisma.ticket.create({
       data: {
@@ -421,7 +434,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
         description: 'Test cascading deletion',
         stage: 'INBOX',
         branch: null,
-        projectId: 1,
+        projectId,
         ticketNumber: 107,
         ticketKey: 'TST-107',
       },
@@ -431,7 +444,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     const job = await prisma.job.create({
       data: {
         ticketId: ticket.id,
-        projectId: 1,
+        projectId,
         command: 'build',
         status: JobStatus.COMPLETED,
         branch: null,
@@ -449,7 +462,7 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     });
 
     // Delete ticket
-    const response = await request.delete(`/api/projects/1/tickets/${ticket.id}`);
+    const response = await request.delete(`/api/projects/${projectId}/tickets/${ticket.id}`);
 
     expect(response.status()).toBe(200);
 

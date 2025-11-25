@@ -299,6 +299,8 @@ When a user is mentioned in a comment:
 - Links notification to source comment, ticket, and actor
 - No notification created for self-mentions
 - No notification created for non-project members
+- AI-BOARD comments create notifications for mentioned users
+- AI-BOARD as actor appears in notification (shows "AI-BOARD mentioned you")
 
 **Notification Delivery**:
 - Notifications appear within 15 seconds via polling

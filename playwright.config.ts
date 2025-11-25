@@ -3,8 +3,10 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Load .env file for test environment
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Load .env.test.local for test environment (contains test tokens)
+// This ensures tests use the same tokens as the test server
+// Use override: true to ensure test tokens take precedence over shell env
+dotenv.config({ path: path.resolve(__dirname, '.env.test.local'), override: true });
 
 // Read test user ID from file (set by global-setup.ts)
 const testUserIdPath = path.resolve(__dirname, '.test-user-id');

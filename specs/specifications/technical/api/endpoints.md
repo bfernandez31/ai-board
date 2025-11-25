@@ -778,10 +778,20 @@ Create AI-BOARD comment (workflow-only endpoint).
 }
 ```
 
+**Mention Notification Behavior**:
+- Automatically extracts @mentions from comment content
+- Creates notifications for mentioned project members (owner + members)
+- Filters out AI-BOARD self-mentions (no notification created)
+- Filters out non-project members (no notification created)
+- Uses AI-BOARD user ID as `actorId` in notification records
+- Notification creation is non-blocking (errors logged but don't fail comment creation)
+
 **Errors**:
 - `400`: Invalid content or userId
 - `401`: Invalid or missing workflow token
 - `404`: Ticket or project not found
+
+**Note**: Comment creation always succeeds even if notification creation fails (non-blocking pattern)
 
 ### DELETE /api/projects/:projectId/tickets/:id/comments/:commentId
 
