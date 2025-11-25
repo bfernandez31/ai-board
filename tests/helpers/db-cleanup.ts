@@ -144,6 +144,20 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
   try {
     // If projectId specified, only clean that project (worker-specific cleanup)
     // Otherwise clean all worker test projects (1, 2, 4, 5, 6, 7) - SKIP project 3 (dev)
+
+    // Delete notifications first (foreign key to tickets)
+    await client.notification.deleteMany({
+      where: projectId
+        ? { ticket: { projectId } }
+        : {
+            ticket: {
+              projectId: {
+                in: [1, 2, 4, 5, 6, 7],
+              },
+            },
+          },
+    });
+
     await client.ticket.deleteMany({
       where: projectId
         ? { projectId }
@@ -252,6 +266,29 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
         ],
       },
     });
+
+    // Delete project-specific test users (pattern: @project{N}.e2e.test)
+    // Only delete for the specific project being cleaned to avoid race conditions
+    if (projectId) {
+      await client.user.deleteMany({
+        where: {
+          email: {
+            endsWith: `@project${projectId}.e2e.test`,
+          },
+        },
+      });
+    } else {
+      // Clean all worker project users when no specific project
+      for (const pid of [1, 2, 4, 5, 6, 7]) {
+        await client.user.deleteMany({
+          where: {
+            email: {
+              endsWith: `@project${pid}.e2e.test`,
+            },
+          },
+        });
+      }
+    }
 
     // Delete [e2e] tickets from projects 8+ (non-worker test projects)
     await client.ticket.deleteMany({

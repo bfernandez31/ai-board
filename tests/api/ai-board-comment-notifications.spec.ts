@@ -1,5 +1,5 @@
 import { test, expect } from '../helpers/worker-isolation';
-import { cleanupDatabase } from '../helpers/db-cleanup';
+import { cleanupDatabase, getProjectKey, getProjectGithub } from '../helpers/db-cleanup';
 import { prisma } from '@/lib/db/client';
 
 /**
@@ -33,10 +33,7 @@ test.describe('AI-Board Comment Notifications', () => {
     // Create test user (project owner)
     const testUser = await prisma.user.upsert({
       where: { email: 'test@e2e.local' },
-      update: {
-        id: 'test-user-id',
-        name: 'E2E Test User',
-      },
+      update: {},
       create: {
         id: 'test-user-id',
         email: 'test@e2e.local',
@@ -48,15 +45,14 @@ test.describe('AI-Board Comment Notifications', () => {
     testUserId = testUser.id;
 
     // Create additional test users for project members
+    // Use projectId-specific emails to avoid cleanup conflicts between parallel workers
+    // Email pattern: user@project{N}.e2e.test - only cleaned when that project is cleaned
     const alice = await prisma.user.upsert({
-      where: { email: 'alice@test.com' },
-      update: {
-        id: 'user-alice',
-        name: 'Alice Smith',
-      },
+      where: { id: `user-alice-p${projectId}` },
+      update: {},
       create: {
-        id: 'user-alice',
-        email: 'alice@test.com',
+        id: `user-alice-p${projectId}`,
+        email: `alice@project${projectId}.e2e.test`,
         name: 'Alice Smith',
         emailVerified: new Date(),
         updatedAt: new Date(),
@@ -65,14 +61,11 @@ test.describe('AI-Board Comment Notifications', () => {
     aliceUserId = alice.id;
 
     const bob = await prisma.user.upsert({
-      where: { email: 'bob@test.com' },
-      update: {
-        id: 'user-bob',
-        name: 'Bob Johnson',
-      },
+      where: { id: `user-bob-p${projectId}` },
+      update: {},
       create: {
-        id: 'user-bob',
-        email: 'bob@test.com',
+        id: `user-bob-p${projectId}`,
+        email: `bob@project${projectId}.e2e.test`,
         name: 'Bob Johnson',
         emailVerified: new Date(),
         updatedAt: new Date(),
@@ -82,14 +75,11 @@ test.describe('AI-Board Comment Notifications', () => {
 
     // Create non-member user (not added to project)
     const nonMember = await prisma.user.upsert({
-      where: { email: 'nonmember@test.com' },
-      update: {
-        id: 'user-nonmember',
-        name: 'Non Member',
-      },
+      where: { id: `user-nonmember-p${projectId}` },
+      update: {},
       create: {
-        id: 'user-nonmember',
-        email: 'nonmember@test.com',
+        id: `user-nonmember-p${projectId}`,
+        email: `nonmember@project${projectId}.e2e.test`,
         name: 'Non Member',
         emailVerified: new Date(),
         updatedAt: new Date(),
@@ -111,7 +101,9 @@ test.describe('AI-Board Comment Notifications', () => {
     });
     aiBoardUserId = aiBoard.id;
 
-    // Create test project with owner
+    // Create test project with owner (use helpers for consistent key/github)
+    const projectKey = getProjectKey(projectId);
+    const github = getProjectGithub(projectId);
     await prisma.project.upsert({
       where: { id: projectId },
       update: { userId: testUser.id },
@@ -119,18 +111,19 @@ test.describe('AI-Board Comment Notifications', () => {
         id: projectId,
         name: '[e2e] Test Project',
         description: 'Test project for AI-board notifications',
-        githubOwner: 'test-owner',
-        githubRepo: 'test-repo',
+        githubOwner: github.owner,
+        githubRepo: github.repo,
         userId: testUser.id,
-        key: `E2E${projectId}`,
+        key: projectKey,
         updatedAt: new Date(),
       },
     });
 
     // Add project members (Alice and Bob, but NOT nonMember)
+    // Note: testUser is already owner via project.userId, add as member for consistency
     await prisma.projectMember.createMany({
       data: [
-        { projectId, userId: testUser.id, role: 'owner' },
+        { projectId, userId: testUser.id, role: 'member' },
         { projectId, userId: alice.id, role: 'member' },
         { projectId, userId: bob.id, role: 'member' },
       ],
@@ -141,7 +134,7 @@ test.describe('AI-Board Comment Notifications', () => {
     const testTicket = await prisma.ticket.create({
       data: {
         ticketNumber: 1,
-        ticketKey: `E2E${projectId}-1`,
+        ticketKey: `${projectKey}-1`,
         title: '[e2e] Test Ticket for AI-board Notifications',
         description: 'Ticket for testing AI-board comment notifications',
         projectId,
