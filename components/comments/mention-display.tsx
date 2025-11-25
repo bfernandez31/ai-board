@@ -26,6 +26,9 @@ interface MentionDisplayProps {
   mentionedUsers: Record<string, User>;
 }
 
+// Token regex for matching mention placeholders
+const MENTION_TOKEN_REGEX = /\{\{MENTION:([^:]+):(\d+)\}\}/g;
+
 /**
  * Render comment content with markdown and mentions formatted as chips
  *
@@ -39,7 +42,6 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
 
   // Replace mentions with placeholder tokens that won't be affected by markdown parsing
   // Using {{MENTION:userId:index}} format to avoid markdown interpretation
-  // (underscores like __MENTION__ get interpreted as bold/emphasis by markdown)
   let processedContent = content;
   const mentionMap = new Map<string, { user: User | undefined; displayName: string; userId: string; isDeleted: boolean }>();
 
@@ -56,14 +58,18 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
     processedContent = processedContent.substring(0, mention.startIndex) + token + processedContent.substring(mention.endIndex);
   });
 
-  // Text component that handles mention tokens
-  const TextWithMentions = ({ value }: { value: string }) => {
-    const mentionTokenRegex = /\{\{MENTION:([^:]+):(\d+)\}\}/g;
+  /**
+   * Process a string value, replacing mention tokens with MentionChip components
+   */
+  const processText = (value: string): React.ReactNode => {
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
-    while ((match = mentionTokenRegex.exec(value)) !== null) {
+    // Reset regex state
+    MENTION_TOKEN_REGEX.lastIndex = 0;
+
+    while ((match = MENTION_TOKEN_REGEX.exec(value)) !== null) {
       // Add text before the match
       if (match.index > lastIndex) {
         parts.push(value.substring(lastIndex, match.index));
@@ -75,13 +81,16 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
       if (mentionData) {
         parts.push(
           <MentionChip
-            key={`mention-${match.index}`}
+            key={`mention-${match.index}-${match[1]}`}
             userId={mentionData.userId}
             displayName={mentionData.displayName}
             email={mentionData.user?.email}
             isDeleted={mentionData.isDeleted}
           />
         );
+      } else {
+        // Token not found in map, keep original text
+        parts.push(token);
       }
 
       lastIndex = match.index + match[0].length;
@@ -92,23 +101,49 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
       parts.push(value.substring(lastIndex));
     }
 
-    return <>{parts.length > 0 ? parts : value}</>;
+    return parts.length > 0 ? <>{parts}</> : value;
+  };
+
+  /**
+   * Recursively process React children to find and replace mention tokens in text nodes
+   */
+  const processChildren = (children: React.ReactNode): React.ReactNode => {
+    return React.Children.map(children, (child) => {
+      // Handle string children - process for mentions
+      if (typeof child === 'string') {
+        return processText(child);
+      }
+
+      // Handle React elements - recursively process their children
+      if (React.isValidElement(child)) {
+        const childProps = child.props as { children?: React.ReactNode };
+        if (childProps.children) {
+          return React.cloneElement(child, {
+            ...childProps,
+            children: processChildren(childProps.children),
+          } as React.Attributes);
+        }
+      }
+
+      // Return other nodes as-is
+      return child;
+    });
   };
 
   const components: Components = {
     p: ({ children }) => (
       <span className="whitespace-pre-wrap block">
-        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+        {processChildren(children)}
       </span>
     ),
     strong: ({ children }) => (
       <strong className="font-semibold text-zinc-100">
-        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+        {processChildren(children)}
       </strong>
     ),
     em: ({ children }) => (
       <em className="italic">
-        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+        {processChildren(children)}
       </em>
     ),
     a: ({ href, children }) => (
@@ -118,7 +153,7 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
         target="_blank"
         rel="noopener noreferrer"
       >
-        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+        {processChildren(children)}
       </a>
     ),
     code: ({ children, className }) => {
@@ -134,18 +169,21 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
         </code>
       );
     },
-    ul: ({ children }) => <ul className="list-disc ml-4 my-2">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
+    ul: ({ children }) => <ul className="list-disc ml-4 my-2">{processChildren(children)}</ul>,
+    ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{processChildren(children)}</ol>,
     li: ({ children }) => (
       <li className="mb-1">
-        {typeof children === 'string' ? <TextWithMentions value={children} /> : children}
+        {processChildren(children)}
       </li>
     ),
     blockquote: ({ children }) => (
       <blockquote className="border-l-4 border-surface0 pl-3 italic text-subtext0 my-2">
-        {children}
+        {processChildren(children)}
       </blockquote>
     ),
+    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{processChildren(children)}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{processChildren(children)}</h2>,
+    h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{processChildren(children)}</h3>,
   };
 
   return (
@@ -172,7 +210,7 @@ function MentionChip({ displayName, email, isDeleted }: MentionChipProps) {
         data-testid="mention-chip"
         className="inline-block px-1.5 py-0.5 mx-0.5 rounded text-sm bg-muted text-muted-foreground"
       >
-        [Removed User]
+        @{displayName}
       </span>
     );
   }
