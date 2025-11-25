@@ -414,8 +414,10 @@ model Notification {
 
 **Business Rules**:
 - Created when comment contains @mention of project member
-- No notification created for self-mentions
+- No notification created for self-mentions (including AI-BOARD self-mentions)
 - No notification created for non-project members
+- AI-BOARD comments create notifications for mentioned users (AI-BOARD as actor)
+- Notification creation is non-blocking (errors logged but don't fail operations)
 - Notifications retained for 30 days before deletion
 - Deleted comments cascade delete notifications
 - Deleted users cascade delete their received and created notifications
