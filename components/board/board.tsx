@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
@@ -84,6 +84,8 @@ function BoardContent({
 }: BoardProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Seed the TanStack Query cache with server-fetched data to avoid loading state
   React.useEffect(() => {
@@ -502,8 +504,12 @@ function BoardContent({
     setIsModalOpen(open);
     if (!open) {
       setSelectedTicket(null);
+      // Clean URL params when closing modal opened via notification link
+      if (searchParams?.get('modal') === 'open') {
+        router.replace(pathname, { scroll: false });
+      }
     }
-  }, []);
+  }, [searchParams, router, pathname]);
 
   // Handle ticket update from modal
   type UpdatedModalTicket = {
