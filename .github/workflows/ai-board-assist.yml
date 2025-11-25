@@ -367,6 +367,11 @@ jobs:
           # This catches MENTION_81817281_121, MENTION_cm47j3m31817281_456, etc.
           CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed "s/MENTION_[^_]*_[0-9]*/@[${USER_ID}:${USER_NAME}]/g")
 
+          # Also replace ANY @[wrongId:displayName] with correct @[USER_ID:displayName]
+          # Claude sometimes outputs @[randomId:name] instead of using the actual USER_ID
+          # This catches the case where Claude uses its own internal ID (like 81817281 instead of cm47j3m31817281)
+          CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed "s/@\[[^:]*:${USER_NAME}\]/@[${USER_ID}:${USER_NAME}]/g")
+
           echo "📝 Cleaned message (first 300 chars): ${CLEANED_MESSAGE:0:300}..."
 
           # Escape special characters for JSON
