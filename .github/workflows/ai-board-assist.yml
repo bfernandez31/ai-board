@@ -342,12 +342,30 @@ jobs:
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         env:
           MESSAGE: ${{ steps.parse.outputs.message }}
+          USER_ID: ${{ inputs.user_id }}
+          USER_NAME: ${{ inputs.user }}
         run: |
           echo "💬 Posting AI-BOARD response comment..."
 
-          # Use env var to avoid shell escaping issues with special characters
+          # Clean Claude's output:
+          # 1. Remove preamble (everything before the first @ mention)
+          # 2. Replace MENTION_xxx_yyy with proper @[userId:displayName] format
+          CLEANED_MESSAGE="$MESSAGE"
+
+          # Remove preamble: keep only from first @[ or MENTION_ onwards
+          if echo "$CLEANED_MESSAGE" | grep -q '@\['; then
+            CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed -n '/@\[/,$p' | sed '1s/.*\(@\[.*\)/\1/')
+          elif echo "$CLEANED_MESSAGE" | grep -q 'MENTION_'; then
+            CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed -n '/MENTION_/,$p' | sed '1s/.*\(MENTION_.*\)/\1/')
+          fi
+
+          # Replace MENTION_userId_xxx patterns with @[userId:displayName]
+          CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed "s/MENTION_${USER_ID}_[0-9]*/@[${USER_ID}:${USER_NAME}]/g")
+
+          echo "📝 Cleaned message (first 200 chars): ${CLEANED_MESSAGE:0:200}..."
+
           # Escape special characters for JSON
-          MESSAGE_JSON=$(echo "$MESSAGE" | jq -Rs .)
+          MESSAGE_JSON=$(echo "$CLEANED_MESSAGE" | jq -Rs .)
 
           curl -L -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/comments/ai-board" \
             -H "Content-Type: application/json" \
