@@ -194,15 +194,14 @@ export function TicketDetailModal({
     }
   }, [ticket]);
 
-  // Reset child dialog states when parent dialog closes
+  // Sync activeTab with initialTab when modal opens or initialTab changes
+  // This ensures the tab is correctly set even when navigating via URL params
   useEffect(() => {
     if (!open) {
       setPolicyEditOpen(false);
-      setActiveTab(initialTab); // Reset to initial tab when modal closes
-    } else {
-      // Set to initial tab when opening
-      setActiveTab(initialTab);
     }
+    // Always sync activeTab with initialTab when either changes
+    setActiveTab(initialTab);
   }, [open, initialTab]);
 
   // Fetch jobs for the ticket to check for completed specify job

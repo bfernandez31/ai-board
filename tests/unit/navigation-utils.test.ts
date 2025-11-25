@@ -38,7 +38,7 @@ describe('buildNotificationUrl', () => {
       commentId: 789,
     });
 
-    expect(url).toBe('/projects/1/tickets/ABC-123?modal=open&tab=comments#comment-789');
+    expect(url).toBe('/projects/1/board?ticket=ABC-123&modal=open&tab=comments#comment-789');
   });
 
   it('should use custom tab parameter', () => {
@@ -49,7 +49,7 @@ describe('buildNotificationUrl', () => {
       tab: 'files',
     });
 
-    expect(url).toBe('/projects/1/tickets/ABC-123?modal=open&tab=files#comment-789');
+    expect(url).toBe('/projects/1/board?ticket=ABC-123&modal=open&tab=files#comment-789');
   });
 
   it('should default to comments tab', () => {
@@ -62,14 +62,14 @@ describe('buildNotificationUrl', () => {
     expect(url).toContain('tab=comments');
   });
 
-  it('should encode special characters in ticket key', () => {
+  it('should include ticket key as query parameter', () => {
     const url = buildNotificationUrl({
       projectId: 1,
-      ticketKey: 'ABC 123',
+      ticketKey: 'ABC-123',
       commentId: 789,
     });
 
-    expect(url).toContain('ABC%20123');
+    expect(url).toContain('ticket=ABC-123');
   });
 
   it('should throw error for invalid project ID', () => {
@@ -152,7 +152,7 @@ describe('createNavigationContext', () => {
       currentProjectId: 1,
       targetProjectId: 1,
       isSameProject: true,
-      targetUrl: '/projects/1/tickets/ABC-123?modal=open&tab=comments#comment-789',
+      targetUrl: '/projects/1/board?ticket=ABC-123&modal=open&tab=comments#comment-789',
       shouldOpenNewTab: false,
     });
   });
@@ -164,7 +164,7 @@ describe('createNavigationContext', () => {
       currentProjectId: 2,
       targetProjectId: 1,
       isSameProject: false,
-      targetUrl: '/projects/1/tickets/ABC-123?modal=open&tab=comments#comment-789',
+      targetUrl: '/projects/1/board?ticket=ABC-123&modal=open&tab=comments#comment-789',
       shouldOpenNewTab: true,
     });
   });

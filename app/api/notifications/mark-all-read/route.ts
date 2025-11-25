@@ -1,20 +1,20 @@
 // API endpoint for marking all notifications as read
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/db/users';
 import { markAllNotificationsAsRead } from '@/app/lib/db/notifications';
 
 export async function POST(_request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
         { status: 401 }
       );
     }
 
-    const result = await markAllNotificationsAsRead(session.user.id);
+    const result = await markAllNotificationsAsRead(user.id);
 
     return NextResponse.json({
       success: true,

@@ -170,26 +170,19 @@ function BoardContent({
   }, [allTickets]);
 
   // AIB-80: Parse URL params to auto-open modal with specific tab
-  // Format: ?modal=open&tab=comments#comment-123
+  // Format: ?ticket=AIB-123&modal=open&tab=comments#comment-123
   useEffect(() => {
     if (!searchParams) return;
 
     const shouldOpenModal = searchParams.get('modal') === 'open';
     const tabParam = searchParams.get('tab');
+    const ticketKey = searchParams.get('ticket');
 
-    if (!shouldOpenModal) return;
+    if (!shouldOpenModal || !ticketKey) return;
 
     // Parse tab parameter
     const initialTab =
       tabParam === 'comments' || tabParam === 'files' ? tabParam : 'details';
-
-    // Extract ticketKey from current URL path
-    // URL format: /projects/{projectId}/tickets/{ticketKey}
-    const pathParts = window.location.pathname.split('/');
-    const ticketsIndex = pathParts.indexOf('tickets');
-    const ticketKey = ticketsIndex >= 0 ? pathParts[ticketsIndex + 1] : null;
-
-    if (!ticketKey) return;
 
     // Find ticket by ticketKey
     const ticket = allTickets.find(t => t.ticketKey === ticketKey);

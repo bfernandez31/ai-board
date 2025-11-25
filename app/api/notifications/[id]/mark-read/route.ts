@@ -1,7 +1,7 @@
 // API endpoint for marking a notification as read
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/db/users';
 import { markNotificationAsRead } from '@/app/lib/db/notifications';
 import { prisma } from '@/lib/db/client';
 
@@ -10,8 +10,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
         { status: 401 }
@@ -38,14 +38,14 @@ export async function PATCH(
       );
     }
 
-    if (notification.recipientId !== session.user.id) {
+    if (notification.recipientId !== user.id) {
       return NextResponse.json(
         { error: 'Cannot mark notification belonging to another user', code: 'FORBIDDEN' },
         { status: 403 }
       );
     }
 
-    await markNotificationAsRead(notificationId, session.user.id);
+    await markNotificationAsRead(notificationId, user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

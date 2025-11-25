@@ -26,7 +26,7 @@ export function isSameProject(
 /**
  * Build notification navigation URL with modal, tab, and comment anchor
  *
- * Format: /projects/{projectId}/tickets/{ticketKey}?modal=open&tab=comments#comment-{commentId}
+ * Format: /projects/{projectId}/board?ticket={ticketKey}&modal=open&tab=comments#comment-{commentId}
  *
  * @param params - URL parameters (projectId, ticketKey, commentId, tab)
  * @returns Full URL string for navigation
@@ -45,9 +45,10 @@ export function buildNotificationUrl(params: NotificationUrlParams): string {
     throw new Error('Invalid comment ID');
   }
 
-  // Build URL components
-  const basePath = `/projects/${projectId}/tickets/${encodeURIComponent(ticketKey)}`;
+  // Build URL components - use /board route with ticket as query param
+  const basePath = `/projects/${projectId}/board`;
   const queryParams = new URLSearchParams({
+    ticket: ticketKey,
     modal: 'open',
     tab: tab,
   });

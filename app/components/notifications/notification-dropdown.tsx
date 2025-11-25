@@ -47,7 +47,7 @@ export function NotificationDropdown() {
     // Otherwise, use navigation context to determine strategy
     if (!currentProjectId) {
       // Not on a project page - always open in new tab
-      const targetUrl = `/projects/${notification.projectId}/tickets/${notification.ticketKey}?modal=open&tab=comments#comment-${notification.commentId}`;
+      const targetUrl = `/projects/${notification.projectId}/board?ticket=${notification.ticketKey}&modal=open&tab=comments#comment-${notification.commentId}`;
       window.open(targetUrl, '_blank', 'noopener,noreferrer');
       // Reset loading state after opening new tab
       setTimeout(() => setNavigatingNotificationId(null), 500);
@@ -102,7 +102,7 @@ export function NotificationDropdown() {
 
       // Fallback: try to navigate to ticket without special handling
       try {
-        router.push(`/projects/${notification.projectId}/tickets/${notification.ticketKey}#comment-${notification.commentId}`);
+        router.push(`/projects/${notification.projectId}/board?ticket=${notification.ticketKey}&modal=open&tab=comments#comment-${notification.commentId}`);
       } catch (fallbackError) {
         console.error('Fallback navigation error:', fallbackError);
       }

@@ -1,13 +1,13 @@
 // API endpoint for listing notifications
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/db/users';
 import { getNotificationsForUser, getUnreadCount } from '@/app/lib/db/notifications';
 
 export async function GET(_request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
         { status: 401 }
@@ -17,8 +17,8 @@ export async function GET(_request: NextRequest) {
     const { searchParams } = new URL(_request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '5'), 50);
 
-    const notifications = await getNotificationsForUser(session.user.id, limit);
-    const unreadCount = await getUnreadCount(session.user.id);
+    const notifications = await getNotificationsForUser(user.id, limit);
+    const unreadCount = await getUnreadCount(user.id);
 
     const notificationsDisplay = notifications.map((n: Awaited<ReturnType<typeof getNotificationsForUser>>[number]) => ({
       id: n.id,
