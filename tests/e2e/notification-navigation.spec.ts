@@ -273,21 +273,13 @@ test.describe('US1: Same-Project Notification Click', () => {
     await expect(notificationItem).toBeVisible();
     await notificationItem.click();
 
-    // Wait for navigation to complete
-    await page.waitForTimeout(500);
-
-    // Assert: Should navigate in the same window (URL should change)
-    const newUrl = page.url();
-    expect(newUrl).not.toBe(initialUrl);
-    expect(newUrl).toContain(`/projects/${projectId}/board`);
-    expect(newUrl).toContain('ticket=');
-    expect(newUrl).toContain('modal=open');
-    expect(newUrl).toContain('tab=comments');
-    expect(newUrl).toContain(`#comment-${comment.id}`);
-
-    // Assert: Modal should be visible
+    // Wait for modal to be visible (URL params are cleaned immediately after opening)
     const modal = page.locator('[role="dialog"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Assert: Should stay on same project board
+    const newUrl = page.url();
+    expect(newUrl).toContain(`/projects/${projectId}/board`);
 
     // Assert: Conversation tab should be active
     const conversationTab = page.locator('[role="tab"]:has-text("Conversation")');
@@ -367,13 +359,10 @@ test.describe('US2: Cross-Project Notification Click', () => {
     // Assert: Original page should remain on the same project board
     expect(page.url()).toBe(originalUrl);
 
-    // Assert: New tab should navigate to project 2 with modal open
+    // Assert: New tab should navigate to project 2 board
+    // Note: URL params are cleaned immediately after modal opens to allow proper closing
     const newUrl = newPage.url();
     expect(newUrl).toContain(`/projects/${testProject2Id}/board`);
-    expect(newUrl).toContain('ticket=');
-    expect(newUrl).toContain('modal=open');
-    expect(newUrl).toContain('tab=comments');
-    expect(newUrl).toContain(`#comment-${comment.id}`);
 
     // Assert: Modal should be visible in new tab
     const modal = newPage.locator('[role="dialog"]');
@@ -643,11 +632,8 @@ test.describe('US3: Notification Mark as Read', () => {
     const modals = page.locator('[role="dialog"]');
     await expect(modals).toHaveCount(1);
 
-    // Assert: URL should have changed to modal URL (only once)
-    const finalUrl = page.url();
-    expect(finalUrl).not.toBe(initialUrl);
-    expect(finalUrl).toContain('modal=open');
-    expect(finalUrl).toContain('tab=comments');
+    // Assert: URL changed (params are cleaned immediately after modal opens)
+    // The important thing is that only one modal opened, not the URL state
   });
 });
 

@@ -194,10 +194,11 @@ function BoardContent({
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
 
-      // Clean up URL params after opening modal (optional - prevents re-opening on refresh)
-      // Note: Keeping params in URL allows deep linking, so we'll leave them
+      // Clean up URL params immediately after opening modal
+      // This prevents re-opening when user closes the modal
+      router.replace(pathname, { scroll: false });
     }
-  }, [searchParams, allTickets, isModalOpen]);
+  }, [searchParams, allTickets, isModalOpen, router, pathname]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display
@@ -504,12 +505,8 @@ function BoardContent({
     setIsModalOpen(open);
     if (!open) {
       setSelectedTicket(null);
-      // Clean URL params when closing modal opened via notification link
-      if (searchParams?.get('modal') === 'open') {
-        router.replace(pathname, { scroll: false });
-      }
     }
-  }, [searchParams, router, pathname]);
+  }, []);
 
   // Handle ticket update from modal
   type UpdatedModalTicket = {
