@@ -22,14 +22,14 @@ Start IMMEDIATELY with the mention. Do NOT add any introductory text.
 
 **REQUIRED**:
 Start DIRECTLY with:
-@[$USER:$USER] ✅ **Action Completed**
+@[$USER_ID:$USER] ✅ **Action Completed**
 
 **WRONG EXAMPLE**:
 "Perfect! Now I'll output the message...
-@[user:user] ✅ **Success**" ❌
+@[userId:name] ✅ **Success**" ❌
 
 **CORRECT EXAMPLE**:
-"@[user:user] ✅ **Success**" ✅
+"@[cm47j3m31817281:Benoît Fernandez] ✅ **Success**" ✅
 
 ## Context
 
@@ -49,7 +49,8 @@ The workflow provides context through environment variables and arguments:
 - `TICKET_TITLE`: The ticket title (e.g., "Rollback quick workflow")
 - `STAGE`: Current stage (e.g., "specify", "plan")
 - `BRANCH`: Git branch name (e.g., "051-897-rollback-quick")
-- `USER`: Username who made the request (e.g., "benoit.fernandez31")
+- `USER_ID`: User ID who made the request (e.g., "cm47j3m31817281") - for mention notification
+- `USER`: Display name who made the request (e.g., "Benoît Fernandez") - for mention display
 - `PROJECT_ID`: Project ID (e.g., "3")
 
 **Arguments**: The user's comment/request is passed as `$ARGUMENTS` (plain text)
@@ -83,7 +84,7 @@ The workflow provides context through environment variables and arguments:
 4. **MODIFY**: Make the requested changes to the content, respecting constitution guidelines
 5. **WRITE**: Use Write tool to save the modified `specs/$BRANCH/spec.md` (REQUIRED - NOT OPTIONAL)
 6. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS (REQUIRED - NOT OPTIONAL)
-7. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+7. **OUTPUT**: Output a Markdown summary message starting with `@[$USER_ID:$USER]`
 
 **⚠️ VERIFICATION STEP**:
 After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
@@ -134,7 +135,7 @@ When a change is requested, you MUST analyze its impact across ALL artifacts and
 6. **SYNC SPEC**: Always ensure spec.md reflects any changes that impact requirements, acceptance criteria, or NFRs
 7. **WRITE ALL**: Use Write tool to save ALL modified files (REQUIRED - NOT OPTIONAL)
 8. **CREATE RESULT**: Use Write tool to create `specs/$BRANCH/.ai-board-result.md` with status SUCCESS listing ALL modified files
-9. **OUTPUT**: Output a Markdown summary message starting with `@[$USER:$USER]`
+9. **OUTPUT**: Output a Markdown summary message starting with `@[$USER_ID:$USER]`
 
 **⚠️ VERIFICATION STEP**:
 After writing files, you MUST use Read tool to verify the changes were actually saved to disk.
@@ -230,7 +231,7 @@ divergence = (
 
 #### MINOR - Auto Iterate
 ```markdown
-@[user:user] ✅ **Minor adjustments detected - Auto-fixing**
+@[$USER_ID:$USER] ✅ **Minor adjustments detected - Auto-fixing**
 
 Issues identified (estimated: 1-2h):
 - Missing email validation
@@ -245,7 +246,7 @@ The ticket will remain in VERIFY while fixes are applied.
 
 #### MODERATE - Manual Decision
 ```markdown
-@[user:user] ⚠️ **Moderate changes required - Decision needed**
+@[$USER_ID:$USER] ⚠️ **Moderate changes required - Decision needed**
 
 The requested changes differ from specifications (35% divergence):
 - New validation rules not in original spec
@@ -264,7 +265,7 @@ Please move the ticket to your preferred stage.
 
 #### MAJOR - Requalification
 ```markdown
-@[user:user] 🔴 **Major misalignment detected**
+@[$USER_ID:$USER] 🔴 **Major misalignment detected**
 
 The implementation fundamentally differs from requirements (75% divergence):
 - Different workflow than specified
@@ -407,14 +408,14 @@ spec.md does not exist at specs/051-897-rollback-quick/spec.md
 
 1. **MANDATORY: Create result file**: You MUST write `.ai-board-result.md` in the specs/$BRANCH directory
 2. **MANDATORY: Modify the files**: You MUST actually read, modify and write the files (spec.md, plan.md, or tasks.md)
-3. **Always mention the requester**: Use `@[$USER:$USER]` format (e.g., `@[bfernandez31:bfernandez31]`)
+3. **Always mention the requester**: Use `@[$USER_ID:$USER]` format (e.g., `@[cm47j3m31817281:Benoît Fernandez]`)
 4. **Be concise**: Keep message under 500 characters
 5. **List modified files**: Include all files you changed in the result file
 6. **Maintain quality**: Don't degrade specification or plan quality
 7. **Stay consistent**: PLAN changes must align with SPEC
 8. **Validate changes**: Re-read files after writing to confirm changes
 9. **Output Markdown ONLY**: Output ONLY a formatted Markdown summary (NO JSON blocks, NO code blocks)
-10. **Correct mention format**: MUST use `@[username:username]` not just `@username`
+10. **Correct mention format**: MUST use `@[userId:displayName]` not just `@username`
 
 **CRITICAL**: You MUST use Read and Write tools to actually modify the files. Don't just say you did it!
 
@@ -433,7 +434,7 @@ The workflow will:
 Start IMMEDIATELY with the mention - NO INTRODUCTION TEXT:
 
 ```
-@[$USER:$USER] ✅ **Specifications Updated Successfully**
+@[$USER_ID:$USER] ✅ **Specifications Updated Successfully**
 
 I've updated the specifications as requested - removed Phase 5 and CI/CD validation scripts.
 
@@ -445,7 +446,7 @@ The remaining phases have been renumbered accordingly.
 ```
 
 **CRITICAL**:
-- Start DIRECTLY with `@[$USER:$USER]`
+- Start DIRECTLY with `@[$USER_ID:$USER]`
 - NO text before the mention
 - NO "Perfect! Now I'll..." or similar introductions
 
@@ -453,7 +454,7 @@ The remaining phases have been renumbered accordingly.
 
 ### Success Output (SPECIFY)
 ```markdown
-@[benoit.fernandez31:benoit.fernandez31] ✅ **Specification Updated**
+@[cm47j3m31817281:Benoît Fernandez] ✅ **Specification Updated**
 
 I've successfully updated the specification based on your request to include rollback requirements.
 
@@ -470,7 +471,7 @@ The specification now clearly defines the rollback behavior when a ticket moves 
 
 ### Success Output (PLAN)
 ```markdown
-@[jane.smith:jane.smith] ✅ **All Feature Documentation Updated**
+@[user-jane-456:Jane Smith] ✅ **All Feature Documentation Updated**
 
 I've holistically updated all artifacts to use PostgreSQL read replicas, ensuring consistency across spec, plan, and tasks.
 
@@ -496,7 +497,7 @@ All feature documentation now reflects the read replica approach with consistent
 
 ### Error Output
 ```markdown
-@[benoit.fernandez31:benoit.fernandez31] ❌ **Error Processing Request**
+@[cm47j3m31817281:Benoît Fernandez] ❌ **Error Processing Request**
 
 I couldn't find the specification file to update.
 
@@ -509,7 +510,7 @@ Please ensure the ticket has been through the SPECIFY stage first, or check if t
 
 ### Refused Request Output (VERIFY Stage)
 ```markdown
-@[benoit.fernandez31:benoit.fernandez31] ❌ **Request Refused**
+@[cm47j3m31817281:Benoît Fernandez] ❌ **Request Refused**
 
 I cannot fulfill destructive requests like deleting all application code.
 

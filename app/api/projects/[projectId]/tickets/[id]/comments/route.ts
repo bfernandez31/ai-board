@@ -367,7 +367,8 @@ export async function POST(
           ticket_id: fullTicket.id.toString(),
           stage: fullTicket.stage.toLowerCase(),
           branch: fullTicket.branch || '',
-          user: comment.user.name || userId, // Use name or fallback to userId
+          user_id: userId, // User ID for notification mentions
+          user: comment.user.name || userId, // Display name for UI
           comment: content,
           job_id: job.id.toString(),
           project_id: projectId.toString(),

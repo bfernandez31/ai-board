@@ -10,7 +10,9 @@ export interface AIBoardWorkflowInputs {
   stage: string;
   /** Git branch name */
   branch: string;
-  /** Requester username (for mention) */
+  /** Requester user ID (for mention notification) */
+  user_id: string;
+  /** Requester display name (for mention display) */
   user: string;
   /** Comment content (user request) */
   comment: string;
@@ -89,6 +91,7 @@ export async function dispatchAIBoardWorkflow(
         ticket_id: inputs.ticket_id,
         stage: inputs.stage,
         branch: inputs.branch,
+        user_id: inputs.user_id,
         user: inputs.user,
         comment: inputs.comment,
         job_id: inputs.job_id,

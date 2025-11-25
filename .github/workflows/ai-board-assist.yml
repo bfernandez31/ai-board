@@ -19,8 +19,13 @@ on:
         required: true
         type: string
 
+      user_id:
+        description: 'User ID who mentioned AI-BOARD (for notification mention)'
+        required: true
+        type: string
+
       user:
-        description: 'Username who mentioned AI-BOARD (for response)'
+        description: 'Username who mentioned AI-BOARD (for display)'
         required: true
         type: string
 
@@ -65,6 +70,7 @@ jobs:
           echo "  ticket_id: ${{ inputs.ticket_id }}"
           echo "  job_id: ${{ inputs.job_id }}"
           echo "  stage: ${{ inputs.stage }}"
+          echo "  user_id: ${{ inputs.user_id }}"
           echo "  user: ${{ inputs.user }}"
           echo "  githubRepository: ${{ inputs.githubRepository }}"
           echo "  SKIP_CLAUDE: ${{ env.SKIP_CLAUDE }}"
@@ -158,6 +164,7 @@ jobs:
           TICKET_ID: ${{ inputs.ticket_id }}
           STAGE: ${{ inputs.stage }}
           BRANCH: ${{ inputs.branch }}
+          USER_ID: ${{ inputs.user_id }}
           USER: ${{ inputs.user }}
           PROJECT_ID: ${{ inputs.project_id }}
         run: |
