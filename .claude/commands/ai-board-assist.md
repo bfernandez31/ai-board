@@ -19,6 +19,10 @@ Start IMMEDIATELY with the mention. Do NOT add any introductory text.
 - ❌ NO "I will now..." or "Let me..." preambles
 - ❌ NO JSON, code blocks, or technical formatting
 - ❌ NO explanations about what you're doing
+- ❌ NO "Sources:" section or external links
+- ❌ NO long detailed explanations - BE BRIEF!
+
+**CHARACTER LIMIT**: Your ENTIRE output must be under **1500 characters** (database limit is 2000).
 
 **REQUIRED**:
 Start DIRECTLY with:
@@ -409,7 +413,7 @@ spec.md does not exist at specs/051-897-rollback-quick/spec.md
 1. **MANDATORY: Create result file**: You MUST write `.ai-board-result.md` in the specs/$BRANCH directory
 2. **MANDATORY: Modify the files**: You MUST actually read, modify and write the files (spec.md, plan.md, or tasks.md)
 3. **Always mention the requester**: Use `@[$USER_ID:$USER]` format (e.g., `@[cm47j3m31817281:Benoît Fernandez]`)
-4. **Be concise**: Keep message under 500 characters
+4. **CRITICAL - Be concise**: Keep ENTIRE message under **1500 characters** (database limit is 2000). NO sources section, NO long explanations. Just: mention + status + brief summary of changes.
 5. **List modified files**: Include all files you changed in the result file
 6. **Maintain quality**: Don't degrade specification or plan quality
 7. **Stay consistent**: PLAN changes must align with SPEC
