@@ -259,6 +259,8 @@ The notification bell provides access to mention notifications:
 - Bell icon positioned in application header
 - Visible on all pages when authenticated
 - Badge displays unread count (1-9 or "9+" for overflow)
+- Badge styled with purple background (purple-500) and white text with hover state (purple-600)
+- Badge border matches background color for cohesive appearance
 - Badge hidden when no unread notifications
 
 **Dropdown Menu**:
