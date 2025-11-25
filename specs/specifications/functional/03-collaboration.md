@@ -333,15 +333,49 @@ When a user is mentioned in a comment:
 - Changes sync across devices within 15 seconds
 
 **Navigation**:
-- Clicking notification opens ticket detail page
-- Comment is visible and highlighted on page load
-- URL includes comment anchor for direct scroll
-- Notification marked as read before navigation
+- Clicking notification navigates to the ticket's conversation tab
+- Same-project notifications open in current window
+- Cross-project notifications open in new browser tab
+- Ticket modal automatically opens with conversation tab selected
+- Comment scrolls into view automatically
+- Notification marked as read before navigation begins
 
 **Retention**:
 - Notifications retained for 30 days (read and unread)
 - Older notifications automatically deleted
 - Deleted comments still show notification with appropriate message
+
+### Notification Click Navigation
+
+**Same-Project Navigation**:
+When notification references a ticket in the same project:
+- Opens ticket modal in current window
+- No page reload or browser tab change
+- Preserves current board state
+- Conversation tab automatically selected
+- Comment scrolls into view within 1 second
+- Unread count updates immediately (within 200ms)
+
+**Cross-Project Navigation**:
+When notification references a ticket in a different project:
+- Opens target project board in new browser tab
+- Original tab remains unchanged
+- New tab automatically opens ticket modal
+- Conversation tab pre-selected on modal open
+- Comment scrolls into view after modal loads
+- Original project context preserved
+
+**Navigation Context Detection**:
+- System compares notification's project ID with current project
+- Uses URL parameters to pass modal and tab state
+- Modal opens automatically when URL contains appropriate parameters
+- Comment anchor included in URL for scroll targeting
+
+**Error Handling**:
+- Deleted tickets: Shows error message instead of navigation
+- Access denied: Displays "Access Denied" for unauthorized projects
+- Missing comments: Opens conversation tab with "Comment not found" indicator
+- Modal conflicts: Closes existing modal before opening new ticket
 
 ### Notification States
 

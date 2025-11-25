@@ -292,6 +292,8 @@ The notification bell provides access to mention notifications:
 - Active tab visually highlighted
 - Click tab headers to switch
 - Smooth transition between tabs
+- Initial tab can be specified via URL parameter
+- Defaults to Details tab when no parameter provided
 
 **Keyboard Navigation**:
 - Arrow keys (left/right) navigate between tabs
@@ -304,6 +306,13 @@ The notification bell provides access to mention notifications:
 - Shows number of comments: "Comments (5)"
 - Updates in real-time as comments added/deleted
 - Provides activity overview
+
+**URL-Based Tab Selection**:
+- URL parameter `tab=comments` opens conversation tab directly
+- Used by notification navigation to link to specific comments
+- Modal automatically selects specified tab on open
+- Comment anchors (`#comment-{id}`) trigger automatic scrolling
+- Supports deep linking to specific conversations
 
 ### Board Navigation
 
