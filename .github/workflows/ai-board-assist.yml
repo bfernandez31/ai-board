@@ -346,23 +346,28 @@ jobs:
           USER_NAME: ${{ inputs.user }}
         run: |
           echo "💬 Posting AI-BOARD response comment..."
+          echo "📝 Raw message (first 300 chars): ${MESSAGE:0:300}..."
 
           # Clean Claude's output:
-          # 1. Remove preamble (everything before the first @ mention)
-          # 2. Replace MENTION_xxx_yyy with proper @[userId:displayName] format
+          # 1. Remove preamble (everything before the first @ mention or MENTION_)
+          # 2. Replace ANY MENTION_xxx_yyy pattern with proper @[userId:displayName] format
           CLEANED_MESSAGE="$MESSAGE"
 
           # Remove preamble: keep only from first @[ or MENTION_ onwards
           if echo "$CLEANED_MESSAGE" | grep -q '@\['; then
+            # Extract from first @[ to end, removing any text before it on that line
             CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed -n '/@\[/,$p' | sed '1s/.*\(@\[.*\)/\1/')
           elif echo "$CLEANED_MESSAGE" | grep -q 'MENTION_'; then
+            # Extract from first MENTION_ to end, removing any text before it on that line
             CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed -n '/MENTION_/,$p' | sed '1s/.*\(MENTION_.*\)/\1/')
           fi
 
-          # Replace MENTION_userId_xxx patterns with @[userId:displayName]
-          CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed "s/MENTION_${USER_ID}_[0-9]*/@[${USER_ID}:${USER_NAME}]/g")
+          # Replace ANY MENTION_xxx_yyy pattern with @[userId:displayName]
+          # Pattern: MENTION_ followed by any characters until _ followed by digits
+          # This catches MENTION_81817281_121, MENTION_cm47j3m31817281_456, etc.
+          CLEANED_MESSAGE=$(echo "$CLEANED_MESSAGE" | sed "s/MENTION_[^_]*_[0-9]*/@[${USER_ID}:${USER_NAME}]/g")
 
-          echo "📝 Cleaned message (first 200 chars): ${CLEANED_MESSAGE:0:200}..."
+          echo "📝 Cleaned message (first 300 chars): ${CLEANED_MESSAGE:0:300}..."
 
           # Escape special characters for JSON
           MESSAGE_JSON=$(echo "$CLEANED_MESSAGE" | jq -Rs .)
