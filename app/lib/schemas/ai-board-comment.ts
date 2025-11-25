@@ -11,7 +11,7 @@ export const aiBoardCommentRequestSchema = z.object({
   content: z
     .string()
     .min(1, 'Comment content cannot be empty')
-    .max(2000, 'Comment content cannot exceed 2000 characters'),
+    .max(10000, 'Comment content cannot exceed 10000 characters'),
 
   /** AI-BOARD user ID (verified server-side) */
   userId: z.string().min(1, 'User ID is required'),
