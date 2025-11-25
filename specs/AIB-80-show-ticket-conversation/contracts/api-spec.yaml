@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: Notification Navigation API
+  description: API endpoints for marking notifications as read and supporting notification-based navigation
+  version: 1.0.0
+  contact:
+    name: AI-Board Development Team
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://ai-board.vercel.app
+    description: Production server
+
+paths:
+  /api/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      description: |
+        Marks a specific notification as read for the authenticated user.
+        This endpoint performs an optimistic update - it's called when the user
+        clicks on a notification, before navigation occurs.
+
+        **Security**: Only the notification's recipient can mark it as read.
+
+        **Side effects**:
+        - Sets `notification.read = true`
+        - Sets `notification.readAt = <current timestamp>`
+        - Decrements unread count for the user
+
+        **Idempotency**: Calling this endpoint multiple times with the same ID
+        is safe - subsequent calls are no-ops that return success.
+      operationId: markNotificationRead
+      tags:
+        - notifications
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID to mark as read
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 123
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Notification successfully marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkNotificationReadResponse'
+              examples:
+                success:
+                  summary: Successfully marked as read
+                  value:
+                    success: true
+                    notification:
+                      id: 123
+                      read: true
+                      readAt: "2025-11-25T10:30:00.000Z"
+                alreadyRead:
+                  summary: Already marked as read (idempotent)
+                  value:
+                    success: true
+                    notification:
+                      id: 123
+                      read: true
+                      readAt: "2025-11-24T15:20:00.000Z"
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Authentication required"
+                code: "UNAUTHORIZED"
+        '403':
+          description: Forbidden - user does not own this notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "You do not have permission to mark this notification as read"
+                code: "FORBIDDEN"
+        '404':
+          description: Notification not found or soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Notification not found"
+                code: "NOT_FOUND"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Failed to mark notification as read"
+                code: "INTERNAL_ERROR"
+
+  /api/notifications:
+    get:
+      summary: List user's notifications
+      description: |
+        Returns a paginated list of notifications for the authenticated user.
+        Includes actor information, ticket details, and comment previews for
+        navigation purposes.
+
+        **NOTE**: This is an EXISTING endpoint - no modifications required
+        for this feature. Documented here for reference only.
+      operationId: listNotifications
+      tags:
+        - notifications
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of notifications to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: offset
+          in: query
+          description: Number of notifications to skip (pagination)
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          example: 0
+        - name: unreadOnly
+          in: query
+          description: Filter to only unread notifications
+          schema:
+            type: boolean
+            default: false
+          example: false
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+
+components:
+  schemas:
+    MarkNotificationReadResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation succeeded
+          example: true
+        notification:
+          type: object
+          description: Updated notification data (present on success)
+          properties:
+            id:
+              type: integer
+              format: int32
+              description: Notification ID
+              example: 123
+            read:
+              type: boolean
+              description: Read status (always true after this call)
+              example: true
+            readAt:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp when marked as read
+              example: "2025-11-25T10:30:00.000Z"
+        error:
+          type: string
+          description: Error message (present on failure)
+          example: "Notification not found"
+
+    NotificationListResponse:
+      type: object
+      required:
+        - notifications
+        - unreadCount
+        - hasMore
+      properties:
+        notifications:
+          type: array
+          description: List of notifications with navigation data
+          items:
+            $ref: '#/components/schemas/NotificationWithNavData'
+        unreadCount:
+          type: integer
+          format: int32
+          description: Total number of unread notifications for this user
+          example: 5
+        hasMore:
+          type: boolean
+          description: Whether there are more notifications beyond this page
+          example: true
+
+    NotificationWithNavData:
+      type: object
+      description: Notification enriched with data needed for navigation
+      required:
+        - id
+        - recipientId
+        - actorId
+        - commentId
+        - ticketId
+        - projectId
+        - ticketKey
+        - read
+        - createdAt
+        - actorName
+        - commentPreview
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Notification ID
+          example: 123
+        recipientId:
+          type: string
+          description: User ID of notification recipient
+          example: "user_abc123"
+        actorId:
+          type: string
+          description: User ID who created the mention
+          example: "user_def456"
+        commentId:
+          type: integer
+          format: int32
+          description: Comment ID containing the mention
+          example: 789
+        ticketId:
+          type: integer
+          format: int32
+          description: Ticket ID where comment was posted
+          example: 456
+        projectId:
+          type: integer
+          format: int32
+          description: Project ID (from ticket) - used for navigation context
+          example: 1
+        ticketKey:
+          type: string
+          description: Ticket key (e.g., ABC-123) - used for URL construction
+          example: "ABC-123"
+        read:
+          type: boolean
+          description: Whether notification has been read
+          example: false
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO 8601 timestamp when marked as read
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when notification was created
+          example: "2025-11-25T09:15:00.000Z"
+        actorName:
+          type: string
+          description: Display name of user who created the mention
+          example: "John Doe"
+        actorImage:
+          type: string
+          format: uri
+          nullable: true
+          description: Avatar URL of user who created the mention
+          example: "https://avatars.githubusercontent.com/u/12345"
+        commentPreview:
+          type: string
+          description: First 100 characters of comment content
+          maxLength: 100
+          example: "Hey @jane, can you review this implementation? I think we should consider adding..."
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Notification not found"
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - VALIDATION_ERROR
+            - INTERNAL_ERROR
+          example: "NOT_FOUND"
+        issues:
+          type: array
+          description: Detailed validation errors (for 400 responses)
+          items:
+            type: object
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+                description: JSON path to the invalid field
+                example: ["notificationId"]
+              message:
+                type: string
+                description: Validation error message
+                example: "Expected number, received string"
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie for authentication
+
+tags:
+  - name: notifications
+    description: Notification management and navigation endpoints
