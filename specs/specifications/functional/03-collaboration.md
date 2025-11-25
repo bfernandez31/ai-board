@@ -281,6 +281,7 @@ The notification bell icon appears in the application header and provides access
 - Visible on all pages when user is authenticated
 - Displays unread count badge when notifications exist
 - Badge shows number (1-9) or "9+" for 10 or more unread notifications
+- Badge styled with purple background (purple-500) and white text for visibility
 - No badge displayed when all notifications are read
 
 **Clicking Bell**:
