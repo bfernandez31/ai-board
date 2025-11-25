@@ -2,28 +2,75 @@
 
 // Notification dropdown content with list, navigation, and mark-as-read functionality
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertCircle } from 'lucide-react';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from './use-notifications';
 import { formatNotificationTime } from '@/app/lib/utils/date-utils';
+import { createNavigationContext, parseProjectIdFromRoute } from '@/lib/utils/navigation-utils';
+import type { NotificationWithNavData } from '@/lib/types/notification-navigation';
 
 export function NotificationDropdown() {
   const router = useRouter();
+  const params = useParams();
   const { data, isLoading, error } = useNotifications();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
 
   const notifications = data?.notifications ?? [];
 
+  // Extract current project ID from route params
+  // The projectId param comes from the route: /projects/[projectId]/...
+  const currentProjectId = parseProjectIdFromRoute(params?.projectId as string | undefined);
+
   const handleNotificationClick = (notification: typeof notifications[number]) => {
-    // Mark as read (optimistic update)
+    // Mark as read (optimistic update) before navigation
     markAsRead.mutate(notification.id);
 
-    // Navigate to ticket with comment anchor
-    router.push(`/projects/${notification.projectId}/tickets/${notification.ticketKey}#comment-${notification.commentId}`);
+    // If we're not on a project page, always open in new tab
+    // Otherwise, use navigation context to determine strategy
+    if (!currentProjectId) {
+      // Not on a project page - always open in new tab
+      const targetUrl = `/projects/${notification.projectId}/tickets/${notification.ticketKey}?modal=open&tab=comments#comment-${notification.commentId}`;
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Create navigation context to determine same-project vs cross-project
+    const notificationWithNavData: NotificationWithNavData = {
+      id: notification.id,
+      recipientId: '', // Not needed for navigation
+      actorId: '', // Not needed for navigation
+      commentId: notification.commentId,
+      ticketId: 0, // Not needed for navigation
+      read: notification.read,
+      readAt: null,
+      createdAt: new Date(notification.createdAt),
+      deletedAt: null,
+      projectId: notification.projectId,
+      ticketKey: notification.ticketKey,
+      actorName: notification.actorName,
+      actorImage: notification.actorImage,
+      commentPreview: notification.commentPreview,
+    };
+
+    try {
+      const context = createNavigationContext(notificationWithNavData, currentProjectId);
+
+      if (context.shouldOpenNewTab) {
+        // Cross-project navigation - open in new tab
+        window.open(context.targetUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // Same-project navigation - use router.push
+        router.push(context.targetUrl);
+      }
+    } catch (error) {
+      // Fallback: navigate to ticket without special handling
+      console.error('Navigation error:', error);
+      router.push(`/projects/${notification.projectId}/tickets/${notification.ticketKey}#comment-${notification.commentId}`);
+    }
   };
 
   return (

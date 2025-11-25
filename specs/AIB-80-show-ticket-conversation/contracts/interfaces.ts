@@ -6,6 +6,9 @@
  * They serve as the "source of truth" for type definitions during implementation.
  */
 
+import type { ClarificationPolicy } from '@prisma/client';
+import type { TicketAttachment } from '@/app/lib/types/ticket';
+
 // ============================================================================
 // Navigation Types
 // ============================================================================

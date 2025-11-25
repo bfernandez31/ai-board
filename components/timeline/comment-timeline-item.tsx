@@ -69,6 +69,7 @@ export const CommentTimelineItem = React.memo(
     return (
       <>
         <li
+          id={`comment-${comment.id}`}
           className="group relative pl-12"
           data-testid="comment-item"
           onMouseEnter={() => setIsHovered(true)}

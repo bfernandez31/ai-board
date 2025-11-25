@@ -29,8 +29,8 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 **Purpose**: Create utility functions and API infrastructure needed by all user stories
 
-- [ ] T001 [P] Create Zod validation schemas in lib/validations/notification.ts
-- [ ] T002 [P] Create TypeScript interfaces file at lib/types/notification-navigation.ts (export from contracts/interfaces.ts)
+- [X] T001 [P] Create Zod validation schemas in lib/validations/notification.ts
+- [X] T002 [P] Create TypeScript interfaces file at lib/types/notification-navigation.ts (export from contracts/interfaces.ts)
 
 ---
 
@@ -40,9 +40,9 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create navigation utility functions in lib/utils/navigation-utils.ts
-- [ ] T004 Implement mark-as-read API endpoint in app/api/notifications/[id]/read/route.ts
-- [ ] T005 Add mark-as-read mutation hook in app/components/notifications/use-notifications.ts (if not exists)
+- [X] T003 Create navigation utility functions in lib/utils/navigation-utils.ts
+- [X] T004 Implement mark-as-read API endpoint in app/api/notifications/[id]/read/route.ts (ALREADY EXISTS)
+- [X] T005 Add mark-as-read mutation hook in app/components/notifications/use-notifications.ts (ALREADY EXISTS)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -56,19 +56,19 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 ### Tests for User Story 1
 
-**NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+**NOTE: Write tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Write unit tests for navigation-utils.ts in tests/unit/navigation-utils.test.ts (test isSameProject, buildNotificationUrl, createNavigationContext)
+- [X] T006 [P] [US1] Write unit tests for navigation-utils.ts in tests/unit/navigation-utils.test.ts (test isSameProject, buildNotificationUrl, createNavigationContext)
 - [ ] T007 [P] [US1] Write E2E test for same-project notification click in tests/e2e/notification-navigation.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Modify notification-dropdown.tsx to extract current project ID from route using useParams in app/components/notifications/notification-dropdown.tsx (lines 21-27)
-- [ ] T009 [US1] Update handleNotificationClick to use createNavigationContext in app/components/notifications/notification-dropdown.tsx
-- [ ] T010 [US1] Implement same-window navigation with router.push() for same-project in app/components/notifications/notification-dropdown.tsx
-- [ ] T011 [US1] Modify board.tsx to parse URL search params (modal, tab) and pass initialTab to TicketDetailModal in components/board/board.tsx
-- [ ] T012 [US1] Add useEffect to auto-open modal when modal=open param present in components/board/board.tsx
-- [ ] T013 [US1] Implement comment scroll behavior in conversation-timeline.tsx using useEffect and scrollIntoView in components/ticket/conversation-timeline.tsx
+- [X] T008 [US1] Modify notification-dropdown.tsx to extract current project ID from route using useParams in app/components/notifications/notification-dropdown.tsx
+- [X] T009 [US1] Update handleNotificationClick to use createNavigationContext in app/components/notifications/notification-dropdown.tsx
+- [X] T010 [US1] Implement same-window navigation with router.push() for same-project in app/components/notifications/notification-dropdown.tsx
+- [X] T011 [US1] Modify board.tsx to parse URL search params (modal, tab) and pass initialTab to TicketDetailModal in components/board/board.tsx
+- [X] T012 [US1] Add useEffect to auto-open modal when modal=open param present in components/board/board.tsx
+- [X] T013 [US1] Implement comment scroll behavior in conversation-timeline.tsx using useEffect and scrollIntoView in components/ticket/conversation-timeline.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - same-project notification clicks navigate to ticket conversation tab with comment visible
 
@@ -87,9 +87,9 @@ description: "Task list for Notification Click Navigation to Ticket Conversation
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Implement cross-project detection logic (shouldOpenNewTab) in app/components/notifications/notification-dropdown.tsx
-- [ ] T017 [US2] Add window.open() navigation for cross-project in app/components/notifications/notification-dropdown.tsx (with noopener,noreferrer)
-- [ ] T018 [US2] Test that modal auto-opens with comments tab in new tab scenario
+- [X] T016 [US2] Implement cross-project detection logic (shouldOpenNewTab) in app/components/notifications/notification-dropdown.tsx
+- [X] T017 [US2] Add window.open() navigation for cross-project in app/components/notifications/notification-dropdown.tsx (with noopener,noreferrer)
+- [X] T018 [US2] Test that modal auto-opens with comments tab in new tab scenario
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - same-project uses same window, cross-project opens new tab
 

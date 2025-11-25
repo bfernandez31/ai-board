@@ -7,7 +7,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useConversationTimeline } from '@/app/lib/hooks/queries/use-conversation-timeline';
 import { Timeline } from '@/components/timeline/timeline';
 import { TimelineItem } from '@/components/timeline/timeline-item';
@@ -65,6 +65,36 @@ export function ConversationTimeline({ ticketId, projectId }: ConversationTimeli
     projectId,
     ticketId,
   });
+
+  // AIB-80: Scroll to comment anchor after timeline renders
+  // This handles notification clicks that include #comment-{id} in URL
+  useEffect(() => {
+    if (!data || isLoading) return;
+
+    // Check if URL has a comment anchor
+    const hash = window.location.hash;
+    if (!hash.startsWith('#comment-')) return;
+
+    // Wait for timeline to fully render, then scroll to comment
+    const timeoutId = setTimeout(() => {
+      const element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+
+        // Optional: Add a subtle highlight effect to the scrolled comment
+        element.classList.add('ring-2', 'ring-blue-500');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-blue-500');
+        }, 2000);
+      }
+    }, 100); // Small delay to ensure DOM is ready
+
+    return () => clearTimeout(timeoutId);
+  }, [data, isLoading]);
 
   // Loading state
   if (isLoading) {

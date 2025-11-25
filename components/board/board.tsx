@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
@@ -82,6 +83,7 @@ function BoardContent({
   activeCleanupJobId,
 }: BoardProps) {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   // Seed the TanStack Query cache with server-fetched data to avoid loading state
   React.useEffect(() => {
@@ -167,6 +169,40 @@ function BoardContent({
     return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
   }, [allTickets]);
 
+  // AIB-80: Parse URL params to auto-open modal with specific tab
+  // Format: ?modal=open&tab=comments#comment-123
+  useEffect(() => {
+    if (!searchParams) return;
+
+    const shouldOpenModal = searchParams.get('modal') === 'open';
+    const tabParam = searchParams.get('tab');
+
+    if (!shouldOpenModal) return;
+
+    // Parse tab parameter
+    const initialTab =
+      tabParam === 'comments' || tabParam === 'files' ? tabParam : 'details';
+
+    // Extract ticketKey from current URL path
+    // URL format: /projects/{projectId}/tickets/{ticketKey}
+    const pathParts = window.location.pathname.split('/');
+    const ticketsIndex = pathParts.indexOf('tickets');
+    const ticketKey = ticketsIndex >= 0 ? pathParts[ticketsIndex + 1] : null;
+
+    if (!ticketKey) return;
+
+    // Find ticket by ticketKey
+    const ticket = allTickets.find(t => t.ticketKey === ticketKey);
+
+    if (ticket && !isModalOpen) {
+      setSelectedTicket(ticket);
+      setModalInitialTab(initialTab);
+      setIsModalOpen(true);
+
+      // Clean up URL params after opening modal (optional - prevents re-opening on refresh)
+      // Note: Keeping params in URL allows deep linking, so we'll leave them
+    }
+  }, [searchParams, allTickets, isModalOpen]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display
