@@ -158,10 +158,14 @@ export function Header() {
 
           {/* Application variant: Show Notification Bell + User Menu */}
           {!isMarketingVariant && !isSignInPage && (
-            <div className="hidden md:flex items-center gap-3">
+            <>
+              {/* Notification Bell - visible on all screen sizes */}
               <NotificationBell />
-              <UserMenu />
-            </div>
+              {/* User Menu - desktop only, mobile uses hamburger menu */}
+              <div className="hidden md:flex">
+                <UserMenu />
+              </div>
+            </>
           )}
 
           {/* Mobile menu (visible below md breakpoint) */}
