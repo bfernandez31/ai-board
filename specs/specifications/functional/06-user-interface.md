@@ -234,12 +234,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Full-width ticket cards
 - Modals occupy full screen
 - Simplified header and navigation
+- Notification bell visible in header
+- User menu hidden (replaced by hamburger menu)
 
 **Interaction**:
 - Touch-only interaction
 - Swipe gestures where appropriate
 - Tap targets minimum 44px
 - No keyboard shortcuts expected
+- Notification bell fully accessible via touch
 
 ### Small Screens (<375px)
 
@@ -257,11 +260,16 @@ The notification bell provides access to mention notifications:
 
 **Visual Presentation**:
 - Bell icon positioned in application header
-- Visible on all pages when authenticated
+- Visible on all pages and all screen sizes when authenticated (mobile, tablet, desktop)
 - Badge displays unread count (1-9 or "9+" for overflow)
 - Badge styled with purple background (purple-500) and white text with hover state (purple-600)
 - Badge border matches background color for cohesive appearance
 - Badge hidden when no unread notifications
+
+**Responsive Behavior**:
+- Mobile (< 768px): Bell visible alongside hamburger menu; user menu hidden
+- Tablet/Desktop (≥ 768px): Bell visible alongside user menu
+- Maintains consistent positioning across all viewport sizes
 
 **Dropdown Menu**:
 - Opens on bell icon click
