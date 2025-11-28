@@ -55,6 +55,9 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+      # Claude Code telemetry - export to console for parsing
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_LOGS_EXPORTER: "console"
 
     steps:
       - name: Debug Inputs
@@ -148,6 +151,16 @@ jobs:
         env:
           MERGE_POINT: ${{ steps.find-merge.outputs.merge_sha }}
         run: |
+          # Initialize telemetry log file
+          TELEMETRY_LOG="/tmp/claude-telemetry.log"
+          > "$TELEMETRY_LOG"
+          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
+
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           echo "🧹 Starting cleanup analysis..."
           echo "📍 Merge point: $MERGE_POINT"
 
@@ -161,7 +174,7 @@ jobs:
 
           # Claude will create the branch, read CLAUDE.md and constitution for project context
           # Claude will use cleanup-tasks.md to track progress
-          claude --dangerously-skip-permissions --model opus "/cleanup $CLEANUP_PAYLOAD" || {
+          run_claude claude --dangerously-skip-permissions --model opus "/cleanup $CLEANUP_PAYLOAD" || {
             echo "❌ Cleanup execution failed"
             exit 1
           }
@@ -210,6 +223,16 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update ticket branch field"
 
           echo "✅ Updated ticket branch to: ${CLEANUP_BRANCH}"
+
+      # Send telemetry metrics before status update
+      - name: Send Claude Telemetry Metrics
+        if: ${{ always() && env.TELEMETRY_LOG != '' }}
+        run: |
+          .specify/scripts/bash/send-claude-metrics.sh \
+            "$TELEMETRY_LOG" \
+            "${{ inputs.job_id }}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
 
       # Update job status - Completed
       - name: Update Job Status - Completed
