@@ -1337,6 +1337,132 @@ env:
 - Multiple batches may be received for a single job (metrics are aggregated)
 - If no job_id in attributes, telemetry is accepted but not stored
 
+## Analytics Endpoints
+
+### GET /api/projects/:projectId/analytics
+
+Fetch aggregated analytics data for project visualization.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
+
+**Response** (200 OK):
+```json
+{
+  "overview": {
+    "totalCost": 45.67,
+    "costTrend": 12.5,
+    "successRate": 94.2,
+    "avgDuration": 125000,
+    "ticketsShipped": 8
+  },
+  "costOverTime": [
+    { "date": "2025-11-20", "cost": 5.23 },
+    { "date": "2025-11-21", "cost": 8.45 }
+  ],
+  "costByStage": [
+    { "stage": "BUILD", "cost": 28.45, "percentage": 62.3 },
+    { "stage": "SPECIFY", "cost": 10.22, "percentage": 22.4 },
+    { "stage": "PLAN", "cost": 4.50, "percentage": 9.8 },
+    { "stage": "VERIFY", "cost": 2.50, "percentage": 5.5 }
+  ],
+  "tokenUsage": {
+    "inputTokens": 1250000,
+    "outputTokens": 450000,
+    "cacheTokens": 380000
+  },
+  "cacheEfficiency": {
+    "totalTokens": 2080000,
+    "cacheTokens": 380000,
+    "savingsPercentage": 18.3,
+    "estimatedSavingsUsd": 3.42
+  },
+  "topTools": [
+    { "tool": "Edit", "count": 245 },
+    { "tool": "Read", "count": 189 },
+    { "tool": "Bash", "count": 156 }
+  ],
+  "workflowDistribution": [
+    { "type": "FULL", "count": 12, "percentage": 60.0 },
+    { "type": "QUICK", "count": 6, "percentage": 30.0 },
+    { "type": "CLEAN", "count": 2, "percentage": 10.0 }
+  ],
+  "velocity": [
+    { "week": "2025-W46", "ticketsShipped": 3 },
+    { "week": "2025-W47", "ticketsShipped": 5 },
+    { "week": "2025-W48", "ticketsShipped": 2 }
+  ],
+  "timeRange": "30d",
+  "generatedAt": "2025-11-28T10:30:00Z",
+  "jobCount": 45,
+  "hasData": true
+}
+```
+
+**Fields**:
+- `overview`: Summary metrics for the selected time period
+  - `totalCost`: Total cost in USD
+  - `costTrend`: Percentage change compared to previous equivalent period
+  - `successRate`: Percentage of COMPLETED jobs (excludes PENDING/RUNNING)
+  - `avgDuration`: Average job duration in milliseconds
+  - `ticketsShipped`: Tickets shipped in current month
+- `costOverTime`: Daily or weekly cost data points
+  - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
+  - `cost`: Cost in USD for period
+- `costByStage`: Cost breakdown by workflow stage
+  - `stage`: SPECIFY, PLAN, BUILD, or VERIFY
+  - `cost`: Total cost for stage
+  - `percentage`: Percentage of total cost
+- `tokenUsage`: Token consumption breakdown
+  - `inputTokens`: Total input tokens
+  - `outputTokens`: Total output tokens
+  - `cacheTokens`: Total cache tokens (read + creation)
+- `cacheEfficiency`: Cache performance metrics
+  - `totalTokens`: All tokens processed
+  - `cacheTokens`: Tokens served from cache
+  - `savingsPercentage`: Cache hit rate
+  - `estimatedSavingsUsd`: Estimated savings from cache
+- `topTools`: Most frequently used AI tools (max 10)
+  - `tool`: Tool name (Edit, Read, Bash, Write, Glob, etc.)
+  - `count`: Usage frequency
+- `workflowDistribution`: Workflow type breakdown
+  - `type`: FULL, QUICK, or CLEAN
+  - `count`: Number of tickets using this type
+  - `percentage`: Percentage of total tickets
+- `velocity`: Weekly shipping velocity
+  - `week`: ISO week identifier (YYYY-Www)
+  - `ticketsShipped`: Tickets shipped that week
+- `timeRange`: Applied time range filter
+- `generatedAt`: Timestamp when analytics were generated
+- `jobCount`: Total jobs included in analysis
+- `hasData`: False if no completed jobs with telemetry data
+
+**Data Aggregation**:
+- Includes only COMPLETED jobs (excludes PENDING, RUNNING, FAILED, CANCELLED from cost/token calculations)
+- Stage derived from job command (specify→SPECIFY, plan→PLAN, implement→BUILD, verify→VERIFY)
+- Cost trend compares current period to previous equivalent period
+- Granularity auto-adjusts: daily for <30 days, weekly for ≥30 days
+- Top tools limited to 10 entries with "Other" aggregation for remaining tools
+
+**Empty State**:
+- Returns zero values when no completed jobs exist
+- `hasData` field indicates data availability
+
+**Errors**:
+- `400`: Invalid time range parameter
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: Database error or aggregation failure
+
+**Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

@@ -96,6 +96,19 @@
 - **Icons Used**: 50+ icons across application
 - **Format**: React components with SVG
 
+### Recharts
+- **Version**: 2.x
+- **Purpose**: React charting library for analytics dashboard
+- **Features Used**:
+  - Area charts (cost over time)
+  - Bar charts (horizontal and vertical)
+  - Donut/Pie charts (workflow distribution, cache efficiency)
+  - Responsive container
+  - Custom tooltips
+  - Dark mode theming via CSS variables
+- **Integration**: Wraps D3.js with declarative React API
+- **Customization**: Colors use `hsl(var(--chart-N))` CSS variables for theme consistency
+
 ## State Management
 
 ### TanStack Query v5.90.5
@@ -350,6 +363,7 @@
 | Prisma | 6.x | ORM |
 | TanStack Query | 5.90.5 | State management |
 | TailwindCSS | 3.4 | Styling |
+| Recharts | 2.x | Chart library |
 | Zod | 4.x | Validation |
 | Playwright | Latest | E2E testing |
 | Vitest | Latest | Unit testing |
