@@ -22,8 +22,8 @@
 
 **Purpose**: Project initialization and basic analytics structure
 
-- [ ] T001 Create TypeScript types for all analytics entities in lib/analytics/types.ts
-- [ ] T002 Install shadcn/ui chart components if not present (npx shadcn@latest add chart)
+- [x] T001 Create TypeScript types for all analytics entities in lib/analytics/types.ts
+- [x] T002 Install shadcn/ui chart components if not present (npx shadcn@latest add chart)
 
 ---
 
