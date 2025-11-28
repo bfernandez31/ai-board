@@ -156,6 +156,9 @@ The detail modal:
 - Centers with appropriate sizing on desktop
 - Uses dark theme styling
 - Provides clear typography and visual hierarchy
+- Content organized in tabs (Details, Comments, Files)
+- Each tab has unified scrolling with no nested scrollbars
+- Description content flows naturally within tab scroll area
 
 ### Closing the Modal
 
