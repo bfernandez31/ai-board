@@ -281,7 +281,7 @@ jobs:
           # Wrapper function to run claude and capture telemetry
           run_claude() {
             # Capture stderr (telemetry) to file while preserving output
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           case "${{ inputs.command }}" in
@@ -398,7 +398,7 @@ jobs:
 
           # Wrapper function to run claude and capture telemetry
           run_claude() {
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           for retry in $(seq 1 $MAX_RETRIES); do

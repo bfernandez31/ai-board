@@ -337,7 +337,7 @@ jobs:
 
           # Wrapper function to run claude and capture telemetry
           run_claude() {
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           echo "🤖 Executing /verify command to fix test failures..."
@@ -392,7 +392,7 @@ jobs:
 
           # Wrapper function to run claude and capture telemetry
           run_claude() {
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           run_claude claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}:

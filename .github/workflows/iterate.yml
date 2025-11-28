@@ -121,7 +121,7 @@ jobs:
 
           # Wrapper function to run claude and capture telemetry
           run_claude() {
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           echo "🔧 Executing iteration fixes..."
@@ -146,7 +146,7 @@ jobs:
 
           # Wrapper function to run claude and capture telemetry
           run_claude() {
-            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+            "$@" 2>>"$TELEMETRY_LOG"
           }
 
           # Update specs/specifications with changes from this iteration
