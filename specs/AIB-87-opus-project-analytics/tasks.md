@@ -16,10 +16,10 @@
 
 **Purpose**: Install dependencies and create type system foundation
 
-- [ ] T001 Install Recharts dependency with `bun add recharts`
-- [ ] T002 [P] Create analytics types in lib/analytics/types.ts
-- [ ] T003 [P] Add chart CSS variables (--chart-1 through --chart-5) to app/globals.css
-- [ ] T004 [P] Add analytics query keys to app/lib/query-keys.ts
+- [x] T001 Install Recharts dependency with `bun add recharts`
+- [x] T002 [P] Create analytics types in lib/analytics/types.ts
+- [x] T003 [P] Add chart CSS variables (--chart-1 through --chart-5) to app/globals.css
+- [x] T004 [P] Add analytics query keys to app/lib/query-keys.ts
 
 ---
 
@@ -29,14 +29,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create command-to-stage mapping function in lib/analytics/aggregations.ts
-- [ ] T006 Implement time range date calculation in lib/analytics/aggregations.ts
-- [ ] T007 Implement granularity auto-adjustment (daily vs weekly) in lib/analytics/aggregations.ts
-- [ ] T008 [P] Create aggregateTools utility function in lib/analytics/aggregations.ts
-- [ ] T009 [P] Create hasAnalyticsData utility function in lib/analytics/aggregations.ts
-- [ ] T010 Create Prisma query helpers in lib/analytics/queries.ts (overview, cost, tokens, tools, workflow, velocity)
-- [ ] T011 Create getAnalyticsData main orchestration function in lib/analytics/queries.ts
-- [ ] T012 Create analytics API route at app/api/projects/[projectId]/analytics/route.ts
+- [x] T005 Create command-to-stage mapping function in lib/analytics/aggregations.ts
+- [x] T006 Implement time range date calculation in lib/analytics/aggregations.ts
+- [x] T007 Implement granularity auto-adjustment (daily vs weekly) in lib/analytics/aggregations.ts
+- [x] T008 [P] Create aggregateTools utility function in lib/analytics/aggregations.ts
+- [x] T009 [P] Create hasAnalyticsData utility function in lib/analytics/aggregations.ts
+- [x] T010 Create Prisma query helpers in lib/analytics/queries.ts (overview, cost, tokens, tools, workflow, velocity)
+- [x] T011 Create getAnalyticsData main orchestration function in lib/analytics/queries.ts
+- [x] T012 Create analytics API route at app/api/projects/[projectId]/analytics/route.ts
 
 **Checkpoint**: Foundation ready - API returns analytics data, user story implementation can now begin
 
@@ -50,8 +50,8 @@
 
 ### Implementation for User Story 7
 
-- [ ] T013 [US7] Add BarChart3 icon import and Analytics menu item to components/project/project-menu.tsx
-- [ ] T014 [US7] Create analytics page at app/projects/[projectId]/analytics/page.tsx (Server Component shell)
+- [x] T013 [US7] Add BarChart3 icon import and Analytics menu item to components/project/project-menu.tsx
+- [x] T014 [US7] Create analytics page at app/projects/[projectId]/analytics/page.tsx (Server Component shell)
 
 **Checkpoint**: Users can navigate to analytics page from project menu
 
@@ -65,12 +65,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Create time-range-selector.tsx component in components/analytics/
-- [ ] T016 [P] [US1] Create overview-cards.tsx component in components/analytics/ with four metric cards (cost, success rate, avg duration, tickets shipped)
-- [ ] T017 [US1] Create analytics-dashboard.tsx client component in components/analytics/ with TanStack Query polling
-- [ ] T018 [US1] Create empty-state.tsx component in components/analytics/ for projects without job data
-- [ ] T019 [US1] Wire overview-cards into analytics-dashboard.tsx with data binding
-- [ ] T020 [US1] Update analytics page.tsx to use AnalyticsDashboard component with initialData
+- [x] T015 [P] [US1] Create time-range-selector.tsx component in components/analytics/
+- [x] T016 [P] [US1] Create overview-cards.tsx component in components/analytics/ with four metric cards (cost, success rate, avg duration, tickets shipped)
+- [x] T017 [US1] Create analytics-dashboard.tsx client component in components/analytics/ with TanStack Query polling
+- [x] T018 [US1] Create empty-state.tsx component in components/analytics/ for projects without job data
+- [x] T019 [US1] Wire overview-cards into analytics-dashboard.tsx with data binding
+- [x] T020 [US1] Update analytics page.tsx to use AnalyticsDashboard component with initialData
 
 **Checkpoint**: Analytics page displays overview cards with cost, success rate, duration, tickets shipped
 
@@ -84,7 +84,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [P] [US2] Create cost-by-stage-chart.tsx component in components/analytics/ using Recharts BarChart horizontal
+- [x] T021 [P] [US2] Create cost-by-stage-chart.tsx component in components/analytics/ using Recharts BarChart horizontal
 
 **Checkpoint**: Cost by Stage chart displays stage breakdown
 
@@ -98,7 +98,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Create cost-over-time-chart.tsx component in components/analytics/ using Recharts AreaChart
+- [x] T022 [P] [US3] Create cost-over-time-chart.tsx component in components/analytics/ using Recharts AreaChart
 
 **Checkpoint**: Cost Over Time chart displays trends with time range selector functionality
 
@@ -112,8 +112,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [P] [US4] Create token-usage-chart.tsx component in components/analytics/ using Recharts stacked/grouped BarChart
-- [ ] T024 [P] [US4] Create cache-efficiency-chart.tsx component in components/analytics/ using Recharts PieChart (donut)
+- [x] T023 [P] [US4] Create token-usage-chart.tsx component in components/analytics/ using Recharts stacked/grouped BarChart
+- [x] T024 [P] [US4] Create cache-efficiency-chart.tsx component in components/analytics/ using Recharts PieChart (donut)
 
 **Checkpoint**: Token Usage and Cache Efficiency charts display token metrics
 
@@ -127,7 +127,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T025 [P] [US5] Create top-tools-chart.tsx component in components/analytics/ using Recharts BarChart horizontal
+- [x] T025 [P] [US5] Create top-tools-chart.tsx component in components/analytics/ using Recharts BarChart horizontal
 
 **Checkpoint**: Top Tools chart displays tool usage rankings
 
@@ -141,8 +141,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T026 [P] [US6] Create workflow-distribution-chart.tsx component in components/analytics/ using Recharts PieChart (donut)
-- [ ] T027 [P] [US6] Create velocity-chart.tsx component in components/analytics/ using Recharts BarChart
+- [x] T026 [P] [US6] Create workflow-distribution-chart.tsx component in components/analytics/ using Recharts PieChart (donut)
+- [x] T027 [P] [US6] Create velocity-chart.tsx component in components/analytics/ using Recharts BarChart
 
 **Checkpoint**: Workflow Distribution and Velocity charts display productivity metrics
 
@@ -152,12 +152,12 @@
 
 **Purpose**: Final integration, responsive layout, and validation
 
-- [ ] T028 Implement responsive bento grid layout in analytics-dashboard.tsx for 768px-1920px+ screens
-- [ ] T029 Add custom tooltip component with shadcn/ui styling for all charts
-- [ ] T030 Add number formatting utilities (abbreviated format: $1.2K, percentage display) in lib/analytics/aggregations.ts
-- [ ] T031 Ensure all chart components handle null/missing data gracefully with fallbacks
-- [ ] T032 Verify dark mode support using CSS variables (hsl(var(--chart-N))) in all chart colors
-- [ ] T033 Run quickstart.md validation - verify all steps work end-to-end
+- [x] T028 Implement responsive bento grid layout in analytics-dashboard.tsx for 768px-1920px+ screens
+- [x] T029 Add custom tooltip component with shadcn/ui styling for all charts
+- [x] T030 Add number formatting utilities (abbreviated format: $1.2K, percentage display) in lib/analytics/aggregations.ts
+- [x] T031 Ensure all chart components handle null/missing data gracefully with fallbacks
+- [x] T032 Verify dark mode support using CSS variables (hsl(var(--chart-N))) in all chart colors
+- [x] T033 Run quickstart.md validation - verify all steps work end-to-end
 
 ---
 

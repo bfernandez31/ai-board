@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Settings, MoreVertical } from 'lucide-react';
+import { Sparkles, Settings, MoreVertical, BarChart3 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,12 @@ export function ProjectMenu({ projectId, onCleanupSuccess }: ProjectMenuProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/projects/${projectId}/analytics`}>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowCleanupDialog(true)}>
             <Sparkles className="mr-2 h-4 w-4" />
             Clean Project

@@ -39,6 +39,13 @@
     --primary-violet-hover: 258 90% 58%; /* #7C3AED */
     --primary-violet-active: 258 86% 50%; /* #6D28D9 */
 
+    /* Chart Colors - For Recharts dark mode support */
+    --chart-1: 258 90% 66%;  /* Violet - primary */
+    --chart-2: 170 57% 73%;  /* Teal */
+    --chart-3: 23 92% 75%;   /* Peach */
+    --chart-4: 217 92% 76%;  /* Blue */
+    --chart-5: 115 54% 76%;  /* Green */
+
     /* Theme Variables */
     --background: var(--ctp-base);
     --foreground: var(--ctp-text);
