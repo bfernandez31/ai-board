@@ -876,186 +876,186 @@ export function TicketDetailModal({
           </TabsList>
 
           {/* Details Tab */}
-          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
-            {/* Description section with inline editing */}
-            <div className="space-y-4 sm:space-y-8" data-testid="description-container">
-            <div className="group">
-            <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
-              Description
-            </h3>
-            {descriptionEdit.isEditing ? (
-              <div className="space-y-4">
-                <Textarea
-                  ref={
-                    descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>
-                  }
-                  value={descriptionEdit.value}
-                  onChange={descriptionEdit.handleChange}
-                  onKeyDown={descriptionEdit.handleKeyDown}
-                  onKeyUp={(event) => {
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }
-                  }}
-                  maxLength={2500}
-                  className="bg-[#313244] border-2 border-[#8B5CF6] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed h-[calc(100vh-470px)] sm:min-h-[300px] sm:max-h-[calc(90vh-500px)] sm:h-auto !text-white"
-                  disabled={descriptionEdit.isSaving}
-                  data-testid="description-textarea"
-                  name="description"
-                  aria-label="Edit ticket description"
-                  aria-invalid={!!descriptionEdit.error}
-                  aria-describedby={
-                    descriptionEdit.error
-                      ? 'description-error'
-                      : 'description-counter'
-                  }
-                />
-                <CharacterCounter
-                  current={descriptionEdit.value.length}
-                  max={2500}
-                />
-                {descriptionEdit.error && (
-                  <p
-                    id="description-error"
-                    className="text-sm text-red-400 font-medium"
-                    data-testid="description-error"
-                    role="alert"
-                  >
-                    {descriptionEdit.error}
-                  </p>
-                )}
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      await descriptionEdit.save();
-                    }}
-                    disabled={
-                      descriptionEdit.isSaving ||
-                      !!descriptionEdit.error ||
-                      descriptionEdit.value.trim() ===
-                        (localTicket?.description || '')
-                    }
-                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-6 shadow-sm"
-                    aria-label="Save description changes"
-                  >
-                    {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={descriptionEdit.cancelEdit}
-                    variant="outline"
-                    disabled={descriptionEdit.isSaving}
-                    className="border-2 border-[#45475a] bg-transparent hover:bg-[#313244] text-[#cdd6f4] font-medium px-6"
-                    aria-label="Cancel editing"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div
-                className={`
-                  p-4 -ml-4 rounded-lg transition-all duration-200
-                  relative
-                  ${isInboxStage ? 'cursor-pointer hover:bg-[#313244]/50' : 'cursor-default'}
-                `}
-                onClick={isInboxStage ? descriptionEdit.startEdit : undefined}
-                onKeyDown={isInboxStage ? (e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    descriptionEdit.startEdit();
-                  }
-                } : undefined}
-                data-testid="ticket-description"
-                role={isInboxStage ? "button" : undefined}
-                tabIndex={isInboxStage ? 0 : undefined}
-                aria-label={isInboxStage ? "Edit ticket description" : "Ticket description (read-only)"}
-              >
-                {isInboxStage && (
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Pencil
-                      className="w-5 h-5 text-[#a6adc8]"
-                      data-testid="edit-icon-description"
-                      aria-hidden="true"
+          <TabsContent value="details" className="flex-1 min-h-0 flex flex-col max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)]">
+            {/* Description section with inline editing - scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto pr-2" data-testid="description-container">
+              <div className="group">
+                <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
+                  Description
+                </h3>
+                {descriptionEdit.isEditing ? (
+                  <div className="space-y-4">
+                    <Textarea
+                      ref={
+                        descriptionEdit.inputRef as React.RefObject<HTMLTextAreaElement>
+                      }
+                      value={descriptionEdit.value}
+                      onChange={descriptionEdit.handleChange}
+                      onKeyDown={descriptionEdit.handleKeyDown}
+                      onKeyUp={(event) => {
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }
+                      }}
+                      maxLength={2500}
+                      className="bg-[#313244] border-2 border-[#8B5CF6] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed min-h-[200px] !text-white"
+                      disabled={descriptionEdit.isSaving}
+                      data-testid="description-textarea"
+                      name="description"
+                      aria-label="Edit ticket description"
+                      aria-invalid={!!descriptionEdit.error}
+                      aria-describedby={
+                        descriptionEdit.error
+                          ? 'description-error'
+                          : 'description-counter'
+                      }
                     />
+                    <CharacterCounter
+                      current={descriptionEdit.value.length}
+                      max={2500}
+                    />
+                    {descriptionEdit.error && (
+                      <p
+                        id="description-error"
+                        className="text-sm text-red-400 font-medium"
+                        data-testid="description-error"
+                        role="alert"
+                      >
+                        {descriptionEdit.error}
+                      </p>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          await descriptionEdit.save();
+                        }}
+                        disabled={
+                          descriptionEdit.isSaving ||
+                          !!descriptionEdit.error ||
+                          descriptionEdit.value.trim() ===
+                            (localTicket?.description || '')
+                        }
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-6 shadow-sm"
+                        aria-label="Save description changes"
+                      >
+                        {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={descriptionEdit.cancelEdit}
+                        variant="outline"
+                        disabled={descriptionEdit.isSaving}
+                        className="border-2 border-[#45475a] bg-transparent hover:bg-[#313244] text-[#cdd6f4] font-medium px-6"
+                        aria-label="Cancel editing"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`
+                      p-4 -ml-4 rounded-lg transition-all duration-200
+                      relative
+                      ${isInboxStage ? 'cursor-pointer hover:bg-[#313244]/50' : 'cursor-default'}
+                    `}
+                    onClick={isInboxStage ? descriptionEdit.startEdit : undefined}
+                    onKeyDown={isInboxStage ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        descriptionEdit.startEdit();
+                      }
+                    } : undefined}
+                    data-testid="ticket-description"
+                    role={isInboxStage ? "button" : undefined}
+                    tabIndex={isInboxStage ? 0 : undefined}
+                    aria-label={isInboxStage ? "Edit ticket description" : "Ticket description (read-only)"}
+                  >
+                    {isInboxStage && (
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <Pencil
+                          className="w-5 h-5 text-[#a6adc8]"
+                          data-testid="edit-icon-description"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    )}
+                    <div
+                      className="text-base leading-relaxed whitespace-pre-wrap text-white"
+                    >
+                      {localTicket?.description ||
+                        ticket.description ||
+                        'No description provided'}
+                    </div>
                   </div>
                 )}
-                <div
-                  className="text-base leading-relaxed whitespace-pre-wrap text-white"
-                >
-                  {localTicket?.description ||
-                    ticket.description ||
-                    'No description provided'}
-                </div>
               </div>
-            )}
-          </div>
-
-            {/* Action buttons section - compact horizontal layout */}
-            {hasCompletedSpecifyJob && (
-              <div className="border-t-2 border-[#313244]/50 pt-6">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    onClick={() => {
-                      setDocViewerType('spec');
-                      setDocViewerOpen(true);
-                    }}
-                    size="sm"
-                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                    title="View specification document"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Spec
-                  </Button>
-                  {showPlanButton && (
-                    <Button
-                      onClick={() => {
-                        setDocViewerType('plan');
-                        setDocViewerOpen(true);
-                      }}
-                      size="sm"
-                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                      title="View implementation plan"
-                    >
-                      <Settings2 className="w-3.5 h-3.5" />
-                      Plan
-                    </Button>
-                  )}
-                  {showTasksButton && (
-                    <Button
-                      onClick={() => {
-                        setDocViewerType('tasks');
-                        setDocViewerOpen(true);
-                      }}
-                      size="sm"
-                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                      title="View task breakdown"
-                    >
-                      <CheckSquare className="w-3.5 h-3.5" />
-                      Tasks
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
             </div>
 
-            {/* Footer with relative dates - sticky on desktop only when not editing */}
-            <div
-              className={`border-t border-border mt-4 pt-3 text-xs text-muted-foreground bg-[#181825] ${
-                !titleEdit.isEditing && !descriptionEdit.isEditing ? 'md:sticky md:bottom-0' : ''
-              }`}
-              data-testid="details-footer"
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono">{localTicket?.ticketKey || ticket.ticketKey}</span>
-                <span>·</span>
-                <span>📅 Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</span>
-                <span>·</span>
-                <span>✏️ Updated {formatDistanceToNow(new Date(localTicket?.updatedAt || ticket.updatedAt), { addSuffix: true })}</span>
+            {/* Fixed footer section - always visible */}
+            <div className="flex-shrink-0 pt-4 space-y-4 bg-[#181825]">
+              {/* Action buttons section - compact horizontal layout */}
+              {hasCompletedSpecifyJob && (
+                <div className="border-t-2 border-[#313244]/50 pt-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      onClick={() => {
+                        setDocViewerType('spec');
+                        setDocViewerOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                      title="View specification document"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Spec
+                    </Button>
+                    {showPlanButton && (
+                      <Button
+                        onClick={() => {
+                          setDocViewerType('plan');
+                          setDocViewerOpen(true);
+                        }}
+                        size="sm"
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        title="View implementation plan"
+                      >
+                        <Settings2 className="w-3.5 h-3.5" />
+                        Plan
+                      </Button>
+                    )}
+                    {showTasksButton && (
+                      <Button
+                        onClick={() => {
+                          setDocViewerType('tasks');
+                          setDocViewerOpen(true);
+                        }}
+                        size="sm"
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        title="View task breakdown"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                        Tasks
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Footer with relative dates */}
+              <div
+                className="border-t border-border pt-3 text-xs text-muted-foreground"
+                data-testid="details-footer"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono">{localTicket?.ticketKey || ticket.ticketKey}</span>
+                  <span>·</span>
+                  <span>📅 Created {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</span>
+                  <span>·</span>
+                  <span>✏️ Updated {formatDistanceToNow(new Date(localTicket?.updatedAt || ticket.updatedAt), { addSuffix: true })}</span>
+                </div>
               </div>
             </div>
           </TabsContent>
