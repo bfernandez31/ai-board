@@ -66,9 +66,13 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
-      # Claude Code telemetry - export to console for parsing
+      # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
-      OTEL_LOGS_EXPORTER: "console"
+      OTEL_LOGS_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+      OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
 
     steps:
       - name: Debug Inputs
@@ -330,16 +334,6 @@ jobs:
       - name: Execute /verify Command
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         run: |
-          # Initialize telemetry log file
-          TELEMETRY_LOG="/tmp/claude-telemetry.log"
-          > "$TELEMETRY_LOG"
-          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
-
-          # Wrapper function to run claude and capture telemetry
-          run_claude() {
-            "$@" 2>>"$TELEMETRY_LOG"
-          }
-
           echo "🤖 Executing /verify command to fix test failures..."
           echo ""
           echo "📋 CRITICAL CONTEXT FOR ANALYSIS:"
@@ -353,7 +347,7 @@ jobs:
           echo "  3. Fix implementation if it violates spec (bugs)"
           echo "  4. Update test if spec documents new behavior (intentional changes)"
           echo ""
-          run_claude claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
+          claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -383,19 +377,7 @@ jobs:
         run: |
           echo "📚 Updating global documentation before PR creation..."
 
-          # Initialize telemetry log if not already set (skip tests path)
-          if [ -z "$TELEMETRY_LOG" ]; then
-            TELEMETRY_LOG="/tmp/claude-telemetry.log"
-            > "$TELEMETRY_LOG"
-            echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
-          fi
-
-          # Wrapper function to run claude and capture telemetry
-          run_claude() {
-            "$@" 2>>"$TELEMETRY_LOG"
-          }
-
-          run_claude claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}:
+          claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}:
 
           This is the FINAL documentation update before PR creation. The feature has been implemented and verified.
 
@@ -452,15 +434,6 @@ jobs:
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${FEATURE_BRANCH}" \
-            "${APP_URL}" \
-            "${WORKFLOW_API_TOKEN}"
-
-      - name: Send Claude Telemetry Metrics
-        if: ${{ always() && inputs.job_id && env.SKIP_EXECUTION != 'true' && env.TELEMETRY_LOG != '' }}
-        run: |
-          .specify/scripts/bash/send-claude-metrics.sh \
-            "$TELEMETRY_LOG" \
-            "${{ inputs.job_id }}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
 

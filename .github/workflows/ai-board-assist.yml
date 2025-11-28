@@ -62,9 +62,13 @@ jobs:
       SKIP_CLAUDE: ${{ contains(inputs.ticket_id, '[e2e]') || inputs.stage == 'build' }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
-      # Claude Code telemetry - export to console for parsing
+      # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
-      OTEL_LOGS_EXPORTER: "console"
+      OTEL_LOGS_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+      OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
 
     steps:
       - name: Debug Inputs
@@ -171,11 +175,6 @@ jobs:
           USER: ${{ inputs.user }}
           PROJECT_ID: ${{ inputs.project_id }}
         run: |
-          # Initialize telemetry log file
-          TELEMETRY_LOG="/tmp/claude-telemetry.log"
-          > "$TELEMETRY_LOG"
-          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
-
           echo "🤖 Executing AI-BOARD assist command..."
 
           echo "📦 Request details:"
@@ -198,9 +197,8 @@ jobs:
           fi
 
           # Execute Claude CLI command with comment as plain text argument
-          # Capture output and stderr (telemetry) separately
           echo "🚀 Executing Claude command..."
-          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" 2>>"$TELEMETRY_LOG" || true)
+          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" || true)
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
           # Remove ```json ... ``` blocks as they cause "Invalid format" errors
@@ -450,15 +448,6 @@ jobs:
           echo "  Is success?: ${{ steps.parse.outputs.status == 'success' }}"
           echo "  Is iterate_required?: ${{ steps.parse.outputs.status == 'iterate_required' }}"
           echo "  Files output: '${{ steps.parse.outputs.files }}'"
-
-      - name: Send Claude Telemetry Metrics
-        if: ${{ always() && env.SKIP_CLAUDE != 'true' && env.TELEMETRY_LOG != '' }}
-        run: |
-          .specify/scripts/bash/send-claude-metrics.sh \
-            "$TELEMETRY_LOG" \
-            "${{ inputs.job_id }}" \
-            "${APP_URL}" \
-            "${WORKFLOW_API_TOKEN}"
 
       - name: Update Job Status - Success
         if: ${{ env.SKIP_CLAUDE != 'true' && (steps.parse.outputs.status == 'success' || steps.parse.outputs.status == 'iterate_required') }}
