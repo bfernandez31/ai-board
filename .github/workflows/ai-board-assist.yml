@@ -200,7 +200,7 @@ jobs:
           # Execute Claude CLI command with comment as plain text argument
           # Capture output and stderr (telemetry) separately
           echo "🚀 Executing Claude command..."
-          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" 2> >(tee -a "$TELEMETRY_LOG" >&2) || true)
+          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" 2>>"$TELEMETRY_LOG" || true)
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
           # Remove ```json ... ``` blocks as they cause "Invalid format" errors
