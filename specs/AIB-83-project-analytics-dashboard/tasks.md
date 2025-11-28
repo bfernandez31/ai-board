@@ -33,19 +33,19 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create unit test file for aggregation functions in tests/unit/analytics/aggregations.test.ts
-- [ ] T004 Create unit test file for calculation functions in tests/unit/analytics/calculations.test.ts
-- [ ] T005 Implement calculateCacheEfficiency function in lib/analytics/calculations.ts
-- [ ] T006 [P] Implement calculateSuccessRate function in lib/analytics/calculations.ts
-- [ ] T007 [P] Implement formatDuration function in lib/analytics/calculations.ts
-- [ ] T008 Implement aggregateCostByStage function in lib/analytics/aggregations.ts
-- [ ] T009 [P] Implement aggregateToolUsage function in lib/analytics/aggregations.ts
-- [ ] T010 [P] Implement COMMAND_TO_STAGE lookup table in lib/analytics/types.ts
-- [ ] T011 Create Prisma query function fetchJobsForAnalytics in lib/db/analytics-queries.ts
-- [ ] T012 [P] Create Prisma query function fetchTicketsForVelocity in lib/db/analytics-queries.ts
-- [ ] T013 [P] Create Prisma query function aggregateCostSummary in lib/db/analytics-queries.ts
-- [ ] T014 Create analytics API route in app/api/projects/[projectId]/analytics/route.ts (basic structure with auth)
-- [ ] T015 Implement API route validation and authorization using verifyProjectAccess in app/api/projects/[projectId]/analytics/route.ts
+- [x] T003 Create unit test file for aggregation functions in tests/unit/analytics/aggregations.test.ts
+- [x] T004 Create unit test file for calculation functions in tests/unit/analytics/calculations.test.ts
+- [x] T005 Implement calculateCacheEfficiency function in lib/analytics/calculations.ts
+- [x] T006 [P] Implement calculateSuccessRate function in lib/analytics/calculations.ts
+- [x] T007 [P] Implement formatDuration function in lib/analytics/calculations.ts
+- [x] T008 Implement aggregateCostByStage function in lib/analytics/aggregations.ts
+- [x] T009 [P] Implement aggregateToolUsage function in lib/analytics/aggregations.ts
+- [x] T010 [P] Implement COMMAND_TO_STAGE lookup table in lib/analytics/types.ts
+- [x] T011 Create Prisma query function fetchJobsForAnalytics in lib/db/analytics-queries.ts
+- [x] T012 [P] Create Prisma query function fetchTicketsForVelocity in lib/db/analytics-queries.ts
+- [x] T013 [P] Create Prisma query function aggregateCostSummary in lib/db/analytics-queries.ts
+- [x] T014 Create analytics API route in app/api/projects/[projectId]/analytics/route.ts (basic structure with auth)
+- [x] T015 Implement API route validation and authorization using verifyProjectAccess in app/api/projects/[projectId]/analytics/route.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
