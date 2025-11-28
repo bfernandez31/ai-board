@@ -983,12 +983,15 @@ export function TicketDetailModal({
                         />
                       </div>
                     )}
-                    <div
-                      className="text-base leading-relaxed whitespace-pre-wrap text-white"
-                    >
-                      {localTicket?.description ||
-                        ticket.description ||
-                        'No description provided'}
+                    <div className="text-base leading-relaxed text-white prose prose-sm prose-invert max-w-none">
+                      {(localTicket?.description || ticket.description) ? (
+                        <MentionDisplay
+                          content={localTicket?.description || ticket.description || ''}
+                          mentionedUsers={{}}
+                        />
+                      ) : (
+                        <span className="text-[#a6adc8]">No description provided</span>
+                      )}
                     </div>
                   </div>
                 )}
