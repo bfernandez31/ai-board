@@ -1263,6 +1263,67 @@ Valid transitions:
 Invalid transitions return 400 error
 ```
 
+### PATCH /api/jobs/:id/metrics
+
+Update job telemetry metrics (workflow-only endpoint).
+
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
+**Authorization**: Workflow token validation (no project membership check)
+
+**Path Parameters**:
+- `id` (number, required): Job ID
+
+**Request Body**:
+```json
+{
+  "inputTokens": 15000,
+  "outputTokens": 3500,
+  "cacheReadTokens": 40000,
+  "cacheCreationTokens": 500,
+  "costUsd": 0.125,
+  "durationMs": 45000,
+  "model": "claude-sonnet-4-5-20250929",
+  "toolsUsed": ["Edit", "Write", "Read", "Bash", "Glob"]
+}
+```
+
+**Validation**:
+- `inputTokens`: Optional, non-negative integer
+- `outputTokens`: Optional, non-negative integer
+- `cacheReadTokens`: Optional, non-negative integer
+- `cacheCreationTokens`: Optional, non-negative integer
+- `costUsd`: Optional, non-negative float
+- `durationMs`: Optional, non-negative integer
+- `model`: Optional, string (max 50 chars)
+- `toolsUsed`: Optional, array of strings
+
+**Response** (200 OK):
+```json
+{
+  "id": 123,
+  "inputTokens": 15000,
+  "outputTokens": 3500,
+  "cacheReadTokens": 40000,
+  "cacheCreationTokens": 500,
+  "costUsd": 0.125,
+  "durationMs": 45000,
+  "model": "claude-sonnet-4-5-20250929",
+  "toolsUsed": ["Edit", "Write", "Read", "Bash", "Glob"],
+  "updatedAt": "2025-01-15T10:40:00.000Z"
+}
+```
+
+**Errors**:
+- `400`: Invalid metrics data (negative values, invalid types)
+- `401`: Invalid or missing workflow token
+- `404`: Job not found
+
+**Usage**:
+- Called by GitHub Actions workflows after Claude CLI execution
+- Metrics aggregated from Claude Code telemetry output
+- Telemetry captured via `CLAUDE_CODE_ENABLE_TELEMETRY=1` and `OTEL_LOGS_EXPORTER=console`
+- Parsed and sent by `.specify/scripts/bash/send-claude-metrics.sh`
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

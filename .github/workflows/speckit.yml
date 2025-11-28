@@ -94,6 +94,9 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Database connection string for test environment
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+      # Claude Code telemetry - export to console for parsing
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_LOGS_EXPORTER: "console"
 
     steps:
       - name: Debug Inputs
@@ -271,6 +274,16 @@ jobs:
         run: |
           set -e
 
+          # Initialize telemetry log file
+          TELEMETRY_LOG="/tmp/claude-telemetry.log"
+          > "$TELEMETRY_LOG"
+
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            # Capture stderr (telemetry) to file while preserving output
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           case "${{ inputs.command }}" in
             specify)
               echo "📦 Using JSON payload with clarification policy"
@@ -281,14 +294,14 @@ jobs:
               # Add image paths if available
               if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
                 echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
+                run_claude claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
               else
-                claude --dangerously-skip-permissions "/speckit.specify $payload"
+                run_claude claude --dangerously-skip-permissions "/speckit.specify $payload"
               fi
               ;;
             plan)
               echo "📋 Executing /speckit.plan command..."
-              claude --dangerously-skip-permissions /speckit.plan
+              run_claude claude --dangerously-skip-permissions /speckit.plan
 
               # Commit plan changes
               git add .
@@ -308,7 +321,7 @@ jobs:
               fi
 
               echo "📋 Executing /speckit.tasks command..."
-              claude --dangerously-skip-permissions /speckit.tasks
+              run_claude claude --dangerously-skip-permissions /speckit.tasks
 
               # Commit tasks changes
               git add .
@@ -328,20 +341,22 @@ jobs:
               fi
               ;;
             task)
-              claude --dangerously-skip-permissions /speckit.tasks
+              run_claude claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
+              run_claude claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              claude --dangerously-skip-permissions /speckit.clarify --answers clarifications.json
+              run_claude claude --dangerously-skip-permissions /speckit.clarify --answers clarifications.json
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"
               exit 1
               ;;
           esac
+
+          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
 
       - name: Detect Incomplete Implementation (Implement Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
@@ -381,10 +396,15 @@ jobs:
           MAX_RETRIES=2
           FEATURE_DIR="specs/$(git rev-parse --abbrev-ref HEAD)"
 
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           for retry in $(seq 1 $MAX_RETRIES); do
             echo "🔄 Retry $retry/$MAX_RETRIES"
 
-            claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
+            run_claude claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
             if .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"
@@ -494,6 +514,15 @@ jobs:
           fi
 
           echo "✅ Cleanup complete (images remain in Cloudinary)"
+
+      - name: Send Claude Telemetry Metrics
+        if: ${{ always() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' && env.TELEMETRY_LOG != '' }}
+        run: |
+          .specify/scripts/bash/send-claude-metrics.sh \
+            "$TELEMETRY_LOG" \
+            "${{ inputs.job_id }}" \
+            "$APP_URL" \
+            "$WORKFLOW_API_TOKEN"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' }}

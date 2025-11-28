@@ -47,6 +47,9 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      # Claude Code telemetry - export to console for parsing
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_LOGS_EXPORTER: "console"
 
     steps:
       - name: Debug Inputs
@@ -111,11 +114,21 @@ jobs:
           PROJECT_ID: ${{ inputs.project_id }}
           ISSUES: ${{ inputs.issues_to_fix }}
         run: |
+          # Initialize telemetry log file
+          TELEMETRY_LOG="/tmp/claude-telemetry.log"
+          > "$TELEMETRY_LOG"
+          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
+
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           echo "🔧 Executing iteration fixes..."
           echo "Issues to fix: $ISSUES"
 
           # Execute Claude iterate-verify command
-          claude --dangerously-skip-permissions "/iterate-verify" > output.log 2>&1 || true
+          run_claude claude --dangerously-skip-permissions "/iterate-verify" > output.log || true
 
           # Check if changes were made
           if git diff --quiet; then
@@ -131,8 +144,13 @@ jobs:
         run: |
           echo "📚 Updating global specifications..."
 
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           # Update specs/specifications with changes from this iteration
-          claude --dangerously-skip-permissions "/sync-specifications \
+          run_claude claude --dangerously-skip-permissions "/sync-specifications \
             --branch ${{ inputs.branch }} \
             --source specs/${{ inputs.branch }}/ \
             --target specs/specifications/"
@@ -164,6 +182,15 @@ jobs:
           git push origin ${{ inputs.branch }}
 
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
+
+      - name: Send Claude Telemetry Metrics
+        if: ${{ always() && env.TELEMETRY_LOG != '' }}
+        run: |
+          .specify/scripts/bash/send-claude-metrics.sh \
+            "$TELEMETRY_LOG" \
+            "${{ inputs.job_id }}" \
+            "${APP_URL}" \
+            "${WORKFLOW_API_TOKEN}"
 
       - name: Update Job Status - Success
         if: success()
