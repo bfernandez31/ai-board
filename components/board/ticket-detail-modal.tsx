@@ -35,6 +35,7 @@ import { CommentForm } from '@/components/comments/comment-form';
 import { ConversationTimeline } from '@/components/ticket/conversation-timeline';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import { MentionDisplay } from '@/components/comments/mention-display';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)

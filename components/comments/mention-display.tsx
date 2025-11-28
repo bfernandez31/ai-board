@@ -158,14 +158,13 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
     ),
     code: ({ children, className }) => {
       const inline = !className;
-      const text = String(children);
       return inline ? (
         <code className="bg-surface0 px-1.5 py-0.5 rounded text-sm text-mauve font-mono">
-          {text}
+          {processChildren(children)}
         </code>
       ) : (
         <code className="block bg-surface0 rounded p-2 text-sm text-mauve font-mono overflow-x-auto my-2">
-          {text}
+          {processChildren(children)}
         </code>
       );
     },
