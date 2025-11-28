@@ -432,6 +432,120 @@ try {
 }
 ```
 
+## Analytics Response Schemas
+
+### AnalyticsData Interface
+
+```typescript
+export interface AnalyticsData {
+  summary: AnalyticsSummary;
+  costOverTime: CostOverTimeDataPoint[];
+  costByStage: CostByStageDataPoint[];
+  tokenUsage: TokenUsage;
+  topTools: TopToolDataPoint[];
+  cacheEfficiency: CacheEfficiency;
+  workflowDistribution: WorkflowDistributionDataPoint[];
+  velocity: VelocityDataPoint[];
+}
+
+export interface AnalyticsSummary {
+  totalCostUsd: number;
+  costTrendPercent: number | null;
+  successRatePercent: number | null;
+  avgDurationMs: number | null;
+  ticketsShippedThisMonth: number;
+}
+
+export interface CostOverTimeDataPoint {
+  date: Date;
+  costUsd: number;
+  jobCount: number;
+}
+
+export interface CostByStageDataPoint {
+  stage: string;
+  costUsd: number;
+  jobCount: number;
+  percentage: number;
+}
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  totalTokens: number;
+}
+
+export interface TopToolDataPoint {
+  toolName: string;
+  usageCount: number;
+  percentage: number;
+}
+
+export interface CacheEfficiency {
+  efficiencyPercent: number;
+  cacheReadTokens: number;
+  freshInputTokens: number;
+  totalInputTokens: number;
+}
+
+export interface WorkflowDistributionDataPoint {
+  workflowType: string;
+  ticketCount: number;
+  percentage: number;
+}
+
+export interface VelocityDataPoint {
+  weekStartDate: Date;
+  ticketsShipped: number;
+  weekLabel: string;
+}
+```
+
+**Location**: `lib/analytics/types.ts`
+
+**Usage**:
+```typescript
+import type { AnalyticsData } from '@/lib/analytics/types';
+
+// API route return type
+export async function GET(): Promise<NextResponse<AnalyticsData>> {
+  const data = await aggregateAnalytics(projectId);
+  return NextResponse.json(data);
+}
+
+// Client component usage
+const { data } = useQuery<AnalyticsData>({
+  queryKey: ['analytics', projectId],
+  queryFn: () => fetch(`/api/projects/${projectId}/analytics`).then(r => r.json())
+});
+```
+
+**COMMAND_TO_STAGE Mapping**:
+```typescript
+export const COMMAND_TO_STAGE: Record<string, string> = {
+  'specify': 'SPECIFY',
+  'plan': 'PLAN',
+  'implement': 'BUILD',
+  'verify': 'VERIFY',
+  'deploy-preview': 'VERIFY',
+  'comment-specify': 'SPECIFY',
+  'comment-plan': 'PLAN',
+  'comment-build': 'BUILD',
+  'comment-verify': 'VERIFY',
+  'quick-impl': 'BUILD',
+  'clean': 'BUILD',
+  'rollback-reset': 'PLAN',
+};
+```
+
+**Validation Notes**:
+- Analytics endpoint uses Zod only for path parameter validation (projectId must be numeric)
+- Response data does not use Zod validation (TypeScript interfaces only)
+- Aggregation logic ensures type safety through TypeScript strict mode
+- Null values allowed for metrics when insufficient data (costTrendPercent, successRatePercent, avgDurationMs)
+
 ## Schema Location & Usage
 
 ### File Organization
@@ -445,6 +559,12 @@ app/lib/schemas/
 ├── project.ts          # Project schemas
 ├── image.ts            # Image attachment schemas
 └── index.ts            # Re-exports all schemas
+
+lib/analytics/
+├── types.ts            # Analytics TypeScript interfaces (no Zod schemas)
+├── aggregations.ts     # Pure aggregation functions
+├── calculations.ts     # Metric calculation functions
+└── README.md           # Analytics utilities documentation
 ```
 
 ### Import Pattern

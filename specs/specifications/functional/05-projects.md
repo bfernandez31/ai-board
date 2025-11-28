@@ -242,6 +242,39 @@ Projects track activity across all tickets:
 
 ## Project Actions
 
+### Analytics Dashboard
+
+Users can view detailed project analytics and telemetry insights:
+
+**Menu Access**:
+- Project menu contains "Analytics" option (BarChart3 icon)
+- Available to project owners and members
+- Navigates to dedicated analytics page for the project
+
+**Dashboard Features**:
+- **Overview Cards**: Four summary metrics displayed prominently
+  - Total Cost: Cumulative cost in USD from all workflow jobs
+  - Success Rate: Percentage of jobs that completed successfully (vs failed/cancelled)
+  - Average Duration: Mean execution time for completed jobs
+  - Tickets Shipped This Month: Count of tickets moved to SHIP stage in current calendar month
+- **Cost Trends**: Shows spending changes compared to previous 30-day period
+- **Stage Breakdown**: Visualizes cost distribution across workflow stages (SPECIFY, PLAN, BUILD, VERIFY)
+- **Token Analytics**: Displays input, output, and cache token usage patterns
+- **Cache Efficiency**: Shows percentage of token requests served from cache
+- **Tool Usage**: Identifies most frequently used Claude Code tools
+- **Workflow Distribution**: Shows ratio of FULL vs QUICK vs CLEAN workflows
+- **Velocity Tracking**: Displays tickets shipped per week over last 12 weeks
+
+**Data Sources**:
+- Job telemetry data (tokens, cost, duration, tools used)
+- Ticket status and workflow metadata
+- Aggregated metrics calculated on-demand from last 30-90 days
+
+**Visual Design**:
+- Bento Grid responsive layout adapting to screen sizes
+- Interactive charts with hover tooltips showing detailed breakdowns
+- Clear "No data available" states when project has no job history
+
 ### Clean Project
 
 Users can trigger automated cleanup of technical debt accumulated from shipped features:
