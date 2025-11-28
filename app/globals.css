@@ -60,6 +60,11 @@
     --input: var(--ctp-surface-0);
     --ring: var(--primary-violet);
     --radius: 0.5rem;
+    --chart-1: var(--ctp-blue);
+    --chart-2: var(--ctp-green);
+    --chart-3: var(--ctp-yellow);
+    --chart-4: var(--ctp-mauve);
+    --chart-5: var(--ctp-peach);
   }
 }
 
