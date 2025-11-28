@@ -94,6 +94,9 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Database connection string for test environment
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+      # Claude Code telemetry - export to console for parsing
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_LOGS_EXPORTER: "console"
 
     steps:
       - name: Debug Inputs
@@ -271,6 +274,16 @@ jobs:
         run: |
           set -e
 
+          # Initialize telemetry log file
+          TELEMETRY_LOG="/tmp/claude-telemetry.log"
+          > "$TELEMETRY_LOG"
+
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            # Capture stderr (telemetry) to file while preserving output
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           case "${{ inputs.command }}" in
             specify)
               echo "📦 Using JSON payload with clarification policy"
@@ -281,14 +294,14 @@ jobs:
               # Add image paths if available
               if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
                 echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
+                run_claude claude --dangerously-skip-permissions "/speckit.specify $payload" $IMAGE_PATHS
               else
-                claude --dangerously-skip-permissions "/speckit.specify $payload"
+                run_claude claude --dangerously-skip-permissions "/speckit.specify $payload"
               fi
               ;;
             plan)
               echo "📋 Executing /speckit.plan command..."
-              claude --dangerously-skip-permissions /speckit.plan
+              run_claude claude --dangerously-skip-permissions /speckit.plan
 
               # Commit plan changes
               git add .
@@ -308,7 +321,7 @@ jobs:
               fi
 
               echo "📋 Executing /speckit.tasks command..."
-              claude --dangerously-skip-permissions /speckit.tasks
+              run_claude claude --dangerously-skip-permissions /speckit.tasks
 
               # Commit tasks changes
               git add .
@@ -328,20 +341,22 @@ jobs:
               fi
               ;;
             task)
-              claude --dangerously-skip-permissions /speckit.tasks
+              run_claude claude --dangerously-skip-permissions /speckit.tasks
               ;;
             implement)
-              claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
+              run_claude claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              claude --dangerously-skip-permissions /speckit.clarify --answers clarifications.json
+              run_claude claude --dangerously-skip-permissions /speckit.clarify --answers clarifications.json
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"
               exit 1
               ;;
           esac
+
+          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
 
       - name: Detect Incomplete Implementation (Implement Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
@@ -381,10 +396,15 @@ jobs:
           MAX_RETRIES=2
           FEATURE_DIR="specs/$(git rev-parse --abbrev-ref HEAD)"
 
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           for retry in $(seq 1 $MAX_RETRIES); do
             echo "🔄 Retry $retry/$MAX_RETRIES"
 
-            claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
+            run_claude claude --dangerously-skip-permissions "/speckit.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
             if .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"
@@ -494,6 +514,80 @@ jobs:
           fi
 
           echo "✅ Cleanup complete (images remain in Cloudinary)"
+
+      - name: Parse and Send Claude Telemetry Metrics
+        if: ${{ always() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' && env.TELEMETRY_LOG != '' }}
+        run: |
+          echo "📊 Parsing Claude telemetry metrics..."
+
+          if [ ! -f "$TELEMETRY_LOG" ]; then
+            echo "⚠️ No telemetry log found at $TELEMETRY_LOG"
+            exit 0
+          fi
+
+          # Check if telemetry log has content
+          if [ ! -s "$TELEMETRY_LOG" ]; then
+            echo "ℹ️ Telemetry log is empty - no metrics to send"
+            exit 0
+          fi
+
+          # Parse telemetry using Node.js script
+          # The script is in the ai-board repo, not the target repo
+          # We need to fetch it or use inline parsing
+          METRICS=$(node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync(process.env.TELEMETRY_LOG, 'utf-8');
+            const lines = content.split('\n');
+
+            const metrics = {
+              inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
+              cacheCreationTokens: 0, costUsd: 0, durationMs: 0,
+              model: null, toolsUsed: new Set()
+            };
+
+            let inApiRequest = false;
+            for (const line of lines) {
+              if (line.includes('claude_code.api_request')) inApiRequest = true;
+              if (line.includes('claude_code.user_prompt') || line.includes('claude_code.tool_result')) inApiRequest = false;
+
+              if (inApiRequest) {
+                let m;
+                if ((m = line.match(/input_tokens:\\s*[\"']?(\\d+)/))) metrics.inputTokens += parseInt(m[1]);
+                if ((m = line.match(/output_tokens:\\s*[\"']?(\\d+)/))) metrics.outputTokens += parseInt(m[1]);
+                if ((m = line.match(/cache_read_tokens:\\s*[\"']?(\\d+)/))) metrics.cacheReadTokens += parseInt(m[1]);
+                if ((m = line.match(/cache_creation_tokens:\\s*[\"']?(\\d+)/))) metrics.cacheCreationTokens += parseInt(m[1]);
+                if ((m = line.match(/cost_usd:\\s*[\"']?([\\d.]+)/))) metrics.costUsd += parseFloat(m[1]);
+                if ((m = line.match(/duration_ms:\\s*[\"']?(\\d+)/))) metrics.durationMs += parseInt(m[1]);
+                if ((m = line.match(/model:\\s*[\"']([^\"']+)/))) metrics.model = m[1];
+              }
+
+              // Tool extraction
+              const toolMatch = line.match(/tool_name:\\s*[\"']([^\"']+)/);
+              if (toolMatch) metrics.toolsUsed.add(toolMatch[1]);
+            }
+
+            console.log(JSON.stringify({
+              inputTokens: metrics.inputTokens,
+              outputTokens: metrics.outputTokens,
+              cacheReadTokens: metrics.cacheReadTokens,
+              cacheCreationTokens: metrics.cacheCreationTokens,
+              costUsd: Math.round(metrics.costUsd * 1000000) / 1000000,
+              durationMs: metrics.durationMs,
+              model: metrics.model,
+              toolsUsed: Array.from(metrics.toolsUsed).sort()
+            }));
+          ")
+
+          echo "📈 Metrics extracted: $METRICS"
+
+          # Send metrics to API
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/metrics" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$METRICS" \
+            -f -s -S || echo "⚠️ Failed to send telemetry metrics"
+
+          echo "✅ Telemetry metrics sent"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_SPECKIT_EXECUTION != 'true' }}

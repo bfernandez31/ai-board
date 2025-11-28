@@ -69,6 +69,9 @@ jobs:
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Database connection string for test environment
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
+      # Claude Code telemetry - export to console for parsing
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_LOGS_EXPORTER: "console"
 
     steps:
       - name: Debug Inputs
@@ -232,6 +235,16 @@ jobs:
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
+          # Initialize telemetry log file
+          TELEMETRY_LOG="/tmp/claude-telemetry.log"
+          > "$TELEMETRY_LOG"
+          echo "TELEMETRY_LOG=$TELEMETRY_LOG" >> "$GITHUB_ENV"
+
+          # Wrapper function to run claude and capture telemetry
+          run_claude() {
+            "$@" 2> >(tee -a "$TELEMETRY_LOG" >&2)
+          }
+
           # Execute /quick-impl command with JSON payload
           # Command will internally call create-new-feature.sh --mode=quick-impl
           payload=$(cat "$QUICK_IMPL_PAYLOAD_FILE")
@@ -239,9 +252,9 @@ jobs:
           # Add image paths if available
           if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
             echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
+            run_claude claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
           else
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+            run_claude claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
           fi
 
       - name: Capture Branch Name
@@ -320,6 +333,74 @@ jobs:
           fi
 
           echo "✅ Cleanup complete (images remain in Cloudinary)"
+
+      - name: Parse and Send Claude Telemetry Metrics
+        if: ${{ always() && inputs.job_id && env.SKIP_EXECUTION != 'true' && env.TELEMETRY_LOG != '' }}
+        run: |
+          echo "📊 Parsing Claude telemetry metrics..."
+
+          if [ ! -f "$TELEMETRY_LOG" ]; then
+            echo "⚠️ No telemetry log found at $TELEMETRY_LOG"
+            exit 0
+          fi
+
+          if [ ! -s "$TELEMETRY_LOG" ]; then
+            echo "ℹ️ Telemetry log is empty - no metrics to send"
+            exit 0
+          fi
+
+          METRICS=$(node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync(process.env.TELEMETRY_LOG, 'utf-8');
+            const lines = content.split('\n');
+
+            const metrics = {
+              inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
+              cacheCreationTokens: 0, costUsd: 0, durationMs: 0,
+              model: null, toolsUsed: new Set()
+            };
+
+            let inApiRequest = false;
+            for (const line of lines) {
+              if (line.includes('claude_code.api_request')) inApiRequest = true;
+              if (line.includes('claude_code.user_prompt') || line.includes('claude_code.tool_result')) inApiRequest = false;
+
+              if (inApiRequest) {
+                let m;
+                if ((m = line.match(/input_tokens:\s*[\"']?(\d+)/))) metrics.inputTokens += parseInt(m[1]);
+                if ((m = line.match(/output_tokens:\s*[\"']?(\d+)/))) metrics.outputTokens += parseInt(m[1]);
+                if ((m = line.match(/cache_read_tokens:\s*[\"']?(\d+)/))) metrics.cacheReadTokens += parseInt(m[1]);
+                if ((m = line.match(/cache_creation_tokens:\s*[\"']?(\d+)/))) metrics.cacheCreationTokens += parseInt(m[1]);
+                if ((m = line.match(/cost_usd:\s*[\"']?([\d.]+)/))) metrics.costUsd += parseFloat(m[1]);
+                if ((m = line.match(/duration_ms:\s*[\"']?(\d+)/))) metrics.durationMs += parseInt(m[1]);
+                if ((m = line.match(/model:\s*[\"']([^\"']+)/))) metrics.model = m[1];
+              }
+
+              const toolMatch = line.match(/tool_name:\s*[\"']([^\"']+)/);
+              if (toolMatch) metrics.toolsUsed.add(toolMatch[1]);
+            }
+
+            console.log(JSON.stringify({
+              inputTokens: metrics.inputTokens,
+              outputTokens: metrics.outputTokens,
+              cacheReadTokens: metrics.cacheReadTokens,
+              cacheCreationTokens: metrics.cacheCreationTokens,
+              costUsd: Math.round(metrics.costUsd * 1000000) / 1000000,
+              durationMs: metrics.durationMs,
+              model: metrics.model,
+              toolsUsed: Array.from(metrics.toolsUsed).sort()
+            }));
+          ")
+
+          echo "📈 Metrics extracted: $METRICS"
+
+          curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/metrics" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d "$METRICS" \
+            -f -s -S || echo "⚠️ Failed to send telemetry metrics"
+
+          echo "✅ Telemetry metrics sent"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
