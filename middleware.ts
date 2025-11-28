@@ -7,6 +7,8 @@ export default authEdge((req) => {
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
   const isWorkflowApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/status$/) !== null
+  const isTelemetryApi = req.nextUrl.pathname.startsWith('/api/telemetry/')
+  const isJobMetricsApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/metrics$/) !== null
   const isAIBoardCommentApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/comments\/ai-board$/) !== null
   const isTicketBranchApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/branch$/) !== null
   const isTransitionApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/[^/]+\/transition$/) !== null
@@ -26,7 +28,7 @@ export default authEdge((req) => {
   }
 
   // Allow public pages, auth pages, public APIs, and workflow APIs
-  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi || isPreviewUrlApi) {
+  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isTelemetryApi || isJobMetricsApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi || isPreviewUrlApi) {
     return NextResponse.next()
   }
 
