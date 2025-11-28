@@ -263,14 +263,14 @@
 
 **Purpose**: Responsive layout, error handling, performance validation
 
-- [ ] T085 [P] Add responsive Bento Grid layout for charts (mobile, tablet, desktop) in app/(authenticated)/project/[projectKey]/analytics/page.tsx
-- [ ] T086 [P] Add loading skeleton for analytics page in components/analytics/analytics-skeleton.tsx
-- [ ] T087 [P] Add error state component with retry button in components/analytics/error-state.tsx
+- [x] T085 [P] Add responsive Bento Grid layout for charts (mobile, tablet, desktop) in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T086 [P] Add loading skeleton for analytics page in components/analytics/analytics-skeleton.tsx
+- [x] T087 [P] Add error state component with retry button in components/analytics/error-state.tsx
 - [ ] T088 Test responsive layout on mobile viewport (320px) using Playwright in tests/integration/analytics/dashboard.spec.ts
-- [ ] T089 Add JSDoc comments to all exported functions in lib/analytics/
+- [x] T089 Add JSDoc comments to all exported functions in lib/analytics/
 - [ ] T090 [P] Verify page load time <2 seconds for 500 jobs (manual test or performance audit)
-- [ ] T091 Run full test suite: bun run type-check && bun run test:unit && bun run test:e2e
-- [ ] T092 Run production build: bun run build
+- [x] T091 Run full test suite: bun run type-check && bun run test:unit && bun run test:e2e
+- [x] T092 Run production build: bun run build
 
 ---
 
