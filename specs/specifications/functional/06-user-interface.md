@@ -142,6 +142,8 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Full-screen presentation on mobile
 - Backdrop darkens underlying content
 - Focus trapped within modal
+- Content scrolling managed at tab level (single scroll area per tab)
+- No nested scrollbars within modal content
 
 **Closing Methods**:
 - Close button (X) in header
@@ -302,6 +304,8 @@ The notification bell provides access to mention notifications:
 - Smooth transition between tabs
 - Initial tab can be specified via URL parameter
 - Defaults to Details tab when no parameter provided
+- Each tab content area has unified scrolling behavior
+- Tab containers manage overflow with single scroll area (no nested scrollbars)
 
 **Keyboard Navigation**:
 - Arrow keys (left/right) navigate between tabs
