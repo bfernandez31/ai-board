@@ -1263,66 +1263,79 @@ Valid transitions:
 Invalid transitions return 400 error
 ```
 
-### PATCH /api/jobs/:id/metrics
+## Telemetry Endpoints
 
-Update job telemetry metrics (workflow-only endpoint).
+### POST /api/telemetry/v1/logs
 
-**Authentication**: Bearer token (WORKFLOW_API_TOKEN)
-**Authorization**: Workflow token validation (no project membership check)
+OTLP HTTP/JSON endpoint for receiving Claude Code telemetry.
 
-**Path Parameters**:
-- `id` (number, required): Job ID
+**Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
+**Authorization**: Workflow token validation
 
-**Request Body**:
+**Request Body** (OTLP JSON format):
 ```json
 {
-  "inputTokens": 15000,
-  "outputTokens": 3500,
-  "cacheReadTokens": 40000,
-  "cacheCreationTokens": 500,
-  "costUsd": 0.125,
-  "durationMs": 45000,
-  "model": "claude-sonnet-4-5-20250929",
-  "toolsUsed": ["Edit", "Write", "Read", "Bash", "Glob"]
+  "resourceLogs": [{
+    "resource": {
+      "attributes": [
+        { "key": "job_id", "value": { "stringValue": "123" } },
+        { "key": "service.name", "value": { "stringValue": "claude-code" } }
+      ]
+    },
+    "scopeLogs": [{
+      "logRecords": [{
+        "body": { "stringValue": "claude_code.api_request" },
+        "attributes": [
+          { "key": "input_tokens", "value": { "stringValue": "1000" } },
+          { "key": "output_tokens", "value": { "stringValue": "500" } },
+          { "key": "cost_usd", "value": { "stringValue": "0.05" } },
+          { "key": "model", "value": { "stringValue": "claude-sonnet-4-5-20250929" } }
+        ]
+      }]
+    }]
+  }]
 }
 ```
 
-**Validation**:
-- `inputTokens`: Optional, non-negative integer
-- `outputTokens`: Optional, non-negative integer
-- `cacheReadTokens`: Optional, non-negative integer
-- `cacheCreationTokens`: Optional, non-negative integer
-- `costUsd`: Optional, non-negative float
-- `durationMs`: Optional, non-negative integer
-- `model`: Optional, string (max 50 chars)
-- `toolsUsed`: Optional, array of strings
+**Workflow Configuration**:
+```yaml
+env:
+  CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+```
+
+**Processing**:
+- Extracts `job_id` from resource attributes
+- Aggregates metrics from `claude_code.api_request` events (tokens, cost, duration, model)
+- Collects tool names from `claude_code.tool_result` events
+- Updates corresponding Job record with aggregated metrics
 
 **Response** (200 OK):
 ```json
 {
-  "id": 123,
-  "inputTokens": 15000,
-  "outputTokens": 3500,
-  "cacheReadTokens": 40000,
-  "cacheCreationTokens": 500,
-  "costUsd": 0.125,
-  "durationMs": 45000,
-  "model": "claude-sonnet-4-5-20250929",
-  "toolsUsed": ["Edit", "Write", "Read", "Bash", "Glob"],
-  "updatedAt": "2025-01-15T10:40:00.000Z"
+  "status": "accepted",
+  "jobId": 123,
+  "metrics": {
+    "inputTokens": 15000,
+    "outputTokens": 3500,
+    "costUsd": 0.125
+  }
 }
 ```
 
 **Errors**:
-- `400`: Invalid metrics data (negative values, invalid types)
+- `400`: Invalid OTLP format
 - `401`: Invalid or missing workflow token
-- `404`: Job not found
+- `404`: Job not found (if job_id provided)
 
-**Usage**:
-- Called by GitHub Actions workflows after Claude CLI execution
-- Metrics aggregated from Claude Code telemetry output
-- Telemetry captured via `CLAUDE_CODE_ENABLE_TELEMETRY=1` and `OTEL_LOGS_EXPORTER=console`
-- Parsed and sent by `.specify/scripts/bash/send-claude-metrics.sh`
+**Notes**:
+- Telemetry is sent automatically by Claude Code during execution
+- Multiple batches may be received for a single job (metrics are aggregated)
+- If no job_id in attributes, telemetry is accepted but not stored
 
 ## Project Member Endpoints
 
