@@ -1,0 +1,509 @@
+openapi: 3.1.0
+info:
+  title: Project Analytics API
+  version: 1.0.0
+  description: |
+    API for retrieving aggregated analytics data for a project, including cost metrics,
+    success rates, token usage, tool usage, cache efficiency, workflow distribution, and velocity.
+
+    **Authorization**: Requires user to be project owner or member (verified via verifyProjectAccess).
+    **Data Source**: Aggregates data from Job and Ticket models without schema changes.
+    **Date Range**: Defaults to last 30 days of data.
+
+servers:
+  - url: https://ai-board.vercel.app/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Local development server
+
+paths:
+  /projects/{projectId}/analytics:
+    get:
+      summary: Get project analytics data
+      description: |
+        Retrieves comprehensive analytics data for a project, including:
+        - Summary metrics (cost, success rate, avg duration, tickets shipped)
+        - Cost over time (daily/weekly time series)
+        - Cost breakdown by workflow stage
+        - Token usage statistics
+        - Top 10 most-used tools
+        - Cache efficiency metrics
+        - Workflow type distribution
+        - Ticket velocity (shipped per week)
+
+        **Performance**: Responds in <2 seconds for projects with up to 500 jobs.
+        **Authorization**: Returns 403 Forbidden if user is not project owner or member.
+
+      operationId: getProjectAnalytics
+      tags:
+        - Analytics
+
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Numeric ID of the project
+          schema:
+            type: integer
+            minimum: 1
+          example: 42
+
+      responses:
+        '200':
+          description: Analytics data successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsData'
+              examples:
+                fullData:
+                  summary: Project with complete analytics data
+                  value:
+                    summary:
+                      totalCostUsd: 12.45
+                      costTrendPercent: 15.3
+                      successRatePercent: 87.5
+                      avgDurationMs: 145000
+                      ticketsShippedThisMonth: 8
+                    costOverTime:
+                      - date: "2025-11-01T00:00:00Z"
+                        costUsd: 0.85
+                        jobCount: 3
+                      - date: "2025-11-02T00:00:00Z"
+                        costUsd: 1.20
+                        jobCount: 5
+                    costByStage:
+                      - stage: "BUILD"
+                        costUsd: 6.50
+                        jobCount: 15
+                        percentage: 52.2
+                      - stage: "SPECIFY"
+                        costUsd: 3.20
+                        jobCount: 8
+                        percentage: 25.7
+                      - stage: "PLAN"
+                        costUsd: 2.00
+                        jobCount: 6
+                        percentage: 16.1
+                      - stage: "VERIFY"
+                        costUsd: 0.75
+                        jobCount: 3
+                        percentage: 6.0
+                    tokenUsage:
+                      inputTokens: 125000
+                      outputTokens: 45000
+                      cacheReadTokens: 80000
+                      cacheCreationTokens: 25000
+                      totalTokens: 275000
+                    topTools:
+                      - toolName: "Edit"
+                        usageCount: 150
+                        percentage: 35.5
+                      - toolName: "Read"
+                        usageCount: 120
+                        percentage: 28.4
+                      - toolName: "Bash"
+                        usageCount: 80
+                        percentage: 18.9
+                      - toolName: "Write"
+                        usageCount: 50
+                        percentage: 11.8
+                      - toolName: "Glob"
+                        usageCount: 22
+                        percentage: 5.2
+                    cacheEfficiency:
+                      efficiencyPercent: 39.0
+                      cacheReadTokens: 80000
+                      freshInputTokens: 125000
+                      totalInputTokens: 205000
+                    workflowDistribution:
+                      - workflowType: "FULL"
+                        ticketCount: 18
+                        percentage: 72.0
+                      - workflowType: "QUICK"
+                        ticketCount: 6
+                        percentage: 24.0
+                      - workflowType: "CLEAN"
+                        ticketCount: 1
+                        percentage: 4.0
+                    velocity:
+                      - weekStartDate: "2025-10-28T00:00:00Z"
+                        ticketsShipped: 3
+                        weekLabel: "Week of Oct 28"
+                      - weekStartDate: "2025-11-04T00:00:00Z"
+                        ticketsShipped: 5
+                        weekLabel: "Week of Nov 4"
+                      - weekStartDate: "2025-11-11T00:00:00Z"
+                        ticketsShipped: 2
+                        weekLabel: "Week of Nov 11"
+                      - weekStartDate: "2025-11-18T00:00:00Z"
+                        ticketsShipped: 4
+                        weekLabel: "Week of Nov 18"
+
+                noData:
+                  summary: Project with no analytics data
+                  value:
+                    summary:
+                      totalCostUsd: 0
+                      costTrendPercent: null
+                      successRatePercent: null
+                      avgDurationMs: null
+                      ticketsShippedThisMonth: 0
+                    costOverTime: []
+                    costByStage: []
+                    tokenUsage:
+                      inputTokens: 0
+                      outputTokens: 0
+                      cacheReadTokens: 0
+                      cacheCreationTokens: 0
+                      totalTokens: 0
+                    topTools: []
+                    cacheEfficiency:
+                      efficiencyPercent: 0
+                      cacheReadTokens: 0
+                      freshInputTokens: 0
+                      totalInputTokens: 0
+                    workflowDistribution: []
+                    velocity: []
+
+        '400':
+          description: Invalid project ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid project ID"
+
+        '403':
+          description: User is not authorized to access this project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have access to this project"
+
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Project not found"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+
+components:
+  schemas:
+    AnalyticsData:
+      type: object
+      required:
+        - summary
+        - costOverTime
+        - costByStage
+        - tokenUsage
+        - topTools
+        - cacheEfficiency
+        - workflowDistribution
+        - velocity
+      properties:
+        summary:
+          $ref: '#/components/schemas/AnalyticsSummary'
+        costOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostOverTimeDataPoint'
+          description: Daily cost data points (empty if no data)
+        costByStage:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostByStageDataPoint'
+          description: Cost breakdown by workflow stage (empty if no data)
+        tokenUsage:
+          $ref: '#/components/schemas/TokenUsage'
+        topTools:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopToolDataPoint'
+          maxItems: 10
+          description: Top 10 most-used tools (empty if no data)
+        cacheEfficiency:
+          $ref: '#/components/schemas/CacheEfficiency'
+        workflowDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowDistributionDataPoint'
+          description: Workflow type distribution (empty if no data)
+        velocity:
+          type: array
+          items:
+            $ref: '#/components/schemas/VelocityDataPoint'
+          description: Tickets shipped per week (empty if no data)
+
+    AnalyticsSummary:
+      type: object
+      required:
+        - totalCostUsd
+        - ticketsShippedThisMonth
+      properties:
+        totalCostUsd:
+          type: number
+          format: float
+          minimum: 0
+          description: Sum of job costs in USD (last 30 days)
+          example: 12.45
+        costTrendPercent:
+          type: number
+          format: float
+          nullable: true
+          description: Percentage change vs. previous 30-day period (null if no previous data)
+          example: 15.3
+        successRatePercent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Percentage of completed jobs vs. failed/cancelled (null if no terminal jobs)
+          example: 87.5
+        avgDurationMs:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: Average duration in milliseconds for completed jobs (null if no completed jobs)
+          example: 145000
+        ticketsShippedThisMonth:
+          type: integer
+          minimum: 0
+          description: Count of tickets in SHIP stage this calendar month
+          example: 8
+
+    CostOverTimeDataPoint:
+      type: object
+      required:
+        - date
+        - costUsd
+        - jobCount
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Day or week start date (ISO 8601)
+          example: "2025-11-28T00:00:00Z"
+        costUsd:
+          type: number
+          format: float
+          minimum: 0
+          description: Sum of job costs for this period
+          example: 1.25
+        jobCount:
+          type: integer
+          minimum: 1
+          description: Number of jobs completed in this period
+          example: 5
+
+    CostByStageDataPoint:
+      type: object
+      required:
+        - stage
+        - costUsd
+        - jobCount
+        - percentage
+      properties:
+        stage:
+          type: string
+          enum: [SPECIFY, PLAN, BUILD, VERIFY]
+          description: Workflow stage
+          example: "BUILD"
+        costUsd:
+          type: number
+          format: float
+          minimum: 0
+          description: Sum of costs for jobs in this stage
+          example: 6.50
+        jobCount:
+          type: integer
+          minimum: 1
+          description: Number of jobs in this stage
+          example: 15
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage of total cost
+          example: 52.2
+
+    TokenUsage:
+      type: object
+      required:
+        - inputTokens
+        - outputTokens
+        - cacheReadTokens
+        - cacheCreationTokens
+        - totalTokens
+      properties:
+        inputTokens:
+          type: integer
+          minimum: 0
+          description: Sum of input tokens across all jobs
+          example: 125000
+        outputTokens:
+          type: integer
+          minimum: 0
+          description: Sum of output tokens across all jobs
+          example: 45000
+        cacheReadTokens:
+          type: integer
+          minimum: 0
+          description: Sum of cache read tokens across all jobs
+          example: 80000
+        cacheCreationTokens:
+          type: integer
+          minimum: 0
+          description: Sum of cache creation tokens across all jobs
+          example: 25000
+        totalTokens:
+          type: integer
+          minimum: 0
+          description: Sum of all token types
+          example: 275000
+
+    TopToolDataPoint:
+      type: object
+      required:
+        - toolName
+        - usageCount
+        - percentage
+      properties:
+        toolName:
+          type: string
+          minLength: 1
+          description: Name of the Claude tool (e.g., Edit, Read, Bash)
+          example: "Edit"
+        usageCount:
+          type: integer
+          minimum: 1
+          description: Number of times tool was used
+          example: 150
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage of total tool usage
+          example: 35.5
+
+    CacheEfficiency:
+      type: object
+      required:
+        - efficiencyPercent
+        - cacheReadTokens
+        - freshInputTokens
+        - totalInputTokens
+      properties:
+        efficiencyPercent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage of input tokens served from cache
+          example: 39.0
+        cacheReadTokens:
+          type: integer
+          minimum: 0
+          description: Total tokens served from cache
+          example: 80000
+        freshInputTokens:
+          type: integer
+          minimum: 0
+          description: Total non-cached input tokens
+          example: 125000
+        totalInputTokens:
+          type: integer
+          minimum: 0
+          description: Sum of cache + fresh input tokens
+          example: 205000
+
+    WorkflowDistributionDataPoint:
+      type: object
+      required:
+        - workflowType
+        - ticketCount
+        - percentage
+      properties:
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+          description: Workflow type
+          example: "FULL"
+        ticketCount:
+          type: integer
+          minimum: 1
+          description: Number of tickets with this workflow type
+          example: 18
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage of total tickets
+          example: 72.0
+
+    VelocityDataPoint:
+      type: object
+      required:
+        - weekStartDate
+        - ticketsShipped
+        - weekLabel
+      properties:
+        weekStartDate:
+          type: string
+          format: date-time
+          description: ISO week start date (Monday, ISO 8601)
+          example: "2025-11-25T00:00:00Z"
+        ticketsShipped:
+          type: integer
+          minimum: 1
+          description: Number of tickets shipped in this week
+          example: 5
+        weekLabel:
+          type: string
+          minLength: 1
+          description: Human-readable week label
+          example: "Week of Nov 25"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Invalid project ID"
+        code:
+          type: string
+          description: Optional error code for client-side handling
+          example: "INVALID_PROJECT_ID"
+
+security:
+  - SessionAuth: []
+
+components:
+  securitySchemes:
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie (automatically included by browser)
