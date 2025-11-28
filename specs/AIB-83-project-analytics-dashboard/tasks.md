@@ -61,19 +61,19 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T016 [P] [US1] Write Playwright API test for GET /api/projects/[projectId]/analytics returns 200 in tests/integration/analytics/api.spec.ts
-- [ ] T017 [P] [US1] Write Playwright API test for no jobs returns valid empty structure in tests/integration/analytics/api.spec.ts
-- [ ] T018 [P] [US1] Write unit tests for cost aggregation logic in tests/unit/analytics/aggregations.test.ts
+- [x] T016 [P] [US1] Write Playwright API test for GET /api/projects/[projectId]/analytics returns 200 in tests/integration/analytics/api.spec.ts
+- [x] T017 [P] [US1] Write Playwright API test for no jobs returns valid empty structure in tests/integration/analytics/api.spec.ts
+- [x] T018 [P] [US1] Write unit tests for cost aggregation logic in tests/unit/analytics/aggregations.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Implement total cost aggregation in API route (sum Job.costUsd) in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T020 [US1] Implement cost trend calculation (current vs previous 30 days) in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T021 [P] [US1] Create OverviewCards component skeleton in components/analytics/overview-cards.tsx
-- [ ] T022 [US1] Implement Total Cost card with trend percentage in components/analytics/overview-cards.tsx
-- [ ] T023 [US1] Add "No data available" handling for zero cost scenarios in components/analytics/overview-cards.tsx
-- [ ] T024 [US1] Create analytics page route in app/(authenticated)/project/[projectKey]/analytics/page.tsx
-- [ ] T025 [US1] Fetch analytics data via API and render Total Cost card in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T019 [US1] Implement total cost aggregation in API route (sum Job.costUsd) in app/api/projects/[projectId]/analytics/route.ts
+- [x] T020 [US1] Implement cost trend calculation (current vs previous 30 days) in app/api/projects/[projectId]/analytics/route.ts
+- [x] T021 [P] [US1] Create OverviewCards component skeleton in components/analytics/overview-cards.tsx
+- [x] T022 [US1] Implement Total Cost card with trend percentage in components/analytics/overview-cards.tsx
+- [x] T023 [US1] Add "No data available" handling for zero cost scenarios in components/analytics/overview-cards.tsx
+- [x] T024 [US1] Create analytics page route in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T025 [US1] Fetch analytics data via API and render Total Cost card in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - total cost displays with trend
 
@@ -87,18 +87,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Write unit tests for calculateSuccessRate with edge cases (0 jobs, all completed, etc.) in tests/unit/analytics/calculations.test.ts
-- [ ] T027 [P] [US2] Write Playwright test for success rate display in tests/integration/analytics/dashboard.spec.ts
+- [x] T026 [P] [US2] Write unit tests for calculateSuccessRate with edge cases (0 jobs, all completed, etc.) in tests/unit/analytics/calculations.test.ts
+- [x] T027 [P] [US2] Write Playwright test for success rate display in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Implement success rate aggregation in API route using Prisma groupBy in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T029 [US2] Add Success Rate card to OverviewCards component in components/analytics/overview-cards.tsx
-- [ ] T030 [US2] Handle "N/A - No completed jobs" edge case in components/analytics/overview-cards.tsx
-- [ ] T031 [US2] Add average duration calculation to API route in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T032 [US2] Add Avg Duration card to OverviewCards component in components/analytics/overview-cards.tsx
-- [ ] T033 [US2] Add Tickets Shipped This Month calculation to API route in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T034 [US2] Add Tickets Shipped card to OverviewCards component in components/analytics/overview-cards.tsx
+- [x] T028 [US2] Implement success rate aggregation in API route using Prisma groupBy in app/api/projects/[projectId]/analytics/route.ts
+- [x] T029 [US2] Add Success Rate card to OverviewCards component in components/analytics/overview-cards.tsx
+- [x] T030 [US2] Handle "N/A - No completed jobs" edge case in components/analytics/overview-cards.tsx
+- [x] T031 [US2] Add average duration calculation to API route in app/api/projects/[projectId]/analytics/route.ts
+- [x] T032 [US2] Add Avg Duration card to OverviewCards component in components/analytics/overview-cards.tsx
+- [x] T033 [US2] Add Tickets Shipped This Month calculation to API route in app/api/projects/[projectId]/analytics/route.ts
+- [x] T034 [US2] Add Tickets Shipped card to OverviewCards component in components/analytics/overview-cards.tsx
 
 **Checkpoint**: At this point, all 4 overview cards display correctly with real metrics
 
@@ -112,16 +112,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T035 [P] [US3] Write unit tests for aggregateCostByStage function in tests/unit/analytics/aggregations.test.ts
-- [ ] T036 [P] [US3] Write Playwright test for cost-by-stage chart rendering in tests/integration/analytics/dashboard.spec.ts
+- [x] T035 [P] [US3] Write unit tests for aggregateCostByStage function in tests/unit/analytics/aggregations.test.ts
+- [x] T036 [P] [US3] Write Playwright test for cost-by-stage chart rendering in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] Implement cost-by-stage aggregation in API route using COMMAND_TO_STAGE lookup in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T038 [US3] Create CostByStageChart component using Recharts BarChart (horizontal) in components/analytics/cost-by-stage-chart.tsx
-- [ ] T039 [US3] Add tooltip formatter for currency display in components/analytics/cost-by-stage-chart.tsx
-- [ ] T040 [US3] Handle empty data state ("No data available") in components/analytics/cost-by-stage-chart.tsx
-- [ ] T041 [US3] Add CostByStageChart to analytics page in Bento Grid layout in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T037 [US3] Implement cost-by-stage aggregation in API route using COMMAND_TO_STAGE lookup in app/api/projects/[projectId]/analytics/route.ts
+- [x] T038 [US3] Create CostByStageChart component using Recharts BarChart (horizontal) in components/analytics/cost-by-stage-chart.tsx
+- [x] T039 [US3] Add tooltip formatter for currency display in components/analytics/cost-by-stage-chart.tsx
+- [x] T040 [US3] Handle empty data state ("No data available") in components/analytics/cost-by-stage-chart.tsx
+- [x] T041 [US3] Add CostByStageChart to analytics page in Bento Grid layout in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: Cost-by-stage chart displays with sorted bars (highest to lowest)
 
@@ -135,18 +135,18 @@
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] [US4] Write unit tests for cache efficiency formula in tests/unit/analytics/calculations.test.ts
-- [ ] T043 [P] [US4] Write Playwright test for token usage chart in tests/integration/analytics/dashboard.spec.ts
+- [x] T042 [P] [US4] Write unit tests for cache efficiency formula in tests/unit/analytics/calculations.test.ts
+- [x] T043 [P] [US4] Write Playwright test for token usage chart in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T044 [US4] Implement token usage aggregation in API route (sum all token fields) in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T045 [US4] Implement cache efficiency calculation in API route in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T046 [P] [US4] Create TokenUsageChart component using Recharts stacked BarChart in components/analytics/token-usage-chart.tsx
-- [ ] T047 [P] [US4] Create CacheEfficiencyChart component using Recharts PieChart (donut) in components/analytics/cache-efficiency-chart.tsx
-- [ ] T048 [US4] Add tooltips showing exact counts and percentages in components/analytics/token-usage-chart.tsx
-- [ ] T049 [US4] Handle 0% cache efficiency edge case with educational tooltip in components/analytics/cache-efficiency-chart.tsx
-- [ ] T050 [US4] Add TokenUsageChart and CacheEfficiencyChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T044 [US4] Implement token usage aggregation in API route (sum all token fields) in app/api/projects/[projectId]/analytics/route.ts
+- [x] T045 [US4] Implement cache efficiency calculation in API route in app/api/projects/[projectId]/analytics/route.ts
+- [x] T046 [P] [US4] Create TokenUsageChart component using Recharts stacked BarChart in components/analytics/token-usage-chart.tsx
+- [x] T047 [P] [US4] Create CacheEfficiencyChart component using Recharts PieChart (donut) in components/analytics/cache-efficiency-chart.tsx
+- [x] T048 [US4] Add tooltips showing exact counts and percentages in components/analytics/token-usage-chart.tsx
+- [x] T049 [US4] Handle 0% cache efficiency edge case with educational tooltip in components/analytics/cache-efficiency-chart.tsx
+- [x] T050 [US4] Add TokenUsageChart and CacheEfficiencyChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: Token usage and cache efficiency charts display with correct calculations
 
@@ -160,16 +160,16 @@
 
 ### Tests for User Story 5
 
-- [ ] T051 [P] [US5] Write unit tests for aggregateToolUsage function in tests/unit/analytics/aggregations.test.ts
-- [ ] T052 [P] [US5] Write Playwright test for top tools chart in tests/integration/analytics/dashboard.spec.ts
+- [x] T051 [P] [US5] Write unit tests for aggregateToolUsage function in tests/unit/analytics/aggregations.test.ts
+- [x] T052 [P] [US5] Write Playwright test for top tools chart in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T053 [US5] Implement tool usage aggregation in API route (flatten arrays, count frequencies) in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T054 [US5] Create TopToolsChart component using Recharts BarChart (horizontal) in components/analytics/top-tools-chart.tsx
-- [ ] T055 [US5] Implement top 10 limiting and percentage calculation in components/analytics/top-tools-chart.tsx
-- [ ] T056 [US5] Handle empty toolsUsed data ("No tool data available") in components/analytics/top-tools-chart.tsx
-- [ ] T057 [US5] Add TopToolsChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T053 [US5] Implement tool usage aggregation in API route (flatten arrays, count frequencies) in app/api/projects/[projectId]/analytics/route.ts
+- [x] T054 [US5] Create TopToolsChart component using Recharts BarChart (horizontal) in components/analytics/top-tools-chart.tsx
+- [x] T055 [US5] Implement top 10 limiting and percentage calculation in components/analytics/top-tools-chart.tsx
+- [x] T056 [US5] Handle empty toolsUsed data ("No tool data available") in components/analytics/top-tools-chart.tsx
+- [x] T057 [US5] Add TopToolsChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: Top tools chart displays sorted by frequency with percentages
 
@@ -183,17 +183,17 @@
 
 ### Tests for User Story 6
 
-- [ ] T058 [P] [US6] Write unit tests for time-series grouping logic in tests/unit/analytics/aggregations.test.ts
-- [ ] T059 [P] [US6] Write Playwright test for cost-over-time chart in tests/integration/analytics/dashboard.spec.ts
+- [x] T058 [P] [US6] Write unit tests for time-series grouping logic in tests/unit/analytics/aggregations.test.ts
+- [x] T059 [P] [US6] Write Playwright test for cost-over-time chart in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 6
 
-- [ ] T060 [US6] Implement daily cost aggregation using Prisma groupBy in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T061 [US6] Create CostOverTimeChart component using Recharts AreaChart in components/analytics/cost-over-time-chart.tsx
-- [ ] T062 [US6] Implement daily/weekly toggle switch in components/analytics/cost-over-time-chart.tsx
-- [ ] T063 [US6] Add client-side weekly aggregation from daily data in components/analytics/cost-over-time-chart.tsx
-- [ ] T064 [US6] Add hover tooltips showing date, cost, and job count in components/analytics/cost-over-time-chart.tsx
-- [ ] T065 [US6] Add CostOverTimeChart to analytics page (lg:col-span-2 for prominence) in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T060 [US6] Implement daily cost aggregation using Prisma groupBy in app/api/projects/[projectId]/analytics/route.ts
+- [x] T061 [US6] Create CostOverTimeChart component using Recharts AreaChart in components/analytics/cost-over-time-chart.tsx
+- [x] T062 [US6] Implement daily/weekly toggle switch in components/analytics/cost-over-time-chart.tsx
+- [x] T063 [US6] Add client-side weekly aggregation from daily data in components/analytics/cost-over-time-chart.tsx
+- [x] T064 [US6] Add hover tooltips showing date, cost, and job count in components/analytics/cost-over-time-chart.tsx
+- [x] T065 [US6] Add CostOverTimeChart to analytics page (lg:col-span-2 for prominence) in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: Cost-over-time chart displays with smooth area curve and functional toggle
 
@@ -207,16 +207,16 @@
 
 ### Tests for User Story 7
 
-- [ ] T066 [P] [US7] Write unit tests for workflow distribution aggregation in tests/unit/analytics/aggregations.test.ts
-- [ ] T067 [P] [US7] Write Playwright test for workflow distribution chart in tests/integration/analytics/dashboard.spec.ts
+- [x] T066 [P] [US7] Write unit tests for workflow distribution aggregation in tests/unit/analytics/aggregations.test.ts
+- [x] T067 [P] [US7] Write Playwright test for workflow distribution chart in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 7
 
-- [ ] T068 [US7] Implement workflow distribution aggregation using Ticket.workflowType in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T069 [US7] Create WorkflowDistributionChart component using Recharts PieChart (donut) in components/analytics/workflow-distribution-chart.tsx
-- [ ] T070 [US7] Add percentage labels to donut segments in components/analytics/workflow-distribution-chart.tsx
-- [ ] T071 [US7] Handle single workflow type edge case (100% full circle) in components/analytics/workflow-distribution-chart.tsx
-- [ ] T072 [US7] Add WorkflowDistributionChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T068 [US7] Implement workflow distribution aggregation using Ticket.workflowType in app/api/projects/[projectId]/analytics/route.ts
+- [x] T069 [US7] Create WorkflowDistributionChart component using Recharts PieChart (donut) in components/analytics/workflow-distribution-chart.tsx
+- [x] T070 [US7] Add percentage labels to donut segments in components/analytics/workflow-distribution-chart.tsx
+- [x] T071 [US7] Handle single workflow type edge case (100% full circle) in components/analytics/workflow-distribution-chart.tsx
+- [x] T072 [US7] Add WorkflowDistributionChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: Workflow distribution donut chart displays with proportional segments and percentages
 
@@ -230,16 +230,16 @@
 
 ### Tests for User Story 8
 
-- [ ] T073 [P] [US8] Write unit tests for velocity weekly grouping in tests/unit/analytics/aggregations.test.ts
-- [ ] T074 [P] [US8] Write Playwright test for velocity chart in tests/integration/analytics/dashboard.spec.ts
+- [x] T073 [P] [US8] Write unit tests for velocity weekly grouping in tests/unit/analytics/aggregations.test.ts
+- [x] T074 [P] [US8] Write Playwright test for velocity chart in tests/integration/analytics/dashboard.spec.ts
 
 ### Implementation for User Story 8
 
-- [ ] T075 [US8] Implement velocity aggregation in API route (Ticket.stage=SHIP, group by ISO week) in app/api/projects/[projectId]/analytics/route.ts
-- [ ] T076 [US8] Create VelocityChart component using Recharts BarChart in components/analytics/velocity-chart.tsx
-- [ ] T077 [US8] Implement ISO week calculation and week label formatting in components/analytics/velocity-chart.tsx
-- [ ] T078 [US8] Handle empty velocity data ("No tickets shipped yet") in components/analytics/velocity-chart.tsx
-- [ ] T079 [US8] Add VelocityChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
+- [x] T075 [US8] Implement velocity aggregation in API route (Ticket.stage=SHIP, group by ISO week) in app/api/projects/[projectId]/analytics/route.ts
+- [x] T076 [US8] Create VelocityChart component using Recharts BarChart in components/analytics/velocity-chart.tsx
+- [x] T077 [US8] Implement ISO week calculation and week label formatting in components/analytics/velocity-chart.tsx
+- [x] T078 [US8] Handle empty velocity data ("No tickets shipped yet") in components/analytics/velocity-chart.tsx
+- [x] T079 [US8] Add VelocityChart to analytics page in app/(authenticated)/project/[projectKey]/analytics/page.tsx
 
 **Checkpoint**: All user stories complete - all 7 charts and 4 overview cards functional
 
@@ -249,11 +249,11 @@
 
 **Purpose**: Connect analytics page to project navigation
 
-- [ ] T080 Locate existing project dropdown menu component (search for "project menu" or "dropdown")
-- [ ] T081 Add "Analytics" menu item with BarChart3 icon to project dropdown
-- [ ] T082 Link Analytics menu item to /project/[projectKey]/analytics route
-- [ ] T083 Write Playwright test for navigation menu item visibility in tests/integration/analytics/dashboard.spec.ts
-- [ ] T084 Test analytics page authorization (403 for non-members) in tests/integration/analytics/api.spec.ts
+- [x] T080 Locate existing project dropdown menu component (search for "project menu" or "dropdown")
+- [x] T081 Add "Analytics" menu item with BarChart3 icon to project dropdown
+- [x] T082 Link Analytics menu item to /project/[projectKey]/analytics route
+- [x] T083 Write Playwright test for navigation menu item visibility in tests/integration/analytics/dashboard.spec.ts
+- [x] T084 Test analytics page authorization (403 for non-members) in tests/integration/analytics/api.spec.ts
 
 **Checkpoint**: Analytics accessible from project menu with proper authorization
 
