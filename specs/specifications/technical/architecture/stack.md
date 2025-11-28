@@ -197,12 +197,16 @@
 
 ### react-markdown
 - **Version**: ^9.0.1
-- **Purpose**: Markdown rendering in comments and docs
+- **Purpose**: Markdown rendering in comments, ticket descriptions, and docs
 - **Features Used**:
   - HTML escaping (XSS protection)
   - Custom components (mentions)
-  - Link support
-  - Code blocks
+  - Link support with `target="_blank"` and `rel="noopener noreferrer"`
+  - Code blocks (inline and block)
+  - Bold, italic, headings
+  - Lists (ordered and unordered)
+  - Blockquotes
+  - Prose styling for dark theme via Tailwind Typography
 
 ### react-syntax-highlighter
 - **Version**: ^15.5.0
