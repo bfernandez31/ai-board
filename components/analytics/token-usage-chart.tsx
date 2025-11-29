@@ -36,7 +36,7 @@ export function TokenUsageChart({ data }: TokenUsageChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Token Usage</CardTitle>
+        <CardTitle className="text-base text-ctp-text">Token Usage</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">

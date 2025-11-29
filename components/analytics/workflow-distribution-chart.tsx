@@ -41,7 +41,7 @@ export function WorkflowDistributionChart({ data }: WorkflowDistributionChartPro
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Workflow Distribution</CardTitle>
+        <CardTitle className="text-base text-ctp-text">Workflow Distribution</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">

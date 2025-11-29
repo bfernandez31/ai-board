@@ -27,7 +27,7 @@ export function TopToolsChart({ data }: TopToolsChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Top Tools</CardTitle>
+        <CardTitle className="text-base text-ctp-text">Top Tools</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">
