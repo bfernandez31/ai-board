@@ -256,6 +256,33 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 ## Header Elements
 
+### Analytics Navigation
+
+The header provides quick access to project analytics:
+
+**Visual Presentation**:
+- Bar chart icon (BarChart3) positioned in application header
+- Visible on desktop (≥768px) alongside specifications link
+- Visible on mobile (<768px) via hamburger menu
+- Consistent gray color scheme with hover state transition
+
+**Desktop Behavior** (≥768px):
+- Analytics icon appears next to specifications icon in header
+- Clicking navigates to `/projects/{projectId}/analytics`
+- Tooltip provides context on hover
+- Visible only when viewing project board
+
+**Mobile Behavior** (<768px):
+- Analytics icon appears in hamburger menu next to specifications icon
+- Positioned below project name in mobile menu drawer
+- Clicking navigates to analytics page and closes menu
+- Part of project-specific navigation group
+
+**Accessibility**:
+- `aria-label="View project analytics"` for screen readers
+- Keyboard accessible via tab navigation
+- Touch-friendly target size on mobile devices
+
 ### Notification Bell
 
 The notification bell provides access to mention notifications:
