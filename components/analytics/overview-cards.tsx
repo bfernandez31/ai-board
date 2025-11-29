@@ -23,7 +23,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
       {/* Total Cost */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
+          <CardTitle className="text-sm font-medium text-white">Total Cost</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -44,7 +44,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
       {/* Success Rate */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+          <CardTitle className="text-sm font-medium text-white">Success Rate</CardTitle>
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -56,7 +56,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
       {/* Avg Duration */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+          <CardTitle className="text-sm font-medium text-white">Avg Duration</CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -68,7 +68,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
       {/* Tickets Shipped */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Tickets Shipped</CardTitle>
+          <CardTitle className="text-sm font-medium text-white">Tickets Shipped</CardTitle>
           <Ship className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>

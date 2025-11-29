@@ -19,7 +19,7 @@ export function WorkflowDistributionChart({ data }: WorkflowDistributionChartPro
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Workflow Distribution</CardTitle>
+          <CardTitle className="text-base text-white">Workflow Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
