@@ -284,13 +284,21 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 
 **Dashboard Features**:
 - **Overview Cards**: Display total cost, success rate, average job duration, and tickets shipped (current month)
+  - Card titles displayed in white text for optimal contrast against dark background
 - **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
+  - Chart title displayed in white text for improved readability
 - **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
+  - Chart title displayed in white text for improved readability
 - **Token Usage**: Chart showing input tokens, output tokens, and cache tokens
+  - Chart title displayed in white text for improved readability
 - **Cache Efficiency**: Ring/donut chart displaying cache savings percentage
+  - Chart title displayed in white text for improved readability
 - **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
+  - Chart title displayed in white text for improved readability
 - **Workflow Distribution**: Donut chart showing proportion of FULL, QUICK, and CLEAN workflows
+  - Chart title displayed in white text for improved readability
 - **Velocity**: Bar chart displaying tickets shipped per week
+  - Chart title displayed in white text for improved readability
 
 **Time Range Selection**:
 - Preset options: 7 days, 30 days, 90 days, all time

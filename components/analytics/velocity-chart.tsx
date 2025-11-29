@@ -13,7 +13,7 @@ export function VelocityChart({ data }: VelocityChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Velocity</CardTitle>
+          <CardTitle className="text-base text-white">Velocity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">

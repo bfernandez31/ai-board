@@ -29,7 +29,7 @@ export function CostByStageChart({ data }: CostByStageChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cost by Stage</CardTitle>
+          <CardTitle className="text-base text-white">Cost by Stage</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
