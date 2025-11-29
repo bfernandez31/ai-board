@@ -377,6 +377,23 @@ The notification bell provides access to mention notifications:
 - Tooltip with absolute timestamp on hover (recommended)
 - Industry-standard pattern for activity indicators
 
+**Responsive Grid Layout**:
+- **Desktop** (≥1024px): 3-column grid for optimal space usage
+- **Tablet** (640px - 1023px): 2-column grid for balanced presentation
+- **Mobile** (<640px): 1-column layout (full-width cards)
+- Grid adapts automatically based on viewport width
+- Consistent card sizing and spacing across all breakpoints
+- No horizontal scroll on any device size
+
+**Mobile Overflow Prevention**:
+- Ticket titles truncate with ellipsis on mobile viewports
+- `min-w-0` utility ensures flex/grid children can shrink below content size
+- `truncate` utility applies text-overflow: ellipsis
+- Cards maintain maximum width matching viewport constraints
+- Long text content (ticket titles, repository names) truncates gracefully
+- No elements extend beyond card boundaries
+- Prevents horizontal scrolling on narrow screens (375px minimum supported)
+
 ## Loading States
 
 ### Initial Load

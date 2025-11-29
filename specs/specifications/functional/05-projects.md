@@ -110,6 +110,21 @@ When no projects exist:
   - Buttons arrange vertically for easy thumb access
   - Maintains consistent spacing and readability
 
+**Project Card Grid**:
+- **Desktop** (≥1024px): 3-column grid layout (grid-cols-3)
+- **Tablet** (640px - 1023px): 2-column grid layout (grid-cols-2)
+- **Mobile** (<640px): 1-column layout (grid-cols-1, full width cards)
+- Cards maintain consistent spacing and visual hierarchy across all breakpoints
+- Scrollable container supports 50+ projects without performance degradation
+
+**Text Overflow Handling**:
+- Long ticket titles truncate with ellipsis to prevent card overflow
+- Tooltip displays full ticket title on hover (format: "ticketKey + title")
+- GitHub repository links displayed as "owner/repo" format
+- Deployment URLs show hostname only (e.g., "example.vercel.app")
+- All text content uses `min-w-0` and `truncate` utilities to prevent horizontal scroll
+- Cards maintain fixed width boundaries on mobile viewports (375px minimum)
+
 ## Project Settings
 
 ### Clarification Policy Configuration
