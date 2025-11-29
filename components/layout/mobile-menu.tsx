@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, FileText } from 'lucide-react';
+import { Menu, LogOut, FileText, BarChart3 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface MobileMenuProps {
+  projectId?: number | undefined;
   projectName?: string | undefined;
   githubOwner?: string | undefined;
   githubRepo?: string | undefined;
 }
 
-export function MobileMenu({ projectName, githubOwner, githubRepo }: MobileMenuProps) {
+export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -45,24 +46,36 @@ export function MobileMenu({ projectName, githubOwner, githubRepo }: MobileMenuP
           <SheetTitle>Navigation Menu</SheetTitle>
         </VisuallyHidden>
 
-        {/* Project Name & Specs Link */}
+        {/* Project Name & Links */}
         {projectName && (
           <>
             <div className="mt-6 px-2">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
-                {githubOwner && githubRepo && (
-                  <a
-                    href={`https://github.com/${githubOwner}/${githubRepo}/tree/main/specs/specifications`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="View project specifications on GitHub"
-                    className="text-zinc-400 hover:text-zinc-50 transition-colors"
-                    onClick={() => setOpen(false)}
-                  >
-                    <FileText className="w-5 h-5" />
-                  </a>
-                )}
+                <div className="flex items-center gap-2">
+                  {githubOwner && githubRepo && (
+                    <a
+                      href={`https://github.com/${githubOwner}/${githubRepo}/tree/main/specs/specifications`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="View project specifications on GitHub"
+                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      <FileText className="w-5 h-5" />
+                    </a>
+                  )}
+                  {projectId && (
+                    <Link
+                      href={`/projects/${projectId}/analytics`}
+                      aria-label="View project analytics"
+                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      <BarChart3 className="w-5 h-5" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
             <div className="border-t border-border my-2" />

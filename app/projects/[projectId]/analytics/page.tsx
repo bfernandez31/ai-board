@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
+import { Button } from '@/components/ui/button';
 import type { TimeRange } from '@/lib/analytics/types';
 
 export const dynamic = 'force-dynamic';
@@ -39,9 +42,17 @@ export default async function AnalyticsPage({
   return (
     <main className="container mx-auto py-10 max-w-7xl">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground mt-2">AI workflow metrics for {project.name}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground mt-2">AI workflow metrics for {project.name}</p>
+          </div>
+          <Link href={`/projects/${projectId}/board`}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Board
+            </Button>
+          </Link>
         </div>
 
         <AnalyticsDashboard projectId={projectId} initialData={initialData} />
