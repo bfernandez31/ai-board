@@ -108,10 +108,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {/* Shipped Ticket Status (User Story 1) */}
         {project.lastShippedTicket ? (
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               <CheckCircle className="h-4 w-4 text-[#a6e3a1] flex-shrink-0" />
               <span
-                className="text-[#cdd6f4] truncate"
+                className="text-[#cdd6f4] truncate min-w-0"
                 data-testid="shipped-ticket-title"
                 title={`${project.lastShippedTicket.ticketKey} ${project.lastShippedTicket.title}`}
               >
