@@ -224,4 +224,64 @@ test.describe('Projects List Page', () => {
       await context.close();
     }
   });
+
+  test('does not cause horizontal scroll on mobile with long ticket titles', async ({ browser, projectId }) => {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    // Create mobile context (iPhone SE dimensions)
+    const context = await browser.newContext({
+      viewport: { width: 375, height: 667 },
+    });
+    const page = await context.newPage();
+
+    try {
+      // Create a ticket with a very long title to test overflow behavior
+      const ticketNumber = nextTicketNumber++;
+      const projectKey = getProjectKey(projectId);
+      const longTitle = 'Very long ticket title causing horizontal scroll on mobile';
+
+      await prisma.ticket.create({
+        data: {
+          ticketNumber,
+          ticketKey: `${projectKey}-${ticketNumber}`,
+          id: 998,
+          title: `[e2e] ${longTitle}`,
+          description: 'Test ticket for mobile overflow verification',
+          stage: 'SHIP',
+          projectId,
+          updatedAt: new Date(),
+        },
+      });
+
+      await page.goto('http://localhost:3000/projects');
+      await page.waitForSelector('[data-testid="project-card"]');
+
+      // Get the document width and check for horizontal scroll
+      const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+      const viewportWidth = 375; // iPhone SE width
+
+      // Document width should not exceed viewport width (no horizontal scroll)
+      expect(documentWidth).toBeLessThanOrEqual(viewportWidth);
+
+      // Verify the card with long title is visible and doesn't overflow
+      const cardWithLongTitle = page.locator(`[data-testid="project-card"][data-project-id="${projectId}"]`);
+      await expect(cardWithLongTitle).toBeVisible();
+
+      // Get the card's width and ensure it doesn't exceed viewport
+      const cardBox = await cardWithLongTitle.boundingBox();
+      expect(cardBox!.width).toBeLessThanOrEqual(viewportWidth);
+
+      // Verify the ticket title element has proper overflow handling
+      const ticketTitle = cardWithLongTitle.locator('[data-testid="shipped-ticket-title"]');
+      await expect(ticketTitle).toBeVisible();
+
+      // Check that the title doesn't overflow its container
+      const titleBox = await ticketTitle.boundingBox();
+      expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(viewportWidth);
+    } finally {
+      await prisma.$disconnect();
+      await context.close();
+    }
+  });
 });
