@@ -35,6 +35,7 @@ import { CommentForm } from '@/components/comments/comment-form';
 import { ConversationTimeline } from '@/components/ticket/conversation-timeline';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
+import { MentionDisplay } from '@/components/comments/mention-display';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -982,12 +983,15 @@ export function TicketDetailModal({
                         />
                       </div>
                     )}
-                    <div
-                      className="text-base leading-relaxed whitespace-pre-wrap text-white"
-                    >
-                      {localTicket?.description ||
-                        ticket.description ||
-                        'No description provided'}
+                    <div className="text-base leading-relaxed text-white prose prose-sm prose-invert max-w-none">
+                      {(localTicket?.description || ticket.description) ? (
+                        <MentionDisplay
+                          content={localTicket?.description || ticket.description || ''}
+                          mentionedUsers={{}}
+                        />
+                      ) : (
+                        <span className="text-[#a6adc8]">No description provided</span>
+                      )}
                     </div>
                   </div>
                 )}

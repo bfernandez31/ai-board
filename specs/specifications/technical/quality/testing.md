@@ -21,7 +21,9 @@ tests/
 ├── e2e/                     # End-to-end tests
 │   ├── ticket-workflow.spec.ts
 │   ├── drag-and-drop.spec.ts
-│   └── comments.spec.ts
+│   ├── comments.spec.ts
+│   └── tickets/
+│       └── description-markdown-rendering.spec.ts  # Markdown in descriptions
 ├── unit/                    # Unit tests
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
