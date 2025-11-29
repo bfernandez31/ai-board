@@ -1,0 +1,444 @@
+openapi: 3.0.3
+info:
+  title: AI Board Analytics API
+  description: API for project analytics dashboard
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/analytics:
+    get:
+      summary: Get project analytics data
+      description: |
+        Returns aggregated analytics data for a project including cost metrics,
+        token usage, tool patterns, and workflow distribution.
+
+        Requires project access (owner or member).
+      operationId: getProjectAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - name: range
+          in: query
+          required: false
+          description: Time range for analytics data
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+            example: 30d
+      responses:
+        '200':
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+              examples:
+                withData:
+                  summary: Project with analytics data
+                  value:
+                    overview:
+                      totalCost: 45.67
+                      costTrend: 12.5
+                      successRate: 94.2
+                      avgDuration: 125000
+                      ticketsShipped: 8
+                    costOverTime:
+                      - date: "2025-11-20"
+                        cost: 5.23
+                      - date: "2025-11-21"
+                        cost: 8.45
+                    costByStage:
+                      - stage: BUILD
+                        cost: 28.45
+                        percentage: 62.3
+                      - stage: SPECIFY
+                        cost: 10.22
+                        percentage: 22.4
+                      - stage: PLAN
+                        cost: 4.50
+                        percentage: 9.8
+                      - stage: VERIFY
+                        cost: 2.50
+                        percentage: 5.5
+                    tokenUsage:
+                      inputTokens: 1250000
+                      outputTokens: 450000
+                      cacheTokens: 380000
+                    cacheEfficiency:
+                      totalTokens: 2080000
+                      cacheTokens: 380000
+                      savingsPercentage: 18.3
+                      estimatedSavingsUsd: 3.42
+                    topTools:
+                      - tool: Edit
+                        count: 245
+                      - tool: Read
+                        count: 189
+                      - tool: Bash
+                        count: 156
+                      - tool: Write
+                        count: 98
+                      - tool: Glob
+                        count: 67
+                    workflowDistribution:
+                      - type: FULL
+                        count: 12
+                        percentage: 60.0
+                      - type: QUICK
+                        count: 6
+                        percentage: 30.0
+                      - type: CLEAN
+                        count: 2
+                        percentage: 10.0
+                    velocity:
+                      - week: "2025-W46"
+                        ticketsShipped: 3
+                      - week: "2025-W47"
+                        ticketsShipped: 5
+                      - week: "2025-W48"
+                        ticketsShipped: 2
+                    timeRange: 30d
+                    generatedAt: "2025-11-28T10:30:00Z"
+                    jobCount: 45
+                    hasData: true
+                noData:
+                  summary: Project with no completed jobs
+                  value:
+                    overview:
+                      totalCost: 0
+                      costTrend: 0
+                      successRate: 0
+                      avgDuration: 0
+                      ticketsShipped: 0
+                    costOverTime: []
+                    costByStage: []
+                    tokenUsage:
+                      inputTokens: 0
+                      outputTokens: 0
+                      cacheTokens: 0
+                    cacheEfficiency:
+                      totalTokens: 0
+                      cacheTokens: 0
+                      savingsPercentage: 0
+                      estimatedSavingsUsd: 0
+                    topTools: []
+                    workflowDistribution: []
+                    velocity: []
+                    timeRange: 30d
+                    generatedAt: "2025-11-28T10:30:00Z"
+                    jobCount: 0
+                    hasData: false
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid time range. Must be one of: 7d, 30d, 90d, all"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+        '403':
+          description: Not authorized to access this project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Access denied"
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal server error"
+
+components:
+  schemas:
+    AnalyticsResponse:
+      type: object
+      required:
+        - overview
+        - costOverTime
+        - costByStage
+        - tokenUsage
+        - cacheEfficiency
+        - topTools
+        - workflowDistribution
+        - velocity
+        - timeRange
+        - generatedAt
+        - jobCount
+        - hasData
+      properties:
+        overview:
+          $ref: '#/components/schemas/OverviewMetrics'
+        costOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostDataPoint'
+        costByStage:
+          type: array
+          items:
+            $ref: '#/components/schemas/StageCost'
+        tokenUsage:
+          $ref: '#/components/schemas/TokenBreakdown'
+        cacheEfficiency:
+          $ref: '#/components/schemas/CacheMetrics'
+        topTools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolUsage'
+          maxItems: 10
+        workflowDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowBreakdown'
+        velocity:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyVelocity'
+        timeRange:
+          type: string
+          enum: [7d, 30d, 90d, all]
+        generatedAt:
+          type: string
+          format: date-time
+        jobCount:
+          type: integer
+          minimum: 0
+        hasData:
+          type: boolean
+          description: False if no completed jobs with telemetry data
+
+    OverviewMetrics:
+      type: object
+      required:
+        - totalCost
+        - costTrend
+        - successRate
+        - avgDuration
+        - ticketsShipped
+      properties:
+        totalCost:
+          type: number
+          format: float
+          description: Total cost in USD for the period
+          example: 45.67
+        costTrend:
+          type: number
+          format: float
+          description: Percentage change compared to previous equivalent period
+          example: 12.5
+        successRate:
+          type: number
+          format: float
+          description: Percentage of successful jobs (COMPLETED / (COMPLETED + FAILED))
+          minimum: 0
+          maximum: 100
+          example: 94.2
+        avgDuration:
+          type: integer
+          description: Average job duration in milliseconds
+          example: 125000
+        ticketsShipped:
+          type: integer
+          description: Number of tickets shipped in current month
+          minimum: 0
+          example: 8
+
+    CostDataPoint:
+      type: object
+      required:
+        - date
+        - cost
+      properties:
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD) or week identifier (YYYY-Www)
+          example: "2025-11-20"
+        cost:
+          type: number
+          format: float
+          description: Cost in USD for that period
+          example: 5.23
+
+    StageCost:
+      type: object
+      required:
+        - stage
+        - cost
+        - percentage
+      properties:
+        stage:
+          type: string
+          enum: [SPECIFY, PLAN, BUILD, VERIFY]
+        cost:
+          type: number
+          format: float
+          description: Total cost in USD for this stage
+          example: 28.45
+        percentage:
+          type: number
+          format: float
+          description: Percentage of total cost
+          minimum: 0
+          maximum: 100
+          example: 62.3
+
+    TokenBreakdown:
+      type: object
+      required:
+        - inputTokens
+        - outputTokens
+        - cacheTokens
+      properties:
+        inputTokens:
+          type: integer
+          minimum: 0
+          description: Total input tokens consumed
+          example: 1250000
+        outputTokens:
+          type: integer
+          minimum: 0
+          description: Total output tokens generated
+          example: 450000
+        cacheTokens:
+          type: integer
+          minimum: 0
+          description: Total cache tokens (read + creation)
+          example: 380000
+
+    CacheMetrics:
+      type: object
+      required:
+        - totalTokens
+        - cacheTokens
+        - savingsPercentage
+        - estimatedSavingsUsd
+      properties:
+        totalTokens:
+          type: integer
+          minimum: 0
+          description: Total tokens processed
+          example: 2080000
+        cacheTokens:
+          type: integer
+          minimum: 0
+          description: Tokens served from cache
+          example: 380000
+        savingsPercentage:
+          type: number
+          format: float
+          description: Cache hit rate as percentage
+          minimum: 0
+          maximum: 100
+          example: 18.3
+        estimatedSavingsUsd:
+          type: number
+          format: float
+          description: Estimated cost savings from cache hits
+          example: 3.42
+
+    ToolUsage:
+      type: object
+      required:
+        - tool
+        - count
+      properties:
+        tool:
+          type: string
+          description: Tool name (Edit, Read, Bash, Write, Glob, etc.)
+          example: Edit
+        count:
+          type: integer
+          minimum: 0
+          description: Usage frequency
+          example: 245
+
+    WorkflowBreakdown:
+      type: object
+      required:
+        - type
+        - count
+        - percentage
+      properties:
+        type:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        count:
+          type: integer
+          minimum: 0
+          example: 12
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          example: 60.0
+
+    WeeklyVelocity:
+      type: object
+      required:
+        - week
+        - ticketsShipped
+      properties:
+        week:
+          type: string
+          description: ISO week identifier (YYYY-Www)
+          example: "2025-W47"
+        ticketsShipped:
+          type: integer
+          minimum: 0
+          example: 5
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code (optional)
+
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+security:
+  - session: []
+
+tags:
+  - name: Analytics
+    description: Project analytics and metrics endpoints

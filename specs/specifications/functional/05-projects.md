@@ -273,6 +273,42 @@ Users can trigger automated cleanup of technical debt accumulated from shipped f
 
 For detailed cleanup workflow behavior, see [Automation - Cleanup Workflow](./04-automation.md#cleanup-workflow).
 
+### Project Analytics
+
+Users can access comprehensive analytics dashboard to visualize AI workflow metrics and track project performance:
+
+**Menu Access**:
+- Project menu contains "Analytics" option (with Chart icon)
+- Available to project owners and members
+- Navigates to `/projects/{projectId}/analytics`
+
+**Dashboard Features**:
+- **Overview Cards**: Display total cost, success rate, average job duration, and tickets shipped (current month)
+- **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
+- **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
+- **Token Usage**: Chart showing input tokens, output tokens, and cache tokens
+- **Cache Efficiency**: Ring/donut chart displaying cache savings percentage
+- **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
+- **Workflow Distribution**: Donut chart showing proportion of FULL, QUICK, and CLEAN workflows
+- **Velocity**: Bar chart displaying tickets shipped per week
+
+**Time Range Selection**:
+- Preset options: 7 days, 30 days, 90 days, all time
+- Default: 30-day view
+- Charts auto-adjust granularity (daily for <30 days, weekly for ≥30 days)
+
+**Empty States**:
+- Friendly empty states with guidance when no job data exists
+- Encourages users to create their first workflow
+
+**Data Updates**:
+- Polling-based refresh every 15 seconds
+- Automatically reflects new job completions
+
+**Access Control**:
+- Only project owners and members can view analytics
+- Analytics scoped to single project (no cross-project visibility)
+
 ## External Repository Support
 
 ### Multi-Repository Architecture

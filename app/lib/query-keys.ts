@@ -84,6 +84,21 @@ export const queryKeys = {
   },
 
   /**
+   * Analytics-related query keys
+   */
+  analytics: {
+    /**
+     * All analytics data for a project
+     */
+    all: (projectId: number) => ['analytics', projectId] as const,
+
+    /**
+     * Analytics data for specific time range
+     */
+    data: (projectId: number, range: string) => ['analytics', projectId, range] as const,
+  },
+
+  /**
    * User-related query keys
    */
   users: {
