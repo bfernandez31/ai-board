@@ -68,6 +68,7 @@
   - Responsive breakpoints (sm, md, lg)
   - Dark mode support
   - Custom utilities
+  - Accessibility-focused text colors (`text-white` for optimal contrast on dark backgrounds)
 
 ### shadcn/ui
 - **Base**: Radix UI primitives
@@ -107,7 +108,10 @@
   - Custom tooltips
   - Dark mode theming via CSS variables
 - **Integration**: Wraps D3.js with declarative React API
-- **Customization**: Colors use `hsl(var(--chart-N))` CSS variables for theme consistency
+- **Customization**:
+  - Colors use `hsl(var(--chart-N))` CSS variables for theme consistency
+  - Chart titles styled with `text-white` Tailwind class for optimal contrast
+  - Overview card titles styled with `text-white` for accessibility compliance
 
 ## State Management
 

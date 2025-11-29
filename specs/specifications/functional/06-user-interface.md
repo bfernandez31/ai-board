@@ -501,7 +501,9 @@ When user has no projects:
 ### Visual Accessibility
 
 **Contrast**:
-- Sufficient contrast ratios for text
+- Sufficient contrast ratios for text (WCAG AA compliance)
+- Analytics dashboard card titles displayed in white (`text-white`) for optimal contrast
+- Analytics chart titles displayed in white for improved readability against dark backgrounds
 - Color not sole indicator of state
 - Icons supplement color coding
 
