@@ -332,6 +332,12 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Only project owners and members can view analytics
 - Analytics scoped to single project (no cross-project visibility)
 
+**Navigation**:
+- "Back to Board" button in analytics page header (top-right)
+- Button displays left arrow icon with "Back to Board" text
+- Navigates to `/projects/{projectId}/board`
+- Outline variant styling for secondary action appearance
+
 ## External Repository Support
 
 ### Multi-Repository Architecture
