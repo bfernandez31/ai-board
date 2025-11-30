@@ -168,7 +168,7 @@ jobs:
 
           # Claude will create the branch, read CLAUDE.md and constitution for project context
           # Claude will use cleanup-tasks.md to track progress
-          claude --dangerously-skip-permissions --model opus "/cleanup $CLEANUP_PAYLOAD" || {
+          claude --dangerously-skip-permissions --model claude-opus-4-5-20251101 "/cleanup $CLEANUP_PAYLOAD" || {
             echo "❌ Cleanup execution failed"
             exit 1
           }
