@@ -8,22 +8,6 @@ export type { Stage, WorkflowType };
 export type Ticket = PrismaTicket;
 
 /**
- * API Response Types
- */
-
-/**
- * Response type for GET /api/tickets - tickets grouped by stage
- */
-export interface TicketsByStage {
-  INBOX: Ticket[];
-  PLAN: Ticket[];
-  BUILD: Ticket[];
-  VERIFY: Ticket[];
-  SHIP: Ticket[];
-}
-
-
-/**
  * Drag-and-Drop Types
  */
 
