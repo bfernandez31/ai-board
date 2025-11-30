@@ -24,8 +24,9 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     const body = await response.json();
 
-    // Validate TicketsByStage structure - all 5 stages must be present
+    // Validate TicketsByStage structure - all 6 stages must be present
     expect(body).toHaveProperty('INBOX');
+    expect(body).toHaveProperty('SPECIFY');
     expect(body).toHaveProperty('PLAN');
     expect(body).toHaveProperty('BUILD');
     expect(body).toHaveProperty('VERIFY');
@@ -33,6 +34,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     // Each stage should be an array
     expect(Array.isArray(body.INBOX)).toBe(true);
+    expect(Array.isArray(body.SPECIFY)).toBe(true);
     expect(Array.isArray(body.PLAN)).toBe(true);
     expect(Array.isArray(body.BUILD)).toBe(true);
     expect(Array.isArray(body.VERIFY)).toBe(true);
@@ -58,7 +60,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     // Find tickets in any stage
     let foundTicket = null;
-    for (const stage of ['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']) {
+    for (const stage of ['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']) {
       if (body[stage].length > 0) {
         foundTicket = body[stage][0];
         break;
@@ -85,7 +87,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     }
 
     expect(foundTicket).toHaveProperty('stage');
-    expect(['INBOX', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']).toContain(foundTicket.stage);
+    expect(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']).toContain(foundTicket.stage);
 
     expect(foundTicket).toHaveProperty('createdAt');
     expect(typeof foundTicket.createdAt).toBe('string');
@@ -107,6 +109,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
 
     // All stages should exist as arrays (may be empty or have tickets)
     expect(Array.isArray(body.INBOX)).toBe(true);
+    expect(Array.isArray(body.SPECIFY)).toBe(true);
     expect(Array.isArray(body.PLAN)).toBe(true);
     expect(Array.isArray(body.BUILD)).toBe(true);
     expect(Array.isArray(body.VERIFY)).toBe(true);
@@ -155,6 +158,7 @@ test.describe('GET /api/tickets - Contract Validation', () => {
     const bodies = await Promise.all(responses.map(r => r.json()));
     bodies.forEach(body => {
       expect(body).toHaveProperty('INBOX');
+      expect(body).toHaveProperty('SPECIFY');
       expect(body).toHaveProperty('PLAN');
       expect(body).toHaveProperty('BUILD');
       expect(body).toHaveProperty('VERIFY');
