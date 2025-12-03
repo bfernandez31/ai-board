@@ -476,6 +476,85 @@ export function useTransitionTicket(projectId: number, ticketId: number) {
 - Invalidate jobs query (new job created)
 - Toast notifications
 
+### Delete Ticket Mutation
+
+**Hook** (`app/lib/hooks/mutations/useDeleteTicket.ts`):
+
+```typescript
+export function useDeleteTicket(projectId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation<DeleteTicketResponse, Error, number, { previousTickets: Ticket[] }>({
+    mutationFn: async (ticketId: number) => {
+      const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete ticket');
+      }
+
+      return response.json();
+    },
+
+    onMutate: async (ticketId: number) => {
+      // Cancel outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.tickets(projectId) });
+
+      // Snapshot previous state for rollback
+      const previousTickets = queryClient.getQueryData<Ticket[]>(
+        queryKeys.projects.tickets(projectId)
+      );
+
+      // Optimistically remove ticket from cache
+      queryClient.setQueryData<Ticket[]>(
+        queryKeys.projects.tickets(projectId),
+        (old) => {
+          if (!old) return [];
+          return old.filter((t) => t.id !== ticketId);
+        }
+      );
+
+      // Return snapshot for rollback context
+      // Ensure we always return a valid context, even if previousTickets is undefined
+      return { previousTickets: previousTickets ?? [] };
+    },
+
+    onError: (_error, _ticketId, context) => {
+      // Restore snapshot from onMutate context
+      if (context) {
+        queryClient.setQueryData(queryKeys.projects.tickets(projectId), context.previousTickets);
+      }
+    },
+
+    onSettled: () => {
+      // Always refetch after mutation (success or error) to ensure consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.tickets(projectId) });
+    },
+
+    retry: false,  // Don't retry GitHub API failures automatically
+  });
+}
+```
+
+**Features**:
+- **Optimistic removal**: Ticket disappears immediately from UI
+- **Rollback on error**: Ticket reappears if deletion fails
+- **Query invalidation**: Refetches tickets after success to ensure consistency
+- **No automatic retry**: User must manually retry after failures (GitHub API rate limits, permissions)
+- **Consecutive deletion support**: Properly handles undefined cache data when multiple tickets are deleted in sequence
+
+**Critical Implementation Details**:
+- The context type guarantees `previousTickets` is always an array, never `undefined`
+- The `onMutate` callback handles undefined cache data by returning an empty array
+- This prevents errors when deleting multiple tickets consecutively after cache invalidation
+- The `onError` callback safely restores the snapshot without additional null checks
+
 ## Cache Invalidation Patterns
 
 ### Hierarchical Invalidation
