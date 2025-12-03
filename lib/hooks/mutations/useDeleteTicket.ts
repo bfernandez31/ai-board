@@ -54,7 +54,7 @@ interface DeleteTicketError {
 export function useDeleteTicket(projectId: number) {
   const queryClient = useQueryClient();
 
-  return useMutation<DeleteTicketResponse, Error, number, { previousTickets?: Ticket[] | undefined }>({
+  return useMutation<DeleteTicketResponse, Error, number, { previousTickets: Ticket[] }>({
     mutationFn: async (ticketId: number) => {
       const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'DELETE',
@@ -83,19 +83,25 @@ export function useDeleteTicket(projectId: number) {
       );
 
       // Optimistically remove ticket from cache
+      // AIB-93: Ensure we always return an array, even if old is undefined
       queryClient.setQueryData<Ticket[]>(
         queryKeys.projects.tickets(projectId),
-        (old) => old?.filter((t) => t.id !== ticketId) ?? []
+        (old) => {
+          if (!old) return [];
+          return old.filter((t) => t.id !== ticketId);
+        }
       );
 
       // Return snapshot for rollback context
-      return { previousTickets };
+      // AIB-93: Ensure we always return a valid context, even if previousTickets is undefined
+      return { previousTickets: previousTickets ?? [] };
     },
 
     // Rollback on error: Restore previous state
     onError: (_error, _ticketId, context) => {
-      // Restore snapshot from onMutate context
-      if (context?.previousTickets) {
+      // AIB-93: Restore snapshot from onMutate context
+      // Since we now guarantee previousTickets is always an array, we can safely restore
+      if (context) {
         queryClient.setQueryData(queryKeys.projects.tickets(projectId), context.previousTickets);
       }
 

@@ -484,4 +484,64 @@ test.describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     });
     expect(deletedComment).toBeNull();
   });
+
+  test('DELETE multiple tickets consecutively (200 OK)', async ({ request, projectId }) => {
+    // AIB-93: Test for bug where deleting multiple tickets in sequence fails
+    // Create two INBOX tickets for consecutive deletion
+    const ticket1 = await prisma.ticket.create({
+      data: {
+        title: '[e2e] DELETE Test - First Ticket',
+        description: 'First ticket to delete',
+        stage: 'INBOX',
+        projectId,
+        ticketNumber: 108,
+        ticketKey: 'TST-108',
+      },
+    });
+
+    const ticket2 = await prisma.ticket.create({
+      data: {
+        title: '[e2e] DELETE Test - Second Ticket',
+        description: 'Second ticket to delete',
+        stage: 'INBOX',
+        projectId,
+        ticketNumber: 109,
+        ticketKey: 'TST-109',
+      },
+    });
+
+    // Delete first ticket
+    const response1 = await request.delete(`/api/projects/${projectId}/tickets/${ticket1.id}`);
+    expect(response1.status()).toBe(200);
+
+    const json1 = await response1.json();
+    expect(json1).toHaveProperty('success', true);
+    expect(json1.deleted).toMatchObject({
+      ticketId: ticket1.id,
+      ticketKey: 'TST-108',
+    });
+
+    // Verify first ticket deleted
+    const deletedTicket1 = await prisma.ticket.findUnique({
+      where: { id: ticket1.id },
+    });
+    expect(deletedTicket1).toBeNull();
+
+    // Delete second ticket (this is where the bug occurs)
+    const response2 = await request.delete(`/api/projects/${projectId}/tickets/${ticket2.id}`);
+    expect(response2.status()).toBe(200);
+
+    const json2 = await response2.json();
+    expect(json2).toHaveProperty('success', true);
+    expect(json2.deleted).toMatchObject({
+      ticketId: ticket2.id,
+      ticketKey: 'TST-109',
+    });
+
+    // Verify second ticket deleted
+    const deletedTicket2 = await prisma.ticket.findUnique({
+      where: { id: ticket2.id },
+    });
+    expect(deletedTicket2).toBeNull();
+  });
 });
