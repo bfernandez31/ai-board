@@ -209,6 +209,12 @@ Users can delete tickets by dragging them to a trash zone that appears during dr
    - All open pull requests where head branch matches ticket branch
    - Workflow artifact files (spec.md, plan.md, tasks.md)
 
+**Multiple Consecutive Deletions**:
+- Users can delete multiple tickets in sequence without errors
+- Each deletion is processed independently with optimistic UI updates
+- The system handles cache invalidation properly between consecutive deletions
+- No need to refresh the page between deletions
+
 **Visual Feedback**:
 - Trash zone highlights when valid ticket is dragged over it:
   - Border turns red (dashed)
