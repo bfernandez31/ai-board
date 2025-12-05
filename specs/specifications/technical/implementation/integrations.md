@@ -111,6 +111,70 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+### Claude Commands
+
+**Implementation Command** (`.claude/commands/speckit.implement.md`):
+- **Purpose**: Execute all tasks in tasks.md and generate implementation summary
+- **Input**: Tasks from tasks.md, plan from plan.md, spec from spec.md
+- **Steps**:
+  1. Prerequisites check (validate FEATURE_DIR and required files)
+  2. Checklist validation (optional, blocks if incomplete)
+  3. Load implementation context (tasks, plan, data model, contracts)
+  4. Setup verification (create/verify ignore files)
+  5. Parse task structure (phases, dependencies, execution order)
+  6. Execute implementation (phase-by-phase, respecting dependencies)
+  7. Progress tracking (mark completed tasks with [X])
+  8. Completion validation (verify all tasks completed)
+  9. Summary generation (Step 10)
+- **Output**: Implemented code, marked tasks, summary.md file
+
+**Summary Generation (Step 10)**:
+- Reads summary template from `.specify/templates/summary-template.md`
+- Generates content following template structure exactly
+- Extracts feature name from spec.md header (first `#` line)
+- Gets current git branch (`git branch --show-current`)
+- Uses current date in YYYY-MM-DD format
+- Enforces character limits:
+  - Changes Summary: max 500 chars
+  - Key Decisions: max 500 chars
+  - Files Modified: max 500 chars
+  - Manual Requirements: max 300 chars
+  - Total: max 2300 chars
+- Writes to `FEATURE_DIR/summary.md`
+- Handles partial failures: includes progress and failure point
+
+**Summary Template** (`.specify/templates/summary-template.md`):
+
+```markdown
+# Implementation Summary: [FEATURE_NAME]
+
+**Branch**: `[BRANCH]` | **Date**: [DATE]
+**Spec**: [link to spec.md]
+
+## Changes Summary
+
+[Brief description of what was implemented - max 500 chars]
+
+## Key Decisions
+
+[Important technical decisions made during implementation - max 500 chars]
+
+## Files Modified
+
+[List of key files created/modified - max 500 chars]
+
+## ⚠️ Manual Requirements
+
+[Any steps requiring human action, or "None" if fully automated - max 300 chars]
+```
+
+**Template Pattern**:
+- Follows existing template conventions (spec-template.md, plan-template.md)
+- Located in `.specify/templates/` directory
+- Placeholder format: `[PLACEHOLDER_NAME]`
+- Section headers with Markdown H2 (`##`)
+- Warning emoji (`⚠️`) for manual requirements section
+
 ### Authentication
 
 **GitHub Token** (Automatic):

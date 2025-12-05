@@ -199,7 +199,28 @@ When ticket moves from PLAN to BUILD stage:
 4. AI reads spec.md, plan.md, and tasks.md
 5. AI implements features according to plan
 6. Code changes committed to feature branch
-7. Job status updates to COMPLETED
+7. AI generates implementation summary (summary.md)
+8. Job status updates to COMPLETED
+
+### Implementation Summary
+
+After implementation completes (or fails partway), the system automatically generates a summary document:
+
+**Summary Content**:
+- **Changes Summary**: Brief description of what was implemented (max 500 chars)
+- **Key Decisions**: Important technical decisions made during implementation (max 500 chars)
+- **Files Modified**: List of key files created/modified (max 500 chars)
+- **Manual Requirements**: Any steps requiring human action, or "None" if fully automated (max 300 chars)
+
+**Summary Location**:
+- Written to `specs/{branch-name}/summary.md` (e.g., `specs/AIB-42-add-feature/summary.md`)
+- Template-based formatting ensures consistency across all features
+- Maximum 2300 characters total
+
+**Partial Implementation**:
+- Summary generated even if implementation fails partway through
+- Includes progress made and failure point
+- Manual Requirements section indicates which task to resume from
 
 ### Quick Implementation (INBOX → BUILD)
 
