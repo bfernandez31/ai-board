@@ -59,6 +59,7 @@ export const test = base.extend<{ projectId: number }>({
   projectId: async ({}, use, testInfo) => {
     const workerIndex = testInfo.parallelIndex ?? 0; // Default to worker 0 if undefined
     const projectId = getWorkerProjectId(workerIndex);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(projectId);
   },
 });

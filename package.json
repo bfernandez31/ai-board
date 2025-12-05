@@ -7,7 +7,7 @@
     "dev:clean": "prisma generate && next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern 'specs/**' --ignore-pattern 'tests/**'",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "test:unit": "vitest run",
     "test:unit:ui": "vitest --ui",
     "test:unit:watch": "vitest --watch",

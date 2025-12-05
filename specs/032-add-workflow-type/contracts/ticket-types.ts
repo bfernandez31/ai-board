@@ -109,7 +109,7 @@ export interface TicketCardProps {
  *           </Badge>
  *         )}
  *       </div>
- *       {/* ... rest of card ... */}
+ *       {/* ... rest of card ... * /}
  *     </div>
  *   );
  * }
