@@ -3,7 +3,7 @@
 ## Application Architecture
 
 ### Framework & Runtime
-- **Next.js 15**: App Router architecture for file-based routing and server-side rendering
+- **Next.js 16**: App Router architecture for file-based routing and server-side rendering
 - **Node.js 22.20.0 LTS**: Server runtime environment
 - **React 18**: Component-based UI library
 - **TypeScript 5.6**: Strict mode for type safety

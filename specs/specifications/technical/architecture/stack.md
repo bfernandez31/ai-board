@@ -14,7 +14,7 @@
 - **Configuration**: tsconfig.json in project root
 - **Build**: Next.js handles TypeScript compilation
 
-### Next.js 15
+### Next.js 16
 - **Router**: App Router (RSC - React Server Components)
 - **Rendering**: Server-side rendering + static generation
 - **API Routes**: RESTful endpoints in `app/api/` directory
@@ -363,7 +363,7 @@
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Next.js | 15 | Framework |
+| Next.js | 16 | Framework |
 | React | 18 | UI library |
 | TypeScript | 5.6 | Type safety |
 | Node.js | 22.20.0 LTS | Runtime |

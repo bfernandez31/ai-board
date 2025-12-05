@@ -257,7 +257,7 @@ All file paths are absolute from project root:
 Exact versions specified where critical:
 
 ```
-✅ Next.js 15
+✅ Next.js 16
 ✅ Node.js 22.20.0 LTS
 ✅ TanStack Query v5.90.5
 ❌ Next.js (latest)

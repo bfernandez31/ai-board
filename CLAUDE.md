@@ -2,7 +2,7 @@
 
 ## Tech Stack
 
-- **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 15 (App Router), React 18
+- **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
 - **Charts**: Recharts 2.x (analytics dashboard)

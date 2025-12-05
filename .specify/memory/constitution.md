@@ -139,7 +139,7 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 ## Technology Standards
 
 **Mandatory Stack**:
-- **Frontend**: Next.js 15 (App Router), React 18, TypeScript, TailwindCSS
+- **Frontend**: Next.js 16 (App Router), React 18, TypeScript, TailwindCSS
 - **UI Components**: shadcn/ui exclusively for primitives
 - **State Management**: TanStack Query v5 (React Query) for server state
 - **Drag & Drop**: @dnd-kit/core and @dnd-kit/sortable
