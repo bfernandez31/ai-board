@@ -16,7 +16,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { JobStatusDto } from '@/app/lib/schemas/job-polling';
 
@@ -95,7 +95,8 @@ export function useJobPolling(
   });
 
   // Compute polling state for UI feedback
-  const jobs = data || [];
+  // Memoize jobs to prevent useEffect dependency from changing on every render
+  const jobs = useMemo(() => data || [], [data]);
   const allTerminal = areAllJobsTerminal(jobs);
 
   // Detect terminal status transitions and invalidate tickets cache
