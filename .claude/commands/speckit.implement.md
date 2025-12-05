@@ -119,4 +119,26 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
 
+10. **Summary Generation**:
+   Generate an implementation summary after completion OR if implementation fails partway through:
+
+   a. Read the summary template from `.specify/templates/summary-template.md`
+
+   b. Generate summary content following template structure exactly. ALL sections are required:
+      - **FEATURE_NAME**: Extract from spec.md header (first `#` line)
+      - **BRANCH**: Current git branch (`git branch --show-current`)
+      - **DATE**: Current date in YYYY-MM-DD format
+      - **Spec link**: `[spec.md](spec.md)` (relative link)
+      - **Changes Summary**: Brief description of what was implemented (max 500 chars). If partial failure, note progress and failure point. Write "None" if no changes.
+      - **Key Decisions**: Important technical decisions made during implementation (max 500 chars). Write "None" if no notable decisions.
+      - **Files Modified**: List of key files created/modified (max 500 chars). Write "None" if no files modified.
+      - **Manual Requirements**: Any steps requiring human action. Write "None" if fully automated. If partial failure, include: "Resume from task [ID]: [description]" (max 300 chars)
+
+   c. Ensure total content does not exceed 2300 characters
+
+   d. Write the generated summary to `FEATURE_DIR/summary.md`
+
+   e. Report: "Summary generated: FEATURE_DIR/summary.md ([N] characters)"
+      If partial failure: "Partial summary generated (implementation incomplete)"
+
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/tasks` first to regenerate the task list.

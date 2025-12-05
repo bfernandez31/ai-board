@@ -18,7 +18,7 @@
 
 **Purpose**: Project initialization and template creation
 
-- [ ] T001 [P] Create summary template file at `.specify/templates/summary-template.md` with structure: Header (feature name, branch, date, spec link), Changes Summary section, Key Decisions section, Files Modified section, Manual Requirements section with warning icon
+- [X] T001 [P] Create summary template file at `.specify/templates/summary-template.md` with structure: Header (feature name, branch, date, spec link), Changes Summary section, Key Decisions section, Files Modified section, Manual Requirements section with warning icon
 
 ---
 
@@ -30,7 +30,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Modify `/speckit.implement` command at `.claude/commands/speckit.implement.md` to add Step 10: Summary Generation after completion validation (Step 9)
+- [X] T002 [US1] Modify `/speckit.implement` command at `.claude/commands/speckit.implement.md` to add Step 10: Summary Generation after completion validation (Step 9)
 
 Step 10 instructions to add:
 1. Read the summary template from `.specify/templates/summary-template.md`
@@ -46,7 +46,7 @@ Step 10 instructions to add:
 4. Write the generated summary to `FEATURE_DIR/summary.md`
 5. Report summary file creation and character count
 
-- [ ] T003 [US1] Add summary generation handling for partial implementation failures in `.claude/commands/speckit.implement.md` - ensure summary is generated even when implementation fails partway, capturing progress and failure point
+- [X] T003 [US1] Add summary generation handling for partial implementation failures in `.claude/commands/speckit.implement.md` - ensure summary is generated even when implementation fails partway, capturing progress and failure point
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - `/speckit.implement` generates summary.md automatically
 
@@ -60,7 +60,7 @@ Step 10 instructions to add:
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] Ensure summary generation step in `.claude/commands/speckit.implement.md` explicitly follows template structure and includes all required sections even if content is "None"
+- [X] T004 [US2] Ensure summary generation step in `.claude/commands/speckit.implement.md` explicitly follows template structure and includes all required sections even if content is "None"
 
 **Checkpoint**: At this point, all summaries follow consistent template format with all sections present
 
@@ -70,8 +70,8 @@ Step 10 instructions to add:
 
 **Purpose**: Validation and documentation
 
-- [ ] T005 Run quickstart.md validation - verify example output matches actual generated format
-- [ ] T006 Verify character limit enforcement - confirm instructions produce summaries under 2300 characters
+- [X] T005 Run quickstart.md validation - verify example output matches actual generated format
+- [X] T006 Verify character limit enforcement - confirm instructions produce summaries under 2300 characters
 
 ---
 
