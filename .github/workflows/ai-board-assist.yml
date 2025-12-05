@@ -460,7 +460,7 @@ jobs:
             -f -s -S || echo "⚠️ Failed to update job status"
 
       - name: Update Job Status - Failure
-        if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' && steps.parse.outputs.status != 'iterate_required' }}
+        if: ${{ failure() || (env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status != 'success' && steps.parse.outputs.status != 'iterate_required') }}
         run: |
           echo "❌ Updating job status to FAILED (status was: '${{ steps.parse.outputs.status }}')"
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
