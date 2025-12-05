@@ -8,7 +8,7 @@
 
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import { parseMentions } from '@/app/lib/utils/mention-parser';

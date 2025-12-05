@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
+
 import { useDroppable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Stage } from '@/lib/stage-transitions';

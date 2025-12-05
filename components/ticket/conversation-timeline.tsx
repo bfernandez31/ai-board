@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useConversationTimeline } from '@/app/lib/hooks/queries/use-conversation-timeline';
 import { Timeline } from '@/components/timeline/timeline';
 import { TimelineItem } from '@/components/timeline/timeline-item';

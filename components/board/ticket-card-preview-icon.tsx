@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
+
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

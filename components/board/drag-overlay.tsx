@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { DragOverlay as DndKitDragOverlay } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { TicketWithVersion } from '@/lib/types';

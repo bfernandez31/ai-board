@@ -7,7 +7,7 @@
 
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import { PlayCircle, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { TimelineBadge } from './timeline-badge';
 import { TimelineContent } from './timeline-content';
