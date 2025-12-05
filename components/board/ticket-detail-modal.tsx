@@ -64,6 +64,15 @@ interface TicketData {
 }
 
 /**
+ * Job data passed from parent for real-time updates
+ */
+export interface TicketJob {
+  id: number;
+  command: string;
+  status: string;
+}
+
+/**
  * Props interface for TicketDetailModal component
  */
 interface TicketDetailModalProps {
@@ -84,6 +93,9 @@ interface TicketDetailModalProps {
 
   /** Optional initial tab to display when modal opens. Defaults to 'details'. */
   initialTab?: 'details' | 'comments' | 'files';
+
+  /** Jobs for this ticket, passed from parent for real-time polling updates */
+  jobs?: TicketJob[];
 }
 
 /**
@@ -160,13 +172,13 @@ export function TicketDetailModal({
   onUpdate,
   projectId,
   initialTab = 'details',
+  jobs = [],
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [jobs, setJobs] = useState<Array<{ id: number; command: string; status: string }>>([]);
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
@@ -178,15 +190,17 @@ export function TicketDetailModal({
     refetchInterval: false, // Don't poll when just showing count
   });
 
-  // Update local ticket when a different ticket is selected or version changes
+  // Update local ticket when a different ticket is selected, version changes, or branch changes
   useEffect(() => {
     if (ticket) {
       setLocalTicket((current) => {
-        // Only update if different ticket or newer version
+        // Only update if different ticket, newer version, or branch changed
+        // Branch comparison is needed because branch updates don't bump version
         if (
           !current ||
           current.id !== ticket.id ||
-          current.version !== ticket.version
+          current.version !== ticket.version ||
+          current.branch !== ticket.branch
         ) {
           return ticket;
         }
@@ -205,32 +219,8 @@ export function TicketDetailModal({
     setActiveTab(initialTab);
   }, [open, initialTab]);
 
-  // Fetch jobs for the ticket to check for completed specify job
-  useEffect(() => {
-    if (!ticket || !open) {
-      setJobs([]);
-      return;
-    }
-
-    const fetchJobs = async () => {
-      try {
-        const response = await fetch(
-          `/api/projects/${projectId}/tickets/${ticket.id}/jobs`
-        );
-        if (response.ok) {
-          const jobsData = await response.json();
-          setJobs(jobsData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch jobs:', error);
-        setJobs([]);
-      }
-    };
-
-    fetchJobs();
-    // Only depend on ticket.id, not entire ticket object to avoid re-fetching when ticket props change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticket?.id, open, projectId]);
+  // Jobs are now passed from parent (board) for real-time polling updates
+  // No need to fetch locally - parent's useJobPolling provides live updates
 
   // Keyboard shortcuts for tab navigation
   useEffect(() => {

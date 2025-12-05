@@ -83,18 +83,18 @@ export function useDeleteTicket(projectId: number) {
       );
 
       // Optimistically remove ticket from cache
-      // AIB-93: Ensure we always return an array, even if old is undefined or not an array
+      // AIB-93: Ensure we always return an array, even if old is undefined
       queryClient.setQueryData<Ticket[]>(
         queryKeys.projects.tickets(projectId),
         (old) => {
-          if (!old || !Array.isArray(old)) return [];
+          if (!old) return [];
           return old.filter((t) => t.id !== ticketId);
         }
       );
 
       // Return snapshot for rollback context
-      // AIB-93: Ensure we always return a valid context, even if previousTickets is undefined or not an array
-      return { previousTickets: Array.isArray(previousTickets) ? previousTickets : [] };
+      // AIB-93: Ensure we always return a valid context, even if previousTickets is undefined
+      return { previousTickets: previousTickets ?? [] };
     },
 
     // Rollback on error: Restore previous state

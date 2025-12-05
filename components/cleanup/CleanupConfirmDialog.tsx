@@ -76,18 +76,16 @@ export function CleanupConfirmDialog({
             <Sparkles className="h-5 w-5" />
             Start Project Cleanup?
           </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="text-sm text-muted-foreground">
-              <span>This will analyze technical debt from recently shipped features and create fixes for:</span>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-                <li>Code quality improvements</li>
-                <li>Test coverage enhancements</li>
-                <li>Documentation updates</li>
-              </ul>
-              <span className="mt-3 block text-sm font-medium">
-                All changes will be submitted as a pull request for your review.
-              </span>
-            </div>
+          <AlertDialogDescription>
+            This will analyze technical debt from recently shipped features and create fixes for:
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+              <li>Code quality improvements</li>
+              <li>Test coverage enhancements</li>
+              <li>Documentation updates</li>
+            </ul>
+            <p className="mt-3 text-sm font-medium">
+              All changes will be submitted as a pull request for your review.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -5,6 +5,9 @@ import { Upload, Plus } from 'lucide-react';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { getUserProjects } from '@/lib/db/projects';
 
+// Force dynamic rendering - this page uses headers() for auth
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Projects | AI Board',
   description: 'View and manage all projects in your AI Board workspace',

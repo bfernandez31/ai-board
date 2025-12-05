@@ -104,8 +104,8 @@ function BoardContent({
   const [activeTicket, setActiveTicket] = useState<TicketWithVersion | null>(
     null
   );
-  const [selectedTicket, setSelectedTicket] =
-    useState<TicketWithVersion | null>(null);
+  // Store only the ID to ensure we always get the latest ticket data from cache
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitialTab, setModalInitialTab] = useState<'details' | 'comments' | 'files'>('details');
   const isOnline = useOnlineStatus();
@@ -165,6 +165,13 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
+  // Derive the selected ticket from allTickets to get the latest data
+  // This ensures we always show fresh data (e.g., branch) after cache invalidation
+  const selectedTicket = useMemo(() => {
+    if (!selectedTicketId) return null;
+    return allTickets.find(t => t.id === selectedTicketId) || null;
+  }, [selectedTicketId, allTickets]);
+
   // Find the ticket with active preview URL (for single-preview warning)
   const activePreviewTicket = useMemo(() => {
     const ticketWithPreview = allTickets.find(t => t.previewUrl !== null && t.previewUrl !== undefined);
@@ -190,7 +197,7 @@ function BoardContent({
     const ticket = allTickets.find(t => t.ticketKey === ticketKey);
 
     if (ticket && !isModalOpen) {
-      setSelectedTicket(ticket);
+      setSelectedTicketId(ticket.id);
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
 
@@ -494,7 +501,7 @@ function BoardContent({
 
   // Handle ticket click to open modal
   const handleTicketClick = useCallback((ticket: TicketWithVersion) => {
-    setSelectedTicket(ticket);
+    setSelectedTicketId(ticket.id);
     setIsModalOpen(true);
     // Open conversation tab for tickets in VERIFY stage
     setModalInitialTab(ticket.stage === 'VERIFY' ? 'comments' : 'details');
@@ -504,7 +511,7 @@ function BoardContent({
   const handleModalClose = useCallback((open: boolean) => {
     setIsModalOpen(open);
     if (!open) {
-      setSelectedTicket(null);
+      setSelectedTicketId(null);
     }
   }, []);
 
@@ -576,7 +583,8 @@ function BoardContent({
         queryKeys.projects.tickets(projectId),
         updatedTickets
       );
-      setSelectedTicket(normalizedTicket);
+      // No need to setSelectedTicketId - selectedTicket is derived from allTickets
+      // which will update automatically when the cache is updated
     },
     [allTickets, projectId, queryClient]
   );
@@ -1077,6 +1085,7 @@ function BoardContent({
         onUpdate={handleTicketUpdate}
         projectId={projectId}
         initialTab={modalInitialTab}
+        jobs={selectedTicket ? polledJobs.filter(job => job.ticketId === selectedTicket.id) : []}
       />
 
       {/* Quick Implementation Modal (T039) */}
