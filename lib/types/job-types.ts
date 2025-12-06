@@ -41,3 +41,51 @@ export interface DualJobState {
 
 // Job type imported from Prisma schema
 import type { Job } from '@prisma/client';
+
+/**
+ * TicketJobWithStats Interface
+ *
+ * Extended job type with telemetry fields for Stats tab display.
+ * Used when fetching jobs with `?includeStats=true` query parameter.
+ */
+export interface TicketJobWithStats {
+  id: number;
+  command: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  startedAt: string;
+  completedAt: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheCreationTokens: number | null;
+  costUsd: number | null;
+  durationMs: number | null;
+  model: string | null;
+  toolsUsed: string[];
+}
+
+/**
+ * ToolUsageCount Interface
+ *
+ * Individual tool usage count for aggregated display.
+ */
+export interface ToolUsageCount {
+  tool: string;
+  count: number;
+}
+
+/**
+ * TicketStats Interface
+ *
+ * Aggregated statistics computed from jobs for Stats tab display.
+ */
+export interface TicketStats {
+  totalCost: number;
+  totalDuration: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  cacheReadTokens: number;
+  cacheEfficiency: number | null;
+  toolUsage: ToolUsageCount[];
+}

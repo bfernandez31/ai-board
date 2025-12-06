@@ -191,3 +191,18 @@ export function calculateTrend(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 }
+
+/**
+ * Format number with abbreviations for large values (K, M)
+ * Uses locale formatting for smaller values.
+ * Used primarily for token counts in Stats tab.
+ */
+export function formatNumber(value: number): string {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+  return value.toLocaleString();
+}

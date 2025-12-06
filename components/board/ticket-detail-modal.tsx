@@ -36,6 +36,8 @@ import { ConversationTimeline } from '@/components/ticket/conversation-timeline'
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 import { MentionDisplay } from '@/components/comments/mention-display';
+import { StatsTab } from '@/components/ticket/stats-tab';
+import type { TicketJobWithStats } from '@/lib/types/job-types';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -92,10 +94,13 @@ interface TicketDetailModalProps {
   projectId: number;
 
   /** Optional initial tab to display when modal opens. Defaults to 'details'. */
-  initialTab?: 'details' | 'comments' | 'files';
+  initialTab?: 'details' | 'comments' | 'files' | 'stats';
 
   /** Jobs for this ticket, passed from parent for real-time polling updates */
   jobs?: TicketJob[];
+
+  /** Jobs with full telemetry data for Stats tab */
+  jobsWithStats?: TicketJobWithStats[];
 }
 
 /**
@@ -173,13 +178,14 @@ export function TicketDetailModal({
   projectId,
   initialTab = 'details',
   jobs = [],
+  jobsWithStats = [],
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
   // Fetch comment count for badge
@@ -242,11 +248,18 @@ export function TicketDetailModal({
         e.preventDefault();
         setActiveTab('files');
       }
+      // Cmd+4 or Ctrl+4 for Stats tab (only if jobs exist)
+      if ((e.metaKey || e.ctrlKey) && e.key === '4') {
+        if (jobs.length > 0) {
+          e.preventDefault();
+          setActiveTab('stats');
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open]);
+  }, [open, jobs.length]);
 
   // Check if "View Specification" button should be visible
   const hasCompletedSpecifyJob = useMemo(() => {
@@ -843,8 +856,8 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial">
-          <TabsList className="flex-shrink-0 grid w-full grid-cols-3 mb-2 sm:mb-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial">
+          <TabsList className={`flex-shrink-0 grid w-full mb-2 sm:mb-4 ${jobs.length > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="details" className="text-sm">
               Details
             </TabsTrigger>
@@ -864,6 +877,11 @@ export function TicketDetailModal({
                 </Badge>
               )}
             </TabsTrigger>
+            {jobs.length > 0 && (
+              <TabsTrigger value="stats" className="text-sm">
+                Stats
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Details Tab */}
@@ -1092,6 +1110,13 @@ export function TicketDetailModal({
               onAttachmentsUpdated={refreshTicketFromServer}
             />
           </TabsContent>
+
+          {/* Stats Tab - only render when jobs exist */}
+          {jobs.length > 0 && (
+            <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
+              <StatsTab jobs={jobsWithStats} />
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
 

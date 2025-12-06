@@ -18,9 +18,9 @@
 
 **Purpose**: Type definitions and utility functions shared across all user stories
 
-- [ ] T001 [P] Create TicketJobWithStats interface in lib/types/job-types.ts
-- [ ] T002 [P] Create TicketStats and ToolUsageCount interfaces in lib/types/job-types.ts
-- [ ] T003 [P] Create formatNumber utility function in lib/analytics/aggregations.ts
+- [X] T001 [P] Create TicketJobWithStats interface in lib/types/job-types.ts ✅ DONE
+- [X] T002 [P] Create TicketStats and ToolUsageCount interfaces in lib/types/job-types.ts ✅ DONE
+- [X] T003 [P] Create formatNumber utility function in lib/analytics/aggregations.ts ✅ DONE
 
 ---
 
@@ -30,9 +30,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Extend jobs API endpoint to support includeStats query parameter in app/api/projects/[projectId]/tickets/[id]/jobs/route.ts
-- [ ] T005 Create calculateTicketStats function in lib/stats/ticket-stats.ts
-- [ ] T006 Create aggregateToolUsage helper function in lib/stats/ticket-stats.ts
+- [X] T004 Extend jobs API endpoint to support includeStats query parameter in app/api/projects/[projectId]/tickets/[id]/jobs/route.ts ✅ DONE
+- [X] T005 Create calculateTicketStats function in lib/stats/ticket-stats.ts ✅ DONE
+- [X] T006 Create aggregateToolUsage helper function in lib/stats/ticket-stats.ts ✅ DONE
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -46,12 +46,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Create StatsSummaryCards component in components/ticket/stats-summary-cards.tsx
-- [ ] T008 [P] [US1] Create StatsTab container component in components/ticket/stats-tab.tsx
-- [ ] T009 [US1] Add Stats tab to ticket detail modal in components/board/ticket-detail-modal.tsx
-- [ ] T010 [US1] Add conditional tab visibility when jobs.length > 0 in components/board/ticket-detail-modal.tsx
-- [ ] T011 [US1] Update grid layout from grid-cols-3 to conditional grid-cols-4 in components/board/ticket-detail-modal.tsx
-- [ ] T012 [US1] Add Cmd/Ctrl+4 keyboard shortcut for Stats tab in components/board/ticket-detail-modal.tsx
+- [X] T007 [P] [US1] Create StatsSummaryCards component in components/ticket/stats-summary-cards.tsx ✅ DONE
+- [X] T008 [P] [US1] Create StatsTab container component in components/ticket/stats-tab.tsx ✅ DONE
+- [X] T009 [US1] Add Stats tab to ticket detail modal in components/board/ticket-detail-modal.tsx ✅ DONE
+- [X] T010 [US1] Add conditional tab visibility when jobs.length > 0 in components/board/ticket-detail-modal.tsx ✅ DONE
+- [X] T011 [US1] Update grid layout from grid-cols-3 to conditional grid-cols-4 in components/board/ticket-detail-modal.tsx ✅ DONE
+- [X] T012 [US1] Add Cmd/Ctrl+4 keyboard shortcut for Stats tab in components/board/ticket-detail-modal.tsx ✅ DONE
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - summary cards visible with accurate aggregates
 
@@ -65,10 +65,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] Create JobTimelineRow component with expandable token breakdown in components/ticket/job-timeline-row.tsx
-- [ ] T014 [US2] Create JobTimeline component with chronological ordering in components/ticket/job-timeline.tsx
-- [ ] T015 [US2] Add getStageFromCommand helper for stage label mapping in lib/stats/ticket-stats.ts
-- [ ] T016 [US2] Integrate JobTimeline into StatsTab component in components/ticket/stats-tab.tsx
+- [X] T013 [P] [US2] Create JobTimelineRow component with expandable token breakdown in components/ticket/job-timeline-row.tsx ✅ DONE
+- [X] T014 [US2] Create JobTimeline component with chronological ordering in components/ticket/job-timeline.tsx ✅ DONE
+- [X] T015 [US2] Add getStageFromCommand helper for stage label mapping in lib/stats/ticket-stats.ts ✅ DONE (already exists in lib/analytics/aggregations.ts)
+- [X] T016 [US2] Integrate JobTimeline into StatsTab component in components/ticket/stats-tab.tsx ✅ DONE
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - summary cards and timeline visible
 
@@ -82,8 +82,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create ToolsUsageSection component with frequency-sorted badges in components/ticket/tools-usage-section.tsx
-- [ ] T018 [US3] Integrate ToolsUsageSection into StatsTab component in components/ticket/stats-tab.tsx
+- [X] T017 [US3] Create ToolsUsageSection component with frequency-sorted badges in components/ticket/tools-usage-section.tsx ✅ DONE
+- [X] T018 [US3] Integrate ToolsUsageSection into StatsTab component in components/ticket/stats-tab.tsx ✅ DONE
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -93,10 +93,10 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T019 [P] Add empty state message for edge case when no jobs exist in components/ticket/stats-tab.tsx
-- [ ] T020 [P] Add null value handling with "—" display in components/ticket/stats-summary-cards.tsx
-- [ ] T021 [P] Add null value handling with "—" display in components/ticket/job-timeline-row.tsx
-- [ ] T022 Run type-check to verify all TypeScript types are correct
+- [X] T019 [P] Add empty state message for edge case when no jobs exist in components/ticket/stats-tab.tsx ✅ DONE
+- [X] T020 [P] Add null value handling with "—" display in components/ticket/stats-summary-cards.tsx ✅ DONE
+- [X] T021 [P] Add null value handling with "—" display in components/ticket/job-timeline-row.tsx ✅ DONE
+- [X] T022 Run type-check to verify all TypeScript types are correct ✅ DONE
 
 ---
 

@@ -24,12 +24,16 @@ import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdString } = params;
+
+    // Check for includeStats query parameter
+    const url = new URL(request.url);
+    const includeStats = url.searchParams.get('includeStats') === 'true';
 
     // Validate projectId
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
@@ -102,18 +106,35 @@ export async function GET(
     }
 
     // Fetch all jobs for the ticket
+    // When includeStats is true, return full telemetry fields for Stats tab
     const jobs = await prisma.job.findMany({
       where: { ticketId: ticketId },
-      select: {
-        id: true,
-        command: true,
-        status: true,
-        completedAt: true,
-      },
-      orderBy: { id: 'asc' },
+      select: includeStats
+        ? {
+            id: true,
+            command: true,
+            status: true,
+            startedAt: true,
+            completedAt: true,
+            inputTokens: true,
+            outputTokens: true,
+            cacheReadTokens: true,
+            cacheCreationTokens: true,
+            costUsd: true,
+            durationMs: true,
+            model: true,
+            toolsUsed: true,
+          }
+        : {
+            id: true,
+            command: true,
+            status: true,
+            completedAt: true,
+          },
+      orderBy: { startedAt: 'asc' },
     });
 
-    return NextResponse.json(jobs);
+    return NextResponse.json({ jobs });
   } catch (error) {
     // Catch-all for unexpected errors
     console.error('Error fetching jobs:', {
