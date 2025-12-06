@@ -1086,6 +1086,7 @@ function BoardContent({
         projectId={projectId}
         initialTab={modalInitialTab}
         jobs={selectedTicket ? polledJobs.filter(job => job.ticketId === selectedTicket.id) : []}
+        fullJobs={selectedTicket ? initialJobs.get(selectedTicket.id) || [] : []}
       />
 
       {/* Quick Implementation Modal (T039) */}

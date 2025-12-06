@@ -2,10 +2,12 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3 } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
+import type { Job } from '@prisma/client';
+import { TicketStats } from '@/components/ticket/ticket-stats';
 import {
   Dialog,
   DialogContent,
@@ -92,10 +94,13 @@ interface TicketDetailModalProps {
   projectId: number;
 
   /** Optional initial tab to display when modal opens. Defaults to 'details'. */
-  initialTab?: 'details' | 'comments' | 'files';
+  initialTab?: 'details' | 'comments' | 'files' | 'stats';
 
   /** Jobs for this ticket, passed from parent for real-time polling updates */
   jobs?: TicketJob[];
+
+  /** Full job data with telemetry fields for Stats tab display */
+  fullJobs?: Job[];
 }
 
 /**
@@ -173,13 +178,14 @@ export function TicketDetailModal({
   projectId,
   initialTab = 'details',
   jobs = [],
+  fullJobs = [],
 }: TicketDetailModalProps) {
   const { toast } = useToast();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
   // Fetch comment count for badge
@@ -222,6 +228,9 @@ export function TicketDetailModal({
   // Jobs are now passed from parent (board) for real-time polling updates
   // No need to fetch locally - parent's useJobPolling provides live updates
 
+  // Check if Stats tab should be visible (only when jobs exist)
+  const hasJobs = fullJobs.length > 0;
+
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
     if (!open) return;
@@ -242,11 +251,16 @@ export function TicketDetailModal({
         e.preventDefault();
         setActiveTab('files');
       }
+      // Cmd+4 or Ctrl+4 for Stats tab (only when jobs exist)
+      if ((e.metaKey || e.ctrlKey) && e.key === '4' && hasJobs) {
+        e.preventDefault();
+        setActiveTab('stats');
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open]);
+  }, [open, hasJobs]);
 
   // Check if "View Specification" button should be visible
   const hasCompletedSpecifyJob = useMemo(() => {
@@ -843,8 +857,8 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial">
-          <TabsList className="flex-shrink-0 grid w-full grid-cols-3 mb-2 sm:mb-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial">
+          <TabsList className={`flex-shrink-0 grid w-full ${hasJobs ? 'grid-cols-4' : 'grid-cols-3'} mb-2 sm:mb-4`}>
             <TabsTrigger value="details" className="text-sm">
               Details
             </TabsTrigger>
@@ -864,6 +878,15 @@ export function TicketDetailModal({
                 </Badge>
               )}
             </TabsTrigger>
+            {hasJobs && (
+              <TabsTrigger value="stats" className="text-sm relative" data-testid="stats-tab-trigger">
+                <BarChart3 className="w-4 h-4 mr-1.5" />
+                Stats
+                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                  {fullJobs.length}
+                </Badge>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Details Tab */}
@@ -1092,6 +1115,13 @@ export function TicketDetailModal({
               onAttachmentsUpdated={refreshTicketFromServer}
             />
           </TabsContent>
+
+          {/* Stats Tab - only rendered when jobs exist */}
+          {hasJobs && (
+            <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="stats-tab-content">
+              <TicketStats jobs={fullJobs} polledJobs={jobs} />
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
 
