@@ -1171,6 +1171,113 @@ Fetch all job statuses for a project (polling endpoint).
 
 **Performance**: <100ms p95 (indexed query on projectId)
 
+### GET /api/projects/:projectId/tickets/:id/jobs
+
+Fetch all jobs for a specific ticket with optional telemetry data.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Query Parameters**:
+- `includeStats` (boolean, optional): Include telemetry fields for Stats tab display
+  - Default: `false`
+  - When `true`, returns full job data with token metrics, cost, duration, model, and tools
+
+**Response** (200 OK) - Without Stats:
+```json
+{
+  "jobs": [
+    {
+      "id": 123,
+      "command": "specify",
+      "status": "COMPLETED",
+      "completedAt": "2025-01-15T10:30:00.000Z"
+    },
+    {
+      "id": 124,
+      "command": "plan",
+      "status": "COMPLETED",
+      "completedAt": "2025-01-15T10:35:00.000Z"
+    }
+  ]
+}
+```
+
+**Response** (200 OK) - With Stats (`?includeStats=true`):
+```json
+{
+  "jobs": [
+    {
+      "id": 123,
+      "command": "specify",
+      "status": "COMPLETED",
+      "startedAt": "2025-01-15T10:28:00.000Z",
+      "completedAt": "2025-01-15T10:30:00.000Z",
+      "inputTokens": 25000,
+      "outputTokens": 8000,
+      "cacheReadTokens": 10000,
+      "cacheCreationTokens": 15000,
+      "costUsd": 0.45,
+      "durationMs": 120000,
+      "model": "claude-sonnet-4-20250514",
+      "toolsUsed": ["Edit", "Read", "Bash"]
+    },
+    {
+      "id": 124,
+      "command": "plan",
+      "status": "COMPLETED",
+      "startedAt": "2025-01-15T10:33:00.000Z",
+      "completedAt": "2025-01-15T10:35:00.000Z",
+      "inputTokens": 18000,
+      "outputTokens": 6000,
+      "cacheReadTokens": 8000,
+      "cacheCreationTokens": 0,
+      "costUsd": 0.32,
+      "durationMs": 90000,
+      "model": "claude-sonnet-4-20250514",
+      "toolsUsed": ["Read", "Edit", "Grep"]
+    }
+  ]
+}
+```
+
+**Fields** (includeStats=true):
+- `id`: Job ID
+- `command`: Workflow command (specify, plan, implement, etc.)
+- `status`: Job status (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+- `startedAt`: ISO 8601 timestamp when job started
+- `completedAt`: ISO 8601 timestamp when job completed (null if not completed)
+- `inputTokens`: Total input tokens consumed (null if not available)
+- `outputTokens`: Total output tokens generated (null if not available)
+- `cacheReadTokens`: Cache read tokens (null if not available)
+- `cacheCreationTokens`: Cache creation tokens (null if not available)
+- `costUsd`: Total cost in USD (null if not available)
+- `durationMs`: Duration in milliseconds (null if not available)
+- `model`: AI model used (null if not available)
+- `toolsUsed`: Array of tool names used during execution
+
+**Ordering**:
+- Jobs ordered chronologically by `startedAt` (oldest first)
+- Consistent ordering for timeline display
+
+**Errors**:
+- `400`: Invalid project ID or ticket ID
+- `401`: Not authenticated
+- `403`: Ticket belongs to different project, or user is neither project owner nor member
+- `404`: Project or ticket not found
+- `500`: Database error
+
+**Use Cases**:
+- Stats tab: Fetch full telemetry data with `?includeStats=true`
+- Job status polling: Fetch minimal data without query parameter
+- Timeline display: Chronological job history for ticket detail modal
+
+**Performance**: <50ms p95 for typical ticket (1-20 jobs)
+
 ### POST /api/projects/:projectId/jobs
 
 Create a new job for a ticket (workflow-only endpoint).

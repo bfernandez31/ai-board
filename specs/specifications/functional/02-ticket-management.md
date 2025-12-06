@@ -164,9 +164,63 @@ The detail modal:
 - Centers with appropriate sizing on desktop
 - Uses dark theme styling
 - Provides clear typography and visual hierarchy
-- Content organized in tabs (Details, Comments, Files)
+- Content organized in tabs (Details, Comments, Files, Stats)
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
+
+### Tab Organization
+
+**Available Tabs**:
+- **Details**: Title, description, metadata (creation date, branch, workflow type, AI model)
+- **Comments**: Threaded discussions with @mentions and notifications
+- **Files**: Workflow artifact files (spec.md, plan.md, tasks.md) with syntax-highlighted viewing
+- **Stats**: Aggregated workflow job telemetry and metrics (visible only when ticket has at least one job)
+
+**Stats Tab Visibility**:
+- The Stats tab appears only when the ticket has at least one associated job
+- Hidden for new tickets in INBOX stage without workflow execution
+- Automatically appears once workflow creates first job (e.g., after moving to SPECIFY)
+- Provides insight into AI resource consumption, execution time, and tool usage
+
+### Stats Tab
+
+The Stats tab provides comprehensive telemetry and metrics for all workflow jobs associated with a ticket.
+
+**Summary Metrics**:
+- **Total Cost**: Cumulative cost across all jobs in USD (formatted as "$X.XX")
+- **Total Duration**: Cumulative execution time across all jobs (formatted as "Xm Xs")
+- **Total Tokens**: Sum of input and output tokens across all jobs
+- **Cache Efficiency**: Percentage of input tokens served from cache (cacheReadTokens / totalInputTokens × 100)
+
+**Jobs Timeline**:
+- Chronological list of all workflow executions, ordered by start time (oldest first)
+- Each job row displays:
+  - Stage/command label (SPECIFY, PLAN, BUILD, VERIFY, or command name)
+  - Status icon (✓ completed, ✗ failed, ⏸ cancelled, ⏱ running, ⏳ pending)
+  - Duration in human-readable format
+  - Cost in USD
+  - AI model used (e.g., "claude-sonnet-4-20250514")
+- Expandable job rows reveal detailed token breakdown:
+  - Input tokens
+  - Output tokens
+  - Cache read tokens
+  - Cache creation tokens
+- Null or unavailable values display as "—"
+
+**Tool Usage Analysis**:
+- Aggregated count of tools used across all jobs
+- Sorted by frequency (most-used tools first)
+- Displays tool name and usage count (e.g., "Edit (3), Read (2), Bash (1)")
+- Hidden when no tool usage data is available
+
+**Data Refresh**:
+- Stats refresh automatically using existing job polling mechanism (2-second interval)
+- Ensures metrics stay current during active workflow execution
+- No manual refresh required
+
+**Empty State**:
+- When ticket has no jobs, Stats tab is hidden from view
+- Tab appears automatically once first job is created
 
 ### Closing the Modal
 

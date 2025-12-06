@@ -325,7 +325,7 @@ The notification bell provides access to mention notifications:
 ### Tab Navigation
 
 **Ticket Detail Tabs**:
-- Details, Comments, Files tabs available
+- Details, Comments, Files, Stats tabs available
 - Active tab visually highlighted
 - Click tab headers to switch
 - Smooth transition between tabs
@@ -333,10 +333,15 @@ The notification bell provides access to mention notifications:
 - Defaults to Details tab when no parameter provided
 - Each tab content area has unified scrolling behavior
 - Tab containers manage overflow with single scroll area (no nested scrollbars)
+- Stats tab conditionally visible (only when ticket has at least one job)
 
 **Keyboard Navigation**:
 - Arrow keys (left/right) navigate between tabs
-- Cmd/Ctrl+1, +2, +3 for direct tab access
+- Cmd/Ctrl+1, +2, +3, +4 for direct tab access
+  - Cmd/Ctrl+1: Details tab
+  - Cmd/Ctrl+2: Comments tab
+  - Cmd/Ctrl+3: Files tab
+  - Cmd/Ctrl+4: Stats tab (when visible)
 - Tab order follows visual sequence
 - Ignored on mobile devices
 

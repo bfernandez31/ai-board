@@ -699,3 +699,146 @@ type Attachments = TicketAttachment[];  // Max 5 items
 - Seed script: `prisma/seed.ts`
 - Reserved projects: 1-2 for tests, 3 for development
 - Test user: `test@e2e.local` (never deleted)
+
+## TypeScript Types
+
+### Job-Related Types
+
+Extended types for job telemetry and statistics display.
+
+#### TicketJobWithStats
+
+Extended job type with full telemetry fields for Stats tab display. Used when fetching jobs with `?includeStats=true` query parameter.
+
+```typescript
+// lib/types/job-types.ts
+
+export interface TicketJobWithStats {
+  id: number;
+  command: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  startedAt: string;           // ISO 8601 timestamp
+  completedAt: string | null;  // ISO 8601 timestamp
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheCreationTokens: number | null;
+  costUsd: number | null;
+  durationMs: number | null;
+  model: string | null;
+  toolsUsed: string[];
+}
+```
+
+**Purpose**: Provides complete job telemetry for Stats tab aggregation and display
+
+**Usage**:
+- Returned by `/api/projects/:projectId/tickets/:id/jobs?includeStats=true`
+- Consumed by Stats tab components for metric calculation
+- Null values represent unavailable or incomplete telemetry data
+
+#### TicketStats
+
+Aggregated statistics computed from job telemetry for Stats tab display.
+
+```typescript
+// lib/stats/ticket-stats.ts
+
+export interface TicketStats {
+  totalCost: number;           // Sum of costUsd (USD)
+  totalDuration: number;       // Sum of durationMs (milliseconds)
+  totalInputTokens: number;    // Sum of inputTokens
+  totalOutputTokens: number;   // Sum of outputTokens
+  totalTokens: number;         // inputTokens + outputTokens
+  cacheReadTokens: number;     // Sum of cacheReadTokens
+  cacheEfficiency: number | null; // (cacheReadTokens / totalInputTokens) * 100, null if no input
+  toolUsage: ToolUsageCount[]; // Aggregated tool counts, sorted by frequency
+}
+```
+
+**Purpose**: Summary metrics calculated from all jobs associated with a ticket
+
+**Calculation Rules**:
+- Null values treated as 0 for summation
+- Cache efficiency is `null` when totalInputTokens is 0 (avoids division by zero)
+- Tool usage aggregates counts across all jobs, sorted descending by count
+
+**Usage**:
+- Computed client-side from `TicketJobWithStats[]` array
+- Displayed in summary cards at top of Stats tab
+- Updated automatically via job polling (2-second interval)
+
+#### ToolUsageCount
+
+Individual tool usage count for aggregated display.
+
+```typescript
+// lib/stats/ticket-stats.ts
+
+export interface ToolUsageCount {
+  tool: string;   // Tool name (Edit, Read, Bash, etc.)
+  count: number;  // Usage count across all jobs
+}
+```
+
+**Purpose**: Tracks frequency of tool usage for analytics
+
+**Usage**:
+- Part of `TicketStats.toolUsage` array
+- Displayed as badges sorted by frequency (most-used first)
+- Hidden when no tool usage data is available
+
+### Component-Specific Types
+
+Internal types used for Stats tab component rendering.
+
+#### JobTimelineItem
+
+Derived type for timeline row display in Stats tab.
+
+```typescript
+// components/ticket/job-timeline.tsx (internal)
+
+interface JobTimelineItem {
+  id: number;
+  stage: string;               // Derived from command (SPECIFY, PLAN, BUILD, VERIFY)
+  command: string;             // Original command
+  status: string;              // Job status
+  statusIcon: React.ReactNode; // Status indicator (✓, ✗, ⏸, ⏱, ⏳)
+  duration: string;            // Formatted "Xm Xs" or "—"
+  cost: string;                // Formatted "$X.XX" or "—"
+  model: string;               // Model name or "—"
+  startedAt: Date;             // For sorting
+  isExpandable: boolean;       // Has token data
+  tokenBreakdown: TokenBreakdown | null;
+}
+```
+
+**Purpose**: Presentational type for job timeline rows
+
+**Usage**:
+- Transformed from `TicketJobWithStats` for display
+- Includes formatted strings and UI elements
+- Internal to JobTimeline component
+
+#### TokenBreakdown
+
+Token details for expanded job row in timeline.
+
+```typescript
+// components/ticket/job-timeline-row.tsx (internal)
+
+interface TokenBreakdown {
+  inputTokens: string;         // Formatted with abbreviations (e.g., "25K")
+  outputTokens: string;
+  cacheReadTokens: string;
+  cacheCreationTokens: string;
+}
+```
+
+**Purpose**: Formatted token metrics for detail view
+
+**Usage**:
+- Displayed when user expands job row
+- Numbers formatted with K/M abbreviations for readability
+- Null values displayed as "—"
