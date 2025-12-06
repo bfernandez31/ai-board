@@ -201,6 +201,133 @@ export function useJobPolling(projectId: number) {
 - **2-Second Interval**: Real-time feel
 - **Cache Invalidation**: Automatically invalidates tickets cache when job reaches terminal state
 
+### Ticket Stats Hook
+
+**Hook** (`lib/hooks/use-ticket-stats.ts`):
+
+```typescript
+import { useMemo } from 'react';
+import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
+
+export interface TicketStats {
+  totalCost: number;
+  totalDuration: number;
+  totalTokens: number;
+  cacheEfficiency: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  jobs: TicketJobWithTelemetry[];
+  toolsUsage: Array<{ tool: string; count: number }>;
+  hasData: boolean;
+}
+
+export function useTicketStats(jobs: TicketJobWithTelemetry[]): TicketStats {
+  return useMemo(() => {
+    // Sort jobs chronologically (oldest first)
+    const sortedJobs = [...jobs].sort((a, b) => {
+      const dateA = new Date(a.startedAt).getTime();
+      const dateB = new Date(b.startedAt).getTime();
+      return dateA - dateB;
+    });
+
+    // Aggregate totals (null treated as 0)
+    const totalCost = jobs.reduce((sum, job) => sum + (job.costUsd ?? 0), 0);
+    const totalDuration = jobs.reduce((sum, job) => sum + (job.durationMs ?? 0), 0);
+    const inputTokens = jobs.reduce((sum, job) => sum + (job.inputTokens ?? 0), 0);
+    const outputTokens = jobs.reduce((sum, job) => sum + (job.outputTokens ?? 0), 0);
+    const cacheReadTokens = jobs.reduce((sum, job) => sum + (job.cacheReadTokens ?? 0), 0);
+    const cacheCreationTokens = jobs.reduce((sum, job) => sum + (job.cacheCreationTokens ?? 0), 0);
+
+    const totalTokens = inputTokens + outputTokens;
+    const cacheEfficiency = (inputTokens + cacheReadTokens) === 0
+      ? 0
+      : (cacheReadTokens / (inputTokens + cacheReadTokens)) * 100;
+
+    // Aggregate tools usage
+    const toolCounts = new Map<string, number>();
+    jobs.forEach(job => {
+      if (job.toolsUsed && Array.isArray(job.toolsUsed)) {
+        job.toolsUsed.forEach(tool => {
+          toolCounts.set(tool, (toolCounts.get(tool) || 0) + 1);
+        });
+      }
+    });
+
+    const toolsUsage = Array.from(toolCounts.entries())
+      .map(([tool, count]) => ({ tool, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const hasData = jobs.some(job =>
+      job.costUsd != null || job.inputTokens != null || job.durationMs != null
+    );
+
+    return {
+      totalCost,
+      totalDuration,
+      totalTokens,
+      cacheEfficiency,
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      cacheCreationTokens,
+      jobs: sortedJobs,
+      toolsUsage,
+      hasData,
+    };
+  }, [jobs]);
+}
+```
+
+**Features**:
+- **Memoization**: Computation only runs when jobs array changes
+- **Null Safety**: Treats null telemetry values as 0 for aggregation
+- **Chronological Sorting**: Jobs sorted by startedAt (oldest first)
+- **Tools Aggregation**: Counts all tool usage across jobs, sorted by frequency
+- **Cache Efficiency**: Standard formula with division-by-zero protection
+- **Data Detection**: `hasData` flag indicates if any job has meaningful telemetry
+
+**Usage in Stats Tab** (`components/ticket/ticket-stats.tsx`):
+
+```typescript
+import { useTicketStats } from '@/lib/hooks/use-ticket-stats';
+import type { Job } from '@prisma/client';
+import type { TicketJob } from '@/components/board/ticket-detail-modal';
+
+function TicketStats({ jobs, polledJobs }: {
+  jobs: Job[];
+  polledJobs: TicketJob[];
+}) {
+  // Merge full job data with polled status updates
+  const mergedJobs = useMemo(() => {
+    return jobs.map(job => {
+      const polledJob = polledJobs.find(p => p.id === job.id);
+      return {
+        ...job,
+        status: polledJob?.status ?? job.status,
+      };
+    });
+  }, [jobs, polledJobs]);
+
+  const stats = useTicketStats(mergedJobs);
+
+  return (
+    <div>
+      <StatsSummaryCards stats={stats} />
+      <JobsTimeline jobs={stats.jobs} />
+      <ToolsUsageSection toolsUsage={stats.toolsUsage} />
+    </div>
+  );
+}
+```
+
+**Real-Time Updates**:
+- Stats recalculate automatically when jobs array changes
+- Polled job status updates merge with full job data
+- Existing 2-second job polling provides real-time status updates
+- No additional API calls required
+
 ## Mutation Hooks
 
 ### Create Ticket Mutation

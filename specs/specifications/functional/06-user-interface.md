@@ -325,7 +325,7 @@ The notification bell provides access to mention notifications:
 ### Tab Navigation
 
 **Ticket Detail Tabs**:
-- Details, Comments, Files tabs available
+- Details, Comments, Files, Stats tabs available
 - Active tab visually highlighted
 - Click tab headers to switch
 - Smooth transition between tabs
@@ -336,7 +336,7 @@ The notification bell provides access to mention notifications:
 
 **Keyboard Navigation**:
 - Arrow keys (left/right) navigate between tabs
-- Cmd/Ctrl+1, +2, +3 for direct tab access
+- Cmd/Ctrl+1, +2, +3, +4 for direct tab access
 - Tab order follows visual sequence
 - Ignored on mobile devices
 
@@ -345,6 +345,12 @@ The notification bell provides access to mention notifications:
 - Shows number of comments: "Comments (5)"
 - Updates in real-time as comments added/deleted
 - Provides activity overview
+
+**Stats Tab Visibility**:
+- Stats tab only appears when ticket has at least one associated job
+- Automatically shown/hidden based on job data
+- Tab list dynamically adjusts from 3 to 4 columns when Stats tab is present
+- Grid layout: `grid-cols-3` (without Stats) or `grid-cols-4` (with Stats)
 
 **URL-Based Tab Selection**:
 - URL parameter `tab=comments` opens conversation tab directly

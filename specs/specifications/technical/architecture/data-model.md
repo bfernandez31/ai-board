@@ -320,6 +320,18 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   - Deleted when VERIFY to PLAN rollback occurs (job record removed as part of rollback)
 - AI-BOARD jobs (command like 'comment-%') don't block transitions or count toward rollback validation
 
+**Telemetry Data Usage**:
+- Telemetry fields aggregated and displayed in ticket Stats tab
+- Stats tab visibility: only shown when ticket has ≥1 job
+- Aggregated metrics calculated from all jobs on a ticket:
+  - Total cost: sum of all `costUsd` values
+  - Total duration: sum of all `durationMs` values
+  - Total tokens: sum of `inputTokens` + `outputTokens`
+  - Cache efficiency: `cacheReadTokens / (inputTokens + cacheReadTokens) * 100`
+- Tools usage aggregated from `toolsUsed` arrays across all jobs
+- Null telemetry values treated as 0 for aggregation
+- Real-time updates via existing 2-second job polling mechanism
+
 ### Comment
 
 Comments enable ticket collaboration with markdown support.
