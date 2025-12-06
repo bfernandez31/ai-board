@@ -1,0 +1,189 @@
+# Job Telemetry Data Contract
+# Feature: AIB-99 Add Stats Tab
+# Date: 2025-12-06
+#
+# This contract documents the extended job data required for the Stats tab.
+# No new API endpoints are created - the existing job polling endpoint is extended.
+
+openapi: 3.0.3
+info:
+  title: Ticket Stats - Job Telemetry Contract
+  version: 1.0.0
+  description: |
+    Extended job data contract for the Stats tab in the ticket detail modal.
+    The Stats tab reuses the existing job polling mechanism with telemetry fields.
+
+paths:
+  /api/projects/{projectId}/jobs/status:
+    get:
+      summary: Poll job status with telemetry (EXTENDED)
+      description: |
+        Existing endpoint extended to include telemetry fields for Stats tab.
+        Called by parent board component with 2-second polling interval.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Array of jobs with status and telemetry
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobWithTelemetry'
+
+components:
+  schemas:
+    JobWithTelemetry:
+      type: object
+      required:
+        - id
+        - ticketId
+        - command
+        - status
+        - startedAt
+        - toolsUsed
+      properties:
+        id:
+          type: integer
+          description: Job unique identifier
+          example: 42
+        ticketId:
+          type: integer
+          description: Parent ticket ID
+          example: 99
+        command:
+          type: string
+          description: Job command type
+          enum:
+            - specify
+            - plan
+            - implement
+            - verify
+            - quick-impl
+            - clean
+            - deploy-preview
+            - rollback-reset
+            - comment-specify
+            - comment-plan
+            - comment-build
+            - comment-verify
+          example: implement
+        status:
+          type: string
+          description: Current job status
+          enum:
+            - PENDING
+            - RUNNING
+            - COMPLETED
+            - FAILED
+            - CANCELLED
+          example: COMPLETED
+        startedAt:
+          type: string
+          format: date-time
+          description: When the job started
+          example: "2025-12-06T10:30:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the job completed (null if still running)
+          example: "2025-12-06T10:32:45Z"
+        inputTokens:
+          type: integer
+          nullable: true
+          description: Total input tokens consumed by all Claude API calls
+          example: 50000
+        outputTokens:
+          type: integer
+          nullable: true
+          description: Total output tokens generated
+          example: 12000
+        cacheReadTokens:
+          type: integer
+          nullable: true
+          description: Tokens read from cache (reduces cost)
+          example: 35000
+        cacheCreationTokens:
+          type: integer
+          nullable: true
+          description: Tokens written to cache
+          example: 8000
+        costUsd:
+          type: number
+          format: float
+          nullable: true
+          description: Total cost in USD for this job
+          example: 0.75
+        durationMs:
+          type: integer
+          nullable: true
+          description: Total Claude API duration in milliseconds
+          example: 45000
+        model:
+          type: string
+          nullable: true
+          description: Primary model used for the job
+          example: "claude-opus-4-5-20251101"
+        toolsUsed:
+          type: array
+          items:
+            type: string
+          description: List of tools used during the job
+          example: ["Edit", "Read", "Bash", "Glob", "Write"]
+
+    TicketStats:
+      type: object
+      description: Computed statistics from job telemetry (client-side aggregation)
+      properties:
+        totalCost:
+          type: number
+          format: float
+          description: Sum of all job costs in USD
+          example: 1.50
+        totalDuration:
+          type: integer
+          description: Sum of all job durations in milliseconds
+          example: 120000
+        totalTokens:
+          type: integer
+          description: Sum of input + output tokens
+          example: 125000
+        cacheEfficiency:
+          type: number
+          format: float
+          description: Cache hit rate as percentage (0-100)
+          example: 28.6
+        inputTokens:
+          type: integer
+          description: Sum of all input tokens
+          example: 100000
+        outputTokens:
+          type: integer
+          description: Sum of all output tokens
+          example: 25000
+        cacheReadTokens:
+          type: integer
+          description: Sum of all cache read tokens
+          example: 70000
+        cacheCreationTokens:
+          type: integer
+          description: Sum of all cache creation tokens
+          example: 15000
+        toolsUsage:
+          type: array
+          items:
+            type: object
+            properties:
+              tool:
+                type: string
+                example: "Edit"
+              count:
+                type: integer
+                example: 15
+          description: Tool frequency sorted by count descending

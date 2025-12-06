@@ -41,3 +41,25 @@ export interface DualJobState {
 
 // Job type imported from Prisma schema
 import type { Job } from '@prisma/client';
+
+/**
+ * TicketJobWithTelemetry Interface
+ *
+ * Extended job interface with full telemetry data for Stats tab display.
+ * Used to type jobs passed to ticket-stats and jobs-timeline components.
+ */
+export interface TicketJobWithTelemetry {
+  id: number;
+  command: string;
+  status: string;
+  startedAt: Date | string;
+  completedAt: Date | string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheCreationTokens: number | null;
+  costUsd: number | null;
+  durationMs: number | null;
+  model: string | null;
+  toolsUsed: string[];
+}

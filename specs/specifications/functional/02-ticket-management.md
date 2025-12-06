@@ -164,9 +164,49 @@ The detail modal:
 - Centers with appropriate sizing on desktop
 - Uses dark theme styling
 - Provides clear typography and visual hierarchy
-- Content organized in tabs (Details, Comments, Files)
+- Content organized in tabs (Details, Comments, Files, Stats)
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
+
+### Stats Tab
+
+The Stats tab displays aggregated telemetry metrics from all workflow jobs associated with the ticket. This tab provides visibility into resource consumption, costs, and workflow efficiency.
+
+**Visibility**:
+- Stats tab only appears when the ticket has at least one associated job
+- Automatically shown/hidden based on job presence
+- No empty state shown when tab is absent
+
+**Summary Metrics**:
+- **Total Cost**: Aggregated cost in USD from all jobs (formatted as $X.XX)
+- **Total Duration**: Combined execution time across all jobs (formatted as Xm Xs)
+- **Total Tokens**: Sum of input and output tokens used
+- **Cache Efficiency**: Percentage of cache hits (cacheReadTokens / (inputTokens + cacheReadTokens))
+
+**Jobs Timeline**:
+- Chronological list of all jobs (oldest first)
+- Each job displays:
+  - Command/stage name (e.g., "specify", "implement", "verify")
+  - Status icon (success checkmark, error icon, pending spinner)
+  - Duration (formatted time)
+  - Cost (formatted USD)
+  - Model used (e.g., "claude-sonnet-4-5")
+- Jobs are expandable to reveal detailed token breakdown:
+  - Input tokens
+  - Output tokens
+  - Cache read tokens
+  - Cache creation tokens
+
+**Tools Usage**:
+- Aggregated count of all tools used across jobs
+- Sorted by frequency (most-used first)
+- Displayed as badges with counts (e.g., "Edit (5)", "Read (3)")
+- Empty state message when no tools recorded
+
+**Real-Time Updates**:
+- Stats automatically update as jobs complete via existing 2-second job polling
+- No manual refresh required
+- Metrics recalculate automatically when job data changes
 
 ### Closing the Modal
 
