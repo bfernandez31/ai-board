@@ -144,6 +144,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Focus trapped within modal
 - Content scrolling managed at tab level (single scroll area per tab)
 - No nested scrollbars within modal content
+- Mobile spacing optimized: tab list has no bottom margin on mobile (0px) to maximize content area
 
 **Closing Methods**:
 - Close button (X) in header
