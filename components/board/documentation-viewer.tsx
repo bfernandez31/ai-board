@@ -30,6 +30,7 @@ const DocumentTypeLabels: Record<DocumentType, string> = {
   spec: 'Specification',
   plan: 'Implementation Plan',
   tasks: 'Task Breakdown',
+  summary: 'Implementation Summary',
 };
 
 interface DocumentationViewerProps {
@@ -331,8 +332,8 @@ export default function DocumentationViewer({
             </ScrollArea>
           )}
 
-          {/* Editor mode - show when editing */}
-          {data && isEditing && (
+          {/* Editor mode - show when editing (summary is read-only, never edited) */}
+          {data && isEditing && docType !== 'summary' && (
             <div className="h-[70vh] flex flex-col">
               <DocumentationEditor
                 projectId={projectId}

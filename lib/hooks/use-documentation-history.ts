@@ -21,7 +21,7 @@ import type { DocumentationHistoryResponse, DocumentationDiffResponse } from '@/
 async function fetchDocumentationHistory(
   projectId: number,
   ticketId: number,
-  docType: 'spec' | 'plan' | 'tasks'
+  docType: 'spec' | 'plan' | 'tasks' | 'summary'
 ): Promise<DocumentationHistoryResponse> {
   const res = await fetch(
     `/api/projects/${projectId}/docs/history?ticketId=${ticketId}&docType=${docType}`
@@ -58,7 +58,7 @@ async function fetchDocumentationHistory(
 export function useDocumentationHistory(
   projectId: number,
   ticketId: number,
-  docType: 'spec' | 'plan' | 'tasks',
+  docType: 'spec' | 'plan' | 'tasks' | 'summary',
   enabled: boolean = false
 ) {
   return useQuery({
@@ -85,7 +85,7 @@ export function useDocumentationHistory(
 async function fetchDocumentationDiff(
   projectId: number,
   ticketId: number,
-  docType: 'spec' | 'plan' | 'tasks',
+  docType: 'spec' | 'plan' | 'tasks' | 'summary',
   sha: string
 ): Promise<DocumentationDiffResponse> {
   const res = await fetch(
@@ -123,7 +123,7 @@ async function fetchDocumentationDiff(
 export function useDocumentationDiff(
   projectId: number,
   ticketId: number,
-  docType: 'spec' | 'plan' | 'tasks',
+  docType: 'spec' | 'plan' | 'tasks' | 'summary',
   sha: string | null
 ) {
   return useQuery({

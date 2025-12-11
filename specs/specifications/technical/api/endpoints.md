@@ -1132,6 +1132,163 @@ Delete image at specific index.
 - `404`: Ticket, project, or attachment index not found
 - `500`: Cloudinary error (logged but doesn't block deletion)
 
+## Documentation Endpoints
+
+Documentation endpoints provide read and write access to workflow documentation files (spec.md, plan.md, tasks.md, summary.md) stored in the `specs/{branch}/` directory of the GitHub repository.
+
+### GET /api/projects/:projectId/tickets/:id/spec
+
+Fetch spec.md content for a ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "content": "# Feature Specification\n\n...",
+  "metadata": {
+    "path": "specs/042-add-login-feature/spec.md",
+    "branch": "042-add-login-feature",
+    "sha": "a1b2c3d4e5f6",
+    "size": 4567
+  }
+}
+```
+
+**Branch Resolution**:
+- **SHIP stage**: Fetches from main branch
+- **All other stages**: Fetches from ticket's feature branch
+
+**Errors**:
+- `400`: Invalid project or ticket ID
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member, or ticket belongs to different project
+- `404`: Project, ticket, or spec.md file not found
+- `500`: GitHub API error
+
+### GET /api/projects/:projectId/tickets/:id/plan
+
+Fetch plan.md content for a ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "content": "# Implementation Plan\n\n...",
+  "metadata": {
+    "path": "specs/042-add-login-feature/plan.md",
+    "branch": "042-add-login-feature",
+    "sha": "b2c3d4e5f6a1",
+    "size": 8901
+  }
+}
+```
+
+**Branch Resolution**:
+- **SHIP stage**: Fetches from main branch
+- **All other stages**: Fetches from ticket's feature branch
+
+**Errors**:
+- `400`: Invalid project or ticket ID
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member, or ticket belongs to different project
+- `404`: Project, ticket, or plan.md file not found
+- `500`: GitHub API error
+
+### GET /api/projects/:projectId/tickets/:id/tasks
+
+Fetch tasks.md content for a ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "content": "# Tasks: Add Login Feature\n\n...",
+  "metadata": {
+    "path": "specs/042-add-login-feature/tasks.md",
+    "branch": "042-add-login-feature",
+    "sha": "c3d4e5f6a1b2",
+    "size": 3456
+  }
+}
+```
+
+**Branch Resolution**:
+- **SHIP stage**: Fetches from main branch
+- **All other stages**: Fetches from ticket's feature branch
+
+**Errors**:
+- `400`: Invalid project or ticket ID
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member, or ticket belongs to different project
+- `404`: Project, ticket, or tasks.md file not found
+- `500`: GitHub API error
+
+### GET /api/projects/:projectId/tickets/:id/summary
+
+Fetch summary.md content for a ticket (read-only).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "content": "# Implementation Summary\n\n## Changes Made\n...",
+  "metadata": {
+    "path": "specs/042-add-login-feature/summary.md",
+    "branch": "042-add-login-feature",
+    "sha": "d4e5f6a1b2c3",
+    "size": 2345
+  }
+}
+```
+
+**Branch Resolution**:
+- **SHIP stage**: Fetches from main branch
+- **All other stages**: Fetches from ticket's feature branch
+
+**Availability**:
+- Only available for FULL workflow tickets with completed implement job
+- Returns 404 for QUICK or CLEAN workflow types
+- Returns 404 if implement job has not completed
+
+**Summary Content**:
+- Implementation details and changes made during BUILD stage
+- Key architectural decisions
+- Files modified or created
+- Generated automatically by workflow during implement step
+
+**Errors**:
+- `400`: Invalid project or ticket ID
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member, or ticket belongs to different project
+- `404`: Project, ticket, or summary.md file not found (includes tickets without implement job or non-FULL workflows)
+- `500`: GitHub API error
+
+**Note**: Unlike spec.md, plan.md, and tasks.md, the summary.md file is read-only and cannot be edited through the UI or API.
+
 ## Job Status Endpoints
 
 ### GET /api/projects/:projectId/jobs/status

@@ -10,7 +10,7 @@ import { z } from 'zod';
 /**
  * Supported documentation types
  */
-export const DocumentTypeSchema = z.enum(['spec', 'plan', 'tasks']);
+export const DocumentTypeSchema = z.enum(['spec', 'plan', 'tasks', 'summary']);
 
 /**
  * Infer TypeScript type from schema
@@ -56,8 +56,8 @@ export const DocumentContentSchema = z.object({
     branch: z.string().min(1).max(200),
     projectId: z.number().int().positive(),
     docType: DocumentTypeSchema,
-    fileName: z.string().regex(/^(spec|plan|tasks)\.md$/),
-    filePath: z.string().regex(/^specs\/[^/]+\/(spec|plan|tasks)\.md$/),
+    fileName: z.string().regex(/^(spec|plan|tasks|summary)\.md$/),
+    filePath: z.string().regex(/^specs\/[^/]+\/(spec|plan|tasks|summary)\.md$/),
     fetchedAt: z.string().datetime(),
   }),
 });

@@ -51,13 +51,13 @@ export const queryKeys = {
     /**
      * Documentation content for a specific ticket and document type
      */
-    documentation: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks') =>
+    documentation: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks' | 'summary') =>
       ['projects', projectId, 'tickets', ticketId, 'documentation', docType] as const,
 
     /**
      * Documentation commit history for a specific ticket and document type
      */
-    documentationHistory: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks') =>
+    documentationHistory: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks' | 'summary') =>
       ['projects', projectId, 'tickets', ticketId, 'documentation', docType, 'history'] as const,
 
     /**

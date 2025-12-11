@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Summary Document API
+  description: API endpoint for fetching implementation summary content
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/summary:
+    get:
+      summary: Get summary document content
+      description: |
+        Retrieves the summary.md file for a ticket from GitHub.
+        - Returns content from feature branch for BUILD/VERIFY stages
+        - Returns content from main branch for SHIP stage
+        - Requires completed 'implement' job
+        - Requires FULL workflow type
+      operationId: getSummary
+      tags:
+        - Documentation
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 123
+      responses:
+        '200':
+          description: Summary content retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentContent'
+              example:
+                content: |
+                  # Implementation Summary
+
+                  ## Changes Made
+                  - Added new component
+                  - Updated API endpoint
+
+                  ## Files Modified
+                  - src/components/Example.tsx
+                  - app/api/example/route.ts
+                metadata:
+                  ticketId: 123
+                  branch: "AIB-102-add-button-to"
+                  projectId: 1
+                  docType: "summary"
+                  fileName: "summary.md"
+                  filePath: "specs/AIB-102-add-button-to/summary.md"
+                  fetchedAt: "2025-12-11T10:30:00.000Z"
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidProjectId:
+                  value:
+                    error: "Invalid project ID"
+                    code: "VALIDATION_ERROR"
+                invalidTicketId:
+                  value:
+                    error: "Invalid ticket ID"
+                    code: "VALIDATION_ERROR"
+        '403':
+          description: Ticket belongs to different project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Forbidden"
+                code: "WRONG_PROJECT"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                projectNotFound:
+                  value:
+                    error: "Project not found"
+                    code: "PROJECT_NOT_FOUND"
+                ticketNotFound:
+                  value:
+                    error: "Ticket not found"
+                    code: "TICKET_NOT_FOUND"
+                noBranch:
+                  value:
+                    error: "Summary not available"
+                    code: "SUMMARY_NOT_AVAILABLE"
+                    message: "Ticket does not have a branch assigned"
+                noImplementJob:
+                  value:
+                    error: "Summary not available"
+                    code: "SUMMARY_NOT_AVAILABLE"
+                    message: "Ticket does not have a completed \"implement\" job"
+                fileNotFound:
+                  value:
+                    error: "Summary file not found"
+                    code: "FILE_NOT_FOUND"
+                    message: "File does not exist at specs/AIB-102-add-button-to/summary.md"
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "GitHub API rate limit exceeded"
+                code: "RATE_LIMIT"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                githubError:
+                  value:
+                    error: "Failed to fetch summary"
+                    code: "GITHUB_API_ERROR"
+                internalError:
+                  value:
+                    error: "Internal server error"
+                    code: "INTERNAL_ERROR"
+
+components:
+  schemas:
+    DocumentContent:
+      type: object
+      required:
+        - content
+        - metadata
+      properties:
+        content:
+          type: string
+          description: Markdown content of the summary file
+          minLength: 1
+          maxLength: 1048576
+        metadata:
+          type: object
+          required:
+            - ticketId
+            - branch
+            - projectId
+            - docType
+            - fileName
+            - filePath
+            - fetchedAt
+          properties:
+            ticketId:
+              type: integer
+              description: Ticket ID
+              minimum: 1
+            branch:
+              type: string
+              description: Branch from which content was fetched
+              minLength: 1
+              maxLength: 200
+            projectId:
+              type: integer
+              description: Project ID
+              minimum: 1
+            docType:
+              type: string
+              enum: [summary]
+              description: Document type
+            fileName:
+              type: string
+              enum: [summary.md]
+              description: File name
+            filePath:
+              type: string
+              pattern: ^specs\/[^/]+\/summary\.md$
+              description: Full path to file in repository
+            fetchedAt:
+              type: string
+              format: date-time
+              description: Timestamp when content was fetched
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - VALIDATION_ERROR
+            - PROJECT_NOT_FOUND
+            - TICKET_NOT_FOUND
+            - WRONG_PROJECT
+            - SUMMARY_NOT_AVAILABLE
+            - FILE_NOT_FOUND
+            - RATE_LIMIT
+            - GITHUB_API_ERROR
+            - INTERNAL_ERROR
+        message:
+          type: string
+          description: Additional error context
