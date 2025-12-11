@@ -369,6 +369,95 @@ interface TransitionResponse {
 }
 ```
 
+## Documentation Schemas
+
+### DocumentTypeSchema
+
+```typescript
+export const DocumentTypeSchema = z.enum(['spec', 'plan', 'tasks', 'summary']);
+
+export type DocumentType = z.infer<typeof DocumentTypeSchema>;
+```
+
+**Validation**:
+- **spec**: Specification document (spec.md)
+- **plan**: Implementation plan document (plan.md)
+- **tasks**: Task breakdown document (tasks.md)
+- **summary**: Implementation summary document (summary.md, read-only)
+
+**Usage**:
+- Used in documentation viewer component to determine which file to fetch
+- Passed as route parameter or component prop
+- Validated in API routes and components
+
+### DocumentContentSchema
+
+```typescript
+export const DocumentContentSchema = z.object({
+  content: z.string().min(1).max(1048576), // Max 1MB
+  metadata: z.object({
+    ticketId: z.number().int().positive(),
+    branch: z.string().min(1).max(200),
+    projectId: z.number().int().positive(),
+    docType: DocumentTypeSchema,
+    fileName: z.string().regex(/^(spec|plan|tasks|summary)\.md$/),
+    filePath: z.string().regex(/^specs\/[^/]+\/(spec|plan|tasks|summary)\.md$/),
+    fetchedAt: z.string().datetime(),
+  }),
+});
+
+export type DocumentContent = z.infer<typeof DocumentContentSchema>;
+```
+
+**Validation Rules**:
+- **content**: Document markdown content, 1 byte to 1MB
+- **metadata.ticketId**: Positive integer identifying the ticket
+- **metadata.branch**: Git branch name (1-200 characters)
+- **metadata.projectId**: Positive integer identifying the project
+- **metadata.docType**: One of: 'spec', 'plan', 'tasks', 'summary'
+- **metadata.fileName**: Must match pattern `(spec|plan|tasks|summary).md`
+- **metadata.filePath**: Must match pattern `specs/{branch}/(spec|plan|tasks|summary).md`
+- **metadata.fetchedAt**: ISO 8601 datetime string
+
+### DocumentErrorSchema
+
+```typescript
+export enum DocumentErrorCode {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  PROJECT_NOT_FOUND = 'PROJECT_NOT_FOUND',
+  TICKET_NOT_FOUND = 'TICKET_NOT_FOUND',
+  WRONG_PROJECT = 'WRONG_PROJECT',
+  BRANCH_NOT_ASSIGNED = 'BRANCH_NOT_ASSIGNED',
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
+  NOT_AVAILABLE_YET = 'NOT_AVAILABLE_YET',
+  NOT_MERGED = 'NOT_MERGED',
+  RATE_LIMIT = 'RATE_LIMIT',
+  GITHUB_API_ERROR = 'GITHUB_API_ERROR',
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+}
+
+export const DocumentErrorSchema = z.object({
+  error: z.string(),
+  code: z.nativeEnum(DocumentErrorCode),
+  message: z.string().optional(),
+});
+
+export type DocumentError = z.infer<typeof DocumentErrorSchema>;
+```
+
+**Error Codes**:
+- **VALIDATION_ERROR**: Invalid request parameters (project ID, ticket ID)
+- **PROJECT_NOT_FOUND**: Project does not exist
+- **TICKET_NOT_FOUND**: Ticket does not exist
+- **WRONG_PROJECT**: Ticket belongs to different project
+- **BRANCH_NOT_ASSIGNED**: Ticket has no branch assigned yet
+- **FILE_NOT_FOUND**: Documentation file not found in repository
+- **NOT_AVAILABLE_YET**: Document not yet created (e.g., plan before planning stage)
+- **NOT_MERGED**: Document not merged to main branch (for SHIP stage tickets)
+- **RATE_LIMIT**: GitHub API rate limit exceeded
+- **GITHUB_API_ERROR**: GitHub API returned an error
+- **INTERNAL_ERROR**: Unexpected server error
+
 ## Type Inference
 
 Zod schemas provide TypeScript type inference:

@@ -156,6 +156,44 @@ Clicking any ticket card opens a detail modal displaying:
   - Workflow type indicator (⚡ for quick implementation, ✨ for cleanup)
   - AI model badge (SONNET for standard workflows, OPUS for cleanup workflows)
 
+### Documentation Buttons
+
+The ticket detail modal provides quick access to workflow documentation files:
+
+**Spec Button**:
+- Displays for tickets with completed specify job
+- Opens modal showing spec.md content
+- Read-only and editable modes available
+- Icon: FileText
+
+**Plan Button**:
+- Displays for tickets with completed plan job
+- Opens modal showing plan.md content
+- Read-only and editable modes available
+- Icon: FileText
+
+**Tasks Button**:
+- Displays for tickets with completed plan job (tasks generated after planning)
+- Opens modal showing tasks.md content
+- Read-only and editable modes available
+- Icon: ListTodo
+
+**Summary Button**:
+- Displays for FULL workflow tickets with completed implement job
+- Opens modal showing summary.md content (implementation details, changes made, key decisions, files modified)
+- Read-only mode only (no edit functionality)
+- Icon: FileOutput
+- Fetches content from feature branch for BUILD/VERIFY stages
+- Fetches content from main branch for SHIP stage
+- Not available for QUICK or CLEAN workflow types (summary files only created during full workflow implementation)
+
+**Common Behaviors**:
+- All documentation modals support commit history viewing
+- Content displayed in formatted markdown
+- Loading states shown during fetch operations
+- Error messages displayed if file cannot be fetched
+- Modal can be closed via close button, Escape key, or clicking outside
+
 ### Modal Behavior
 
 The detail modal:
