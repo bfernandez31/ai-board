@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
+import { Button } from '@/components/ui/button';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -42,11 +45,19 @@ export default async function ProjectSettingsPage({
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
-          <p className="text-muted-foreground mt-2">
-            Configure default behavior for {project.name}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
+            <p className="text-muted-foreground mt-2">
+              Configure default behavior for {project.name}
+            </p>
+          </div>
+          <Link href={`/projects/${projectId}/board`}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Board
+            </Button>
+          </Link>
         </div>
 
         <div className="space-y-6">
