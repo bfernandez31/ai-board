@@ -127,6 +127,19 @@ When no projects exist:
 
 ## Project Settings
 
+### Settings Page Navigation
+
+**Access**:
+- Settings page accessible from project menu or direct URL `/projects/{projectId}/settings`
+- Available to project owners and members
+
+**Page Layout**:
+- Header displays "Project Settings" title with project name
+- "Back to Board" button in top-right corner of settings header
+- Button displays left arrow icon with "Back to Board" text
+- Navigates to `/projects/{projectId}/board`
+- Outline variant styling for secondary action appearance
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:
