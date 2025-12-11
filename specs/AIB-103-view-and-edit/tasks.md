@@ -18,8 +18,8 @@
 
 **Purpose**: Create TypeScript interfaces and shared utilities that all user stories depend on
 
-- [ ] T001 [P] Create constitution TypeScript interfaces in lib/types/constitution.ts
-- [ ] T002 [P] Create constitution fetcher utility in lib/github/constitution-fetcher.ts
+- [X] T001 [P] Create constitution TypeScript interfaces in lib/types/constitution.ts ✅ DONE
+- [X] T002 [P] Create constitution fetcher utility in lib/github/constitution-fetcher.ts ✅ DONE
 
 ---
 
@@ -29,13 +29,13 @@
 
 **⚠️ CRITICAL**: No user story UI work can begin until this phase is complete
 
-- [ ] T003 Create GET endpoint for constitution content in app/api/projects/[projectId]/constitution/route.ts
-- [ ] T004 Add PUT endpoint for constitution update in app/api/projects/[projectId]/constitution/route.ts
-- [ ] T005 [P] Create history endpoint in app/api/projects/[projectId]/constitution/history/route.ts
-- [ ] T006 [P] Create diff endpoint in app/api/projects/[projectId]/constitution/diff/route.ts
-- [ ] T007 Create useConstitution query hook in lib/hooks/use-constitution.ts
-- [ ] T008 [P] Create useConstitutionHistory query hook in lib/hooks/use-constitution-history.ts
-- [ ] T009 [P] Create useConstitutionDiff query hook in lib/hooks/use-constitution-history.ts
+- [X] T003 Create GET endpoint for constitution content in app/api/projects/[projectId]/constitution/route.ts ✅ DONE
+- [X] T004 Add PUT endpoint for constitution update in app/api/projects/[projectId]/constitution/route.ts ✅ DONE
+- [X] T005 [P] Create history endpoint in app/api/projects/[projectId]/constitution/history/route.ts ✅ DONE
+- [X] T006 [P] Create diff endpoint in app/api/projects/[projectId]/constitution/diff/route.ts ✅ DONE
+- [X] T007 Create useConstitution query hook in lib/hooks/use-constitution.ts ✅ DONE
+- [X] T008 [P] Create useConstitutionHistory query hook in lib/hooks/use-constitution-history.ts ✅ DONE
+- [X] T009 [P] Create useConstitutionDiff query hook in lib/hooks/use-constitution-history.ts ✅ DONE
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -49,11 +49,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create ConstitutionCard component in components/settings/constitution-card.tsx
-- [ ] T011 [US1] Create ConstitutionViewer modal with View tab in components/settings/constitution-viewer.tsx
-- [ ] T012 [US1] Integrate markdown rendering using react-markdown in ConstitutionViewer
-- [ ] T013 [US1] Add empty state handling for missing constitution file in ConstitutionViewer
-- [ ] T014 [US1] Add ConstitutionCard to project settings page in app/projects/[projectId]/settings/page.tsx
+- [X] T010 [US1] Create ConstitutionCard component in components/settings/constitution-card.tsx ✅ DONE
+- [X] T011 [US1] Create ConstitutionViewer modal with View tab in components/settings/constitution-viewer.tsx ✅ DONE
+- [X] T012 [US1] Integrate markdown rendering using react-markdown in ConstitutionViewer ✅ DONE
+- [X] T013 [US1] Add empty state handling for missing constitution file in ConstitutionViewer ✅ DONE
+- [X] T014 [US1] Add ConstitutionCard to project settings page in app/projects/[projectId]/settings/page.tsx ✅ DONE
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can view constitution content
 
@@ -67,11 +67,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add Edit tab to ConstitutionViewer with textarea in components/settings/constitution-viewer.tsx
-- [ ] T016 [US2] Implement useConstitutionMutation for save operation in lib/hooks/use-constitution.ts
-- [ ] T017 [US2] Add markdown validation before save using existing validateMarkdown utility
-- [ ] T018 [US2] Add unsaved changes confirmation dialog to ConstitutionViewer
-- [ ] T019 [US2] Add loading and error states for save operation in Edit tab
+- [X] T015 [US2] Add Edit tab to ConstitutionViewer with textarea in components/settings/constitution-viewer.tsx ✅ DONE
+- [X] T016 [US2] Implement useConstitutionMutation for save operation in lib/hooks/use-constitution.ts ✅ DONE
+- [X] T017 [US2] Add markdown validation before save using existing validateMarkdown utility ✅ DONE
+- [X] T018 [US2] Add unsaved changes confirmation dialog to ConstitutionViewer ✅ DONE
+- [X] T019 [US2] Add loading and error states for save operation in Edit tab ✅ DONE
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - users can view and edit constitution
 
@@ -85,10 +85,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Add History tab to ConstitutionViewer in components/settings/constitution-viewer.tsx
-- [ ] T021 [US3] Integrate CommitHistoryViewer component for commit list display
-- [ ] T022 [US3] Integrate DiffViewer component for selected commit diff display
-- [ ] T023 [US3] Add empty history state handling for new files with no commits
+- [X] T020 [US3] Add History tab to ConstitutionViewer in components/settings/constitution-viewer.tsx ✅ DONE
+- [X] T021 [US3] Integrate CommitHistoryViewer component for commit list display ✅ DONE
+- [X] T022 [US3] Integrate DiffViewer component for selected commit diff display ✅ DONE
+- [X] T023 [US3] Add empty history state handling for new files with no commits ✅ DONE
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -98,10 +98,10 @@
 
 **Purpose**: Final improvements and edge case handling
 
-- [ ] T024 [P] Add error toast notifications for GitHub API failures
-- [ ] T025 [P] Add loading skeletons for constitution content fetch
-- [ ] T026 Verify keyboard accessibility for all constitution viewer interactions
-- [ ] T027 Run quickstart.md validation to verify feature works end-to-end
+- [X] T024 [P] Add error toast notifications for GitHub API failures ✅ DONE
+- [X] T025 [P] Add loading skeletons for constitution content fetch ✅ DONE
+- [X] T026 Verify keyboard accessibility for all constitution viewer interactions ✅ DONE
+- [X] T027 Run quickstart.md validation to verify feature works end-to-end ✅ DONE
 
 ---
 
