@@ -162,6 +162,91 @@ it('should return "New Command Display Name" for new-command', () => {
 - No code changes required for new assistance commands
 - Test fallback pattern with example command
 
+## Constitution Fetcher
+
+### Purpose
+
+Provides utility functions for fetching and managing constitution files from GitHub repositories with test environment support.
+
+### File Location
+
+`lib/github/constitution-fetcher.ts`
+
+### API Reference
+
+**Function**: `fetchConstitutionContent(githubOwner: string, githubRepo: string): Promise<{ content: string; exists: boolean }>`
+
+Fetches constitution markdown content from `.specify/memory/constitution.md` in the project repository.
+
+**Parameters**:
+- `githubOwner` (string): GitHub repository owner (org or user)
+- `githubRepo` (string): GitHub repository name
+
+**Returns**: Promise resolving to object with:
+- `content` (string): Raw markdown content
+- `exists` (boolean): Whether file exists in repository
+
+**Test Environment**:
+- Returns mock constitution content when `NODE_ENV !== 'production'`
+- Consistent test data for E2E testing
+
+**Errors**:
+- Throws if GitHub API request fails
+- Returns `exists: false` if file not found (404)
+
+**Function**: `updateConstitutionContent(githubOwner: string, githubRepo: string, content: string): Promise<void>`
+
+Updates constitution file content via GitHub API commit.
+
+**Parameters**:
+- `githubOwner` (string): GitHub repository owner
+- `githubRepo` (string): GitHub repository name
+- `content` (string): New markdown content
+
+**Behavior**:
+- Creates commit with message "Update constitution"
+- Uses authenticated GitHub API (PAT token)
+- Test mode: returns success without persisting changes
+
+**Function**: `fetchConstitutionHistory(githubOwner: string, githubRepo: string): Promise<ConstitutionCommit[]>`
+
+Fetches commit history for constitution file.
+
+**Returns**: Array of commits with:
+- `sha` (string): Commit SHA hash
+- `message` (string): Commit message
+- `author` (string): Author name
+- `date` (string): ISO 8601 timestamp
+- `url` (string): GitHub commit URL
+
+**Function**: `fetchConstitutionDiff(githubOwner: string, githubRepo: string, sha: string): Promise<ConstitutionDiff>`
+
+Fetches diff for specific commit.
+
+**Parameters**:
+- `sha` (string): Commit SHA to fetch diff for
+
+**Returns**: Object with:
+- `additions` (string[]): Added lines
+- `deletions` (string[]): Removed lines
+- `unchanged` (string[]): Unchanged lines
+
+### Implementation Details
+
+**GitHub API Integration**:
+- Uses Octokit for repository operations
+- Authenticates with `GITHUB_TOKEN` or `GH_PAT`
+- Handles rate limiting and network errors
+- Caches responses at TanStack Query level
+
+**Test Mode Detection**:
+```typescript
+const isTestMode = process.env.NODE_ENV !== 'production';
+if (isTestMode) {
+  return mockConstitutionData;
+}
+```
+
 ## Conversation Events
 
 ### Purpose

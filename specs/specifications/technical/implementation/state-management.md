@@ -201,6 +201,93 @@ export function useJobPolling(projectId: number) {
 - **2-Second Interval**: Real-time feel
 - **Cache Invalidation**: Automatically invalidates tickets cache when job reaches terminal state
 
+### Constitution Hooks
+
+**Constitution Content Hook** (`lib/hooks/use-constitution.ts`):
+
+```typescript
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+export function useConstitution(projectId: number) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'constitution'],
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/constitution`);
+      if (!response.ok) throw new Error('Failed to fetch constitution');
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useUpdateConstitution(projectId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (content: string) => {
+      const response = await fetch(`/api/projects/${projectId}/constitution`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) throw new Error('Failed to update constitution');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['projects', projectId, 'constitution'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['projects', projectId, 'constitution', 'history'],
+      });
+    },
+  });
+}
+```
+
+**Constitution History Hook** (`lib/hooks/use-constitution-history.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+export function useConstitutionHistory(projectId: number) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'constitution', 'history'],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/constitution/history`
+      );
+      if (!response.ok) throw new Error('Failed to fetch history');
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useConstitutionDiff(projectId: number, sha: string | null) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'constitution', 'diff', sha],
+    queryFn: async () => {
+      if (!sha) return null;
+      const response = await fetch(
+        `/api/projects/${projectId}/constitution/diff?sha=${sha}`
+      );
+      if (!response.ok) throw new Error('Failed to fetch diff');
+      return response.json();
+    },
+    enabled: !!sha,
+    staleTime: 1000 * 60 * 10, // 10 minutes (historical data)
+  });
+}
+```
+
+**Features**:
+- **Constitution Content**: Fetches and updates constitution markdown
+- **Optimistic Updates**: UI updates immediately on save
+- **Cache Invalidation**: Invalidates both content and history on update
+- **Test Mode Support**: Handles mock responses in test environment
+- **Conditional Diff**: Only fetches diff when SHA is provided
+
 ### Ticket Stats Hook
 
 **Hook** (`lib/hooks/use-ticket-stats.ts`):
