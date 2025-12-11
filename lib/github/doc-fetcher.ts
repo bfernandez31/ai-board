@@ -10,7 +10,7 @@ import { Octokit } from '@octokit/rest';
 /**
  * Supported documentation types for viewing
  */
-export type DocumentType = 'spec' | 'plan' | 'tasks';
+export type DocumentType = 'spec' | 'plan' | 'tasks' | 'summary';
 
 /**
  * File names for documentation types
@@ -20,6 +20,7 @@ export const DocumentTypeFiles: Record<DocumentType, string> = {
   spec: 'spec.md',
   plan: 'plan.md',
   tasks: 'tasks.md',
+  summary: 'summary.md',
 };
 
 /**

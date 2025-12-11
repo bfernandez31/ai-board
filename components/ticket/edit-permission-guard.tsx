@@ -2,8 +2,9 @@ import { Stage } from '@prisma/client';
 
 /**
  * Document type that can be edited
+ * Note: 'summary' is read-only and intentionally not included in EDIT_PERMISSIONS
  */
-export type DocType = 'spec' | 'plan' | 'tasks' | 'images';
+export type DocType = 'spec' | 'plan' | 'tasks' | 'images' | 'summary';
 
 /**
  * Stage-based permission rules for documentation editing

@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3 } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -278,10 +278,20 @@ export function TicketDetailModal({
     );
   }, [localTicket?.branch, jobs]);
 
+  // Check if "View Summary" button should be visible
+  const hasCompletedImplementJob = useMemo(() => {
+    if (!localTicket?.branch || jobs.length === 0) return false;
+    return jobs.some(
+      (job) => job.command === 'implement' && job.status === 'COMPLETED'
+    );
+  }, [localTicket?.branch, jobs]);
+
   // Both plan and tasks buttons have the same visibility logic
   // (tasks.md is generated at the same time as plan.md by the plan job)
   const showPlanButton = localTicket?.workflowType === 'FULL' && hasCompletedPlanJob;
   const showTasksButton = showPlanButton; // Same rule: both docs created by plan job
+  // Summary button visibility: FULL workflow with completed implement job
+  const showSummaryButton = localTicket?.workflowType === 'FULL' && hasCompletedImplementJob;
 
   /**
    * Refresh ticket data from server
@@ -1055,6 +1065,20 @@ export function TicketDetailModal({
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
                         Tasks
+                      </Button>
+                    )}
+                    {showSummaryButton && (
+                      <Button
+                        onClick={() => {
+                          setDocViewerType('summary');
+                          setDocViewerOpen(true);
+                        }}
+                        size="sm"
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        title="View implementation summary"
+                      >
+                        <FileOutput className="w-3.5 h-3.5" />
+                        Summary
                       </Button>
                     )}
                   </div>

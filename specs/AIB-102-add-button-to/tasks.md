@@ -18,8 +18,8 @@
 
 **Purpose**: Extend core type definitions that all subsequent changes depend on
 
-- [ ] T001 [P] Add 'summary' to DocumentTypeSchema enum in lib/validations/documentation.ts
-- [ ] T002 [P] Add 'summary' to DocumentTypeLabels mapping in components/board/documentation-viewer.tsx
+- [X] T001 [P] Add 'summary' to DocumentTypeSchema enum in lib/validations/documentation.ts
+- [X] T002 [P] Add 'summary' to DocumentTypeLabels mapping in components/board/documentation-viewer.tsx
 
 **Checkpoint**: Type definitions ready - API and UI implementation can proceed
 
@@ -31,7 +31,7 @@
 
 **⚠️ CRITICAL**: UI cannot function until API endpoint is available
 
-- [ ] T003 Create GET endpoint for summary content in app/api/projects/[projectId]/tickets/[id]/summary/route.ts following spec/route.ts pattern with 'implement' job check
+- [X] T003 Create GET endpoint for summary content in app/api/projects/[projectId]/tickets/[id]/summary/route.ts following spec/route.ts pattern with 'implement' job check
 
 **Checkpoint**: API ready - user story implementation can now begin
 
@@ -45,9 +45,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Add hasCompletedImplementJob state calculation in components/board/ticket-detail-modal.tsx (similar to hasCompletedPlanJob pattern, checking for job.command='implement' with status='COMPLETED')
-- [ ] T005 [US1] Add Summary button with FileOutput icon and visibility logic (workflowType === 'FULL' && hasCompletedImplementJob) in components/board/ticket-detail-modal.tsx
-- [ ] T006 [US1] Update docViewerType state to include 'summary' option in components/board/ticket-detail-modal.tsx
+- [X] T004 [US1] Add hasCompletedImplementJob state calculation in components/board/ticket-detail-modal.tsx (similar to hasCompletedPlanJob pattern, checking for job.command='implement' with status='COMPLETED')
+- [X] T005 [US1] Add Summary button with FileOutput icon and visibility logic (workflowType === 'FULL' && hasCompletedImplementJob) in components/board/ticket-detail-modal.tsx
+- [X] T006 [US1] Update docViewerType state to include 'summary' option in components/board/ticket-detail-modal.tsx
 
 **Checkpoint**: User Story 1 complete - users can view summary for BUILD/VERIFY stage tickets
 
@@ -61,8 +61,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Verify API endpoint branch resolution logic (SHIP → main branch, else → feature branch) in app/api/projects/[projectId]/tickets/[id]/summary/route.ts
-- [ ] T008 [US2] Verify Summary button remains visible for SHIP stage tickets in components/board/ticket-detail-modal.tsx
+- [X] T007 [US2] Verify API endpoint branch resolution logic (SHIP → main branch, else → feature branch) in app/api/projects/[projectId]/tickets/[id]/summary/route.ts
+- [X] T008 [US2] Verify Summary button remains visible for SHIP stage tickets in components/board/ticket-detail-modal.tsx
 
 **Checkpoint**: User Story 2 complete - shipped tickets show summary from main branch
 
@@ -76,9 +76,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Verify Summary button is hidden for SPECIFY and PLAN stage tickets (no implement job yet) in components/board/ticket-detail-modal.tsx
-- [ ] T010 [US3] Verify Summary button is hidden for QUICK workflow tickets (workflowType !== 'FULL' check) in components/board/ticket-detail-modal.tsx
-- [ ] T011 [US3] Verify Summary button is hidden for BUILD stage tickets without completed implement job in components/board/ticket-detail-modal.tsx
+- [X] T009 [US3] Verify Summary button is hidden for SPECIFY and PLAN stage tickets (no implement job yet) in components/board/ticket-detail-modal.tsx
+- [X] T010 [US3] Verify Summary button is hidden for QUICK workflow tickets (workflowType !== 'FULL' check) in components/board/ticket-detail-modal.tsx
+- [X] T011 [US3] Verify Summary button is hidden for BUILD stage tickets without completed implement job in components/board/ticket-detail-modal.tsx
 
 **Checkpoint**: User Story 3 complete - button visibility matches implement job availability
 
@@ -88,9 +88,9 @@
 
 **Purpose**: Verify read-only enforcement and error handling
 
-- [ ] T012 Verify no Edit button appears for summary content (read-only enforcement via EDIT_PERMISSIONS exclusion) in components/ticket/edit-permission-guard.tsx
-- [ ] T013 Verify error handling for missing summary file (FILE_NOT_FOUND response) in app/api/projects/[projectId]/tickets/[id]/summary/route.ts
-- [ ] T014 Run type-check to ensure all TypeScript types are correct
+- [X] T012 Verify no Edit button appears for summary content (read-only enforcement via EDIT_PERMISSIONS exclusion) in components/ticket/edit-permission-guard.tsx
+- [X] T013 Verify error handling for missing summary file (FILE_NOT_FOUND response) in app/api/projects/[projectId]/tickets/[id]/summary/route.ts
+- [X] T014 Run type-check to ensure all TypeScript types are correct
 
 ---
 
