@@ -18,8 +18,8 @@
 
 **Purpose**: Create new files and project structure for the duplicate feature
 
-- [ ] T001 Create title utility file at lib/utils/ticket-title.ts with createDuplicateTitle function stub
-- [ ] T002 Create API route directory at app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts with placeholder export
+- [x] T001 Create title utility file at lib/utils/ticket-title.ts with createDuplicateTitle function stub
+- [x] T002 Create API route directory at app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts with placeholder export
 
 ---
 
@@ -31,15 +31,15 @@
 
 ### Unit Tests (TDD - Red)
 
-- [ ] T003 [P] Create Vitest unit tests for createDuplicateTitle in tests/unit/ticket-title.test.ts - test short titles, long titles (95+ chars), exactly 92 char boundary
+- [x] T003 [P] Create Vitest unit tests for createDuplicateTitle in tests/unit/ticket-title.test.ts - test short titles, long titles (95+ chars), exactly 92 char boundary
 
 ### Core Utility Implementation (TDD - Green)
 
-- [ ] T004 Implement createDuplicateTitle function in lib/utils/ticket-title.ts - prefix with "Copy of ", truncate to 100 chars max
+- [x] T004 Implement createDuplicateTitle function in lib/utils/ticket-title.ts - prefix with "Copy of ", truncate to 100 chars max
 
 ### Verification
 
-- [ ] T005 Run `bun run test:unit` to verify all title truncation tests pass
+- [x] T005 Run `bun run test:unit` to verify all title truncation tests pass
 
 **Checkpoint**: Foundation ready - title utility complete and tested, user story implementation can now begin
 
@@ -53,7 +53,7 @@
 
 ### API Implementation for User Story 1
 
-- [ ] T006 [US1] Implement POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts:
+- [x] T006 [US1] Implement POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts:
   - Validate projectId and ticketId params
   - Use verifyProjectAccess for authorization
   - Fetch source ticket with required fields
@@ -61,7 +61,7 @@
   - Call createTicket with copied fields (title, description, clarificationPolicy, attachments)
   - Return 201 with new ticket data
 
-- [ ] T007 [US1] Add error handling to duplicate route.ts:
+- [x] T007 [US1] Add error handling to duplicate route.ts:
   - 400 for invalid project/ticket ID
   - 401 for unauthorized
   - 404 for ticket/project not found
@@ -69,14 +69,14 @@
 
 ### UI Implementation for User Story 1
 
-- [ ] T008 [US1] Add duplicate button to components/board/ticket-detail-modal.tsx:
+- [x] T008 [US1] Add duplicate button to components/board/ticket-detail-modal.tsx:
   - Import Copy icon from lucide-react
   - Add isDuplicating state with useState
   - Place button in metadata row (around line 791) with variant="ghost", size="sm"
   - Add data-testid="duplicate-button"
   - Show "Duplicate" text with Copy icon
 
-- [ ] T009 [US1] Implement handleDuplicate function in ticket-detail-modal.tsx:
+- [x] T009 [US1] Implement handleDuplicate function in ticket-detail-modal.tsx:
   - Set isDuplicating to true on start
   - POST to /api/projects/{projectId}/tickets/{ticketId}/duplicate
   - Parse response for new ticket data
@@ -95,16 +95,16 @@
 
 ### UI Implementation for User Story 2
 
-- [ ] T010 [US2] Add success toast to handleDuplicate in ticket-detail-modal.tsx:
+- [x] T010 [US2] Add success toast to handleDuplicate in ticket-detail-modal.tsx:
   - Import ToastAction from @/components/ui/toast
   - On success: show toast with title "Ticket duplicated", description = newTicket.ticketKey
   - Add action prop with ToastAction containing "View" text
 
-- [ ] T011 [US2] Implement toast "View" action navigation in ticket-detail-modal.tsx:
+- [x] T011 [US2] Implement toast "View" action navigation in ticket-detail-modal.tsx:
   - Import useRouter from next/navigation (or use existing router if present)
   - onClick: router.push(`/projects/${projectId}/board?ticket=${newTicket.id}&tab=details`)
 
-- [ ] T012 [US2] Add error toast to handleDuplicate catch block in ticket-detail-modal.tsx:
+- [x] T012 [US2] Add error toast to handleDuplicate catch block in ticket-detail-modal.tsx:
   - Show toast with variant="destructive"
   - title: "Error"
   - description: "Failed to duplicate ticket. Please try again."
@@ -121,7 +121,7 @@
 
 ### Verification for User Story 3
 
-- [ ] T013 [US3] Verify description handling in duplicate route.ts - confirm description is copied exactly without modification (already handled by createTicket, just verify in code review)
+- [x] T013 [US3] Verify description handling in duplicate route.ts - confirm description is copied exactly without modification (already handled by createTicket, just verify in code review)
 
 **Checkpoint**: User Story 3 complete - long descriptions preserved
 
@@ -131,10 +131,10 @@
 
 **Purpose**: End-to-end Playwright tests for complete duplicate flow
 
-- [ ] T014 [P] Create E2E test file at tests/e2e/duplicate-ticket.spec.ts with test structure
-- [ ] T015 [P] Add E2E test: duplicate ticket and verify toast appears with ticket key
-- [ ] T016 [P] Add E2E test: click "View" action on toast and verify new ticket modal opens with "Copy of" title
-- [ ] T017 Add E2E test: verify duplicate appears in INBOX column on board
+- [x] T014 [P] Create E2E test file at tests/e2e/duplicate-ticket.spec.ts with test structure
+- [x] T015 [P] Add E2E test: duplicate ticket and verify toast appears with ticket key
+- [x] T016 [P] Add E2E test: click "View" action on toast and verify new ticket modal opens with "Copy of" title
+- [x] T017 Add E2E test: verify duplicate appears in INBOX column on board
 
 ---
 
@@ -142,10 +142,10 @@
 
 **Purpose**: Final verification and cleanup
 
-- [ ] T018 Run `bun run type-check` to verify TypeScript compilation
-- [ ] T019 Run `bun run test:unit` to verify all unit tests pass
-- [ ] T020 Run `bun run test:e2e` to verify all E2E tests pass
-- [ ] T021 Run quickstart.md manual verification checklist
+- [x] T018 Run `bun run type-check` to verify TypeScript compilation
+- [x] T019 Run `bun run test:unit` to verify all unit tests pass
+- [x] T020 Run `bun run test:e2e` to verify all E2E tests pass
+- [x] T021 Run quickstart.md manual verification checklist
 
 ---
 

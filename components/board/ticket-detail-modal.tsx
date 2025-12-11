@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3 } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, Copy } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -25,7 +25,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
@@ -181,12 +183,14 @@ export function TicketDetailModal({
   fullJobs = [],
 }: TicketDetailModalProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -313,6 +317,56 @@ export function TicketDetailModal({
       }
     } catch (error) {
       console.error('Failed to refresh ticket:', error);
+    }
+  };
+
+  /**
+   * Duplicate the current ticket
+   * Creates a new ticket in INBOX with copied content
+   */
+  const handleDuplicate = async () => {
+    if (!localTicket) return;
+
+    setIsDuplicating(true);
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}/duplicate`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to duplicate ticket');
+      }
+
+      const newTicket = await response.json();
+
+      toast({
+        title: 'Ticket duplicated',
+        description: newTicket.ticketKey,
+        action: (
+          <ToastAction
+            altText="View duplicated ticket"
+            onClick={() => {
+              router.push(`/projects/${projectId}/board?ticket=${newTicket.id}&tab=details`);
+            }}
+          >
+            View
+          </ToastAction>
+        ),
+      });
+
+      // Notify parent to refresh board (new ticket added to INBOX)
+      if (onUpdate) {
+        onUpdate(localTicket);
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to duplicate ticket. Please try again.',
+      });
+    } finally {
+      setIsDuplicating(false);
     }
   };
 
@@ -789,6 +843,19 @@ export function TicketDetailModal({
                 Edit Policy
               </Button>
             )}
+            {/* Duplicate button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDuplicate}
+              disabled={isDuplicating}
+              className={`h-6 px-2 text-xs ${!localTicket?.project || !isInboxStage ? 'ml-auto' : ''}`}
+              data-testid="duplicate-button"
+              title="Duplicate ticket"
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              {isDuplicating ? 'Duplicating...' : 'Duplicate'}
+            </Button>
           </div>
 
           <div className="group">
