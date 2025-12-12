@@ -556,7 +556,9 @@ When user has no projects:
 - Visible focus indicators
 - Logical focus order
 - Focus trapped in modals
-- Auto-focus on form inputs
+- Auto-focus on form inputs when appropriate
+- Action buttons in modals do not auto-focus to prevent unintended activation
+- Users navigate to interactive elements via keyboard (Tab key)
 
 ### Visual Accessibility
 

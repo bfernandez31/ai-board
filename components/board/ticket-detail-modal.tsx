@@ -849,6 +849,7 @@ export function TicketDetailModal({
                 className="ml-auto h-6 px-2 text-xs"
                 data-testid="edit-policy-button"
                 title="Edit clarification policy"
+                autoFocus={false}
               >
                 <Settings2 className="w-3 h-3 mr-1" />
                 Edit Policy
@@ -865,6 +866,7 @@ export function TicketDetailModal({
                     disabled={isDuplicating}
                     className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
                     data-testid="duplicate-ticket-button"
+                    autoFocus={false}
                   >
                     {isDuplicating ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
