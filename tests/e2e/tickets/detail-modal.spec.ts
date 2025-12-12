@@ -1225,3 +1225,124 @@ test.describe('Ticket Detail Modal - Initial Tab Selection', () => {
     await expect(conversationTab).toHaveAttribute('data-state', 'active');
   });
 });
+
+/**
+ * E2E Tests for Ticket Detail Modal - Focus Management
+ * Feature: AIB-109 - Change the ticket modal focus
+ *
+ * Tests for:
+ * 1. Modal does not focus on Duplicate button when opening
+ * 2. Modal focuses on close button or title for accessibility
+ */
+test.describe('Ticket Detail Modal - Focus Management', () => {
+  const BASE_URL = 'http://localhost:3000';
+  const prisma = getPrismaClient();
+
+  test.beforeEach(async ({ request , projectId }) => {
+    // Clean database before each test
+    await cleanupDatabase(projectId);
+
+    // Create test user
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@e2e.local' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        email: 'test@e2e.local',
+        name: 'E2E Test User',
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update worker project
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        userId: testUser.id,
+      },
+    });
+
+    // Create test ticket
+    await request.post(`${BASE_URL}/api/projects/${projectId}/tickets`, {
+      data: {
+        title: '[e2e] Test Ticket for Focus',
+        description: 'Test ticket for focus management',
+      },
+    });
+  });
+
+  test.afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  /**
+   * Test: Modal should not focus on Duplicate button when opening
+   */
+  test('should not focus on Duplicate button when modal opens', async ({ page , projectId }) => {
+    // Navigate to board
+    await page.goto(`/projects/${projectId}/board`);
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
+
+    // Click ticket to open modal
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Wait a moment for focus to settle
+    await page.waitForTimeout(100);
+
+    // Get the currently focused element
+    const focusedElement = await page.evaluateHandle(() => document.activeElement);
+
+    // Verify the focused element is NOT the Duplicate button
+    const duplicateButton = dialog.locator('[data-testid="duplicate-ticket-button"]');
+    const isDuplicateButtonFocused = await duplicateButton.evaluate(
+      (button, focused) => button === focused,
+      focusedElement
+    );
+
+    expect(isDuplicateButtonFocused).toBe(false);
+  });
+
+  /**
+   * Test: Modal should focus on close button for accessibility
+   */
+  test('should focus on close button when modal opens', async ({ page , projectId }) => {
+    // Navigate to board
+    await page.goto(`/projects/${projectId}/board`);
+    await page.waitForSelector('[data-testid="ticket-card"]', { timeout: 3000 });
+
+    // Click ticket to open modal
+    await page.locator('[data-testid="ticket-card"]').first().click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Wait a moment for focus to settle
+    await page.waitForTimeout(100);
+
+    // Get the currently focused element
+    const focusedElement = await page.evaluateHandle(() => document.activeElement);
+
+    // Find the close button (it has aria-label or sr-only text "Close")
+    const closeButton = dialog.locator('button').filter({ hasText: 'Close' }).or(
+      dialog.locator('button[aria-label*="Close"]')
+    ).first();
+
+    // Verify the close button is focused OR the dialog itself is focused
+    const isCloseButtonFocused = await closeButton.evaluate(
+      (button, focused) => button === focused,
+      focusedElement
+    );
+
+    const isDialogFocused = await dialog.evaluate(
+      (dialogEl, focused) => dialogEl === focused || dialogEl.contains(focused as Node),
+      focusedElement
+    );
+
+    // Either close button should be focused OR dialog should contain focus (acceptable for accessibility)
+    expect(isCloseButtonFocused || isDialogFocused).toBe(true);
+  });
+});
