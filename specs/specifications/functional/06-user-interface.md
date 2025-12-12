@@ -146,6 +146,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 - No nested scrollbars within modal content
 - Mobile spacing optimized: tab list has no bottom margin on mobile (0px) to maximize content area
 
+**Constitution Viewer Modal**:
+- Opened from project settings "Constitution" button
+- Three tabs: View, Edit, History
+- View tab displays rendered markdown content
+- Edit tab provides raw markdown textarea with save/cancel
+- History tab shows commit list with diff viewer
+- Unsaved changes prompt when closing with edits
+- Same markdown rendering as ticket documentation viewer
+
 **Closing Methods**:
 - Close button (X) in header
 - Cancel button in footer

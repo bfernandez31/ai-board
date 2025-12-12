@@ -1709,6 +1709,179 @@ All error responses follow a consistent structure:
 | `423` | Locked (cleanup in progress, transitions blocked) |
 | `500` | Internal Server Error |
 
+## Constitution Endpoints
+
+### GET /api/projects/:projectId/constitution
+
+Fetch constitution content from project repository.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "content": "# Project Constitution\n\n## Development Principles...",
+  "exists": true
+}
+```
+
+**Test Environment Response**:
+```json
+{
+  "content": "# Test Project Constitution\n\nThis is a mock constitution for testing...",
+  "exists": true
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found or constitution file doesn't exist
+- `500`: GitHub API error
+
+### PUT /api/projects/:projectId/constitution
+
+Update constitution content in project repository.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "content": "# Updated Constitution\n\n## New Principles..."
+}
+```
+
+**Validation**:
+- `content`: Required, non-empty string, valid markdown syntax
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Constitution updated successfully"
+}
+```
+
+**Test Environment Response**:
+```json
+{
+  "success": true,
+  "message": "Constitution updated (test mode - changes not persisted)"
+}
+```
+
+**Errors**:
+- `400`: Invalid content (empty or invalid markdown)
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: GitHub API error or commit failed
+
+### GET /api/projects/:projectId/constitution/history
+
+Fetch commit history for constitution file.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "commits": [
+    {
+      "sha": "abc123def456...",
+      "message": "Update testing requirements",
+      "author": "Alice Smith",
+      "date": "2025-01-15T10:30:00.000Z",
+      "url": "https://github.com/owner/repo/commit/abc123..."
+    }
+  ]
+}
+```
+
+**Test Environment Response**:
+```json
+{
+  "commits": [
+    {
+      "sha": "mock-sha-1",
+      "message": "Initial constitution",
+      "author": "Test User",
+      "date": "2025-01-01T00:00:00.000Z",
+      "url": "https://github.com/test/repo/commit/mock-sha-1"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found or constitution file has no history
+- `500`: GitHub API error
+
+### GET /api/projects/:projectId/constitution/diff
+
+Fetch diff for a specific commit.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `sha` (string, required): Commit SHA to fetch diff for
+
+**Response** (200 OK):
+```json
+{
+  "diff": {
+    "additions": [
+      "## New Testing Requirements",
+      "- All features must have E2E tests"
+    ],
+    "deletions": [
+      "## Old Testing Section"
+    ],
+    "unchanged": [
+      "# Project Constitution",
+      "## Development Principles"
+    ]
+  }
+}
+```
+
+**Test Environment Response**:
+```json
+{
+  "diff": {
+    "additions": ["+ Added line for testing"],
+    "deletions": ["- Removed line for testing"],
+    "unchanged": ["# Test Constitution"]
+  }
+}
+```
+
+**Errors**:
+- `400`: Missing or invalid SHA parameter
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found, commit not found, or no diff available
+- `500`: GitHub API error
+
 ## Project Cleanup Endpoints
 
 ### POST /api/projects/:projectId/clean

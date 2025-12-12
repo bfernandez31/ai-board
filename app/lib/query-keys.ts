@@ -71,6 +71,24 @@ export const queryKeys = {
      */
     timeline: (projectId: number, ticketId: number) =>
       ['projects', projectId, 'tickets', ticketId, 'timeline'] as const,
+
+    /**
+     * Constitution content for a project
+     */
+    constitution: (projectId: number) =>
+      ['projects', projectId, 'constitution'] as const,
+
+    /**
+     * Constitution commit history for a project
+     */
+    constitutionHistory: (projectId: number) =>
+      ['projects', projectId, 'constitution', 'history'] as const,
+
+    /**
+     * Constitution diff for a specific commit
+     */
+    constitutionDiff: (projectId: number, sha: string) =>
+      ['projects', projectId, 'constitution', 'diff', sha] as const,
   },
 
   /**

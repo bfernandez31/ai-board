@@ -140,6 +140,50 @@ When no projects exist:
 - Navigates to `/projects/{projectId}/board`
 - Outline variant styling for secondary action appearance
 
+### Constitution Management
+
+Projects include a constitution document that defines development guidelines, testing requirements, and governance rules:
+
+**Purpose**:
+- Documents project-specific principles and standards
+- Provides AI agents with project context and rules
+- Maintains consistency across all tickets
+- Enables team alignment on development practices
+
+**Constitution Location**:
+- Stored at `.specify/memory/constitution.md` in project repository
+- Markdown format for human and AI readability
+- Version-controlled alongside project code
+
+**Viewing Constitution**:
+- Accessible via "Constitution" button in project settings
+- Opens modal viewer with markdown rendering
+- Supports all standard markdown elements (headers, code blocks, tables, lists)
+- Same rendering quality as ticket documentation viewer
+
+**Editing Constitution**:
+- Edit mode with raw markdown textarea
+- Save commits changes to repository with descriptive message
+- Unsaved changes warning prevents accidental data loss
+- Markdown syntax validation before save
+- Available to project owners and members
+
+**Constitution History**:
+- View chronological commit history
+- See author, date, and commit message for each change
+- Diff view shows additions (green) and deletions (red)
+- Provides transparency and audit trail for governance changes
+
+**Access Control**:
+- View and edit permissions follow project access model
+- Available to project owners and members
+- Uses same authorization as other project settings
+
+**Error Handling**:
+- Clear message when constitution file doesn't exist
+- User-friendly errors for network or API issues
+- Preserves unsaved edits on save failure for retry
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:

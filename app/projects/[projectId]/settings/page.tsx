@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { Button } from '@/components/ui/button';
+import { ConstitutionCard } from '@/components/settings/constitution-card';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -68,7 +69,12 @@ export default async function ProjectSettingsPage({
             }}
           />
 
-          {/* Future settings cards can be added here */}
+          <ConstitutionCard
+            project={{
+              id: project.id,
+              name: project.name,
+            }}
+          />
         </div>
       </div>
     </main>

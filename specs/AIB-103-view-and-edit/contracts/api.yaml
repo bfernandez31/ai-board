@@ -1,0 +1,389 @@
+openapi: 3.0.3
+info:
+  title: Constitution API
+  description: API endpoints for viewing and editing project constitution files
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/constitution:
+    get:
+      summary: Get constitution content
+      description: Fetches the constitution markdown file from the project's GitHub repository
+      operationId: getConstitution
+      tags:
+        - Constitution
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+      responses:
+        '200':
+          description: Constitution content retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstitutionContent'
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - user lacks project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Constitution file not found in repository
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstitutionNotFound'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update constitution content
+      description: Commits updated constitution content to the project's GitHub repository
+      operationId: updateConstitution
+      tags:
+        - Constitution
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConstitutionUpdateRequest'
+      responses:
+        '200':
+          description: Constitution updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstitutionUpdateResponse'
+        '400':
+          description: Invalid request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - user lacks project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/projects/{projectId}/constitution/history:
+    get:
+      summary: Get constitution commit history
+      description: Returns list of commits that modified the constitution file
+      operationId: getConstitutionHistory
+      tags:
+        - Constitution
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+      responses:
+        '200':
+          description: Commit history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstitutionHistoryResponse'
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - user lacks project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/projects/{projectId}/constitution/diff:
+    get:
+      summary: Get constitution commit diff
+      description: Returns diff information for a specific commit
+      operationId: getConstitutionDiff
+      tags:
+        - Constitution
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+        - name: sha
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{40}$'
+          description: 40-character commit SHA
+      responses:
+        '200':
+          description: Diff retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstitutionDiffResponse'
+        '400':
+          description: Invalid SHA format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - user lacks project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Commit not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ConstitutionContent:
+      type: object
+      required:
+        - content
+        - sha
+        - path
+      properties:
+        content:
+          type: string
+          description: Raw markdown content
+        sha:
+          type: string
+          description: Git blob SHA
+        path:
+          type: string
+          description: File path in repository
+          example: '.specify/memory/constitution.md'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    ConstitutionNotFound:
+      type: object
+      required:
+        - error
+        - exists
+      properties:
+        error:
+          type: string
+          example: 'Constitution file not found'
+        exists:
+          type: boolean
+          example: false
+        guidance:
+          type: string
+          example: 'Create a constitution using the /speckit.constitution command'
+
+    ConstitutionUpdateRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: Updated markdown content
+          maxLength: 1048576
+        commitMessage:
+          type: string
+          description: Custom commit message (optional)
+          maxLength: 500
+
+    ConstitutionUpdateResponse:
+      type: object
+      required:
+        - success
+        - commitSha
+        - updatedAt
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        commitSha:
+          type: string
+          description: New commit SHA
+        updatedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: 'Constitution updated successfully'
+
+    ConstitutionHistoryResponse:
+      type: object
+      required:
+        - commits
+      properties:
+        commits:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstitutionCommit'
+
+    ConstitutionCommit:
+      type: object
+      required:
+        - sha
+        - author
+        - message
+        - url
+      properties:
+        sha:
+          type: string
+          pattern: '^[a-f0-9]{40}$'
+        author:
+          type: object
+          required:
+            - name
+            - email
+            - date
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            date:
+              type: string
+              format: date-time
+        message:
+          type: string
+        url:
+          type: string
+          format: uri
+
+    ConstitutionDiffResponse:
+      type: object
+      required:
+        - sha
+        - files
+      properties:
+        sha:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstitutionDiffFile'
+
+    ConstitutionDiffFile:
+      type: object
+      required:
+        - filename
+        - status
+        - additions
+        - deletions
+      properties:
+        filename:
+          type: string
+        status:
+          type: string
+          enum:
+            - added
+            - modified
+            - removed
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+        patch:
+          type: string
+          description: Unified diff format
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+
+security:
+  - session: []
