@@ -206,6 +206,13 @@ The detail modal:
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
 
+**Focus Management**:
+- Modal maintains proper focus for keyboard accessibility
+- Action buttons (Edit Policy, Duplicate) do not receive automatic focus on modal open
+- Focus management follows accessibility best practices
+- Prevents unintended actions from keyboard input immediately after modal opens
+- Users can navigate to interactive elements using Tab key
+
 ### Stats Tab
 
 The Stats tab displays aggregated telemetry metrics from all workflow jobs associated with the ticket. This tab provides visibility into resource consumption, costs, and workflow efficiency.
