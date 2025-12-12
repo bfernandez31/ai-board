@@ -215,6 +215,52 @@ Users can close the detail modal by:
 - Pressing the Escape key
 - Clicking outside the modal content area
 
+## Ticket Duplication
+
+### Duplicate Button
+
+Users can quickly create a copy of any ticket from the ticket detail modal:
+
+**Button Location**:
+- Appears in the ticket detail modal header area
+- Positioned next to the Edit Policy button (when visible)
+- Available for tickets in all stages (INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+- Always visible regardless of ticket stage
+
+**Duplication Process**:
+1. User opens any ticket detail modal
+2. User clicks the "Duplicate" button in the header area
+3. System creates new ticket immediately with:
+   - Title: "Copy of [original title]" (truncated to 100 chars if needed)
+   - Description: Exact copy of original description
+   - Clarification Policy: Same as original (explicit value or null for project default)
+   - Attachments: Same image URLs referenced from original
+   - Stage: Always INBOX regardless of source ticket stage
+4. Success toast notification appears with new ticket key
+5. Toast includes "View" action to navigate to the duplicated ticket
+6. Original modal remains open (user stays on source ticket)
+
+**Visual Feedback**:
+- Button shows "Duplicating..." text while request is in progress
+- Button is disabled during duplication to prevent double-submission
+- Success toast displays new ticket key (e.g., "ABC-106")
+- Error toast appears if duplication fails with retry message
+
+**Title Handling**:
+- System prepends "Copy of " to the original title
+- If "Copy of [title]" exceeds 100 characters, original title is truncated
+- Maximum final length is always 100 characters
+
+**Attachment Handling**:
+- Image attachments reference the same Cloudinary URLs (no re-upload)
+- All attachment metadata is copied (filename, mimeType, sizeBytes, etc.)
+- Attachments remain accessible as long as Cloudinary URLs are valid
+
+**Navigation**:
+- Clicking "View" action in toast navigates to duplicated ticket
+- Navigation URL format: `/projects/{projectId}/board?ticket={newTicketId}&tab=details`
+- Duplicated ticket opens in detail modal automatically
+
 ## Ticket Deletion
 
 ### Drag-to-Trash Feature

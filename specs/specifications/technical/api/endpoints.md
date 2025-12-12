@@ -379,6 +379,78 @@ Fetch single ticket with nested project data (legacy endpoint).
 - `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 
+### POST /api/projects/:projectId/tickets/:id/duplicate
+
+Duplicate an existing ticket to create a new ticket in INBOX stage.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID to duplicate
+
+**Request Body**: Empty
+
+**Response** (201 Created):
+```json
+{
+  "id": 44,
+  "ticketNumber": 7,
+  "ticketKey": "ABC-7",
+  "title": "Copy of Fix login bug",
+  "description": "Login button doesn't work on mobile devices",
+  "stage": "INBOX",
+  "projectId": 1,
+  "branch": null,
+  "workflowType": "FULL",
+  "clarificationPolicy": null,
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/.../screenshot.png",
+      "filename": "screenshot.png",
+      "mimeType": "image/png",
+      "sizeBytes": 204800,
+      "uploadedAt": "2025-01-15T10:00:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/screenshot"
+    }
+  ],
+  "version": 1,
+  "createdAt": "2025-01-20T09:05:00.000Z",
+  "updatedAt": "2025-01-20T09:05:00.000Z"
+}
+```
+
+**Duplication Behavior**:
+- **Title**: Prepends "Copy of " to original title, truncates if total exceeds 100 chars
+- **Description**: Exact copy of original description
+- **Clarification Policy**: Copies explicit value or null from original
+- **Attachments**: References same Cloudinary URLs (no re-upload)
+- **Stage**: Always INBOX regardless of source ticket stage
+- **Branch**: Always null (new ticket not yet in workflow)
+- **Workflow Type**: Always FULL (default for new tickets)
+
+**Title Truncation**:
+- Maximum title length: 100 characters
+- Prefix: "Copy of " (8 characters)
+- If "Copy of [original]" > 100 chars, original title is truncated to fit
+- Formula: `truncatedOriginal = original.slice(0, 92)` then `"Copy of " + truncatedOriginal`
+
+**Attachment Handling**:
+- All attachment metadata copied (url, filename, mimeType, sizeBytes, cloudinaryPublicId)
+- No new Cloudinary upload occurs (references same URLs)
+- Attachments remain valid as long as original Cloudinary resources exist
+
+**Errors**:
+- `400`: Invalid project ID or ticket ID format
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `500`: Database error
+
+**Performance**: <500ms typical response time for tickets with attachments
+
 ### PATCH /api/projects/:projectId/tickets/:id
 
 Update ticket fields with optimistic concurrency control.

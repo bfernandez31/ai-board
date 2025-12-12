@@ -405,3 +405,172 @@ Date formatting and manipulation using `date-fns` library.
 - UTC conversion
 
 See [architecture/stack.md](../architecture/stack.md#date-utilities) for date-fns integration details.
+
+## Ticket Title Utilities
+
+### Purpose
+
+Utility functions for ticket title operations, specifically for handling title duplication with automatic truncation.
+
+### File Location
+
+`lib/utils/ticket-title.ts`
+
+### Function Reference
+
+**createDuplicateTitle(originalTitle: string): string**
+
+Creates a duplicate ticket title with "Copy of " prefix, automatically truncating the original title if necessary to ensure the final result doesn't exceed 100 characters.
+
+**Parameters**:
+- `originalTitle` (string): The title of the ticket being duplicated
+
+**Returns**: New title with "Copy of " prefix (max 100 characters)
+
+**Algorithm**:
+1. Define constants: `PREFIX = "Copy of "` (8 chars), `MAX_LENGTH = 100`
+2. Calculate max original length: `100 - 8 = 92 characters`
+3. Truncate original title if longer than 92 characters
+4. Prepend "Copy of " to the (possibly truncated) title
+5. Return final result
+
+**Examples**:
+
+```typescript
+import { createDuplicateTitle } from '@/lib/utils/ticket-title';
+
+// Short title (no truncation needed)
+createDuplicateTitle('Fix login bug')
+// → "Copy of Fix login bug" (21 chars)
+
+// Title at boundary (exactly 92 chars original)
+createDuplicateTitle('A'.repeat(92))
+// → "Copy of " + 92 A's = 100 chars exactly
+
+// Long title (truncation required)
+createDuplicateTitle('Add user authentication with OAuth2 integration and multi-factor authentication support for enterprise users')
+// → "Copy of Add user authentication with OAuth2 integration and multi-factor authentica" (100 chars)
+```
+
+### Constants
+
+**PREFIX**: `"Copy of "` (8 characters)
+- Recognizable duplication indicator
+- Matches common application patterns (Google Drive, macOS Finder, etc.)
+- Consistent across all duplicated tickets
+
+**MAX_LENGTH**: `100` characters
+- Enforces ticket title validation constraint
+- Prevents database errors from oversized titles
+- Matches `title` field max length in Ticket schema
+
+### Usage Context
+
+**API Endpoint**:
+- Used by `POST /api/projects/[projectId]/tickets/[id]/duplicate`
+- Called once per duplication request
+- Runs server-side only (not exposed to frontend)
+
+**Workflow**:
+1. User clicks "Duplicate" button in ticket detail modal
+2. Frontend makes POST request to duplicate endpoint
+3. Backend calls `createDuplicateTitle(sourceTicket.title)`
+4. Backend creates new ticket with resulting title
+5. Frontend receives new ticket with duplicated title
+
+### Design Considerations
+
+**Automatic Truncation**:
+- Users don't need to manually edit long titles
+- Prevents validation errors from oversized titles
+- Preserves as much context as possible (92 chars)
+
+**Prefix Consistency**:
+- Always uses "Copy of " prefix (no variations)
+- Enables pattern recognition for duplicated tickets
+- Makes it obvious the ticket is a copy
+
+**No Recursive Copying**:
+- Duplicating "Copy of Ticket" → "Copy of Copy of Ticket"
+- No special handling for already-duplicated titles
+- Simple, predictable behavior
+
+### Testing
+
+**Unit Tests**: `tests/unit/ticket-title.test.ts`
+
+Test coverage:
+- Short titles (no truncation)
+- Titles at max length boundary (92 chars)
+- Long titles requiring truncation
+- Empty string handling (edge case)
+- Single character titles
+- Titles with special characters
+
+**Test Examples**:
+```typescript
+describe('createDuplicateTitle', () => {
+  it('should prepend "Copy of " to short titles', () => {
+    expect(createDuplicateTitle('Fix bug')).toBe('Copy of Fix bug');
+  });
+
+  it('should truncate titles longer than 92 characters', () => {
+    const longTitle = 'A'.repeat(100);
+    const result = createDuplicateTitle(longTitle);
+    expect(result).toBe('Copy of ' + 'A'.repeat(92));
+    expect(result.length).toBe(100);
+  });
+
+  it('should handle titles exactly 92 characters', () => {
+    const title = 'B'.repeat(92);
+    const result = createDuplicateTitle(title);
+    expect(result.length).toBe(100);
+  });
+});
+```
+
+### Performance
+
+**Time Complexity**: O(n) where n is title length (string slicing)
+
+**Memory Footprint**: O(n) for truncated string copy
+
+**Execution Time**: <1ms per call (synchronous string operation)
+
+### Error Handling
+
+**No Error Cases**:
+- Function always returns valid string
+- No exceptions thrown
+- Handles all input lengths gracefully
+
+**Edge Cases**:
+- Empty string → "Copy of " (8 chars)
+- Single char → "Copy of X" (9 chars)
+- Max length (100 chars) → truncates to fit
+
+### Extension Pattern
+
+**Adding New Title Operations**:
+
+If additional title utilities are needed:
+
+```typescript
+// lib/utils/ticket-title.ts
+
+/**
+ * Validates ticket title length and format
+ */
+export function validateTicketTitle(title: string): boolean {
+  return title.length > 0 && title.length <= MAX_LENGTH;
+}
+
+/**
+ * Sanitizes ticket title (removes invalid characters)
+ */
+export function sanitizeTicketTitle(title: string): string {
+  return title.replace(/[^\w\s\-.,!?]/g, '');
+}
+```
+
+Keep all title-related utilities in this file for consistency.
