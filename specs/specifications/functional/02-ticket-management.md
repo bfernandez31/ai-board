@@ -253,6 +253,58 @@ Users can close the detail modal by:
 - Pressing the Escape key
 - Clicking outside the modal content area
 
+## Ticket Duplication
+
+### Duplicate Button
+
+Users can create a copy of any existing ticket to reuse content for similar work items:
+
+**Button Location**:
+- Appears in the ticket detail modal header row
+- Located next to other metadata actions (Edit Policy button)
+- Visible for tickets in all stages (INBOX through SHIP)
+
+**Duplication Process**:
+1. User opens any ticket detail modal
+2. User clicks the duplicate button (with copy icon)
+3. System creates a new ticket in INBOX with:
+   - Title: "Copy of [original title]" (truncated if needed to stay within 100 chars)
+   - Description: Exact copy of original description
+   - Clarification Policy: Same as original (or null if using project default)
+   - Image Attachments: References to same images (uploaded and external URLs)
+4. Modal closes automatically
+5. New ticket appears immediately at the bottom of INBOX column
+6. Success toast displays with new ticket key (e.g., "Ticket ABC-107 duplicated")
+
+**Visual Feedback**:
+- Tooltip displays "Duplicate ticket" on hover
+- Button shows loading state during API call
+- Button is disabled while duplication is in progress
+- Success toast notification confirms creation with ticket key
+- Error toast displays if duplication fails
+
+**Title Handling**:
+- Original title prefixed with "Copy of "
+- If prefix would exceed 100 character limit, original title is truncated first
+- Truncation preserves "Copy of " prefix and includes as much of original title as fits
+
+**Attachment Handling**:
+- All image attachments (up to 5) are copied by reference
+- Uploaded images (Cloudinary URLs) safely reference same URL
+- External image URLs are copied as-is
+- No re-uploading or duplication of image files
+
+**Error Handling**:
+- Network failures show error toast with descriptive message
+- Modal remains open on error to allow retry
+- Validation errors prevent duplication (e.g., source ticket not found)
+- User can click duplicate button again to retry after error
+
+**Performance**:
+- Duplication completes in under 3 seconds from button click to new ticket visible
+- Optimistic UI update shows new ticket immediately
+- Database operation is atomic (all-or-nothing)
+
 ## Ticket Deletion
 
 ### Drag-to-Trash Feature

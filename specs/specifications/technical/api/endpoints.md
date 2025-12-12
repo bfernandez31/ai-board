@@ -427,6 +427,88 @@ Update ticket fields with optimistic concurrency control.
 - `404`: Ticket or project not found
 - `409`: Version conflict (concurrent update detected)
 
+### POST /api/projects/:projectId/tickets/:id/duplicate
+
+Create a duplicate of an existing ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Source ticket ID to duplicate
+
+**Request Body**: Empty (all data copied from source ticket)
+
+**Response** (201 Created):
+```json
+{
+  "id": 107,
+  "ticketNumber": 107,
+  "ticketKey": "AIB-107",
+  "title": "Copy of Add login button",
+  "description": "User story: As a user, I want to log in...",
+  "stage": "INBOX",
+  "version": 1,
+  "projectId": 3,
+  "branch": null,
+  "previewUrl": null,
+  "autoMode": false,
+  "workflowType": "FULL",
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/xxx/image/upload/v1/ai-board/tickets/42/mockup.png",
+      "filename": "mockup.png",
+      "mimeType": "image/png",
+      "sizeBytes": 245760,
+      "uploadedAt": "2025-01-15T10:30:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/mockup"
+    }
+  ],
+  "clarificationPolicy": "PRAGMATIC",
+  "createdAt": "2025-01-20T14:22:00.000Z",
+  "updatedAt": "2025-01-20T14:22:00.000Z"
+}
+```
+
+**Duplication Behavior**:
+- **New Ticket Created**: Always in INBOX stage with new ticket number and key
+- **Title**: Prefixed with "Copy of " (truncated to 100 chars if needed)
+- **Description**: Exact copy from source ticket
+- **Clarification Policy**: Copied from source (or null if source uses project default)
+- **Attachments**: All image attachments copied by reference (same URLs)
+  - Uploaded images (Cloudinary) safely reference same URL
+  - External URLs copied as-is
+  - No image re-uploading or duplication
+- **Branch**: Always null (new tickets have no branch)
+- **Preview URL**: Always null (new tickets have no preview)
+- **Workflow Type**: Always FULL (standard workflow path)
+- **Version**: Always 1 (new ticket version)
+
+**Title Truncation**:
+- If "Copy of [original title]" exceeds 100 characters:
+  - Original title is truncated first
+  - "Copy of " prefix is preserved
+  - Final title stays within 100 character limit
+
+**Errors**:
+- `400`: Invalid projectId or ticketId format
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project or source ticket not found
+- `500`: Database error
+
+**Error Response** (404):
+```json
+{
+  "error": "Ticket not found",
+  "code": "TICKET_NOT_FOUND"
+}
+```
+
+**Performance**: <3 seconds from API call to new ticket visible in UI
+
 ### PATCH /api/projects/:projectId/tickets/:id/branch
 
 Update ticket branch name (workflow-only endpoint).

@@ -3,6 +3,7 @@ import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
+import type { Ticket } from '@prisma/client';
 
 /**
  * Fetch all tickets for a specific project, grouped by stage
@@ -255,4 +256,67 @@ export async function getTicketsWithJobs(projectId: number) {
   });
 
   return { ticketsByStage: groupedTickets, ticketsWithJobs: grouped };
+}
+
+/**
+ * Duplicate a ticket within the same project
+ * Creates a new ticket in INBOX stage with "Copy of " prefix and copied fields
+ * @param projectId - The project ID containing the source ticket
+ * @param sourceTicketId - The ID of the ticket to duplicate
+ * @returns The newly created duplicate ticket
+ */
+export async function duplicateTicket(
+  projectId: number,
+  sourceTicketId: number
+): Promise<Ticket> {
+  // Fetch source ticket with project key for generating new ticketKey
+  const sourceTicket = await prisma.ticket.findFirst({
+    where: {
+      id: sourceTicketId,
+      projectId: projectId,
+    },
+    include: {
+      project: {
+        select: { key: true },
+      },
+    },
+  });
+
+  if (!sourceTicket) {
+    throw new Error('Ticket not found');
+  }
+
+  // Generate new ticket number using PostgreSQL sequence
+  const ticketNumber = await getNextTicketNumber(projectId);
+  const ticketKey = `${sourceTicket.project.key}-${ticketNumber}`;
+
+  // Apply "Copy of " prefix, truncating source title to 92 chars if needed
+  const PREFIX = 'Copy of ';
+  const maxSourceLength = 100 - PREFIX.length; // 92 chars
+  const truncatedTitle =
+    sourceTicket.title.length > maxSourceLength
+      ? sourceTicket.title.substring(0, maxSourceLength)
+      : sourceTicket.title;
+  const newTitle = `${PREFIX}${truncatedTitle}`;
+
+  // Build data object for new ticket
+  const duplicateData = {
+    title: newTitle,
+    description: sourceTicket.description,
+    stage: 'INBOX' as const,
+    version: 1,
+    projectId: projectId,
+    ticketNumber,
+    ticketKey,
+    branch: null,
+    previewUrl: null,
+    autoMode: false,
+    workflowType: 'FULL' as const,
+    attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
+    clarificationPolicy: sourceTicket.clarificationPolicy,
+  };
+
+  return await prisma.ticket.create({
+    data: duplicateData,
+  });
 }
