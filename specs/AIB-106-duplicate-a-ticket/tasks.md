@@ -26,8 +26,8 @@
 
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-- [ ] T001 Add `duplicateTicket` function signature to lib/db/tickets.ts (exports empty implementation)
-- [ ] T002 Create API route directory structure at app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts (stub returning 501)
+- [x] T001 Add `duplicateTicket` function signature to lib/db/tickets.ts (exports empty implementation)
+- [x] T002 Create API route directory structure at app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts (stub returning 501)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -43,15 +43,15 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T003 [P] [US1] Create E2E test file tests/e2e/ticket-duplicate.spec.ts with test for basic duplication flow
-- [ ] T004 [P] [US1] Create API contract test file tests/api/tickets-duplicate.spec.ts with 201 success case
+- [x] T003 [P] [US1] Create E2E test file tests/e2e/ticket-duplicate.spec.ts with test for basic duplication flow
+- [x] T004 [P] [US1] Create API contract test file tests/api/tickets-duplicate.spec.ts with 201 success case
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Implement `duplicateTicket` function in lib/db/tickets.ts with title prefix and field mapping per data-model.md
-- [ ] T006 [US1] Implement POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts with verifyProjectAccess and verifyTicketAccess
-- [ ] T007 [US1] Add duplicate button to components/board/ticket-detail-modal.tsx header row with Copy icon from lucide-react
-- [ ] T008 [US1] Add `handleDuplicate` function in ticket-detail-modal.tsx with API call and TanStack Query invalidation
+- [x] T005 [US1] Implement `duplicateTicket` function in lib/db/tickets.ts with title prefix and field mapping per data-model.md
+- [x] T006 [US1] Implement POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts with verifyProjectAccess and verifyTicketAccess
+- [x] T007 [US1] Add duplicate button to components/board/ticket-detail-modal.tsx header row with Copy icon from lucide-react
+- [x] T008 [US1] Add `handleDuplicate` function in ticket-detail-modal.tsx with API call and TanStack Query invalidation
 
 **Checkpoint**: User Story 1 should be fully functional - users can duplicate a ticket and see the new ticket in INBOX
 
@@ -65,16 +65,16 @@
 
 ### Tests for User Story 2 (TDD - Red Phase)
 
-- [ ] T009 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for loading state during duplication
-- [ ] T010 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for tooltip display on duplicate button hover
-- [ ] T011 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for success toast with ticket key
+- [x] T009 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for loading state during duplication
+- [x] T010 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for tooltip display on duplicate button hover
+- [x] T011 [P] [US2] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for success toast with ticket key
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Add `isDuplicating` state and disabled/loading state to duplicate button in components/board/ticket-detail-modal.tsx
-- [ ] T013 [US2] Add tooltip with "Duplicate ticket" text to duplicate button in components/board/ticket-detail-modal.tsx
-- [ ] T014 [US2] Add success toast notification with new ticket key in handleDuplicate function in components/board/ticket-detail-modal.tsx
-- [ ] T015 [US2] Close modal after successful duplication in handleDuplicate function
+- [x] T012 [US2] Add `isDuplicating` state and disabled/loading state to duplicate button in components/board/ticket-detail-modal.tsx
+- [x] T013 [US2] Add tooltip with "Duplicate ticket" text to duplicate button in components/board/ticket-detail-modal.tsx
+- [x] T014 [US2] Add success toast notification with new ticket key in handleDuplicate function in components/board/ticket-detail-modal.tsx
+- [x] T015 [US2] Close modal after successful duplication in handleDuplicate function
 
 **Checkpoint**: User Story 2 complete - users see loading state, tooltip, and success toast with ticket key
 
@@ -88,16 +88,16 @@
 
 ### Tests for User Story 3 (TDD - Red Phase)
 
-- [ ] T016 [P] [US3] Add API contract test in tests/api/tickets-duplicate.spec.ts for 404 when ticket not found
-- [ ] T017 [P] [US3] Add API contract test in tests/api/tickets-duplicate.spec.ts for 404 when project not found
-- [ ] T018 [P] [US3] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for error toast on API failure
+- [x] T016 [P] [US3] Add API contract test in tests/api/tickets-duplicate.spec.ts for 404 when ticket not found
+- [x] T017 [P] [US3] Add API contract test in tests/api/tickets-duplicate.spec.ts for 404 when project not found
+- [x] T018 [P] [US3] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for error toast on API failure
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add error response handling in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts for ticket not found (404)
-- [ ] T020 [US3] Add error response handling in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts for database errors (500)
-- [ ] T021 [US3] Add error toast in handleDuplicate catch block in components/board/ticket-detail-modal.tsx
-- [ ] T022 [US3] Ensure modal remains open on error and button re-enables for retry in components/board/ticket-detail-modal.tsx
+- [x] T019 [US3] Add error response handling in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts for ticket not found (404)
+- [x] T020 [US3] Add error response handling in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts for database errors (500)
+- [x] T021 [US3] Add error toast in handleDuplicate catch block in components/board/ticket-detail-modal.tsx
+- [x] T022 [US3] Ensure modal remains open on error and button re-enables for retry in components/board/ticket-detail-modal.tsx
 
 **Checkpoint**: All user stories complete - full duplication flow with success and error handling
 
@@ -107,11 +107,11 @@
 
 **Purpose**: Edge cases and final validation
 
-- [ ] T023 [P] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for long title truncation (>92 chars)
-- [ ] T024 [P] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for ticket with maximum 5 attachments
-- [ ] T025 [P] Add API test in tests/api/tickets-duplicate.spec.ts for 400 on invalid projectId/ticketId
-- [ ] T026 Run quickstart.md validation - verify all manual testing steps pass
-- [ ] T027 Run full test suite with bun run test to ensure no regressions
+- [x] T023 [P] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for long title truncation (>92 chars)
+- [x] T024 [P] Add E2E test in tests/e2e/ticket-duplicate.spec.ts for ticket with maximum 5 attachments
+- [x] T025 [P] Add API test in tests/api/tickets-duplicate.spec.ts for 400 on invalid projectId/ticketId
+- [x] T026 Run quickstart.md validation - verify all manual testing steps pass
+- [x] T027 Run full test suite with bun run test to ensure no regressions
 
 ---
 

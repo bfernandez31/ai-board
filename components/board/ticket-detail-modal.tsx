@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2 } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -38,6 +38,13 @@ import { ConversationTimeline } from '@/components/ticket/conversation-timeline'
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 import { MentionDisplay } from '@/components/comments/mention-display';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -181,12 +188,14 @@ export function TicketDetailModal({
   fullJobs = [],
 }: TicketDetailModalProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -292,6 +301,52 @@ export function TicketDetailModal({
   const showTasksButton = showPlanButton; // Same rule: both docs created by plan job
   // Summary button visibility: FULL workflow with completed implement job
   const showSummaryButton = localTicket?.workflowType === 'FULL' && hasCompletedImplementJob;
+
+  /**
+   * Handle ticket duplication
+   * Creates a new ticket in INBOX with "Copy of " prefix
+   */
+  const handleDuplicate = async () => {
+    if (!localTicket) return;
+
+    setIsDuplicating(true);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}/duplicate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to duplicate ticket');
+      }
+
+      const newTicket = await response.json();
+
+      // Invalidate tickets query to refresh the board
+      await queryClient.invalidateQueries({ queryKey: ['tickets', projectId] });
+
+      toast({
+        title: 'Ticket duplicated',
+        description: `Created ${newTicket.ticketKey}`,
+      });
+
+      // Close modal after successful duplication
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to duplicate ticket',
+      });
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
 
   /**
    * Refresh ticket data from server
@@ -799,6 +854,31 @@ export function TicketDetailModal({
                 Edit Policy
               </Button>
             )}
+            {/* Duplicate button - always visible */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDuplicate}
+                    disabled={isDuplicating}
+                    className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
+                    data-testid="duplicate-ticket-button"
+                  >
+                    {isDuplicating ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Copy className="w-3 h-3 mr-1" />
+                    )}
+                    {isDuplicating ? 'Duplicating...' : 'Duplicate'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Duplicate ticket</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="group">
