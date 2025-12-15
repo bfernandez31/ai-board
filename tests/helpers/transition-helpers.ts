@@ -83,14 +83,3 @@ export async function transitionThrough(
     }
   }
 }
-
-/**
- * @deprecated Use cleanupDatabase() from db-cleanup.ts instead.
- * This function is redundant with cleanupDatabase() and should not be used.
- */
-export async function cleanupTestData(): Promise<void> {
-  throw new Error(
-    'cleanupTestData() is deprecated. Use cleanupDatabase() from db-cleanup.ts instead. ' +
-    'This ensures consistent cleanup behavior across all tests.'
-  );
-}

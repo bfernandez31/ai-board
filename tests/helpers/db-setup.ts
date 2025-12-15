@@ -382,15 +382,3 @@ export async function setupMemberAuthTestData(): Promise<{
     nonMemberUserId: nonMemberUser.id,
   };
 }
-
-/**
- * @deprecated Use cleanupDatabase() from db-cleanup.ts instead.
- * This function deletes ALL projects and tickets without selective cleanup.
- * The cleanupDatabase() function preserves non-test data (projects 3+).
- */
-export async function cleanupTestData(): Promise<void> {
-  throw new Error(
-    'cleanupTestData() is deprecated. Use cleanupDatabase() from db-cleanup.ts instead. ' +
-    'This prevents accidental deletion of development data (e.g., Project 3).'
-  );
-}

@@ -451,6 +451,8 @@ Reusable authorization validation functions for project and ticket access contro
 - Use for member management, project settings
 - Returns project record or throws 403
 
+**Note**: The deprecated `verifyTicketOwnership` function has been removed. Use `verifyTicketAccess` for ticket access validation, which validates both owner and member access via the parent project.
+
 ### Usage Pattern
 
 ```typescript
