@@ -1307,7 +1307,7 @@ test.describe('Ticket Detail Modal - Focus Management', () => {
   });
 
   /**
-   * Test: Modal should focus on close button for accessibility
+   * Test: Modal focuses on close button for accessibility
    */
   test('should focus on close button when modal opens', async ({ page , projectId }) => {
     // Navigate to board
@@ -1323,26 +1323,22 @@ test.describe('Ticket Detail Modal - Focus Management', () => {
     // Wait a moment for focus to settle
     await page.waitForTimeout(100);
 
-    // Get the currently focused element
+    // Verify focus is inside the dialog
+    const isFocusInDialog = await page.evaluate(() => {
+      const dialog = document.querySelector('[role="dialog"]');
+      return dialog?.contains(document.activeElement) ?? false;
+    });
+
+    expect(isFocusInDialog).toBe(true);
+
+    // Verify the focused element is NOT the Duplicate button
+    const duplicateButton = dialog.locator('[data-testid="duplicate-ticket-button"]');
     const focusedElement = await page.evaluateHandle(() => document.activeElement);
-
-    // Find the close button (it has aria-label or sr-only text "Close")
-    const closeButton = dialog.locator('button').filter({ hasText: 'Close' }).or(
-      dialog.locator('button[aria-label*="Close"]')
-    ).first();
-
-    // Verify the close button is focused OR the dialog itself is focused
-    const isCloseButtonFocused = await closeButton.evaluate(
+    const isDuplicateButtonFocused = await duplicateButton.evaluate(
       (button, focused) => button === focused,
       focusedElement
     );
 
-    const isDialogFocused = await dialog.evaluate(
-      (dialogEl, focused) => dialogEl === focused || dialogEl.contains(focused as Node),
-      focusedElement
-    );
-
-    // Either close button should be focused OR dialog should contain focus (acceptable for accessibility)
-    expect(isCloseButtonFocused || isDialogFocused).toBe(true);
+    expect(isDuplicateButtonFocused).toBe(false);
   });
 });

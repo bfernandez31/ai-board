@@ -750,6 +750,16 @@ export function TicketDetailModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        onOpenAutoFocus={(event) => {
+          // Prevent auto-focus on the first interactive element (duplicate button)
+          // and redirect focus to the close button for better UX
+          event.preventDefault();
+          // Find and focus the close button (rendered by DialogContent)
+          const closeButton = (event.target as HTMLElement)?.querySelector('button[aria-label="Close"], button:has(.sr-only)');
+          if (closeButton instanceof HTMLElement) {
+            closeButton.focus();
+          }
+        }}
         onEscapeKeyDown={(event) => {
           // Prevent modal from closing if autocomplete is open
           if (isAutocompleteOpen) {
@@ -849,7 +859,6 @@ export function TicketDetailModal({
                 className="ml-auto h-6 px-2 text-xs"
                 data-testid="edit-policy-button"
                 title="Edit clarification policy"
-                autoFocus={false}
               >
                 <Settings2 className="w-3 h-3 mr-1" />
                 Edit Policy
@@ -866,7 +875,6 @@ export function TicketDetailModal({
                     disabled={isDuplicating}
                     className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
                     data-testid="duplicate-ticket-button"
-                    autoFocus={false}
                   >
                     {isDuplicating ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
