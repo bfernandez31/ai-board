@@ -141,20 +141,6 @@ describe('Authorization Helpers Type Safety', () => {
     });
   });
 
-  describe('verifyTicketOwnership (deprecated)', () => {
-    it('should maintain backward compatibility with owner-only access', () => {
-      // Mock function maintains void return type (no return value)
-      const verifyTicketOwnership = async (ticketId: number): Promise<void> => {
-        if (ticketId === 999) {
-          throw new Error('Ticket not found');
-        }
-        // Returns void on success
-      };
-
-      expect(verifyTicketOwnership(1)).resolves.toBeUndefined();
-      expect(verifyTicketOwnership(999)).rejects.toThrow('Ticket not found');
-    });
-  });
 });
 
 describe('Authorization Logic Behavior', () => {

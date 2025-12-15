@@ -101,25 +101,3 @@ export async function verifyProjectOwnership(projectId: number): Promise<Authori
 
   return project;
 }
-
-/**
- * Verify that a ticket's project belongs to the current user (owner-only)
- * @deprecated Use verifyTicketAccess() instead - member access is now supported
- * @throws Error if ticket/project not found or doesn't belong to user
- */
-export async function verifyTicketOwnership(ticketId: number): Promise<void> {
-  const userId = await requireAuth();
-
-  const ticket = await prisma.ticket.findFirst({
-    where: {
-      id: ticketId,
-      project: {
-        userId,
-      },
-    },
-  });
-
-  if (!ticket) {
-    throw new Error('Ticket not found');
-  }
-}
