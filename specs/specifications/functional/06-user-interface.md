@@ -318,6 +318,13 @@ The notification bell provides access to mention notifications:
 - Provides relative timestamps
 - Includes "Mark all as read" and "View all" actions
 
+**Mobile Responsiveness**:
+- Dropdown width adapts to viewport: `calc(100vw - 16px)` with 380px maximum
+- Prevents horizontal overflow on narrow screens (375px minimum supported)
+- Content area height: `calc(100vh - 200px)` minimum 200px on mobile, fixed 400px maximum on desktop (≥640px)
+- Scrollable content area prevents dropdown from extending beyond screen bounds
+- 8px horizontal margin ensures dropdown doesn't touch screen edges
+
 **Visual States**:
 - Unread: Blue dot or background highlight
 - Read: No highlight indicator
