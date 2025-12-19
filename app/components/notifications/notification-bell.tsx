@@ -34,7 +34,7 @@ export function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[380px] p-0">
+      <PopoverContent align="end" className="w-[calc(100vw-16px)] max-w-[380px] p-0">
         <NotificationDropdown />
       </PopoverContent>
     </Popover>
