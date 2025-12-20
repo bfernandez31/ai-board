@@ -312,6 +312,92 @@ Users can create a copy of any existing ticket to reuse content for similar work
 - Optimistic UI update shows new ticket immediately
 - Database operation is atomic (all-or-nothing)
 
+## Ticket Search
+
+### Search Interface
+
+Users can quickly find tickets using a search input in the header:
+
+**Location**:
+- Search input appears centered in the header when viewing a project board
+- Hidden when no project is selected (homepage, settings pages)
+- Visible on desktop and tablet viewports (hidden on mobile due to space constraints)
+
+**Search Scope**:
+- Searches within the currently selected project only
+- No cross-project search (keeps results focused and relevant)
+
+**Search Fields**:
+- **Ticket Key**: Matches partial or complete ticket keys (e.g., "AIB-42", "42")
+- **Title**: Searches for keywords in ticket titles (case-insensitive)
+- **Description**: Searches for keywords in ticket descriptions (case-insensitive)
+
+### Search Behavior
+
+**Trigger**:
+- Search activates after typing 2 or more characters
+- Debounced by 300ms to reduce API calls during fast typing
+- Results update automatically as user types
+
+**Results Display**:
+- Dropdown appears below search input when results are available
+- Shows up to 10 matching tickets
+- Each result displays:
+  - Ticket key (monospace font for easy identification)
+  - Ticket title (truncated if too long)
+- Results ordered by relevance:
+  1. Exact key matches first
+  2. Partial key matches second
+  3. Title matches third
+  4. Description matches last
+  - Within same match type, sorted by most recently updated
+
+**Empty States**:
+- "No tickets found" when query has no matches
+- "Search unavailable" when API returns error
+- "Searching..." loading indicator during API call
+- Placeholder text guides users: "Search tickets..."
+
+### Keyboard Navigation
+
+Users can navigate search results using keyboard for efficient workflow:
+
+**Navigation Keys**:
+- **Down Arrow**: Move to next result in list
+- **Up Arrow**: Move to previous result in list
+- **Enter**: Open the currently highlighted ticket modal
+- **Escape**: Close dropdown (if open) or clear search input (if closed)
+
+**Focus Management**:
+- Search input remains focused during keyboard navigation
+- Highlighted result scrolls into view automatically
+- Selected result visually distinct (highlighted background)
+
+### Result Selection
+
+**Opening Tickets**:
+- Clicking a result opens the ticket detail modal
+- Pressing Enter on highlighted result opens the ticket modal
+- Search input clears automatically after ticket opens
+- Dropdown closes after selection
+
+**Modal Integration**:
+- Ticket modal opens with Details tab active by default
+- All ticket information accessible (comments, files, stats, documentation)
+- Search state resets for next search
+
+### Performance
+
+**Response Time**:
+- Search results appear within 500ms of user stopping typing
+- Debounce (300ms) provides smooth UX without lag
+- API optimized with database indexes on projectId
+
+**Accessibility**:
+- Keyboard-only navigation fully supported
+- Screen reader compatible (ARIA labels and roles)
+- Focus indicators clearly visible
+
 ## Ticket Deletion
 
 ### Drag-to-Trash Feature

@@ -648,6 +648,43 @@ Used for multi-column queries with optimal performance:
 - `Notification(recipientId, read, createdAt)`: Unread notification queries with sorting
 - `Notification(recipientId, deletedAt)`: Active notification filtering (soft delete)
 
+## TypeScript Types
+
+### Search Types
+
+```typescript
+interface SearchResult {
+  id: number;
+  ticketKey: string;
+  title: string;
+  stage: Stage;
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  totalCount: number;
+}
+```
+
+**Purpose**: Ticket search functionality in header
+
+**Usage**:
+- Used by `/api/projects/:projectId/tickets/search` endpoint
+- Consumed by `useTicketSearch` hook and `TicketSearch` component
+- Results limited to essential fields for performance
+
+**Fields**:
+- `id`: Ticket ID for modal navigation
+- `ticketKey`: Human-readable identifier (e.g., "ABC-42")
+- `title`: Ticket title for display
+- `stage`: Current workflow stage
+- `totalCount`: Number of results (capped at API limit)
+
+**Validation**:
+- Query must be minimum 2 characters
+- Limit defaults to 10, maximum 50
+- Results ordered by relevance (key > title > description)
+
 ## Data Types
 
 ### JSON Fields

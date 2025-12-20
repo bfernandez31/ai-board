@@ -144,6 +144,65 @@ export type UpdatePreviewUrlInput = z.infer<typeof updatePreviewUrlSchema>;
 - **Pattern**: `^https:\/\/[a-z0-9-]+\.vercel\.app$`
 - Rejects non-HTTPS URLs, non-Vercel domains, and malformed URLs
 
+## Search Schemas
+
+### SearchTicketsSchema
+
+```typescript
+export const searchTicketsSchema = z.object({
+  q: z.string()
+    .min(2, 'Search query must be at least 2 characters')
+    .max(100, 'Search query must be 100 characters or less'),
+
+  limit: z.coerce.number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .default(10),
+});
+
+export type SearchTicketsInput = z.infer<typeof searchTicketsSchema>;
+```
+
+**Validation Rules**:
+- **q**: Search query string, 2-100 characters required
+- **limit**: Optional result limit (default: 10, max: 50)
+
+**Usage**:
+- Used by `/api/projects/:projectId/tickets/search` endpoint
+- Query parameter validation before database query
+- Prevents empty searches and excessive result sets
+
+### SearchResultSchema
+
+```typescript
+export const searchResultSchema = z.object({
+  id: z.number().int().positive(),
+  ticketKey: z.string().min(1),
+  title: z.string().min(1),
+  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+});
+
+export const searchResponseSchema = z.object({
+  results: z.array(searchResultSchema),
+  totalCount: z.number().int().nonnegative(),
+});
+
+export type SearchResult = z.infer<typeof searchResultSchema>;
+export type SearchResponse = z.infer<typeof searchResponseSchema>;
+```
+
+**Response Structure**:
+- **results**: Array of matching tickets with minimal fields
+- **totalCount**: Number of results returned (capped at limit)
+
+**Fields**:
+- **id**: Ticket ID for modal navigation
+- **ticketKey**: Human-readable identifier (e.g., "ABC-42")
+- **title**: Ticket title for display
+- **stage**: Current workflow stage enum
+
 ## Comment Schemas
 
 ### CreateCommentSchema
