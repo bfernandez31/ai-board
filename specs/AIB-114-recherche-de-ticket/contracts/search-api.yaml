@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  title: AI-Board Ticket Search API
+  description: API contract for ticket search functionality within a project context.
+  version: 1.0.0
+  contact:
+    name: AI-Board Team
+
+servers:
+  - url: /api
+    description: Relative API path
+
+paths:
+  /projects/{projectId}/tickets/search:
+    get:
+      operationId: searchTickets
+      summary: Search tickets within a project
+      description: |
+        Searches tickets by key, title, and description within the specified project.
+        Results are ordered by relevance (key matches first, then title, then description)
+        and limited to 10 results.
+      tags:
+        - Tickets
+        - Search
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: The project ID to search within
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - name: q
+          in: query
+          required: true
+          description: Search query string (minimum 2 characters)
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+            example: "AIB-42"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+            example: 10
+      responses:
+        '200':
+          description: Successful search response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                found:
+                  summary: Results found
+                  value:
+                    results:
+                      - id: 42
+                        ticketKey: "AIB-42"
+                        title: "Add user authentication"
+                        stage: "BUILD"
+                      - id: 142
+                        ticketKey: "AIB-142"
+                        title: "Fix authentication bug"
+                        stage: "VERIFY"
+                    totalCount: 2
+                empty:
+                  summary: No results
+                  value:
+                    results: []
+                    totalCount: 0
+        '400':
+          description: Invalid request (query too short or missing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Query must be at least 2 characters"
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+        '403':
+          description: Not authorized to access this project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Access denied"
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal server error"
+
+components:
+  schemas:
+    SearchResult:
+      type: object
+      description: A single search result representing a matching ticket
+      required:
+        - id
+        - ticketKey
+        - title
+        - stage
+      properties:
+        id:
+          type: integer
+          description: Unique ticket identifier
+          example: 42
+        ticketKey:
+          type: string
+          description: Formatted ticket key
+          pattern: "^[A-Z]+-\\d+$"
+          example: "AIB-42"
+        title:
+          type: string
+          description: Ticket title
+          maxLength: 100
+          example: "Add user authentication"
+        stage:
+          $ref: '#/components/schemas/Stage'
+
+    SearchResponse:
+      type: object
+      description: Search API response containing results and metadata
+      required:
+        - results
+        - totalCount
+      properties:
+        results:
+          type: array
+          description: Array of matching tickets (max 10)
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        totalCount:
+          type: integer
+          description: Total number of matches (may exceed results length)
+          minimum: 0
+          example: 2
+
+    Stage:
+      type: string
+      description: Ticket stage/status
+      enum:
+        - INBOX
+        - SPECIFY
+        - PLAN
+        - BUILD
+        - VERIFY
+        - SHIP
+      example: "BUILD"
+
+    ErrorResponse:
+      type: object
+      description: Error response structure
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Query must be at least 2 characters"
+        code:
+          type: string
+          description: Optional error code for client handling
+          example: "QUERY_TOO_SHORT"
+
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+security:
+  - session: []
+
+tags:
+  - name: Tickets
+    description: Ticket-related operations
+  - name: Search
+    description: Search functionality

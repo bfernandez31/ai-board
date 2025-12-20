@@ -624,6 +624,73 @@ Update ticket preview URL (workflow-only endpoint).
 
 **Note**: This endpoint does NOT use optimistic concurrency control (no version checking).
 
+### GET /api/projects/:projectId/tickets/search
+
+Search tickets within a project by key, title, or description.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `q` (string, required): Search query (minimum 2 characters)
+- `limit` (number, optional): Maximum results to return (default: 10, max: 50)
+
+**Response** (200 OK):
+```json
+{
+  "results": [
+    {
+      "id": 42,
+      "ticketKey": "ABC-42",
+      "title": "Add user authentication",
+      "stage": "BUILD"
+    },
+    {
+      "id": 38,
+      "ticketKey": "ABC-38",
+      "title": "Fix authentication bug",
+      "stage": "VERIFY"
+    }
+  ],
+  "totalCount": 2
+}
+```
+
+**Search Behavior**:
+- Searches across ticketKey, title, and description fields
+- Case-insensitive matching (uses Prisma `mode: 'insensitive'`)
+- Results ordered by relevance:
+  1. Exact ticket key matches (score: 4)
+  2. Partial ticket key matches (score: 3)
+  3. Title contains query (score: 2)
+  4. Description contains query (score: 1)
+- Within same relevance score, ordered by most recently updated
+- Limited to specified limit (default 10, max 50)
+
+**Fields**:
+- `id`: Ticket ID (for opening modal via URL parameter)
+- `ticketKey`: Human-readable key (e.g., "ABC-42")
+- `title`: Ticket title
+- `stage`: Current workflow stage
+- `totalCount`: Number of results returned (capped at limit)
+
+**Errors**:
+- `400`: Query too short (less than 2 characters) or invalid limit
+  ```json
+  {
+    "error": "Query must be at least 2 characters"
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: Database error
+
+**Performance**: <500ms for typical queries, indexed on projectId
+
 ### DELETE /api/projects/:projectId/tickets/:id
 
 Delete ticket with GitHub cleanup (permanent deletion).

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
+import { TicketSearch } from '@/components/search/ticket-search';
 
 interface ProjectInfo {
   id: number;
@@ -134,8 +135,15 @@ export function Header() {
           </>
         )}
 
-        {/* Spacer to push buttons to the right (hidden on mobile when project info exists) */}
-        <div className={projectInfo ? "hidden md:flex flex-1" : "flex-1"} />
+        {/* Center: Search (when project selected) - hidden on mobile */}
+        {projectInfo && (
+          <div className="hidden md:flex flex-1 justify-center">
+            <TicketSearch projectId={projectInfo.id} />
+          </div>
+        )}
+
+        {/* Spacer to push buttons to the right (hidden on mobile when project info exists, or when search is visible) */}
+        <div className={projectInfo ? "hidden" : "flex-1"} />
 
         {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">

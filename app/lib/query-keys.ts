@@ -89,6 +89,12 @@ export const queryKeys = {
      */
     constitutionDiff: (projectId: number, sha: string) =>
       ['projects', projectId, 'constitution', 'diff', sha] as const,
+
+    /**
+     * Ticket search within a project
+     */
+    ticketSearch: (projectId: number, query: string) =>
+      ['projects', projectId, 'tickets', 'search', query] as const,
   },
 
   /**
