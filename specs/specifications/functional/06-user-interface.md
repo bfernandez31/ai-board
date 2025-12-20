@@ -337,6 +337,57 @@ The notification bell provides access to mention notifications:
 - Stops when user logs out
 - Syncs across open tabs/windows
 
+### Ticket Search
+
+The header includes a search input for quickly finding tickets within the current project.
+
+**Visual Presentation**:
+- Search input positioned in the center area of the header
+- Search icon (magnifying glass) displayed on the left side of input
+- Placeholder text: "Search tickets..."
+- Visible when viewing project pages (board, analytics, etc.)
+- Width adapts to available space in header center area
+
+**Search Behavior**:
+- Searches across ticket key, title, and description fields
+- Case-insensitive substring matching
+- Results appear as query is typed (minimum 1 character)
+- Client-side filtering of already-loaded tickets (no server round-trip)
+- Search results update within 100ms of typing
+
+**Search Results Dropdown**:
+- Displays below the search input
+- Shows up to 10 matching tickets
+- Each result shows ticket key and title
+- Results ordered by relevance: exact key matches first, then title matches, then description matches
+- Clicking a result opens the ticket detail modal
+- Dropdown closes when clicking outside or pressing Escape
+- "No results found" message when query matches no tickets
+
+**Keyboard Navigation**:
+- Down Arrow: Highlight next result
+- Up Arrow: Highlight previous result
+- Enter: Open highlighted ticket
+- Escape: Close dropdown and clear search input
+- Tab: Move focus out of search (closes dropdown)
+
+**Responsive Behavior**:
+- Desktop (≥768px): Search input visible in header center
+- Mobile (<768px): Search input visible in header center with adjusted width
+- Dropdown adapts to viewport width on mobile
+- Touch-friendly tap targets on mobile devices
+
+**Performance**:
+- Instant results (client-side filtering)
+- No loading state needed
+- Handles typical project size (<500 tickets) efficiently
+
+**Accessibility**:
+- `aria-label="Search tickets"` on input field
+- Keyboard navigation fully supported
+- Screen reader announcements for result count
+- Clear visual focus indicators
+
 ## Navigation
 
 ### Tab Navigation

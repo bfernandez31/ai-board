@@ -469,6 +469,269 @@ if (ticket.projectId !== projectId) {
 
 See [authentication.md](authentication.md#authorization-patterns) for detailed authorization patterns.
 
+## Ticket Search Utilities
+
+### Purpose
+
+Provides client-side search and ranking functionality for finding tickets by key, title, or description. Optimized for instant results with relevance-based scoring.
+
+### File Location
+
+`lib/utils/ticket-search.ts`
+
+### Type Definitions
+
+**TicketSearchResult**:
+```typescript
+interface TicketSearchResult {
+  id: number;                    // Ticket ID for selection
+  ticketKey: string;             // Display key (e.g., "AIB-123")
+  title: string;                 // Ticket title
+  stage: Stage;                  // Current stage for visual indicator
+  relevanceScore: number;        // Match quality (higher = better)
+}
+```
+
+**TicketSearchState**:
+```typescript
+interface TicketSearchState {
+  query: string;                 // Current search query
+  isOpen: boolean;               // Dropdown visibility
+  selectedIndex: number;         // Keyboard navigation index
+  results: TicketSearchResult[]; // Filtered and sorted results
+}
+```
+
+**TicketSearchProps**:
+```typescript
+interface TicketSearchProps {
+  tickets: TicketWithVersion[];                 // All project tickets
+  onSelectTicket: (ticketId: number) => void;   // Selection callback
+  className?: string;                           // Optional styling
+  placeholder?: string;                         // Input placeholder
+}
+```
+
+### Core Functions
+
+**Function**: `calculateRelevance(ticket: TicketWithVersion, query: string): number`
+
+Scores ticket relevance based on where the search query matches.
+
+**Scoring Algorithm**:
+- Exact key match: 4 points (highest priority)
+- Key contains query: 3 points
+- Title starts with query: 2 points
+- Title contains query: 1 point
+- Description contains query: 0.5 points (tiebreaker)
+
+**Parameters**:
+- `ticket` (TicketWithVersion): Ticket to score
+- `query` (string): Search query (already lowercased)
+
+**Returns**: Relevance score (number)
+
+**Examples**:
+```typescript
+// Query: "aib-42"
+calculateRelevance({ ticketKey: "AIB-42", ... }, "aib-42")  // → 4 (exact)
+
+// Query: "aib"
+calculateRelevance({ ticketKey: "AIB-42", ... }, "aib")      // → 3 (key contains)
+
+// Query: "dark"
+calculateRelevance({ title: "Dark mode toggle", ... }, "dark")  // → 2 (title starts with)
+
+// Query: "mode"
+calculateRelevance({ title: "Dark mode toggle", ... }, "mode")  // → 1 (title contains)
+
+// Query: "authentication"
+calculateRelevance({ description: "Add authentication flow", ... }, "authentication")  // → 0.5 (description)
+```
+
+**Function**: `searchTickets(tickets: TicketWithVersion[], query: string, maxResults = 10): TicketSearchResult[]`
+
+Filters, ranks, and limits search results.
+
+**Parameters**:
+- `tickets` (TicketWithVersion[]): All project tickets
+- `query` (string): Search query
+- `maxResults` (number): Maximum results to return (default: 10)
+
+**Returns**: Array of TicketSearchResult, sorted by relevance (highest first)
+
+**Algorithm**:
+1. Validate inputs (empty query → empty array)
+2. Lowercase query for case-insensitive matching
+3. Map all tickets to results with relevance scores
+4. Filter out results with score 0 (no match)
+5. Sort by relevance score (descending)
+6. Slice to max results limit
+
+**Performance**:
+- Time complexity: O(n log n) for sort (n = ticket count)
+- Memory complexity: O(n) for result array
+- Optimized for <500 tickets (typical project size)
+- Executes in <100ms for instant user feedback
+
+**Examples**:
+```typescript
+import { searchTickets } from '@/lib/utils/ticket-search';
+
+// Search by key
+searchTickets(allTickets, "AIB-42")
+// → [{ id: 42, ticketKey: "AIB-42", title: "...", stage: "BUILD", relevanceScore: 4 }]
+
+// Search by title
+searchTickets(allTickets, "dark mode")
+// → [{ ticketKey: "AIB-15", title: "Dark mode toggle", relevanceScore: 2 }, ...]
+
+// Empty query
+searchTickets(allTickets, "")
+// → []
+
+// No matches
+searchTickets(allTickets, "xyz123")
+// → []
+
+// With custom limit
+searchTickets(allTickets, "button", 5)
+// → First 5 results matching "button"
+```
+
+### Component Implementation
+
+**Component**: `TicketSearch` (`components/search/ticket-search.tsx`)
+
+React component providing the search input and results dropdown.
+
+**Features**:
+- Client-side filtering via `useMemo` (instant results)
+- Keyboard navigation (Arrow keys, Enter, Escape)
+- Click-outside to close dropdown
+- Auto-scroll selected result into view
+- Accessible via `aria-label` and keyboard events
+
+**State Management**:
+```typescript
+const [query, setQuery] = useState('');
+const [isOpen, setIsOpen] = useState(false);
+const [selectedIndex, setSelectedIndex] = useState(0);
+
+// Memoized search results
+const results = useMemo(() => searchTickets(tickets, query), [tickets, query]);
+```
+
+**Keyboard Shortcuts**:
+- Down Arrow: Move selection down
+- Up Arrow: Move selection up
+- Enter: Select highlighted result
+- Escape: Close dropdown and clear query
+- Tab: Close dropdown (focus moves out)
+
+**Component**: `TicketSearchResult` (`components/search/ticket-search-result.tsx`)
+
+Individual result item renderer showing ticket key and title.
+
+**Props**:
+```typescript
+interface TicketSearchResultProps {
+  ticket: TicketSearchResult;
+  isSelected: boolean;
+  onClick: () => void;
+}
+```
+
+### Usage Pattern
+
+**Integration in Header** (`components/layout/header.tsx`):
+
+```typescript
+import { TicketSearch } from '@/components/search/ticket-search';
+import { useTickets } from '@/lib/hooks/queries/useTickets';
+
+function Header({ projectId }: { projectId: number }) {
+  const { data } = useTickets(projectId);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+
+  return (
+    <header>
+      <TicketSearch
+        tickets={data?.tickets || []}
+        onSelectTicket={(id) => setSelectedTicketId(id)}
+        placeholder="Search tickets..."
+      />
+
+      {selectedTicketId && (
+        <TicketDetailModal
+          ticketId={selectedTicketId}
+          onClose={() => setSelectedTicketId(null)}
+        />
+      )}
+    </header>
+  );
+}
+```
+
+### Testing
+
+**Unit Tests**: `tests/unit/ticket-search.test.ts`
+
+Test coverage for search logic:
+- Relevance scoring for each match type
+- Empty query handling
+- No matches scenario
+- Result limiting (max 10)
+- Case-insensitive matching
+- Sorting by relevance
+
+**E2E Tests**: `tests/e2e/ticket-search.spec.ts`
+
+Test coverage for UI interactions:
+- Search by ticket key
+- Search by title keywords
+- Search by description content
+- Keyboard navigation (arrows, enter, escape)
+- Click outside to close
+- Result selection opens modal
+- Empty state ("No results found")
+
+### Performance Characteristics
+
+**Execution Time**:
+- <100ms for 500 tickets (typical project)
+- <200ms for 1000 tickets (large project)
+- Client-side filtering ensures instant feedback
+
+**Memory Usage**:
+- Result array: ~5KB for 10 results
+- Search state: <1KB
+- No server round-trip required
+
+**Optimization**:
+- Memoized results prevent redundant calculations
+- Direct array operations (no intermediate copies)
+- Early exit for empty queries
+- Slice only after filtering and sorting
+
+### Design Rationale
+
+**Client-Side Search**:
+- Board already loads all project tickets (no additional data fetch)
+- Instant results (<100ms target)
+- Typical projects have <500 tickets (manageable in memory)
+- Future: Consider server-side search for 1000+ ticket projects
+
+**Relevance Scoring**:
+- Exact key matches prioritized (users know exact ticket IDs)
+- Title matches weighted higher than description (title is primary content)
+- Description matches included for completeness (low weight)
+
+**Max 10 Results**:
+- Prevents overwhelming dropdown UI
+- Encourages query refinement for better matches
+- Standard pattern across search interfaces
+
 ## Date Utilities
 
 ### Purpose

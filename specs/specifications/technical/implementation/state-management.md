@@ -1053,6 +1053,61 @@ test('creates ticket with optimistic update', async () => {
 });
 ```
 
+## Client-Side Filtering
+
+### Ticket Search
+
+**Pattern**: Pure client-side filtering without TanStack Query hooks
+
+Ticket search does not use TanStack Query because:
+- Data already loaded in TanStack Query cache (tickets query)
+- No server round-trip needed
+- Pure function filtering with `useMemo`
+- Instant results (<100ms)
+
+**Implementation** (`components/search/ticket-search.tsx`):
+
+```typescript
+import { useMemo } from 'react';
+import { useTickets } from '@/lib/hooks/queries/useTickets';
+import { searchTickets } from '@/lib/utils/ticket-search';
+
+function TicketSearch({ projectId }: { projectId: number }) {
+  const { data } = useTickets(projectId);  // Existing TanStack Query hook
+  const [query, setQuery] = useState('');
+
+  // Client-side filtering with useMemo (no TanStack Query)
+  const results = useMemo(() => {
+    return searchTickets(data?.tickets || [], query);
+  }, [data?.tickets, query]);
+
+  return <SearchDropdown results={results} />;
+}
+```
+
+**Benefits**:
+- Zero network latency (instant results)
+- No additional API endpoints required
+- Leverages existing ticket cache
+- Simpler state management (React hooks only)
+
+**Trade-offs**:
+- Requires all tickets loaded in memory
+- Not scalable beyond ~1000 tickets
+- No server-side ranking or fuzzy search
+
+**When to Use This Pattern**:
+- Data already in TanStack Query cache
+- Small to medium dataset (<1000 items)
+- Real-time filtering required (<100ms)
+- Simple substring matching sufficient
+
+**When to Use TanStack Query Instead**:
+- Data not yet loaded
+- Large datasets (>1000 items)
+- Server-side search/ranking needed
+- Complex query syntax (filters, operators)
+
 ## Best Practices
 
 ### Query Keys
@@ -1078,3 +1133,9 @@ test('creates ticket with optimistic update', async () => {
 - ✅ Enable request deduplication (automatic)
 - ✅ Prefetch on hover/click
 - ❌ Don't poll unnecessarily
+
+### Client-Side Filtering
+- ✅ Use `useMemo` for derived data
+- ✅ Leverage existing TanStack Query cache
+- ✅ Keep filtering logic in utility functions
+- ❌ Don't create duplicate data in state
