@@ -188,39 +188,48 @@ Action: Provide examples and best practices
 
 **Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for minor fixes.
 
-**✅ VERIFY STAGE CAPABILITIES** (different from SPECIFY/PLAN):
-- ✅ **CAN FIX CODE**: For minor issues (<30% divergence), launch iterate job to modify code files
-- ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md if needed
-- ✅ **AUTOMATED FIXES**: Small bugs, validation issues, UI adjustments can be auto-fixed
+**🚨 CRITICAL RESTRICTION - READ THIS FIRST**:
+- ❌ **DO NOT MODIFY CODE FILES DIRECTLY** - You cannot edit source code (*.tsx, *.ts, *.js, *.css, etc.)
+- ❌ **DO NOT USE Edit/Write ON CODE** - The workflow only commits `specs/` directory
+- ✅ **USE ITERATE_REQUIRED STATUS** - For code fixes, write status `ITERATE_REQUIRED` in result file
+- ✅ **THE WORKFLOW WILL LAUNCH iterate.yml** - Which has permission to modify and commit all files
+
+**Why?** The `ai-board-assist` workflow only commits files in `specs/$BRANCH/`. If you modify code directly, those changes are LOST. The `iterate.yml` workflow does `git add .` and also syncs global specifications.
+
+**✅ VERIFY STAGE CAPABILITIES**:
+- ✅ **CAN REQUEST CODE FIXES**: Write `ITERATE_REQUIRED` status → workflow launches iterate job
+- ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md directly (these ARE committed)
+- ✅ **AUTOMATED FIXES**: Small bugs, validation issues, UI adjustments via iterate job
 - ❌ **CANNOT**: Make architectural changes, major refactoring, or changes exceeding 60% divergence
 
 **⚠️ CRITICAL APPROACH**:
 - **QUANTIFY FIRST**: Assess the size and impact of needed changes
-- **AUTOMATE MINOR**: Launch iterate job for small fixes (< 30% divergence)
-- **INFORM MAJOR**: Explain options for larger changes
+- **AUTOMATE MINOR**: Write `ITERATE_REQUIRED` status for small fixes (< 30% divergence)
+- **INFORM MAJOR**: Explain options for larger changes (no iterate, user decides)
 
 **What I Can Help With in VERIFY Stage**:
-- Fixing minor bugs in code (via iterate job)
-- Adjusting validation logic
-- UI/UX tweaks and alignments
-- Error message corrections
-- Small performance optimizations
-- Updating specifications to match implementation
-- Synchronizing documentation
+- Requesting code fixes via iterate job (validation, UI, error messages)
+- Adjusting validation logic (via iterate)
+- UI/UX tweaks and alignments (via iterate)
+- Error message corrections (via iterate)
+- Small performance optimizations (via iterate)
+- Updating specifications to match implementation (direct - specs ARE committed)
+- Synchronizing documentation (direct for specs/, via iterate for code comments)
 
 **Process for VERIFY**:
 1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
 2. **READ ALL SPECS**: Read specs/$BRANCH/ files and understand current state
-3. **ANALYZE ISSUES**: Parse the user's request to understand what's not working
-4. **QUANTIFY IMPACT**: Calculate the divergence percentage and effort required:
+3. **READ CODE IF NEEDED**: Read the relevant code files to understand the issue
+4. **ANALYZE ISSUES**: Parse the user's request to understand what's not working
+5. **QUANTIFY IMPACT**: Calculate the divergence percentage and effort required:
    - Count affected files
    - Estimate lines of code to change
    - Check if architectural changes needed
    - Calculate divergence from original spec
-5. **DECIDE ACTION**:
-   - **MINOR (< 30% divergence)**: Auto-launch iterate job
-   - **MODERATE (30-60%)**: Inform user of options
-   - **MAJOR (> 60%)**: Recommend requalification
+6. **DECIDE ACTION**:
+   - **MINOR (< 30% divergence)**: Write `ITERATE_REQUIRED` status with issues list
+   - **MODERATE (30-60%)**: Inform user of options (no automatic fix)
+   - **MAJOR (> 60%)**: Recommend requalification (no automatic fix)
 
 **Quantification Formula**:
 ```
@@ -233,20 +242,24 @@ divergence = (
 
 **Response Templates**:
 
-#### MINOR - Auto Iterate
+#### MINOR - Auto Iterate (use ITERATE_REQUIRED status)
 ```markdown
-@[$USER_ID:$USER] ✅ **Minor adjustments detected - Auto-fixing**
+@[$USER_ID:$USER] ✅ **Minor adjustments detected - Launching iterate job**
 
-Issues identified (estimated: 1-2h):
+Issues to fix:
 - Missing email validation
 - Button alignment on mobile
 - Error message formatting
 
-**Action**: Launching iteration job #[JOB_ID] to fix these automatically.
-These changes align with the original specification.
-
+**Action**: The iterate workflow will apply these fixes automatically.
 The ticket will remain in VERIFY while fixes are applied.
 ```
+
+**⚠️ IMPORTANT**: When outputting this response, you MUST also write the result file with:
+- `## Status` = `ITERATE_REQUIRED` (NOT SUCCESS)
+- `## Issues To Fix` = List of issues (one per line with `- ` prefix)
+
+The workflow reads the status and dispatches `iterate.yml` automatically.
 
 #### MODERATE - Manual Decision
 ```markdown
@@ -286,14 +299,25 @@ Automatic fixes are not possible for changes of this magnitude.
 ```
 
 **Integration with iterate.yml**:
-When divergence < 30%, automatically:
-1. Create job with command='iterate'
-2. Dispatch iterate.yml workflow with issues_to_fix
-3. Workflow will fix code and sync all documentation
-4. Ticket stays in VERIFY throughout
+
+When you write `ITERATE_REQUIRED` status, the workflow automatically:
+1. Reads the `## Issues To Fix` section from your result file
+2. Creates a new job with command='iterate'
+3. Dispatches `iterate.yml` workflow with the issues list
+4. `iterate.yml` runs `/iterate-verify` command which:
+   - Actually modifies the code files
+   - Syncs global specifications (`specs/specifications/`)
+   - Commits ALL changes (not just specs/)
+5. Ticket stays in VERIFY throughout
 
 **Example Request**: "@ai-board the validation isn't working correctly on the form"
-**Action**: Quantify the issue, if minor launch iterate job, if major inform user
+
+**Correct Action**:
+1. Read the code to understand the issue
+2. Determine it's a minor fix (< 30% divergence)
+3. Write result file with `ITERATE_REQUIRED` status and issues list
+4. Output message saying iterate job will fix it
+5. **DO NOT modify the code yourself** - iterate.yml will do it
 
 ## Output Format
 
