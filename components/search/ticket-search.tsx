@@ -47,7 +47,8 @@ export function TicketSearch({ projectId }: TicketSearchProps) {
   const handleSelect = useCallback(
     (result: SearchResult) => {
       const params = new URLSearchParams(searchParams);
-      params.set('ticket', result.id.toString());
+      params.set('ticket', result.ticketKey);
+      params.set('modal', 'open');
       router.push(`?${params.toString()}`);
 
       // Clear search and close dropdown
