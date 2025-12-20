@@ -14,9 +14,10 @@ import { Stage } from '@prisma/client';
  * - Shared across all components that query tickets
  *
  * @param projectId - Project ID to fetch tickets for
+ * @param options - Optional query options (enabled)
  * @returns Query result with tickets array
  */
-export function useProjectTickets(projectId: number) {
+export function useProjectTickets(projectId: number, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.projects.tickets(projectId),
     queryFn: async () => {
@@ -33,6 +34,8 @@ export function useProjectTickets(projectId: number) {
 
       return response.json() as Promise<TicketWithVersion[]>;
     },
+    // Only fetch if enabled (defaults to true)
+    enabled: options?.enabled ?? true,
     // Data is fresh for 5 seconds
     staleTime: 5000,
     // Keep in cache for 10 minutes after unmount

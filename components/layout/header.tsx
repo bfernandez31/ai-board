@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FileText, BarChart3 } from 'lucide-react';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
+import { TicketSearch } from '@/components/search/ticket-search';
+import { useProjectTickets } from '@/app/lib/hooks/queries/useTickets';
 
 interface ProjectInfo {
   id: number;
@@ -19,9 +21,33 @@ interface ProjectInfo {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+
+  // Extract project ID from pathname for ticket search
+  const projectId = useMemo(() => {
+    if (!pathname) return null;
+    const match = pathname.match(/^\/projects\/(\d+)/);
+    return match && match[1] ? parseInt(match[1], 10) : null;
+  }, [pathname]);
+
+  // Fetch tickets for search (only when on project page)
+  const { data: tickets = [] } = useProjectTickets(projectId ?? 0, {
+    enabled: projectId !== null && projectId > 0,
+  });
+
+  // Handle ticket selection - navigate to open the modal via URL params
+  const handleTicketSelect = useCallback(
+    (ticketId: number) => {
+      const ticket = tickets.find((t) => t.id === ticketId);
+      if (ticket && projectId) {
+        router.push(`/projects/${projectId}/board?ticket=${ticket.ticketKey}&modal=open`);
+      }
+    },
+    [tickets, projectId, router]
+  );
 
   // Determine if we should show marketing variant
   // Show marketing variant on landing page (/) when user is NOT authenticated
@@ -132,6 +158,15 @@ export function Header() {
               </span>
             </div>
           </>
+        )}
+
+        {/* Center: Ticket Search (only visible on project pages on desktop) */}
+        {projectId && (
+          <TicketSearch
+            tickets={tickets}
+            onSelectTicket={handleTicketSelect}
+            className="hidden md:flex ml-6"
+          />
         )}
 
         {/* Spacer to push buttons to the right (hidden on mobile when project info exists) */}
