@@ -59,17 +59,17 @@
 
 ## User Scenarios & Testing
 
-### User Story 1 - Developer Runs Fast API Tests (Priority: P1)
+### User Story 1 - AI Agent Validates API Changes Quickly (Priority: P1)
 
-A developer makes changes to an API route and wants quick feedback on whether their changes broke anything. They run `bun run test:integration` and get results in seconds instead of minutes.
+An AI agent makes changes to an API route and needs quick feedback on whether the changes broke anything. Running `bun run test:integration` provides results in seconds instead of minutes.
 
-**Why this priority**: This is the core value proposition - dramatically faster feedback loops during development enable more confident, rapid iteration.
+**Why this priority**: This is the core value proposition - dramatically faster feedback loops enable more confident, rapid iteration.
 
 **Independent Test**: Can be fully tested by running `bun run test:integration` against a single API endpoint and verifying sub-100ms execution time per test.
 
 **Acceptance Scenarios**:
 
-1. **Given** a developer has modified `/api/tickets/route.ts`, **When** they run `bun run test:integration`, **Then** all ticket-related API tests complete in under 5 seconds total
+1. **Given** an AI agent has modified `/api/tickets/route.ts`, **When** integration tests run, **Then** all ticket-related API tests complete in under 5 seconds total
 2. **Given** the integration test suite contains 30+ API tests, **When** running the full suite, **Then** total execution time is under 30 seconds
 3. **Given** a test requires database state, **When** the test runs, **Then** it uses an isolated project ID based on worker pool and cleans up after itself
 
@@ -79,7 +79,7 @@ A developer makes changes to an API route and wants quick feedback on whether th
 
 The CI pipeline runs all tests on every push. With the Testing Trophy architecture, the majority of tests run at the fast integration layer, reducing total CI time while maintaining coverage confidence.
 
-**Why this priority**: CI speed directly impacts team velocity. Slow CI causes context switching and blocks merges.
+**Why this priority**: CI speed directly impacts iteration velocity. Slow CI causes delays and blocks merges.
 
 **Independent Test**: Can be fully tested by measuring total CI test job duration before and after migration.
 
@@ -91,9 +91,9 @@ The CI pipeline runs all tests on every push. With the Testing Trophy architectu
 
 ---
 
-### User Story 3 - Developer Writes New API Tests in Vitest (Priority: P2)
+### User Story 3 - AI Agent Writes New API Tests in Vitest (Priority: P2)
 
-A developer adding a new API endpoint follows the established pattern to write integration tests using Vitest, not Playwright. The test infrastructure provides helpers for auth, database setup, and API calls.
+An AI agent adding a new API endpoint follows the established pattern to write integration tests using Vitest, not Playwright. The test infrastructure provides helpers for auth, database setup, and API calls.
 
 **Why this priority**: Consistent patterns ensure new tests follow the Testing Trophy architecture, preventing regression to slow patterns.
 
@@ -101,7 +101,7 @@ A developer adding a new API endpoint follows the established pattern to write i
 
 **Acceptance Scenarios**:
 
-1. **Given** a developer needs to test a new API endpoint, **When** they create a test in `tests/integration/`, **Then** they can use the provided `apiClient` helper with built-in auth
+1. **Given** an AI agent needs to test a new API endpoint, **When** creating a test in `tests/integration/`, **Then** the provided `apiClient` helper with built-in auth can be used
 2. **Given** a test needs database fixtures, **When** using `tests/fixtures/vitest/setup.ts`, **Then** the test gets an isolated project ID and clean state
 3. **Given** test files exist in `tests/integration/**/*.test.ts`, **When** running `bun run test:integration`, **Then** Vitest discovers and runs all integration tests
 
@@ -125,7 +125,7 @@ Tests that genuinely require a browser (drag-drop, OAuth redirects, viewport tes
 
 ### User Story 5 - Documentation Reflects Testing Strategy (Priority: P3)
 
-The constitution and CLAUDE.md are updated to reflect the Testing Trophy architecture, ensuring AI agents and developers follow the correct patterns when writing tests.
+The constitution and CLAUDE.md are updated to reflect the Testing Trophy architecture, ensuring AI agents follow the correct patterns when writing tests.
 
 **Why this priority**: Documentation ensures long-term consistency and prevents regression to old patterns.
 
@@ -135,7 +135,7 @@ The constitution and CLAUDE.md are updated to reflect the Testing Trophy archite
 
 1. **Given** `.specify/memory/constitution.md` has a testing section, **When** reviewing Section III, **Then** it describes Testing Trophy with Vitest for integration and Playwright for E2E only
 2. **Given** `CLAUDE.md` has testing commands, **When** an AI agent reads the file, **Then** it knows to use Vitest for API tests and Playwright for browser tests
-3. **Given** a developer searches for test guidance, **When** reading either documentation file, **Then** they understand the distinction between integration and E2E tests
+3. **Given** an AI agent searches for test guidance, **When** reading either documentation file, **Then** it understands the distinction between integration and E2E tests
 
 ---
 
