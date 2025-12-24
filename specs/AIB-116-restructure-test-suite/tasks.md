@@ -48,15 +48,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Migrate projects CRUD tests from `tests/e2e/projects/*.spec.ts` to `tests/integration/projects/crud.test.ts`
-- [ ] T010 [P] [US1] Migrate projects settings tests to `tests/integration/projects/settings.test.ts`
-- [ ] T011 [P] [US1] Migrate tickets CRUD tests from `tests/e2e/tickets/*.spec.ts` to `tests/integration/tickets/crud.test.ts`
-- [ ] T012 [P] [US1] Migrate tickets transitions tests to `tests/integration/tickets/transitions.test.ts`
-- [ ] T013 [P] [US1] Migrate tickets workflows tests to `tests/integration/tickets/workflows.test.ts`
-- [ ] T014 [P] [US1] Migrate comments CRUD tests from `tests/e2e/comments/*.spec.ts` to `tests/integration/comments/crud.test.ts`
-- [ ] T015 [P] [US1] Migrate jobs status tests from `tests/e2e/jobs/*.spec.ts` to `tests/integration/jobs/status.test.ts`
-- [ ] T016 [P] [US1] Migrate cleanup analysis tests from `tests/e2e/cleanup/*.spec.ts` to `tests/integration/cleanup/analysis.test.ts`
-- [ ] T017 [P] [US1] Migrate database constraint tests (3 files) to appropriate `tests/integration/` domain folders
+- [x] T009 [P] [US1] Migrate projects CRUD tests from `tests/e2e/projects/*.spec.ts` to `tests/integration/projects/crud.test.ts`
+- [x] T010 [P] [US1] Migrate projects settings tests to `tests/integration/projects/settings.test.ts`
+- [x] T011 [P] [US1] Migrate tickets CRUD tests from `tests/e2e/tickets/*.spec.ts` to `tests/integration/tickets/crud.test.ts`
+- [x] T012 [P] [US1] Migrate tickets transitions tests to `tests/integration/tickets/transitions.test.ts`
+- [x] T013 [P] [US1] Migrate tickets workflows tests to `tests/integration/tickets/workflows.test.ts`
+- [x] T014 [P] [US1] Migrate comments CRUD tests from `tests/e2e/comments/*.spec.ts` to `tests/integration/comments/crud.test.ts`
+- [x] T015 [P] [US1] Migrate jobs status tests from `tests/e2e/jobs/*.spec.ts` to `tests/integration/jobs/status.test.ts`
+- [x] T016 [P] [US1] Migrate cleanup analysis tests from `tests/e2e/cleanup/*.spec.ts` to `tests/integration/cleanup/analysis.test.ts`
+- [x] T017 [P] [US1] Migrate database constraint tests (3 files) to appropriate `tests/integration/` domain folders
 - [ ] T018 [US1] Run full integration suite and verify total execution time under 30 seconds (SC-001)
 - [ ] T019 [US1] Verify individual test execution averages under 100ms (SC-002)
 

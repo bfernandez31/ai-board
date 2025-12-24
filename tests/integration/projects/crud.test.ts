@@ -1,6 +1,7 @@
 /**
  * Integration Tests: Projects CRUD
  *
+ * Migrated from: tests/api/projects-*.spec.ts, tests/e2e/projects/*.spec.ts
  * Tests for project API endpoints using Vitest integration test infrastructure.
  */
 
@@ -28,11 +29,14 @@ describe('Projects CRUD', () => {
 
   describe('GET /api/projects/:id', () => {
     it('should get project by ID', async () => {
-      const response = await ctx.api.get(`/api/projects/${ctx.projectId}`);
+      const response = await ctx.api.get<{ id: number; name: string }>(
+        `/api/projects/${ctx.projectId}`
+      );
 
       expect(response.status).toBe(200);
       expect(response.ok).toBe(true);
       expect(response.data).toHaveProperty('id', ctx.projectId);
+      expect(response.data).toHaveProperty('name');
     });
 
     it('should return 404 for non-existent project', async () => {
@@ -40,6 +44,38 @@ describe('Projects CRUD', () => {
 
       expect(response.status).toBe(404);
       expect(response.ok).toBe(false);
+    });
+
+    it('should return 400 for invalid projectId format', async () => {
+      const response = await ctx.api.get('/api/projects/abc');
+
+      expect(response.status).toBe(400);
+      expect(response.ok).toBe(false);
+    });
+
+    it('should include all expected project fields', async () => {
+      const response = await ctx.api.get<{
+        id: number;
+        name: string;
+        description: string;
+        githubOwner: string;
+        githubRepo: string;
+        clarificationPolicy: string;
+        createdAt: string;
+        updatedAt: string;
+      }>(`/api/projects/${ctx.projectId}`);
+
+      expect(response.status).toBe(200);
+
+      // Verify response structure
+      expect(response.data).toHaveProperty('id');
+      expect(response.data).toHaveProperty('name');
+      expect(response.data).toHaveProperty('description');
+      expect(response.data).toHaveProperty('githubOwner');
+      expect(response.data).toHaveProperty('githubRepo');
+      expect(response.data).toHaveProperty('clarificationPolicy');
+      expect(response.data).toHaveProperty('createdAt');
+      expect(response.data).toHaveProperty('updatedAt');
     });
   });
 
@@ -50,6 +86,14 @@ describe('Projects CRUD', () => {
       expect(response.status).toBe(200);
       expect(response.ok).toBe(true);
       expect(Array.isArray(response.data)).toBe(true);
+    });
+
+    it('should include the worker project in the list', async () => {
+      const response = await ctx.api.get<{ id: number }[]>('/api/projects');
+
+      expect(response.status).toBe(200);
+      const projectIds = response.data.map((p) => p.id);
+      expect(projectIds).toContain(ctx.projectId);
     });
   });
 
@@ -68,6 +112,47 @@ describe('Projects CRUD', () => {
         `/api/projects/${ctx.projectId}`
       );
       expect(getResponse.data.description).toBe(newDescription);
+    });
+
+    it('should update project name', async () => {
+      const newName = `[e2e] Updated Project ${Date.now()}`;
+      const response = await ctx.api.patch(`/api/projects/${ctx.projectId}`, {
+        name: newName,
+      });
+
+      expect(response.status).toBe(200);
+
+      const getResponse = await ctx.api.get<{ name: string }>(`/api/projects/${ctx.projectId}`);
+      expect(getResponse.data.name).toBe(newName);
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const response = await ctx.api.patch('/api/projects/99999', {
+        description: 'Should not work',
+      });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should update updatedAt timestamp', async () => {
+      const beforeResponse = await ctx.api.get<{ updatedAt: string }>(
+        `/api/projects/${ctx.projectId}`
+      );
+      const initialUpdatedAt = new Date(beforeResponse.data.updatedAt);
+
+      // Wait 100ms to ensure timestamp difference
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await ctx.api.patch(`/api/projects/${ctx.projectId}`, {
+        description: `[e2e] Timestamp test ${Date.now()}`,
+      });
+
+      const afterResponse = await ctx.api.get<{ updatedAt: string }>(
+        `/api/projects/${ctx.projectId}`
+      );
+      const newUpdatedAt = new Date(afterResponse.data.updatedAt);
+
+      expect(newUpdatedAt.getTime()).toBeGreaterThanOrEqual(initialUpdatedAt.getTime());
     });
   });
 });
