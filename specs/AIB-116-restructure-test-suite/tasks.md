@@ -14,27 +14,27 @@
 
 ---
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Setup (Shared Infrastructure) ✅ DONE
 
 **Purpose**: Create Vitest integration test infrastructure
 
-- [ ] T001 Create directory structure `tests/fixtures/vitest/` for integration test fixtures
-- [ ] T002 Create directory structure `tests/integration/` with domain subdirectories (projects/, tickets/, comments/, jobs/, cleanup/)
-- [ ] T003 [P] Implement API client in `tests/fixtures/vitest/api-client.ts` per contracts/api-client.ts interface
+- [x] T001 Create directory structure `tests/fixtures/vitest/` for integration test fixtures
+- [x] T002 Create directory structure `tests/integration/` with domain subdirectories (projects/, tickets/, comments/, jobs/, cleanup/)
+- [x] T003 [P] Implement API client in `tests/fixtures/vitest/api-client.ts` per contracts/api-client.ts interface
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Phase 2: Foundational (Blocking Prerequisites) ✅ DONE
 
 **Purpose**: Core test infrastructure that MUST be complete before ANY user story can be implemented
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Implement global setup with worker ID mapping in `tests/fixtures/vitest/global-setup.ts` per research.md pattern
-- [ ] T005 Implement per-test setup with TestContext in `tests/fixtures/vitest/setup.ts` per contracts/test-context.ts interface
-- [ ] T006 Modify `vitest.config.mts` to add integration test profile with VITEST_INTEGRATION env var toggle per research.md configuration pattern
-- [ ] T007 [P] Add `test:integration` script to `package.json` with VITEST_INTEGRATION=1 flag
-- [ ] T008 Verify worker isolation works by running a simple test that logs projectId across parallel workers
+- [x] T004 Implement global setup with worker ID mapping in `tests/fixtures/vitest/global-setup.ts` per research.md pattern
+- [x] T005 Implement per-test setup with TestContext in `tests/fixtures/vitest/setup.ts` per contracts/test-context.ts interface
+- [x] T006 Modify `vitest.config.mts` to add integration test profile with VITEST_INTEGRATION env var toggle per research.md configuration pattern
+- [x] T007 [P] Add `test:integration` script to `package.json` with VITEST_INTEGRATION=1 flag
+- [x] T008 Verify worker isolation works by running a simple test that logs projectId across parallel workers
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
