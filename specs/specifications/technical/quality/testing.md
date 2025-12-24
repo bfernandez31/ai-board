@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-Comprehensive testing strategy with Playwright (E2E/API) and Vitest (unit tests), including data isolation patterns.
+Comprehensive testing strategy following Testing Trophy architecture: Vitest for unit and integration tests, Playwright for browser-required E2E tests only.
 
 ## Test Organization
 
@@ -8,28 +8,112 @@ Comprehensive testing strategy with Playwright (E2E/API) and Vitest (unit tests)
 
 ```
 tests/
-├── global-setup.ts          # Test environment setup
-├── global-teardown.ts       # Test environment cleanup
+├── fixtures/                # Test infrastructure
+│   ├── playwright/          # Playwright fixtures
+│   │   ├── auth-fixture.ts
+│   │   └── worker-isolation.ts
+│   └── vitest/              # Vitest fixtures (integration tests)
+│       ├── api-client.ts    # Fetch wrapper with auth
+│       ├── global-setup.ts  # One-time database setup
+│       └── setup.ts         # Per-test worker isolation
 ├── helpers/                 # Shared test utilities
 │   ├── db-setup.ts          # Database helpers
 │   ├── db-cleanup.ts        # Cleanup utilities
+│   ├── worker-isolation.ts  # Worker → project ID mapping
 │   └── test-utils.tsx       # React testing utilities
-├── api/                     # API contract tests
-│   ├── tickets.spec.ts
-│   ├── comments.spec.ts
-│   └── jobs.spec.ts
-├── e2e/                     # End-to-end tests
-│   ├── ticket-workflow.spec.ts
-│   ├── drag-and-drop.spec.ts
-│   ├── comments.spec.ts
-│   └── tickets/
-│       └── description-markdown-rendering.spec.ts  # Markdown in descriptions
-├── unit/                    # Unit tests
+├── unit/                    # Unit tests (Vitest)
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
-└── integration/             # Integration tests
-    └── workflow-dispatch.spec.ts
+├── integration/             # Integration tests (Vitest)
+│   ├── projects/            # Domain: project management
+│   │   ├── crud.test.ts
+│   │   └── settings.test.ts
+│   ├── tickets/             # Domain: ticket lifecycle
+│   │   ├── crud.test.ts
+│   │   ├── transitions.test.ts
+│   │   ├── workflows.test.ts
+│   │   └── constraints.test.ts
+│   ├── comments/            # Domain: comment system
+│   │   └── crud.test.ts
+│   ├── jobs/                # Domain: job tracking
+│   │   └── status.test.ts
+│   └── cleanup/             # Domain: cleanup workflow
+│       └── analysis.test.ts
+└── e2e/                     # E2E tests (Playwright, browser-required only)
+    ├── auth/                # OAuth flows
+    ├── board/               # Drag-drop interactions
+    ├── keyboard/            # Keyboard navigation
+    └── visual/              # Viewport/responsive
+```
+
+## Testing Trophy Architecture
+
+### Test Type Selection
+
+The project follows Kent C. Dodds' Testing Trophy architecture, emphasizing fast integration tests over slow E2E tests.
+
+| Test Type | Tool | Speed | Use For |
+|-----------|------|-------|---------|
+| Unit | Vitest | ~5ms | Pure functions, utilities, hooks |
+| Integration | Vitest | ~50ms | API endpoints, database operations, state machines |
+| E2E | Playwright | ~500ms | Browser features (OAuth, drag-drop, viewport) |
+
+### When to Use Integration Tests (Vitest)
+
+Integration tests validate API behavior and database operations without a browser:
+
+- **API endpoint validation**: HTTP methods, status codes, response schemas
+- **Database constraints**: Foreign keys, unique constraints, cascade deletes
+- **State machine transitions**: Valid/invalid state changes
+- **Authorization**: Access control, ownership verification
+- **Business logic**: Multi-step workflows, data transformations
+
+### When to Use E2E Tests (Playwright)
+
+E2E tests are reserved for scenarios that genuinely require a real browser:
+
+- **OAuth flows**: Browser redirects, session cookies
+- **Drag-and-drop**: DnD Kit interactions with real DOM
+- **Keyboard navigation**: Focus management, keyboard shortcuts
+- **Viewport testing**: Responsive layouts, media queries
+- **Visual state**: Cleanup banners, loading states
+
+### Worker Isolation Pattern
+
+Both Vitest integration tests and Playwright E2E tests use worker isolation to enable parallel execution without data conflicts.
+
+**Project ID Mapping**:
+```typescript
+const PROJECT_MAPPING = [1, 2, 4, 5, 6, 7]; // Skip project 3 (development)
+
+// Each worker gets a unique project ID based on pool ID
+function getProjectId(workerId: number): number {
+  return PROJECT_MAPPING[workerId % PROJECT_MAPPING.length];
+}
+```
+
+**Vitest Configuration**:
+```typescript
+// vitest.config.mts
+{
+  pool: 'forks',
+  poolOptions: {
+    forks: {
+      maxForks: 6, // Match project mapping length
+      minForks: 1,
+    },
+  },
+}
+```
+
+**Playwright Configuration**:
+```typescript
+// playwright.config.ts
+{
+  fullyParallel: true,
+  workers: process.env.CI ? 1 : undefined, // Parallel in local, sequential in CI
+}
 ```
 
 ## Test Data Isolation
@@ -222,68 +306,70 @@ export default defineConfig({
 
 ## Test Patterns
 
-### API Contract Test
+### Integration Test (Vitest)
 
-**File**: `tests/api/tickets.spec.ts`
+**File**: `tests/integration/tickets/crud.test.ts`
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 
-test.describe('Tickets API', () => {
-  test.beforeEach(async () => {
-    await cleanupDatabase();
+describe('Tickets API', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await getTestContext();
+    await ctx.cleanup();
   });
 
-  test('POST /api/projects/:projectId/tickets creates ticket', async ({ request }) => {
-    const response = await request.post('/api/projects/1/tickets', {
-      data: {
-        title: '[e2e] Test Ticket',
-        description: 'Test description',
-      },
+  it('POST /api/projects/:projectId/tickets creates ticket', async () => {
+    const response = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
+      title: '[e2e] Test Ticket',
+      description: 'Test description',
     });
 
-    expect(response.status()).toBe(201);
+    expect(response.status).toBe(201);
 
     const ticket = await response.json();
     expect(ticket.title).toBe('[e2e] Test Ticket');
     expect(ticket.stage).toBe('INBOX');
-    expect(ticket.projectId).toBe(1);
+    expect(ticket.projectId).toBe(ctx.projectId);
   });
 
-  test('GET /api/projects/:projectId/tickets returns tickets', async ({ request }) => {
+  it('GET /api/projects/:projectId/tickets returns tickets', async () => {
     // Create test ticket
-    await request.post('/api/projects/1/tickets', {
-      data: {
-        title: '[e2e] Test Ticket',
-        description: 'Test description',
-      },
+    await ctx.createTicket({
+      title: '[e2e] Test Ticket',
+      description: 'Test description',
     });
 
     // Fetch tickets
-    const response = await request.get('/api/projects/1/tickets');
-    expect(response.status()).toBe(200);
+    const response = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets`);
+    expect(response.status).toBe(200);
 
     const data = await response.json();
     expect(data.tickets).toHaveLength(1);
     expect(data.tickets[0].title).toBe('[e2e] Test Ticket');
   });
 
-  test('PATCH /api/projects/:projectId/tickets/:id updates ticket', async ({ request }) => {
+  it('PATCH /api/projects/:projectId/tickets/:id updates ticket', async () => {
     // Create ticket
-    const createResponse = await request.post('/api/projects/1/tickets', {
-      data: { title: '[e2e] Original', description: 'Desc' },
+    const { id } = await ctx.createTicket({
+      title: '[e2e] Original',
+      description: 'Desc',
     });
-    const ticket = await createResponse.json();
+
+    // Fetch ticket to get version
+    const getResponse = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets/${id}`);
+    const ticket = await getResponse.json();
 
     // Update ticket
-    const updateResponse = await request.patch(`/api/projects/1/tickets/${ticket.id}`, {
-      data: {
-        title: '[e2e] Updated',
-        version: ticket.version,
-      },
+    const updateResponse = await ctx.api.patch(`/api/projects/${ctx.projectId}/tickets/${id}`, {
+      title: '[e2e] Updated',
+      version: ticket.version,
     });
 
-    expect(updateResponse.status()).toBe(200);
+    expect(updateResponse.status).toBe(200);
 
     const updated = await updateResponse.json();
     expect(updated.title).toBe('[e2e] Updated');
@@ -291,6 +377,13 @@ test.describe('Tickets API', () => {
   });
 });
 ```
+
+**Key Features**:
+- `getTestContext()` provides isolated project ID and API client
+- `ctx.cleanup()` clears test data for each test
+- `ctx.createTicket()` helper for test fixtures
+- Worker isolation prevents parallel test conflicts
+- Average execution: ~50ms per test
 
 ### E2E Test
 
@@ -471,13 +564,17 @@ export function renderWithProviders(
 ### Commands
 
 ```bash
-# All tests (unit + E2E)
+# All tests (unit + integration + E2E)
 bun run test
 
 # Unit tests only (Vitest)
 bun run test:unit
 # or
 bun test
+
+# Integration tests only (Vitest)
+bun run test:integration
+# Sets VITEST_INTEGRATION=1 to enable integration test mode
 
 # E2E tests only (Playwright)
 bun run test:e2e
@@ -488,14 +585,42 @@ npx playwright test
 npx playwright test --ui
 
 # Specific test file
-npx playwright test tests/api/tickets.spec.ts
+npx playwright test tests/e2e/board/drag-drop.spec.ts
+VITEST_INTEGRATION=1 bun test tests/integration/tickets/crud.test.ts
 
 # Debug mode
 npx playwright test --debug
+bun test --reporter=verbose
+
+# Coverage
+bun test --coverage
 
 # Generate HTML report
 npx playwright show-report
 ```
+
+### Test Execution Modes
+
+**Unit Tests** (`bun run test:unit`):
+- Environment: `happy-dom` (lightweight browser simulation)
+- Includes: `tests/unit/**/*.test.ts`
+- Timeout: 5 seconds per test
+- Workers: Unlimited (CPU-bound)
+
+**Integration Tests** (`bun run test:integration`):
+- Environment: `node` (no browser simulation)
+- Includes: `tests/integration/**/*.test.ts`
+- Timeout: 30 seconds per test
+- Workers: 6 forks (matches project mapping)
+- Setup: `tests/fixtures/vitest/setup.ts` (worker isolation)
+- Global Setup: `tests/fixtures/vitest/global-setup.ts` (one-time DB prep)
+
+**E2E Tests** (`bun run test:e2e`):
+- Environment: Real browser (Chromium/Firefox/WebKit)
+- Includes: `tests/e2e/**/*.spec.ts`
+- Timeout: Default Playwright timeout
+- Workers: Parallel (local), sequential (CI)
+- Setup: Playwright fixtures
 
 ### CI/CD Integration
 
@@ -542,13 +667,18 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
       - name: Run unit tests
-        run: bun test
+        run: bun run test:unit
+
+      - name: Run integration tests
+        run: bun run test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
       - name: Run E2E tests
-        run: npx playwright test
+        run: bun run test:e2e
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
@@ -572,8 +702,11 @@ The verify workflow (`.github/workflows/verify.yml`) runs automatically when tic
 - name: Run Unit Tests
   run: bun run test:unit --reporter=json --outputFile=unit-results.json
 
+- name: Run Integration Tests
+  run: bun run test:integration --reporter=json --outputFile=integration-results.json
+
 - name: Run E2E Tests
-  run: npx playwright test --reporter=json --output=e2e-results.json
+  run: bun run test:e2e --reporter=json --output=e2e-results.json
 ```
 
 **Phase 2: Failure Report Generation**
@@ -716,32 +849,44 @@ npx playwright test --coverage
 
 ## Best Practices
 
+### Test Type Selection
+- ✅ Default to integration tests for API/database behavior
+- ✅ Use unit tests for pure functions and utilities
+- ✅ Reserve E2E tests for browser-required scenarios only
+- ❌ Don't use Playwright for API testing (use Vitest integration tests)
+
 ### Test Isolation
 - ✅ Use `beforeEach` cleanup for each test
 - ✅ Assume clean database state at test start
 - ✅ Use `[e2e]` prefix for all test data
+- ✅ Use worker isolation for parallel execution
 - ❌ Don't rely on test execution order
 
 ### Data Management
 - ✅ Create minimal test data needed
-- ✅ Use deterministic IDs (1, 2 for projects)
-- ✅ Clean up after tests (via global teardown)
+- ✅ Use worker-specific project IDs (1, 2, 4, 5, 6, 7)
+- ✅ Clean up after tests (via `ctx.cleanup()` or global teardown)
+- ✅ Use test helpers: `ctx.createTicket()`, `ctx.createProject()`
 - ❌ Don't create data without `[e2e]` prefix
+- ❌ Don't hardcode project ID 3 (reserved for development)
 
 ### Assertions
 - ✅ Use specific assertions (toBe, toHaveLength)
 - ✅ Test both success and error cases
 - ✅ Verify database state for mutations
+- ✅ Check status codes before parsing response bodies
 - ❌ Don't test implementation details
 
 ### Performance
-- ✅ Run tests in parallel (Playwright default)
-- ✅ Use database transactions for speed
+- ✅ Run integration tests in parallel (6 workers)
+- ✅ Use native fetch instead of Playwright for API tests
 - ✅ Mock external services (Cloudinary, GitHub)
+- ✅ Target <50ms per integration test, <500ms per E2E test
 - ❌ Don't make unnecessary API calls
 
 ### Debugging
-- ✅ Use `--debug` flag for step-through
-- ✅ Take screenshots on failure (automatic)
-- ✅ Use `page.pause()` for breakpoints
-- ❌ Don't commit debug code
+- ✅ Use `bun test --reporter=verbose` for detailed output
+- ✅ Use `npx playwright test --debug` for E2E debugging
+- ✅ Use `console.error()` in tests (goes to stderr, not captured)
+- ✅ Take screenshots on failure (automatic in Playwright)
+- ❌ Don't commit debug code or console.log statements

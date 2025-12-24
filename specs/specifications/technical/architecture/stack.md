@@ -229,27 +229,33 @@
 
 ## Testing
 
-### Playwright
-- **Version**: Latest stable
-- **Purpose**: E2E and API contract testing
-- **Command**: `npx playwright test`
-- **Features Used**:
-  - Cross-browser testing (Chromium, Firefox, WebKit)
-  - API testing (`request` fixture)
-  - Global setup/teardown
-  - Test isolation
-  - Screenshots on failure
-- **Configuration**: `playwright.config.ts`
-
 ### Vitest
 - **Version**: Latest stable
-- **Purpose**: Unit testing
-- **Command**: `bun test`
+- **Purpose**: Unit and integration testing
+- **Commands**:
+  - `bun run test:unit` - Unit tests only
+  - `bun run test:integration` - Integration tests (API, database)
 - **Features Used**:
-  - Fast test execution
+  - Fast test execution (~5ms unit, ~50ms integration)
   - TypeScript support
+  - Worker isolation (forks pool with 6 workers)
   - Mocking utilities
   - Coverage reporting
+  - Environment switching (happy-dom for unit, node for integration)
+- **Configuration**: `vitest.config.mts`
+
+### Playwright
+- **Version**: Latest stable
+- **Purpose**: E2E testing (browser-required scenarios only)
+- **Command**: `bun run test:e2e`
+- **Features Used**:
+  - Cross-browser testing (Chromium, Firefox, WebKit)
+  - Real browser automation
+  - Global setup/teardown
+  - Worker isolation
+  - Screenshots on failure
+- **Use Cases**: OAuth flows, drag-and-drop, keyboard navigation, viewport testing
+- **Configuration**: `playwright.config.ts`
 
 ## Date/Time
 
@@ -355,8 +361,9 @@
   - `start`: Start production server
   - `lint`: Run ESLint
   - `type-check`: TypeScript type checking
-  - `test`: Run all tests
+  - `test`: Run all tests (unit + integration + E2E)
   - `test:unit`: Run unit tests (Vitest)
+  - `test:integration`: Run integration tests (Vitest)
   - `test:e2e`: Run E2E tests (Playwright)
 
 ## Version Matrix
