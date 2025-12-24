@@ -40,7 +40,7 @@
 
 ---
 
-## Phase 3: User Story 1 - AI Agent Validates API Changes Quickly (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - AI Agent Validates API Changes Quickly (Priority: P1) 🎯 MVP ✅ DONE
 
 **Goal**: Integration tests execute in under 100ms per test, enabling rapid feedback for API changes
 
@@ -57,14 +57,14 @@
 - [x] T015 [P] [US1] Migrate jobs status tests from `tests/e2e/jobs/*.spec.ts` to `tests/integration/jobs/status.test.ts`
 - [x] T016 [P] [US1] Migrate cleanup analysis tests from `tests/e2e/cleanup/*.spec.ts` to `tests/integration/cleanup/analysis.test.ts`
 - [x] T017 [P] [US1] Migrate database constraint tests (3 files) to appropriate `tests/integration/` domain folders
-- [ ] T018 [US1] Run full integration suite and verify total execution time under 30 seconds (SC-001)
-- [ ] T019 [US1] Verify individual test execution averages under 100ms (SC-002)
+- [x] T018 [US1] Run full integration suite and verify total execution time under 30 seconds (SC-001)
+- [x] T019 [US1] Verify individual test execution averages under 100ms (SC-002)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - integration tests run fast (~50ms per test)
 
 ---
 
-## Phase 4: User Story 2 - CI Pipeline Validates Changes Quickly (Priority: P1)
+## Phase 4: User Story 2 - CI Pipeline Validates Changes Quickly (Priority: P1) ✅ DONE
 
 **Goal**: CI test job completes in under 2 minutes with both Vitest and Playwright tests
 
@@ -72,16 +72,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Update `bun run test` script in `package.json` to run `test:unit && test:integration && test:e2e`
-- [ ] T021 [US2] Verify CI workflow runs both Vitest and Playwright tests correctly in GitHub Actions
-- [ ] T022 [US2] Ensure test failure messages clearly indicate which test and assertion failed
-- [ ] T023 [US2] Measure and document CI test duration before and after migration (target: 40% reduction per SC-003)
+- [x] T020 [US2] Update `bun run test` script in `package.json` to run `test:unit && test:integration && test:e2e`
+- [x] T021 [US2] Verify CI workflow runs both Vitest and Playwright tests correctly in GitHub Actions
+- [x] T022 [US2] Ensure test failure messages clearly indicate which test and assertion failed
+- [x] T023 [US2] Measure and document CI test duration before and after migration (target: 40% reduction per SC-003)
 
 **Checkpoint**: At this point, CI pipeline runs faster with Testing Trophy architecture
 
 ---
 
-## Phase 5: User Story 3 - AI Agent Writes New API Tests in Vitest (Priority: P2)
+## Phase 5: User Story 3 - AI Agent Writes New API Tests in Vitest (Priority: P2) ✅ DONE
 
 **Goal**: Clear patterns and helpers for writing new integration tests
 
@@ -89,16 +89,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T024 [P] [US3] Export `getTestContext` from `tests/fixtures/vitest/setup.ts` for use in new tests
-- [ ] T025 [P] [US3] Export `createAPIClient` factory from `tests/fixtures/vitest/api-client.ts` for custom client creation
-- [ ] T026 [US3] Add helper methods to TestContext: `createProject`, `createTicket`, `createUser` per contracts/test-context.ts
-- [ ] T027 [US3] Verify Vitest discovers and runs all tests matching `tests/integration/**/*.test.ts`
+- [x] T024 [P] [US3] Export `getTestContext` from `tests/fixtures/vitest/setup.ts` for use in new tests
+- [x] T025 [P] [US3] Export `createAPIClient` factory from `tests/fixtures/vitest/api-client.ts` for custom client creation
+- [x] T026 [US3] Add helper methods to TestContext: `createProject`, `createTicket`, `createUser` per contracts/test-context.ts
+- [x] T027 [US3] Verify Vitest discovers and runs all tests matching `tests/integration/**/*.test.ts`
 
 **Checkpoint**: At this point, new integration tests can be written using established patterns
 
 ---
 
-## Phase 6: User Story 4 - Browser-Required Tests Run in Playwright (Priority: P2)
+## Phase 6: User Story 4 - Browser-Required Tests Run in Playwright (Priority: P2) ✅ DONE
 
 **Goal**: Playwright E2E suite contains only browser-required tests (~47 files from ~92)
 
@@ -106,20 +106,20 @@
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Audit `tests/e2e/` to identify browser-required tests (OAuth, drag-drop, viewport, keyboard nav, visual state)
-- [ ] T029 [P] [US4] Retain auth/OAuth tests in `tests/e2e/auth/` (browser redirects, session cookies required)
-- [ ] T030 [P] [US4] Retain drag-drop tests in `tests/e2e/board/` (DnD Kit requires real DOM events)
-- [ ] T031 [P] [US4] Retain keyboard navigation tests in `tests/e2e/keyboard/` (real focus management required)
-- [ ] T032 [P] [US4] Retain viewport tests in `tests/e2e/visual/` (browser window sizing required)
-- [ ] T033 [US4] Delete Playwright tests that duplicate coverage now in Vitest integration tests
-- [ ] T034 [US4] Verify E2E suite contains ~40-50 test files (SC-004: down from 92)
-- [ ] T035 [US4] Verify all existing test coverage is maintained (SC-005: no functionality loses test protection)
+- [x] T028 [US4] Audit `tests/e2e/` to identify browser-required tests (OAuth, drag-drop, viewport, keyboard nav, visual state)
+- [x] T029 [P] [US4] Retain auth/OAuth tests in `tests/e2e/auth/` (browser redirects, session cookies required)
+- [x] T030 [P] [US4] Retain drag-drop tests in `tests/e2e/board/` (DnD Kit requires real DOM events)
+- [x] T031 [P] [US4] Retain keyboard navigation tests in `tests/e2e/keyboard/` (real focus management required)
+- [x] T032 [P] [US4] Retain viewport tests in `tests/e2e/visual/` (browser window sizing required)
+- [x] T033 [US4] Delete Playwright tests that duplicate coverage now in Vitest integration tests
+- [x] T034 [US4] Verify E2E suite contains ~40-50 test files (SC-004: down from 92)
+- [x] T035 [US4] Verify all existing test coverage is maintained (SC-005: no functionality loses test protection)
 
 **Checkpoint**: At this point, Playwright is reserved for browser-required scenarios only
 
 ---
 
-## Phase 7: User Story 5 - Documentation Reflects Testing Strategy (Priority: P3)
+## Phase 7: User Story 5 - Documentation Reflects Testing Strategy (Priority: P3) ✅ DONE
 
 **Goal**: Constitution and CLAUDE.md guide AI agents to use Testing Trophy patterns
 
@@ -127,23 +127,23 @@
 
 ### Implementation for User Story 5
 
-- [ ] T036 [P] [US5] Update `.specify/memory/constitution.md` Section III to describe Testing Trophy architecture per FR-009
-- [ ] T037 [P] [US5] Update `CLAUDE.md` testing section with new commands (`bun run test:integration`) and strategy per FR-010
-- [ ] T038 [US5] Document when to use Vitest vs Playwright (API tests → Vitest, browser tests → Playwright)
-- [ ] T039 [US5] Verify documentation accurately describes Testing Trophy (SC-007)
+- [x] T036 [P] [US5] Update `.specify/memory/constitution.md` Section III to describe Testing Trophy architecture per FR-009
+- [x] T037 [P] [US5] Update `CLAUDE.md` testing section with new commands (`bun run test:integration`) and strategy per FR-010
+- [x] T038 [US5] Document when to use Vitest vs Playwright (API tests → Vitest, browser tests → Playwright)
+- [x] T039 [US5] Verify documentation accurately describes Testing Trophy (SC-007)
 
 **Checkpoint**: AI agents will follow Testing Trophy patterns when writing tests
 
 ---
 
-## Phase 8: Polish & Cross-Cutting Concerns
+## Phase 8: Polish & Cross-Cutting Concerns ✅ DONE
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T040 Remove any dead test files that were fully migrated to integration tests
-- [ ] T041 Run quickstart.md validation scenarios to verify all patterns work
-- [ ] T042 Verify SC-006: New API tests use Vitest, not Playwright (code review check)
-- [ ] T043 Final run of `bun run test` to verify all test types pass together
+- [x] T040 Remove any dead test files that were fully migrated to integration tests
+- [x] T041 Run quickstart.md validation scenarios to verify all patterns work
+- [x] T042 Verify SC-006: New API tests use Vitest, not Playwright (code review check)
+- [x] T043 Final run of `bun run test` to verify all test types pass together
 
 ---
 
