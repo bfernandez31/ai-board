@@ -4,12 +4,15 @@
  * This file runs once before all tests in a worker.
  * Sets up worker isolation by mapping workerId to projectId.
  *
- * Implementation of: specs/AIB-116-restructure-test-suite/contracts/test-context.ts
+ * IMPORTANT: Integration tests require the dev server to be running.
+ * Run `bun run dev` in another terminal before running integration tests.
  */
 
 import { ensureTestFixtures, cleanupDatabase } from '../../helpers/db-cleanup';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 /**
  * Worker to project mapping
@@ -32,15 +35,48 @@ export function getProjectId(workerId: number): number {
 }
 
 /**
+ * Check if the dev server is running
+ */
+async function checkServerRunning(): Promise<boolean> {
+  try {
+    // Try to fetch the root page - any 2xx or 3xx response means server is running
+    const response = await fetch(BASE_URL, {
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Global setup function for Vitest
  * Called once before all tests in a worker
  */
 export default async function globalSetup(): Promise<void> {
-  console.error('\n🧹 Running Vitest integration test setup...');
+  console.error('\n🧪 Running Vitest integration test setup...');
 
   // Load environment variables
   const envPath = path.resolve(process.cwd(), '.env');
   dotenv.config({ path: envPath });
+
+  // Check if dev server is running
+  const serverRunning = await checkServerRunning();
+  if (!serverRunning) {
+    console.error(`
+╔════════════════════════════════════════════════════════════════════╗
+║  ❌ DEV SERVER NOT RUNNING                                         ║
+║                                                                    ║
+║  Integration tests require the dev server to be running.          ║
+║  Please run in another terminal:                                  ║
+║                                                                    ║
+║    TEST_MODE=true bun run dev                                     ║
+║                                                                    ║
+║  Then re-run the integration tests.                               ║
+╚════════════════════════════════════════════════════════════════════╝
+`);
+    throw new Error('Dev server not running. Run `TEST_MODE=true bun run dev` first.');
+  }
 
   try {
     // Clean any leftover test data

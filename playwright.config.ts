@@ -20,8 +20,8 @@ try {
 }
 
 const config = defineConfig({
-  testDir: './tests',
-  testMatch: ['**/*.spec.ts', '!**/unit/**'], // Run .spec.ts files but exclude unit tests
+  testDir: './tests/e2e', // Only browser-required tests (Testing Trophy: E2E for critical paths only)
+  testMatch: '**/*.spec.ts',
   fullyParallel: true, // ✅ Enabled: All tests now use worker-isolation helper
   forbidOnly: !!process.env.CI,
   retries: 0, // No retries for faster feedback during auth setup
