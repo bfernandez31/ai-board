@@ -7,6 +7,8 @@
  */
 
 import { beforeAll, afterAll } from 'vitest';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 import { createAPIClient, type APIClient } from './api-client';
 import { PROJECT_MAPPING, getProjectId } from './global-setup';
 import {
@@ -16,6 +18,10 @@ import {
   disconnectPrisma,
 } from '../../helpers/db-cleanup';
 import { createTestProject, createTestTicket } from '../../helpers/db-setup';
+
+// Load environment variables for test tokens (must happen before any tests run)
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.test.local'), override: true });
 
 export interface TestContext {
   /** Isolated project ID for this worker (1, 2, 4, 5, 6, or 7) */
@@ -117,8 +123,10 @@ export async function getTestContext(): Promise<TestContext> {
  */
 beforeAll(async () => {
   // Get worker ID from environment (set by Vitest in poolOptions.forks)
+  // VITEST_POOL_ID is 1-indexed (1, 2, 3, ...) so we subtract 1 for 0-indexed mapping
   // Default to worker 0 if not set
-  const workerId = parseInt(process.env.VITEST_POOL_ID ?? '0', 10);
+  const rawPoolId = parseInt(process.env.VITEST_POOL_ID ?? '1', 10);
+  const workerId = rawPoolId - 1; // Convert 1-indexed to 0-indexed
   currentProjectId = getProjectId(workerId);
 
   // Ensure the worker's project exists

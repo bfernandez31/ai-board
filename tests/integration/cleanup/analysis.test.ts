@@ -58,12 +58,12 @@ describe('Cleanup Analysis', () => {
 
       // Note: Cleanup may fail if no tickets shipped since last cleanup
       // This is expected behavior
-      if (response.status === 200) {
+      if (response.status === 201) {
         expect(response.data.ticket.workflowType).toBe('CLEAN');
         expect(response.data.job.command).toBe('clean');
       } else {
         // 400 is expected if shouldRunCleanup returns false
-        expect([200, 400]).toContain(response.status);
+        expect([201, 400]).toContain(response.status);
       }
     });
   });

@@ -130,13 +130,13 @@ describe('Comments CRUD', () => {
 
   describe('GET /api/projects/:projectId/tickets/:ticketId/comments', () => {
     it('should return empty array when no comments exist', async () => {
-      const response = await ctx.api.get<unknown[]>(
+      const response = await ctx.api.get<{ comments: unknown[]; currentUserId: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/comments`
       );
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.data)).toBe(true);
-      expect(response.data.length).toBe(0);
+      expect(Array.isArray(response.data.comments)).toBe(true);
+      expect(response.data.comments.length).toBe(0);
     });
 
     it('should return comments for ticket', async () => {
@@ -149,13 +149,13 @@ describe('Comments CRUD', () => {
         content: 'Second test comment',
       });
 
-      const response = await ctx.api.get<Array<{ id: number; content: string }>>(
+      const response = await ctx.api.get<{ comments: Array<{ id: number; content: string }> }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/comments`
       );
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.data)).toBe(true);
-      expect(response.data.length).toBe(2);
+      expect(Array.isArray(response.data.comments)).toBe(true);
+      expect(response.data.comments.length).toBe(2);
     });
 
     it('should return 404 for non-existent ticket', async () => {
@@ -171,13 +171,13 @@ describe('Comments CRUD', () => {
         content: 'Comment with user info',
       });
 
-      const response = await ctx.api.get<Array<{ user: { name: string; image: string | null } }>>(
+      const response = await ctx.api.get<{ comments: Array<{ user: { name: string; image: string | null } }> }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/comments`
       );
 
       expect(response.status).toBe(200);
-      expect(response.data[0]).toHaveProperty('user');
-      expect(response.data[0].user).toHaveProperty('name');
+      expect(response.data.comments[0]).toHaveProperty('user');
+      expect(response.data.comments[0].user).toHaveProperty('name');
     });
   });
 
@@ -190,18 +190,18 @@ describe('Comments CRUD', () => {
       );
       const commentId = createResponse.data.id;
 
-      // Delete the comment
+      // Delete the comment - API returns 204 No Content
       const deleteResponse = await ctx.api.delete(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/comments/${commentId}`
       );
 
-      expect(deleteResponse.status).toBe(200);
+      expect(deleteResponse.status).toBe(204);
 
       // Verify deletion
-      const listResponse = await ctx.api.get<unknown[]>(
+      const listResponse = await ctx.api.get<{ comments: unknown[] }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/comments`
       );
-      expect(listResponse.data.length).toBe(0);
+      expect(listResponse.data.comments.length).toBe(0);
     });
 
     it('should return 404 for non-existent comment', async () => {

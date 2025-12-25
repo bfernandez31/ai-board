@@ -13,7 +13,10 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createTestProject, createTestTicket } from '@/tests/helpers/db-setup';
 
-const uniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+// Short unique suffix for test data (fits within ticketKey max 11 chars)
+const shortId = () => Math.random().toString(36).slice(2, 6);
+// Generate unique 3-char key for each test run to avoid cross-worker collisions
+const uniqueKey = () => Math.random().toString(36).slice(2, 5).toUpperCase();
 
 describe('Database Constraints', () => {
   let ctx: TestContext;
@@ -61,37 +64,38 @@ describe('Database Constraints', () => {
     });
 
     it('should cascade delete tickets when project is deleted', async () => {
-      const id = uniqueId();
+      const id = shortId();
+      const projectKey = uniqueKey(); // Unique key for this test run
 
       const project = await createTestProject({
         name: '[e2e] Cascade Test Project',
         description: 'Project for testing cascade delete',
         githubOwner: `test-owner-${id}`,
         githubRepo: `cascade-test-repo-${id}`,
-        key: 'CAD',
+        key: projectKey,
       });
       createdProjectIds.push(project.id);
 
-      // Create multiple tickets
+      // Create multiple tickets (ticketKey must fit 11 chars max)
       await createTestTicket(project.id, {
         title: '[e2e] Ticket 1',
         description: 'First ticket',
         ticketNumber: 1,
-        ticketKey: `CAD-1-${id}`,
+        ticketKey: `${projectKey}-1`,
       });
 
       await createTestTicket(project.id, {
         title: '[e2e] Ticket 2',
         description: 'Second ticket',
         ticketNumber: 2,
-        ticketKey: `CAD-2-${id}`,
+        ticketKey: `${projectKey}-2`,
       });
 
       await createTestTicket(project.id, {
         title: '[e2e] Ticket 3',
         description: 'Third ticket',
         ticketNumber: 3,
-        ticketKey: `CAD-3-${id}`,
+        ticketKey: `${projectKey}-3`,
       });
 
       // Verify tickets were created
@@ -113,14 +117,16 @@ describe('Database Constraints', () => {
     });
 
     it('should return only tickets for specified project', async () => {
-      const id = uniqueId();
+      const id = shortId();
+      const key1 = uniqueKey(); // Unique key for project 1
+      const key2 = uniqueKey(); // Unique key for project 2
 
       const project1 = await createTestProject({
         name: '[e2e] Project 1',
         description: 'First project',
         githubOwner: `owner1-${id}`,
         githubRepo: `repo1-${id}`,
-        key: 'P1X',
+        key: key1,
       });
       createdProjectIds.push(project1.id);
 
@@ -129,28 +135,28 @@ describe('Database Constraints', () => {
         description: 'Second project',
         githubOwner: `owner2-${id}`,
         githubRepo: `repo2-${id}`,
-        key: 'P2X',
+        key: key2,
       });
       createdProjectIds.push(project2.id);
 
-      // Create tickets for project 1
+      // Create tickets for project 1 (ticketKey max 11 chars)
       await createTestTicket(project1.id, {
         title: '[e2e] Project 1 - Ticket 1',
         ticketNumber: 1,
-        ticketKey: `P1X-1-${id}`,
+        ticketKey: `${key1}-1`,
       });
 
       await createTestTicket(project1.id, {
         title: '[e2e] Project 1 - Ticket 2',
         ticketNumber: 2,
-        ticketKey: `P1X-2-${id}`,
+        ticketKey: `${key1}-2`,
       });
 
       // Create tickets for project 2
       await createTestTicket(project2.id, {
         title: '[e2e] Project 2 - Ticket 1',
         ticketNumber: 1,
-        ticketKey: `P2X-1-${id}`,
+        ticketKey: `${key2}-1`,
       });
 
       // Query tickets for project 1 only
@@ -171,14 +177,15 @@ describe('Database Constraints', () => {
     });
 
     it('should allow querying tickets via project relation', async () => {
-      const id = uniqueId();
+      const id = shortId();
+      const projectKey = uniqueKey(); // Unique key for this test run
 
       const project = await createTestProject({
         name: '[e2e] Relation Test Project',
         description: 'Project for testing relations',
         githubOwner: `relation-owner-${id}`,
         githubRepo: `relation-repo-${id}`,
-        key: 'REL',
+        key: projectKey,
       });
       createdProjectIds.push(project.id);
 
@@ -186,14 +193,14 @@ describe('Database Constraints', () => {
         title: '[e2e] Ticket 1',
         stage: 'INBOX',
         ticketNumber: 1,
-        ticketKey: `REL-1-${id}`,
+        ticketKey: `${projectKey}-1`,
       });
 
       await createTestTicket(project.id, {
         title: '[e2e] Ticket 2',
         stage: 'PLAN',
         ticketNumber: 2,
-        ticketKey: `REL-2-${id}`,
+        ticketKey: `${projectKey}-2`,
       });
 
       const projectWithTickets = await prisma.project.findUnique({
@@ -224,13 +231,14 @@ describe('Database Constraints', () => {
 
   describe('Project Uniqueness Constraints', () => {
     it('should enforce unique project key', async () => {
-      const id = uniqueId();
+      const id = shortId();
+      const testKey = uniqueKey(); // Unique key for this test run
 
       const project1 = await createTestProject({
         name: '[e2e] Unique Key Test 1',
         githubOwner: `owner-${id}`,
         githubRepo: `repo1-${id}`,
-        key: 'UNI',
+        key: testKey,
       });
       createdProjectIds.push(project1.id);
 
@@ -238,14 +246,14 @@ describe('Database Constraints', () => {
         name: '[e2e] Unique Key Test 2',
         githubOwner: `owner2-${id}`,
         githubRepo: `repo2-${id}`,
-        key: 'UNI', // Same key should fail
+        key: testKey, // Same key should fail
       });
 
       await expect(createPromise).rejects.toThrow();
     });
 
     it('should enforce unique github owner/repo combination', async () => {
-      const id = uniqueId();
+      const id = shortId();
 
       const project1 = await createTestProject({
         name: '[e2e] Unique Repo Test 1',

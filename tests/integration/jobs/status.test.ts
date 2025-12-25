@@ -8,15 +8,33 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
+
+// Workflow token for PATCH /api/jobs/:id/status endpoint
+const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+
+/**
+ * Create an API client with workflow token authentication
+ * (for job status updates which require workflow auth, not user auth)
+ */
+function createWorkflowClient(): APIClient {
+  return createAPIClient({
+    defaultHeaders: {
+      'Authorization': `Bearer ${WORKFLOW_TOKEN}`,
+    },
+  });
+}
 
 describe('Jobs Status', () => {
   let ctx: TestContext;
+  let workflowApi: APIClient;
   let ticketId: number;
   let jobId: number;
   const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
+    workflowApi = createWorkflowClient();
     await ctx.cleanup();
 
     // Create a test ticket
@@ -44,15 +62,15 @@ describe('Jobs Status', () => {
 
   describe('GET /api/projects/:projectId/jobs/status', () => {
     it('should return job status for project', async () => {
-      const response = await ctx.api.get<Array<{ id: number; status: string; command: string }>>(
+      const response = await ctx.api.get<{ jobs: Array<{ id: number; status: string; command: string }> }>(
         `/api/projects/${ctx.projectId}/jobs/status`
       );
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.data)).toBe(true);
-      expect(response.data.length).toBeGreaterThan(0);
+      expect(Array.isArray(response.data.jobs)).toBe(true);
+      expect(response.data.jobs.length).toBeGreaterThan(0);
 
-      const job = response.data.find((j) => j.id === jobId);
+      const job = response.data.jobs.find((j) => j.id === jobId);
       expect(job).toBeDefined();
       expect(job!.status).toBe('PENDING');
       expect(job!.command).toBe('specify');
@@ -67,7 +85,7 @@ describe('Jobs Status', () => {
 
   describe('PATCH /api/jobs/:id/status', () => {
     it('should update job status to RUNNING', async () => {
-      const response = await ctx.api.patch<{ id: number; status: string }>(
+      const response = await workflowApi.patch<{ id: number; status: string }>(
         `/api/jobs/${jobId}/status`,
         { status: 'RUNNING' }
       );
@@ -83,10 +101,10 @@ describe('Jobs Status', () => {
 
     it('should update job status to COMPLETED', async () => {
       // First set to RUNNING
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
 
       // Then set to COMPLETED
-      const response = await ctx.api.patch<{ id: number; status: string }>(
+      const response = await workflowApi.patch<{ id: number; status: string }>(
         `/api/jobs/${jobId}/status`,
         { status: 'COMPLETED' }
       );
@@ -102,10 +120,10 @@ describe('Jobs Status', () => {
 
     it('should update job status to FAILED', async () => {
       // First set to RUNNING
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
 
       // Then set to FAILED
-      const response = await ctx.api.patch<{ id: number; status: string }>(
+      const response = await workflowApi.patch<{ id: number; status: string }>(
         `/api/jobs/${jobId}/status`,
         { status: 'FAILED' }
       );
@@ -120,7 +138,7 @@ describe('Jobs Status', () => {
     });
 
     it('should return 400 for invalid status', async () => {
-      const response = await ctx.api.patch<{ error: string }>(
+      const response = await workflowApi.patch<{ error: string }>(
         `/api/jobs/${jobId}/status`,
         { status: 'INVALID_STATUS' }
       );
@@ -130,7 +148,7 @@ describe('Jobs Status', () => {
     });
 
     it('should return 404 for non-existent job', async () => {
-      const response = await ctx.api.patch(
+      const response = await workflowApi.patch(
         '/api/jobs/999999/status',
         { status: 'RUNNING' }
       );
@@ -139,7 +157,11 @@ describe('Jobs Status', () => {
     });
 
     it('should update status to CANCELLED', async () => {
-      const response = await ctx.api.patch<{ id: number; status: string }>(
+      // First transition to RUNNING (PENDING → RUNNING is required before CANCELLED)
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      // Then transition to CANCELLED (RUNNING → CANCELLED is valid)
+      const response = await workflowApi.patch<{ id: number; status: string }>(
         `/api/jobs/${jobId}/status`,
         { status: 'CANCELLED' }
       );
@@ -151,21 +173,21 @@ describe('Jobs Status', () => {
 
   describe('Job status lifecycle', () => {
     it('should track full job lifecycle: PENDING → RUNNING → COMPLETED', async () => {
-      // Verify initial PENDING state
+      // Verify initial PENDING state (startedAt is set at job creation)
       let job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job?.status).toBe('PENDING');
-      expect(job?.startedAt).toBeNull();
+      expect(job?.startedAt).not.toBeNull(); // Set at job creation
       expect(job?.completedAt).toBeNull();
 
       // Transition to RUNNING
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
       job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job?.status).toBe('RUNNING');
       expect(job?.startedAt).not.toBeNull();
       expect(job?.completedAt).toBeNull();
 
       // Transition to COMPLETED
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
       job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job?.status).toBe('COMPLETED');
       expect(job?.startedAt).not.toBeNull();
@@ -175,14 +197,22 @@ describe('Jobs Status', () => {
 
   describe('Multiple jobs per ticket', () => {
     it('should handle multiple jobs for same ticket', async () => {
-      // Complete the first job
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
-      await ctx.api.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+      // Complete the first job using workflow API
+      const runningResponse = await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+      expect(runningResponse.status).toBe(200);
 
-      // Transition to next stage to create second job
-      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`, {
-        targetStage: 'PLAN',
-      });
+      const completedResponse = await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'COMPLETED' });
+      expect(completedResponse.status).toBe(200);
+
+      // Transition to next stage to create second job (user auth)
+      const transitionResponse = await ctx.api.post<{ stage: string; jobId?: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'PLAN' }
+      );
+
+      // Transition should succeed and create a new job
+      expect(transitionResponse.status).toBe(200);
+      expect(transitionResponse.data.stage).toBe('PLAN');
 
       // Get all jobs for the ticket
       const ticket = await prisma.ticket.findUnique({

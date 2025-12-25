@@ -82,7 +82,7 @@ export async function ensureTestFixtures(): Promise<string> {
     });
 
     // Ensure test projects exist for workers (SKIP project 3 - reserved for dev!)
-    // Projects: 1, 2, 4, 5, 6, 7 for up to 6 parallel workers
+    // Projects: 1, 2, 4, 5, 6, 7, 8, 9, 10 for up to 9 parallel workers
     const workerProjects = [
       { id: 1, key: 'E2E', repo: 'test', name: '[e2e] Test Project' },
       { id: 2, key: 'TE2', repo: 'test2', name: '[e2e] Test Project 2' },
@@ -90,6 +90,9 @@ export async function ensureTestFixtures(): Promise<string> {
       { id: 5, key: 'TE5', repo: 'test5', name: '[e2e] Test Project 5' },
       { id: 6, key: 'TE6', repo: 'test6', name: '[e2e] Test Project 6' },
       { id: 7, key: 'TE7', repo: 'test7', name: '[e2e] Test Project 7' },
+      { id: 8, key: 'TE8', repo: 'test8', name: '[e2e] Test Project 8' },
+      { id: 9, key: 'TE9', repo: 'test9', name: '[e2e] Test Project 9' },
+      { id: 10, key: 'T10', repo: 'test10', name: '[e2e] Test Project 10' },
     ];
 
     for (const project of workerProjects) {
@@ -425,37 +428,51 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
     },
   });
 
-  // Ensure test user is a project member
-  await client.projectMember.upsert({
-    where: {
-      projectId_userId: {
+  // Ensure test user is a project member (ignore race condition errors)
+  try {
+    await client.projectMember.upsert({
+      where: {
+        projectId_userId: {
+          projectId,
+          userId: testUser.id,
+        },
+      },
+      update: {},
+      create: {
         projectId,
         userId: testUser.id,
+        role: 'member',
       },
-    },
-    update: {},
-    create: {
-      projectId,
-      userId: testUser.id,
-      role: 'member',
-    },
-  });
+    });
+  } catch (error: unknown) {
+    // Ignore unique constraint errors (race condition with parallel workers)
+    if (!(error instanceof Error) || !error.message.includes('Unique constraint')) {
+      throw error;
+    }
+  }
 
-  // Ensure AI-BOARD is a project member
-  await client.projectMember.upsert({
-    where: {
-      projectId_userId: {
+  // Ensure AI-BOARD is a project member (ignore race condition errors)
+  try {
+    await client.projectMember.upsert({
+      where: {
+        projectId_userId: {
+          projectId,
+          userId: aiBoardUser.id,
+        },
+      },
+      update: {},
+      create: {
         projectId,
         userId: aiBoardUser.id,
+        role: 'member',
       },
-    },
-    update: {},
-    create: {
-      projectId,
-      userId: aiBoardUser.id,
-      role: 'member',
-    },
-  });
+    });
+  } catch (error: unknown) {
+    // Ignore unique constraint errors (race condition with parallel workers)
+    if (!(error instanceof Error) || !error.message.includes('Unique constraint')) {
+      throw error;
+    }
+  }
 }
 
 export async function disconnectPrisma(): Promise<void> {

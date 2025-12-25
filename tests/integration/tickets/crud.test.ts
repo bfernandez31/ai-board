@@ -291,7 +291,7 @@ describe('Tickets CRUD', () => {
     });
   });
 
-  describe('GET /api/tickets/:id', () => {
+  describe('GET /api/projects/:projectId/tickets/:id', () => {
     it('should get ticket by ID', async () => {
       // Create ticket first
       const createResponse = await ctx.api.post<{ id: number }>(
@@ -305,7 +305,7 @@ describe('Tickets CRUD', () => {
       const ticketId = createResponse.data.id;
 
       const response = await ctx.api.get<{ id: number; title: string }>(
-        `/api/tickets/${ticketId}`
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`
       );
 
       expect(response.status).toBe(200);
@@ -314,7 +314,7 @@ describe('Tickets CRUD', () => {
     });
 
     it('should return 404 for non-existent ticket', async () => {
-      const response = await ctx.api.get('/api/tickets/999999');
+      const response = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets/999999`);
 
       expect(response.status).toBe(404);
     });
@@ -322,7 +322,7 @@ describe('Tickets CRUD', () => {
 
   describe('PATCH /api/projects/:projectId/tickets/:id', () => {
     it('should update ticket title', async () => {
-      const createResponse = await ctx.api.post<{ id: number }>(
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
         {
           title: '[e2e] Original title',
@@ -331,11 +331,12 @@ describe('Tickets CRUD', () => {
       );
 
       const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
       const newTitle = '[e2e] Updated title';
 
       const response = await ctx.api.patch<{ title: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
-        { title: newTitle }
+        { title: newTitle, version }
       );
 
       expect(response.status).toBe(200);
@@ -343,7 +344,8 @@ describe('Tickets CRUD', () => {
     });
 
     it('should update ticket description', async () => {
-      const createResponse = await ctx.api.post<{ id: number }>(
+      // Description can only be updated in INBOX stage
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
         {
           title: '[e2e] Test ticket',
@@ -352,11 +354,12 @@ describe('Tickets CRUD', () => {
       );
 
       const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
       const newDescription = 'Updated description';
 
       const response = await ctx.api.patch<{ description: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
-        { description: newDescription }
+        { description: newDescription, version }
       );
 
       expect(response.status).toBe(200);
@@ -366,14 +369,14 @@ describe('Tickets CRUD', () => {
     it('should return 404 for non-existent ticket', async () => {
       const response = await ctx.api.patch(
         `/api/projects/${ctx.projectId}/tickets/999999`,
-        { title: 'Should fail' }
+        { title: 'Should fail', version: 1 }
       );
 
       expect(response.status).toBe(404);
     });
   });
 
-  describe('DELETE /api/tickets/:id', () => {
+  describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     it('should delete ticket', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
@@ -385,16 +388,16 @@ describe('Tickets CRUD', () => {
 
       const ticketId = createResponse.data.id;
 
-      const deleteResponse = await ctx.api.delete(`/api/tickets/${ticketId}`);
+      const deleteResponse = await ctx.api.delete(`/api/projects/${ctx.projectId}/tickets/${ticketId}`);
       expect(deleteResponse.status).toBe(200);
 
       // Verify deletion
-      const getResponse = await ctx.api.get(`/api/tickets/${ticketId}`);
+      const getResponse = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets/${ticketId}`);
       expect(getResponse.status).toBe(404);
     });
 
     it('should return 404 for non-existent ticket', async () => {
-      const response = await ctx.api.delete('/api/tickets/999999');
+      const response = await ctx.api.delete(`/api/projects/${ctx.projectId}/tickets/999999`);
       expect(response.status).toBe(404);
     });
   });

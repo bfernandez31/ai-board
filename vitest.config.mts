@@ -18,12 +18,15 @@ export default defineConfig({
     setupFiles: isIntegration ? ['./tests/fixtures/vitest/setup.ts'] : [],
     // Global setup for integration tests (one-time database prep)
     globalSetup: isIntegration ? './tests/fixtures/vitest/global-setup.ts' : undefined,
-    // Pool configuration for worker isolation
+    // For integration tests: disable file parallelism to avoid database race conditions
+    // This ensures test files run sequentially, sharing the same database state
+    fileParallelism: isIntegration ? false : true,
+    // Pool configuration
     pool: 'forks',
     poolOptions: {
       forks: {
-        // Limit to 6 workers to match project mapping [1, 2, 4, 5, 6, 7]
-        maxForks: isIntegration ? 6 : undefined,
+        // Single fork for integration tests (sequential execution)
+        maxForks: isIntegration ? 1 : undefined,
         minForks: isIntegration ? 1 : undefined,
       },
     },

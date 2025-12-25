@@ -107,24 +107,25 @@ describe('Ticket Transitions', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should return 400 for invalid transition path (INBOX to BUILD)', async () => {
+    it('should allow INBOX to BUILD transition (quick-impl)', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
         {
-          title: '[e2e] Invalid path test',
-          description: 'Test invalid transition path',
+          title: '[e2e] Quick impl test',
+          description: 'Test quick-impl transition path',
         }
       );
       const ticketId = createResponse.data.id;
 
-      // INBOX → BUILD is not a valid normal transition (requires quick-impl)
-      const response = await ctx.api.post<{ error: string }>(
+      // INBOX → BUILD is valid (quick-impl path)
+      const response = await ctx.api.post<{ id: number; stage: string; workflowType: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
         { targetStage: 'BUILD' }
       );
 
-      expect(response.status).toBe(400);
-      expect(response.data).toHaveProperty('error');
+      expect(response.status).toBe(200);
+      expect(response.data.stage).toBe('BUILD');
+      expect(response.data.workflowType).toBe('QUICK');
     });
 
     it('should not allow transitioning backwards (SPECIFY to INBOX)', async () => {
@@ -191,13 +192,13 @@ describe('Ticket Transitions', () => {
     });
   });
 
-  describe('Idempotency', () => {
-    it('should return 200 for transition to same stage (idempotent)', async () => {
+  describe('Same-stage transitions', () => {
+    it('should return 400 for transition to same stage (not allowed)', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
         {
-          title: '[e2e] Idempotent transition test',
-          description: 'Test idempotent transition',
+          title: '[e2e] Same-stage transition test',
+          description: 'Test same-stage transition is not allowed',
         }
       );
       const ticketId = createResponse.data.id;
@@ -207,14 +208,14 @@ describe('Ticket Transitions', () => {
         targetStage: 'SPECIFY',
       });
 
-      // Second transition to SPECIFY (same stage)
-      const response = await ctx.api.post<{ stage: string }>(
+      // Second transition to SPECIFY (same stage) - should be rejected
+      const response = await ctx.api.post<{ error: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
         { targetStage: 'SPECIFY' }
       );
 
-      expect(response.status).toBe(200);
-      expect(response.data.stage).toBe('SPECIFY');
+      expect(response.status).toBe(400);
+      expect(response.data).toHaveProperty('error');
     });
   });
 });

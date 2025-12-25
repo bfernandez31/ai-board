@@ -17,21 +17,18 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 /**
  * Worker to project mapping
  * Skip project 3 (reserved for development)
+ * Projects 8-10 added to support up to 9 parallel test files
  */
-const PROJECT_MAPPING: readonly [1, 2, 4, 5, 6, 7] = [1, 2, 4, 5, 6, 7];
+const PROJECT_MAPPING: readonly number[] = [1, 2, 4, 5, 6, 7, 8, 9, 10];
 
 /**
  * Get project ID for a worker index
+ * Uses modulo to recycle projects when workers exceed available projects
  */
 export function getProjectId(workerId: number): number {
-  if (workerId >= PROJECT_MAPPING.length) {
-    throw new Error(
-      `Worker ${workerId} exceeds configured projects. ` +
-        `Max workers: ${PROJECT_MAPPING.length}. ` +
-        `Configure more projects to support more workers.`
-    );
-  }
-  return PROJECT_MAPPING[workerId]!;
+  // Use modulo to recycle projects - workers share projects if there are more workers than projects
+  const index = workerId % PROJECT_MAPPING.length;
+  return PROJECT_MAPPING[index]!;
 }
 
 /**
@@ -56,9 +53,11 @@ async function checkServerRunning(): Promise<boolean> {
 export default async function globalSetup(): Promise<void> {
   console.error('\n🧪 Running Vitest integration test setup...');
 
-  // Load environment variables
+  // Load environment variables (.env.test.local takes precedence for test tokens)
   const envPath = path.resolve(process.cwd(), '.env');
+  const envTestLocalPath = path.resolve(process.cwd(), '.env.test.local');
   dotenv.config({ path: envPath });
+  dotenv.config({ path: envTestLocalPath, override: true });
 
   // Check if dev server is running
   const serverRunning = await checkServerRunning();

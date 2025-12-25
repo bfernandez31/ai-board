@@ -98,37 +98,33 @@ describe('Projects CRUD', () => {
   });
 
   describe('PATCH /api/projects/:id', () => {
-    it('should update project description', async () => {
-      const newDescription = `[e2e] Updated at ${Date.now()}`;
-      const response = await ctx.api.patch(`/api/projects/${ctx.projectId}`, {
-        description: newDescription,
-      });
+    it('should update project clarificationPolicy', async () => {
+      const response = await ctx.api.patch<{ clarificationPolicy: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { clarificationPolicy: 'CONSERVATIVE' }
+      );
 
       expect(response.status).toBe(200);
       expect(response.ok).toBe(true);
-
-      // Verify the update
-      const getResponse = await ctx.api.get<{ description: string }>(
-        `/api/projects/${ctx.projectId}`
-      );
-      expect(getResponse.data.description).toBe(newDescription);
+      // Verify the PATCH response contains the updated value
+      expect(response.data.clarificationPolicy).toBe('CONSERVATIVE');
     });
 
-    it('should update project name', async () => {
-      const newName = `[e2e] Updated Project ${Date.now()}`;
-      const response = await ctx.api.patch(`/api/projects/${ctx.projectId}`, {
-        name: newName,
-      });
+    it('should update project deploymentUrl', async () => {
+      const newUrl = 'https://example.com/deployment';
+      const response = await ctx.api.patch<{ deploymentUrl: string | null }>(
+        `/api/projects/${ctx.projectId}`,
+        { deploymentUrl: newUrl }
+      );
 
       expect(response.status).toBe(200);
-
-      const getResponse = await ctx.api.get<{ name: string }>(`/api/projects/${ctx.projectId}`);
-      expect(getResponse.data.name).toBe(newName);
+      // Verify the PATCH response contains the updated value
+      expect(response.data.deploymentUrl).toBe(newUrl);
     });
 
     it('should return 404 for non-existent project', async () => {
       const response = await ctx.api.patch('/api/projects/99999', {
-        description: 'Should not work',
+        clarificationPolicy: 'CONSERVATIVE',
       });
 
       expect(response.status).toBe(404);
@@ -144,7 +140,7 @@ describe('Projects CRUD', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       await ctx.api.patch(`/api/projects/${ctx.projectId}`, {
-        description: `[e2e] Timestamp test ${Date.now()}`,
+        clarificationPolicy: 'PRAGMATIC',
       });
 
       const afterResponse = await ctx.api.get<{ updatedAt: string }>(

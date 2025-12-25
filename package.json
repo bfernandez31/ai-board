@@ -80,6 +80,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitest/ui": "^4.0.2",
     "autoprefixer": "^10.4.20",
+    "baseline-browser-mapping": "^2.9.11",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.0",
     "eslint-config-prettier": "^9.1.0",
