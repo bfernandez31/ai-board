@@ -25,20 +25,59 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
   /**
    * Helper: Perform drag-and-drop with @dnd-kit compatibility
+   * Uses dispatchEvent for reliable pointer events that @dnd-kit recognizes
    */
   const dragTicketToColumn = async (page: Page, ticketId: number, targetStage: string) => {
     const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
     const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
 
+    // Ensure both elements are visible
+    await expect(ticketCard).toBeVisible();
+    await expect(targetColumn).toBeVisible();
+
     const ticketBox = await ticketCard.boundingBox();
     const targetBox = await targetColumn.boundingBox();
 
-    if (ticketBox && targetBox) {
-      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
-      await page.mouse.up();
+    if (!ticketBox || !targetBox) {
+      throw new Error('Could not get bounding boxes for drag elements');
     }
+
+    // Calculate coordinates
+    const startX = ticketBox.x + ticketBox.width / 2;
+    const startY = ticketBox.y + ticketBox.height / 2;
+    const endX = targetBox.x + targetBox.width / 2;
+    const endY = targetBox.y + targetBox.height / 2;
+
+    // Use dispatchEvent to fire proper pointer events that @dnd-kit recognizes
+    await ticketCard.dispatchEvent('pointerdown', {
+      clientX: startX,
+      clientY: startY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    // Small delay for event processing
+    await page.waitForTimeout(50);
+
+    // Move slightly to activate drag (>8px threshold)
+    await page.mouse.move(startX + 15, startY);
+    await page.waitForTimeout(100);
+
+    // Move to target
+    await page.mouse.move(endX, endY, { steps: 10 });
+    await page.waitForTimeout(50);
+
+    // Release on target column
+    await targetColumn.dispatchEvent('pointerup', {
+      clientX: endX,
+      clientY: endY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    await page.waitForTimeout(300); // Wait for UI update
   };
 
   /**
@@ -61,7 +100,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
         return isRollback || isNormalTransition;
       },
-      { timeout: 2000 }
+      { timeout: 5000 }
     );
   };
 
@@ -100,9 +139,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    // Drag ticket from BUILD to INBOX
-    await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Drag ticket from BUILD to INBOX - set up listener before drag
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      dragTicketToColumn(page, ticket.id, 'INBOX'),
+    ]);
 
     // Verify API response
     expect(response.status()).toBe(200);
@@ -169,9 +210,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    // Drag ticket from BUILD to INBOX
-    await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Drag ticket from BUILD to INBOX - set up listener before drag
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      dragTicketToColumn(page, ticket.id, 'INBOX'),
+    ]);
 
     // Verify rollback succeeded
     expect(response.status()).toBe(200);
@@ -212,8 +255,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Set up listener before drag
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      dragTicketToColumn(page, ticket.id, 'INBOX'),
+    ]);
 
     // Verify rollback blocked
     expect(response.status()).toBe(400);
@@ -258,8 +304,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    await dragTicketToColumn(page, ticket.id, 'INBOX');
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Set up listener before drag
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      dragTicketToColumn(page, ticket.id, 'INBOX'),
+    ]);
 
     // Verify rollback blocked
     expect(response.status()).toBe(400);
@@ -344,9 +393,11 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    // Drag to SPECIFY (normal workflow)
-    await dragTicketToColumn(page, ticket.id, 'SPECIFY');
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Drag to SPECIFY (normal workflow) - set up listener before drag
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      dragTicketToColumn(page, ticket.id, 'SPECIFY'),
+    ]);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -382,12 +433,12 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     const modal = page.locator('[role="dialog"]', { hasText: /quick implementation/i });
     await expect(modal).toBeVisible({ timeout: 2000 });
 
-    // Click proceed button to confirm quick-impl
+    // Click proceed button and wait for API response simultaneously
     const proceedButton = modal.locator('button', { hasText: /proceed/i });
-    await proceedButton.click();
-
-    // Wait for API call after modal confirmation
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      proceedButton.click(),
+    ]);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
