@@ -25,20 +25,60 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
   /**
    * Helper: Perform drag-and-drop with @dnd-kit compatibility
+   * Uses dispatchEvent for reliable pointer events that @dnd-kit recognizes
    */
   const dragTicketToColumn = async (page: Page, ticketId: number, targetStage: string) => {
     const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
     const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
 
+    // Ensure both elements are visible
+    await expect(ticketCard).toBeVisible();
+    await expect(targetColumn).toBeVisible();
+
+    // Get bounding boxes
     const ticketBox = await ticketCard.boundingBox();
     const targetBox = await targetColumn.boundingBox();
 
-    if (ticketBox && targetBox) {
-      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
-      await page.mouse.up();
+    if (!ticketBox || !targetBox) {
+      throw new Error('Could not get bounding boxes for drag elements');
     }
+
+    // Calculate coordinates
+    const startX = ticketBox.x + ticketBox.width / 2;
+    const startY = ticketBox.y + ticketBox.height / 2;
+    const endX = targetBox.x + targetBox.width / 2;
+    const endY = targetBox.y + targetBox.height / 2;
+
+    // Use dispatchEvent to fire proper pointer events that @dnd-kit recognizes
+    await ticketCard.dispatchEvent('pointerdown', {
+      clientX: startX,
+      clientY: startY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    // Small delay for event processing
+    await page.waitForTimeout(50);
+
+    // Move slightly to activate drag (>8px threshold)
+    await page.mouse.move(startX + 15, startY);
+    await page.waitForTimeout(100);
+
+    // Move to target
+    await page.mouse.move(endX, endY, { steps: 10 });
+    await page.waitForTimeout(50);
+
+    // Release on target column
+    await targetColumn.dispatchEvent('pointerup', {
+      clientX: endX,
+      clientY: endY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    await page.waitForTimeout(300); // Wait for UI update
   };
 
   /**
@@ -154,12 +194,12 @@ test.describe('Rollback VERIFY to PLAN', () => {
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
     await expect(modal).toBeVisible({ timeout: 2000 });
 
-    // Click confirm button
+    // Click confirm button and wait for API response in parallel
     const confirmButton = modal.locator('button[data-action="confirm"]');
-    await confirmButton.click();
-
-    // Wait for API response
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      confirmButton.click(),
+    ]);
 
     // Verify API response
     expect(response.status()).toBe(200);
@@ -188,9 +228,11 @@ test.describe('Rollback VERIFY to PLAN', () => {
     });
     expect(updatedTicket?.version).toBe(6);
 
-    // Verify job was deleted
+    // Verify old verify job was deleted but rollback-reset job was created
     const jobs = await prisma.job.findMany({ where: { ticketId: ticket.id } });
-    expect(jobs).toHaveLength(0);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.command).toBe('rollback-reset');
+    expect(jobs[0]?.status).toBe('PENDING');
   });
 
   test('should rollback ticket from VERIFY to PLAN with FAILED job', async ({ page, projectId }) => {
@@ -234,10 +276,12 @@ test.describe('Rollback VERIFY to PLAN', () => {
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
     await expect(modal).toBeVisible({ timeout: 2000 });
-    await modal.locator('button[data-action="confirm"]').click();
 
-    // Wait for API response
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Click confirm and wait for API response in parallel
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      modal.locator('button[data-action="confirm"]').click(),
+    ]);
 
     // Verify rollback succeeded
     expect(response.status()).toBe(200);
@@ -286,10 +330,12 @@ test.describe('Rollback VERIFY to PLAN', () => {
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
     await expect(modal).toBeVisible({ timeout: 2000 });
-    await modal.locator('button[data-action="confirm"]').click();
 
-    // Wait for API response
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Click confirm and wait for API response in parallel
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      modal.locator('button[data-action="confirm"]').click(),
+    ]);
 
     // Verify rollback succeeded
     expect(response.status()).toBe(200);
@@ -466,8 +512,10 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     if (isModalVisible) {
       // If modal appeared, confirm and expect API to reject
-      await modal.locator('button[data-action="confirm"]').click();
-      const response = await waitForTransitionAPI(page, ticket.id, projectId);
+      const [response] = await Promise.all([
+        waitForTransitionAPI(page, ticket.id, projectId),
+        modal.locator('button[data-action="confirm"]').click(),
+      ]);
       expect(response.status()).toBe(400);
       const body = await response.json();
       expect(body.error).toContain('workflow is still running');
@@ -524,7 +572,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
   });
 
   test('should allow normal workflow progression after rollback', async ({ page, projectId }) => {
-    // Setup: Ticket that was rolled back to PLAN
+    // Setup: Ticket that was rolled back to PLAN with completed plan job
     const ticketNumber = nextTicketNumber++;
     const projectKey = getProjectKey(projectId);
     const ticket = await prisma.ticket.create({
@@ -543,15 +591,42 @@ test.describe('Rollback VERIFY to PLAN', () => {
       },
     });
 
+    // Create completed plan job (required to transition to BUILD)
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        command: 'plan',
+        status: 'COMPLETED',
+        branch: '105-post-rollback-branch',
+        startedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
     // Navigate to board
     await page.goto(`${BASE_URL}/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
+    // Ensure ticket is visible in PLAN
+    await expect(page.locator(`[data-ticket-id="${ticket.id}"]`)).toBeVisible();
+
+    // Set up response listener BEFORE dragging
+    const responsePromise = page.waitForResponse(
+      (response) => {
+        const url = response.url();
+        return url.includes(`/tickets/${ticket.id}/transition`) && response.request().method() === 'POST';
+      },
+      { timeout: 10000 }
+    );
+
     // Drag to BUILD (normal workflow progression)
     await dragTicketToColumn(page, ticket.id, 'BUILD');
 
-    // Wait for API response (might trigger transition API)
-    await page.waitForTimeout(1000);
+    // Wait for transition API response
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
 
     // Verify ticket moved to BUILD
     const buildColumn = page.locator('[data-stage="BUILD"]');
@@ -602,10 +677,12 @@ test.describe('Rollback VERIFY to PLAN', () => {
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
     await expect(modal).toBeVisible({ timeout: 2000 });
-    await modal.locator('button[data-action="confirm"]').click();
 
-    // Wait for API response
-    const response = await waitForTransitionAPI(page, ticket.id, projectId);
+    // Click confirm and wait for API response in parallel
+    const [response] = await Promise.all([
+      waitForTransitionAPI(page, ticket.id, projectId),
+      modal.locator('button[data-action="confirm"]').click(),
+    ]);
 
     // Verify API response includes resetJobId
     expect(response.status()).toBe(200);

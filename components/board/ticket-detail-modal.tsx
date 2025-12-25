@@ -485,8 +485,10 @@ export function TicketDetailModal({
         description: 'Failed to save changes while offline. Changes reverted.',
       });
 
-      // Rollback on error
-      setLocalTicket(originalTicket);
+      // Rollback after short delay to allow optimistic state to show
+      setTimeout(() => {
+        setLocalTicket(originalTicket);
+      }, 500);
     }
   };
 
@@ -713,8 +715,10 @@ export function TicketDetailModal({
         description: 'Failed to save changes while offline. Changes reverted.',
       });
 
-      // Rollback on error
-      setLocalTicket(originalTicket);
+      // Rollback after short delay to allow optimistic state to show
+      setTimeout(() => {
+        setLocalTicket(originalTicket);
+      }, 500);
     }
   };
 

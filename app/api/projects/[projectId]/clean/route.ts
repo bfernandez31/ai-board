@@ -130,9 +130,19 @@ export async function POST(
     const aiboardRepo = process.env.GITHUB_REPO;
     const targetRepository = `${project.githubOwner}/${project.githubRepo}`;
 
-    if (!aiboardOwner || !aiboardRepo) {
+    // Skip GitHub API call in test mode (same logic as other dispatchers)
+    const isTestMode =
+      process.env.TEST_MODE === 'true' ||
+      process.env.NODE_ENV === 'test' ||
+      (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
+
+    if (isTestMode) {
+      console.log('[Cleanup Workflow Dispatch] Skipping in test mode:', {
+        ticketKey: result.ticket.ticketKey,
+      });
+    } else if (!aiboardOwner || !aiboardRepo) {
       console.error('Missing GITHUB_OWNER or GITHUB_REPO environment variables');
-    } else if (githubToken && !githubToken.includes('test') && !githubToken.includes('placeholder')) {
+    } else {
       try {
         const octokit = new Octokit({ auth: githubToken });
 

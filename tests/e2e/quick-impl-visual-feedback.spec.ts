@@ -24,6 +24,12 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Reset ticket counter
     nextTicketNumber = 1;
 
+    // Clear any existing cleanup lock
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { activeCleanupJobId: null },
+    });
+
     // Create test ticket in INBOX
     const projectKey = getProjectKey(projectId);
     const ticketNumber = nextTicketNumber++;
@@ -61,17 +67,25 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
-    // Start dragging - need actual mouse movement to trigger @dnd-kit
+    // Get bounding box for drag simulation
     const ticketBox = await ticketCard.boundingBox();
     if (!ticketBox) throw new Error('Ticket not found');
 
-    // Move to ticket center and press down
-    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-    await page.mouse.down();
+    const startX = ticketBox.x + ticketBox.width / 2;
+    const startY = ticketBox.y + ticketBox.height / 2;
 
-    // Move mouse slightly to trigger drag (important for @dnd-kit)
-    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(50); // Wait for drag state to activate
+    // Use dispatchEvent for reliable pointer events that @dnd-kit recognizes
+    await ticketCard.dispatchEvent('pointerdown', {
+      clientX: startX,
+      clientY: startY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    // Move slightly to activate PointerSensor (needs >8px)
+    await page.mouse.move(startX + 15, startY);
+    await page.waitForTimeout(200); // Wait for drag state to activate
 
     // Check SPECIFY column - should have blue border (normal workflow)
     const specifyColumn = page.locator('[data-testid="column-SPECIFY"]');
@@ -124,26 +138,34 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const ticketCard = page.locator('[data-testid="column-INBOX"] [data-draggable="true"]').first();
     await expect(ticketCard).toBeVisible();
 
-    // Start dragging - need actual mouse movement to trigger @dnd-kit
+    // Get bounding box for drag simulation
     const ticketBox = await ticketCard.boundingBox();
     if (!ticketBox) throw new Error('Ticket not found');
 
-    // Move to ticket center and press down
-    await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-    await page.mouse.down();
+    const startX = ticketBox.x + ticketBox.width / 2;
+    const startY = ticketBox.y + ticketBox.height / 2;
 
-    // Move mouse slightly to trigger drag
-    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(50);
+    // Use dispatchEvent for reliable pointer events
+    await ticketCard.dispatchEvent('pointerdown', {
+      clientX: startX,
+      clientY: startY,
+      button: 0,
+      pointerId: 1,
+      isPrimary: true,
+    });
+
+    // Move slightly to activate PointerSensor (needs >8px)
+    await page.mouse.move(startX + 15, startY);
+    await page.waitForTimeout(200);
 
     // Verify styling is applied during drag
     const buildColumn = page.locator('[data-testid="column-BUILD"]');
     let buildClasses = await buildColumn.getAttribute('class');
     expect(buildClasses).toContain('border-green-500');
 
-    // End drag
+    // End drag with pointerup
     await page.mouse.up();
-    await page.waitForTimeout(50);
+    await page.waitForTimeout(100);
 
     // Verify styling is removed after drag
     buildClasses = await buildColumn.getAttribute('class');

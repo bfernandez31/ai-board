@@ -1,13 +1,38 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+const isIntegration = !!process.env.VITEST_INTEGRATION;
+
 export default defineConfig({
   test: {
     globals: true,
-    // Use happy-dom for React hook tests (faster than jsdom)
-    environment: 'happy-dom',
-    include: ['tests/unit/**/*.test.ts'], // Only run Vitest unit tests
-    exclude: ['tests/integration/**', 'tests/e2e/**', 'tests/**/*.spec.ts'], // Exclude Playwright tests
+    // Use happy-dom for unit tests (faster than jsdom), node for integration tests
+    environment: isIntegration ? 'node' : 'happy-dom',
+    // Include appropriate test files based on mode
+    include: isIntegration
+      ? ['tests/integration/**/*.test.ts']
+      : ['tests/unit/**/*.test.ts'],
+    // Exclude Playwright tests and cross-mode tests
+    exclude: ['tests/e2e/**', 'tests/**/*.spec.ts'],
+    // Setup files for integration tests (worker isolation, database)
+    setupFiles: isIntegration ? ['./tests/fixtures/vitest/setup.ts'] : [],
+    // Global setup for integration tests (one-time database prep)
+    globalSetup: isIntegration ? './tests/fixtures/vitest/global-setup.ts' : undefined,
+    // For integration tests: disable file parallelism to avoid database race conditions
+    // This ensures test files run sequentially, sharing the same database state
+    fileParallelism: isIntegration ? false : true,
+    // Pool configuration
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        // Single fork for integration tests (sequential execution)
+        maxForks: isIntegration ? 1 : undefined,
+        minForks: isIntegration ? 1 : undefined,
+      },
+    },
+    // Timeout configuration
+    testTimeout: isIntegration ? 30000 : 5000,
+    hookTimeout: isIntegration ? 30000 : 10000,
   },
   resolve: {
     alias: {

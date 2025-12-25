@@ -7,17 +7,18 @@
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
 - **Charts**: Recharts 2.x (analytics dashboard)
 - **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics)
-- **Testing**: Playwright (E2E), Vitest (unit)
+- **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 
 ## Commands
 
 ```bash
-bun run dev          # Start dev server
-bun run test         # Run all tests
-bun run test:e2e     # Playwright tests
-bun run test:unit    # Vitest tests
-bun run type-check   # TypeScript check
+bun run dev                # Start dev server
+bun run test               # Run all tests (unit + integration + e2e)
+bun run test:unit          # Vitest unit tests
+bun run test:integration   # Vitest integration tests (API, database)
+bun run test:e2e           # Playwright browser tests
+bun run type-check         # TypeScript check
 ```
 
 ## Key Architecture Decisions
@@ -178,19 +179,66 @@ workflowInputs = {
 
 ## Testing Guidelines
 
-### E2E Test Pattern
-```typescript
-// Always create test user first
-const testUser = await prisma.user.upsert({
-  where: { email: 'test@e2e.local' },
-  update: {},
-  create: { email: 'test@e2e.local', name: 'E2E Test User' }
-});
+### Testing Trophy Architecture
 
-// Then create projects with [e2e] prefix
-await prisma.project.create({
-  name: '[e2e] Test Project',
-  userId: testUser.id
+**Principles**: Most tests should be fast integration tests; use E2E only for browser-required features.
+
+| Test Type | Tool | Location | Use For |
+|-----------|------|----------|---------|
+| Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
+| Integration | Vitest | `tests/integration/` | API endpoints, database operations |
+| E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
+
+### When to Use Which Test Type
+
+**Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
+- API endpoint validation
+- Database constraints and cascades
+- State machine transitions
+- Authorization and access control
+
+**Use Playwright E2E Tests** (`tests/e2e/**/*.spec.ts`):
+- OAuth/authentication flows (browser redirects)
+- Drag-and-drop interactions
+- Keyboard navigation and focus management
+- Viewport-dependent behavior
+
+### Integration Test Pattern (Vitest)
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+
+describe('Feature', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await getTestContext();
+    await ctx.cleanup();
+  });
+
+  it('should test API endpoint', async () => {
+    const response = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
+      title: '[e2e] Test',
+      description: 'Description',
+    });
+    expect(response.status).toBe(201);
+  });
+});
+```
+
+### E2E Test Pattern (Playwright)
+```typescript
+import { test, expect } from '../helpers/worker-isolation';
+import { cleanupDatabase } from '../helpers/db-cleanup';
+
+test.describe('Browser Feature', () => {
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+  });
+
+  test('should interact with browser', async ({ page }) => {
+    // Browser-required tests only
+  });
 });
 ```
 

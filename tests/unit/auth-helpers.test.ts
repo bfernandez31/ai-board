@@ -51,7 +51,7 @@ describe('Authorization Helpers Type Safety', () => {
       expect(result.id).toBe(1);
     });
 
-    it('should throw error with "Project not found" message on unauthorized access', () => {
+    it('should throw error with "Project not found" message on unauthorized access', async () => {
       const mockVerifyProjectAccess = async (projectId: number) => {
         if (projectId === 999) {
           throw new Error('Project not found');
@@ -65,7 +65,7 @@ describe('Authorization Helpers Type Safety', () => {
         };
       };
 
-      expect(mockVerifyProjectAccess(999)).rejects.toThrow('Project not found');
+      await expect(mockVerifyProjectAccess(999)).rejects.toThrow('Project not found');
     });
   });
 
@@ -97,7 +97,7 @@ describe('Authorization Helpers Type Safety', () => {
       expect(result.projectId).toBe(1);
     });
 
-    it('should throw error with "Ticket not found" message on unauthorized access', () => {
+    it('should throw error with "Ticket not found" message on unauthorized access', async () => {
       const mockVerifyTicketAccess = async (ticketId: number) => {
         if (ticketId === 999) {
           throw new Error('Ticket not found');
@@ -119,7 +119,7 @@ describe('Authorization Helpers Type Safety', () => {
         };
       };
 
-      expect(mockVerifyTicketAccess(999)).rejects.toThrow('Ticket not found');
+      await expect(mockVerifyTicketAccess(999)).rejects.toThrow('Ticket not found');
     });
   });
 
