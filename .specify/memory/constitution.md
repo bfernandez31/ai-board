@@ -1,6 +1,30 @@
 <!--
 Sync Impact Report
 ===================
+Version Change: 1.4.0 → 1.5.0
+Rationale: Add Component Integration Tests layer to Testing Trophy architecture
+
+Modified Principles:
+- UPDATED: Principle III - Testing Trophy Strategy table (added Component row)
+- UPDATED: Test Selection Decision Tree (added component test step)
+- UPDATED: AI Agent Implementation Guidelines (added component test path)
+
+Added Rules:
+- Component tests in tests/integration/components/ using Vitest + RTL
+- React component tests for form validation, user interactions, keyboard behavior
+- Use renderWithProviders utility for component test isolation
+
+Templates Requiring Updates:
+✅ CLAUDE.md: Added component testing guidelines section
+✅ vitest.config.mts: Added .tsx support for integration tests
+✅ tests/helpers/render-with-providers.tsx: Created (new file)
+✅ tests/fixtures/component-mocks.ts: Created (new file)
+
+Follow-up TODOs:
+- None (Component testing layer complete)
+
+Previous Version History:
+===================
 Version Change: 1.3.0 → 1.4.0
 Rationale: Migrate to Testing Trophy architecture (Kent C. Dodds) - Vitest for integration tests, Playwright for browser-only E2E
 
@@ -98,6 +122,7 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 |-------|------|----------|-------|---------|
 | Static | TypeScript + ESLint | - | Instant | Type/syntax errors |
 | Unit | Vitest | `tests/unit/` | ~1ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/integration/components/` | ~100ms | React component behavior, form validation, user interactions |
 | Integration | Vitest + Prisma + fetch | `tests/integration/` | ~50ms | API endpoints, database, state machines |
 | E2E | Playwright | `tests/e2e/` | ~5s | Browser-required only (auth, drag-drop, keyboard) |
 
@@ -115,9 +140,10 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
-2. Does it involve API calls or database operations? → **Vitest integration test**
-3. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
-4. If unsure, default to **Vitest integration test** (faster feedback)
+2. Is it a React component with user interactions (forms, validation, keyboard)? → **Vitest component test** (tests/integration/components/)
+3. Does it involve API calls or database operations? → **Vitest integration test**
+4. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
+5. If unsure, default to **Vitest integration test** (faster feedback)
 
 **Test Commands**:
 - `bun run test:unit` - Fast unit tests (~1ms each)
@@ -243,6 +269,7 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 6. Match existing folder structure conventions
 7. **Write tests following Testing Trophy strategy**:
    - Vitest unit tests for pure functions (`tests/unit/[feature].test.ts`)
+   - Vitest component tests for React components (`tests/integration/components/[component].test.tsx`)
    - Vitest integration tests for API/DB (`tests/integration/[domain]/[feature].test.ts`)
    - Playwright E2E ONLY if browser-required (`tests/e2e/[feature].spec.ts`)
 8. Add TypeScript types explicitly (no implicit `any`)
@@ -294,4 +321,4 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.4.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-12-25
+**Version**: 1.5.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-12-26

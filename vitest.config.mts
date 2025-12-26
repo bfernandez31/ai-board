@@ -3,14 +3,17 @@ import path from 'path';
 
 const isIntegration = !!process.env.VITEST_INTEGRATION;
 
+// Check if running component tests (need DOM environment)
+const isComponentTest = process.env.VITEST_COMPONENT === 'true';
+
 export default defineConfig({
   test: {
     globals: true,
-    // Use happy-dom for unit tests (faster than jsdom), node for integration tests
-    environment: isIntegration ? 'node' : 'happy-dom',
+    // Use happy-dom for unit tests and component tests, node for API integration tests
+    environment: isIntegration && !isComponentTest ? 'node' : 'happy-dom',
     // Include appropriate test files based on mode
     include: isIntegration
-      ? ['tests/integration/**/*.test.ts']
+      ? ['tests/integration/**/*.test.{ts,tsx}']
       : ['tests/unit/**/*.test.ts'],
     // Exclude Playwright tests and cross-mode tests
     exclude: ['tests/e2e/**', 'tests/**/*.spec.ts'],

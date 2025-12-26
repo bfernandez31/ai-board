@@ -186,10 +186,18 @@ workflowInputs = {
 | Test Type | Tool | Location | Use For |
 |-----------|------|----------|---------|
 | Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/integration/components/` | React components, form validation, user interactions |
 | Integration | Vitest | `tests/integration/` | API endpoints, database operations |
 | E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
 
 ### When to Use Which Test Type
+
+**Use Vitest Component Tests** (`tests/integration/components/**/*.test.tsx`):
+- Form validation and submission
+- Keyboard shortcuts (Cmd+Enter, Escape, Arrow keys)
+- User interactions (click, type, hover)
+- Component loading and error states
+- Autocomplete and dropdown behavior
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation
@@ -200,8 +208,32 @@ workflowInputs = {
 **Use Playwright E2E Tests** (`tests/e2e/**/*.spec.ts`):
 - OAuth/authentication flows (browser redirects)
 - Drag-and-drop interactions
-- Keyboard navigation and focus management
+- Complex keyboard navigation and focus management
 - Viewport-dependent behavior
+
+### Component Test Pattern (Vitest + RTL)
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, waitFor } from '@/tests/helpers/render-with-providers';
+import { MyComponent } from '@/components/my-component';
+
+describe('MyComponent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle user interaction', async () => {
+    const { user } = renderWithProviders(<MyComponent projectId={1} />);
+
+    await user.type(screen.getByRole('textbox', { name: /title/i }), 'Test');
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Success')).toBeVisible();
+    });
+  });
+});
+```
 
 ### Integration Test Pattern (Vitest)
 ```typescript
