@@ -20,12 +20,19 @@ tests/
 │   ├── db-setup.ts          # Database helpers
 │   ├── db-cleanup.ts        # Cleanup utilities
 │   ├── worker-isolation.ts  # Worker → project ID mapping
-│   └── test-utils.tsx       # React testing utilities
+│   ├── test-query-client.ts # Test QueryClient factory
+│   └── render-with-providers.tsx  # Component test rendering utility
 ├── unit/                    # Unit tests (Vitest)
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
 ├── integration/             # Integration tests (Vitest)
+│   ├── components/          # Component integration tests (Vitest + RTL)
+│   │   ├── new-ticket-modal.test.tsx
+│   │   ├── comment-form.test.tsx
+│   │   ├── ticket-search.test.tsx
+│   │   ├── mention-input.test.tsx
+│   │   └── delete-confirmation-modal.test.tsx
 │   ├── projects/            # Domain: project management
 │   │   ├── crud.test.ts
 │   │   └── settings.test.ts
@@ -56,8 +63,25 @@ The project follows Kent C. Dodds' Testing Trophy architecture, emphasizing fast
 | Test Type | Tool | Speed | Use For |
 |-----------|------|-------|---------|
 | Unit | Vitest | ~5ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | ~100ms | React components, form validation, user interactions |
 | Integration | Vitest | ~50ms | API endpoints, database operations, state machines |
 | E2E | Playwright | ~500ms | Browser features (OAuth, drag-drop, viewport) |
+
+### When to Use Component Tests (Vitest + React Testing Library)
+
+Component tests validate React component behavior in isolation with simulated user interactions:
+
+- **Form validation**: Input validation rules, error messages, submission flows
+- **Keyboard shortcuts**: Cmd+Enter submission, Escape key handlers, arrow key navigation
+- **User interactions**: Click events, typing, hover states, focus management
+- **Component state**: Loading states, error states, success states
+- **Autocomplete**: Dropdown behavior, filtering, selection
+- **Debouncing**: Search input debouncing, API call throttling
+- **Modal behavior**: Open/close interactions, confirmation flows
+
+**Location**: `tests/integration/components/`
+**Test Files**: `*.test.tsx`
+**Environment**: happy-dom (lightweight browser simulation)
 
 ### When to Use Integration Tests (Vitest)
 
@@ -75,7 +99,7 @@ E2E tests are reserved for scenarios that genuinely require a real browser:
 
 - **OAuth flows**: Browser redirects, session cookies
 - **Drag-and-drop**: DnD Kit interactions with real DOM
-- **Keyboard navigation**: Focus management, keyboard shortcuts
+- **Complex keyboard navigation**: Advanced focus management across multiple components
 - **Viewport testing**: Responsive layouts, media queries
 - **Visual state**: Cleanup banners, loading states
 
@@ -306,6 +330,77 @@ export default defineConfig({
 
 ## Test Patterns
 
+### Component Test (Vitest + React Testing Library)
+
+**File**: `tests/integration/components/new-ticket-modal.test.tsx`
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, waitFor } from '@/tests/helpers/render-with-providers';
+import { NewTicketModal } from '@/components/board/new-ticket-modal';
+
+describe('NewTicketModal', () => {
+  const defaultProps = {
+    open: true,
+    onOpenChange: vi.fn(),
+    projectId: 1,
+    onSuccess: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
+  });
+
+  it('should submit form with valid data', async () => {
+    const { user } = renderWithProviders(<NewTicketModal {...defaultProps} />);
+
+    // Fill in form fields
+    await user.type(screen.getByRole('textbox', { name: /title/i }), 'New Feature');
+    await user.type(screen.getByRole('textbox', { name: /description/i }), 'Add new feature');
+
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /create/i }));
+
+    // Verify API call
+    await waitFor(() => {
+      expect(defaultProps.onSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('should show validation error for short title', async () => {
+    const { user } = renderWithProviders(<NewTicketModal {...defaultProps} />);
+
+    await user.type(screen.getByRole('textbox', { name: /title/i }), 'ab');
+    await user.tab(); // Trigger blur validation
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/at least 3 characters/i);
+    });
+  });
+
+  it('should submit on Cmd+Enter', async () => {
+    const { user } = renderWithProviders(<NewTicketModal {...defaultProps} />);
+
+    await user.type(screen.getByRole('textbox', { name: /title/i }), 'Test');
+    await user.type(screen.getByRole('textbox', { name: /description/i }), 'Description');
+    await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+    await waitFor(() => {
+      expect(defaultProps.onSuccess).toHaveBeenCalled();
+    });
+  });
+});
+```
+
+**Key Features**:
+- `renderWithProviders()` wraps component with QueryClientProvider and other providers
+- Pre-configured `user` instance from userEvent for realistic interaction simulation
+- `waitFor()` handles async state updates and API calls
+- Role-based queries (getByRole) for accessibility and test robustness
+- Mock API calls with `vi.fn()` for isolated testing
+- Average execution: ~100ms per test
+
 ### Integration Test (Vitest)
 
 **File**: `tests/integration/tickets/crud.test.ts`
@@ -514,38 +609,38 @@ export async function createTestJob(data: {
 }
 ```
 
-### React Testing Utilities
+### React Component Testing Utilities
 
-**File**: `tests/helpers/test-utils.tsx`
+**File**: `tests/helpers/render-with-providers.tsx`
 
 ```typescript
+import { ReactElement, ReactNode } from 'react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, RenderOptions } from '@testing-library/react';
-import { ReactElement } from 'react';
+import userEvent from '@testing-library/user-event';
+import { createTestQueryClient } from './test-query-client';
 
-export function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        gcTime: Infinity,
-      },
-      mutations: {
-        retry: false,
-      },
-    },
-  });
+export interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  queryClient?: QueryClient;
+  initialSearchParams?: URLSearchParams;
 }
 
-interface TestProvidersProps {
-  children: React.ReactNode;
+export interface CustomRenderResult extends RenderResult {
+  queryClient: QueryClient;
+  user: ReturnType<typeof userEvent.setup>;
 }
 
-function TestProviders({ children }: TestProvidersProps) {
-  const testQueryClient = createTestQueryClient();
+export function TestProviders({
+  children,
+  queryClient,
+}: {
+  children: ReactNode;
+  queryClient?: QueryClient;
+}): ReactElement {
+  const client = queryClient ?? createTestQueryClient();
 
   return (
-    <QueryClientProvider client={testQueryClient}>
+    <QueryClientProvider client={client}>
       {children}
     </QueryClientProvider>
   );
@@ -553,11 +648,35 @@ function TestProviders({ children }: TestProvidersProps) {
 
 export function renderWithProviders(
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
-  return render(ui, { wrapper: TestProviders, ...options });
+  options: CustomRenderOptions = {}
+): CustomRenderResult {
+  const { queryClient = createTestQueryClient(), ...renderOptions } = options;
+  const user = userEvent.setup();
+
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <TestProviders queryClient={queryClient}>
+      {children}
+    </TestProviders>
+  );
+
+  return {
+    ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    queryClient,
+    user,
+  };
 }
+
+// Re-exports from React Testing Library
+export * from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
 ```
+
+**Features**:
+- Returns pre-configured `user` instance for consistent interaction patterns
+- Provides access to `queryClient` for cache inspection and state assertions
+- Wraps components with QueryClientProvider automatically
+- Re-exports all React Testing Library utilities for convenience
+- Optimized test query client with disabled retries and infinite cache time
 
 ## Running Tests
 
@@ -608,12 +727,13 @@ npx playwright show-report
 - Workers: Unlimited (CPU-bound)
 
 **Integration Tests** (`bun run test:integration`):
-- Environment: `node` (no browser simulation)
-- Includes: `tests/integration/**/*.test.ts`
+- Environment: `node` for API tests, `happy-dom` for component tests
+- Includes: `tests/integration/**/*.test.ts` and `tests/integration/components/**/*.test.tsx`
 - Timeout: 30 seconds per test
 - Workers: 6 forks (matches project mapping)
 - Setup: `tests/fixtures/vitest/setup.ts` (worker isolation)
 - Global Setup: `tests/fixtures/vitest/global-setup.ts` (one-time DB prep)
+- Component tests use `renderWithProviders()` utility for provider wrapping
 
 **E2E Tests** (`bun run test:e2e`):
 - Environment: Real browser (Chromium/Firefox/WebKit)
@@ -851,9 +971,22 @@ npx playwright test --coverage
 
 ### Test Type Selection
 - ✅ Default to integration tests for API/database behavior
+- ✅ Use component tests for React component interactions and form validation
 - ✅ Use unit tests for pure functions and utilities
 - ✅ Reserve E2E tests for browser-required scenarios only
 - ❌ Don't use Playwright for API testing (use Vitest integration tests)
+- ❌ Don't use Playwright for simple component interactions (use Vitest component tests)
+
+### Component Testing
+- ✅ Use role-based queries (getByRole) for accessibility and robustness
+- ✅ Use `renderWithProviders()` utility from `@/tests/helpers/render-with-providers`
+- ✅ Use pre-configured `user` instance from render result
+- ✅ Mock API calls with `vi.fn()` and global.fetch
+- ✅ Use `waitFor()` for async state updates
+- ✅ Test keyboard shortcuts with `user.keyboard()`
+- ✅ Target <100ms per component test
+- ❌ Don't create your own QueryClient instances
+- ❌ Don't test implementation details (internal state, private methods)
 
 ### Test Isolation
 - ✅ Use `beforeEach` cleanup for each test

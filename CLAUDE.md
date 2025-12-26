@@ -198,6 +198,8 @@ workflowInputs = {
 - User interactions (click, type, hover)
 - Component loading and error states
 - Autocomplete and dropdown behavior
+- Debounced search inputs
+- Modal open/close interactions
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation
@@ -220,20 +222,64 @@ import { MyComponent } from '@/components/my-component';
 describe('MyComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock fetch if component makes API calls
+    global.fetch = vi.fn();
   });
 
   it('should handle user interaction', async () => {
     const { user } = renderWithProviders(<MyComponent projectId={1} />);
 
+    // Use role-based queries for accessibility
     await user.type(screen.getByRole('textbox', { name: /title/i }), 'Test');
     await user.click(screen.getByRole('button', { name: /submit/i }));
 
+    // Wait for async updates
     await waitFor(() => {
       expect(screen.getByText('Success')).toBeVisible();
     });
   });
+
+  it('should handle keyboard shortcuts', async () => {
+    const onSubmit = vi.fn();
+    const { user } = renderWithProviders(<MyComponent onSubmit={onSubmit} />);
+
+    await user.type(screen.getByRole('textbox'), 'Test');
+    await user.keyboard('{Meta>}{Enter}{/Meta}'); // Cmd+Enter
+
+    expect(onSubmit).toHaveBeenCalled();
+  });
 });
 ```
+
+### Component Testing Best Practices
+
+**Rendering**:
+- Always use `renderWithProviders()` from `@/tests/helpers/render-with-providers`
+- Use the pre-configured `user` instance from render result
+- Don't create your own QueryClient instances
+
+**Queries**:
+- Prefer role-based queries: `getByRole('button', { name: /submit/i })`
+- Use `getByLabelText()` for form fields
+- Use `getByText()` for content verification
+- Avoid `getByTestId()` unless necessary
+
+**Interactions**:
+- Use `user.type()` for text input
+- Use `user.click()` for button clicks
+- Use `user.keyboard()` for keyboard shortcuts
+- Use `waitFor()` for async state updates
+
+**Mocking**:
+- Mock API calls with `global.fetch = vi.fn()`
+- Mock TanStack Query hooks when needed: `vi.mock('@tanstack/react-query')`
+- Clear mocks in `beforeEach()`: `vi.clearAllMocks()`
+
+**Assertions**:
+- Use `toBeVisible()` for visibility checks
+- Use `toHaveTextContent()` for text verification
+- Use `waitFor()` for async assertions
+- Check both success and error states
 
 ### Integration Test Pattern (Vitest)
 ```typescript
