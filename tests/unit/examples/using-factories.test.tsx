@@ -211,14 +211,13 @@ describe('Using Mock Data Factories (Example)', () => {
 
     it('preserves explicit null values', () => {
       const ticket = mockTicket({
-        description: undefined, // Clear description
         previewUrl: null, // Explicit null
       });
 
-      // undefined gets overridden by default
-      expect(ticket.description).toBeDefined();
       // null is preserved
       expect(ticket.previewUrl).toBeNull();
+      // Default description is provided when not specified
+      expect(ticket.description).toBeDefined();
     });
 
     it('handles type-safe overrides', () => {

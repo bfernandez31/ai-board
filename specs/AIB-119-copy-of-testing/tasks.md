@@ -18,11 +18,11 @@
 
 **Purpose**: Create test helper infrastructure for RTL component tests
 
-- [ ] T001 Create test directory structure at `tests/unit/components/helpers/`
-- [ ] T002 [P] Implement TestWrapper component with QueryClientProvider in `tests/unit/components/helpers/test-wrapper.tsx`
-- [ ] T003 [P] Implement renderWithProviders function in `tests/unit/components/helpers/render-helpers.ts`
-- [ ] T004 [P] Implement type-safe mock data factories in `tests/unit/components/helpers/factories.ts`
-- [ ] T005 [P] Implement Next.js navigation mocks in `tests/unit/components/helpers/next-mocks.ts`
+- [x] T001 Create test directory structure at `tests/unit/components/helpers/`
+- [x] T002 [P] Implement TestWrapper component with QueryClientProvider in `tests/unit/components/helpers/test-wrapper.tsx`
+- [x] T003 [P] Implement renderWithProviders function in `tests/unit/components/helpers/render-helpers.ts`
+- [x] T004 [P] Implement type-safe mock data factories in `tests/unit/components/helpers/factories.ts`
+- [x] T005 [P] Implement Next.js navigation mocks in `tests/unit/components/helpers/next-mocks.ts`
 
 **Checkpoint**: Test helper infrastructure ready - component tests can now be written
 
@@ -34,8 +34,8 @@
 
 **⚠️ CRITICAL**: No user story component tests can begin until this phase is complete
 
-- [ ] T006 Create smoke test to validate test wrapper works in `tests/unit/components/helpers/test-wrapper.test.tsx`
-- [ ] T007 Verify factories return correct Prisma types by running TypeScript check
+- [x] T006 Create smoke test to validate test wrapper works in `tests/unit/components/helpers/test-wrapper.test.tsx`
+- [x] T007 Verify factories return correct Prisma types by running TypeScript check
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -49,18 +49,18 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Create board test directory at `tests/unit/components/board/`
-- [ ] T009 [US1] Write TicketCard component tests in `tests/unit/components/board/ticket-card.test.tsx`
+- [x] T008 [P] [US1] Create board test directory at `tests/unit/components/board/`
+- [x] T009 [US1] Write TicketCard component tests in `tests/unit/components/board/ticket-card.test.tsx`
   - Test: displays ticket key and title
   - Test: shows workflow type badge (QUICK, FULL, CLEAN)
   - Test: calls onTicketClick when card is clicked
   - Test: shows job status indicator when jobs are present
-- [ ] T010 [US1] Write NewTicketModal component tests in `tests/unit/components/board/new-ticket-modal.test.tsx`
+- [x] T010 [US1] Write NewTicketModal component tests in `tests/unit/components/board/new-ticket-modal.test.tsx`
   - Test: renders form fields for title and description
   - Test: validates required title field
   - Test: calls onSubmit with form data when submitted
   - Test: closes modal on cancel
-- [ ] T011 [US1] Write StageColumn component tests in `tests/unit/components/board/stage-column.test.tsx`
+- [x] T011 [US1] Write StageColumn component tests in `tests/unit/components/board/stage-column.test.tsx`
   - Test: displays column heading with stage name
   - Test: renders all ticket cards in the column
   - Test: shows empty state when no tickets
@@ -77,13 +77,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Create comments test directory at `tests/unit/components/comments/`
-- [ ] T013 [US2] Write CommentForm component tests in `tests/unit/components/comments/comment-form.test.tsx`
+- [x] T012 [P] [US2] Create comments test directory at `tests/unit/components/comments/`
+- [x] T013 [US2] Write CommentForm component tests in `tests/unit/components/comments/comment-form.test.tsx`
   - Test: renders textarea for comment input
   - Test: calls onSubmit with comment content when form is submitted
   - Test: disables submit button when input is empty
   - Test: clears input after successful submission
-- [ ] T014 [US2] Write CommentList component tests in `tests/unit/components/comments/comment-list.test.tsx`
+- [x] T014 [US2] Write CommentList component tests in `tests/unit/components/comments/comment-list.test.tsx`
   - Test: renders all comments with author and content
   - Test: displays timestamps for each comment
   - Test: shows empty state when no comments
@@ -100,14 +100,14 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [P] [US3] Create projects test directory at `tests/unit/components/projects/`
-- [ ] T016 [US3] Write ProjectCard component tests in `tests/unit/components/projects/project-card.test.tsx`
+- [x] T015 [P] [US3] Create projects test directory at `tests/unit/components/projects/`
+- [x] T016 [US3] Write ProjectCard component tests in `tests/unit/components/projects/project-card.test.tsx`
   - Test: displays project name and key
   - Test: shows ticket count
   - Test: copies project key to clipboard when copy button clicked
   - Test: shows copy success feedback
   - Test: navigates to project board when card is clicked
-- [ ] T017 [US3] Write EmptyProjectsState component tests in `tests/unit/components/projects/empty-projects-state.test.tsx`
+- [x] T017 [US3] Write EmptyProjectsState component tests in `tests/unit/components/projects/empty-projects-state.test.tsx`
   - Test: displays empty state message
   - Test: shows create project action button
 
@@ -123,12 +123,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T018 [P] [US4] Update constitution.md with RTL component testing as part of Testing Trophy strategy in `.specify/constitution.md`
-- [ ] T019 [P] [US4] Update CLAUDE.md Testing Guidelines section with RTL component test guidance in `CLAUDE.md`
+- [x] T018 [P] [US4] Update constitution.md with RTL component testing as part of Testing Trophy strategy in `.specify/constitution.md`
+- [x] T019 [P] [US4] Update CLAUDE.md Testing Guidelines section with RTL component test guidance in `CLAUDE.md`
   - Add: When to use RTL component tests vs unit/integration/E2E
   - Add: Component test file location (`tests/unit/components/`)
   - Add: Query priority (getByRole > getByLabelText > getByText > getByTestId)
-- [ ] T020 [US4] Verify test commands include component tests by running `bun run test:unit` and confirming new tests execute
+- [x] T020 [US4] Verify test commands include component tests by running `bun run test:unit` and confirming new tests execute
 
 **Checkpoint**: Documentation complete - team can write consistent RTL tests
 
@@ -138,10 +138,10 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T021 Run full test suite with `bun run test:unit` to verify all component tests pass
-- [ ] T022 Run TypeScript check with `bun run type-check` to verify no type errors
-- [ ] T023 Validate test execution time is under 2 seconds for all component tests
-- [ ] T024 Run quickstart.md validation - verify examples in quickstart.md work correctly
+- [x] T021 Run full test suite with `bun run test:unit` to verify all component tests pass
+- [x] T022 Run TypeScript check with `bun run type-check` to verify no type errors
+- [x] T023 Validate test execution time is under 2 seconds for all component tests
+- [x] T024 Run quickstart.md validation - verify examples in quickstart.md work correctly
 
 ---
 

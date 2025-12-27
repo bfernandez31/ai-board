@@ -186,10 +186,18 @@ workflowInputs = {
 | Test Type | Tool | Location | Use For |
 |-----------|------|----------|---------|
 | Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | React component rendering, user interactions |
 | Integration | Vitest | `tests/integration/` | API endpoints, database operations |
 | E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
 
 ### When to Use Which Test Type
+
+**Use Vitest Component Tests** (`tests/unit/components/**/*.test.tsx`):
+- Component rendering and data display
+- User interactions (clicks, form submissions)
+- Conditional rendering based on props
+- Mock data factories with type-safe Prisma types
+- Components that don't require browser-specific features
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation
@@ -222,6 +230,36 @@ describe('Feature', () => {
       description: 'Description',
     });
     expect(response.status).toBe(201);
+  });
+});
+```
+
+### Component Test Pattern (RTL)
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../helpers/render-helpers';
+import { createMockTicketWithVersion } from '../helpers/factories';
+
+// Mock dependencies
+vi.mock('@dnd-kit/core', () => ({
+  useDraggable: () => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn() }),
+}));
+
+describe('MyComponent', () => {
+  it('displays data from props', () => {
+    const ticket = createMockTicketWithVersion({ title: 'Test' });
+    renderWithProviders(<MyComponent ticket={ticket} />);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+
+  it('handles user interactions', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    renderWithProviders(<MyComponent onClick={onClick} />);
+    await user.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalled();
   });
 });
 ```

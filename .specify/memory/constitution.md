@@ -98,26 +98,30 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 |-------|------|----------|-------|---------|
 | Static | TypeScript + ESLint | - | Instant | Type/syntax errors |
 | Unit | Vitest | `tests/unit/` | ~1ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | ~10ms | React component rendering, user interactions |
 | Integration | Vitest + Prisma + fetch | `tests/integration/` | ~50ms | API endpoints, database, state machines |
 | E2E | Playwright | `tests/e2e/` | ~5s | Browser-required only (auth, drag-drop, keyboard) |
 
 **Non-Negotiable Rules**:
 - **API tests use Vitest, NOT Playwright** - 10-20x faster execution
+- **Component tests use Vitest + React Testing Library** - Mock dependencies, test rendering and interactions
 - **E2E tests are for browser-required features ONLY**: OAuth flow, drag-drop (DnD Kit), keyboard navigation, viewport testing
 - Tests organized by domain (tickets, projects, jobs), NOT by spec document
 - Tests verify behavior, not implementation details
 - **ALWAYS search for existing tests FIRST** before creating new test files
 - Update and extend existing test files rather than creating duplicates
 - Unit tests in `/tests/unit/[feature].test.ts` using Vitest
+- Component tests in `/tests/unit/components/[feature].test.tsx` using Vitest + RTL
 - Integration tests in `/tests/integration/[domain]/[feature].test.ts` using Vitest
 - E2E tests in `/tests/e2e/[feature].spec.ts` using Playwright
 - No feature is complete without passing tests
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
-2. Does it involve API calls or database operations? → **Vitest integration test**
-3. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
-4. If unsure, default to **Vitest integration test** (faster feedback)
+2. Is it a React component with props and user interactions? → **Vitest + RTL component test**
+3. Does it involve API calls or database operations? → **Vitest integration test**
+4. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
+5. If unsure, default to **Vitest integration test** (faster feedback)
 
 **Test Commands**:
 - `bun run test:unit` - Fast unit tests (~1ms each)
