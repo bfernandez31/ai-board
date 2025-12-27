@@ -264,6 +264,14 @@ describe('MyComponent', () => {
 });
 ```
 
+**Component Test Helpers**:
+- `renderWithProviders()`: Renders component with QueryClientProvider context
+- `createMock*()` factories: Type-safe Prisma entities (Ticket, Project, Job, Comment, User)
+- `createMockTicketWithVersion()`: Includes version field for optimistic locking
+- Query priority: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
+- Use `userEvent` for interactions, `findBy*` for async elements
+- Mock dependencies: `vi.mock('@dnd-kit/core')`, `vi.mock('@/lib/hooks/*')`
+
 ### E2E Test Pattern (Playwright)
 ```typescript
 import { test, expect } from '../helpers/worker-isolation';

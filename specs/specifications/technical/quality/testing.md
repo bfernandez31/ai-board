@@ -22,6 +22,22 @@ tests/
 │   ├── worker-isolation.ts  # Worker → project ID mapping
 │   └── test-utils.tsx       # React testing utilities
 ├── unit/                    # Unit tests (Vitest)
+│   ├── components/          # Component tests (RTL)
+│   │   ├── helpers/         # Component test utilities
+│   │   │   ├── test-wrapper.tsx    # QueryClient provider wrapper
+│   │   │   ├── render-helpers.tsx  # renderWithProviders helper
+│   │   │   ├── factories.ts        # Type-safe mock data factories
+│   │   │   └── next-mocks.ts       # Next.js component mocks
+│   │   ├── board/           # Board component tests
+│   │   │   ├── ticket-card.test.tsx
+│   │   │   ├── stage-column.test.tsx
+│   │   │   └── new-ticket-modal.test.tsx
+│   │   ├── comments/        # Comment component tests
+│   │   │   ├── comment-form.test.tsx
+│   │   │   └── comment-list.test.tsx
+│   │   └── projects/        # Project component tests
+│   │       ├── project-card.test.tsx
+│   │       └── empty-projects-state.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
@@ -56,8 +72,27 @@ The project follows Kent C. Dodds' Testing Trophy architecture, emphasizing fast
 | Test Type | Tool | Speed | Use For |
 |-----------|------|-------|---------|
 | Unit | Vitest | ~5ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | ~10ms | React component rendering, user interactions |
 | Integration | Vitest | ~50ms | API endpoints, database operations, state machines |
 | E2E | Playwright | ~500ms | Browser features (OAuth, drag-drop, viewport) |
+
+### When to Use Component Tests (RTL)
+
+Component tests validate React component behavior without a real browser:
+
+- **Component rendering**: Verify components render with correct data
+- **User interactions**: Clicks, form submissions, keyboard input
+- **Conditional rendering**: Display logic based on props/state
+- **Event handlers**: Callback functions fire with correct arguments
+- **Form validation**: Client-side validation and error messages
+- **Modal interactions**: Opening/closing dialogs and overlays
+- **State updates**: Component state changes in response to user actions
+
+**Test Utilities**:
+- `renderWithProviders()`: Renders components with QueryClientProvider
+- `createMock*()` factories: Type-safe mock data (Ticket, Project, Job, etc.)
+- `userEvent`: Simulate user interactions (click, type, keyboard shortcuts)
+- Query helpers: `getByRole`, `getByLabelText`, `getByText`
 
 ### When to Use Integration Tests (Vitest)
 
@@ -305,6 +340,70 @@ export default defineConfig({
 ```
 
 ## Test Patterns
+
+### Component Test (RTL)
+
+**File**: `tests/unit/components/board/ticket-card.test.tsx`
+
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../helpers/render-helpers';
+import { createMockTicketWithVersion } from '../helpers/factories';
+import { TicketCard } from '@/components/board/ticket-card';
+
+// Mock dependencies
+vi.mock('@dnd-kit/core', () => ({
+  useDraggable: () => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn() }),
+}));
+
+describe('TicketCard', () => {
+  it('displays ticket key and title', () => {
+    const ticket = createMockTicketWithVersion({
+      ticketKey: 'ABC-42',
+      title: 'Fix authentication bug',
+    });
+
+    renderWithProviders(<TicketCard ticket={ticket} />);
+
+    expect(screen.getByText('ABC-42')).toBeInTheDocument();
+    expect(screen.getByText('Fix authentication bug')).toBeInTheDocument();
+  });
+
+  it('calls onTicketClick when card is clicked', async () => {
+    const user = userEvent.setup();
+    const ticket = createMockTicketWithVersion();
+    const onClick = vi.fn();
+
+    renderWithProviders(
+      <TicketCard ticket={ticket} onTicketClick={onClick} />
+    );
+
+    await user.click(screen.getByTestId('ticket-card'));
+
+    expect(onClick).toHaveBeenCalledWith(ticket);
+  });
+
+  it('shows preview URL badge when available', () => {
+    const ticket = createMockTicketWithVersion({
+      previewUrl: 'https://preview.example.com',
+    });
+
+    renderWithProviders(<TicketCard ticket={ticket} />);
+
+    expect(screen.getByTestId('preview-badge')).toBeInTheDocument();
+  });
+});
+```
+
+**Key Features**:
+- `renderWithProviders()` provides QueryClient context automatically
+- `createMockTicketWithVersion()` generates type-safe mock data
+- `userEvent` simulates real user interactions
+- `vi.mock()` mocks dependencies like `@dnd-kit/core`
+- Query by role/label first, fallback to test IDs when needed
+- Average execution: ~10ms per test
 
 ### Integration Test (Vitest)
 
@@ -559,6 +658,122 @@ export function renderWithProviders(
 }
 ```
 
+### Component Test Helpers
+
+**File**: `tests/unit/components/helpers/render-helpers.tsx`
+
+```typescript
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderOptions } from '@testing-library/react';
+import type { ReactElement } from 'react';
+
+/**
+ * Creates a QueryClient configured for component tests
+ */
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+        staleTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+}
+
+/**
+ * Renders component with QueryClientProvider and returns queryClient for assertions
+ */
+export function renderWithProviders(
+  ui: ReactElement,
+  options?: RenderOptions & { queryClient?: QueryClient }
+) {
+  const queryClient = options?.queryClient ?? createTestQueryClient();
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+
+  return {
+    ...render(ui, { ...options, wrapper: Wrapper }),
+    queryClient,
+  };
+}
+```
+
+**File**: `tests/unit/components/helpers/factories.ts`
+
+```typescript
+import type { Ticket, Project, Job, Comment, User } from '@prisma/client';
+
+type TicketWithVersion = Ticket & { version: number };
+
+/**
+ * Creates type-safe mock ticket with all required fields
+ */
+export function createMockTicket(overrides: Partial<Ticket> = {}): Ticket {
+  return {
+    id: 1,
+    ticketKey: 'ABC-1',
+    title: 'Test Ticket',
+    description: 'Test description',
+    stage: 'INBOX',
+    projectId: 1,
+    workflowType: null,
+    branch: null,
+    previewUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+/**
+ * Creates ticket with version field for optimistic locking
+ */
+export function createMockTicketWithVersion(
+  overrides: Partial<TicketWithVersion> = {}
+): TicketWithVersion {
+  return {
+    ...createMockTicket(overrides),
+    version: overrides.version ?? 0,
+  };
+}
+
+/**
+ * Creates type-safe mock project
+ */
+export function createMockProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: 1,
+    key: 'ABC',
+    name: 'Test Project',
+    description: 'Test project description',
+    githubOwner: 'test-owner',
+    githubRepo: 'test-repo',
+    userId: 'user-1',
+    clarificationPolicy: 'CONSERVATIVE',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+// Additional factories: createMockJob, createMockComment, createMockUser
+```
+
+**Key Features**:
+- **Type-safe mocks**: All factories return Prisma-typed entities
+- **Minimal defaults**: Only required fields, override as needed
+- **Version support**: `createMockTicketWithVersion()` includes optimistic locking field
+- **Consistent structure**: All factories follow same pattern
+
 ## Running Tests
 
 ### Commands
@@ -603,9 +818,10 @@ npx playwright show-report
 
 **Unit Tests** (`bun run test:unit`):
 - Environment: `happy-dom` (lightweight browser simulation)
-- Includes: `tests/unit/**/*.test.ts`
+- Includes: `tests/unit/**/*.test.ts` and `tests/unit/components/**/*.test.tsx`
 - Timeout: 5 seconds per test
 - Workers: Unlimited (CPU-bound)
+- Component tests run alongside unit tests in same environment
 
 **Integration Tests** (`bun run test:integration`):
 - Environment: `node` (no browser simulation)
@@ -851,8 +1067,10 @@ npx playwright test --coverage
 
 ### Test Type Selection
 - ✅ Default to integration tests for API/database behavior
+- ✅ Use component tests (RTL) for React component interactions
 - ✅ Use unit tests for pure functions and utilities
 - ✅ Reserve E2E tests for browser-required scenarios only
+- ❌ Don't use Playwright for component testing (use RTL instead)
 - ❌ Don't use Playwright for API testing (use Vitest integration tests)
 
 ### Test Isolation
@@ -875,7 +1093,10 @@ npx playwright test --coverage
 - ✅ Test both success and error cases
 - ✅ Verify database state for mutations
 - ✅ Check status codes before parsing response bodies
-- ❌ Don't test implementation details
+- ✅ Query by role/label first in component tests (`getByRole`, `getByLabelText`)
+- ✅ Use `findBy*` for async elements that appear after render
+- ❌ Don't test implementation details (CSS classes, internal state)
+- ❌ Don't query by implementation details in component tests
 
 ### Performance
 - ✅ Run integration tests in parallel (6 workers)
