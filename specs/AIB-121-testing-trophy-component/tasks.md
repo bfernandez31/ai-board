@@ -18,7 +18,7 @@
 
 **Purpose**: No setup required - project already has Vitest and RTL dependencies installed
 
-- [ ] T001 Verify RTL dependencies exist in package.json (@testing-library/react, @testing-library/dom, @testing-library/user-event)
+- [x] T001 Verify RTL dependencies exist in package.json (@testing-library/react, @testing-library/dom, @testing-library/user-event)
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: No component test tasks (US3) can begin until this phase is complete
 
-- [ ] T002 Create tests/unit/components/ directory structure for RTL component tests
-- [ ] T003 Create component test utilities in tests/utils/component-test-utils.tsx with renderWithProviders() and createTestQueryClient()
+- [x] T002 Create tests/unit/components/ directory structure for RTL component tests
+- [x] T003 Create component test utilities in tests/utils/component-test-utils.tsx with renderWithProviders() and createTestQueryClient()
 
 **Checkpoint**: Infrastructure ready - component test implementation can now begin
 
@@ -43,9 +43,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Update .specify/memory/constitution.md to add RTL component testing layer to Testing Trophy table
-- [ ] T005 [US1] Add query priority hierarchy (getByRole > getByLabelText > getByText > getByTestId) to constitution.md
-- [ ] T006 [US1] Document userEvent vs fireEvent guidance in constitution.md (prefer userEvent)
+- [x] T004 [US1] Update .specify/memory/constitution.md to add RTL component testing layer to Testing Trophy table
+- [x] T005 [US1] Add query priority hierarchy (getByRole > getByLabelText > getByText > getByTestId) to constitution.md
+- [x] T006 [US1] Document userEvent vs fireEvent guidance in constitution.md (prefer userEvent)
 
 **Checkpoint**: Constitution documentation complete - AI agents can reference RTL guidelines
 
@@ -61,10 +61,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Implement createTestQueryClient() helper with retry: false and gcTime: 0 in tests/utils/component-test-utils.tsx
-- [ ] T008 [US2] Implement renderWithProviders() wrapper with QueryClientProvider in tests/utils/component-test-utils.tsx
-- [ ] T009 [US2] Re-export RTL utilities (screen, within, waitFor) from tests/utils/component-test-utils.tsx
-- [ ] T010 [US2] Re-export userEvent from tests/utils/component-test-utils.tsx
+- [x] T007 [US2] Implement createTestQueryClient() helper with retry: false and gcTime: 0 in tests/utils/component-test-utils.tsx
+- [x] T008 [US2] Implement renderWithProviders() wrapper with QueryClientProvider in tests/utils/component-test-utils.tsx
+- [x] T009 [US2] Re-export RTL utilities (screen, within, waitFor) from tests/utils/component-test-utils.tsx
+- [x] T010 [US2] Re-export userEvent from tests/utils/component-test-utils.tsx
 
 **Checkpoint**: Test infrastructure ready - component tests can import utilities
 
@@ -80,11 +80,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [P] [US3] Create RTL test for NewTicketModal in tests/unit/components/new-ticket-modal.test.tsx (form submission, validation, ESC to close)
-- [ ] T012 [P] [US3] Create RTL test for QuickImplModal in tests/unit/components/quick-impl-modal.test.tsx (confirm/cancel behavior, keyboard accessibility)
-- [ ] T013 [P] [US3] Create RTL test for DeleteConfirmationModal in tests/unit/components/delete-confirmation-modal.test.tsx (confirmation flow, danger action)
-- [ ] T014 [P] [US3] Create RTL test for TicketSearch in tests/unit/components/ticket-search.test.tsx (search input, results display, keyboard navigation)
-- [ ] T015 [P] [US3] Create RTL test for CommentForm in tests/unit/components/comment-form.test.tsx (text input, Cmd/Ctrl+Enter submission)
+- [x] T011 [P] [US3] Create RTL test for NewTicketModal in tests/unit/components/new-ticket-modal.test.tsx (form submission, validation, ESC to close)
+- [x] T012 [P] [US3] Create RTL test for QuickImplModal in tests/unit/components/quick-impl-modal.test.tsx (confirm/cancel behavior, keyboard accessibility)
+- [x] T013 [P] [US3] Create RTL test for DeleteConfirmationModal in tests/unit/components/delete-confirmation-modal.test.tsx (confirmation flow, danger action)
+- [x] T014 [P] [US3] Create RTL test for TicketSearch in tests/unit/components/ticket-search.test.tsx (search input, results display, keyboard navigation)
+- [x] T015 [P] [US3] Create RTL test for CommentForm in tests/unit/components/comment-form.test.tsx (text input, Cmd/Ctrl+Enter submission)
 
 **Checkpoint**: 5 component tests complete - `bun run test:unit` passes with new RTL tests
 
@@ -100,9 +100,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T016 [US4] Update CLAUDE.md Testing Guidelines table to add RTL component test type
-- [ ] T017 [US4] Add "When to Use Which Test Type" decision tree in CLAUDE.md with RTL component criteria
-- [ ] T018 [US4] Add RTL integration test pattern example in CLAUDE.md (similar to existing unit/integration/E2E patterns)
+- [x] T016 [US4] Update CLAUDE.md Testing Guidelines table to add RTL component test type
+- [x] T017 [US4] Add "When to Use Which Test Type" decision tree in CLAUDE.md with RTL component criteria
+- [x] T018 [US4] Add RTL integration test pattern example in CLAUDE.md (similar to existing unit/integration/E2E patterns)
 
 **Checkpoint**: CLAUDE.md documentation complete - AI agents can make correct testing decisions
 
@@ -112,9 +112,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T019 Run `bun run test:unit` to verify all component tests pass
-- [ ] T020 Run `bun run type-check` to verify no TypeScript errors introduced
-- [ ] T021 Verify constitution.md and CLAUDE.md are consistent in their RTL guidance
+- [x] T019 Run `bun run test:unit` to verify all component tests pass
+- [x] T020 Run `bun run type-check` to verify no TypeScript errors introduced
+- [x] T021 Verify constitution.md and CLAUDE.md are consistent in their RTL guidance
 
 ---
 

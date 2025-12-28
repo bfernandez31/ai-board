@@ -35,6 +35,7 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 |-------|------|----------|-------|---------|
 | Static | TypeScript + ESLint | - | Instant | Type/syntax errors |
 | Unit | Vitest | `tests/unit/` | ~1ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | ~10-50ms | Interactive UI behavior (forms, modals, user interactions) |
 | Integration | Vitest + Prisma + fetch | `tests/integration/` | ~50ms | API endpoints, database, state machines |
 | E2E | Playwright | `tests/e2e/` | ~5s | Browser-required only (auth, drag-drop, keyboard) |
 
@@ -52,9 +53,16 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
-2. Does it involve API calls or database operations? → **Vitest integration test**
-3. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
-4. If unsure, default to **Vitest integration test** (faster feedback)
+2. Is it a React component with user interactions (forms, modals, buttons)? → **Vitest + RTL component test**
+3. Does it involve API calls or database operations? → **Vitest integration test**
+4. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
+5. If unsure, default to **Vitest integration test** (faster feedback)
+
+**RTL Component Testing Guidelines**:
+- **Query Priority** (accessibility-first): `getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort)
+- **User Interactions**: Use `userEvent` over `fireEvent` for realistic event simulation
+- **Test Behavior**: Focus on user-visible behavior, not implementation details
+- **Provider Setup**: Use `renderWithProviders()` from `tests/utils/component-test-utils.tsx`
 
 **Test Commands**:
 - `bun run test:unit` - Fast unit tests (~1ms each)
@@ -180,6 +188,7 @@ When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
 6. Match existing folder structure conventions
 7. **Write tests following Testing Trophy strategy**:
    - Vitest unit tests for pure functions (`tests/unit/[feature].test.ts`)
+   - Vitest + RTL component tests for interactive UI (`tests/unit/components/[component].test.tsx`)
    - Vitest integration tests for API/DB (`tests/integration/[domain]/[feature].test.ts`)
    - Playwright E2E ONLY if browser-required (`tests/e2e/[feature].spec.ts`)
 8. Add TypeScript types explicitly (no implicit `any`)
