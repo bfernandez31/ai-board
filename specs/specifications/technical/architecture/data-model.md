@@ -562,7 +562,6 @@ enum WorkflowType {
 - Set during first BUILD transition
 - Immutable after initial setting
 - Determines visual badge (⚡ Quick, ✨ Clean with sparkles icon)
-- Determines AI model badge: SONNET (FULL/QUICK) or OPUS (CLEAN)
 - CLEAN type created via project menu "Clean Project" action
 - CLEAN tickets bypass INBOX, SPECIFY, PLAN stages
 

@@ -154,7 +154,6 @@ Clicking any ticket card opens a detail modal displaying:
   - Last updated date
   - Branch name (when available)
   - Workflow type indicator (⚡ for quick implementation, ✨ for cleanup)
-  - AI model badge (SONNET for standard workflows, OPUS for cleanup workflows)
 
 ### Documentation Buttons
 

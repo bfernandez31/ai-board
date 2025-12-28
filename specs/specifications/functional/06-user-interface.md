@@ -89,12 +89,6 @@ The user interface provides an intuitive, modern experience for managing tickets
 - CLEAN: ✨ Clean badge with sparkles icon and purple background (purple-100/purple-900 dark)
 - FULL: No workflow type badge displayed
 
-**AI Model Badge**:
-- SONNET: Default model badge for FULL and QUICK workflow tickets
-- OPUS: Model badge for CLEAN workflow tickets (more capable model for cleanup analysis)
-- Badge styling: Blue accent color (bg-[#89b4fa]/20, text-[#89b4fa])
-- Always visible on ticket cards, positioned in header row
-
 ## Interactive Elements
 
 ### Buttons
