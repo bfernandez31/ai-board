@@ -163,7 +163,7 @@ Examples of foundational tasks (adjust based on your project):
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
 - **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
+  - User stories can then proceed in parallel
   - Or sequentially in priority order (P1 → P2 → P3)
 - **Polish (Final Phase)**: Depends on all desired user stories being complete
 
@@ -185,10 +185,10 @@ Examples of foundational tasks (adjust based on your project):
 
 - All Setup tasks marked [P] can run in parallel
 - All Foundational tasks marked [P] can run in parallel (within Phase 2)
-- Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
+- Once Foundational phase completes, all user stories can start in parallel
 - All tests for a user story marked [P] can run in parallel
 - Models within a story marked [P] can run in parallel
-- Different user stories can be worked on in parallel by different team members
+- Different user stories can be executed in parallel via ai-board parallel task orchestration
 
 ---
 
@@ -224,15 +224,15 @@ Task: "Create [Entity2] model in src/models/[entity2].py"
 4. Add User Story 3 → Test independently → Deploy/Demo
 5. Each story adds value without breaking previous stories
 
-### Parallel Team Strategy
+### Parallel Execution Strategy
 
-With multiple developers:
+ai-board can execute user stories in parallel:
 
-1. Team completes Setup + Foundational together
-2. Once Foundational is done:
-   - Developer A: User Story 1
-   - Developer B: User Story 2
-   - Developer C: User Story 3
+1. Complete Setup + Foundational phases sequentially
+2. Once Foundational is done, user stories can run in parallel:
+   - Parallel task 1: User Story 1
+   - Parallel task 2: User Story 2
+   - Parallel task 3: User Story 3
 3. Stories complete and integrate independently
 
 ---
