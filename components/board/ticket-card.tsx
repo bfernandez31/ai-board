@@ -139,9 +139,6 @@ export const TicketCard = React.memo(
                   Clean
                 </Badge>
               )}
-              <Badge className="bg-[#89b4fa]/20 text-[#89b4fa] border-[#89b4fa]/50 hover:bg-[#89b4fa]/30 text-xs px-2 py-0.5 font-semibold">
-                {ticket.workflowType === 'CLEAN' ? 'OPUS' : 'SONNET'}
-              </Badge>
             </div>
           </div>
 

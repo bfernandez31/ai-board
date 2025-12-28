@@ -7,7 +7,6 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import type { DemoTicket } from '@/lib/utils/animation-helpers';
 
 export interface DemoTicketCardProps {
@@ -50,14 +49,11 @@ export function DemoTicketCard({
       role="article"
       aria-label={`Demo ticket: ${ticket.title}`}
     >
-      {/* Header: ID and Badge */}
+      {/* Header: Ticket ID */}
       <div className="flex items-start justify-between mb-3">
         <span className="text-xs text-[#a6adc8] font-mono font-semibold">
           #{ticket.id}
         </span>
-        <Badge className="bg-[#89b4fa]/20 text-[#89b4fa] border-[#89b4fa]/50 hover:bg-[#89b4fa]/30 text-xs px-2 py-0.5 font-semibold">
-          SONNET
-        </Badge>
       </div>
 
       {/* Title */}
