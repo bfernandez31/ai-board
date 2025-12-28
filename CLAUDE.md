@@ -187,6 +187,29 @@ workflowInputs = {
 - Creates `comment-{stage}` jobs
 - Dispatches to Claude for assistance
 
+## Component Testing Skill
+
+**Location**: `.claude/commands/component-testing.md`
+
+**Purpose**: Generate React Testing Library component tests following Testing Trophy patterns
+
+**Triggers**: Automatically invoked when:
+- Working on component testing tasks
+- Keywords: "component test", "RTL", "React testing", "testing library"
+
+**Provides**:
+- Standard test structure with mocking patterns
+- Provider wrapping for TanStack Query
+- Hook mocking examples (mutations, queries)
+- Keyboard shortcut testing patterns
+- Fetch mocking patterns
+- Reference to existing component tests
+
+**Example tests**:
+- `tests/unit/components/comment-form.test.ts` - Character limits, keyboard shortcuts, loading states
+- `tests/unit/components/new-ticket-modal.test.ts` - Form validation, modal behavior
+- `tests/unit/components/ticket-search.test.ts` - Debounced input, search filtering
+
 ## Testing Guidelines
 
 ### Testing Trophy Architecture
@@ -205,8 +228,11 @@ workflowInputs = {
 **Use Vitest + RTL Component Tests** (`tests/unit/components/**/*.test.ts`):
 - React component user interactions (clicks, keyboard, form input)
 - Component state changes and rendering
+- Validation logic (character limits, error states)
+- Loading and disabled states
 - Mock-based testing of components with TanStack Query hooks
 - Use `/component-testing` skill for patterns and examples
+- Test behavior (what users see/do), not implementation details
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation

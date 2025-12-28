@@ -22,6 +22,10 @@ tests/
 │   ├── worker-isolation.ts  # Worker → project ID mapping
 │   └── test-utils.tsx       # React testing utilities
 ├── unit/                    # Unit tests (Vitest)
+│   ├── components/          # Component tests (RTL)
+│   │   ├── comment-form.test.ts
+│   │   ├── new-ticket-modal.test.ts
+│   │   └── ticket-search.test.ts
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
@@ -56,8 +60,22 @@ The project follows Kent C. Dodds' Testing Trophy architecture, emphasizing fast
 | Test Type | Tool | Speed | Use For |
 |-----------|------|-------|---------|
 | Unit | Vitest | ~5ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | ~20ms | React component behavior, user interactions |
 | Integration | Vitest | ~50ms | API endpoints, database operations, state machines |
 | E2E | Playwright | ~500ms | Browser features (OAuth, drag-drop, viewport) |
+
+### When to Use Component Tests (Vitest + RTL)
+
+Component tests validate React component behavior and user interactions using React Testing Library:
+
+- **User interactions**: Form inputs, button clicks, keyboard shortcuts
+- **Component state changes**: Rendering based on props and state
+- **Validation logic**: Character limits, input validation, error states
+- **Loading states**: Disabled states, loading indicators
+- **Mock-based testing**: Components with TanStack Query hooks
+- **Accessibility**: ARIA attributes, keyboard navigation
+
+Component tests run in `happy-dom` environment with full TypeScript support.
 
 ### When to Use Integration Tests (Vitest)
 
@@ -422,6 +440,107 @@ test.describe('Ticket Workflow', () => {
   });
 });
 ```
+
+### Component Test (RTL)
+
+**File**: `tests/unit/components/comment-form.test.ts`
+
+```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+import { CommentForm } from '@/components/comments/comment-form';
+
+// Mock hooks before importing component
+vi.mock('@/app/lib/hooks/mutations/use-create-comment', () => ({
+  useCreateComment: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+}));
+
+import { useCreateComment } from '@/app/lib/hooks/mutations/use-create-comment';
+
+describe('CommentForm', () => {
+  let queryClient: QueryClient;
+  const mockMutate = vi.fn();
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+      },
+    });
+
+    vi.mocked(useCreateComment).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+      // ... full TanStack Query return type
+    });
+
+    mockMutate.mockClear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const renderComponent = () => {
+    return render(
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(CommentForm, { projectId: 1, ticketId: 1 })
+      )
+    );
+  };
+
+  it('should update character count as user types', async () => {
+    renderComponent();
+
+    const textarea = screen.getByPlaceholderText(/write a comment/i);
+    fireEvent.change(textarea, { target: { value: 'Hello' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/5 \/ 2000/)).toBeDefined();
+    });
+  });
+
+  it('should submit form on Cmd+Enter when valid', async () => {
+    renderComponent();
+
+    const textarea = screen.getByPlaceholderText(/write a comment/i);
+    fireEvent.change(textarea, { target: { value: 'Test comment' } });
+
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({ content: 'Test comment' });
+    });
+  });
+
+  it('should disable submit button when over character limit', async () => {
+    renderComponent();
+
+    const textarea = screen.getByPlaceholderText(/write a comment/i);
+    const longText = 'a'.repeat(2001);
+    fireEvent.change(textarea, { target: { value: longText } });
+
+    const submitButton = screen.getByRole('button', { name: /comment/i });
+    expect((submitButton as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+```
+
+**Key Features**:
+- React Testing Library for DOM queries and user interactions
+- Mock TanStack Query hooks with full return type
+- Test user behavior (typing, clicking, keyboard shortcuts)
+- QueryClientProvider wrapper for components using queries
+- Semantic queries (`getByRole`, `getByPlaceholderText`)
+- Average execution: ~20ms per test
+- Runs in `happy-dom` environment
 
 ### Unit Test
 
@@ -851,9 +970,11 @@ npx playwright test --coverage
 
 ### Test Type Selection
 - ✅ Default to integration tests for API/database behavior
+- ✅ Use component tests (RTL) for React component user interactions
 - ✅ Use unit tests for pure functions and utilities
 - ✅ Reserve E2E tests for browser-required scenarios only
 - ❌ Don't use Playwright for API testing (use Vitest integration tests)
+- ❌ Don't test component implementation details (test behavior instead)
 
 ### Test Isolation
 - ✅ Use `beforeEach` cleanup for each test
@@ -872,17 +993,21 @@ npx playwright test --coverage
 
 ### Assertions
 - ✅ Use specific assertions (toBe, toHaveLength)
+- ✅ Use semantic queries in component tests (getByRole, getByLabelText)
 - ✅ Test both success and error cases
 - ✅ Verify database state for mutations
 - ✅ Check status codes before parsing response bodies
 - ❌ Don't test implementation details
+- ❌ Don't query by className or testId (prefer semantic queries)
 
 ### Performance
 - ✅ Run integration tests in parallel (6 workers)
 - ✅ Use native fetch instead of Playwright for API tests
 - ✅ Mock external services (Cloudinary, GitHub)
-- ✅ Target <50ms per integration test, <500ms per E2E test
+- ✅ Mock TanStack Query hooks in component tests
+- ✅ Target <20ms per component test, <50ms per integration test, <500ms per E2E test
 - ❌ Don't make unnecessary API calls
+- ❌ Don't use real API calls in component tests (use mocks)
 
 ### Debugging
 - ✅ Use `bun test --reporter=verbose` for detailed output

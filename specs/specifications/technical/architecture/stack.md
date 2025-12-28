@@ -231,18 +231,34 @@
 
 ### Vitest
 - **Version**: Latest stable
-- **Purpose**: Unit and integration testing
+- **Purpose**: Unit, component, and integration testing
 - **Commands**:
-  - `bun run test:unit` - Unit tests only
+  - `bun run test:unit` - Unit and component tests
   - `bun run test:integration` - Integration tests (API, database)
 - **Features Used**:
-  - Fast test execution (~5ms unit, ~50ms integration)
+  - Fast test execution (~5ms unit, ~20ms component, ~50ms integration)
   - TypeScript support
   - Worker isolation (forks pool with 6 workers)
-  - Mocking utilities
+  - Mocking utilities (vi.mock for hooks and functions)
   - Coverage reporting
-  - Environment switching (happy-dom for unit, node for integration)
+  - Environment switching (happy-dom for unit/component, node for integration)
 - **Configuration**: `vitest.config.mts`
+
+### React Testing Library (RTL)
+- **Packages**:
+  - `@testing-library/react` ^16.3.0
+  - `@testing-library/dom` ^10.4.1
+  - `@testing-library/react-hooks` ^8.0.1
+- **Purpose**: Component testing with user-centric queries
+- **Environment**: happy-dom (lightweight browser simulation)
+- **Features Used**:
+  - Semantic queries (getByRole, getByLabelText, getByPlaceholderText)
+  - User event simulation (fireEvent, userEvent)
+  - Async utilities (waitFor, findBy*)
+  - Accessibility-focused testing
+  - Provider wrapping (QueryClientProvider)
+- **Integration**: Works seamlessly with Vitest and TanStack Query
+- **Philosophy**: Test behavior, not implementation details
 
 ### Playwright
 - **Version**: Latest stable
@@ -381,7 +397,8 @@
 | Recharts | 2.x | Chart library |
 | Zod | 4.x | Validation |
 | Playwright | Latest | E2E testing |
-| Vitest | Latest | Unit testing |
+| Vitest | Latest | Unit/component/integration testing |
+| @testing-library/react | ^16.3.0 | Component testing |
 | @octokit/rest | ^22.0.0 | GitHub API |
 | react-markdown | ^9.0.1 | Markdown rendering |
 | date-fns | Latest | Date utilities |
