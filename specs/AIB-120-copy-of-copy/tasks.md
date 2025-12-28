@@ -26,69 +26,74 @@
 
 ## Phase 2: User Story 1 - Run Component Tests (Priority: P1) - MVP
 
-**Goal**: AI agents can run component tests to verify React component behavior with `bun run test:unit`
+**Goal**: AI agents can run component tests to verify React component behavior using the `/testing` skill
 
-**Independent Test**: Run `bun run test:unit tests/unit/components/` and verify RTL-based tests execute and pass
+**Independent Test**: Use `/testing` skill to run component tests and verify RTL-based tests execute and pass
 
 ### Implementation for User Story 1
 
-- [x] T004 [P] [US1] Create CommentForm component test in tests/unit/components/comment-form.test.ts ✅ DONE
+- [x] T004 [P] [US1] Use `/testing` skill to create CommentForm component test in tests/unit/components/comment-form.test.ts ✅ DONE
   - Test keyboard shortcuts (Cmd+Enter to submit)
   - Test character limit validation
   - Test loading and error states from TanStack Query mutation
-- [x] T005 [P] [US1] Create NewTicketModal component test in tests/unit/components/new-ticket-modal.test.ts ✅ DONE
+- [x] T005 [P] [US1] Use `/testing` skill to create NewTicketModal component test in tests/unit/components/new-ticket-modal.test.ts ✅ DONE
   - Test Zod form validation
   - Test field error display
   - Test form submission handling
-- [x] T006 [P] [US1] Create TicketSearch component test in tests/unit/components/ticket-search.test.ts ✅ DONE
+- [x] T006 [P] [US1] Use `/testing` skill to create TicketSearch component test in tests/unit/components/ticket-search.test.ts ✅ DONE
   - Test keyboard navigation (ArrowUp/Down, Enter, Escape)
   - Test debounced input behavior
   - Test dropdown visibility states
-- [x] T007 [US1] Verify all component tests execute under 100ms each (SC-004 requirement) ✅ DONE
-- [x] T008 [US1] Verify `bun run test:unit` passes with new component tests (SC-005 requirement) ✅ DONE
+- [x] T007 [US1] Use `/testing` skill to verify all component tests execute under 100ms each (SC-004 requirement) ✅ DONE
+- [x] T008 [US1] Use `/testing` skill to verify all tests pass with new component tests (SC-005 requirement) ✅ DONE
 
 **Checkpoint**: User Story 1 complete - 3+ component tests pass, meeting SC-001
 
 ---
 
-## Phase 3: User Story 2 - Create Component Tests Using Skill (Priority: P1)
+## Phase 3: User Story 2 - Create Tests Using Skill (Priority: P1)
 
-**Goal**: AI agents can invoke `/component-testing` skill to generate appropriate test files following established patterns
+**Goal**: AI agents can invoke `/testing` skill to generate appropriate test files following established patterns for ANY test type
 
-**Independent Test**: Invoke `/component-testing` skill in Claude and verify it provides correct RTL guidance
+**Independent Test**: Invoke `/testing` skill in Claude and verify it provides correct guidance for all test types
 
 ### Implementation for User Story 2
 
-- [x] T009 [US2] Create Claude skill file at .claude/commands/component-testing.md ✅ DONE
-  - Add YAML frontmatter with description, command (/component-testing), category (Testing & Quality)
-  - Add trigger keywords: "component test", "RTL", "React testing", "testing library"
-  - Document provider wrapping pattern (QueryClientProvider wrapper factory)
-  - Document fetch mocking pattern (global.fetch = vi.fn())
-  - Include example test structure from data-model.md
-  - Reference tests/unit/components/ location
-- [x] T010 [US2] Verify skill is invocable and provides actionable testing guidance (SC-002 requirement) ✅ DONE
+- [x] T009 [US2] Update Claude skill file at .claude/commands/testing.md (renamed from component-testing.md) ✅ DONE
+  - Add YAML frontmatter with description, command (/testing), category (Testing & Quality)
+  - Add trigger keywords: "test", "unit test", "component test", "integration test", "E2E test", "RTL", "Vitest", "Playwright"
+  - Document Test Type Decision Tree (5 decision points per constitution)
+  - Section 1: Unit tests (pure functions, utilities)
+  - Section 2: Component tests (RTL patterns, provider wrapping, fetch mocking, hook mocking, keyboard shortcuts, debounced input)
+  - Section 3: Integration tests (API endpoints, database, state machines, authorization)
+  - Section 4: E2E tests (Playwright, browser-required only)
+  - Include testing guidelines, common assertions for all test types
+  - Reference tests/ location for all test types
+- [x] T010 [US2] Verify skill is invocable and provides actionable testing guidance for all test types (SC-002 requirement) ✅ DONE
+- [ ] T011 [US2] Remove old component-testing.md skill file (replaced by testing.md)
 
-**Checkpoint**: User Story 2 complete - Claude skill provides RTL testing patterns and guidance
+**Checkpoint**: User Story 2 complete - Claude skill provides comprehensive testing patterns and guidance for all test types
 
 ---
 
 ## Phase 4: User Story 3 - Updated Documentation Guides Testing Decisions (Priority: P2)
 
-**Goal**: Constitution and CLAUDE.md reflect RTL component testing strategy so AI agents make correct testing decisions
+**Goal**: Constitution and CLAUDE.md reflect comprehensive testing strategy (all test types) so AI agents make correct testing decisions
 
-**Independent Test**: Read constitution.md and CLAUDE.md and confirm component testing guidance exists
+**Independent Test**: Read constitution.md and CLAUDE.md and confirm testing guidance exists for all test types
 
 ### Implementation for User Story 3
 
-- [x] T011 [P] [US3] Update .specify/memory/constitution.md with RTL component testing ✅ DONE
-  - Add RTL to Testing Trophy table under Unit layer
-  - Add component testing to Test Selection Decision Tree
+- [x] T012 [P] [US3] Update .specify/memory/constitution.md with comprehensive testing strategy ✅ DONE
+  - Ensure Testing Trophy table includes all layers (Static, Unit, Component, Integration, E2E)
+  - Ensure Test Selection Decision Tree has all 5 decision points
+  - Reference the /testing skill (not /component-testing)
   - Keep updates reference-style (not tutorial per VI. AI-First Development)
-- [x] T012 [P] [US3] Update CLAUDE.md Testing Guidelines section ✅ DONE
-  - Add component testing section explaining when to use RTL vs E2E
-  - Reference the /component-testing skill
-  - Document tests/unit/components/ location
-- [x] T013 [US3] Verify documentation is reference-style and not tutorial format (constitution VI requirement) ✅ DONE
+- [x] T013 [P] [US3] Update CLAUDE.md Testing Guidelines section ✅ DONE
+  - Ensure "Component Testing Skill" section references /testing skill (not /component-testing)
+  - Update skill triggers to include all test types
+  - Reference tests/ location for all test types
+- [x] T014 [US3] Verify documentation is reference-style and not tutorial format (constitution VI requirement) ✅ DONE
 
 **Checkpoint**: User Story 3 complete - Documentation updated, meeting SC-003
 
@@ -98,11 +103,11 @@
 
 **Purpose**: Final validation and verification across all stories
 
-- [x] T014 Run full test suite with `bun run test` to verify no regressions (SC-005) ✅ DONE
-- [x] T015 Validate quickstart.md checklist items are complete ✅ DONE
-- [x] T016 Verify all success criteria are met: ✅ DONE
+- [x] T015 Use `/testing` skill to run full test suite and verify no regressions (SC-005) ✅ DONE
+- [x] T016 Validate quickstart.md checklist items are complete ✅ DONE
+- [x] T017 Verify all success criteria are met: ✅ DONE
   - SC-001: 3+ component tests passing
-  - SC-002: Skill invocable
+  - SC-002: Skill invocable for all test types
   - SC-003: Docs updated
   - SC-004: Tests < 100ms
   - SC-005: No regressions
@@ -129,7 +134,7 @@
 
 - T004, T005, T006 are parallelizable (different component files)
 - T007, T008 depend on T004-T006 (verification after implementation)
-- T011, T012 are parallelizable (different documentation files)
+- T012, T013 are parallelizable (different documentation files)
 
 ### Parallel Opportunities
 
@@ -137,7 +142,7 @@ Within User Story 1:
 - T004, T005, T006 can all run in parallel (different test files)
 
 Within User Story 3:
-- T011, T012 can run in parallel (different documentation files)
+- T012, T013 can run in parallel (different documentation files)
 
 Across User Stories:
 - US1 (Phases 2) and US2 (Phase 3) and US3 (Phase 4) can all execute in parallel after Setup
@@ -148,9 +153,9 @@ Across User Stories:
 
 ```bash
 # Launch all component tests together (different files, no dependencies):
-Task: "Create CommentForm component test in tests/unit/components/comment-form.test.ts"
-Task: "Create NewTicketModal component test in tests/unit/components/new-ticket-modal.test.ts"
-Task: "Create TicketSearch component test in tests/unit/components/ticket-search.test.ts"
+Task: "Use /testing skill to create CommentForm component test in tests/unit/components/comment-form.test.ts"
+Task: "Use /testing skill to create NewTicketModal component test in tests/unit/components/new-ticket-modal.test.ts"
+Task: "Use /testing skill to create TicketSearch component test in tests/unit/components/ticket-search.test.ts"
 ```
 
 ---
@@ -160,15 +165,15 @@ Task: "Create TicketSearch component test in tests/unit/components/ticket-search
 ### MVP First (User Story 1 Only)
 
 1. Complete Phase 1: Setup (verify infrastructure)
-2. Complete Phase 2: User Story 1 (create 3 component tests)
-3. **STOP and VALIDATE**: Run `bun run test:unit` - all component tests pass under 100ms
+2. Complete Phase 2: User Story 1 (use /testing skill to create 3 component tests)
+3. **STOP and VALIDATE**: Use /testing skill to run tests - all component tests pass under 100ms
 4. MVP delivers: Working component testing capability
 
 ### Incremental Delivery
 
 1. Complete Setup → Infrastructure verified
 2. Add User Story 1 → Component tests work → MVP ready
-3. Add User Story 2 → AI agents can use skill for guidance
+3. Add User Story 2 → AI agents can use skill for guidance (all test types)
 4. Add User Story 3 → Documentation complete for long-term maintenance
 5. Each story adds value without breaking previous stories
 
@@ -178,8 +183,8 @@ ai-board can execute user stories in parallel:
 
 1. Complete Setup phase sequentially
 2. Once Setup is done, user stories can run in parallel:
-   - Parallel task 1: User Story 1 (component tests)
-   - Parallel task 2: User Story 2 (Claude skill)
+   - Parallel task 1: User Story 1 (component tests using /testing skill)
+   - Parallel task 2: User Story 2 (enhance /testing skill to cover all test types)
    - Parallel task 3: User Story 3 (documentation)
 3. Stories complete and validate independently
 
@@ -190,7 +195,9 @@ ai-board can execute user stories in parallel:
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
 - Each user story is independently completable and testable
+- **ALL test operations use `/testing` skill** (not direct commands)
+- `/testing` skill provides decision tree and patterns for ALL test types (unit, component, integration, E2E)
 - Test files must follow pattern from data-model.md (fresh QueryClient, vi.fn() for fetch)
-- Skill must use allowed-tools: Read, Glob, Grep, Write
+- Skill must use allowed-tools: Read, Glob, Grep, Write, Bash
 - Documentation updates must be reference-style per constitution VI
-- All tests must execute under 100ms per SC-004
+- All component tests must execute under 100ms per SC-004
