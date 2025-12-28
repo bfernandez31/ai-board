@@ -196,10 +196,17 @@ workflowInputs = {
 | Test Type | Tool | Location | Use For |
 |-----------|------|----------|---------|
 | Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | React component behavior, user interactions |
 | Integration | Vitest | `tests/integration/` | API endpoints, database operations |
 | E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
 
 ### When to Use Which Test Type
+
+**Use Vitest + RTL Component Tests** (`tests/unit/components/**/*.test.ts`):
+- React component user interactions (clicks, keyboard, form input)
+- Component state changes and rendering
+- Mock-based testing of components with TanStack Query hooks
+- Use `/component-testing` skill for patterns and examples
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation

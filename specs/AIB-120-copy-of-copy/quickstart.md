@@ -5,40 +5,40 @@
 ## Implementation Checklist
 
 ### Phase 1: Create Claude Skill
-- [ ] Create `.claude/commands/component-testing.md`
-- [ ] Add YAML frontmatter with description, command, category
-- [ ] Document RTL patterns and provider wrapping
-- [ ] Include example test structure
-- [ ] Add trigger keywords in description
+- [x] Create `.claude/commands/component-testing.md`
+- [x] Add YAML frontmatter with description, command, category
+- [x] Document RTL patterns and provider wrapping
+- [x] Include example test structure
+- [x] Add trigger keywords in description
 
 ### Phase 2: Create Component Tests
-- [ ] Create `tests/unit/components/` directory
-- [ ] Implement `comment-form.test.ts`
+- [x] Create `tests/unit/components/` directory
+- [x] Implement `comment-form.test.ts`
   - Test keyboard shortcuts (Cmd+Enter)
   - Test character limit validation
   - Test loading and error states
-- [ ] Implement `new-ticket-modal.test.ts`
+- [x] Implement `new-ticket-modal.test.ts`
   - Test form validation
   - Test field error display
   - Test submit handling
-- [ ] Implement `ticket-search.test.ts`
+- [x] Implement `ticket-search.test.ts`
   - Test keyboard navigation
   - Test debounced input
   - Test dropdown visibility
 
 ### Phase 3: Update Documentation
-- [ ] Update `.specify/memory/constitution.md`
+- [x] Update `.specify/memory/constitution.md`
   - Add RTL to Testing Trophy table
   - Update Test Selection Decision Tree
-- [ ] Update `CLAUDE.md`
+- [x] Update `CLAUDE.md`
   - Add component testing to Testing Guidelines
   - Reference component-testing skill
 
 ### Phase 4: Verification
-- [ ] Run `bun run test:unit` - all tests pass
-- [ ] Verify each component test < 100ms execution
-- [ ] Verify `/component-test` skill is invocable
-- [ ] Verify documentation is reference-style (not tutorial)
+- [x] Run `bun run test:unit` - all tests pass
+- [x] Verify each component test < 100ms execution
+- [x] Verify `/component-test` skill is invocable
+- [x] Verify documentation is reference-style (not tutorial)
 
 ## Test Execution Commands
 

@@ -35,6 +35,7 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 |-------|------|----------|-------|---------|
 | Static | TypeScript + ESLint | - | Instant | Type/syntax errors |
 | Unit | Vitest | `tests/unit/` | ~1ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | ~50ms | React component behavior, user interactions |
 | Integration | Vitest + Prisma + fetch | `tests/integration/` | ~50ms | API endpoints, database, state machines |
 | E2E | Playwright | `tests/e2e/` | ~5s | Browser-required only (auth, drag-drop, keyboard) |
 
@@ -52,9 +53,10 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 
 **Test Selection Decision Tree**:
 1. Is it a pure function with no side effects? → **Vitest unit test**
-2. Does it involve API calls or database operations? → **Vitest integration test**
-3. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
-4. If unsure, default to **Vitest integration test** (faster feedback)
+2. Is it a React component with user interactions? → **Vitest + RTL component test**
+3. Does it involve API calls or database operations? → **Vitest integration test**
+4. Does it REQUIRE a browser (OAuth, drag-drop, viewport)? → **Playwright E2E test**
+5. If unsure, default to **Vitest integration test** (faster feedback)
 
 **Test Commands**:
 - `bun run test:unit` - Fast unit tests (~1ms each)
