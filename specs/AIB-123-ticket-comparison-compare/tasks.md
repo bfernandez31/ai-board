@@ -89,13 +89,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement telemetry extraction from Job model via Prisma in lib/comparison/telemetry-extractor.ts
-- [ ] T021 [US2] Extend comparison generator to include cost comparison table in lib/comparison/comparison-generator.ts
-- [ ] T022 [US2] Handle N/A display for tickets without telemetry data in lib/comparison/comparison-generator.ts
+- [x] T020 [US2] Implement telemetry extraction from Job model via Prisma in lib/comparison/telemetry-extractor.ts
+- [x] T021 [US2] Extend comparison generator to include cost comparison table in lib/comparison/comparison-generator.ts
+- [x] T022 [US2] Handle N/A display for tickets without telemetry data in lib/comparison/comparison-generator.ts
 
 ### Unit Tests for User Story 2
 
-- [ ] T023 [US2] Unit tests for telemetry extraction in tests/unit/comparison/telemetry-extractor.test.ts
+- [x] T023 [US2] Unit tests for telemetry extraction in tests/unit/comparison/telemetry-extractor.test.ts
 
 **Checkpoint**: User Story 2 complete - cost analysis available in comparison reports
 

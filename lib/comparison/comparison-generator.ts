@@ -199,7 +199,48 @@ function generateComplianceSection(
 }
 
 /**
- * Generate telemetry/cost section
+ * Format duration in milliseconds to human-readable string
+ */
+function formatDurationMs(ms: number): string {
+  if (ms <= 0) return 'N/A';
+  if (ms < 1000) return `${ms}ms`;
+
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes < 60) {
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+/**
+ * Format cost value with proper handling
+ */
+function formatCost(costUsd: number): string {
+  if (costUsd <= 0) return 'N/A';
+  if (costUsd < 0.01) return `$${costUsd.toFixed(6)}`;
+  return `$${costUsd.toFixed(4)}`;
+}
+
+/**
+ * Calculate percentage difference with proper handling
+ */
+function calculatePercentDiff(base: number, current: number): string {
+  if (base <= 0) return current > 0 ? '+∞%' : '0%';
+  const diff = ((current - base) / base) * 100;
+  const sign = diff >= 0 ? '+' : '';
+  return `${sign}${diff.toFixed(1)}%`;
+}
+
+/**
+ * Generate telemetry/cost section with comparison table
  */
 function generateTelemetrySection(
   telemetry: Record<string, TicketTelemetry>
@@ -211,17 +252,21 @@ function generateTelemetrySection(
   }
 
   let section = `## Cost & Telemetry\n\n`;
-  section += `| Ticket | Total Tokens | Cost (USD) | Duration | Jobs |\n`;
-  section += `|--------|--------------|------------|----------|------|\n`;
+
+  // Main comparison table
+  section += `### Cost Overview\n\n`;
+  section += `| Ticket | Total Tokens | Cost (USD) | Duration | Jobs | Model |\n`;
+  section += `|--------|--------------|------------|----------|------|-------|\n`;
 
   for (const t of entries) {
     if (t.hasData) {
       const tokens = t.inputTokens + t.outputTokens;
-      const duration = t.durationMs > 0 ? `${Math.round(t.durationMs / 1000)}s` : 'N/A';
-      const cost = t.costUsd > 0 ? `$${t.costUsd.toFixed(4)}` : 'N/A';
-      section += `| ${t.ticketKey} | ${tokens.toLocaleString()} | ${cost} | ${duration} | ${t.jobCount} |\n`;
+      const duration = formatDurationMs(t.durationMs);
+      const cost = formatCost(t.costUsd);
+      const model = t.model ?? 'N/A';
+      section += `| ${t.ticketKey} | ${tokens.toLocaleString()} | ${cost} | ${duration} | ${t.jobCount} | ${model} |\n`;
     } else {
-      section += `| ${t.ticketKey} | N/A | N/A | N/A | N/A |\n`;
+      section += `| ${t.ticketKey} | N/A | N/A | N/A | N/A | N/A |\n`;
     }
   }
 
@@ -238,6 +283,74 @@ function generateTelemetrySection(
       section += `| ${t.ticketKey} | ${t.inputTokens.toLocaleString()} | ${t.outputTokens.toLocaleString()} | ${t.cacheReadTokens.toLocaleString()} | ${t.cacheCreationTokens.toLocaleString()} |\n`;
     }
     section += '\n';
+  }
+
+  // Cost comparison table (only if 2+ tickets have data)
+  if (withData.length >= 2) {
+    section += `### Cost Comparison\n\n`;
+
+    // Use first ticket as baseline
+    const baseline = withData[0]!;
+    const baseTokens = baseline.inputTokens + baseline.outputTokens;
+
+    section += `*Baseline: ${baseline.ticketKey}*\n\n`;
+    section += `| Ticket | Token Δ | Cost Δ | Duration Δ |\n`;
+    section += `|--------|---------|--------|------------|\n`;
+
+    for (let i = 1; i < withData.length; i++) {
+      const t = withData[i]!;
+      const tokens = t.inputTokens + t.outputTokens;
+      const tokenDiff = tokens - baseTokens;
+      const tokenDiffStr = tokenDiff >= 0 ? `+${tokenDiff.toLocaleString()}` : tokenDiff.toLocaleString();
+      const tokenPercent = calculatePercentDiff(baseTokens, tokens);
+
+      const costDiff = t.costUsd - baseline.costUsd;
+      const costDiffStr = costDiff >= 0 ? `+${formatCost(costDiff)}` : `-${formatCost(Math.abs(costDiff))}`;
+      const costPercent = calculatePercentDiff(baseline.costUsd, t.costUsd);
+
+      const durationDiff = t.durationMs - baseline.durationMs;
+      const durationDiffStr = durationDiff >= 0 ? `+${formatDurationMs(durationDiff)}` : `-${formatDurationMs(Math.abs(durationDiff))}`;
+      const durationPercent = calculatePercentDiff(baseline.durationMs, t.durationMs);
+
+      section += `| ${t.ticketKey} | ${tokenDiffStr} (${tokenPercent}) | ${costDiffStr} (${costPercent}) | ${durationDiffStr} (${durationPercent}) |\n`;
+    }
+    section += '\n';
+  }
+
+  // Tools used summary
+  if (withData.length > 0) {
+    const allTools = new Set<string>();
+    for (const t of withData) {
+      for (const tool of t.toolsUsed) {
+        allTools.add(tool);
+      }
+    }
+
+    if (allTools.size > 0) {
+      section += `### Tools Used\n\n`;
+      section += `| Ticket | Tools |\n`;
+      section += `|--------|-------|\n`;
+
+      for (const t of withData) {
+        const toolsList = t.toolsUsed.length > 0 ? t.toolsUsed.join(', ') : 'None';
+        section += `| ${t.ticketKey} | ${toolsList} |\n`;
+      }
+      section += '\n';
+    }
+  }
+
+  // Summary totals
+  if (withData.length > 1) {
+    const totalTokens = withData.reduce((sum, t) => sum + t.inputTokens + t.outputTokens, 0);
+    const totalCost = withData.reduce((sum, t) => sum + t.costUsd, 0);
+    const totalDuration = withData.reduce((sum, t) => sum + t.durationMs, 0);
+    const totalJobs = withData.reduce((sum, t) => sum + t.jobCount, 0);
+
+    section += `### Summary\n\n`;
+    section += `- **Total Tokens**: ${totalTokens.toLocaleString()}\n`;
+    section += `- **Total Cost**: ${formatCost(totalCost)}\n`;
+    section += `- **Total Duration**: ${formatDurationMs(totalDuration)}\n`;
+    section += `- **Total Jobs**: ${totalJobs}\n\n`;
   }
 
   return section;
