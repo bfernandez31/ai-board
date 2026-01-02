@@ -47,6 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTicket } from '@/app/lib/hooks/queries/useTickets';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -200,6 +201,14 @@ export function TicketDetailModal({
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
 
+  // Fetch fresh ticket data when modal is open to ensure we have the latest branch, jobs, etc.
+  const { data: freshTicket } = useTicket(
+    projectId,
+    ticket?.id || 0,
+    // Only fetch when modal is open and we have a ticket
+    open && !!ticket
+  );
+
   // Fetch comment count for badge
   const { data: comments } = useComments({
     projectId,
@@ -216,23 +225,32 @@ export function TicketDetailModal({
   );
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
+  // Use freshTicket if available (fetched when modal is open), otherwise use prop ticket
   useEffect(() => {
-    if (ticket) {
+    const sourceTicket = freshTicket || ticket;
+    if (sourceTicket) {
       setLocalTicket((current) => {
         // Only update if different ticket, newer version, or branch changed
         // Branch comparison is needed because branch updates don't bump version
         if (
           !current ||
-          current.id !== ticket.id ||
-          current.version !== ticket.version ||
-          current.branch !== ticket.branch
+          current.id !== sourceTicket.id ||
+          current.version !== sourceTicket.version ||
+          current.branch !== sourceTicket.branch
         ) {
-          return ticket;
+          // Convert TicketWithVersion to TicketData if needed
+          const ticketData: TicketData = {
+            ...sourceTicket,
+            attachments: isTicketAttachmentArray(sourceTicket.attachments)
+              ? sourceTicket.attachments
+              : null,
+          };
+          return ticketData;
         }
         return current;
       });
     }
-  }, [ticket]);
+  }, [ticket, freshTicket]);
 
   // Sync activeTab with initialTab when modal opens or initialTab changes
   // This ensures the tab is correctly set even when navigating via URL params

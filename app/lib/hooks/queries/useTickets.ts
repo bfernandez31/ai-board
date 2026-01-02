@@ -97,9 +97,10 @@ export function useTicketsByStage(projectId: number) {
  *
  * @param projectId - Project ID
  * @param ticketId - Ticket ID
+ * @param enabled - Optional flag to enable/disable the query (defaults to true)
  * @returns Query result with single ticket
  */
-export function useTicket(projectId: number, ticketId: number) {
+export function useTicket(projectId: number, ticketId: number, enabled: boolean = true) {
   return useQuery({
     queryKey: queryKeys.projects.ticket(projectId, ticketId),
     queryFn: async () => {
@@ -123,5 +124,7 @@ export function useTicket(projectId: number, ticketId: number) {
     staleTime: 5000,
     // Keep in cache for 10 minutes after unmount
     gcTime: 10 * 60 * 1000,
+    // Allow conditional fetching
+    enabled,
   });
 }
