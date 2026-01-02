@@ -1128,21 +1128,25 @@ export function TicketDetailModal({
             {/* Fixed footer section - always visible */}
             <div className="flex-shrink-0 pt-4 space-y-4 bg-[#181825]">
               {/* Action buttons section - compact horizontal layout */}
-              {hasCompletedSpecifyJob && (
+              {/* Show section when any button should be visible (documents OR comparisons) */}
+              {(hasCompletedSpecifyJob || comparisonCheck?.hasComparisons) && (
                 <div className="border-t-2 border-[#313244]/50 pt-4">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button
-                      onClick={() => {
-                        setDocViewerType('spec');
-                        setDocViewerOpen(true);
-                      }}
-                      size="sm"
-                      className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                      title="View specification document"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      Spec
-                    </Button>
+                    {/* Document buttons - only for FULL workflow with completed specify job */}
+                    {hasCompletedSpecifyJob && (
+                      <Button
+                        onClick={() => {
+                          setDocViewerType('spec');
+                          setDocViewerOpen(true);
+                        }}
+                        size="sm"
+                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        title="View specification document"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Spec
+                      </Button>
+                    )}
                     {showPlanButton && (
                       <Button
                         onClick={() => {
@@ -1185,7 +1189,7 @@ export function TicketDetailModal({
                         Summary
                       </Button>
                     )}
-                    {/* Compare button - visible when comparisons exist */}
+                    {/* Compare button - visible when comparisons exist (independent of workflow type) */}
                     {comparisonCheck?.hasComparisons && (
                       <Button
                         onClick={() => setComparisonViewerOpen(true)}
