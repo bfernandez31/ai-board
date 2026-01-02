@@ -196,10 +196,24 @@ workflowInputs = {
 | Test Type | Tool | Location | Use For |
 |-----------|------|----------|---------|
 | Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | `tests/unit/components/` | Interactive UI (forms, modals, user interactions) |
 | Integration | Vitest | `tests/integration/` | API endpoints, database operations |
 | E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
 
 ### When to Use Which Test Type
+
+**Use Vitest Unit Tests** (`tests/unit/**/*.test.ts`):
+- Pure functions with no side effects
+- Custom hooks (non-rendering)
+- Utility functions and helpers
+
+**Use RTL Component Tests** (`tests/unit/components/**/*.test.tsx`):
+- React component user interactions (forms, modals, buttons)
+- Form validation and submission flows
+- Keyboard shortcuts and accessibility
+- Component state changes from user actions
+- **Query Priority**: `getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort)
+- **User Events**: Use `userEvent` over `fireEvent` for realistic interactions
 
 **Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
 - API endpoint validation
@@ -209,9 +223,32 @@ workflowInputs = {
 
 **Use Playwright E2E Tests** (`tests/e2e/**/*.spec.ts`):
 - OAuth/authentication flows (browser redirects)
-- Drag-and-drop interactions
-- Keyboard navigation and focus management
+- Drag-and-drop interactions (DnD Kit)
+- Cross-component navigation requiring full page
 - Viewport-dependent behavior
+
+### Component Test Pattern (RTL)
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
+import { MyComponent } from '@/components/my-component';
+
+describe('MyComponent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle form submission', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MyComponent onSubmit={vi.fn()} />);
+
+    await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(screen.getByText(/success/i)).toBeInTheDocument();
+  });
+});
+```
 
 ### Integration Test Pattern (Vitest)
 ```typescript

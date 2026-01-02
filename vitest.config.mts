@@ -11,11 +11,13 @@ export default defineConfig({
     // Include appropriate test files based on mode
     include: isIntegration
       ? ['tests/integration/**/*.test.ts']
-      : ['tests/unit/**/*.test.ts'],
+      : ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
     // Exclude Playwright tests and cross-mode tests
     exclude: ['tests/e2e/**', 'tests/**/*.spec.ts'],
-    // Setup files for integration tests (worker isolation, database)
-    setupFiles: isIntegration ? ['./tests/fixtures/vitest/setup.ts'] : [],
+    // Setup files for tests
+    setupFiles: isIntegration
+      ? ['./tests/fixtures/vitest/setup.ts']
+      : ['./tests/fixtures/vitest/unit-setup.ts'],
     // Global setup for integration tests (one-time database prep)
     globalSetup: isIntegration ? './tests/fixtures/vitest/global-setup.ts' : undefined,
     // For integration tests: disable file parallelism to avoid database race conditions

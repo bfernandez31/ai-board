@@ -20,8 +20,16 @@ tests/
 │   ├── db-setup.ts          # Database helpers
 │   ├── db-cleanup.ts        # Cleanup utilities
 │   ├── worker-isolation.ts  # Worker → project ID mapping
-│   └── test-utils.tsx       # React testing utilities
+│   └── test-query-client.ts # TanStack Query client for tests
+├── utils/                   # Test rendering utilities
+│   └── component-test-utils.tsx  # RTL wrapper with providers
 ├── unit/                    # Unit tests (Vitest)
+│   ├── components/          # RTL component tests
+│   │   ├── new-ticket-modal.test.tsx
+│   │   ├── quick-impl-modal.test.tsx
+│   │   ├── delete-confirmation-modal.test.tsx
+│   │   ├── ticket-search.test.tsx
+│   │   └── comment-form.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
@@ -56,8 +64,21 @@ The project follows Kent C. Dodds' Testing Trophy architecture, emphasizing fast
 | Test Type | Tool | Speed | Use For |
 |-----------|------|-------|---------|
 | Unit | Vitest | ~5ms | Pure functions, utilities, hooks |
+| Component | Vitest + RTL | ~10-50ms | React component user interactions (forms, modals, user events) |
 | Integration | Vitest | ~50ms | API endpoints, database operations, state machines |
 | E2E | Playwright | ~500ms | Browser features (OAuth, drag-drop, viewport) |
+
+### When to Use Component Tests (Vitest + RTL)
+
+Component tests verify React component behavior from a user's perspective using React Testing Library:
+
+- **User interactions**: Forms, modals, buttons, interactive elements
+- **Form validation and submission**: Input validation, error messages, success states
+- **Keyboard shortcuts**: Cmd/Ctrl+Enter submission, ESC to close, Tab navigation
+- **Accessibility**: ARIA attributes, keyboard focus management
+- **Component state changes**: Conditional rendering based on user actions
+- **Query Priority**: `getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort)
+- **User Events**: Use `userEvent` over `fireEvent` for realistic interactions
 
 ### When to Use Integration Tests (Vitest)
 
@@ -423,6 +444,80 @@ test.describe('Ticket Workflow', () => {
 });
 ```
 
+### Component Test (RTL)
+
+**File**: `tests/unit/components/new-ticket-modal.test.tsx`
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
+import { NewTicketModal } from '@/components/new-ticket-modal';
+
+describe('NewTicketModal', () => {
+  const mockOnSubmit = vi.fn();
+  const mockOnClose = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render modal with form fields', () => {
+    renderWithProviders(
+      <NewTicketModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
+
+    expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument();
+  });
+
+  it('should handle form submission with valid data', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <NewTicketModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
+
+    await user.type(screen.getByLabelText(/title/i), 'New Feature');
+    await user.type(screen.getByLabelText(/description/i), 'Feature description');
+    await user.click(screen.getByRole('button', { name: /create/i }));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      title: 'New Feature',
+      description: 'Feature description',
+    });
+  });
+
+  it('should close on ESC key', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <NewTicketModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
+
+    await user.keyboard('{Escape}');
+    expect(mockOnClose).toHaveBeenCalled();
+  });
+});
+```
+
+**Key Features**:
+- Uses `renderWithProviders()` for QueryClient and other context providers
+- Prefers `getByRole()` and `getByLabelText()` for accessible queries
+- Uses `userEvent` for realistic user interactions (typing, clicking)
+- Tests behavior from user perspective, not implementation details
+- Average execution: ~10-50ms per test
+
 ### Unit Test
 
 **File**: `tests/unit/job-state-machine.test.ts`
@@ -516,46 +611,87 @@ export async function createTestJob(data: {
 
 ### React Testing Utilities
 
-**File**: `tests/helpers/test-utils.tsx`
+**File**: `tests/utils/component-test-utils.tsx`
 
 ```typescript
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, RenderOptions } from '@testing-library/react';
-import { ReactElement } from 'react';
+import React, { type ReactElement, type ReactNode } from 'react';
+import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '@/tests/helpers/test-query-client';
+
+// Re-export RTL utilities
+export { screen, within, waitFor } from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
+
+// Re-export createTestQueryClient for direct usage
+export { createTestQueryClient } from '@/tests/helpers/test-query-client';
+
+interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
+  queryClient?: ReturnType<typeof createTestQueryClient>;
+}
+
+interface RenderWithProvidersResult extends RenderResult {
+  queryClient: ReturnType<typeof createTestQueryClient>;
+}
+
+/**
+ * Render a React component with all necessary providers for testing
+ *
+ * Features:
+ * - QueryClientProvider with test-optimized client
+ * - Returns queryClient for direct manipulation in tests
+ *
+ * Usage:
+ * ```typescript
+ * import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
+ *
+ * it('should handle form submission', async () => {
+ *   const user = userEvent.setup();
+ *   renderWithProviders(<MyComponent />);
+ *
+ *   await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+ *   await user.click(screen.getByRole('button', { name: /submit/i }));
+ *
+ *   expect(screen.getByText(/success/i)).toBeInTheDocument();
+ * });
+ * ```
+ */
+export function renderWithProviders(
+  ui: ReactElement,
+  { queryClient = createTestQueryClient(), ...renderOptions }: RenderWithProvidersOptions = {}
+): RenderWithProvidersResult {
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  }
+
+  return {
+    ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    queryClient,
+  };
+}
+```
+
+**File**: `tests/helpers/test-query-client.ts`
+
+```typescript
+import { QueryClient } from '@tanstack/react-query';
 
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
-        gcTime: Infinity,
+        gcTime: 0, // Disable caching for isolated tests
       },
       mutations: {
         retry: false,
       },
     },
   });
-}
-
-interface TestProvidersProps {
-  children: React.ReactNode;
-}
-
-function TestProviders({ children }: TestProvidersProps) {
-  const testQueryClient = createTestQueryClient();
-
-  return (
-    <QueryClientProvider client={testQueryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-}
-
-export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
-  return render(ui, { wrapper: TestProviders, ...options });
 }
 ```
 
@@ -851,9 +987,11 @@ npx playwright test --coverage
 
 ### Test Type Selection
 - ✅ Default to integration tests for API/database behavior
+- ✅ Use component tests (RTL) for interactive React components
 - ✅ Use unit tests for pure functions and utilities
 - ✅ Reserve E2E tests for browser-required scenarios only
 - ❌ Don't use Playwright for API testing (use Vitest integration tests)
+- ❌ Don't use E2E tests for component behavior (use RTL component tests)
 
 ### Test Isolation
 - ✅ Use `beforeEach` cleanup for each test
@@ -875,7 +1013,21 @@ npx playwright test --coverage
 - ✅ Test both success and error cases
 - ✅ Verify database state for mutations
 - ✅ Check status codes before parsing response bodies
-- ❌ Don't test implementation details
+- ✅ Prefer accessible queries (getByRole, getByLabelText) over test IDs
+- ❌ Don't test implementation details (class names, internal state)
+- ❌ Don't use getByTestId unless absolutely necessary
+
+### Component Testing (RTL)
+- ✅ Query priority: getByRole > getByLabelText > getByText > getByTestId
+- ✅ Use userEvent over fireEvent for realistic interactions
+- ✅ Test behavior from user perspective, not implementation
+- ✅ Use renderWithProviders() to include QueryClient context
+- ✅ Mock props and callbacks with vi.fn()
+- ✅ Test keyboard interactions (ESC, Enter, Tab)
+- ✅ Verify accessibility (ARIA attributes, focus management)
+- ❌ Don't access component internals or state directly
+- ❌ Don't test styling or CSS classes
+- ❌ Don't test React hooks directly (use unit tests instead)
 
 ### Performance
 - ✅ Run integration tests in parallel (6 workers)
