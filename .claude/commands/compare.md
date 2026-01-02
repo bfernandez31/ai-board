@@ -1,16 +1,17 @@
 ---
 command: "/compare"
 category: "Ticket Comparison"
-purpose: "Compare ticket implementations to analyze feature alignment, costs, and compliance"
+purpose: "Evaluate which ticket implementation best meets requirements and project standards"
 ---
 
 # /compare - Ticket Comparison Command
 
-Compare 1-5 tickets against the current ticket to analyze:
-- Feature alignment (spec overlap)
-- Implementation metrics (code changes)
-- Constitution compliance
-- Cost/telemetry data
+**Purpose**: Compare multiple implementations of the same feature to identify which one:
+1. Best aligns with the source ticket requirements
+2. Best implements the solution (code quality, architecture)
+3. Best respects the project's constitution/standards
+
+**Key Insight**: When comparing tickets for the same feature, similarity is **expected and positive**. The goal is NOT to flag overlap as a problem, but to **identify the best implementation**.
 
 ## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
@@ -76,15 +77,16 @@ Extract structured sections:
 - Entities (PascalCase words)
 - Keywords (significant terms)
 
-### Step 4: Calculate Feature Alignment
+### Step 4: Calculate Requirements Coverage
 
-Compare specs using weighted dimensions:
-- Requirements: 40%
-- Scenarios: 30%
-- Entities: 20%
-- Keywords: 10%
+**Objective**: Determine how well each compared ticket covers the source ticket's requirements.
 
-If alignment < 30%, include warning about low relevance.
+For each compared ticket, calculate:
+- **Requirements Coverage**: What % of source FR-XXX are addressed?
+- **Scenario Coverage**: What % of source US-XXX are handled?
+- **Entity Alignment**: Are the same domain concepts used?
+
+**Note**: High similarity between tickets is POSITIVE when comparing implementations of the same feature. It indicates the tickets are solving the same problem.
 
 ### Step 5: Extract Implementation Metrics
 
@@ -108,17 +110,66 @@ Query job telemetry for each ticket:
 - Models used
 - Tools used
 
-### Step 7: Score Constitution Compliance (if applicable)
+### Step 7: Evaluate Constitution Compliance (Dynamic)
 
-Check each ticket against constitution principles:
-1. TypeScript-First Development
-2. Component-Driven Architecture
-3. Test-Driven Development
-4. Security-First Design
-5. Database Integrity
-6. AI-First Development Model
+**IMPORTANT**: Read the project's constitution dynamically. Do NOT use hardcoded principles.
 
-### Step 8: Generate Comparison Report
+1. **Read the constitution file**: `.specify/memory/constitution.md`
+2. **Extract all principles** from the document (sections starting with "### I.", "### II.", etc. or similar headings)
+3. **For each principle found**:
+   - Understand what the principle requires (technology-agnostic)
+   - Check if each ticket's implementation respects this principle
+   - Note specific compliance or violations
+
+**Constitution is project-specific**: It may define TypeScript rules, Python conventions, Go standards, or any other technology. Evaluate based on what the document actually says, not on assumptions.
+
+Example evaluation approach:
+- If constitution says "use TypeScript strict mode" → check for type annotations
+- If constitution says "all functions must have docstrings" → check for docstrings
+- If constitution says "follow REST conventions" → check API design
+- If constitution says "test coverage > 80%" → check test file ratios
+
+### Step 8: Analyze Implementation Choices
+
+**This is the key differentiator**. Identify and compare the architectural and design decisions:
+
+1. **Identify Key Decision Points**:
+   - What are the main architectural choices each ticket made?
+   - Examples: state management approach, data fetching strategy, component structure, API design, error handling patterns
+
+2. **Compare Approaches Side-by-Side**:
+   For each decision point, document:
+   - What choice did each ticket make?
+   - What are the trade-offs of each approach?
+   - Which aligns better with the constitution?
+   - Which is more appropriate for this specific app context?
+
+3. **Evaluate Against Constitution & Best Practices**:
+   - Read the constitution principles
+   - For each implementation choice, explain WHY one is better based on:
+     - Constitution rules (e.g., "use TanStack Query for server state" → ticket using useState for API data violates this)
+     - App-specific context (e.g., existing patterns in codebase, scalability needs)
+     - Industry best practices (e.g., separation of concerns, testability)
+
+4. **Document the Reasoning**:
+   - Don't just say "AIB-125 is better" - explain the logic
+   - Example: "AIB-125 uses TanStack Query with optimistic updates per constitution III, while AIB-124 uses useState which breaks cache consistency"
+
+### Step 9: Rank Implementations
+
+**Weighted evaluation** for each compared ticket:
+
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| Requirements Coverage | 30% | How completely does it address source requirements? |
+| Implementation Choices | 30% | Are architectural decisions aligned with constitution and best practices? |
+| Constitution Compliance | 20% | Overall adherence to project standards |
+| Test Coverage | 10% | Presence and quality of tests |
+| Efficiency | 10% | Cost, duration, lines of code (less can be better) |
+
+**Produce a ranking**: Best implementation first, with clear justification for each criterion.
+
+### Step 10: Generate Comparison Report
 
 Create markdown report at:
 `specs/$BRANCH/comparisons/{timestamp}-vs-{keys}.md`
@@ -128,15 +179,85 @@ This prevents filename collisions when running multiple comparisons on the same 
 
 Example filename: `20260102-143052-vs-AIB-124-AIB-125.md`
 
-Report sections:
-1. Executive Summary
-2. Feature Alignment Analysis
-3. Implementation Metrics
-4. Cost & Telemetry
-5. Constitution Compliance
-6. Recommendation
+**Report Structure**:
 
-### Step 9: Create Result File
+```markdown
+# Implementation Comparison Report
+
+## Executive Summary
+- **Best Implementation**: [TICKET-KEY] with [score]%
+- **Key Differentiator**: [Main reason this implementation wins]
+- **Recommendation**: [Clear action - ship this ticket, merge aspects, etc.]
+
+## Requirements Analysis
+How each ticket addresses the source requirements:
+| Ticket | Coverage | Missing Requirements |
+| ... | ... | ... |
+
+## Implementation Choices Analysis
+
+### Decision Point 1: [e.g., State Management]
+| Ticket | Approach | Constitution Alignment | Trade-offs |
+|--------|----------|------------------------|------------|
+| AIB-124 | useState for API data | ❌ Violates "TanStack Query for server state" | Simpler but no cache |
+| AIB-125 | TanStack Query with optimistic updates | ✅ Follows constitution | More complex but proper cache |
+| AIB-126 | Custom fetch wrapper | ⚠️ Partial - no caching | Lightweight but manual |
+
+**Best Practice**: AIB-125 - Uses the project's standard state management pattern with optimistic updates for better UX.
+
+### Decision Point 2: [e.g., Component Structure]
+| Ticket | Approach | Constitution Alignment | Trade-offs |
+|--------|----------|------------------------|------------|
+| ... | ... | ... | ... |
+
+**Best Practice**: [Explanation of why one approach is better]
+
+### Decision Point 3: [e.g., Error Handling]
+...
+
+## Constitution Compliance
+Based on `.specify/memory/constitution.md`:
+| Ticket | [Principle I] | [Principle II] | [Principle III] | Overall |
+| ... | ✅/❌ | ✅/❌ | ✅/❌ | X% |
+
+Detailed analysis:
+- **AIB-125**: Fully compliant - uses TypeScript strict, shadcn/ui components, TanStack Query
+- **AIB-124**: 60% - Missing tests, uses any types in 2 places
+- **AIB-126**: 80% - Good types but bypasses shadcn/ui for custom modal
+
+## Metrics Comparison
+| Ticket | Lines | Files | Tests | Cost | Duration |
+| ... | ... | ... | ... | ... | ... |
+
+## Ranking & Recommendation
+
+### 🏆 1. **[TICKET-KEY]** - Best overall (score: X%)
+**Why it wins**:
+- [Specific implementation choice that's superior]
+- [Constitution compliance detail]
+- [Quality/test coverage advantage]
+
+**Minor weaknesses**:
+- [Any areas where other tickets did something better]
+
+### 2. **[TICKET-KEY]** - Runner-up (score: X%)
+**Good aspects worth considering**:
+- [What this ticket did well that could be merged]
+
+**Why it lost**:
+- [Specific implementation choice that's inferior and why]
+
+### 3. **[TICKET-KEY]** - (score: X%)
+...
+
+## Actionable Next Steps
+- [ ] **Ship**: [TICKET-KEY] as the best implementation
+- [ ] **Consider merging**: [specific feature/approach] from [OTHER-TICKET] because [reason]
+- [ ] **Close**: [TICKET-KEYS] with reference to chosen implementation
+- [ ] **Fix before shipping**: [any minor issues in winning ticket]
+```
+
+### Step 11: Create Result File
 
 Write result file at `specs/$BRANCH/.ai-board-result.md`:
 
@@ -154,13 +275,14 @@ SUCCESS
 
 ## Summary
 Generated comparison report comparing {source} with {targets}
+Best implementation: {best-ticket} with {score}%
 ```
 
-### Step 10: Output Summary
+### Step 12: Output Summary
 
 Output a concise comment (< 1500 chars) with:
-- Overall alignment score
-- Key findings (metrics, costs)
+- **Best implementation** clearly identified
+- Key differentiator (main reason it wins)
 - Link to full report
 
 ## Output Format
@@ -169,38 +291,36 @@ Output a concise comment (< 1500 chars) with:
 ```markdown
 @[cm47j3m31817281:Benoît Fernandez] ✅ **Comparison Complete**
 
-Compared **AIB-123** with **AIB-124**, **AIB-125**
+Compared **AIB-123** with **AIB-124**, **AIB-125**, **AIB-126**
 
-### Feature Alignment: 68% (Medium)
-Matching: FR-002, FR-003 | Entities: Ticket, Project
+### 🏆 Best: **AIB-125** (92%)
 
-### Implementation Metrics
-| Ticket | Lines | Files | Tests |
-|--------|-------|-------|-------|
-| AIB-124 | +450/-120 | 12 | 3 |
-| AIB-125 | +280/-85 | 8 | 2 |
+**Why it wins**: Uses TanStack Query with optimistic updates (per constitution) vs useState in others. Proper error boundaries and complete test coverage.
 
-### Cost Summary
-| Ticket | Tokens | Cost | Duration |
-|--------|--------|------|----------|
-| AIB-124 | 45K | $0.12 | 3m 20s |
-| AIB-125 | 38K | $0.09 | 2m 45s |
+### Ranking
+| # | Ticket | Score | Differentiator |
+|---|--------|-------|----------------|
+| 1 | AIB-125 | 92% | TanStack Query, full tests |
+| 2 | AIB-126 | 78% | Good structure, no cache |
+| 3 | AIB-124 | 65% | useState, missing tests |
 
-📄 Full report: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
+→ **Ship AIB-125**, close others
+
+📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125-AIB-126.md`
 ```
 
-**Low Alignment Warning**:
+**Low Relevance Warning**:
 ```markdown
-@[cm47j3m31817281:Benoît Fernandez] ⚠️ **Low Alignment Detected**
+@[cm47j3m31817281:Benoît Fernandez] ⚠️ **Low Relevance Detected**
 
 Compared **AIB-123** with **AIB-456**
 
-### Feature Alignment: 15%
-These tickets appear unrelated. Comparison results may not be meaningful.
+These tickets address different features (only 15% overlap).
+Comparison may not be meaningful for choosing a "best" implementation.
 
-Consider comparing tickets with similar features.
+Consider comparing tickets that implement the same feature.
 
-📄 Report generated with cost-only analysis: `comparisons/{filename}.md`
+📄 Report generated: `comparisons/{filename}.md`
 ```
 
 **Error Example**:
@@ -215,13 +335,13 @@ Please verify ticket keys are correct and in the same project.
 
 ## Important Rules
 
-1. **Validate references**: 1-5 tickets, same project
-2. **Handle missing branches**: Use fallback resolution
-3. **Generate report**: Always create markdown file
-4. **Create result file**: For workflow status tracking
-5. **Keep output brief**: Under 1500 characters
-6. **Include link**: Point to full report
-7. **Warn on low alignment**: < 30% threshold
+1. **Purpose is EVALUATION**: Find the best implementation, not flag duplicates
+2. **Similarity is POSITIVE**: For same-feature tickets, overlap means they're solving the same problem
+3. **Constitution is DYNAMIC**: Read `.specify/memory/constitution.md`, don't use hardcoded rules
+4. **Provide clear ranking**: Always identify the best implementation
+5. **Actionable recommendations**: Tell the user what to do (ship X, close Y)
+6. **Keep output brief**: Under 1500 characters
+7. **Include link**: Point to full report
 
 ## Error Handling
 

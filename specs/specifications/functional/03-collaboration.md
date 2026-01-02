@@ -248,6 +248,15 @@ AI-BOARD responses include:
 
 ## Ticket Comparison
 
+### Purpose
+
+The `/compare` command evaluates multiple implementations of the same feature to identify:
+1. Which implementation best aligns with the source ticket requirements
+2. Which implementation uses the best architectural choices for the project
+3. Which implementation best respects the project's constitution and standards
+
+**Key Insight**: When comparing tickets for the same feature, similarity is expected and positive. The goal is NOT to flag overlap as a problem, but to identify the best implementation.
+
 ### Triggering Comparisons
 
 Users compare tickets by mentioning @ai-board with the `/compare` command and ticket references:
@@ -277,10 +286,17 @@ Users compare tickets by mentioning @ai-board with the `/compare` command and ti
 
 When comparison runs, AI analyzes multiple dimensions:
 
-**Feature Alignment**:
-- Compares specification requirements, user scenarios, entities, and keywords
-- Calculates weighted alignment score (0-100%)
-- Warns when alignment < 30% (indicates unrelated tickets)
+**Requirements Coverage**:
+- How completely each ticket addresses the source requirements
+- Compares specification requirements (FR-XXX), scenarios (US-XXX), and entities
+- High similarity is positive (indicates solving same problem)
+
+**Implementation Choices Analysis**:
+- Identifies key architectural decisions in each ticket
+- Compares approaches side-by-side (state management, data fetching, component structure, etc.)
+- Evaluates each choice against constitution and best practices
+- Explains WHY one approach is better with specific reasoning
+- Documents trade-offs for each decision point
 
 **Implementation Metrics**:
 - Lines of code added/removed
@@ -295,31 +311,41 @@ When comparison runs, AI analyzes multiple dimensions:
 - Models used (claude-sonnet-4-5, etc.)
 - Tools used (Edit, Read, Bash, etc.)
 
-**Constitution Compliance**:
-- Scores each ticket against project constitution principles
-- Identifies specific principle violations
-- References `.specify/memory/constitution.md`
+**Constitution Compliance** (Dynamic):
+- Reads project's `.specify/memory/constitution.md` file dynamically
+- Extracts principles from the document (technology-agnostic)
+- Evaluates each ticket against those project-specific principles
+- Works with any technology stack (TypeScript, Python, Go, etc.)
 
 ### Comparison Reports
 
 **Report Generation**:
 - Markdown file created in `specs/{branch}/comparisons/` directory
 - Filename format: `{timestamp}-vs-{KEY1}-{KEY2}.md` (e.g., `20260102-143000-vs-AIB-124-AIB-125.md`)
-- Contains executive summary, detailed analysis, and recommendations
+- Contains executive summary, detailed analysis, ranking, and recommendations
 - Preserved in git history (never deleted automatically)
 
 **Report Sections**:
-1. Executive Summary: High-level overview of findings
-2. Feature Alignment Matrix: Requirement and scenario overlap
-3. Implementation Metrics: Code changes comparison
-4. Cost & Telemetry: Resource usage breakdown
-5. Constitution Compliance: Scores per principle
-6. Recommendation: Suggested next steps
+1. Executive Summary: Best implementation identified with key differentiator
+2. Requirements Analysis: Coverage comparison per ticket
+3. Implementation Choices Analysis: Decision points with trade-offs and best practice recommendations
+4. Constitution Compliance: Dynamic evaluation against project-specific principles
+5. Metrics Comparison: Code changes, tests, cost, duration
+6. Ranking & Recommendation: Ordered list with strengths/weaknesses and actionable next steps
 
-**Low Alignment Handling**:
+**Ranking Criteria** (Weighted):
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| Requirements Coverage | 30% | How completely it addresses source requirements |
+| Implementation Choices | 30% | Architectural decisions aligned with constitution and best practices |
+| Constitution Compliance | 20% | Adherence to project standards |
+| Test Coverage | 10% | Presence and quality of tests |
+| Efficiency | 10% | Cost, duration, lines of code |
+
+**Low Relevance Handling**:
 - Alignment < 30% triggers warning
-- Report focuses on cost-only comparison
-- Indicates tickets may be unrelated
+- Indicates tickets may address different features
+- Comparison may not be meaningful for choosing "best" implementation
 
 ### Viewing Comparisons
 
@@ -346,38 +372,36 @@ When comparison runs, AI analyzes multiple dimensions:
 ```markdown
 @[username] ✅ **Comparison Complete**
 
-Compared **AIB-123** with **AIB-124**, **AIB-125**
+Compared **AIB-123** with **AIB-124**, **AIB-125**, **AIB-126**
 
-### Feature Alignment: 68% (Medium)
-Matching: FR-002, FR-003 | Entities: Ticket, Project
+### 🏆 Best: **AIB-125** (92%)
 
-### Implementation Metrics
-| Ticket | Lines | Files | Tests |
-|--------|-------|-------|-------|
-| AIB-124 | +450/-120 | 12 | 3 |
-| AIB-125 | +280/-85 | 8 | 2 |
+**Why it wins**: Uses TanStack Query with optimistic updates (per constitution) vs useState in others. Proper error boundaries and complete test coverage.
 
-### Cost Summary
-| Ticket | Tokens | Cost | Duration |
-|--------|--------|------|----------|
-| AIB-124 | 45K | $0.12 | 3m 20s |
-| AIB-125 | 38K | $0.09 | 2m 45s |
+### Ranking
+| # | Ticket | Score | Differentiator |
+|---|--------|-------|----------------|
+| 1 | AIB-125 | 92% | TanStack Query, full tests |
+| 2 | AIB-126 | 78% | Good structure, no cache |
+| 3 | AIB-124 | 65% | useState, missing tests |
 
-📄 Full report: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
+→ **Ship AIB-125**, close others
+
+📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125-AIB-126.md`
 ```
 
-**Low Alignment Warning**:
+**Low Relevance Warning**:
 ```markdown
-@[username] ⚠️ **Low Alignment Detected**
+@[username] ⚠️ **Low Relevance Detected**
 
 Compared **AIB-123** with **AIB-456**
 
-### Feature Alignment: 15%
-These tickets appear unrelated. Comparison results may not be meaningful.
+These tickets address different features (only 15% overlap).
+Comparison may not be meaningful for choosing a "best" implementation.
 
-Consider comparing tickets with similar features.
+Consider comparing tickets that implement the same feature.
 
-📄 Report generated with cost-only analysis: `comparisons/{filename}.md`
+📄 Report generated: `comparisons/{filename}.md`
 ```
 
 **Error Response**:
