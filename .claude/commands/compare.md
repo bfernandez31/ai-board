@@ -6,6 +6,22 @@ purpose: "Evaluate which ticket implementation best meets requirements and proje
 
 # /compare - Ticket Comparison Command
 
+## ⛔ MANDATORY: ALWAYS REGENERATE - NO EXCEPTIONS
+
+**YOU MUST ALWAYS CREATE A NEW COMPARISON. NEVER SKIP.**
+
+Before doing ANYTHING else, understand these rules:
+1. **NEVER** check if a comparison already exists
+2. **NEVER** read or list the `comparisons/` directory to see existing reports
+3. **NEVER** read `.ai-board-result.md` files
+4. **NEVER** say "Comparison Already Available" or similar
+5. **ALWAYS** do a fresh analysis from scratch
+6. **ALWAYS** create a new report file with a new timestamp
+
+If you find yourself thinking "this comparison was already done", STOP and do it anyway. The user explicitly requested a new comparison.
+
+---
+
 **Purpose**: Compare multiple implementations of the same feature to identify which one:
 1. Best implements the solution (code quality, architecture)
 2. Best respects the project's constitution/standards
@@ -14,8 +30,6 @@ purpose: "Evaluate which ticket implementation best meets requirements and proje
 **Key Insight**: When comparing tickets for the same feature, similarity is **expected and positive**. The goal is NOT to flag overlap as a problem, but to **identify the best implementation**.
 
 **IMPORTANT**: The source ticket is **ALSO a candidate** for best implementation. ALL tickets (source + compared) must be evaluated and ranked together. The source ticket is not just a baseline - it's competing alongside the others.
-
-**CRITICAL - ALWAYS REGENERATE**: You MUST generate a NEW comparison every time. Do NOT check for or reuse existing comparison reports. Do NOT read `.ai-board-result.md` files. Each `/compare` request MUST produce a fresh analysis with a new timestamp. Never say "Comparison Already Available" - always do a fresh analysis.
 
 ## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
