@@ -109,12 +109,12 @@
 
 ### Unit Tests for User Story 3
 
-- [ ] T024 [P] [US3] Unit tests for constitution scoring in tests/unit/comparison/constitution-scoring.test.ts
+- [x] T024 [P] [US3] Unit tests for constitution scoring in tests/unit/comparison/constitution-scoring.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement constitution compliance scorer in lib/comparison/constitution-scoring.ts
-- [ ] T026 [US3] Extend comparison generator to include compliance section in lib/comparison/comparison-generator.ts
+- [x] T025 [US3] Implement constitution compliance scorer in lib/comparison/constitution-scoring.ts
+- [x] T026 [US3] Extend comparison generator to include compliance section in lib/comparison/comparison-generator.ts
 
 **Checkpoint**: User Story 3 complete - constitution compliance visible in reports
 
