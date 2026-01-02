@@ -168,6 +168,20 @@ When users mention @ai-board in a comment:
 4. AI processes the request using Claude
 5. AI-BOARD posts response as a comment
 
+### Supported Commands
+
+**Basic Assistance** (no command):
+- Handles general requests when @ai-board mentioned without specific command
+- Behavior depends on current ticket stage (see Supported Stages below)
+
+**Comparison Command** (`/compare`):
+- Compare current ticket with 1-5 other tickets
+- Analyze feature alignment, implementation metrics, costs, and constitution compliance
+- Syntax: `@ai-board /compare #TICKET-KEY1 #TICKET-KEY2`
+- Available in any stage where ticket has a branch (SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+- Generates comparison report in `specs/{branch}/comparisons/` directory
+- See Ticket Comparison section below for details
+
 ### Supported Stages
 
 **SPECIFY Stage**:
@@ -231,6 +245,170 @@ AI-BOARD responses include:
 - When job completes (COMPLETED/FAILED), AI-BOARD becomes available again
 - Users can submit new requests after previous job finishes
 - Failed jobs don't block future requests
+
+## Ticket Comparison
+
+### Triggering Comparisons
+
+Users compare tickets by mentioning @ai-board with the `/compare` command and ticket references:
+
+**Syntax**:
+```
+@ai-board /compare #TICKET-KEY1 #TICKET-KEY2 #TICKET-KEY3
+```
+
+**Example**:
+```
+@ai-board /compare #AIB-124 #AIB-125
+```
+
+**Requirements**:
+- Must specify 1-5 ticket keys (excluding source ticket)
+- All tickets must be in the same project
+- Tickets must have accessible branches (or be merged to main)
+- Current ticket must have a branch
+
+**Availability**:
+- Command available in any stage with a branch (SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+- Blocked during active AI-BOARD jobs
+- Same concurrent request protection as other AI-BOARD commands
+
+### Comparison Analysis
+
+When comparison runs, AI analyzes multiple dimensions:
+
+**Feature Alignment**:
+- Compares specification requirements, user scenarios, entities, and keywords
+- Calculates weighted alignment score (0-100%)
+- Warns when alignment < 30% (indicates unrelated tickets)
+
+**Implementation Metrics**:
+- Lines of code added/removed
+- Files changed
+- Test files modified
+- Test coverage ratio
+
+**Cost & Telemetry**:
+- Total input/output tokens consumed
+- USD cost from job telemetry
+- Duration in milliseconds
+- Models used (claude-sonnet-4-5, etc.)
+- Tools used (Edit, Read, Bash, etc.)
+
+**Constitution Compliance**:
+- Scores each ticket against project constitution principles
+- Identifies specific principle violations
+- References `.specify/memory/constitution.md`
+
+### Comparison Reports
+
+**Report Generation**:
+- Markdown file created in `specs/{branch}/comparisons/` directory
+- Filename format: `{timestamp}-vs-{KEY1}-{KEY2}.md` (e.g., `20260102-143000-vs-AIB-124-AIB-125.md`)
+- Contains executive summary, detailed analysis, and recommendations
+- Preserved in git history (never deleted automatically)
+
+**Report Sections**:
+1. Executive Summary: High-level overview of findings
+2. Feature Alignment Matrix: Requirement and scenario overlap
+3. Implementation Metrics: Code changes comparison
+4. Cost & Telemetry: Resource usage breakdown
+5. Constitution Compliance: Scores per principle
+6. Recommendation: Suggested next steps
+
+**Low Alignment Handling**:
+- Alignment < 30% triggers warning
+- Report focuses on cost-only comparison
+- Indicates tickets may be unrelated
+
+### Viewing Comparisons
+
+**Compare Button**:
+- Appears in ticket detail modal Files section when comparisons exist
+- Shows "Compare" label with comparison icon
+- Only visible when at least one comparison report exists
+
+**Comparison Viewer**:
+- Opens in modal dialog when Compare button clicked
+- Lists all comparison reports sorted by date (newest first)
+- Shows compared tickets, alignment score, and generation timestamp
+- Click report to view full markdown content
+- Uses existing DocumentationViewer component pattern
+
+**History Access**:
+- All past comparisons preserved and accessible
+- Reports sorted chronologically (newest first)
+- No limit on number of stored comparisons
+
+### Response Format
+
+**Success Response**:
+```markdown
+@[username] ✅ **Comparison Complete**
+
+Compared **AIB-123** with **AIB-124**, **AIB-125**
+
+### Feature Alignment: 68% (Medium)
+Matching: FR-002, FR-003 | Entities: Ticket, Project
+
+### Implementation Metrics
+| Ticket | Lines | Files | Tests |
+|--------|-------|-------|-------|
+| AIB-124 | +450/-120 | 12 | 3 |
+| AIB-125 | +280/-85 | 8 | 2 |
+
+### Cost Summary
+| Ticket | Tokens | Cost | Duration |
+|--------|--------|------|----------|
+| AIB-124 | 45K | $0.12 | 3m 20s |
+| AIB-125 | 38K | $0.09 | 2m 45s |
+
+📄 Full report: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
+```
+
+**Low Alignment Warning**:
+```markdown
+@[username] ⚠️ **Low Alignment Detected**
+
+Compared **AIB-123** with **AIB-456**
+
+### Feature Alignment: 15%
+These tickets appear unrelated. Comparison results may not be meaningful.
+
+Consider comparing tickets with similar features.
+
+📄 Report generated with cost-only analysis: `comparisons/{filename}.md`
+```
+
+**Error Response**:
+```markdown
+@[username] ❌ **Comparison Failed**
+
+Could not compare tickets:
+- #XYZ-999: Ticket not found in project
+
+Please verify ticket keys are correct and in the same project.
+```
+
+### Error Handling
+
+**Invalid References**:
+- No ticket keys specified: Prompts for ticket keys
+- Too many references (>5): Rejects with maximum limit message
+- Cross-project references: Rejects with same-project requirement
+- Self-reference: Automatically excluded from count
+
+**Missing Tickets**:
+- Database lookup fails: Searches for branch patterns
+- Branch not found: Searches merge history on main branch
+- Still not found: Reports specific tickets that couldn't be resolved
+- Partial failures: Lists which tickets succeeded and which failed
+
+**Branch Resolution**:
+1. Check ticket database for branch name
+2. Search git branches matching ticket key pattern
+3. Search merge commits on main branch
+4. Report unavailable if all methods fail
 
 ## Tab Navigation
 
