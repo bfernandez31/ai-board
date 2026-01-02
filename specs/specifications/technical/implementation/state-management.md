@@ -107,6 +107,59 @@ function BoardComponent({ projectId }: { projectId: number }) {
 }
 ```
 
+### Single Ticket Query with Conditional Fetching
+
+**Hook** (`app/lib/hooks/queries/useTickets.ts`):
+
+```typescript
+export function useTicket(projectId: number, ticketId: number, enabled: boolean = true) {
+  return useQuery({
+    queryKey: queryKeys.projects.ticket(projectId, ticketId),
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch ticket');
+      }
+
+      return response.json();
+    },
+    staleTime: 5000,
+    gcTime: 10 * 60 * 1000,
+    enabled,  // Allow conditional fetching
+  });
+}
+```
+
+**Usage - Modal Fresh Data Fetching**:
+
+```typescript
+function TicketDetailModal({ ticket, open }: { ticket: Ticket; open: boolean }) {
+  // Fetch fresh ticket data when modal is open to ensure we have the latest branch, jobs, etc.
+  const { data: freshTicket } = useTicket(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket  // Only fetch when modal is open and we have a ticket
+  );
+
+  // Use freshTicket if available (fetched when modal is open), otherwise use prop ticket
+  const sourceTicket = freshTicket || ticket;
+
+  // Display sourceTicket data in modal...
+}
+```
+
+**Features**:
+- **Conditional Fetching**: `enabled` parameter controls whether query runs
+- **Fresh Data**: Refetches ticket when modal opens to ensure current state
+- **Default Behavior**: Defaults to `enabled: true` for backward compatibility
+- **Prevents Stale Data**: Ensures branch names, job statuses, and documentation buttons reflect latest state
+
 ### Comments Query with Polling
 
 **Hook** (`app/lib/hooks/queries/useComments.ts`):

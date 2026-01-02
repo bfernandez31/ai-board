@@ -197,6 +197,7 @@ The ticket detail modal provides quick access to workflow documentation files:
 
 The detail modal:
 - Opens on ticket card click
+- Fetches fresh ticket data when opened to ensure all displayed information is current (branch name, jobs, documentation buttons, stats)
 - Displays in full-screen mode on mobile
 - Centers with appropriate sizing on desktop
 - Uses dark theme styling
