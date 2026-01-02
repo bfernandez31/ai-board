@@ -154,16 +154,23 @@ export async function GET(
       const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
 
       // Parse timestamp from filename
+      // Supports both YYYYMMDD-HHMMSS and YYYYMMDD (date-only) formats
       const { timestamp, comparedTickets } = parsedFilename;
       const year = timestamp.slice(0, 4);
       const month = timestamp.slice(4, 6);
       const day = timestamp.slice(6, 8);
-      const hour = timestamp.slice(9, 11);
-      const minute = timestamp.slice(11, 13);
-      const second = timestamp.slice(13, 15);
-      const generatedAt = new Date(
-        `${year}-${month}-${day}T${hour}:${minute}:${second}Z`
-      );
+
+      let generatedAt: Date;
+      if (timestamp.length > 8) {
+        // Full format: YYYYMMDD-HHMMSS
+        const hour = timestamp.slice(9, 11);
+        const minute = timestamp.slice(11, 13);
+        const second = timestamp.slice(13, 15);
+        generatedAt = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+      } else {
+        // Date-only format: YYYYMMDD
+        generatedAt = new Date(`${year}-${month}-${day}T00:00:00Z`);
+      }
 
       // Try to extract alignment score from content
       let alignmentScore = 0;
