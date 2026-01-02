@@ -95,6 +95,12 @@ export const queryKeys = {
      */
     ticketSearch: (projectId: number, query: string) =>
       ['projects', projectId, 'tickets', 'search', query] as const,
+
+    /**
+     * Full job data with telemetry for a specific ticket
+     */
+    ticketJobs: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
   },
 
   /**

@@ -32,6 +32,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { useTicketsByStage } from '@/app/lib/hooks/queries/useTickets';
+import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
@@ -94,6 +95,18 @@ function BoardContent({
       Object.values(initialTicketsByStage).flat()
     );
   }, [projectId, initialTicketsByStage, queryClient]);
+
+  // T008: Seed ticket jobs cache with server data for immediate reactivity
+  React.useEffect(() => {
+    for (const [ticketId, jobs] of initialJobs.entries()) {
+      if (jobs.length > 0) {
+        queryClient.setQueryData(
+          queryKeys.projects.ticketJobs(projectId, ticketId),
+          jobs
+        );
+      }
+    }
+  }, [projectId, initialJobs, queryClient]);
 
   // Fetch tickets using TanStack Query (automatically updates on cache invalidation)
   const { data: ticketsByStage = initialTicketsByStage } = useTicketsByStage(projectId);
@@ -171,6 +184,14 @@ function BoardContent({
     if (!selectedTicketId) return null;
     return allTickets.find(t => t.id === selectedTicketId) || null;
   }, [selectedTicketId, allTickets]);
+
+  // T007: Fetch ticket jobs with telemetry for modal Stats tab
+  // Only enabled when modal is open to avoid unnecessary requests
+  const { data: selectedTicketJobs = [] } = useTicketJobs(
+    projectId,
+    selectedTicketId,
+    isModalOpen
+  );
 
   // Find the ticket with active preview URL (for single-preview warning)
   const activePreviewTicket = useMemo(() => {
@@ -1086,7 +1107,7 @@ function BoardContent({
         projectId={projectId}
         initialTab={modalInitialTab}
         jobs={selectedTicket ? polledJobs.filter(job => job.ticketId === selectedTicket.id) : []}
-        fullJobs={selectedTicket ? initialJobs.get(selectedTicket.id) || [] : []}
+        fullJobs={selectedTicketJobs}
       />
 
       {/* Quick Implementation Modal (T039) */}

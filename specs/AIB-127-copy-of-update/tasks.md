@@ -18,7 +18,7 @@
 
 **Purpose**: Query key foundation and type definitions required by all features
 
-- [ ] T001 Add `ticketJobs` query key to `app/lib/query-keys.ts`
+- [x] T001 Add `ticketJobs` query key to `app/lib/query-keys.ts`
 
 ---
 
@@ -28,9 +28,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 Enhance jobs endpoint to return telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
-- [ ] T003 Create `useTicketJobs` query hook in `app/lib/hooks/queries/useTicketJobs.ts`
-- [ ] T004 Add ticketJobs cache invalidation to terminal job detection in `app/lib/hooks/useJobPolling.ts`
+- [x] T002 Enhance jobs endpoint to return telemetry fields in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [x] T003 Create `useTicketJobs` query hook in `app/lib/hooks/queries/useTicketJobs.ts`
+- [x] T004 Add ticketJobs cache invalidation to terminal job detection in `app/lib/hooks/useJobPolling.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -44,13 +44,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Integration test for jobs endpoint with telemetry in `tests/integration/jobs/ticket-jobs.test.ts`
-- [ ] T006 [P] [US1] Unit test for ticketJobs cache invalidation in `tests/unit/useJobPolling.test.ts` (extend existing)
+- [x] T005 [P] [US1] Integration test for jobs endpoint with telemetry in `tests/integration/jobs/ticket-jobs.test.ts`
+- [x] T006 [P] [US1] Unit test for ticketJobs cache invalidation in `tests/unit/useJobPolling.test.ts` (extend existing)
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Update board component to use `useTicketJobs` for modal fullJobs prop in `components/board/board.tsx`
-- [ ] T008 [US1] Add cache seeding for initial jobs data in `components/board/board.tsx`
+- [x] T007 [US1] Update board component to use `useTicketJobs` for modal fullJobs prop in `components/board/board.tsx`
+- [x] T008 [US1] Add cache seeding for initial jobs data in `components/board/board.tsx`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - branch and Spec button visible after job completion
 
@@ -64,11 +64,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Component test for Stats tab reactivity when jobs change in `tests/unit/components/ticket-stats.test.tsx`
+- [x] T009 [P] [US2] Component test for Stats tab reactivity when jobs change in `tests/unit/components/ticket-stats.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Verify Stats tab derives data from reactive `fullJobs` prop in `components/ticket/ticket-stats.tsx` (may only need verification, not changes)
+- [x] T010 [US2] Verify Stats tab derives data from reactive `fullJobs` prop in `components/ticket/ticket-stats.tsx` (may only need verification, not changes)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - Stats tab updates reactively
 
@@ -82,12 +82,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T011 [P] [US3] Component test for modal reactivity to ticket prop changes in `tests/unit/components/ticket-detail-modal.test.tsx`
-- [ ] T012 [P] [US3] Component test for View Specification button visibility in `tests/unit/components/ticket-detail-modal.test.tsx`
+- [x] T011 [P] [US3] Component test for modal reactivity to ticket prop changes in `tests/unit/components/ticket-detail-modal.test.tsx`
+- [x] T012 [P] [US3] Component test for View Specification button visibility in `tests/unit/components/ticket-detail-modal.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Verify modal `localTicket` useEffect correctly syncs with ticket prop updates in `components/board/ticket-detail-modal.tsx` (may only need verification, not changes)
+- [x] T013 [US3] Verify modal `localTicket` useEffect correctly syncs with ticket prop updates in `components/board/ticket-detail-modal.tsx` (may only need verification, not changes)
 
 **Checkpoint**: All user stories should now be independently functional - modal updates while open
 
@@ -97,9 +97,9 @@
 
 **Purpose**: Validation and cleanup across all stories
 
-- [ ] T014 Run quickstart.md verification checklist to validate all scenarios
-- [ ] T015 Verify all existing tests still pass (`bun run test`)
-- [ ] T016 [P] TypeScript type-check (`bun run type-check`)
+- [x] T014 Run quickstart.md verification checklist to validate all scenarios
+- [x] T015 Verify all existing tests still pass (`bun run test`)
+- [x] T016 [P] TypeScript type-check (`bun run type-check`)
 
 ---
 

@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Clock, Coins, Zap, Wrench } from 'lucide-react';
-import type { Job } from '@prisma/client';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { useTicketStats, type TicketStats as TicketStatsType } from '@/lib/hooks/use-ticket-stats';
@@ -20,8 +19,8 @@ import { JobsTimeline } from './jobs-timeline';
  * Props for TicketStats component
  */
 interface TicketStatsProps {
-  /** Full job data with telemetry from initial server load */
-  jobs: Job[];
+  /** Full job data with telemetry from API/cache */
+  jobs: TicketJobWithTelemetry[];
   /** Lightweight polled jobs for real-time status updates */
   polledJobs: TicketJob[];
 }
