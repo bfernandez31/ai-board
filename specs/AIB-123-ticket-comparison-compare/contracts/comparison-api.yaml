@@ -1,0 +1,350 @@
+openapi: 3.0.3
+info:
+  title: Ticket Comparison API
+  version: 1.0.0
+  description: |
+    API endpoints for ticket comparison feature (AIB-123).
+    Enables viewing comparison reports generated via @ai-board /compare command.
+
+servers:
+  - url: /api
+    description: Next.js API routes
+
+paths:
+  /projects/{projectId}/comparisons:
+    get:
+      summary: List comparison reports for a project
+      description: |
+        Returns all comparison reports across all tickets in the project.
+        Reports are ordered by generation date (newest first).
+      operationId: listProjectComparisons
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Maximum number of reports to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of reports to skip
+      responses:
+        '200':
+          description: List of comparison reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+
+  /projects/{projectId}/tickets/{ticketId}/comparisons:
+    get:
+      summary: List comparison reports for a ticket
+      description: |
+        Returns comparison reports where this ticket was the source
+        (i.e., where the /compare command was posted).
+      operationId: listTicketComparisons
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/ticketId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+          description: Maximum number of reports to return
+      responses:
+        '200':
+          description: List of comparison reports for this ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TicketNotFound'
+
+  /projects/{projectId}/tickets/{ticketId}/comparisons/{filename}:
+    get:
+      summary: Get a specific comparison report
+      description: |
+        Returns the content of a specific comparison report by filename.
+        The filename format is: {timestamp}-vs-{ticket-keys}.md
+      operationId: getComparisonReport
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/ticketId'
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{8}-\d{6}-vs-[A-Z0-9-]+\.md$'
+            example: '20260102-143000-vs-AIB-124-AIB-125.md'
+          description: Comparison report filename
+      responses:
+        '200':
+          description: Comparison report content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonReportResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ReportNotFound'
+
+  /projects/{projectId}/tickets/{ticketId}/comparisons/check:
+    get:
+      summary: Check if ticket has comparisons
+      description: |
+        Quick check to determine if a ticket has any comparison reports.
+        Used to conditionally show the "Compare" button in UI.
+      operationId: checkComparisonExists
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+        - $ref: '#/components/parameters/ticketId'
+      responses:
+        '200':
+          description: Comparison existence check
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasComparisons:
+                    type: boolean
+                    description: Whether any comparison reports exist
+                  count:
+                    type: integer
+                    description: Number of comparison reports
+                  latestReport:
+                    type: string
+                    nullable: true
+                    description: Filename of most recent report
+                required:
+                  - hasComparisons
+                  - count
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/TicketNotFound'
+
+components:
+  parameters:
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Project ID
+
+    ticketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Ticket ID
+
+  schemas:
+    ComparisonSummary:
+      type: object
+      description: Summary of a comparison report
+      properties:
+        filename:
+          type: string
+          description: Report filename
+          example: '20260102-143000-vs-AIB-124-AIB-125.md'
+        generatedAt:
+          type: string
+          format: date-time
+          description: Report generation timestamp
+        sourceTicket:
+          type: string
+          description: Ticket key where comparison was triggered
+          example: 'AIB-123'
+        comparedTickets:
+          type: array
+          items:
+            type: string
+          description: Ticket keys that were compared
+          example: ['AIB-124', 'AIB-125']
+        alignmentScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Overall feature alignment percentage
+        isAligned:
+          type: boolean
+          description: Whether alignment is above threshold (30%)
+      required:
+        - filename
+        - generatedAt
+        - sourceTicket
+        - comparedTickets
+        - alignmentScore
+        - isAligned
+
+    ComparisonListResponse:
+      type: object
+      properties:
+        comparisons:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonSummary'
+        total:
+          type: integer
+          description: Total number of comparisons
+        limit:
+          type: integer
+          description: Requested limit
+        offset:
+          type: integer
+          description: Requested offset
+      required:
+        - comparisons
+        - total
+        - limit
+        - offset
+
+    ComparisonReportResponse:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: Report filename
+        content:
+          type: string
+          description: Full markdown content of the report
+        metadata:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            sourceTicket:
+              type: string
+            comparedTickets:
+              type: array
+              items:
+                type: string
+            alignmentScore:
+              type: number
+            branch:
+              type: string
+              description: Branch where report is stored
+          required:
+            - generatedAt
+            - sourceTicket
+            - comparedTickets
+            - alignmentScore
+            - branch
+      required:
+        - filename
+        - content
+        - metadata
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+      required:
+        - error
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Authentication required
+            code: UNAUTHORIZED
+
+    Forbidden:
+      description: Access denied to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Access denied to project
+            code: FORBIDDEN
+
+    ProjectNotFound:
+      description: Project not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Project not found
+            code: PROJECT_NOT_FOUND
+
+    TicketNotFound:
+      description: Ticket not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Ticket not found
+            code: TICKET_NOT_FOUND
+
+    ReportNotFound:
+      description: Comparison report not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Comparison report not found
+            code: REPORT_NOT_FOUND
+
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+security:
+  - session: []
+
+tags:
+  - name: Comparisons
+    description: Ticket comparison report endpoints
