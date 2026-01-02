@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2 } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -39,6 +39,8 @@ import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 import { MentionDisplay } from '@/components/comments/mention-display';
 import { useQueryClient } from '@tanstack/react-query';
+import { useComparisonCheck } from '@/hooks/use-comparisons';
+import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
 import {
   Tooltip,
   TooltipContent,
@@ -196,6 +198,7 @@ export function TicketDetailModal({
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -204,6 +207,13 @@ export function TicketDetailModal({
     enabled: open && !!ticket,
     refetchInterval: false, // Don't poll when just showing count
   });
+
+  // Check if ticket has comparison reports
+  const { data: comparisonCheck } = useComparisonCheck(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket && !!ticket.branch
+  );
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
   useEffect(() => {
@@ -1175,6 +1185,19 @@ export function TicketDetailModal({
                         Summary
                       </Button>
                     )}
+                    {/* Compare button - visible when comparisons exist */}
+                    {comparisonCheck?.hasComparisons && (
+                      <Button
+                        onClick={() => setComparisonViewerOpen(true)}
+                        size="sm"
+                        className="bg-[#89b4fa] hover:bg-[#b4befe] text-zinc-900 font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        title={`View comparison reports (${comparisonCheck.count})`}
+                        data-testid="compare-button"
+                      >
+                        <GitCompare className="w-3.5 h-3.5" />
+                        Compare ({comparisonCheck.count})
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1264,6 +1287,16 @@ export function TicketDetailModal({
           currentPolicy={localTicket.clarificationPolicy}
           projectDefaultPolicy={localTicket.project.clarificationPolicy}
           onSave={handleSavePolicy}
+        />
+      )}
+
+      {/* ComparisonViewer modal - only render when parent dialog is open */}
+      {ticket && open && (
+        <ComparisonViewer
+          projectId={projectId}
+          ticketId={ticket.id}
+          isOpen={comparisonViewerOpen}
+          onClose={() => setComparisonViewerOpen(false)}
         />
       )}
     </Dialog>

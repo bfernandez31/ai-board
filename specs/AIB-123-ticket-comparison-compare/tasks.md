@@ -18,8 +18,8 @@
 
 **Purpose**: TypeScript types and project structure for comparison feature
 
-- [ ] T001 Create TypeScript interfaces for comparison types in lib/types/comparison.ts
-- [ ] T002 [P] Create component types in components/comparison/types.ts
+- [x] T001 Create TypeScript interfaces for comparison types in lib/types/comparison.ts
+- [x] T002 [P] Create component types in components/comparison/types.ts
 
 ---
 
@@ -31,14 +31,14 @@
 
 ### Core Parsing & Algorithms
 
-- [ ] T003 Implement ticket reference parser with regex in lib/comparison/ticket-reference-parser.ts
-- [ ] T004 [P] Implement similarity algorithms (levenshtein, jaccard, tfidf) in lib/comparison/similarity-algorithms.ts
-- [ ] T005 [P] Implement spec section parser using remark in lib/comparison/spec-parser.ts
+- [x] T003 Implement ticket reference parser with regex in lib/comparison/ticket-reference-parser.ts
+- [x] T004 [P] Implement similarity algorithms (levenshtein, jaccard, tfidf) in lib/comparison/similarity-algorithms.ts
+- [x] T005 [P] Implement spec section parser using remark in lib/comparison/spec-parser.ts
 
 ### Unit Tests for Foundational
 
-- [ ] T006 [P] Unit tests for ticket reference parser in tests/unit/comparison/ticket-reference-parser.test.ts
-- [ ] T007 [P] Unit tests for similarity algorithms in tests/unit/comparison/similarity-algorithms.test.ts
+- [x] T006 [P] Unit tests for ticket reference parser in tests/unit/comparison/ticket-reference-parser.test.ts
+- [x] T007 [P] Unit tests for similarity algorithms in tests/unit/comparison/similarity-algorithms.test.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -52,30 +52,30 @@
 
 ### Unit Tests for User Story 1
 
-- [ ] T008 [P] [US1] Unit tests for feature alignment scoring in tests/unit/comparison/feature-alignment.test.ts
+- [x] T008 [P] [US1] Unit tests for feature alignment scoring in tests/unit/comparison/feature-alignment.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement feature alignment calculator using weighted dimensions in lib/comparison/feature-alignment.ts
-- [ ] T010 [US1] Implement implementation metrics extraction (git diff analysis) in lib/comparison/implementation-metrics.ts
-- [ ] T011 [US1] Implement comparison report generator (markdown output) in lib/comparison/comparison-generator.ts
-- [ ] T012 [US1] Create /compare Claude command in .claude/commands/compare.md
+- [x] T009 [US1] Implement feature alignment calculator using weighted dimensions in lib/comparison/feature-alignment.ts
+- [x] T010 [US1] Implement implementation metrics extraction (git diff analysis) in lib/comparison/implementation-metrics.ts
+- [x] T011 [US1] Implement comparison report generator (markdown output) in lib/comparison/comparison-generator.ts
+- [x] T012 [US1] Create /compare Claude command in .claude/commands/compare.md
 
 ### API Routes for User Story 1
 
-- [ ] T013 [US1] Implement GET comparison list endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/route.ts
-- [ ] T014 [P] [US1] Implement GET comparison check endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/check/route.ts
-- [ ] T015 [US1] Implement GET specific report endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/[filename]/route.ts
+- [x] T013 [US1] Implement GET comparison list endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/route.ts
+- [x] T014 [P] [US1] Implement GET comparison check endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/check/route.ts
+- [x] T015 [US1] Implement GET specific report endpoint in app/api/projects/[projectId]/tickets/[ticketId]/comparisons/[filename]/route.ts
 
 ### Integration Tests for User Story 1
 
-- [ ] T016 [US1] Integration tests for comparison API endpoints in tests/integration/comparisons/comparison-api.test.ts
+- [x] T016 [US1] Integration tests for comparison API endpoints in tests/integration/comparisons/comparison-api.test.ts
 
 ### UI Components for User Story 1
 
-- [ ] T017 [US1] Implement TanStack Query hooks for comparisons in hooks/use-comparisons.ts
-- [ ] T018 [US1] Implement comparison viewer component in components/comparison/comparison-viewer.tsx
-- [ ] T019 [US1] Add "Compare" button to ticket detail modal in components/ticket/ticket-detail-modal.tsx
+- [x] T017 [US1] Implement TanStack Query hooks for comparisons in hooks/use-comparisons.ts
+- [x] T018 [US1] Implement comparison viewer component in components/comparison/comparison-viewer.tsx
+- [x] T019 [US1] Add "Compare" button to ticket detail modal in components/ticket/ticket-detail-modal.tsx
 
 **Checkpoint**: User Story 1 complete - users can trigger comparisons and view reports with alignment/metrics
 
