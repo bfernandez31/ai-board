@@ -57,6 +57,8 @@ export const queryKeys = {
       [...queryKeys.projects.ticket(projectId, ticketId), 'comments'] as const,
 
     jobs: (projectId: number) => [...queryKeys.projects.detail(projectId), 'jobs'] as const,
+    ticketJobs: (projectId: number, ticketId: number) =>
+      [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
 };
 ```
@@ -199,7 +201,54 @@ export function useJobPolling(projectId: number) {
 - **Auto-Resume**: Polling resumes when new jobs created
 - **Terminal Tracking**: Client tracks which jobs completed
 - **2-Second Interval**: Real-time feel
-- **Cache Invalidation**: Automatically invalidates tickets cache when job reaches terminal state
+- **Cache Invalidation**: Automatically invalidates tickets and ticketJobs caches when job reaches terminal state
+
+### Ticket Jobs Query Hook
+
+**Hook** (`app/lib/hooks/queries/useTicketJobs.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+
+export function useTicketJobs(projectId: number, ticketId: number) {
+  return useQuery({
+    queryKey: queryKeys.projects.ticketJobs(projectId, ticketId),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}/jobs`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch ticket jobs');
+      }
+
+      return response.json();
+    },
+    staleTime: 1000 * 60,  // 1 minute
+  });
+}
+```
+
+**Features**:
+- **Ticket-Scoped Jobs**: Fetches jobs only for specific ticket with full telemetry data
+- **Cache Integration**: Uses hierarchical query keys for automatic invalidation
+- **Real-Time Updates**: Invalidated automatically by job polling when jobs reach terminal states
+- **Modal Reactivity**: Powers ticket detail modal with up-to-date job data including branch, telemetry, and status
+
+**Usage in Ticket Modal**:
+```typescript
+function TicketDetailModal({ ticketId, projectId }: Props) {
+  const { data: ticketJobs } = useTicketJobs(projectId, ticketId);
+
+  return (
+    <Modal>
+      <TicketDetails ticket={ticket} fullJobs={ticketJobs?.jobs} />
+      <TicketStats jobs={ticketJobs?.jobs} />
+    </Modal>
+  );
+}
+```
 
 ### Constitution Hooks
 
@@ -834,7 +883,7 @@ queryClient.setQueryData(
 
 ### Workflow-Triggered Cache Invalidation
 
-**Pattern**: When workflows complete and transition tickets to new stages, the board automatically updates via cache invalidation.
+**Pattern**: When workflows complete and transition tickets to new stages, the board and modal automatically update via cache invalidation.
 
 **Implementation** (`useJobPolling` hook):
 
@@ -851,6 +900,11 @@ useEffect(() => {
           queryKey: queryKeys.projects.tickets(projectId),
         });
 
+        // Invalidate ticket-specific jobs cache for modal updates
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.ticketJobs(projectId, job.ticketId),
+        });
+
         // Track that we've processed this job's terminal state
         setTerminalJobIds((prev) => new Set(prev).add(job.id));
       }
@@ -862,10 +916,13 @@ useEffect(() => {
 **Flow**:
 1. **Job Polling**: Client polls `/api/projects/:projectId/jobs/status` every 2 seconds
 2. **Terminal Detection**: Hook detects when job transitions to COMPLETED/FAILED/CANCELLED
-3. **Cache Invalidation**: Automatically invalidates `queryKeys.projects.tickets(projectId)`
+3. **Cache Invalidation**: Automatically invalidates both:
+   - `queryKeys.projects.tickets(projectId)` - Board ticket list
+   - `queryKeys.projects.ticketJobs(projectId, ticketId)` - Ticket modal jobs
 4. **Board Refetch**: TanStack Query refetches tickets from `/api/projects/:projectId/tickets`
-5. **UI Update**: Board re-renders with updated ticket positions
-6. **Deduplication**: Terminal job IDs tracked to prevent duplicate invalidations
+5. **Modal Refetch**: TanStack Query refetches ticket jobs from `/api/projects/:projectId/tickets/:id/jobs`
+6. **UI Update**: Board and modal re-render with updated data (branch, buttons, telemetry)
+7. **Deduplication**: Terminal job IDs tracked to prevent duplicate invalidations
 
 **Benefits**:
 - **Automatic**: No manual refresh required

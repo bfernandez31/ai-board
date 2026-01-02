@@ -1095,6 +1095,82 @@ Mark all notifications as read for authenticated user.
 
 ## Timeline Endpoints
 
+### GET /api/projects/:projectId/tickets/:id/jobs
+
+Fetch all jobs for a specific ticket with full telemetry data.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Response** (200 OK):
+```json
+{
+  "jobs": [
+    {
+      "id": 123,
+      "ticketId": 42,
+      "projectId": 1,
+      "command": "specify",
+      "status": "COMPLETED",
+      "branch": "042-add-login-feature",
+      "startedAt": "2025-01-15T10:05:00.000Z",
+      "completedAt": "2025-01-15T10:10:00.000Z",
+      "inputTokens": 5000,
+      "outputTokens": 1500,
+      "cacheReadTokens": 2000,
+      "cacheCreationTokens": 500,
+      "costUsd": 0.025,
+      "durationMs": 300000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Read", "Edit", "Write"]
+    },
+    {
+      "id": 124,
+      "ticketId": 42,
+      "projectId": 1,
+      "command": "plan",
+      "status": "RUNNING",
+      "branch": "042-add-login-feature",
+      "startedAt": "2025-01-15T10:15:00.000Z",
+      "completedAt": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "cacheReadTokens": null,
+      "cacheCreationTokens": null,
+      "costUsd": null,
+      "durationMs": null,
+      "model": null,
+      "toolsUsed": null
+    }
+  ]
+}
+```
+
+**Fields**:
+- All standard Job fields (id, ticketId, projectId, command, status, branch)
+- Full telemetry data (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens)
+- Cost and duration metrics (costUsd, durationMs)
+- Model identifier (model)
+- Tools usage array (toolsUsed)
+- Telemetry fields are null for PENDING/RUNNING jobs
+
+**Usage**:
+- Powers ticket detail modal with real-time job data
+- Enables Stats tab to display telemetry metrics
+- Provides branch name for documentation button visibility
+- Invalidated automatically when jobs reach terminal states
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+
+**Performance**: <200ms p95 (indexed query on ticketId)
+
 ### GET /api/projects/:projectId/tickets/:id/timeline
 
 Fetch unified conversation timeline (comments + job events).
