@@ -97,9 +97,10 @@ export function useTicketsByStage(projectId: number) {
  *
  * @param projectId - Project ID
  * @param ticketId - Ticket ID
+ * @param enabled - Whether to fetch (default: true)
  * @returns Query result with single ticket
  */
-export function useTicket(projectId: number, ticketId: number) {
+export function useTicket(projectId: number, ticketId: number, enabled: boolean = true) {
   return useQuery({
     queryKey: queryKeys.projects.ticket(projectId, ticketId),
     queryFn: async () => {
@@ -119,8 +120,10 @@ export function useTicket(projectId: number, ticketId: number) {
 
       return response.json() as Promise<TicketWithVersion>;
     },
-    // Data is fresh for 5 seconds
-    staleTime: 5000,
+    // Only fetch when enabled
+    enabled,
+    // Data is fresh for 3 seconds (balance between freshness and API calls)
+    staleTime: 3000,
     // Keep in cache for 10 minutes after unmount
     gcTime: 10 * 60 * 1000,
   });

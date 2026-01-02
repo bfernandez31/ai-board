@@ -44,6 +44,12 @@ export const queryKeys = {
     jobsStatus: (id: number) => ['projects', id, 'jobs', 'status'] as const,
 
     /**
+     * Full job data with telemetry for a specific ticket
+     */
+    ticketJobs: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
+
+    /**
      * Project settings
      */
     settings: (id: number) => ['projects', id, 'settings'] as const,

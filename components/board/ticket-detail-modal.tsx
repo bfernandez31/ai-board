@@ -47,6 +47,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTicket } from '@/app/lib/hooks/queries/useTickets';
+import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -200,6 +202,20 @@ export function TicketDetailModal({
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
 
+  // Fetch fresh ticket data when modal opens (includes updated branch, etc.)
+  const { data: freshTicket } = useTicket(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket
+  );
+
+  // Fetch fresh job data with telemetry when modal opens
+  const { data: freshJobs } = useTicketJobs(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket
+  );
+
   // Fetch comment count for badge
   const { data: comments } = useComments({
     projectId,
@@ -216,23 +232,29 @@ export function TicketDetailModal({
   );
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
+  // Prefer freshTicket (from API) over ticket prop for most up-to-date data
   useEffect(() => {
-    if (ticket) {
+    const sourceTicket = freshTicket || ticket;
+    if (sourceTicket) {
       setLocalTicket((current) => {
         // Only update if different ticket, newer version, or branch changed
         // Branch comparison is needed because branch updates don't bump version
         if (
           !current ||
-          current.id !== ticket.id ||
-          current.version !== ticket.version ||
-          current.branch !== ticket.branch
+          current.id !== sourceTicket.id ||
+          current.version !== sourceTicket.version ||
+          current.branch !== sourceTicket.branch
         ) {
-          return ticket;
+          // Cast attachments to the correct type for TicketData
+          return {
+            ...sourceTicket,
+            attachments: sourceTicket.attachments as TicketAttachment[] | null,
+          } as TicketData;
         }
         return current;
       });
     }
-  }, [ticket]);
+  }, [ticket, freshTicket]);
 
   // Sync activeTab with initialTab when modal opens or initialTab changes
   // This ensures the tab is correctly set even when navigating via URL params
@@ -246,9 +268,11 @@ export function TicketDetailModal({
 
   // Jobs are now passed from parent (board) for real-time polling updates
   // No need to fetch locally - parent's useJobPolling provides live updates
+  // Use freshJobs from API when available for most up-to-date telemetry data
+  const jobsForStats = freshJobs || fullJobs;
 
   // Check if Stats tab should be visible (only when jobs exist)
-  const hasJobs = fullJobs.length > 0;
+  const hasJobs = jobsForStats.length > 0;
 
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
@@ -1260,7 +1284,7 @@ export function TicketDetailModal({
           {/* Stats Tab - only rendered when jobs exist */}
           {hasJobs && (
             <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="stats-tab-content">
-              <TicketStats jobs={fullJobs} polledJobs={jobs} />
+              <TicketStats jobs={jobsForStats} polledJobs={jobs} />
             </TabsContent>
           )}
         </Tabs>
