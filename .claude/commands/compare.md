@@ -15,6 +15,8 @@ purpose: "Evaluate which ticket implementation best meets requirements and proje
 
 **IMPORTANT**: The source ticket is **ALSO a candidate** for best implementation. ALL tickets (source + compared) must be evaluated and ranked together. The source ticket is not just a baseline - it's competing alongside the others.
 
+**CRITICAL - ALWAYS REGENERATE**: You MUST generate a NEW comparison every time. Do NOT check for or reuse existing comparison reports. Do NOT read `.ai-board-result.md` files. Each `/compare` request MUST produce a fresh analysis with a new timestamp. Never say "Comparison Already Available" - always do a fresh analysis.
+
 ## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
 **Your output will be posted DIRECTLY as a ticket comment.**
