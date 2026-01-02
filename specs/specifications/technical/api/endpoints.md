@@ -379,6 +379,90 @@ Fetch single ticket with nested project data (legacy endpoint).
 - `403`: User is neither project owner nor member
 - `404`: Ticket or project not found
 
+### GET /api/projects/:projectId/tickets/:id/jobs/full
+
+Fetch all jobs with complete telemetry data for a specific ticket.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Purpose**:
+This endpoint returns complete Job objects including all telemetry fields (totalCost, totalDuration, totalTokens, cacheReadTokens, cacheWriteTokens) which are needed for displaying detailed statistics in the ticket modal's Stats tab. Unlike the polling endpoint that returns lightweight job status updates, this endpoint provides full job data for comprehensive analysis.
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": 123,
+    "ticketId": 42,
+    "projectId": 1,
+    "command": "specify",
+    "status": "COMPLETED",
+    "workflowRunId": 12345,
+    "workflowRunUrl": "https://github.com/user/repo/actions/runs/12345",
+    "branch": "042-add-login-feature",
+    "totalCost": 0.05,
+    "totalDuration": 45000,
+    "totalTokens": 15000,
+    "inputTokens": 10000,
+    "outputTokens": 5000,
+    "cacheReadTokens": 8000,
+    "cacheWriteTokens": 2000,
+    "primaryModel": "claude-sonnet-4-5-20250929",
+    "toolsUsed": ["Read", "Edit", "Bash"],
+    "startedAt": "2025-01-15T10:00:00.000Z",
+    "completedAt": "2025-01-15T10:00:45.000Z",
+    "createdAt": "2025-01-15T09:59:55.000Z",
+    "updatedAt": "2025-01-15T10:00:45.000Z"
+  },
+  {
+    "id": 124,
+    "ticketId": 42,
+    "projectId": 1,
+    "command": "implement",
+    "status": "RUNNING",
+    "workflowRunId": 12346,
+    "workflowRunUrl": "https://github.com/user/repo/actions/runs/12346",
+    "branch": "042-add-login-feature",
+    "totalCost": 0.03,
+    "totalDuration": 30000,
+    "totalTokens": 10000,
+    "inputTokens": 7000,
+    "outputTokens": 3000,
+    "cacheReadTokens": 5000,
+    "cacheWriteTokens": 1000,
+    "primaryModel": "claude-sonnet-4-5-20250929",
+    "toolsUsed": ["Write", "Bash"],
+    "startedAt": "2025-01-15T10:05:00.000Z",
+    "completedAt": null,
+    "createdAt": "2025-01-15T10:04:55.000Z",
+    "updatedAt": "2025-01-15T10:05:30.000Z"
+  }
+]
+```
+
+**Response Notes**:
+- Jobs are ordered by `startedAt` descending (most recent first)
+- All telemetry fields are included even if null
+- Empty array returned if ticket has no jobs
+
+**Usage**:
+- Called when ticket detail modal opens to fetch fresh job data
+- Provides complete data for Stats tab metrics calculations
+- Includes cache efficiency metrics for performance analysis
+- Used alongside the lightweight polling endpoint for real-time updates
+
+**Errors**:
+- `400`: Invalid project ID or ticket ID
+- `401`: Not authenticated
+- `403`: Ticket belongs to different project or unauthorized access
+- `404`: Project or ticket not found
+- `500`: Internal server error
+
 ### PATCH /api/projects/:projectId/tickets/:id
 
 Update ticket fields with optimistic concurrency control.

@@ -205,6 +205,13 @@ The detail modal:
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
 
+**Data Loading**:
+- Fresh ticket data is fetched from the API when the modal opens
+- Ensures branch names, status, and metadata reflect the current database state
+- Full job telemetry is fetched separately for Stats tab display
+- Data remains cached for 3 seconds to optimize performance when reopening
+- Automatic polling continues for real-time job status updates
+
 **Focus Management**:
 - Modal maintains proper focus for keyboard accessibility
 - Action buttons (Edit Policy, Duplicate) do not receive automatic focus on modal open
@@ -247,7 +254,11 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 - Displayed as badges with counts (e.g., "Edit (5)", "Read (3)")
 - Empty state message when no tools recorded
 
-**Real-Time Updates**:
+**Data Freshness**:
+- Ticket data and job telemetry are automatically fetched when the modal opens
+- Ensures the displayed information reflects the latest state from the database
+- Fetched data includes complete job telemetry (cost, duration, tokens, cache metrics)
+- Stale time of 3 seconds prevents excessive API calls when modal is reopened quickly
 - Stats automatically update as jobs complete via existing 2-second job polling
 - No manual refresh required
 - Metrics recalculate automatically when job data changes

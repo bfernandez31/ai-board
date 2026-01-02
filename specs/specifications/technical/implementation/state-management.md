@@ -57,6 +57,8 @@ export const queryKeys = {
       [...queryKeys.projects.ticket(projectId, ticketId), 'comments'] as const,
 
     jobs: (projectId: number) => [...queryKeys.projects.detail(projectId), 'jobs'] as const,
+    ticketJobs: (projectId: number, ticketId: number) =>
+      [...queryKeys.projects.detail(projectId), 'tickets', ticketId, 'jobs'] as const,
   },
 };
 ```
@@ -138,6 +140,126 @@ export function useComments(projectId: number, ticketId: number, options?: {
 - **Polling**: Automatic refetch every 10 seconds
 - **Conditional**: Can disable via `enabled` option
 - **Real-time**: Stale time 0 for immediate updates
+
+### Single Ticket Query with Conditional Fetching
+
+**Hook** (`app/lib/hooks/queries/useTickets.ts`):
+
+```typescript
+export function useTicket(
+  projectId: number,
+  ticketId: number,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: queryKeys.projects.ticket(projectId, ticketId),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}`
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch ticket');
+
+      return response.json();
+    },
+    enabled,
+    staleTime: 3000,  // 3 seconds
+    gcTime: 10 * 60 * 1000,  // 10 minutes
+  });
+}
+```
+
+**Features**:
+- **Conditional Fetching**: Only fetches when `enabled` is true
+- **Modal Usage**: Fetches fresh ticket data when modal opens
+- **Caching**: 3-second stale time prevents excessive API calls on quick modal reopens
+- **Garbage Collection**: Cached for 10 minutes after component unmounts
+
+**Usage**:
+```typescript
+function TicketDetailModal({ open, ticket }: Props) {
+  // Fetch fresh data only when modal is open
+  const { data: freshTicket } = useTicket(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket
+  );
+
+  // Use fresh data if available, fallback to prop
+  const displayTicket = freshTicket || ticket;
+}
+```
+
+### Ticket Jobs Query with Telemetry
+
+**Hook** (`app/lib/hooks/queries/useTicketJobs.ts`):
+
+```typescript
+export function useTicketJobs(
+  projectId: number,
+  ticketId: number,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: queryKeys.projects.ticketJobs(projectId, ticketId),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketId}/jobs/full`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch jobs: HTTP ${response.status}`);
+      }
+
+      return response.json() as Promise<Job[]>;
+    },
+    enabled,
+    staleTime: 3000,  // 3 seconds
+    gcTime: 5 * 60 * 1000,  // 5 minutes
+  });
+}
+```
+
+**Features**:
+- **Complete Telemetry**: Fetches all job fields including cost, duration, tokens, cache metrics
+- **Modal Stats Display**: Provides data for Stats tab calculations
+- **Conditional**: Only fetches when modal is open (`enabled` parameter)
+- **Fresh Data**: 3-second stale time ensures stats reflect latest telemetry
+- **Efficient**: Cached for 5 minutes to reduce API calls on modal reopens
+
+**Usage**:
+```typescript
+function TicketDetailModal({ open, ticket, jobs: polledJobs }: Props) {
+  // Fetch full job data with telemetry when modal opens
+  const { data: freshJobs } = useTicketJobs(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket
+  );
+
+  // Use fresh data for stats display, fallback to polled data
+  const jobsForStats = freshJobs || polledJobs;
+
+  return (
+    <TabsContent value="stats">
+      <TicketStats jobs={jobsForStats} polledJobs={polledJobs} />
+    </TabsContent>
+  );
+}
+```
+
+**Data Flow**:
+1. **Modal Opens**: `enabled=true` triggers fetch to `/api/projects/:projectId/tickets/:id/jobs/full`
+2. **Fresh Data**: Complete Job objects with telemetry returned from API
+3. **Stats Display**: Jobs used to calculate total cost, duration, tokens, cache efficiency
+4. **Real-time Updates**: Existing 2-second polling continues for status updates
+5. **Modal Closes**: Data remains cached for 5 minutes for quick reopens
 
 ### Job Polling Hook
 
