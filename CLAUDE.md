@@ -24,12 +24,15 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 
 ```bash
 bun run dev                # Start dev server
-bun run test               # Run all tests (unit + integration + e2e)
-bun run test:unit          # Vitest unit tests
-bun run test:integration   # Vitest integration tests (API, database)
+bun run test               # Run all tests with auto-server management
+bun run test:unit          # Vitest unit tests (no server needed)
+bun run test:integration   # Integration tests (auto-starts server)
 bun run test:e2e           # Playwright browser tests
+bun run test:ci            # CI mode (requires running server)
 bun run type-check         # TypeScript check
 ```
+
+**Note**: `test` and `test:integration` automatically start/stop the dev server. For manual server control, use `test:integration:manual` with `TEST_MODE=true bun run dev` running.
 
 ## Key Architecture Decisions
 
