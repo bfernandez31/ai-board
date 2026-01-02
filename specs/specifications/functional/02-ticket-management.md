@@ -205,6 +205,13 @@ The detail modal:
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
 
+**Real-Time Data Synchronization**:
+- Modal data updates automatically when job status changes, without requiring page refresh
+- Documentation buttons (Spec, Plan, Tasks, Summary) appear within 5 seconds of job completion
+- Branch field updates within 5 seconds when workflow creates branch
+- Stats tab data refreshes automatically when jobs reach terminal status
+- All modal tabs display consistent, up-to-date data from cache invalidation
+
 **Focus Management**:
 - Modal maintains proper focus for keyboard accessibility
 - Action buttons (Edit Policy, Duplicate) do not receive automatic focus on modal open
@@ -251,6 +258,7 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 - Stats automatically update as jobs complete via existing 2-second job polling
 - No manual refresh required
 - Metrics recalculate automatically when job data changes
+- Timeline data refreshes automatically when jobs reach terminal status (COMPLETED, FAILED, CANCELLED)
 
 ### Closing the Modal
 

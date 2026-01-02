@@ -43,20 +43,30 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ```typescript
 export const queryKeys = {
-  all: ['projects'] as const,
-
   projects: {
-    all: () => [...queryKeys.all] as const,
-    detail: (projectId: number) => [...queryKeys.all, projectId] as const,
+    all: ['projects'] as const,
+    detail: (id: number) => ['projects', id] as const,
 
-    tickets: (projectId: number) => [...queryKeys.projects.detail(projectId), 'tickets'] as const,
+    tickets: (id: number) => ['projects', id, 'tickets'] as const,
     ticket: (projectId: number, ticketId: number) =>
-      [...queryKeys.projects.tickets(projectId), ticketId] as const,
+      ['projects', projectId, 'tickets', ticketId] as const,
 
-    comments: (projectId: number, ticketId: number) =>
-      [...queryKeys.projects.ticket(projectId, ticketId), 'comments'] as const,
+    jobsStatus: (id: number) => ['projects', id, 'jobs', 'status'] as const,
 
-    jobs: (projectId: number) => [...queryKeys.projects.detail(projectId), 'jobs'] as const,
+    timeline: (projectId: number, ticketId: number) =>
+      ['projects', projectId, 'tickets', ticketId, 'timeline'] as const,
+
+    documentation: (projectId: number, ticketId: number, docType: 'spec' | 'plan' | 'tasks' | 'summary') =>
+      ['projects', projectId, 'tickets', ticketId, 'documentation', docType] as const,
+
+    constitution: (projectId: number) =>
+      ['projects', projectId, 'constitution'] as const,
+  },
+  comments: {
+    list: (ticketId: number) => ['comments', ticketId] as const,
+  },
+  analytics: {
+    data: (projectId: number, range: string) => ['analytics', projectId, range] as const,
   },
 };
 ```
@@ -831,6 +841,7 @@ queryClient.setQueryData(
 - **Trigger**: When board visible
 - **Stop**: When all jobs terminal
 - **Resume**: When new job created
+- **Cache Invalidation**: Automatically invalidates tickets cache and timeline cache when jobs reach terminal status
 
 ### Workflow-Triggered Cache Invalidation
 
@@ -840,32 +851,50 @@ queryClient.setQueryData(
 
 ```typescript
 useEffect(() => {
-  if (data?.jobs) {
-    data.jobs.forEach((job: Job) => {
-      const isTerminal = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
-      const wasNotTerminalBefore = !terminalJobIds.has(job.id);
+  // Skip on initial mount (no previous jobs to compare)
+  if (previousJobsRef.current.length === 0 && jobs.length > 0) {
+    previousJobsRef.current = jobs;
+    return;
+  }
 
-      if (isTerminal && wasNotTerminalBefore) {
-        // Invalidate tickets cache when job transitions to terminal state
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.projects.tickets(projectId),
-        });
+  // Find jobs that transitioned to terminal status
+  const newlyTerminal = jobs.filter(job => {
+    const isTerminal = TERMINAL_STATUSES.has(job.status);
+    const wasTerminal = previousJobsRef.current.some(
+      prev => prev.id === job.id && TERMINAL_STATUSES.has(prev.status)
+    );
+    return isTerminal && !wasTerminal;
+  });
 
-        // Track that we've processed this job's terminal state
-        setTerminalJobIds((prev) => new Set(prev).add(job.id));
-      }
+  // Invalidate tickets cache when workflow completes
+  if (newlyTerminal.length > 0) {
+    // Invalidate tickets cache for branch/stage updates
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.projects.tickets(projectId),
+    });
+    // Invalidate timeline cache for each affected ticket (Stats tab)
+    newlyTerminal.forEach(job => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.timeline(projectId, job.ticketId),
+      });
     });
   }
-}, [data?.jobs, terminalJobIds, projectId, queryClient]);
+
+  // Update previous state for next comparison
+  previousJobsRef.current = jobs;
+}, [jobs, projectId, queryClient]);
 ```
 
 **Flow**:
 1. **Job Polling**: Client polls `/api/projects/:projectId/jobs/status` every 2 seconds
 2. **Terminal Detection**: Hook detects when job transitions to COMPLETED/FAILED/CANCELLED
-3. **Cache Invalidation**: Automatically invalidates `queryKeys.projects.tickets(projectId)`
+3. **Cache Invalidation**: Automatically invalidates:
+   - `queryKeys.projects.tickets(projectId)` - for branch/stage updates
+   - `queryKeys.projects.timeline(projectId, ticketId)` - for Stats tab telemetry data
 4. **Board Refetch**: TanStack Query refetches tickets from `/api/projects/:projectId/tickets`
-5. **UI Update**: Board re-renders with updated ticket positions
-6. **Deduplication**: Terminal job IDs tracked to prevent duplicate invalidations
+5. **Modal Update**: Open ticket modals receive fresh ticket data via cache invalidation
+6. **UI Update**: Board and modal re-render with updated data
+7. **Deduplication**: Previous job state tracked via ref to prevent duplicate invalidations
 
 **Benefits**:
 - **Automatic**: No manual refresh required
@@ -879,6 +908,51 @@ useEffect(() => {
 - **Concurrent Workflows**: Multiple jobs finishing simultaneously → single API call via deduplication
 - **Polling Stopped**: If all jobs terminal before invalidation, next job creation resumes polling
 - **Manual Transitions**: Optimistic updates for drag-and-drop continue to work independently
+
+### Modal Data Synchronization
+
+**Pattern**: Ticket detail modals display real-time data by syncing with the parent's cache-invalidated ticket data.
+
+**Implementation** (`ticket-detail-modal.tsx`):
+
+```typescript
+// Sync local ticket with incoming ticket prop
+// Always sync when ticket prop changes to ensure real-time updates after cache invalidation
+useEffect(() => {
+  if (ticket) {
+    setLocalTicket(ticket);
+  }
+}, [ticket]);
+```
+
+**Data Flow**:
+1. **Job Completes**: Workflow job reaches terminal status (COMPLETED/FAILED/CANCELLED)
+2. **Cache Invalidation**: `useJobPolling` invalidates tickets cache via `queryClient.invalidateQueries()`
+3. **Board Refetch**: Board component's `useTickets()` query refetches fresh ticket data
+4. **Prop Update**: Board passes updated `selectedTicket` prop to modal
+5. **Modal Sync**: Modal's `useEffect` detects prop change and updates `localTicket` state
+6. **UI Update**: Modal re-renders with fresh data (branch field, artifact buttons, stats)
+
+**Key Benefits**:
+- **Unconditional Sync**: Always syncs with parent ticket prop (no version/branch checks)
+- **Cache-Driven**: Relies on TanStack Query cache invalidation (no modal-specific polling)
+- **Consistent State**: Modal always displays data from single source of truth (parent cache)
+- **No Race Conditions**: React's `useEffect` ensures predictable update order
+
+**Artifact Button Visibility**:
+
+Buttons now use fresh `localTicket` state that updates via prop sync:
+
+```typescript
+const hasCompletedSpecifyJob = useMemo(() => {
+  if (!localTicket?.branch || jobs.length === 0) return false;
+  return jobs.some((job) => job.command === 'specify' && job.status === 'COMPLETED');
+}, [localTicket?.branch, jobs]);
+```
+
+**Previous Issue**: Button checks relied on stale `localTicket?.branch` because conditional sync only updated on version/branch changes.
+
+**Current Solution**: Unconditional sync ensures `localTicket?.branch` is always current after cache invalidation.
 
 ### Implementation Pattern
 

@@ -467,11 +467,18 @@ The notification bell provides access to mention notifications:
 **Job Status**:
 - Status indicator shows current state
 - Updates every 2 seconds via polling
+- Triggers automatic cache invalidation when jobs reach terminal status
 - Clear visual distinction between states:
   - PENDING: Waiting indicator
   - RUNNING: Progress animation
   - COMPLETED: Success checkmark
   - FAILED: Error icon
+
+**Modal Data Updates**:
+- Open ticket modals automatically receive fresh data when jobs complete
+- Documentation buttons, branch fields, and stats update within 5 seconds
+- No manual page refresh required
+- All modal tabs display consistent, synchronized data
 
 **Cleanup In Progress Banner**:
 - Warning banner displayed at top of project board during cleanup
