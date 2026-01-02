@@ -128,11 +128,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Implement three-tier branch resolution strategy in lib/comparison/branch-resolver.ts
-- [ ] T028 [US4] Add branch pattern search fallback (git branch -a | grep) in lib/comparison/branch-resolver.ts
-- [ ] T029 [US4] Add merge commit analysis fallback (git log --merges) in lib/comparison/branch-resolver.ts
-- [ ] T030 [US4] Update comparison generator to handle unavailable status in lib/comparison/comparison-generator.ts
-- [ ] T031 [US4] Update /compare command to use branch resolver in .claude/commands/compare.md
+- [x] T027 [US4] Implement three-tier branch resolution strategy in lib/comparison/branch-resolver.ts
+- [x] T028 [US4] Add branch pattern search fallback (git branch -a | grep) in lib/comparison/branch-resolver.ts
+- [x] T029 [US4] Add merge commit analysis fallback (git log --merges) in lib/comparison/branch-resolver.ts
+- [x] T030 [US4] Update comparison generator to handle unavailable status in lib/comparison/comparison-generator.ts
+- [x] T031 [US4] Update /compare command to use branch resolver in .claude/commands/compare.md
 
 **Checkpoint**: User Story 4 complete - robust handling of edge cases
 
