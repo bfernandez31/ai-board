@@ -212,6 +212,14 @@ The detail modal:
 - Prevents unintended actions from keyboard input immediately after modal opens
 - Users can navigate to interactive elements using Tab key
 
+**Automatic Data Refresh**:
+- Ticket data refreshes automatically when the modal opens
+- Ensures users always see the most current information
+- Branch information appears immediately after workflow completion
+- Documentation buttons (Spec, Plan, Tasks) display correctly based on job status
+- Stats tab shows latest telemetry data
+- No manual refresh required after background job completion
+
 ### Stats Tab
 
 The Stats tab displays aggregated telemetry metrics from all workflow jobs associated with the ticket. This tab provides visibility into resource consumption, costs, and workflow efficiency.

@@ -444,6 +444,92 @@ test.describe('Ticket Workflow', () => {
 });
 ```
 
+**File**: `tests/e2e/ticket-modal-refresh.spec.ts`
+
+```typescript
+import { test, expect } from '../helpers/worker-isolation';
+import { PrismaClient } from '@prisma/client';
+import { getPrismaClient, cleanupDatabase, getProjectKey } from '../helpers/db-cleanup';
+
+test.describe('Ticket Modal Data Refresh', () => {
+  const BASE_URL = 'http://localhost:3000';
+  let prisma: PrismaClient;
+
+  test.beforeAll(() => {
+    prisma = getPrismaClient();
+  });
+
+  test.beforeEach(async ({ projectId }) => {
+    await cleanupDatabase(projectId);
+  });
+
+  test('should show branch and Spec button when opening modal after specify job completes', async ({ page, projectId }) => {
+    // Setup: Create ticket in SPECIFY stage with branch and completed specify job
+    const projectKey = getProjectKey(projectId);
+    const branchName = '1-test-branch';
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber: 1,
+        ticketKey: `${projectKey}-1`,
+        title: '[e2e] Modal Refresh Test',
+        description: 'Test ticket for modal data refresh',
+        stage: 'SPECIFY',
+        workflowType: 'FULL',
+        branch: branchName,
+        version: 2,
+        projectId,
+        updatedAt: new Date(),
+      },
+    });
+
+    await prisma.job.create({
+      data: {
+        ticketId: ticket.id,
+        projectId,
+        command: 'specify',
+        status: 'COMPLETED',
+        branch: branchName,
+        startedAt: new Date(Date.now() - 60000),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Navigate to board
+    await page.goto(`${BASE_URL}/projects/${projectId}/board`);
+    await page.waitForLoadState('networkidle');
+
+    // Click ticket to open modal
+    await page.locator(`[data-ticket-id="${ticket.id}"]`).click();
+
+    // Wait for modal to open
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 2000 });
+
+    // Wait for network requests to complete after modal opens (invalidation triggers refetch)
+    await page.waitForLoadState('networkidle');
+
+    // Verify branch link is visible in modal
+    const branchLink = modal.locator('[data-testid="github-branch-link"]');
+    await expect(branchLink).toBeVisible({ timeout: 10000 });
+    await expect(branchLink).toContainText(branchName);
+
+    // Verify "Spec" button is visible (appears after completed specify job)
+    const specButton = modal.getByRole('button', { name: /Spec/i });
+    await expect(specButton).toBeVisible({ timeout: 10000 });
+  });
+});
+```
+
+**Key Features**:
+- Tests modal data refresh behavior after job completion
+- Uses Playwright worker isolation for parallel execution
+- Verifies that opening modal triggers cache invalidation and refetch
+- Validates that UI elements (branch link, documentation buttons) appear correctly
+- Tests real browser interactions with networkidle waiting
+- Average execution: ~500ms per test
+
 ### Component Test (RTL)
 
 **File**: `tests/unit/components/new-ticket-modal.test.tsx`

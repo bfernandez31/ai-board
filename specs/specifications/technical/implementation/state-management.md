@@ -880,6 +880,52 @@ useEffect(() => {
 - **Polling Stopped**: If all jobs terminal before invalidation, next job creation resumes polling
 - **Manual Transitions**: Optimistic updates for drag-and-drop continue to work independently
 
+### Modal-Triggered Cache Invalidation
+
+**Pattern**: When the ticket detail modal opens, it automatically invalidates and refetches ticket data to ensure users see the most current information.
+
+**Implementation** (`components/board/ticket-detail-modal.tsx`):
+
+```typescript
+// Invalidate tickets and jobs queries when modal opens to ensure fresh data
+useEffect(() => {
+  if (open && ticket) {
+    // Invalidate tickets query to refresh data from server
+    queryClient.invalidateQueries({ queryKey: ['tickets', projectId] });
+    // Invalidate jobs status to get latest job information
+    queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'jobs', 'status'] });
+  }
+  // Only re-run when open state changes or ticket ID changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, ticket?.id, projectId, queryClient]);
+```
+
+**Flow**:
+1. **Modal Opens**: User clicks ticket card to open detail modal
+2. **Cache Invalidation**: useEffect triggers invalidation for tickets and jobs queries
+3. **Data Refetch**: TanStack Query automatically refetches fresh data from API
+4. **UI Update**: Modal displays updated ticket information (branch, jobs, stats)
+5. **Tab Content**: All tabs (Details, Comments, Files, Stats) show current data
+
+**Use Cases**:
+- **Post-Workflow Refresh**: User opens modal after workflow job completes → sees updated branch, spec button, stats
+- **Multi-User Collaboration**: Another user updates ticket → first user opens modal and sees latest changes
+- **Reopening Modal**: User closes and reopens modal → data refreshes each time
+- **Background Job Completion**: Job completes while board is visible → user opens modal and sees fresh data
+
+**Benefits**:
+- **Always Fresh**: Modal always shows current server state when opened
+- **No Manual Refresh**: Users never need to manually refresh to see updates
+- **Consistent UX**: Works seamlessly with existing polling and invalidation patterns
+- **Low Overhead**: Only invalidates when modal opens, not continuously
+- **Race-Safe**: TanStack Query handles concurrent invalidations gracefully
+
+**Dependency Management**:
+- Tracks `open` state to trigger on modal open
+- Tracks `ticket?.id` to avoid re-invalidating on every ticket object change
+- Excludes `ticket` from dependencies to prevent unnecessary re-runs
+- ESLint rule disabled with explanation comment
+
 ### Implementation Pattern
 
 ```typescript
