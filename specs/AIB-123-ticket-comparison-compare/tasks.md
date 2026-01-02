@@ -158,9 +158,9 @@
 
 **Purpose**: Validation and cleanup across all user stories
 
-- [ ] T035 Add input validation with Zod schemas for ticket limits (1-5) in lib/comparison/validation.ts
-- [ ] T036 [P] Add error handling for cross-project ticket references in lib/comparison/ticket-reference-parser.ts
-- [ ] T037 Run quickstart.md validation checklist
+- [x] T035 Add input validation with Zod schemas for ticket limits (1-5) in lib/comparison/validation.ts ✅ DONE
+- [x] T036 [P] Add error handling for cross-project ticket references in lib/comparison/ticket-reference-parser.ts ✅ DONE
+- [x] T037 Run quickstart.md validation checklist ✅ DONE
 
 ---
 

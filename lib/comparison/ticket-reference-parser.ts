@@ -211,3 +211,114 @@ export function parseAndValidateProjectScope(
 
   return { validRefs, crossProjectRefs };
 }
+
+/**
+ * Error result for cross-project ticket reference validation
+ */
+export interface CrossProjectValidationResult {
+  /** Whether all references are from the same project */
+  valid: boolean;
+  /** Project key that all tickets should belong to */
+  expectedProject: string;
+  /** Valid ticket keys from the same project */
+  validTicketKeys: string[];
+  /** Invalid cross-project references */
+  crossProjectKeys: string[];
+  /** User-friendly error message if invalid */
+  error?: string;
+}
+
+/**
+ * Validate that all ticket references belong to the same project
+ *
+ * @param content - Text content with ticket references
+ * @param sourceProjectKey - Project key that all tickets must belong to
+ * @returns Validation result with error handling for cross-project references
+ *
+ * @example
+ * validateCrossProjectReferences("Compare #AIB-123 #AIB-456", "AIB")
+ * // Returns: { valid: true, validTicketKeys: ['AIB-123', 'AIB-456'], ... }
+ *
+ * validateCrossProjectReferences("Compare #AIB-123 #OTHER-456", "AIB")
+ * // Returns: { valid: false, error: "Cross-project comparison not supported...", ... }
+ */
+export function validateCrossProjectReferences(
+  content: string,
+  sourceProjectKey: string
+): CrossProjectValidationResult {
+  const { validRefs, crossProjectRefs } = parseAndValidateProjectScope(
+    content,
+    sourceProjectKey
+  );
+
+  const validTicketKeys = validRefs.map((r) => r.ticketKey);
+  const crossProjectKeys = crossProjectRefs.map((r) => r.ticketKey);
+
+  if (crossProjectRefs.length > 0) {
+    // Get unique cross-project keys for error message
+    const uniqueCrossProjects = [
+      ...new Set(crossProjectKeys.map((k) => k.split('-')[0])),
+    ];
+
+    return {
+      valid: false,
+      expectedProject: sourceProjectKey,
+      validTicketKeys,
+      crossProjectKeys,
+      error: `Cross-project comparison not supported. Ticket${crossProjectKeys.length > 1 ? 's' : ''} ${crossProjectKeys.join(', ')} belong${crossProjectKeys.length === 1 ? 's' : ''} to project${uniqueCrossProjects.length > 1 ? 's' : ''} ${uniqueCrossProjects.join(', ')}, but comparison is for project ${sourceProjectKey}.`,
+    };
+  }
+
+  return {
+    valid: true,
+    expectedProject: sourceProjectKey,
+    validTicketKeys,
+    crossProjectKeys: [],
+  };
+}
+
+/**
+ * Extract project key from a ticket key
+ *
+ * @param ticketKey - Ticket key (e.g., "AIB-123")
+ * @returns Project key portion (e.g., "AIB")
+ */
+export function extractProjectKey(ticketKey: string): string {
+  return ticketKey.split('-')[0] ?? '';
+}
+
+/**
+ * Validate all tickets are from the same project (no source project required)
+ *
+ * @param ticketKeys - Array of ticket keys to validate
+ * @returns Validation result
+ */
+export function validateSameProjectTickets(ticketKeys: string[]): {
+  valid: boolean;
+  projectKey?: string;
+  error?: string;
+} {
+  if (ticketKeys.length === 0) {
+    return { valid: false, error: 'No ticket keys provided' };
+  }
+
+  const projectKeys = ticketKeys.map(extractProjectKey);
+  const uniqueProjects = [...new Set(projectKeys)];
+
+  if (uniqueProjects.length > 1) {
+    return {
+      valid: false,
+      error: `Cross-project comparison not supported. Found tickets from multiple projects: ${uniqueProjects.join(', ')}`,
+    };
+  }
+
+  const projectKey = uniqueProjects[0];
+  if (!projectKey) {
+    return { valid: false, error: 'Could not determine project key' };
+  }
+
+  return {
+    valid: true,
+    projectKey,
+  };
+}

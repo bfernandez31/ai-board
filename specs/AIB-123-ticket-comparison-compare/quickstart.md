@@ -214,12 +214,14 @@ export function useComparisonCheck(projectId: number, ticketId: number) {
 
 Before marking implementation complete:
 
-- [ ] Ticket reference parsing handles 1-5 references
-- [ ] Alignment score is 0-100%
-- [ ] Constitution scoring evaluates all 6 principles
-- [ ] Telemetry aggregation sums all ticket jobs
-- [ ] Reports stored in correct directory structure
-- [ ] "Compare" button only shows when comparisons exist
-- [ ] All API endpoints return proper error responses
-- [ ] Unit tests cover parsing and scoring logic
-- [ ] Integration tests cover API endpoints
+- [x] Ticket reference parsing handles 1-5 references
+- [x] Alignment score is 0-100%
+- [x] Constitution scoring evaluates all 6 principles
+- [x] Telemetry aggregation sums all ticket jobs
+- [x] Reports stored in correct directory structure
+- [x] "Compare" button only shows when comparisons exist
+- [x] All API endpoints return proper error responses
+- [x] Unit tests cover parsing and scoring logic
+- [x] Integration tests cover API endpoints
+
+**Validated**: 2026-01-02
