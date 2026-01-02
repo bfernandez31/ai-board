@@ -491,8 +491,9 @@ export function parseReportFilename(filename: string): {
   timestamp: string;
   comparedTickets: string[];
 } | null {
-  // Pattern: YYYYMMDD-HHMMSS-vs-KEY1-KEY2.md
-  const match = filename.match(/^(\d{8}-\d{6})-vs-(.+)\.md$/);
+  // Pattern: YYYYMMDD-HHMMSS-vs-KEY1-KEY2.md (with time)
+  // or: YYYYMMDD-vs-KEY1-KEY2.md (date only, for backwards compatibility)
+  const match = filename.match(/^(\d{8}(?:-\d{6})?)-vs-(.+)\.md$/);
   if (!match) return null;
 
   const timestamp = match[1]!;
