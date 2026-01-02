@@ -7,11 +7,13 @@ purpose: "Evaluate which ticket implementation best meets requirements and proje
 # /compare - Ticket Comparison Command
 
 **Purpose**: Compare multiple implementations of the same feature to identify which one:
-1. Best aligns with the source ticket requirements
-2. Best implements the solution (code quality, architecture)
-3. Best respects the project's constitution/standards
+1. Best implements the solution (code quality, architecture)
+2. Best respects the project's constitution/standards
+3. Has the best overall quality (tests, efficiency)
 
 **Key Insight**: When comparing tickets for the same feature, similarity is **expected and positive**. The goal is NOT to flag overlap as a problem, but to **identify the best implementation**.
+
+**IMPORTANT**: The source ticket is **ALSO a candidate** for best implementation. ALL tickets (source + compared) must be evaluated and ranked together. The source ticket is not just a baseline - it's competing alongside the others.
 
 ## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
@@ -67,35 +69,43 @@ For each referenced ticket, resolve the branch:
 
 ### Step 3: Load Specifications
 
-Read spec.md from each ticket's branch directory:
-- Source: `specs/$BRANCH/spec.md`
-- Targets: `specs/{target-branch}/spec.md`
+Read spec.md from **ALL tickets** (source AND compared):
+- Source ticket: `specs/$BRANCH/spec.md`
+- Compared tickets: `specs/{target-branch}/spec.md`
 
-Extract structured sections:
+Extract structured sections from each:
 - Requirements (FR-XXX patterns)
 - User Scenarios (US-XXX patterns)
 - Entities (PascalCase words)
 - Keywords (significant terms)
 
-### Step 4: Calculate Requirements Coverage
+**Note**: All tickets are candidates - load specs for ALL of them equally.
 
-**Objective**: Determine how well each compared ticket covers the source ticket's requirements.
+### Step 4: Analyze Feature Scope & Completeness
 
-For each compared ticket, calculate:
-- **Requirements Coverage**: What % of source FR-XXX are addressed?
-- **Scenario Coverage**: What % of source US-XXX are handled?
-- **Entity Alignment**: Are the same domain concepts used?
+**Objective**: Understand what each ticket implements and how complete it is.
+
+For **ALL tickets** (source AND compared), analyze:
+- **Requirements Implemented**: Which FR-XXX are addressed?
+- **Scenarios Covered**: Which US-XXX are handled?
+- **Feature Completeness**: Does it implement the full feature or partial?
+- **Entity Coverage**: Are all domain concepts properly modeled?
+
+Compare tickets to identify:
+- Which ticket has the most complete implementation?
+- Which ticket covers edge cases better?
+- Are there requirements one ticket handles that others miss?
 
 **Note**: High similarity between tickets is POSITIVE when comparing implementations of the same feature. It indicates the tickets are solving the same problem.
 
 ### Step 5: Extract Implementation Metrics
 
-For each ticket with a branch, run:
+For **ALL tickets** (source AND compared) with a branch, run:
 ```bash
 git diff --numstat main...{branch}
 ```
 
-Calculate:
+Calculate for each ticket:
 - Lines added/removed
 - Files changed
 - Test files changed
@@ -116,7 +126,7 @@ Query job telemetry for each ticket:
 
 1. **Read the constitution file**: `.specify/memory/constitution.md`
 2. **Extract all principles** from the document (sections starting with "### I.", "### II.", etc. or similar headings)
-3. **For each principle found**:
+3. **For each principle found**, evaluate **ALL tickets** (source AND compared):
    - Understand what the principle requires (technology-agnostic)
    - Check if each ticket's implementation respects this principle
    - Note specific compliance or violations
@@ -131,15 +141,15 @@ Example evaluation approach:
 
 ### Step 8: Analyze Implementation Choices
 
-**This is the key differentiator**. Identify and compare the architectural and design decisions:
+**This is the key differentiator**. Identify and compare the architectural and design decisions across **ALL tickets** (source AND compared):
 
 1. **Identify Key Decision Points**:
    - What are the main architectural choices each ticket made?
    - Examples: state management approach, data fetching strategy, component structure, API design, error handling patterns
 
-2. **Compare Approaches Side-by-Side**:
+2. **Compare Approaches Side-by-Side** (include source ticket!):
    For each decision point, document:
-   - What choice did each ticket make?
+   - What choice did each ticket make? (including source)
    - What are the trade-offs of each approach?
    - Which aligns better with the constitution?
    - Which is more appropriate for this specific app context?
@@ -153,21 +163,22 @@ Example evaluation approach:
 
 4. **Document the Reasoning**:
    - Don't just say "AIB-125 is better" - explain the logic
-   - Example: "AIB-125 uses TanStack Query with optimistic updates per constitution III, while AIB-124 uses useState which breaks cache consistency"
+   - The source ticket may be the best, or one of the compared tickets may be better
+   - Example: "AIB-125 uses TanStack Query with optimistic updates per constitution III, while AIB-124 and source ticket AIB-128 use useState which breaks cache consistency"
 
 ### Step 9: Rank Implementations
 
-**Weighted evaluation** for each compared ticket:
+**Weighted evaluation** for **ALL tickets** (source AND compared):
 
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Requirements Coverage | 30% | How completely does it address source requirements? |
+| Feature Completeness | 30% | How complete is the implementation? |
 | Implementation Choices | 30% | Are architectural decisions aligned with constitution and best practices? |
 | Constitution Compliance | 20% | Overall adherence to project standards |
 | Test Coverage | 10% | Presence and quality of tests |
 | Efficiency | 10% | Cost, duration, lines of code (less can be better) |
 
-**Produce a ranking**: Best implementation first, with clear justification for each criterion.
+**Produce a ranking of ALL tickets** (including source): Best implementation first, with clear justification for each criterion. The source ticket competes equally with compared tickets - it may win, or another ticket may be better.
 
 ### Step 10: Generate Comparison Report
 
@@ -185,13 +196,16 @@ Example filename: `20260102-143052-vs-AIB-124-AIB-125.md`
 # Implementation Comparison Report
 
 ## Executive Summary
+- **Tickets Evaluated**: [SOURCE-KEY] (source), [KEY-1], [KEY-2], ...
 - **Best Implementation**: [TICKET-KEY] with [score]%
 - **Key Differentiator**: [Main reason this implementation wins]
 - **Recommendation**: [Clear action - ship this ticket, merge aspects, etc.]
 
-## Requirements Analysis
-How each ticket addresses the source requirements:
-| Ticket | Coverage | Missing Requirements |
+## Feature Completeness Analysis
+How complete is each ticket's implementation:
+| Ticket | Completeness | Missing Features |
+| [SOURCE-KEY] | X% | ... |
+| [KEY-1] | X% | ... |
 | ... | ... | ... |
 
 ## Implementation Choices Analysis
@@ -199,6 +213,7 @@ How each ticket addresses the source requirements:
 ### Decision Point 1: [e.g., State Management]
 | Ticket | Approach | Constitution Alignment | Trade-offs |
 |--------|----------|------------------------|------------|
+| AIB-128 (source) | useState for API data | ❌ Violates "TanStack Query for server state" | Simpler but no cache |
 | AIB-124 | useState for API data | ❌ Violates "TanStack Query for server state" | Simpler but no cache |
 | AIB-125 | TanStack Query with optimistic updates | ✅ Follows constitution | More complex but proper cache |
 | AIB-126 | Custom fetch wrapper | ⚠️ Partial - no caching | Lightweight but manual |
@@ -218,18 +233,25 @@ How each ticket addresses the source requirements:
 ## Constitution Compliance
 Based on `.specify/memory/constitution.md`:
 | Ticket | [Principle I] | [Principle II] | [Principle III] | Overall |
+| AIB-128 (source) | ✅/❌ | ✅/❌ | ✅/❌ | X% |
+| AIB-124 | ✅/❌ | ✅/❌ | ✅/❌ | X% |
 | ... | ✅/❌ | ✅/❌ | ✅/❌ | X% |
 
 Detailed analysis:
+- **AIB-128 (source)**: 70% - Good types but uses useState instead of TanStack Query
 - **AIB-125**: Fully compliant - uses TypeScript strict, shadcn/ui components, TanStack Query
 - **AIB-124**: 60% - Missing tests, uses any types in 2 places
 - **AIB-126**: 80% - Good types but bypasses shadcn/ui for custom modal
 
 ## Metrics Comparison
 | Ticket | Lines | Files | Tests | Cost | Duration |
+| AIB-128 (source) | ... | ... | ... | ... | ... |
+| AIB-124 | ... | ... | ... | ... | ... |
 | ... | ... | ... | ... | ... | ... |
 
 ## Ranking & Recommendation
+
+**All tickets ranked** (source competes equally with compared tickets):
 
 ### 🏆 1. **[TICKET-KEY]** - Best overall (score: X%)
 **Why it wins**:
@@ -249,6 +271,9 @@ Detailed analysis:
 
 ### 3. **[TICKET-KEY]** - (score: X%)
 ...
+
+### 4. **[SOURCE-KEY]** (source) - (score: X%)
+**Note**: The source ticket placed [position] because [specific reasons].
 
 ## Actionable Next Steps
 - [ ] **Ship**: [TICKET-KEY] as the best implementation
@@ -291,20 +316,21 @@ Output a concise comment (< 1500 chars) with:
 ```markdown
 @[cm47j3m31817281:Benoît Fernandez] ✅ **Comparison Complete**
 
-Compared **AIB-123** with **AIB-124**, **AIB-125**, **AIB-126**
+Evaluated **AIB-128** (source), **AIB-124**, **AIB-125**, **AIB-126**
 
 ### 🏆 Best: **AIB-125** (92%)
 
 **Why it wins**: Uses TanStack Query with optimistic updates (per constitution) vs useState in others. Proper error boundaries and complete test coverage.
 
-### Ranking
+### Ranking (all tickets)
 | # | Ticket | Score | Differentiator |
 |---|--------|-------|----------------|
 | 1 | AIB-125 | 92% | TanStack Query, full tests |
 | 2 | AIB-126 | 78% | Good structure, no cache |
-| 3 | AIB-124 | 65% | useState, missing tests |
+| 3 | AIB-128 (source) | 70% | useState, good types |
+| 4 | AIB-124 | 65% | useState, missing tests |
 
-→ **Ship AIB-125**, close others
+→ **Ship AIB-125**, close others (including source)
 
 📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125-AIB-126.md`
 ```
@@ -336,12 +362,14 @@ Please verify ticket keys are correct and in the same project.
 ## Important Rules
 
 1. **Purpose is EVALUATION**: Find the best implementation, not flag duplicates
-2. **Similarity is POSITIVE**: For same-feature tickets, overlap means they're solving the same problem
-3. **Constitution is DYNAMIC**: Read `.specify/memory/constitution.md`, don't use hardcoded rules
-4. **Provide clear ranking**: Always identify the best implementation
-5. **Actionable recommendations**: Tell the user what to do (ship X, close Y)
-6. **Keep output brief**: Under 1500 characters
-7. **Include link**: Point to full report
+2. **Source ticket is a CANDIDATE**: The source ticket competes equally - it may win or lose
+3. **Rank ALL tickets**: Include source ticket in the ranking alongside compared tickets
+4. **Similarity is POSITIVE**: For same-feature tickets, overlap means they're solving the same problem
+5. **Constitution is DYNAMIC**: Read `.specify/memory/constitution.md`, don't use hardcoded rules
+6. **Provide clear ranking**: Always identify the best implementation (may be source or another)
+7. **Actionable recommendations**: Tell the user what to do (ship X, close Y - even if Y is source)
+8. **Keep output brief**: Under 1500 characters
+9. **Include link**: Point to full report
 
 ## Error Handling
 

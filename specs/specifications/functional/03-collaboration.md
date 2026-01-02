@@ -251,11 +251,13 @@ AI-BOARD responses include:
 ### Purpose
 
 The `/compare` command evaluates multiple implementations of the same feature to identify:
-1. Which implementation best aligns with the source ticket requirements
-2. Which implementation uses the best architectural choices for the project
-3. Which implementation best respects the project's constitution and standards
+1. Which implementation uses the best architectural choices for the project
+2. Which implementation best respects the project's constitution and standards
+3. Which implementation has the best overall quality (tests, completeness)
 
 **Key Insight**: When comparing tickets for the same feature, similarity is expected and positive. The goal is NOT to flag overlap as a problem, but to identify the best implementation.
+
+**Important**: The source ticket is also a candidate for "best implementation". ALL tickets (source + compared) are evaluated and ranked together - the source ticket competes equally with the compared tickets.
 
 ### Triggering Comparisons
 
@@ -284,19 +286,21 @@ Users compare tickets by mentioning @ai-board with the `/compare` command and ti
 
 ### Comparison Analysis
 
-When comparison runs, AI analyzes multiple dimensions:
+When comparison runs, AI analyzes **ALL tickets** (source AND compared) across multiple dimensions:
 
-**Requirements Coverage**:
-- How completely each ticket addresses the source requirements
+**Feature Completeness**:
+- How complete is each ticket's implementation
 - Compares specification requirements (FR-XXX), scenarios (US-XXX), and entities
+- Identifies which tickets cover edge cases better
 - High similarity is positive (indicates solving same problem)
 
 **Implementation Choices Analysis**:
-- Identifies key architectural decisions in each ticket
+- Identifies key architectural decisions in each ticket (including source)
 - Compares approaches side-by-side (state management, data fetching, component structure, etc.)
 - Evaluates each choice against constitution and best practices
 - Explains WHY one approach is better with specific reasoning
 - Documents trade-offs for each decision point
+- Source ticket evaluated equally with compared tickets
 
 **Implementation Metrics**:
 - Lines of code added/removed
@@ -333,10 +337,10 @@ When comparison runs, AI analyzes multiple dimensions:
 5. Metrics Comparison: Code changes, tests, cost, duration
 6. Ranking & Recommendation: Ordered list with strengths/weaknesses and actionable next steps
 
-**Ranking Criteria** (Weighted):
+**Ranking Criteria** (Weighted - applied to ALL tickets including source):
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Requirements Coverage | 30% | How completely it addresses source requirements |
+| Feature Completeness | 30% | How complete is the implementation |
 | Implementation Choices | 30% | Architectural decisions aligned with constitution and best practices |
 | Constitution Compliance | 20% | Adherence to project standards |
 | Test Coverage | 10% | Presence and quality of tests |
@@ -372,20 +376,21 @@ When comparison runs, AI analyzes multiple dimensions:
 ```markdown
 @[username] ✅ **Comparison Complete**
 
-Compared **AIB-123** with **AIB-124**, **AIB-125**, **AIB-126**
+Evaluated **AIB-123** (source), **AIB-124**, **AIB-125**, **AIB-126**
 
 ### 🏆 Best: **AIB-125** (92%)
 
 **Why it wins**: Uses TanStack Query with optimistic updates (per constitution) vs useState in others. Proper error boundaries and complete test coverage.
 
-### Ranking
+### Ranking (all tickets)
 | # | Ticket | Score | Differentiator |
 |---|--------|-------|----------------|
 | 1 | AIB-125 | 92% | TanStack Query, full tests |
 | 2 | AIB-126 | 78% | Good structure, no cache |
-| 3 | AIB-124 | 65% | useState, missing tests |
+| 3 | AIB-123 (source) | 70% | useState, good types |
+| 4 | AIB-124 | 65% | useState, missing tests |
 
-→ **Ship AIB-125**, close others
+→ **Ship AIB-125**, close others (including source)
 
 📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125-AIB-126.md`
 ```
