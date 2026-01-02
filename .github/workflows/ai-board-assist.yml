@@ -196,6 +196,12 @@ jobs:
             echo "⚠️ Spec directory not found: specs/${{ inputs.branch }}"
           fi
 
+          # For /compare commands, clean up old result file to force fresh analysis
+          if echo "${{ inputs.comment }}" | grep -q "/compare"; then
+            echo "🧹 Cleaning up old result file for /compare command..."
+            rm -f "specs/${{ inputs.branch }}/.ai-board-result.md" || true
+          fi
+
           # Execute Claude CLI command with comment as plain text argument
           echo "🚀 Executing Claude command..."
           OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" || true)
