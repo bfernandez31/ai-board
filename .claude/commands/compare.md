@@ -62,18 +62,41 @@ Extract ticket keys from $ARGUMENTS using regex `/#([A-Z0-9]{3,6}-\d+)/g`.
 
 ### Step 2: Resolve Branches
 
-For each referenced ticket, resolve the branch:
+For each referenced ticket, resolve the branch name:
 
-1. **Database lookup**: Check if ticket exists with a branch
-2. **Pattern search**: `git branch -a | grep {ticketKey}` if branch missing
-3. **Merge analysis**: `git log --merges --grep={ticketKey}` for merged tickets
-4. **Unavailable**: Report if ticket cannot be resolved
+1. **Pattern search**: `git branch -a | grep {ticketKey}` to find branch name
+2. **Merge analysis**: `git log --merges --grep={ticketKey}` for merged tickets (specs on main)
+3. **Unavailable**: Report if ticket branch cannot be found
+
+Example:
+```bash
+# Find branch for AIB-124
+git branch -a | grep AIB-124
+# Output: remotes/origin/AIB-124-some-description
+```
 
 ### Step 3: Load Specifications
 
-Read spec.md from **ALL tickets** (source AND compared):
-- Source ticket: `specs/$BRANCH/spec.md`
-- Compared tickets: `specs/{target-branch}/spec.md`
+**IMPORTANT**: Each ticket has its specs on ITS OWN BRANCH. You must use `git show` to read files from other branches.
+
+**For source ticket** (current branch):
+```bash
+cat specs/$BRANCH/spec.md
+```
+
+**For compared tickets** (other branches):
+```bash
+# First, find the branch name
+TICKET_BRANCH=$(git branch -a | grep "AIB-124" | head -1 | sed 's/.*\///')
+
+# Then read spec from that branch using git show
+git show origin/$TICKET_BRANCH:specs/$TICKET_BRANCH/spec.md
+```
+
+**For merged tickets** (specs on main):
+```bash
+git show origin/main:specs/{ticket-branch}/spec.md
+```
 
 Extract structured sections from each:
 - Requirements (FR-XXX patterns)
