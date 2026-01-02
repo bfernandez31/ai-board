@@ -119,8 +119,15 @@ export function useJobPolling(
     // Invalidate tickets cache when workflow completes
     if (newlyTerminal.length > 0) {
       console.log('[useJobPolling] Detected terminal jobs:', newlyTerminal);
+      // Invalidate tickets cache for branch/stage updates
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
+      });
+      // Invalidate timeline cache for each affected ticket (Stats tab)
+      newlyTerminal.forEach(job => {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.timeline(projectId, job.ticketId),
+        });
       });
     }
 

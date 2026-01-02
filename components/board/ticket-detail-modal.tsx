@@ -215,22 +215,11 @@ export function TicketDetailModal({
     open && !!ticket && !!ticket.branch
   );
 
-  // Update local ticket when a different ticket is selected, version changes, or branch changes
+  // Sync local ticket with incoming ticket prop
+  // Always sync when ticket prop changes to ensure real-time updates after cache invalidation
   useEffect(() => {
     if (ticket) {
-      setLocalTicket((current) => {
-        // Only update if different ticket, newer version, or branch changed
-        // Branch comparison is needed because branch updates don't bump version
-        if (
-          !current ||
-          current.id !== ticket.id ||
-          current.version !== ticket.version ||
-          current.branch !== ticket.branch
-        ) {
-          return ticket;
-        }
-        return current;
-      });
+      setLocalTicket(ticket);
     }
   }, [ticket]);
 

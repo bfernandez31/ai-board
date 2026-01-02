@@ -51,9 +51,13 @@ describe('useJobPolling - Cache Invalidation', () => {
     // Wait for second poll (COMPLETED status)
     await waitFor(() => expect(result.current.jobs[0]?.status).toBe('COMPLETED'), { timeout: 1000 });
 
-    // Verify invalidateQueries was called with correct query key
+    // Verify invalidateQueries was called for tickets and timeline
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+    }), { timeout: 1000 });
+    // Also verify timeline invalidation for the specific ticket
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10, 'timeline'],
     }), { timeout: 1000 });
   });
 
@@ -147,10 +151,19 @@ describe('useJobPolling - Cache Invalidation', () => {
 
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalled(), { timeout: 1000 });
 
-    // Should only invalidate once (even though multiple jobs transitioned)
-    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    // Should invalidate tickets once, plus timeline for each terminal job
+    // Expected: 1 (tickets) + 2 (timeline for each job) = 3 calls
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
+    // Verify tickets cache invalidated
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+    });
+    // Verify timeline cache invalidated for each affected ticket
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10, 'timeline'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 11, 'timeline'],
     });
   });
 });
