@@ -123,6 +123,11 @@ Check each ticket against constitution principles:
 Create markdown report at:
 `specs/$BRANCH/comparisons/{timestamp}-vs-{keys}.md`
 
+**IMPORTANT**: The timestamp MUST include both date AND time in format `YYYYMMDD-HHMMSS` (e.g., `20260102-143052`).
+This prevents filename collisions when running multiple comparisons on the same day.
+
+Example filename: `20260102-143052-vs-AIB-124-AIB-125.md`
+
 Report sections:
 1. Executive Summary
 2. Feature Alignment Analysis
