@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Ticket Jobs API
+  description: API contract for fetching full job data with telemetry for a ticket
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/jobs:
+    get:
+      summary: Get all jobs for a ticket with telemetry data
+      description: |
+        Retrieves all jobs for a specific ticket including full telemetry data
+        for Stats tab display. This endpoint extends the existing endpoint to
+        include token counts, cost, duration, and tools used.
+      operationId: getTicketJobs
+      tags:
+        - Jobs
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: ticketId
+          in: path
+          required: true
+          description: Ticket ID
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: List of jobs with telemetry data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketJobWithTelemetry'
+              example:
+                - id: 1
+                  command: "specify"
+                  status: "COMPLETED"
+                  startedAt: "2026-01-02T10:00:00.000Z"
+                  completedAt: "2026-01-02T10:02:30.000Z"
+                  inputTokens: 15000
+                  outputTokens: 8000
+                  cacheReadTokens: 5000
+                  cacheCreationTokens: 2000
+                  costUsd: 0.0234
+                  durationMs: 150000
+                  model: "claude-sonnet-4-20250514"
+                  toolsUsed: ["Read", "Write", "Edit", "Bash"]
+        '400':
+          description: Invalid project or ticket ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid project ID"
+                code: "VALIDATION_ERROR"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                code: "AUTH_ERROR"
+        '403':
+          description: Ticket belongs to different project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden"
+                code: "WRONG_PROJECT"
+        '404':
+          description: Project or ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Ticket not found"
+                code: "TICKET_NOT_FOUND"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    TicketJobWithTelemetry:
+      type: object
+      required:
+        - id
+        - command
+        - status
+        - startedAt
+        - toolsUsed
+      properties:
+        id:
+          type: integer
+          description: Job ID
+        command:
+          type: string
+          description: Job command (specify, plan, implement, quick-impl, verify, etc.)
+          enum:
+            - specify
+            - plan
+            - implement
+            - quick-impl
+            - verify
+            - clean
+            - deploy-preview
+            - rollback-reset
+            - comment-specify
+            - comment-plan
+            - comment-build
+            - comment-verify
+        status:
+          type: string
+          description: Job execution status
+          enum:
+            - PENDING
+            - RUNNING
+            - COMPLETED
+            - FAILED
+            - CANCELLED
+        startedAt:
+          type: string
+          format: date-time
+          description: When the job started execution
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the job reached terminal status
+        inputTokens:
+          type: integer
+          nullable: true
+          description: Number of LLM input tokens
+        outputTokens:
+          type: integer
+          nullable: true
+          description: Number of LLM output tokens
+        cacheReadTokens:
+          type: integer
+          nullable: true
+          description: Number of cache read tokens
+        cacheCreationTokens:
+          type: integer
+          nullable: true
+          description: Number of cache creation tokens
+        costUsd:
+          type: number
+          format: float
+          nullable: true
+          description: Total cost in USD
+        durationMs:
+          type: integer
+          nullable: true
+          description: Total duration in milliseconds
+        model:
+          type: string
+          nullable: true
+          description: LLM model used (e.g., claude-sonnet-4-20250514)
+        toolsUsed:
+          type: array
+          items:
+            type: string
+          description: List of tools used during job execution
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+          enum:
+            - VALIDATION_ERROR
+            - AUTH_ERROR
+            - WRONG_PROJECT
+            - PROJECT_NOT_FOUND
+            - TICKET_NOT_FOUND
+            - INTERNAL_ERROR
