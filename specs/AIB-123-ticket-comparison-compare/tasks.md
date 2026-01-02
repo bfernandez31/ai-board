@@ -146,9 +146,9 @@
 
 ### Implementation for User Story 5
 
-- [ ] T032 [US5] Implement comparison history component in components/comparison/comparison-history.tsx
-- [ ] T033 [US5] Add history selection UI to comparison viewer in components/comparison/comparison-viewer.tsx
-- [ ] T034 [US5] Implement project-wide comparisons endpoint in app/api/projects/[projectId]/comparisons/route.ts
+- [x] T032 [US5] Implement comparison history component in components/comparison/comparison-history.tsx ✅ DONE
+- [x] T033 [US5] Add history selection UI to comparison viewer in components/comparison/comparison-viewer.tsx ✅ DONE
+- [x] T034 [US5] Implement project-wide comparisons endpoint in app/api/projects/[projectId]/comparisons/route.ts ✅ DONE
 
 **Checkpoint**: User Story 5 complete - full comparison history accessible
 
