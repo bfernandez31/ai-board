@@ -215,6 +215,19 @@ export function TicketDetailModal({
     open && !!ticket && !!ticket.branch
   );
 
+  // Invalidate tickets and jobs queries when modal opens to ensure fresh data
+  // This fixes the issue where opening a modal after a job completes shows stale data
+  useEffect(() => {
+    if (open && ticket) {
+      // Invalidate tickets query to refresh data from server
+      queryClient.invalidateQueries({ queryKey: ['tickets', projectId] });
+      // Invalidate jobs status to get latest job information
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'jobs', 'status'] });
+    }
+    // We only track ticket?.id to avoid re-running on every ticket object change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ticket?.id, projectId, queryClient]);
+
   // Update local ticket when a different ticket is selected, version changes, or branch changes
   useEffect(() => {
     if (ticket) {
