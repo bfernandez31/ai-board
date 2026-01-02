@@ -158,20 +158,21 @@ A project owner wants to view previous comparison reports for a ticket to track 
 ### Functional Requirements
 
 - **FR-001**: System MUST detect `/compare` command in comments mentioning `@ai-board`
-- **FR-002**: System MUST parse `#TICKET-KEY` references from the comment text (e.g., `#AIB-124`, `#AIB-125`)
-- **FR-003**: System MUST validate that referenced tickets exist and belong to the same project
-- **FR-004**: System MUST limit comparison to 1-5 tickets (excluding the reference ticket where comment was posted)
-- **FR-005**: System MUST calculate feature alignment score (0-100%) by analyzing spec overlap between tickets
-- **FR-006**: System MUST warn when feature alignment is below 30% and generate cost-only comparison
-- **FR-007**: System MUST analyze implementation metrics: lines changed, files changed, test coverage percentage
-- **FR-008**: System MUST score constitution compliance against `.specify/memory/constitution.md` principles
-- **FR-009**: System MUST extract and display job telemetry (input tokens, output tokens, cache tokens, USD cost, duration)
-- **FR-010**: System MUST generate comparison report file at `specs/{branch}/comparisons/{timestamp}-vs-{keys}.md`
-- **FR-011**: System MUST post comment response with link to view the comparison report
-- **FR-012**: System MUST display "Compare" button in ticket detail when comparison reports exist
-- **FR-013**: System MUST support viewing comparison reports through DocumentationViewer component
-- **FR-014**: System MUST handle missing tickets by searching branch patterns before failing
-- **FR-015**: System MUST handle merged/deleted branches by finding merge commits on main
+- **FR-002**: System MUST use --ultrathink mode (~32K token budget) when executing `/compare` command to enable deep cross-ticket analysis of specifications, implementations, and constitution compliance
+- **FR-003**: System MUST parse `#TICKET-KEY` references from the comment text (e.g., `#AIB-124`, `#AIB-125`)
+- **FR-004**: System MUST validate that referenced tickets exist and belong to the same project
+- **FR-005**: System MUST limit comparison to 1-5 tickets (excluding the reference ticket where comment was posted)
+- **FR-006**: System MUST calculate feature alignment score (0-100%) by analyzing spec overlap between tickets
+- **FR-007**: System MUST warn when feature alignment is below 30% and generate cost-only comparison
+- **FR-008**: System MUST analyze implementation metrics: lines changed, files changed, test coverage percentage
+- **FR-009**: System MUST score constitution compliance against `.specify/memory/constitution.md` principles
+- **FR-010**: System MUST extract and display job telemetry (input tokens, output tokens, cache tokens, USD cost, duration)
+- **FR-011**: System MUST generate comparison report file at `specs/{branch}/comparisons/{timestamp}-vs-{keys}.md`
+- **FR-012**: System MUST post comment response with link to view the comparison report
+- **FR-013**: System MUST display "Compare" button in ticket detail when comparison reports exist
+- **FR-014**: System MUST support viewing comparison reports through DocumentationViewer component
+- **FR-015**: System MUST handle missing tickets by searching branch patterns before failing
+- **FR-016**: System MUST handle merged/deleted branches by finding merge commits on main
 
 ### Key Entities
 
