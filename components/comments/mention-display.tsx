@@ -10,6 +10,7 @@
 
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { parseMentions } from '@/app/lib/utils/mention-parser';
 import { User } from '@/app/lib/types/mention';
@@ -187,7 +188,9 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
 
   return (
     <div className="markdown-content">
-      <ReactMarkdown components={components}>{processedContent}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {processedContent}
+      </ReactMarkdown>
     </div>
   );
 }
