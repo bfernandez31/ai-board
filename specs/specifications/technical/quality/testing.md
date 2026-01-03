@@ -29,7 +29,8 @@ tests/
 │   │   ├── quick-impl-modal.test.tsx
 │   │   ├── delete-confirmation-modal.test.tsx
 │   │   ├── ticket-search.test.tsx
-│   │   └── comment-form.test.tsx
+│   │   ├── comment-form.test.tsx
+│   │   └── notification-dropdown.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
