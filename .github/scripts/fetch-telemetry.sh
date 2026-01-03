@@ -124,19 +124,24 @@ for TICKET_KEY in $TICKETS; do
   fi
 
   # Step 3: Aggregate telemetry from COMPLETED jobs
-  TELEMETRY=$(echo "$JOBS_BODY" | jq --arg key "$TICKET_KEY" '{
-    ticketKey: $key,
-    inputTokens: ([.[] | select(.status == "COMPLETED") | .inputTokens // 0] | add) // 0,
-    outputTokens: ([.[] | select(.status == "COMPLETED") | .outputTokens // 0] | add) // 0,
-    cacheReadTokens: ([.[] | select(.status == "COMPLETED") | .cacheReadTokens // 0] | add) // 0,
-    cacheCreationTokens: ([.[] | select(.status == "COMPLETED") | .cacheCreationTokens // 0] | add) // 0,
-    costUsd: ([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0,
-    durationMs: ([.[] | select(.status == "COMPLETED") | .durationMs // 0] | add) // 0,
-    model: ([.[] | select(.status == "COMPLETED" and .model != null) | .model] | first) // null,
-    toolsUsed: ([.[] | select(.status == "COMPLETED") | .toolsUsed[]] | unique | sort) // [],
-    jobCount: ([.[] | select(.status == "COMPLETED")] | length) // 0,
-    hasData: (([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0) > 0
-  }')
+  # Use heredoc to preserve jq filter with // operators
+  JQ_FILTER=$(cat <<'JQEOF'
+{
+  ticketKey: $key,
+  inputTokens: ([.[] | select(.status == "COMPLETED") | .inputTokens // 0] | add) // 0,
+  outputTokens: ([.[] | select(.status == "COMPLETED") | .outputTokens // 0] | add) // 0,
+  cacheReadTokens: ([.[] | select(.status == "COMPLETED") | .cacheReadTokens // 0] | add) // 0,
+  cacheCreationTokens: ([.[] | select(.status == "COMPLETED") | .cacheCreationTokens // 0] | add) // 0,
+  costUsd: ([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0,
+  durationMs: ([.[] | select(.status == "COMPLETED") | .durationMs // 0] | add) // 0,
+  model: ([.[] | select(.status == "COMPLETED" and .model != null) | .model] | first) // null,
+  toolsUsed: ([.[] | select(.status == "COMPLETED") | .toolsUsed[]] | unique | sort) // [],
+  jobCount: ([.[] | select(.status == "COMPLETED")] | length) // 0,
+  hasData: (([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0) > 0
+}
+JQEOF
+)
+  TELEMETRY=$(echo "$JOBS_BODY" | jq --arg key "$TICKET_KEY" "$JQ_FILTER")
 
   JOB_COUNT=$(echo "$TELEMETRY" | jq -r '.jobCount')
   COST=$(echo "$TELEMETRY" | jq -r '.costUsd')
