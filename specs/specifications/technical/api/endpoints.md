@@ -628,8 +628,8 @@ Update ticket preview URL (workflow-only endpoint).
 
 Search tickets within a project by key, title, or description.
 
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
+**Authentication**: Required (session) OR Bearer token (workflow)
+**Authorization**: Must be project owner or member (session), OR valid workflow token
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID

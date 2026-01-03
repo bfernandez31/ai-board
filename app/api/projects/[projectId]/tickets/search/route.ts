@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import {
+  hasWorkflowToken,
+  verifyWorkflowToken,
+} from '@/app/lib/auth/workflow-auth';
 import type { SearchResponse, SearchResult } from '@/app/lib/types/search';
 
 /**
  * GET /api/projects/[projectId]/tickets/search
  * Searches tickets by key, title, and description within the specified project
+ *
+ * Authentication: Supports both session auth (UI) and Bearer token (workflow)
  */
 export async function GET(
   request: NextRequest,
@@ -22,8 +28,28 @@ export async function GET(
       );
     }
 
-    // Verify access
-    await verifyProjectAccess(projectId);
+    // Dual auth: workflow Bearer token OR session auth
+    if (hasWorkflowToken(request)) {
+      // Workflow authentication
+      const isAuthorized = await verifyWorkflowToken(request);
+      if (!isAuthorized) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      // Verify project exists (workflow doesn't need ownership check)
+      const projectExists = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true },
+      });
+      if (!projectExists) {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Session authentication (UI)
+      await verifyProjectAccess(projectId);
+    }
 
     // Get query param
     const { searchParams } = new URL(request.url);
