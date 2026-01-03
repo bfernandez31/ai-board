@@ -172,11 +172,25 @@ export async function GET(
         generatedAt = new Date(`${year}-${month}-${day}T00:00:00Z`);
       }
 
-      // Try to extract alignment score from content
+      // Try to extract best implementation score from content
       let alignmentScore = 0;
-      const alignmentMatch = content.match(/\*\*Feature Alignment\*\*:\s*(\d+)%/);
-      if (alignmentMatch && alignmentMatch[1]) {
-        alignmentScore = parseInt(alignmentMatch[1], 10);
+
+      // New format: "### 🏆 Best: **AIB-125** (92%)"
+      const bestMatch = content.match(/🏆.*?\((?:score:\s*)?(\d+)%\)/i);
+      if (bestMatch && bestMatch[1]) {
+        alignmentScore = parseInt(bestMatch[1], 10);
+      } else {
+        // Ranking table format: "| 1 | AIB-125 | 92% |"
+        const rankingMatch = content.match(/\|\s*1\s*\|[^|]+\|\s*(\d+)%/);
+        if (rankingMatch && rankingMatch[1]) {
+          alignmentScore = parseInt(rankingMatch[1], 10);
+        } else {
+          // Legacy format
+          const legacyMatch = content.match(/\*\*Feature Alignment\*\*:\s*(\d+)%/);
+          if (legacyMatch && legacyMatch[1]) {
+            alignmentScore = parseInt(legacyMatch[1], 10);
+          }
+        }
       }
 
       return NextResponse.json({

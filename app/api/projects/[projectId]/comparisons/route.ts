@@ -65,19 +65,32 @@ function timestampToDate(timestamp: string): string {
 }
 
 /**
- * Extract alignment score from report content
+ * Extract best implementation score from report content
+ * Looks for the winner's score in various formats
  */
 function extractAlignmentScore(content: string): number {
-  // Look for "Feature Alignment: XX%" pattern
-  const match = content.match(/Feature Alignment[:\s]+(\d+)%/i);
-  if (match) {
-    return parseInt(match[1]!, 10);
+  // New format: "### 🏆 Best: **AIB-125** (92%)" or "🏆 1. **AIB-125** - Best overall (score: 92%)"
+  const bestMatch = content.match(/🏆.*?\((?:score:\s*)?(\d+)%\)/i);
+  if (bestMatch) {
+    return parseInt(bestMatch[1]!, 10);
   }
 
-  // Fallback: look in table format
-  const tableMatch = content.match(/\|\s*\*\*Overall\*\*\s*\|\s*\*\*(\d+)%\*\*/);
-  if (tableMatch) {
-    return parseInt(tableMatch[1]!, 10);
+  // Ranking table format: "| 1 | AIB-125 | 92% |"
+  const rankingMatch = content.match(/\|\s*1\s*\|[^|]+\|\s*(\d+)%/);
+  if (rankingMatch) {
+    return parseInt(rankingMatch[1]!, 10);
+  }
+
+  // Legacy format: "Feature Alignment: XX%"
+  const legacyMatch = content.match(/Feature Alignment[:\s]+(\d+)%/i);
+  if (legacyMatch) {
+    return parseInt(legacyMatch[1]!, 10);
+  }
+
+  // Fallback: look for any "Best Implementation: TICKET (XX%)" pattern
+  const implMatch = content.match(/Best Implementation[:\s]+[^(]+\((\d+)%\)/i);
+  if (implMatch) {
+    return parseInt(implMatch[1]!, 10);
   }
 
   return 0;

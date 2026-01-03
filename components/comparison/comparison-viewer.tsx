@@ -151,9 +151,9 @@ export function ComparisonViewer({
             {/* Action buttons */}
             {reportData && !showHistory && (
               <div className="flex items-center gap-2 shrink-0">
-                {/* Alignment badge */}
+                {/* Best score badge */}
                 <Badge variant={getAlignmentVariant(reportData.metadata.alignmentScore)}>
-                  {reportData.metadata.alignmentScore}% Aligned
+                  {reportData.metadata.alignmentScore}% Best
                 </Badge>
 
                 {/* History button */}
