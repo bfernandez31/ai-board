@@ -1,7 +1,7 @@
 ---
 command: "/compare"
 category: "Ticket Comparison"
-purpose: "Evaluate which ticket implementation best meets requirements and project standards"
+purpose: "Evaluate which ticket implementation has the best CODE quality"
 ---
 
 # /compare - Ticket Comparison Command
@@ -22,14 +22,27 @@ If you find yourself thinking "this comparison was already done", STOP and do it
 
 ---
 
-**Purpose**: Compare multiple implementations of the same feature to identify which one:
-1. Best implements the solution (code quality, architecture)
-2. Best respects the project's constitution/standards
-3. Has the best overall quality (tests, efficiency)
+## Core Philosophy
 
-**Key Insight**: When comparing tickets for the same feature, similarity is **expected and positive**. The goal is NOT to flag overlap as a problem, but to **identify the best implementation**.
+**THIS COMMAND COMPARES CODE, NOT SPECIFICATIONS.**
 
-**IMPORTANT**: The source ticket is **ALSO a candidate** for best implementation. ALL tickets (source + compared) must be evaluated and ranked together. The source ticket is not just a baseline - it's competing alongside the others.
+Key principles:
+1. **Code-Only Analysis**: Only evaluate actual source code (`.ts`, `.tsx`, `.js`, etc.)
+2. **Workflow-Agnostic**: Quick-impl vs full workflow is NOT a quality criteria
+3. **No Spec Penalty**: Missing specs doesn't affect score - specs are process, not quality
+4. **Constitution Compliance**: Check code against constitution, not spec completeness
+5. **Consolidated Specs Freshness**: Verify `specs/specifications/` is updated if needed
+
+**What we DON'T care about**:
+- Whether the ticket has a `spec.md`, `plan.md`, or `tasks.md`
+- Whether it went through full workflow or quick-impl
+- Lines of documentation in ticket-specific `specs/{branch}/` folder
+
+**What we DO care about**:
+- Code quality, architecture, patterns
+- Constitution compliance in actual code
+- Test coverage for the feature
+- Whether consolidated specs (`specs/specifications/`) need updates for new features
 
 ## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
@@ -74,285 +87,182 @@ Extract ticket keys from $ARGUMENTS using regex `/#([A-Z0-9]{3,6}-\d+)/g`.
 - All tickets must be in same project
 - Tickets must exist with accessible branches
 
-### ⚠️ CRITICAL Step 2: Resolve Ticket Sources
+### Step 2: Resolve Ticket Branches
 
-For each referenced ticket, determine where its specs live using this **fallback chain**:
+For each referenced ticket, find its branch:
 
-#### Resolution Order (follow in sequence):
-
-**1. Try active branch first**:
 ```bash
+# Find branch for each ticket
 git branch -a | grep {ticketKey}
 # Example: git branch -a | grep AIB-124
 # Output: remotes/origin/AIB-124-some-description
 ```
-→ If found: specs are on that branch, use `git show origin/{branch}:specs/{branch}/spec.md`
 
-**2. If no branch, check specs folder on main** (merged/deleted branch):
-```bash
-# Check if specs exist on main for this ticket
-git show origin/main:specs/ 2>/dev/null | grep {ticketKey}
-# Or check local specs folder
-ls specs/ | grep {ticketKey}
-```
-→ If found: specs were merged to main, use `cat specs/{folder}/spec.md` or `git show origin/main:specs/{folder}/spec.md`
+**Validation Gate**: Each ticket MUST have a branch. If no branch exists, report error.
 
-**3. If neither branch nor specs exist** → Ticket does not exist, report error
+### Step 3: Extract CODE Metrics (Excluding specs/)
 
-**REQUIRED - Run this for EACH ticket reference**:
-```bash
-# Step 1: Try branch
-BRANCH=$(git branch -a | grep "AIB-124" | head -1 | sed 's/.*\///')
-
-# Step 2: If no branch, try specs folder
-if [ -z "$BRANCH" ]; then
-  SPEC_FOLDER=$(ls specs/ 2>/dev/null | grep "AIB-124" | head -1)
-fi
-
-# Step 3: If neither exists, ticket not found
-```
-
-**Validation Gate**: Before proceeding to Step 3, you MUST have for EACH ticket:
-- [ ] Source type: `branch` OR `main-specs` OR `not-found`
-- [ ] If branch: the full branch name
-- [ ] If main-specs: the specs folder name
-- [ ] If not-found: report error and stop
-
-### Step 3: Load Specifications
-
-**⛔ PREREQUISITE**: You MUST have completed Step 2 and know the source type for ALL tickets.
-
-Use the source type determined in Step 2 to load specs:
-
-**For source ticket** (current branch - always available):
-```bash
-cat specs/$BRANCH/spec.md
-```
-
-**For compared tickets with active branch** (source type: `branch`):
-```bash
-# Use the branch name from Step 2
-git show origin/$TICKET_BRANCH:specs/$TICKET_BRANCH/spec.md
-```
-
-**For compared tickets with merged/deleted branch** (source type: `main-specs`):
-```bash
-# Specs are on main, use the folder name from Step 2
-cat specs/$SPEC_FOLDER/spec.md
-# Or if on a different branch:
-git show origin/main:specs/$SPEC_FOLDER/spec.md
-```
-
-Extract structured sections from each:
-- Requirements (FR-XXX patterns)
-- User Scenarios (US-XXX patterns)
-- Entities (PascalCase words)
-- Keywords (significant terms)
-
-**Note**: All tickets are candidates - load specs for ALL of them equally.
-
-### Step 4: Analyze Feature Scope & Completeness
-
-**Objective**: Understand what each ticket implements and how complete it is.
-
-For **ALL tickets** (source AND compared), analyze:
-- **Requirements Implemented**: Which FR-XXX are addressed?
-- **Scenarios Covered**: Which US-XXX are handled?
-- **Feature Completeness**: Does it implement the full feature or partial?
-- **Entity Coverage**: Are all domain concepts properly modeled?
-
-Compare tickets to identify:
-- Which ticket has the most complete implementation?
-- Which ticket covers edge cases better?
-- Are there requirements one ticket handles that others miss?
-
-**Note**: High similarity between tickets is POSITIVE when comparing implementations of the same feature. It indicates the tickets are solving the same problem.
-
-### Step 5: Extract Implementation Metrics
+**CRITICAL**: Only count actual source code changes, NOT specification files.
 
 For **ALL tickets** (source AND compared) with a branch, run:
+
 ```bash
-git diff --numstat main...{branch}
+# Get diff stats EXCLUDING specs/ folder
+git diff --numstat main...{branch} -- . ':!specs/'
 ```
 
 Calculate for each ticket:
-- Lines added/removed
-- Files changed
-- Test files changed
-- Test coverage ratio
+- **Code lines added/removed** (excluding specs/)
+- **Source files changed** (`.ts`, `.tsx`, `.js`, `.jsx`, `.css`, etc.)
+- **Test files changed** (`*.test.ts`, `*.spec.ts`)
+- **Test coverage ratio**: test files / source files
 
-### Step 6: Aggregate Telemetry (if available)
+**DO NOT COUNT**:
+- `specs/**/*` (spec.md, plan.md, tasks.md, research/, etc.)
+- `.md` files in specs/
+- Any documentation artifacts
 
-Query job telemetry for each ticket:
-- Total input/output tokens
-- Cost in USD
-- Duration in ms
-- Models used
-- Tools used
+### Step 4: Analyze Code Implementation
 
-### Step 7: Evaluate Constitution Compliance (Dynamic)
+For **ALL tickets**, analyze the actual code changes:
 
-**IMPORTANT**: Read the project's constitution dynamically. Do NOT use hardcoded principles.
+```bash
+# View actual code changes (excluding specs)
+git diff main...{branch} -- . ':!specs/' | head -500
+```
 
-1. **Read the constitution file**: `.specify/memory/constitution.md`
-2. **Extract all principles** from the document (sections starting with "### I.", "### II.", etc. or similar headings)
-3. **For each principle found**, evaluate **ALL tickets** (source AND compared):
-   - Understand what the principle requires (technology-agnostic)
-   - Check if each ticket's implementation respects this principle
-   - Note specific compliance or violations
+Evaluate:
+1. **Code Architecture**: How is the feature structured?
+2. **Pattern Usage**: Does it follow existing codebase patterns?
+3. **Error Handling**: Are errors properly caught and handled?
+4. **Type Safety**: Are TypeScript types properly used?
 
-**Constitution is project-specific**: It may define TypeScript rules, Python conventions, Go standards, or any other technology. Evaluate based on what the document actually says, not on assumptions.
+### Step 5: Evaluate Constitution Compliance (Code Only)
 
-Example evaluation approach:
-- If constitution says "use TypeScript strict mode" → check for type annotations
-- If constitution says "all functions must have docstrings" → check for docstrings
-- If constitution says "follow REST conventions" → check API design
-- If constitution says "test coverage > 80%" → check test file ratios
+Read `.specify/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
 
-### Step 8: Analyze Implementation Choices
+| Principle | What to Check in CODE |
+|-----------|----------------------|
+| I. TypeScript-First | Type annotations, no `any`, strict compliance |
+| II. Component-Driven | shadcn/ui usage, feature folders, Server/Client split |
+| III. Test-Driven | Presence of tests, test type appropriateness |
+| IV. Security-First | Input validation (Zod), no raw SQL, no exposed secrets |
+| V. Database Integrity | Prisma migrations, transactions, soft deletes |
+| VI. AI-First | N/A for code comparison |
 
-**This is the key differentiator**. Identify and compare the architectural and design decisions across **ALL tickets** (source AND compared):
+**IMPORTANT**: Do NOT penalize for missing specs. Principle VI is about not creating human docs, not about having specs.
 
-1. **Identify Key Decision Points**:
-   - What are the main architectural choices each ticket made?
-   - Examples: state management approach, data fetching strategy, component structure, API design, error handling patterns
+### Step 6: Analyze Implementation Choices
 
-2. **Compare Approaches Side-by-Side** (include source ticket!):
-   For each decision point, document:
-   - What choice did each ticket make? (including source)
-   - What are the trade-offs of each approach?
-   - Which aligns better with the constitution?
-   - Which is more appropriate for this specific app context?
+**This is the key differentiator**. Compare architectural decisions in CODE:
 
-3. **Evaluate Against Constitution & Best Practices**:
-   - Read the constitution principles
-   - For each implementation choice, explain WHY one is better based on:
-     - Constitution rules (e.g., "use TanStack Query for server state" → ticket using useState for API data violates this)
-     - App-specific context (e.g., existing patterns in codebase, scalability needs)
-     - Industry best practices (e.g., separation of concerns, testability)
+1. **Identify Decision Points**:
+   - State management approach (TanStack Query vs useState)
+   - Component structure (server vs client)
+   - API design (route structure, error responses)
+   - Data fetching strategy
 
-4. **Document the Reasoning**:
-   - Don't just say "AIB-125 is better" - explain the logic
-   - The source ticket may be the best, or one of the compared tickets may be better
-   - Example: "AIB-125 uses TanStack Query with optimistic updates per constitution III, while AIB-124 and source ticket AIB-128 use useState which breaks cache consistency"
+2. **Compare Approaches**:
+   For each decision, document:
+   - What choice did each ticket make?
+   - Which aligns better with constitution?
+   - Which is more maintainable?
 
-### Step 9: Rank Implementations
+3. **Evaluate Trade-offs**:
+   - Simplicity vs completeness
+   - Performance vs readability
+   - Code reuse vs isolation
 
-**Weighted evaluation** for **ALL tickets** (source AND compared):
+### Step 7: Check Consolidated Specs Freshness
+
+If the feature introduces new behaviors, APIs, or patterns, check if `specs/specifications/` needs updating.
+
+**Note**: Consolidated specs are updated during VERIFY stage. For comparison, just note if the feature warrants spec updates.
+
+### Step 8: Rank Implementations
+
+**Weighted evaluation** (CODE-focused):
 
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Feature Completeness | 30% | How complete is the implementation? |
-| Implementation Choices | 30% | Are architectural decisions aligned with constitution and best practices? |
-| Constitution Compliance | 20% | Overall adherence to project standards |
-| Test Coverage | 10% | Presence and quality of tests |
-| Efficiency | 10% | Cost, duration, lines of code (less can be better) |
+| Code Quality | 35% | Clean code, readability, maintainability |
+| Constitution Compliance | 30% | Adherence to project standards in actual code |
+| Implementation Choices | 20% | Architectural decisions, patterns |
+| Test Coverage | 15% | Presence and quality of tests |
 
-**Produce a ranking of ALL tickets** (including source): Best implementation first, with clear justification for each criterion. The source ticket competes equally with compared tickets - it may win, or another ticket may be better.
+**NOT EVALUATED**:
+- Spec completeness (0%)
+- Workflow type (0%)
+- Documentation in specs/ (0%)
 
-### Step 10: Generate Comparison Report
+### Step 9: Generate Comparison Report
 
 Create markdown report at:
 `specs/$BRANCH/comparisons/{timestamp}-vs-{keys}.md`
 
-**IMPORTANT**: The timestamp MUST include both date AND time in format `YYYYMMDD-HHMMSS` (e.g., `20260102-143052`).
-This prevents filename collisions when running multiple comparisons on the same day.
-
-Example filename: `20260102-143052-vs-AIB-124-AIB-125.md`
+**IMPORTANT**: Timestamp format `YYYYMMDD-HHMMSS` (e.g., `20260102-143052`).
 
 **Report Structure**:
 
 ```markdown
-# Implementation Comparison Report
+# Code Implementation Comparison
 
 ## Executive Summary
 - **Tickets Evaluated**: [SOURCE-KEY] (source), [KEY-1], [KEY-2], ...
 - **Best Implementation**: [TICKET-KEY] with [score]%
-- **Key Differentiator**: [Main reason this implementation wins]
-- **Recommendation**: [Clear action - ship this ticket, merge aspects, etc.]
+- **Key Differentiator**: [Main code quality reason]
+- **Recommendation**: [Ship/merge action]
 
-## Feature Completeness Analysis
-How complete is each ticket's implementation:
-| Ticket | Completeness | Missing Features |
-| [SOURCE-KEY] | X% | ... |
-| [KEY-1] | X% | ... |
-| ... | ... | ... |
+## Code Metrics (specs/ excluded)
+
+| Ticket | Code Lines | Source Files | Test Files | Test Ratio |
+|--------|------------|--------------|------------|------------|
+| AIB-128 (source) | +150 | 5 | 1 | 20% |
+| AIB-124 | +180 | 6 | 2 | 33% |
 
 ## Implementation Choices Analysis
 
 ### Decision Point 1: [e.g., State Management]
-| Ticket | Approach | Constitution Alignment | Trade-offs |
-|--------|----------|------------------------|------------|
-| AIB-128 (source) | useState for API data | ❌ Violates "TanStack Query for server state" | Simpler but no cache |
-| AIB-124 | useState for API data | ❌ Violates "TanStack Query for server state" | Simpler but no cache |
-| AIB-125 | TanStack Query with optimistic updates | ✅ Follows constitution | More complex but proper cache |
-| AIB-126 | Custom fetch wrapper | ⚠️ Partial - no caching | Lightweight but manual |
+| Ticket | Approach | Constitution | Trade-offs |
+|--------|----------|--------------|------------|
+| AIB-128 | TanStack Query | ✅ | Proper caching |
+| AIB-124 | useState | ❌ | No cache |
 
-**Best Practice**: AIB-125 - Uses the project's standard state management pattern with optimistic updates for better UX.
+**Best**: AIB-128 - Uses proper server state management per constitution.
 
-### Decision Point 2: [e.g., Component Structure]
-| Ticket | Approach | Constitution Alignment | Trade-offs |
-|--------|----------|------------------------|------------|
-| ... | ... | ... | ... |
-
-**Best Practice**: [Explanation of why one approach is better]
-
-### Decision Point 3: [e.g., Error Handling]
+### Decision Point 2: [e.g., Error Handling]
 ...
 
-## Constitution Compliance
-Based on `.specify/memory/constitution.md`:
-| Ticket | [Principle I] | [Principle II] | [Principle III] | Overall |
-| AIB-128 (source) | ✅/❌ | ✅/❌ | ✅/❌ | X% |
-| AIB-124 | ✅/❌ | ✅/❌ | ✅/❌ | X% |
-| ... | ✅/❌ | ✅/❌ | ✅/❌ | X% |
+## Constitution Compliance (Code Only)
 
-Detailed analysis:
-- **AIB-128 (source)**: 70% - Good types but uses useState instead of TanStack Query
-- **AIB-125**: Fully compliant - uses TypeScript strict, shadcn/ui components, TanStack Query
-- **AIB-124**: 60% - Missing tests, uses any types in 2 places
-- **AIB-126**: 80% - Good types but bypasses shadcn/ui for custom modal
+| Ticket | I. TypeScript | II. Components | III. Tests | IV. Security | V. Database | Overall |
+|--------|--------------|----------------|------------|--------------|-------------|---------|
+| AIB-128 | ✅ | ✅ | ✅ | ✅ | ✅ | 95% |
+| AIB-124 | ⚠️ 1 any | ✅ | ❌ no tests | ✅ | ✅ | 70% |
 
-## Metrics Comparison
-| Ticket | Lines | Files | Tests | Cost | Duration |
-| AIB-128 (source) | ... | ... | ... | ... | ... |
-| AIB-124 | ... | ... | ... | ... | ... |
-| ... | ... | ... | ... | ... | ... |
+## Consolidated Specs Status
+- [ ] Feature warrants `specs/specifications/` update
+- [x] No spec updates needed
 
 ## Ranking & Recommendation
 
-**All tickets ranked** (source competes equally with compared tickets):
-
-### 🏆 1. **[TICKET-KEY]** - Best overall (score: X%)
+### 1. **[TICKET-KEY]** - Best code (score: X%)
 **Why it wins**:
-- [Specific implementation choice that's superior]
-- [Constitution compliance detail]
-- [Quality/test coverage advantage]
+- [Code quality reason]
+- [Constitution compliance]
+- [Better patterns]
 
-**Minor weaknesses**:
-- [Any areas where other tickets did something better]
-
-### 2. **[TICKET-KEY]** - Runner-up (score: X%)
-**Good aspects worth considering**:
-- [What this ticket did well that could be merged]
-
+### 2. **[TICKET-KEY]** - (score: X%)
 **Why it lost**:
-- [Specific implementation choice that's inferior and why]
+- [Specific code issue]
 
-### 3. **[TICKET-KEY]** - (score: X%)
-...
-
-### 4. **[SOURCE-KEY]** (source) - (score: X%)
-**Note**: The source ticket placed [position] because [specific reasons].
-
-## Actionable Next Steps
-- [ ] **Ship**: [TICKET-KEY] as the best implementation
-- [ ] **Consider merging**: [specific feature/approach] from [OTHER-TICKET] because [reason]
-- [ ] **Close**: [TICKET-KEYS] with reference to chosen implementation
-- [ ] **Fix before shipping**: [any minor issues in winning ticket]
+## Next Steps
+- [ ] **Ship**: [TICKET-KEY]
+- [ ] **Close**: [other tickets]
+- [ ] **Update specs/specifications/**: [if needed - will be done in VERIFY stage]
 ```
 
-### Step 11: Create Result File
+### Step 10: Create Result File
 
 Write result file at `specs/$BRANCH/.ai-board-result.md`:
 
@@ -363,21 +273,21 @@ Write result file at `specs/$BRANCH/.ai-board-result.md`:
 SUCCESS
 
 ## Message
-@{USER} Comparison report generated for {tickets}
+@{USER} Code comparison generated for {tickets}
 
 ## Files Modified
 - specs/$BRANCH/comparisons/{filename}.md
 
 ## Summary
-Generated comparison report comparing {source} with {targets}
-Best implementation: {best-ticket} with {score}%
+Best code implementation: {best-ticket} with {score}%
+Compared on: code quality, constitution compliance, tests
 ```
 
-### Step 12: Output Summary
+### Step 11: Output Summary
 
 Output a concise comment (< 1500 chars) with:
 - **Best implementation** clearly identified
-- Key differentiator (main reason it wins)
+- Key code quality differentiator
 - Link to full report
 
 ## Output Format
@@ -386,65 +296,50 @@ Output a concise comment (< 1500 chars) with:
 ```markdown
 @[cm47j3m31817281:Benoît Fernandez] ✅ **Comparison Complete**
 
-Evaluated **AIB-128** (source), **AIB-124**, **AIB-125**, **AIB-126**
+Compared CODE quality: **AIB-128** (source), **AIB-124**, **AIB-125**
 
 ### 🏆 Best: **AIB-125** (92%)
 
-**Why it wins**: Uses TanStack Query with optimistic updates (per constitution) vs useState in others. Proper error boundaries and complete test coverage.
+**Why**: TanStack Query (not useState), complete error handling, 2 test files covering happy + edge cases.
 
-### Ranking (all tickets)
-| # | Ticket | Score | Differentiator |
-|---|--------|-------|----------------|
-| 1 | AIB-125 | 92% | TanStack Query, full tests |
-| 2 | AIB-126 | 78% | Good structure, no cache |
-| 3 | AIB-128 (source) | 70% | useState, good types |
-| 4 | AIB-124 | 65% | useState, missing tests |
+### Code Ranking
+| # | Ticket | Score | Key Differentiator |
+|---|--------|-------|-------------------|
+| 1 | AIB-125 | 92% | Proper state mgmt, tests |
+| 2 | AIB-128 | 78% | Good types, no tests |
+| 3 | AIB-124 | 65% | Uses `any`, no tests |
 
-→ **Ship AIB-125**, close others (including source)
+*Specs/workflow type NOT evaluated - code only*
 
-📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125-AIB-126.md`
-```
+→ **Ship AIB-125**
 
-**Low Relevance Warning**:
-```markdown
-@[cm47j3m31817281:Benoît Fernandez] ⚠️ **Low Relevance Detected**
-
-Compared **AIB-123** with **AIB-456**
-
-These tickets address different features (only 15% overlap).
-Comparison may not be meaningful for choosing a "best" implementation.
-
-Consider comparing tickets that implement the same feature.
-
-📄 Report generated: `comparisons/{filename}.md`
+📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
 ```
 
 **Error Example**:
 ```markdown
 @[cm47j3m31817281:Benoît Fernandez] ❌ **Comparison Failed**
 
-Could not compare tickets:
-- #XYZ-999: Ticket not found in project
+Could not find branches:
+- #XYZ-999: No branch found
 
-Please verify ticket keys are correct and in the same project.
+Please verify tickets have branches.
 ```
 
 ## Important Rules
 
-1. **Purpose is EVALUATION**: Find the best implementation, not flag duplicates
-2. **Source ticket is a CANDIDATE**: The source ticket competes equally - it may win or lose
-3. **Rank ALL tickets**: Include source ticket in the ranking alongside compared tickets
-4. **Similarity is POSITIVE**: For same-feature tickets, overlap means they're solving the same problem
-5. **Constitution is DYNAMIC**: Read `.specify/memory/constitution.md`, don't use hardcoded rules
-6. **Provide clear ranking**: Always identify the best implementation (may be source or another)
-7. **Actionable recommendations**: Tell the user what to do (ship X, close Y - even if Y is source)
-8. **Keep output brief**: Under 1500 characters
-9. **Include link**: Point to full report
+1. **CODE ONLY**: Never evaluate spec completeness or workflow type
+2. **Exclude specs/**: All metrics exclude `specs/**/*` folder (both ticket specs and consolidated)
+3. **Constitution = Code**: Evaluate constitution compliance in actual code, not docs
+4. **Quick-impl is valid**: A quick-impl with great code beats full-workflow with bad code
+5. **Consolidated specs awareness**: Note if `specs/specifications/` needs updating
+6. **Source competes**: Source ticket may win or lose based on code quality
+7. **Keep output brief**: Under 1500 characters
+8. **Include disclaimer**: "Specs/workflow type NOT evaluated"
 
 ## Error Handling
 
 - **No references**: "Please specify tickets to compare (e.g., #AIB-124)"
 - **Too many references**: "Maximum 5 tickets per comparison"
-- **Cross-project**: "All tickets must be in the same project"
-- **Self-reference**: Exclude source ticket from count
-- **Ticket not found**: List specific tickets that couldn't be resolved
+- **No branch found**: List specific tickets without branches
+- **Same ticket**: Exclude source from comparison list
