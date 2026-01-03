@@ -211,9 +211,21 @@ jobs:
             rm -f "specs/${{ inputs.branch }}/.ai-board-result.md" || true
           fi
 
-          # Execute Claude CLI command with comment as plain text argument
+          # Detect skill command in comment and route appropriately
           echo "🚀 Executing Claude command..."
-          OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"${{ inputs.comment }}\"" || true)
+          COMMENT="${{ inputs.comment }}"
+
+          # Route /compare command to dedicated skill (designed for comment usage)
+          # Note: /verify and /iterate-verify are launched by their own workflows, not via comments
+          if echo "$COMMENT" | grep -qE "/compare\b"; then
+            echo "📌 Detected /compare command - routing to compare skill"
+            # Extract arguments after /compare (e.g., "#AIB-133 #AIB-134")
+            ARGS=$(echo "$COMMENT" | sed -n 's/.*\/compare[[:space:]]*\(.*\)/\1/p')
+            OUTPUT=$(claude --dangerously-skip-permissions "/compare \"$ARGS\"" || true)
+          else
+            echo "📌 Using ai-board-assist for general request"
+            OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"$COMMENT\"" || true)
+          fi
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
           # Remove ```json ... ``` blocks as they cause "Invalid format" errors
