@@ -143,11 +143,11 @@ The user interface provides an intuitive, modern experience for managing tickets
 **Constitution Viewer Modal**:
 - Opened from project settings "Constitution" button
 - Three tabs: View, Edit, History
-- View tab displays rendered markdown content
+- View tab displays rendered GitHub Flavored Markdown (GFM) content
 - Edit tab provides raw markdown textarea with save/cancel
 - History tab shows commit list with diff viewer
 - Unsaved changes prompt when closing with edits
-- Same markdown rendering as ticket documentation viewer
+- Same GFM rendering as ticket documentation viewer (supports tables, task lists, strikethrough)
 
 **Closing Methods**:
 - Close button (X) in header

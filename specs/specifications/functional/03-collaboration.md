@@ -64,13 +64,16 @@ The Comments tab displays a unified timeline that interleaves comments with work
 
 ### Markdown Support
 
-Comments support rich text formatting using Markdown:
+Comments support rich text formatting using GitHub Flavored Markdown (GFM):
 
 - **Bold** and *italic* text
 - Links to external resources
 - Code blocks for technical content
 - Ordered and unordered lists
 - Headings for structure
+- Tables with aligned columns
+- Strikethrough text
+- Task lists for tracking work items
 
 **Security**:
 - HTML content is automatically escaped
