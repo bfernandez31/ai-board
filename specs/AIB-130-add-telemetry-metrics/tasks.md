@@ -18,9 +18,9 @@
 
 **Purpose**: Verify prerequisites and existing infrastructure
 
-- [ ] T001 Verify existing `TicketTelemetry` interface in lib/types/comparison.ts matches schema from data-model.md
-- [ ] T002 [P] Verify existing telemetry aggregation utilities in lib/comparison/telemetry-extractor.ts
-- [ ] T003 [P] Verify existing jobs API endpoint at app/api/projects/[projectId]/tickets/[id]/jobs/route.ts returns telemetry fields
+- [X] T001 Verify existing `TicketTelemetry` interface in lib/types/comparison.ts matches schema from data-model.md
+- [X] T002 [P] Verify existing telemetry aggregation utilities in lib/comparison/telemetry-extractor.ts
+- [X] T003 [P] Verify existing jobs API endpoint at app/api/projects/[projectId]/tickets/[id]/jobs/route.ts returns telemetry fields
 
 ---
 
@@ -30,8 +30,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add `.telemetry-context.json` pattern to specs/.gitignore to exclude runtime artifacts
-- [ ] T005 Verify WORKFLOW_API_TOKEN authentication pattern in existing ai-board-assist.yml workflow
+- [X] T004 Add `.telemetry-context.json` pattern to specs/.gitignore to exclude runtime artifacts
+- [X] T005 Verify WORKFLOW_API_TOKEN authentication pattern in existing ai-board-assist.yml workflow
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -47,12 +47,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] Create fetch-telemetry.sh script at .github/scripts/fetch-telemetry.sh with ticket parsing and API calls
-- [ ] T007 [US3] Add "Fetch Telemetry for Compare" step to .github/workflows/ai-board-assist.yml before Claude execution
-- [ ] T008 [US3] Implement ticket key extraction logic using regex pattern `#[A-Z0-9]{3,6}-[0-9]+` in fetch-telemetry.sh
-- [ ] T009 [US3] Implement search API call to resolve ticket key to ticket ID in fetch-telemetry.sh
-- [ ] T010 [US3] Implement jobs API call and jq aggregation for telemetry data in fetch-telemetry.sh
-- [ ] T011 [US3] Write aggregated telemetry to specs/$BRANCH/.telemetry-context.json in fetch-telemetry.sh
+- [X] T006 [US3] Create fetch-telemetry.sh script at .github/scripts/fetch-telemetry.sh with ticket parsing and API calls
+- [X] T007 [US3] Add "Fetch Telemetry for Compare" step to .github/workflows/ai-board-assist.yml before Claude execution
+- [X] T008 [US3] Implement ticket key extraction logic using regex pattern `#[A-Z0-9]{3,6}-[0-9]+` in fetch-telemetry.sh
+- [X] T009 [US3] Implement search API call to resolve ticket key to ticket ID in fetch-telemetry.sh
+- [X] T010 [US3] Implement jobs API call and jq aggregation for telemetry data in fetch-telemetry.sh
+- [X] T011 [US3] Write aggregated telemetry to specs/$BRANCH/.telemetry-context.json in fetch-telemetry.sh
 
 **Checkpoint**: Workflow generates telemetry context file for /compare commands
 
@@ -66,10 +66,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Update .claude/commands/compare.md to read specs/$BRANCH/.telemetry-context.json in Step 6 (Aggregate Telemetry)
-- [ ] T013 [US1] Add instructions for parsing JSON telemetry data into Metrics Comparison table in compare.md
-- [ ] T014 [US1] Update Metrics Comparison table format to include Cost and Duration columns in compare.md
-- [ ] T015 [US1] Add telemetry data usage instructions for Efficiency criterion (10% weight) calculation in compare.md
+- [X] T012 [US1] Update .claude/commands/compare.md to read specs/$BRANCH/.telemetry-context.json in Step 6 (Aggregate Telemetry)
+- [X] T013 [US1] Add instructions for parsing JSON telemetry data into Metrics Comparison table in compare.md
+- [X] T014 [US1] Update Metrics Comparison table format to include Cost and Duration columns in compare.md
+- [X] T015 [US1] Add telemetry data usage instructions for Efficiency criterion (10% weight) calculation in compare.md
 
 **Checkpoint**: Compare command displays telemetry metrics when context file exists
 
@@ -83,10 +83,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Add error handling in fetch-telemetry.sh for ticket-not-found case (empty telemetry with hasData: false)
-- [ ] T017 [US2] Add error handling in fetch-telemetry.sh for API timeout/failure (retry once, then empty telemetry)
-- [ ] T018 [US2] Add instructions in compare.md for handling hasData: false tickets (display "N/A")
-- [ ] T019 [US2] Add instructions in compare.md for missing context file scenario (proceed without telemetry)
+- [X] T016 [US2] Add error handling in fetch-telemetry.sh for ticket-not-found case (empty telemetry with hasData: false)
+- [X] T017 [US2] Add error handling in fetch-telemetry.sh for API timeout/failure (retry once, then empty telemetry)
+- [X] T018 [US2] Add instructions in compare.md for handling hasData: false tickets (display "N/A")
+- [X] T019 [US2] Add instructions in compare.md for missing context file scenario (proceed without telemetry)
 
 **Checkpoint**: Comparisons gracefully degrade when telemetry unavailable
 
@@ -96,10 +96,10 @@
 
 **Purpose**: Integration testing and validation
 
-- [ ] T020 Create integration test at tests/integration/telemetry/context-file-schema.test.ts validating TelemetryContextFile structure
-- [ ] T021 [P] Create unit test at tests/unit/telemetry/aggregation.test.ts for jq aggregation logic documentation
-- [ ] T022 Run quickstart.md validation checklist to verify all success criteria met
-- [ ] T023 Verify end-to-end flow: workflow → context file → compare command → metrics table
+- [X] T020 Create integration test at tests/unit/telemetry/context-file-schema.test.ts validating TelemetryContextFile structure
+- [X] T021 [P] Create unit test at tests/unit/telemetry/aggregation.test.ts for jq aggregation logic documentation
+- [X] T022 Run quickstart.md validation checklist to verify all success criteria met
+- [X] T023 Verify end-to-end flow: workflow → context file → compare command → metrics table
 
 ---
 

@@ -65,3 +65,6 @@ fix-*.py
 
 # temporary ticket assets (uploaded to Cloudinary)
 ticket-assets/
+
+# telemetry context (runtime artifact for /compare commands)
+specs/**/.telemetry-context.json
