@@ -51,7 +51,7 @@ for TICKET_KEY in $TICKETS; do
   # Step 1: Resolve ticket key to ticket ID via search API
   SEARCH_URL="${APP_URL}/api/projects/${PROJECT_ID}/tickets/search?q=${TICKET_KEY}"
 
-  SEARCH_RESULT=$(curl -s -w "\n%{http_code}" \
+  SEARCH_RESULT=$(curl -sL -w "\n%{http_code}" \
     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
     "$SEARCH_URL" 2>/dev/null) || {
     echo "⚠️ API request failed for $TICKET_KEY, using empty telemetry"
@@ -96,7 +96,7 @@ for TICKET_KEY in $TICKETS; do
   # Step 2: Fetch jobs for the ticket
   JOBS_URL="${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/jobs"
 
-  JOBS_RESULT=$(curl -s -w "\n%{http_code}" \
+  JOBS_RESULT=$(curl -sL -w "\n%{http_code}" \
     -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
     "$JOBS_URL" 2>/dev/null) || {
     echo "⚠️ Jobs API request failed for $TICKET_KEY, using empty telemetry"
