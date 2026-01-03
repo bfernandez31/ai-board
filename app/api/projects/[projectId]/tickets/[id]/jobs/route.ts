@@ -101,14 +101,23 @@ export async function GET(
       );
     }
 
-    // Fetch all jobs for the ticket
+    // Fetch all jobs for the ticket with full telemetry
     const jobs = await prisma.job.findMany({
       where: { ticketId: ticketId },
       select: {
         id: true,
         command: true,
         status: true,
+        startedAt: true,
         completedAt: true,
+        inputTokens: true,
+        outputTokens: true,
+        cacheReadTokens: true,
+        cacheCreationTokens: true,
+        costUsd: true,
+        durationMs: true,
+        model: true,
+        toolsUsed: true,
       },
       orderBy: { id: 'asc' },
     });

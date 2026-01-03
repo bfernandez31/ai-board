@@ -205,6 +205,14 @@ The detail modal:
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
 
+**Real-Time Data Synchronization**:
+- Modal automatically reflects ticket updates when jobs reach terminal states (COMPLETED, FAILED, CANCELLED)
+- Branch name appears immediately after workflow creates it (no page refresh required)
+- Documentation buttons (Spec, Plan, Tasks) become visible as soon as corresponding jobs complete
+- Stats tab updates in real-time with latest job telemetry data
+- Changes occur automatically via job status polling system (2-second interval)
+- Modal content stays synchronized whether opened before or after job completion
+
 **Focus Management**:
 - Modal maintains proper focus for keyboard accessibility
 - Action buttons (Edit Policy, Duplicate) do not receive automatic focus on modal open
@@ -251,6 +259,8 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 - Stats automatically update as jobs complete via existing 2-second job polling
 - No manual refresh required
 - Metrics recalculate automatically when job data changes
+- Modal content (including Stats tab) updates automatically when jobs transition to terminal states
+- Real-time synchronization ensures branch name, documentation buttons, and job telemetry are always current
 
 ### Closing the Modal
 

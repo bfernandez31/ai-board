@@ -116,12 +116,19 @@ export function useJobPolling(
       return isTerminal && !wasTerminal;
     });
 
-    // Invalidate tickets cache when workflow completes
+    // Invalidate tickets and ticket jobs cache when workflow completes
     if (newlyTerminal.length > 0) {
       console.log('[useJobPolling] Detected terminal jobs:', newlyTerminal);
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(projectId),
       });
+
+      // Invalidate ticket jobs for each terminal job to refresh telemetry data
+      for (const job of newlyTerminal) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.ticketJobs(projectId, job.ticketId),
+        });
+      }
     }
 
     // Update previous state for next comparison

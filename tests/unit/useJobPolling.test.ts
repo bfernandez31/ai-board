@@ -147,10 +147,89 @@ describe('useJobPolling - Cache Invalidation', () => {
 
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalled(), { timeout: 1000 });
 
-    // Should only invalidate once (even though multiple jobs transitioned)
-    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    // Should invalidate tickets cache once
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['projects', 1, 'tickets'],
+    });
+  });
+
+  it('should invalidate ticketJobs cache when job transitions to terminal status', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    let callCount = 0;
+    global.fetch = vi.fn(() => {
+      callCount++;
+      const jobs: JobStatusDto[] = callCount === 1
+        ? [{ id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() }]
+        : [{ id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() }];
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ jobs }),
+      } as Response);
+    });
+
+    const { result } = renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) => (
+        React.createElement(QueryClientProvider, { client: queryClient }, children)
+      ),
+    });
+
+    // Wait for first poll (RUNNING status)
+    await waitFor(() => expect(result.current.jobs.length).toBe(1), { timeout: 1000 });
+
+    // Wait for second poll (COMPLETED status)
+    await waitFor(() => expect(result.current.jobs[0]?.status).toBe('COMPLETED'), { timeout: 1000 });
+
+    // Verify ticketJobs cache was invalidated for the terminal job's ticket
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10, 'jobs'],
+    }), { timeout: 1000 });
+  });
+
+  it('should invalidate ticketJobs for each terminal job in multiple jobs scenario', async () => {
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    let callCount = 0;
+    global.fetch = vi.fn(() => {
+      callCount++;
+      const jobs: JobStatusDto[] = callCount === 1
+        ? [
+            { id: 1, ticketId: 10, status: 'RUNNING', updatedAt: new Date().toISOString() },
+            { id: 2, ticketId: 20, status: 'RUNNING', updatedAt: new Date().toISOString() },
+          ]
+        : [
+            { id: 1, ticketId: 10, status: 'COMPLETED', updatedAt: new Date().toISOString() },
+            { id: 2, ticketId: 20, status: 'FAILED', updatedAt: new Date().toISOString() },
+          ];
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ jobs }),
+      } as Response);
+    });
+
+    renderHook(() => useJobPolling(1, 100), {
+      wrapper: ({ children }) => (
+        React.createElement(QueryClientProvider, { client: queryClient }, children)
+      ),
+    });
+
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(3), { timeout: 1000 });
+
+    // Should invalidate tickets once
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets'],
+    });
+
+    // Should invalidate ticketJobs for ticket 10
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 10, 'jobs'],
+    });
+
+    // Should invalidate ticketJobs for ticket 20
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['projects', 1, 'tickets', 20, 'jobs'],
     });
   });
 });

@@ -6,7 +6,7 @@ import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarC
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
-import type { Job } from '@prisma/client';
+import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { TicketStats } from '@/components/ticket/ticket-stats';
 import {
   Dialog,
@@ -109,7 +109,7 @@ interface TicketDetailModalProps {
   jobs?: TicketJob[];
 
   /** Full job data with telemetry fields for Stats tab display */
-  fullJobs?: Job[];
+  fullJobs?: TicketJobWithTelemetry[];
 }
 
 /**
