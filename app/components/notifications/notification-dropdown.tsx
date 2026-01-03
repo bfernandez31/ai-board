@@ -127,7 +127,7 @@ export function NotificationDropdown() {
       </div>
 
       {/* Content */}
-      <div className="max-h-[calc(100vh-200px)] min-h-[200px] sm:max-h-[400px]">
+      <div className="max-h-[50vh] min-h-[200px] sm:max-h-[400px]">
         <ScrollArea className="h-full">
           {error ? (
             <div className="p-4 flex flex-col items-center gap-2 text-center">
