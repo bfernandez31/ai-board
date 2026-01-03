@@ -124,8 +124,9 @@ for TICKET_KEY in $TICKETS; do
   fi
 
   # Step 3: Aggregate telemetry from COMPLETED jobs
-  # Use heredoc to preserve jq filter with // operators
-  JQ_FILTER=$(cat <<'JQEOF'
+  # Write jq filter to temp file to avoid shell quoting issues with // operator
+  JQ_FILTER_FILE=$(mktemp)
+  cat > "$JQ_FILTER_FILE" <<'JQEOF'
 {
   ticketKey: $key,
   inputTokens: ([.[] | select(.status == "COMPLETED") | .inputTokens // 0] | add) // 0,
@@ -140,8 +141,8 @@ for TICKET_KEY in $TICKETS; do
   hasData: (([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0) > 0
 }
 JQEOF
-)
-  TELEMETRY=$(echo "$JOBS_BODY" | jq --arg key "$TICKET_KEY" "$JQ_FILTER")
+  TELEMETRY=$(echo "$JOBS_BODY" | jq --arg key "$TICKET_KEY" -f "$JQ_FILTER_FILE")
+  rm -f "$JQ_FILTER_FILE"
 
   JOB_COUNT=$(echo "$TELEMETRY" | jq -r '.jobCount')
   COST=$(echo "$TELEMETRY" | jq -r '.costUsd')
