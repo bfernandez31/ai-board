@@ -83,11 +83,10 @@ export function useDeleteTicket(projectId: number) {
       );
 
       // Optimistically remove ticket from cache
-      // AIB-93: Ensure we always return an array, even if old is undefined
       queryClient.setQueryData<Ticket[]>(
         queryKeys.projects.tickets(projectId),
         (old) => {
-          if (!old) return [];
+          if (!old || !Array.isArray(old)) return [];
           return old.filter((t) => t.id !== ticketId);
         }
       );
