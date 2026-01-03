@@ -74,42 +74,73 @@ Extract ticket keys from $ARGUMENTS using regex `/#([A-Z0-9]{3,6}-\d+)/g`.
 - All tickets must be in same project
 - Tickets must exist with accessible branches
 
-### Step 2: Resolve Branches
+### ⚠️ CRITICAL Step 2: Resolve Ticket Sources
 
-For each referenced ticket, resolve the branch name:
+For each referenced ticket, determine where its specs live using this **fallback chain**:
 
-1. **Pattern search**: `git branch -a | grep {ticketKey}` to find branch name
-2. **Merge analysis**: `git log --merges --grep={ticketKey}` for merged tickets (specs on main)
-3. **Unavailable**: Report if ticket branch cannot be found
+#### Resolution Order (follow in sequence):
 
-Example:
+**1. Try active branch first**:
 ```bash
-# Find branch for AIB-124
-git branch -a | grep AIB-124
+git branch -a | grep {ticketKey}
+# Example: git branch -a | grep AIB-124
 # Output: remotes/origin/AIB-124-some-description
 ```
+→ If found: specs are on that branch, use `git show origin/{branch}:specs/{branch}/spec.md`
+
+**2. If no branch, check specs folder on main** (merged/deleted branch):
+```bash
+# Check if specs exist on main for this ticket
+git show origin/main:specs/ 2>/dev/null | grep {ticketKey}
+# Or check local specs folder
+ls specs/ | grep {ticketKey}
+```
+→ If found: specs were merged to main, use `cat specs/{folder}/spec.md` or `git show origin/main:specs/{folder}/spec.md`
+
+**3. If neither branch nor specs exist** → Ticket does not exist, report error
+
+**REQUIRED - Run this for EACH ticket reference**:
+```bash
+# Step 1: Try branch
+BRANCH=$(git branch -a | grep "AIB-124" | head -1 | sed 's/.*\///')
+
+# Step 2: If no branch, try specs folder
+if [ -z "$BRANCH" ]; then
+  SPEC_FOLDER=$(ls specs/ 2>/dev/null | grep "AIB-124" | head -1)
+fi
+
+# Step 3: If neither exists, ticket not found
+```
+
+**Validation Gate**: Before proceeding to Step 3, you MUST have for EACH ticket:
+- [ ] Source type: `branch` OR `main-specs` OR `not-found`
+- [ ] If branch: the full branch name
+- [ ] If main-specs: the specs folder name
+- [ ] If not-found: report error and stop
 
 ### Step 3: Load Specifications
 
-**IMPORTANT**: Each ticket has its specs on ITS OWN BRANCH. You must use `git show` to read files from other branches.
+**⛔ PREREQUISITE**: You MUST have completed Step 2 and know the source type for ALL tickets.
 
-**For source ticket** (current branch):
+Use the source type determined in Step 2 to load specs:
+
+**For source ticket** (current branch - always available):
 ```bash
 cat specs/$BRANCH/spec.md
 ```
 
-**For compared tickets** (other branches):
+**For compared tickets with active branch** (source type: `branch`):
 ```bash
-# First, find the branch name
-TICKET_BRANCH=$(git branch -a | grep "AIB-124" | head -1 | sed 's/.*\///')
-
-# Then read spec from that branch using git show
+# Use the branch name from Step 2
 git show origin/$TICKET_BRANCH:specs/$TICKET_BRANCH/spec.md
 ```
 
-**For merged tickets** (specs on main):
+**For compared tickets with merged/deleted branch** (source type: `main-specs`):
 ```bash
-git show origin/main:specs/{ticket-branch}/spec.md
+# Specs are on main, use the folder name from Step 2
+cat specs/$SPEC_FOLDER/spec.md
+# Or if on a different branch:
+git show origin/main:specs/$SPEC_FOLDER/spec.md
 ```
 
 Extract structured sections from each:
