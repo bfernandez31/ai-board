@@ -81,6 +81,12 @@ export async function dispatchWorkflow(params: {
 - **Repository Checkout**: Checks out external project repository
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
+- **Telemetry Integration**: For `/compare` commands:
+  1. Extracts ticket keys from comment (e.g., `#ABC-123 #ABC-124`)
+  2. Calls telemetry API: `GET /api/projects/{projectId}/telemetry?ticketKeys=ABC-123,ABC-124`
+  3. Stores telemetry JSON in `.telemetry-context.json` in spec directory
+  4. Claude command reads telemetry data during comparison analysis
+  5. Includes cost/efficiency metrics in comparison report
 
 **Deploy Preview** (`.github/workflows/deploy-preview.yml`):
 - **Trigger**: `workflow_dispatch`

@@ -312,11 +312,13 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 - Test coverage ratio
 
 **Cost & Telemetry**:
-- Total input/output tokens consumed
-- USD cost from job telemetry
-- Duration in milliseconds
+- Total input/output tokens consumed (input, output, cache read, cache creation)
+- USD cost aggregated from all completed jobs
+- Total duration in milliseconds
 - Models used (claude-sonnet-4-5, etc.)
 - Tools used (Edit, Read, Bash, etc.)
+- Number of completed jobs per ticket
+- Fetched via telemetry API for accurate cross-ticket comparison
 
 **Constitution Compliance** (Dynamic):
 - Reads project's `.specify/memory/constitution.md` file dynamically

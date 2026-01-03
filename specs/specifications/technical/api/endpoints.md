@@ -1885,6 +1885,84 @@ env:
 - Multiple batches may be received for a single job (metrics are aggregated)
 - If no job_id in attributes, telemetry is accepted but not stored
 
+### GET /api/projects/:projectId/telemetry
+
+Get aggregated telemetry metrics for multiple tickets (comparison endpoint).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `ticketKeys` (string, required): Comma-separated list of ticket keys (e.g., "ABC-123,ABC-124")
+  - Minimum: 1 ticket key
+  - Maximum: 10 ticket keys per request
+
+**Response** (200 OK):
+```json
+{
+  "ABC-123": {
+    "inputTokens": 45000,
+    "outputTokens": 12000,
+    "cacheReadTokens": 5000,
+    "cacheCreationTokens": 2000,
+    "costUsd": 0.45,
+    "durationMs": 180000,
+    "models": ["claude-sonnet-4-5-20250929"],
+    "toolsUsed": ["Edit", "Bash", "Read", "Write"],
+    "jobCount": 3
+  },
+  "ABC-124": {
+    "inputTokens": 38000,
+    "outputTokens": 10000,
+    "cacheReadTokens": 4000,
+    "cacheCreationTokens": 1500,
+    "costUsd": 0.38,
+    "durationMs": 145000,
+    "models": ["claude-sonnet-4-5-20250929"],
+    "toolsUsed": ["Edit", "Read", "Grep"],
+    "jobCount": 2
+  }
+}
+```
+
+**Fields**:
+- `inputTokens`: Total input tokens across all completed jobs
+- `outputTokens`: Total output tokens across all completed jobs
+- `cacheReadTokens`: Total cache read tokens (prompt caching)
+- `cacheCreationTokens`: Total cache creation tokens
+- `costUsd`: Total cost in USD from all completed jobs
+- `durationMs`: Total execution duration in milliseconds
+- `models`: List of unique models used (e.g., claude-sonnet-4-5-20250929)
+- `toolsUsed`: List of unique tools invoked (e.g., Edit, Read, Bash)
+- `jobCount`: Number of completed jobs for the ticket
+
+**Empty Metrics**:
+- Tickets without jobs return zero values with empty arrays
+- Tickets not found in project return zero values with empty arrays
+- Only COMPLETED jobs are included in aggregation
+
+**Errors**:
+- `400`: Validation errors
+  - Missing `ticketKeys` query parameter
+  - Invalid project ID format
+  - Too many ticket keys (>10)
+  - Empty ticket keys list
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Project not found
+- `500`: Database error
+
+**Performance**: <200ms p95 (batch query with project filter)
+
+**Use Cases**:
+- Ticket comparison workflow (fetches metrics for all compared tickets)
+- Cost analysis across related tickets
+- Efficiency comparison between implementations
+- Identifying resource-intensive tickets
+
 ## Analytics Endpoints
 
 ### GET /api/projects/:projectId/analytics
