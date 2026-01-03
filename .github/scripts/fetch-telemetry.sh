@@ -124,25 +124,46 @@ for TICKET_KEY in $TICKETS; do
   fi
 
   # Step 3: Aggregate telemetry from COMPLETED jobs
-  # Write jq filter to temp file to avoid shell quoting issues with // operator
-  JQ_FILTER_FILE=$(mktemp)
-  cat > "$JQ_FILTER_FILE" <<'JQEOF'
-{
-  ticketKey: $key,
-  inputTokens: ([.[] | select(.status == "COMPLETED") | .inputTokens // 0] | add) // 0,
-  outputTokens: ([.[] | select(.status == "COMPLETED") | .outputTokens // 0] | add) // 0,
-  cacheReadTokens: ([.[] | select(.status == "COMPLETED") | .cacheReadTokens // 0] | add) // 0,
-  cacheCreationTokens: ([.[] | select(.status == "COMPLETED") | .cacheCreationTokens // 0] | add) // 0,
-  costUsd: ([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0,
-  durationMs: ([.[] | select(.status == "COMPLETED") | .durationMs // 0] | add) // 0,
-  model: ([.[] | select(.status == "COMPLETED" and .model != null) | .model] | first) // null,
-  toolsUsed: ([.[] | select(.status == "COMPLETED") | .toolsUsed[]] | unique | sort) // [],
-  jobCount: ([.[] | select(.status == "COMPLETED")] | length) // 0,
-  hasData: (([.[] | select(.status == "COMPLETED") | .costUsd // 0] | add) // 0) > 0
-}
-JQEOF
-  TELEMETRY=$(echo "$JOBS_BODY" | jq --arg key "$TICKET_KEY" -f "$JQ_FILTER_FILE")
-  rm -f "$JQ_FILTER_FILE"
+  # Extract completed jobs first, then aggregate
+  COMPLETED_JOBS=$(echo "$JOBS_BODY" | jq '[.[] | select(.status == "COMPLETED")]')
+
+  INPUT_TOKENS=$(echo "$COMPLETED_JOBS" | jq '[.[].inputTokens | select(. != null)] | add | if . == null then 0 else . end')
+  OUTPUT_TOKENS=$(echo "$COMPLETED_JOBS" | jq '[.[].outputTokens | select(. != null)] | add | if . == null then 0 else . end')
+  CACHE_READ=$(echo "$COMPLETED_JOBS" | jq '[.[].cacheReadTokens | select(. != null)] | add | if . == null then 0 else . end')
+  CACHE_CREATE=$(echo "$COMPLETED_JOBS" | jq '[.[].cacheCreationTokens | select(. != null)] | add | if . == null then 0 else . end')
+  COST=$(echo "$COMPLETED_JOBS" | jq '[.[].costUsd | select(. != null)] | add | if . == null then 0 else . end')
+  DURATION=$(echo "$COMPLETED_JOBS" | jq '[.[].durationMs | select(. != null)] | add | if . == null then 0 else . end')
+  MODEL=$(echo "$COMPLETED_JOBS" | jq -r '[.[].model | select(. != null)] | first | if . == null then "null" else . end')
+  TOOLS=$(echo "$COMPLETED_JOBS" | jq '[.[].toolsUsed | select(. != null) | .[]] | unique | sort')
+  JOB_COUNT=$(echo "$COMPLETED_JOBS" | jq 'length')
+  HAS_DATA=$(echo "$COST" | jq '. > 0')
+
+  # Build telemetry JSON
+  TELEMETRY=$(jq -n \
+    --arg key "$TICKET_KEY" \
+    --argjson inputTokens "$INPUT_TOKENS" \
+    --argjson outputTokens "$OUTPUT_TOKENS" \
+    --argjson cacheRead "$CACHE_READ" \
+    --argjson cacheCreate "$CACHE_CREATE" \
+    --argjson cost "$COST" \
+    --argjson duration "$DURATION" \
+    --arg model "$MODEL" \
+    --argjson tools "$TOOLS" \
+    --argjson jobCount "$JOB_COUNT" \
+    --argjson hasData "$HAS_DATA" \
+    '{
+      ticketKey: $key,
+      inputTokens: $inputTokens,
+      outputTokens: $outputTokens,
+      cacheReadTokens: $cacheRead,
+      cacheCreationTokens: $cacheCreate,
+      costUsd: $cost,
+      durationMs: $duration,
+      model: (if $model == "null" then null else $model end),
+      toolsUsed: $tools,
+      jobCount: $jobCount,
+      hasData: $hasData
+    }')
 
   JOB_COUNT=$(echo "$TELEMETRY" | jq -r '.jobCount')
   COST=$(echo "$TELEMETRY" | jq -r '.costUsd')
