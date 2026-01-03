@@ -139,13 +139,16 @@ When two users modify the same ticket simultaneously:
 Clicking any ticket card opens a detail modal displaying:
 
 - **Title**: Full ticket title (large, prominent)
-- **Description**: Complete description text with markdown formatting
+- **Description**: Complete description text with GitHub Flavored Markdown (GFM) formatting
   - Renders markdown syntax as formatted content
   - Supports bold (`**text**`), italic (`*text*`), inline code (`` `code` ``)
   - Supports links (`[text](url)`) with `target="_blank"` and `rel="noopener noreferrer"`
   - Supports unordered lists (`- item`) and ordered lists (`1. item`)
   - Supports blockquotes (`> text`)
   - Supports headings (`# H1`, `## H2`, etc.)
+  - Supports GFM tables with aligned columns
+  - Supports strikethrough (`~~text~~`)
+  - Supports task lists (`- [ ]` and `- [x]`)
   - Plain text without markdown renders normally
   - Uses prose styling optimized for dark theme
 - **Stage Badge**: Current workflow stage with visual indicator

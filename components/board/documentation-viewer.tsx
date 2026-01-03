@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Pencil, History } from 'lucide-react';
@@ -214,6 +215,7 @@ export default function DocumentationViewer({
               <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                 <ReactMarkdown
                   className="text-zinc-100"
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({ node, ...props }) => (
                       <h1

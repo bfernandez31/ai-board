@@ -208,6 +208,21 @@
   - Blockquotes
   - Prose styling for dark theme via Tailwind Typography
 
+### remark-gfm
+- **Version**: ^4.0.1
+- **Purpose**: GitHub Flavored Markdown (GFM) plugin for react-markdown
+- **Features Enabled**:
+  - Tables with column alignment (left, center, right)
+  - Strikethrough text (`~~text~~`)
+  - Task lists (`- [ ]` and `- [x]`)
+  - Autolinks (URLs automatically converted to links)
+- **Integration**: Added to all ReactMarkdown components via `remarkPlugins={[remarkGfm]}` prop
+- **Locations**:
+  - `components/board/documentation-viewer.tsx` (Spec/Plan/Tasks documentation)
+  - `components/settings/constitution-viewer.tsx` (CLAUDE.md files)
+  - `components/comments/mention-display.tsx` (Comment markdown)
+  - `components/comparison/comparison-viewer.tsx` (Comparison reports)
+
 ### react-syntax-highlighter
 - **Version**: ^15.5.0
 - **Purpose**: Code syntax highlighting in markdown
@@ -384,6 +399,7 @@
 | Vitest | Latest | Unit testing |
 | @octokit/rest | ^22.0.0 | GitHub API |
 | react-markdown | ^9.0.1 | Markdown rendering |
+| remark-gfm | ^4.0.1 | GFM support for markdown |
 | date-fns | Latest | Date utilities |
 | @vercel/speed-insights | ^1.2.0 | Performance monitoring |
 

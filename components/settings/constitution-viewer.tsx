@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Pencil, History, FileText, Scroll } from 'lucide-react';
@@ -260,6 +261,7 @@ export default function ConstitutionViewer({
                 <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                   <ReactMarkdown
                     className="text-zinc-100"
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ ...props }) => (
                         <h1 className="text-3xl font-bold mb-4 text-zinc-50" {...props} />
