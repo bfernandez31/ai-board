@@ -1099,8 +1099,8 @@ Mark all notifications as read for authenticated user.
 
 Fetch all jobs for a specific ticket with full telemetry data.
 
-**Authentication**: Required (session)
-**Authorization**: Must be project owner or member
+**Authentication**: Required (session) OR Bearer token (workflow)
+**Authorization**: Must be project owner or member (session), OR valid workflow token
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID
@@ -1163,10 +1163,11 @@ Fetch all jobs for a specific ticket with full telemetry data.
 - Enables Stats tab to display telemetry metrics
 - Provides branch name for documentation button visibility
 - Invalidated automatically when jobs reach terminal states
+- **Workflow Usage**: `/compare` command fetches telemetry for comparison analysis
 
 **Errors**:
-- `401`: Not authenticated
-- `403`: User is neither project owner nor member
+- `401`: Not authenticated (session or workflow token required)
+- `403`: User is neither project owner nor member (session auth only)
 - `404`: Ticket or project not found
 
 **Performance**: <200ms p95 (indexed query on ticketId)

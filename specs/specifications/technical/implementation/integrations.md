@@ -77,8 +77,9 @@ export async function dispatchWorkflow(params: {
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
   - `ticket_id`, `stage`, `comment_content`, `job_id`, `project_id`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository
+- **Telemetry Pre-Fetch**: Executes `fetch-telemetry.sh` for `/compare` commands
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
 
@@ -231,6 +232,88 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 
 **Repository Variables**:
 - `APP_URL`: Application URL for API calls (e.g., `https://ai-board.vercel.app`)
+
+### Telemetry Context Script
+
+**Script**: `.github/scripts/fetch-telemetry.sh`
+
+**Purpose**: Pre-fetch job telemetry for tickets referenced in `/compare` commands.
+
+**Execution Context**:
+- Called by `ai-board-assist.yml` workflow before Claude execution
+- Conditional: Only runs when comment contains `/compare`
+- Runs after repository checkout, before Claude CLI execution
+
+**Process**:
+1. Parses ticket references from comment using regex: `#[A-Z0-9]{3,6}-[0-9]+`
+2. Resolves each ticket key to ticket ID via search API
+3. Fetches jobs for each ticket via jobs API (requires workflow token)
+4. Aggregates telemetry from COMPLETED jobs:
+   - Sums token counts (input, output, cache read, cache creation)
+   - Sums cost (USD) and duration (milliseconds)
+   - Extracts first model name from completed jobs
+   - Collects unique tool names across all jobs
+   - Counts completed jobs per ticket
+5. Writes aggregated data to `.telemetry-context.json` in ticket's spec directory
+
+**Output File Structure**:
+```json
+{
+  "generatedAt": "2026-01-03T10:30:00Z",
+  "tickets": {
+    "AIB-127": {
+      "ticketKey": "AIB-127",
+      "inputTokens": 15000,
+      "outputTokens": 5000,
+      "cacheReadTokens": 3000,
+      "cacheCreationTokens": 1000,
+      "costUsd": 0.125,
+      "durationMs": 180000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Edit", "Read", "Bash"],
+      "jobCount": 4,
+      "hasData": true
+    },
+    "AIB-128": {
+      "ticketKey": "AIB-128",
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "costUsd": 0,
+      "durationMs": 0,
+      "model": null,
+      "toolsUsed": [],
+      "jobCount": 0,
+      "hasData": false
+    }
+  }
+}
+```
+
+**Error Handling**:
+- API failures: Uses empty telemetry (zeros, hasData: false)
+- Missing tickets: Uses empty telemetry
+- No completed jobs: Sets jobCount: 0, hasData: false
+- Script continues on individual ticket failures (non-blocking)
+
+**Environment Requirements**:
+- `APP_URL`: Base URL for API endpoints
+- `WORKFLOW_API_TOKEN`: Bearer token for authentication
+- `PROJECT_ID`: Current project ID
+- `BRANCH`: Current ticket branch (for output file path)
+
+**Usage in Claude**:
+```bash
+# Claude reads context file during /compare execution
+cat specs/$BRANCH/.telemetry-context.json
+```
+
+**File Lifecycle**:
+- Generated: Before each `/compare` execution
+- Location: `specs/{branch}/.telemetry-context.json`
+- Ignored: `.gitignore` entry prevents commit
+- Temporary: Regenerated on every comparison request
 
 ### Multi-Repository Workflow Architecture
 

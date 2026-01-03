@@ -287,6 +287,45 @@ Users compare tickets by mentioning @ai-board with the `/compare` command and ti
 - Blocked during active AI-BOARD jobs
 - Same concurrent request protection as other AI-BOARD commands
 
+### Telemetry Context Generation
+
+Before Claude executes the `/compare` command, the workflow automatically fetches telemetry data:
+
+**Workflow Step** (`fetch-telemetry.sh`):
+1. Parses ticket references from comment (regex: `#[A-Z0-9]{3,6}-[0-9]+`)
+2. Resolves each ticket key to ticket ID via search API
+3. Fetches jobs for each ticket via jobs API
+4. Aggregates telemetry from COMPLETED jobs only
+5. Writes `.telemetry-context.json` to `specs/{branch}/` directory
+
+**Context File Structure**:
+```json
+{
+  "generatedAt": "2026-01-03T10:30:00Z",
+  "tickets": {
+    "AIB-127": {
+      "ticketKey": "AIB-127",
+      "inputTokens": 15000,
+      "outputTokens": 5000,
+      "cacheReadTokens": 3000,
+      "cacheCreationTokens": 1000,
+      "costUsd": 0.125,
+      "durationMs": 180000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Edit", "Read", "Bash"],
+      "jobCount": 4,
+      "hasData": true
+    }
+  }
+}
+```
+
+**Graceful Degradation**:
+- If ticket not found: Uses empty telemetry (all zeros, hasData: false)
+- If API fails: Uses empty telemetry
+- If no completed jobs: Uses zeros with hasData: false
+- Claude reads context file and displays "N/A" for missing data
+
 ### Comparison Analysis
 
 When comparison runs, AI analyzes **ALL tickets** (source AND compared) across multiple dimensions:
@@ -312,11 +351,12 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 - Test coverage ratio
 
 **Cost & Telemetry**:
-- Total input/output tokens consumed
-- USD cost from job telemetry
-- Duration in milliseconds
-- Models used (claude-sonnet-4-5, etc.)
-- Tools used (Edit, Read, Bash, etc.)
+- Total input/output tokens consumed (input + output + cache read + cache creation)
+- USD cost from job telemetry (aggregated across all completed jobs)
+- Duration in milliseconds (total execution time)
+- Models used (claude-sonnet-4-5-20250929, etc.)
+- Tools used (Edit, Read, Bash, Glob, Grep, etc.)
+- Data sourced from workflow-generated telemetry context file
 
 **Constitution Compliance** (Dynamic):
 - Reads project's `.specify/memory/constitution.md` file dynamically
