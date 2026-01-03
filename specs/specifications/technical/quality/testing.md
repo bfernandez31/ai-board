@@ -29,7 +29,8 @@ tests/
 │   │   ├── quick-impl-modal.test.tsx
 │   │   ├── delete-confirmation-modal.test.tsx
 │   │   ├── ticket-search.test.tsx
-│   │   └── comment-form.test.tsx
+│   │   ├── comment-form.test.tsx
+│   │   └── notification-dropdown.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts
@@ -516,6 +517,116 @@ describe('NewTicketModal', () => {
 - Prefers `getByRole()` and `getByLabelText()` for accessible queries
 - Uses `userEvent` for realistic user interactions (typing, clicking)
 - Tests behavior from user perspective, not implementation details
+- Average execution: ~10-50ms per test
+
+### Component Test with Mocked Hooks (RTL)
+
+**File**: `tests/unit/components/notification-dropdown.test.tsx`
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, userEvent, waitFor } from '@/tests/utils/component-test-utils';
+import { NotificationDropdown } from '@/app/components/notifications/notification-dropdown';
+
+// Mock external dependencies
+const mockPush = vi.fn();
+const mockParams = { projectId: '1' };
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  useParams: () => mockParams,
+}));
+
+const mockMarkAsRead = vi.fn();
+const mockMarkAllAsRead = vi.fn();
+const mockNotificationsData = {
+  notifications: [
+    {
+      id: 1,
+      projectId: 1,
+      ticketKey: 'AIB-123',
+      actorName: 'John Doe',
+      commentPreview: 'This is a test comment',
+      read: false,
+      createdAt: '2024-01-01T10:00:00Z',
+    },
+  ],
+  unreadCount: 1,
+  hasMore: false,
+};
+
+vi.mock('@/app/components/notifications/use-notifications', () => ({
+  useNotifications: vi.fn(() => ({
+    data: mockNotificationsData,
+    isLoading: false,
+    error: null,
+  })),
+  useMarkNotificationRead: vi.fn(() => ({
+    mutate: mockMarkAsRead,
+    isPending: false,
+  })),
+}));
+
+describe('NotificationDropdown', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('should render dropdown with header', () => {
+      renderWithProviders(<NotificationDropdown />);
+      expect(screen.getByText('Notifications')).toBeInTheDocument();
+    });
+
+    it('should show unread indicator for unread notifications', () => {
+      renderWithProviders(<NotificationDropdown />);
+      const unreadIndicators = screen.getAllByTestId('unread-indicator');
+      expect(unreadIndicators).toHaveLength(1);
+    });
+
+    it('should show loading state', () => {
+      mockUseNotifications.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+      });
+      renderWithProviders(<NotificationDropdown />);
+      expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Mark as Read', () => {
+    it('should call markAsRead when notification is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<NotificationDropdown />);
+
+      const notificationItems = screen.getAllByTestId('notification-item');
+      await user.click(notificationItems[0]);
+
+      await waitFor(() => {
+        expect(mockMarkAsRead).toHaveBeenCalledWith(1);
+      });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA labels', () => {
+      renderWithProviders(<NotificationDropdown />);
+      const notificationItems = screen.getAllByTestId('notification-item');
+      expect(notificationItems[0]).toHaveAttribute('role', 'button');
+      expect(notificationItems[0]).toHaveAttribute('tabIndex', '0');
+    });
+  });
+});
+```
+
+**Key Features**:
+- Mocks complex hooks (useNotifications, useRouter) for isolated testing
+- Uses `vi.mocked()` to manipulate mock return values between tests
+- Tests component states (loading, empty, error, populated)
+- Verifies accessibility attributes (role, tabIndex, aria-label)
+- Tests keyboard navigation (Enter, Space keys)
+- Tests user interactions (click, keyboard events) with `userEvent`
+- Uses `waitFor()` for async state updates and navigation
 - Average execution: ~10-50ms per test
 
 ### Unit Test

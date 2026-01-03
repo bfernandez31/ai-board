@@ -127,8 +127,7 @@ export function NotificationDropdown() {
       </div>
 
       {/* Content */}
-      <div className="max-h-[calc(100vh-200px)] min-h-[200px] sm:max-h-[400px]">
-        <ScrollArea className="h-full">
+      <ScrollArea className="h-[300px] sm:h-[400px]">
           {error ? (
             <div className="p-4 flex flex-col items-center gap-2 text-center">
               <AlertCircle className="h-8 w-8 text-destructive" />
@@ -200,8 +199,7 @@ export function NotificationDropdown() {
               })}
             </div>
           )}
-        </ScrollArea>
-      </div>
+      </ScrollArea>
 
       {/* Footer */}
       {data && data.hasMore && (
