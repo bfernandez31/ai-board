@@ -31,7 +31,9 @@ export function useProjectTickets(projectId: number) {
         throw new Error(`Failed to fetch tickets: HTTP ${response.status}`);
       }
 
-      return response.json() as Promise<TicketWithVersion[]>;
+      // API returns Record<Stage, Ticket[]>, flatten to array for cache consistency
+      const data = await response.json();
+      return Object.values(data).flat() as TicketWithVersion[];
     },
     // Data is fresh for 5 seconds
     staleTime: 5000,
@@ -66,7 +68,9 @@ export function useTicketsByStage(projectId: number) {
         throw new Error(`Failed to fetch tickets: HTTP ${response.status}`);
       }
 
-      return response.json() as Promise<TicketWithVersion[]>;
+      // API returns Record<Stage, Ticket[]>, flatten to array for cache consistency
+      const data = await response.json();
+      return Object.values(data).flat() as TicketWithVersion[];
     },
     // Transform data into stage-grouped structure
     select: (tickets): TicketsByStage => {
