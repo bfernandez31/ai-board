@@ -1,6 +1,21 @@
 import { NextRequest } from 'next/server';
 
 /**
+ * Authentication source types
+ */
+export type AuthSource = 'session' | 'workflow' | null;
+
+/**
+ * Check if request has a workflow Bearer token
+ * @param request Next.js request object
+ * @returns true if Bearer token is present (doesn't validate it)
+ */
+export function hasWorkflowToken(request: NextRequest): boolean {
+  const authHeader = request.headers.get('Authorization');
+  return authHeader?.startsWith('Bearer ') ?? false;
+}
+
+/**
  * Verify GitHub workflow authentication token
  *
  * Validates that the request comes from a GitHub Actions workflow

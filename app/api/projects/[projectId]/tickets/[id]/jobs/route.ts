@@ -3,12 +3,15 @@
  *
  * Retrieves all jobs for a specific ticket within a project.
  *
+ * Authentication: Supports both session auth (UI) and Bearer token (workflow)
+ *
  * @param request - Next.js request object
  * @param context - Route context with projectId and ticket id params
  *
  * @returns JSON array of jobs with id, command, status, completedAt fields
  *
  * @throws 400 - Invalid project or ticket ID
+ * @throws 401 - Unauthorized (invalid Bearer token)
  * @throws 403 - Ticket belongs to different project
  * @throws 404 - Project or ticket not found
  * @throws 500 - Internal server error
@@ -20,11 +23,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ProjectIdSchema } from '@/lib/validations/ticket';
-import { getProjectById } from '@/lib/db/projects';
 import { prisma } from '@/lib/db/client';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import {
+  hasWorkflowToken,
+  verifyWorkflowToken,
+} from '@/app/lib/auth/workflow-auth';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
@@ -59,14 +66,31 @@ export async function GET(
       );
     }
 
-    // Verify project exists
-    const project = await getProjectById(projectId);
-    if (!project) {
-      console.error('Project not found:', { projectId });
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
-      );
+    // Dual auth: workflow Bearer token OR session auth
+    if (hasWorkflowToken(request)) {
+      // Workflow authentication
+      const isAuthorized = await verifyWorkflowToken(request);
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
+      // Verify project exists (workflow doesn't need ownership check)
+      const projectExists = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true },
+      });
+      if (!projectExists) {
+        console.error('Project not found:', { projectId });
+        return NextResponse.json(
+          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Session authentication (UI)
+      await verifyProjectAccess(projectId);
     }
 
     // Query ticket with project-scoped validation
@@ -124,6 +148,22 @@ export async function GET(
 
     return NextResponse.json(jobs);
   } catch (error) {
+    // Handle session auth errors from verifyProjectAccess
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json(
+          { error: 'Access denied', code: 'ACCESS_DENIED' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Catch-all for unexpected errors
     console.error('Error fetching jobs:', {
       error: error instanceof Error ? error.message : 'Unknown error',
