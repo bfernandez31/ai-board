@@ -104,14 +104,38 @@ git branch -a | grep {ticketKey}
 
 **CRITICAL**: Only count actual source code changes, NOT specification files.
 
-For **ALL tickets** (source AND compared) with a branch, run:
+#### 3a: Extract SOURCE ticket key from $BRANCH
+
+The source ticket key is the prefix of the branch name before the description:
+```bash
+# Extract ticket key from branch name
+# Example: AIB-137-fix-notifications-test -> AIB-137
+SOURCE_KEY=$(echo "$BRANCH" | grep -oE '^[A-Z0-9]+-[0-9]+')
+```
+
+#### 3b: Analyze SOURCE ticket FIRST
+
+**YOU MUST analyze the source ticket using the current branch ($BRANCH)**:
+
+```bash
+# Get diff stats for SOURCE ticket (current branch)
+git diff --numstat main...origin/$BRANCH -- . ':!specs/'
+```
+
+This will show all code changes on the source ticket. **DO NOT skip this step or report 0 for source.**
+
+#### 3c: Analyze COMPARED tickets
+
+For each referenced ticket, run the same command with their branch:
 
 ```bash
 # Get diff stats EXCLUDING specs/ folder
 git diff --numstat main...{branch} -- . ':!specs/'
 ```
 
-Calculate for each ticket:
+#### 3d: Calculate metrics for ALL tickets
+
+For **EACH ticket** (source AND compared), calculate:
 - **Code lines added/removed** (excluding specs/)
 - **Source files changed** (`.ts`, `.tsx`, `.js`, `.jsx`, `.css`, etc.)
 - **Test files changed** (`*.test.ts`, `*.spec.ts`)
@@ -121,6 +145,8 @@ Calculate for each ticket:
 - `specs/**/*` (spec.md, plan.md, tasks.md, research/, etc.)
 - `.md` files in specs/
 - Any documentation artifacts
+
+**VALIDATION**: If source ticket shows 0 code changes, re-run the git diff command. The source ticket MUST have code changes if it's in VERIFY stage.
 
 ### Step 4: Read Telemetry Data (if available)
 
@@ -142,18 +168,31 @@ This JSON file contains pre-aggregated telemetry for all referenced tickets.
 
 ### Step 5: Analyze Code Implementation
 
-For **ALL tickets**, analyze the actual code changes:
+#### 5a: Analyze SOURCE ticket code
 
+**Run this command for the source ticket (current branch)**:
+```bash
+# View SOURCE ticket code changes
+git diff main...origin/$BRANCH -- . ':!specs/' | head -500
+```
+
+#### 5b: Analyze COMPARED tickets code
+
+For each referenced ticket:
 ```bash
 # View actual code changes (excluding specs)
 git diff main...{branch} -- . ':!specs/' | head -500
 ```
 
-Evaluate:
+#### 5c: Evaluate ALL tickets (including source)
+
+For **EACH ticket**, evaluate:
 1. **Code Architecture**: How is the feature structured?
 2. **Pattern Usage**: Does it follow existing codebase patterns?
 3. **Error Handling**: Are errors properly caught and handled?
 4. **Type Safety**: Are TypeScript types properly used?
+
+**IMPORTANT**: The source ticket is a COMPETITOR. Analyze it with the same rigor as compared tickets.
 
 ### Step 6: Evaluate Constitution Compliance (Code Only)
 
