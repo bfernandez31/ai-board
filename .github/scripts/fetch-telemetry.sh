@@ -34,15 +34,38 @@ fi
 # Pattern: #[A-Z0-9]{3,6}-[0-9]+ (e.g., #AIB-127, #ABC-1)
 TICKETS=$(echo "$COMMENT" | grep -oE '#[A-Z0-9]{3,6}-[0-9]+' | tr -d '#' | sort -u)
 
+# T006: Extract source ticket key from BRANCH env var
+# Pattern: AIB-138-add-telemetry-for -> AIB-138
+SOURCE_KEY=$(echo "$BRANCH" | grep -oE '^[A-Z0-9]+-[0-9]+')
+
+if [ -z "$SOURCE_KEY" ]; then
+  echo "⚠️ Could not extract source ticket key from BRANCH: $BRANCH"
+else
+  echo "📌 Source ticket: $SOURCE_KEY"
+fi
+
 if [ -z "$TICKETS" ]; then
   echo "ℹ️ No ticket references found in comment, skipping telemetry fetch"
   exit 0
 fi
 
+# T007: Add source ticket to list if not already present
+if [ -n "$SOURCE_KEY" ]; then
+  if ! echo "$TICKETS" | grep -qw "$SOURCE_KEY"; then
+    TICKETS="$SOURCE_KEY $TICKETS"
+    echo "📊 Added source ticket to telemetry list"
+  else
+    echo "📊 Source ticket already in compare list"
+  fi
+fi
+
 echo "📊 Found ticket references: $TICKETS"
 
-# Initialize telemetry JSON with generated timestamp
-TELEMETRY_JSON=$(jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{generatedAt: $ts, tickets: {}}')
+# T008: Initialize telemetry JSON with generated timestamp and sourceTicket metadata
+TELEMETRY_JSON=$(jq -n \
+  --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg src "${SOURCE_KEY:-}" \
+  '{generatedAt: $ts, sourceTicket: $src, tickets: {}}')
 
 # Process each ticket
 for TICKET_KEY in $TICKETS; do

@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-board.dev/schemas/telemetry-context-file.json",
+  "title": "TelemetryContextFile",
+  "description": "JSON file structure for pre-aggregated telemetry data used by the /compare command",
+  "type": "object",
+  "required": ["generatedAt", "sourceTicket", "tickets"],
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when telemetry was fetched"
+    },
+    "sourceTicket": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]+-[0-9]+$",
+      "description": "Ticket key of the source ticket (extracted from BRANCH env var)"
+    },
+    "tickets": {
+      "type": "object",
+      "description": "Telemetry data keyed by ticket key",
+      "additionalProperties": {
+        "$ref": "#/definitions/TicketTelemetry"
+      }
+    }
+  },
+  "definitions": {
+    "TicketTelemetry": {
+      "type": "object",
+      "required": [
+        "ticketKey",
+        "inputTokens",
+        "outputTokens",
+        "cacheReadTokens",
+        "cacheCreationTokens",
+        "costUsd",
+        "durationMs",
+        "model",
+        "toolsUsed",
+        "jobCount",
+        "hasData"
+      ],
+      "properties": {
+        "ticketKey": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]+-[0-9]+$",
+          "description": "Ticket identifier (e.g., 'AIB-127')"
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total input tokens across all completed jobs"
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total output tokens across all completed jobs"
+        },
+        "cacheReadTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total cache read tokens"
+        },
+        "cacheCreationTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total cache creation tokens"
+        },
+        "costUsd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total cost in USD"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total duration in milliseconds"
+        },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Primary model used (most frequently used across jobs)"
+        },
+        "toolsUsed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "description": "Unique tools used across all jobs (sorted alphabetically)"
+        },
+        "jobCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of completed jobs"
+        },
+        "hasData": {
+          "type": "boolean",
+          "description": "True if costUsd > 0"
+        }
+      }
+    }
+  }
+}

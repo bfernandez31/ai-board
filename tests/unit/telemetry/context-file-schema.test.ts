@@ -18,6 +18,9 @@ interface TelemetryContextFile {
   /** ISO timestamp of generation */
   generatedAt: string;
 
+  /** Source ticket key extracted from BRANCH env var */
+  sourceTicket: string;
+
   /** Telemetry data keyed by ticket key */
   tickets: Record<string, TicketTelemetry>;
 }
@@ -26,6 +29,7 @@ describe('TelemetryContextFile Schema', () => {
   it('should validate a complete context file structure', () => {
     const context: TelemetryContextFile = {
       generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-127',
       tickets: {
         'AIB-127': {
           ticketKey: 'AIB-127',
@@ -68,6 +72,7 @@ describe('TelemetryContextFile Schema', () => {
   it('should validate empty telemetry for tickets without data', () => {
     const context: TelemetryContextFile = {
       generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-128',
       tickets: {
         'AIB-128': {
           ticketKey: 'AIB-128',
@@ -97,6 +102,7 @@ describe('TelemetryContextFile Schema', () => {
   it('should support multiple tickets in a single context file', () => {
     const context: TelemetryContextFile = {
       generatedAt: '2026-01-03T14:30:00.000Z',
+      sourceTicket: 'AIB-127',
       tickets: {
         'AIB-127': {
           ticketKey: 'AIB-127',
@@ -160,6 +166,7 @@ describe('TelemetryContextFile Schema', () => {
     for (const timestamp of validTimestamps) {
       const context: TelemetryContextFile = {
         generatedAt: timestamp,
+        sourceTicket: 'AIB-100',
         tickets: {},
       };
 
@@ -205,5 +212,169 @@ describe('TelemetryContextFile Schema', () => {
 
     expect(telemetryWithoutCost.hasData).toBe(false);
     expect(telemetryWithoutCost.costUsd).toBe(0);
+  });
+
+  // T002: Schema validation test for sourceTicket field
+  it('should validate sourceTicket field is present and matches pattern', () => {
+    const context: TelemetryContextFile = {
+      generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-138',
+      tickets: {
+        'AIB-138': {
+          ticketKey: 'AIB-138',
+          inputTokens: 25000,
+          outputTokens: 12000,
+          cacheReadTokens: 5000,
+          cacheCreationTokens: 2000,
+          costUsd: 0.0789,
+          durationMs: 28000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write'],
+          jobCount: 2,
+          hasData: true,
+        },
+        'AIB-124': {
+          ticketKey: 'AIB-124',
+          inputTokens: 35000,
+          outputTokens: 18000,
+          cacheReadTokens: 8000,
+          cacheCreationTokens: 3000,
+          costUsd: 0.1023,
+          durationMs: 33000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write', 'Bash'],
+          jobCount: 3,
+          hasData: true,
+        },
+      },
+    };
+
+    // Validate sourceTicket field exists and is a string
+    expect(context.sourceTicket).toBeDefined();
+    expect(typeof context.sourceTicket).toBe('string');
+
+    // Validate sourceTicket matches pattern ^[A-Z0-9]+-[0-9]+$
+    expect(context.sourceTicket).toMatch(/^[A-Z0-9]+-[0-9]+$/);
+  });
+
+  // T003: Test for source ticket present in tickets object
+  it('should have source ticket present in tickets object', () => {
+    const context: TelemetryContextFile = {
+      generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-138',
+      tickets: {
+        'AIB-138': {
+          ticketKey: 'AIB-138',
+          inputTokens: 25000,
+          outputTokens: 12000,
+          cacheReadTokens: 5000,
+          cacheCreationTokens: 2000,
+          costUsd: 0.0789,
+          durationMs: 28000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write'],
+          jobCount: 2,
+          hasData: true,
+        },
+        'AIB-124': {
+          ticketKey: 'AIB-124',
+          inputTokens: 35000,
+          outputTokens: 18000,
+          cacheReadTokens: 8000,
+          cacheCreationTokens: 3000,
+          costUsd: 0.1023,
+          durationMs: 33000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write', 'Bash'],
+          jobCount: 3,
+          hasData: true,
+        },
+      },
+    };
+
+    // Validate sourceTicket key exists in tickets object
+    expect(context.tickets[context.sourceTicket]).toBeDefined();
+
+    // Validate the source ticket telemetry has matching ticketKey
+    expect(context.tickets[context.sourceTicket].ticketKey).toBe(context.sourceTicket);
+  });
+
+  // T004: Test for source ticket with no data (hasData: false)
+  it('should support source ticket with no completed jobs (hasData: false)', () => {
+    const context: TelemetryContextFile = {
+      generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-140',
+      tickets: {
+        'AIB-140': {
+          ticketKey: 'AIB-140',
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheCreationTokens: 0,
+          costUsd: 0,
+          durationMs: 0,
+          model: null,
+          toolsUsed: [],
+          jobCount: 0,
+          hasData: false,
+        },
+        'AIB-124': {
+          ticketKey: 'AIB-124',
+          inputTokens: 35000,
+          outputTokens: 18000,
+          cacheReadTokens: 8000,
+          cacheCreationTokens: 3000,
+          costUsd: 0.1023,
+          durationMs: 33000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write', 'Bash'],
+          jobCount: 3,
+          hasData: true,
+        },
+      },
+    };
+
+    // Source ticket can have no data (hasData: false)
+    const sourceTelemetry = context.tickets[context.sourceTicket];
+    expect(sourceTelemetry.hasData).toBe(false);
+    expect(sourceTelemetry.costUsd).toBe(0);
+    expect(sourceTelemetry.jobCount).toBe(0);
+
+    // But sourceTicket field should still be present
+    expect(context.sourceTicket).toBe('AIB-140');
+    expect(context.tickets['AIB-140']).toBeDefined();
+  });
+
+  // T005: Test for deduplication when source is in compare list
+  it('should deduplicate when source ticket is also in compare list', () => {
+    // When user runs `/compare #AIB-138` from ticket AIB-138,
+    // the source ticket should only appear once in tickets object
+    const context: TelemetryContextFile = {
+      generatedAt: new Date().toISOString(),
+      sourceTicket: 'AIB-138',
+      tickets: {
+        'AIB-138': {
+          ticketKey: 'AIB-138',
+          inputTokens: 25000,
+          outputTokens: 12000,
+          cacheReadTokens: 5000,
+          cacheCreationTokens: 2000,
+          costUsd: 0.0789,
+          durationMs: 28000,
+          model: 'claude-sonnet-4-5-20251101',
+          toolsUsed: ['Edit', 'Read', 'Write'],
+          jobCount: 2,
+          hasData: true,
+        },
+      },
+    };
+
+    // Ticket keys should be unique - no duplicates
+    const ticketKeys = Object.keys(context.tickets);
+    const uniqueKeys = [...new Set(ticketKeys)];
+    expect(ticketKeys).toEqual(uniqueKeys);
+
+    // Source ticket appears exactly once
+    expect(ticketKeys.filter((k) => k === context.sourceTicket)).toHaveLength(1);
   });
 });
