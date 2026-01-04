@@ -30,16 +30,26 @@ if [ -z "$APP_URL" ] || [ -z "$WORKFLOW_API_TOKEN" ] || [ -z "$PROJECT_ID" ] || 
   exit 1
 fi
 
+# Extract source ticket key from branch name
+# Pattern: branch starts with ticket key (e.g., AIB-137-fix-notifications)
+SOURCE_TICKET=$(echo "$BRANCH" | grep -oE '^[A-Z0-9]+-[0-9]+')
+
 # Extract ticket references from comment using regex pattern
 # Pattern: #[A-Z0-9]{3,6}-[0-9]+ (e.g., #AIB-127, #ABC-1)
 TICKETS=$(echo "$COMMENT" | grep -oE '#[A-Z0-9]{3,6}-[0-9]+' | tr -d '#' | sort -u)
+
+# Add source ticket to the list if extracted
+if [ -n "$SOURCE_TICKET" ]; then
+  TICKETS=$(echo -e "$SOURCE_TICKET\n$TICKETS" | sort -u)
+  echo "📊 Source ticket extracted from branch: $SOURCE_TICKET"
+fi
 
 if [ -z "$TICKETS" ]; then
   echo "ℹ️ No ticket references found in comment, skipping telemetry fetch"
   exit 0
 fi
 
-echo "📊 Found ticket references: $TICKETS"
+echo "📊 Found ticket references (including source): $TICKETS"
 
 # Initialize telemetry JSON with generated timestamp
 TELEMETRY_JSON=$(jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{generatedAt: $ts, tickets: {}}')
