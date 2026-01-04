@@ -18,7 +18,7 @@
 
 **Purpose**: This feature modifies existing files only. No new project structure or dependencies needed.
 
-- [ ] T001 Verify BRANCH environment variable pattern in existing workflow
+- [X] T001 Verify BRANCH environment variable pattern in existing workflow
 
 **Checkpoint**: Environment confirmed - ready for implementation
 
@@ -44,16 +44,16 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T002 [US1] Add schema validation test for sourceTicket field in tests/unit/telemetry/context-file-schema.test.ts
-- [ ] T003 [P] [US1] Add test for source ticket present in tickets object in tests/unit/telemetry/context-file-schema.test.ts
-- [ ] T004 [P] [US1] Add test for source ticket with no data (hasData: false) in tests/unit/telemetry/context-file-schema.test.ts
-- [ ] T005 [P] [US1] Add test for deduplication when source is in compare list in tests/unit/telemetry/context-file-schema.test.ts
+- [X] T002 [US1] Add schema validation test for sourceTicket field in tests/unit/telemetry/context-file-schema.test.ts
+- [X] T003 [P] [US1] Add test for source ticket present in tickets object in tests/unit/telemetry/context-file-schema.test.ts
+- [X] T004 [P] [US1] Add test for source ticket with no data (hasData: false) in tests/unit/telemetry/context-file-schema.test.ts
+- [X] T005 [P] [US1] Add test for deduplication when source is in compare list in tests/unit/telemetry/context-file-schema.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Extract source ticket key from BRANCH env var in .github/scripts/fetch-telemetry.sh (after line 35)
-- [ ] T007 [US1] Add source ticket to tickets list if not already present in .github/scripts/fetch-telemetry.sh
-- [ ] T008 [US1] Add sourceTicket metadata field to TELEMETRY_JSON initialization in .github/scripts/fetch-telemetry.sh (line 45)
+- [X] T006 [US1] Extract source ticket key from BRANCH env var in .github/scripts/fetch-telemetry.sh (after line 35)
+- [X] T007 [US1] Add source ticket to tickets list if not already present in .github/scripts/fetch-telemetry.sh
+- [X] T008 [US1] Add sourceTicket metadata field to TELEMETRY_JSON initialization in .github/scripts/fetch-telemetry.sh (line 45)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - `.telemetry-context.json` includes source ticket telemetry with `sourceTicket` field
 
@@ -73,7 +73,7 @@
 
 **NOTE**: Per research.md Q5, the compare command already has logic to identify source ticket via BRANCH (Step 3a). The telemetry context file extension is transparent to the command. No implementation tasks needed for this story - the `sourceTicket` metadata from US1 enables this functionality automatically.
 
-- [ ] T009 [US2] Verify compare.md uses BRANCH extraction for source identification in .claude/commands/compare.md
+- [X] T009 [US2] Verify compare.md uses BRANCH extraction for source identification in .claude/commands/compare.md
 
 **Checkpoint**: At this point, User Story 2 should be functional - source ticket appears with "(source)" label in comparison reports
 
@@ -83,8 +83,8 @@
 
 **Purpose**: Verification and validation
 
-- [ ] T010 Run tests to verify all schema tests pass: bun run test:unit tests/unit/telemetry/
-- [ ] T011 Run quickstart.md validation steps
+- [X] T010 Run tests to verify all schema tests pass: bun run test:unit tests/unit/telemetry/
+- [X] T011 Run quickstart.md validation steps
 
 ---
 
