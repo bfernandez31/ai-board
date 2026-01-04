@@ -292,11 +292,13 @@ Users compare tickets by mentioning @ai-board with the `/compare` command and ti
 Before Claude executes the `/compare` command, the workflow automatically fetches telemetry data:
 
 **Workflow Step** (`fetch-telemetry.sh`):
-1. Parses ticket references from comment (regex: `#[A-Z0-9]{3,6}-[0-9]+`)
-2. Resolves each ticket key to ticket ID via search API
-3. Fetches jobs for each ticket via jobs API
-4. Aggregates telemetry from COMPLETED jobs only
-5. Writes `.telemetry-context.json` to `specs/{branch}/` directory
+1. Extracts source ticket key from branch name (pattern: `^[A-Z0-9]+-[0-9]+`)
+2. Parses ticket references from comment (regex: `#[A-Z0-9]{3,6}-[0-9]+`)
+3. Combines source ticket with parsed references (deduplicated)
+4. Resolves each ticket key to ticket ID via search API
+5. Fetches jobs for each ticket via jobs API
+6. Aggregates telemetry from COMPLETED jobs only
+7. Writes `.telemetry-context.json` to `specs/{branch}/` directory
 
 **Context File Structure**:
 ```json

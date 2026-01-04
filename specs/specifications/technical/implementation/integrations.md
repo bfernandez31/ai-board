@@ -245,16 +245,18 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 - Runs after repository checkout, before Claude CLI execution
 
 **Process**:
-1. Parses ticket references from comment using regex: `#[A-Z0-9]{3,6}-[0-9]+`
-2. Resolves each ticket key to ticket ID via search API
-3. Fetches jobs for each ticket via jobs API (requires workflow token)
-4. Aggregates telemetry from COMPLETED jobs:
+1. Extracts source ticket key from branch name (pattern: `^[A-Z0-9]+-[0-9]+`)
+2. Parses ticket references from comment using regex: `#[A-Z0-9]{3,6}-[0-9]+`
+3. Combines source ticket with parsed references (sorted and deduplicated)
+4. Resolves each ticket key to ticket ID via search API
+5. Fetches jobs for each ticket via jobs API (requires workflow token)
+6. Aggregates telemetry from COMPLETED jobs:
    - Sums token counts (input, output, cache read, cache creation)
    - Sums cost (USD) and duration (milliseconds)
    - Extracts first model name from completed jobs
    - Collects unique tool names across all jobs
    - Counts completed jobs per ticket
-5. Writes aggregated data to `.telemetry-context.json` in ticket's spec directory
+7. Writes aggregated data to `.telemetry-context.json` in ticket's spec directory
 
 **Output File Structure**:
 ```json
