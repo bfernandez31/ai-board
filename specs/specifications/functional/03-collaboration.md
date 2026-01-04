@@ -292,17 +292,40 @@ Users compare tickets by mentioning @ai-board with the `/compare` command and ti
 Before Claude executes the `/compare` command, the workflow automatically fetches telemetry data:
 
 **Workflow Step** (`fetch-telemetry.sh`):
-1. Parses ticket references from comment (regex: `#[A-Z0-9]{3,6}-[0-9]+`)
-2. Resolves each ticket key to ticket ID via search API
-3. Fetches jobs for each ticket via jobs API
-4. Aggregates telemetry from COMPLETED jobs only
-5. Writes `.telemetry-context.json` to `specs/{branch}/` directory
+1. Extracts source ticket key from BRANCH environment variable (pattern: `{KEY}-{NUM}-{description}`)
+2. Parses ticket references from comment (regex: `#[A-Z0-9]{3,6}-[0-9]+`)
+3. Adds source ticket to telemetry list if not already present in compared tickets
+4. Resolves each ticket key to ticket ID via search API
+5. Fetches jobs for each ticket via jobs API
+6. Aggregates telemetry from COMPLETED jobs only
+7. Writes `.telemetry-context.json` to `specs/{branch}/` directory with source ticket metadata
+
+**Source Ticket Inclusion**:
+- Source ticket (ticket from which comparison is triggered) automatically included in telemetry
+- Uses BRANCH environment variable to extract ticket key
+- Avoids duplication if source ticket also appears in compare list
+- Enables complete cost analysis including the source implementation
+- Source ticket clearly identified via `sourceTicket` metadata field
 
 **Context File Structure**:
 ```json
 {
   "generatedAt": "2026-01-03T10:30:00Z",
+  "sourceTicket": "AIB-138",
   "tickets": {
+    "AIB-138": {
+      "ticketKey": "AIB-138",
+      "inputTokens": 12000,
+      "outputTokens": 4500,
+      "cacheReadTokens": 2500,
+      "cacheCreationTokens": 800,
+      "costUsd": 0.110,
+      "durationMs": 160000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Edit", "Read", "Bash"],
+      "jobCount": 3,
+      "hasData": true
+    },
     "AIB-127": {
       "ticketKey": "AIB-127",
       "inputTokens": 15000,
