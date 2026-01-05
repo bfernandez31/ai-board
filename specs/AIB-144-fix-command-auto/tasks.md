@@ -28,8 +28,8 @@ This feature modifies existing files only; no new project structure or dependenc
 
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-- [ ] T001 Review existing autocomplete implementation in components/comments/mention-input.tsx
-- [ ] T002 Review existing tests in tests/unit/components/command-autocomplete.test.tsx
+- [x] T001 Review existing autocomplete implementation in components/comments/mention-input.tsx
+- [x] T002 Review existing tests in tests/unit/components/command-autocomplete.test.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -45,13 +45,13 @@ This feature modifies existing files only; no new project structure or dependenc
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T003 [P] [US3] Create test file tests/unit/components/mention-input.test.tsx with test setup and mock data
-- [ ] T004 [P] [US3] Add test case "should close command dropdown when space is typed after /" in tests/unit/components/mention-input.test.tsx
-- [ ] T005 [P] [US3] Add test case "should close command dropdown when space is typed after partial command" in tests/unit/components/mention-input.test.tsx
+- [x] T003 [P] [US3] Create test file tests/unit/components/mention-input.test.tsx with test setup and mock data
+- [x] T004 [P] [US3] Add test case "should close command dropdown when space is typed after /" in tests/unit/components/mention-input.test.tsx
+- [x] T005 [P] [US3] Add test case "should close command dropdown when space is typed after partial command" in tests/unit/components/mention-input.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] Add space check `!query.includes(' ')` to command trigger logic at lines 264-270 in components/comments/mention-input.tsx
+- [x] T006 [US3] Add space check `!query.includes(' ')` to command trigger logic at lines 264-270 in components/comments/mention-input.tsx
 
 **Checkpoint**: User Story 3 complete - space closes command dropdown like other autocomplete types
 
@@ -67,13 +67,13 @@ This feature modifies existing files only; no new project structure or dependenc
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T007 [P] [US1] Add test case "should not re-trigger autocomplete after command selection" in tests/unit/components/mention-input.test.tsx
-- [ ] T008 [P] [US1] Add test case "should insert command with trailing space after selection" in tests/unit/components/mention-input.test.tsx
+- [x] T007 [P] [US1] Add test case "should not re-trigger autocomplete after command selection" in tests/unit/components/mention-input.test.tsx
+- [x] T008 [P] [US1] Add test case "should insert command with trailing space after selection" in tests/unit/components/mention-input.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Verify existing handleCommandSelect behavior correctly closes dropdown and moves cursor in components/comments/mention-input.tsx
-- [ ] T010 [US1] Verify existing regex pattern prevents re-triggering after command selection in components/comments/mention-input.tsx
+- [x] T009 [US1] Verify existing handleCommandSelect behavior correctly closes dropdown and moves cursor in components/comments/mention-input.tsx
+- [x] T010 [US1] Verify existing regex pattern prevents re-triggering after command selection in components/comments/mention-input.tsx
 
 **Checkpoint**: User Story 1 complete - command selection behavior is robust and does not re-trigger
 
@@ -89,15 +89,15 @@ This feature modifies existing files only; no new project structure or dependenc
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US2] Add test case "should shift dropdown left when near right edge" in tests/unit/components/mention-input.test.tsx
-- [ ] T012 [P] [US2] Add test case "should flip dropdown above cursor when near bottom edge" in tests/unit/components/mention-input.test.tsx
-- [ ] T013 [P] [US2] Add test case "should use default position when in center of viewport" in tests/unit/components/mention-input.test.tsx
+- [x] T011 [P] [US2] Add test case "should shift dropdown left when near right edge" in tests/unit/components/mention-input.test.tsx
+- [x] T012 [P] [US2] Add test case "should flip dropdown above cursor when near bottom edge" in tests/unit/components/mention-input.test.tsx
+- [x] T013 [P] [US2] Add test case "should use default position when in center of viewport" in tests/unit/components/mention-input.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add calculateBoundedPosition function after getCaretCoordinates function in components/comments/mention-input.tsx
-- [ ] T015 [US2] Update useEffect position calculation to use calculateBoundedPosition at lines 480-490 in components/comments/mention-input.tsx
-- [ ] T016 [US2] Add getBoundingClientRect call for textarea reference in components/comments/mention-input.tsx
+- [x] T014 [US2] Add calculateBoundedPosition function after getCaretCoordinates function in components/comments/mention-input.tsx
+- [x] T015 [US2] Update useEffect position calculation to use calculateBoundedPosition at lines 480-490 in components/comments/mention-input.tsx
+- [x] T016 [US2] Add getBoundingClientRect call for textarea reference in components/comments/mention-input.tsx
 
 **Checkpoint**: User Story 2 complete - dropdowns stay within visible viewport bounds
 
@@ -107,10 +107,10 @@ This feature modifies existing files only; no new project structure or dependenc
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T017 Run all autocomplete tests via `bun run test:unit -- --grep "autocomplete"`
-- [ ] T018 Run all MentionInput tests via `bun run test:unit -- --grep "MentionInput"`
-- [ ] T019 Run type-check via `bun run type-check`
-- [ ] T020 Verify no regression in existing ticket and mention autocomplete behavior
+- [x] T017 Run all autocomplete tests via `bun run test:unit -- --grep "autocomplete"`
+- [x] T018 Run all MentionInput tests via `bun run test:unit -- --grep "MentionInput"`
+- [x] T019 Run type-check via `bun run type-check`
+- [x] T020 Verify no regression in existing ticket and mention autocomplete behavior
 - [ ] T021 Run quickstart.md validation scenarios manually
 
 ---
