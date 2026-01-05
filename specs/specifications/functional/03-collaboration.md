@@ -192,6 +192,18 @@ After mentioning @ai-board, commands can be autocompleted for faster typing:
 - Typing / without preceding @ai-board inserts literal / character
 - Ensures commands are only used in appropriate context
 
+**Autocomplete Closing Behavior**:
+- Autocomplete dropdown automatically closes when space is typed
+- Prevents dropdown from appearing after command is completed (e.g., `@ai-board /compare `)
+- Only shows autocomplete while actively typing the command (no spaces in query)
+- Allows users to type arguments after command without interference
+
+**Positioning**:
+- Dropdown positioned below the caret at cursor location
+- Automatically adjusts position if it would overflow textarea bounds
+- Stays within textarea width to prevent horizontal overflow
+- Ensures dropdown remains fully visible during typing
+
 ### AI-BOARD Mentions
 
 **Special System User**:
