@@ -30,7 +30,8 @@ tests/
 │   │   ├── delete-confirmation-modal.test.tsx
 │   │   ├── ticket-search.test.tsx
 │   │   ├── comment-form.test.tsx
-│   │   └── notification-dropdown.test.tsx
+│   │   ├── notification-dropdown.test.tsx
+│   │   └── mention-input.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
 │   └── query-keys.test.ts

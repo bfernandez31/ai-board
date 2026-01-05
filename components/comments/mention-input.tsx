@@ -226,6 +226,42 @@ export function MentionInput({
   }, []);
 
   /**
+   * Calculate bounded position to keep dropdown within viewport
+   * Shifts dropdown left when near right edge, flips above when near bottom
+   */
+  const calculateBoundedPosition = useCallback((
+    coords: { top: number; left: number },
+    textareaRect: DOMRect
+  ): { top: number; left: number } => {
+    const dropdownWidth = 320; // w-80
+    const dropdownHeight = 200; // max-h-[200px]
+    const lineHeight = 24;
+    const buffer = 16;
+
+    // Calculate absolute viewport position
+    const absoluteTop = textareaRect.top + coords.top + lineHeight;
+    const absoluteLeft = textareaRect.left + coords.left;
+
+    let top = coords.top + lineHeight;
+    let left = coords.left;
+
+    // Check right edge overflow
+    if (absoluteLeft + dropdownWidth > window.innerWidth - buffer) {
+      left = Math.max(0, window.innerWidth - textareaRect.left - dropdownWidth - buffer);
+    }
+
+    // Check bottom edge overflow - flip above if needed
+    if (absoluteTop + dropdownHeight > window.innerHeight - buffer) {
+      const topAbove = coords.top - dropdownHeight - 8;
+      if (textareaRect.top + topAbove > 0) {
+        top = topAbove;
+      }
+    }
+
+    return { top, left };
+  }, []);
+
+  /**
    * Check if position is inside an existing mention markup
    */
   const isInsideMentionMarkup = useCallback((text: string, position: number): boolean => {
@@ -263,11 +299,14 @@ export function MentionInput({
       const aiBoardMentionPattern = /@\[[^\]]*AI-BOARD[^\]]*\]\s*$/;
       if (aiBoardMentionPattern.test(textBeforeSlash)) {
         const query = textBeforeCursor.substring(lastSlashIndex + 1);
-        setTriggerPosition(lastSlashIndex);
-        setSearchQuery(query);
-        setAutocompleteType('command');
-        setSelectedIndex(0);
-        return;
+        // Close autocomplete if query contains space (consistent with mention and ticket autocomplete)
+        if (!query.includes(' ')) {
+          setTriggerPosition(lastSlashIndex);
+          setSearchQuery(query);
+          setAutocompleteType('command');
+          setSelectedIndex(0);
+          return;
+        }
       }
     }
 
@@ -480,14 +519,12 @@ export function MentionInput({
   useEffect(() => {
     if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
       const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
+      const rect = textareaRef.current.getBoundingClientRect();
+      const boundedPosition = calculateBoundedPosition(coords, rect);
 
-      // Position below the caret with line height offset
-      setAutocompletePosition({
-        top: coords.top + 24, // Add line height
-        left: coords.left,
-      });
+      setAutocompletePosition(boundedPosition);
     }
-  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates]);
+  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateBoundedPosition]);
 
   /**
    * Auto-scroll selected item into view
