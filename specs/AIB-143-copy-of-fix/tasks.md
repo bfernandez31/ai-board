@@ -26,10 +26,10 @@ N/A - All changes are modifications to existing files.
 
 **Purpose**: Add new state and helper function that user stories depend on
 
-- [ ] T001 Add `completedCommandPosition` state variable in components/comments/mention-input.tsx
-- [ ] T002 Add `calculateViewportAwarePosition` helper function in components/comments/mention-input.tsx
+- [x] T001 Add `completedCommandPosition` state variable in components/comments/mention-input.tsx
+- [x] T002 Add `calculateViewportAwarePosition` helper function in components/comments/mention-input.tsx
 
-**Checkpoint**: Foundation ready - state and helper function are available for user story implementation
+**Checkpoint**: ✅ DONE - Foundation ready - state and helper function are available for user story implementation
 
 ---
 
@@ -41,10 +41,10 @@ N/A - All changes are modifications to existing files.
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Update `handleSelectCommand` to set `completedCommandPosition` when a command is selected in components/comments/mention-input.tsx
-- [ ] T004 [US1] Update `handleInputChange` command detection to check `completedCommandPosition` and skip re-triggering in components/comments/mention-input.tsx
+- [x] T003 [US1] Update `handleSelectCommand` to set `completedCommandPosition` when a command is selected in components/comments/mention-input.tsx
+- [x] T004 [US1] Update `handleInputChange` command detection to check `completedCommandPosition` and skip re-triggering in components/comments/mention-input.tsx
 
-**Checkpoint**: User Story 1 complete - command selection properly closes autocomplete and prevents re-triggering
+**Checkpoint**: ✅ DONE - User Story 1 complete - command selection properly closes autocomplete and prevents re-triggering
 
 ---
 
@@ -56,9 +56,9 @@ N/A - All changes are modifications to existing files.
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Add space detection check for command autocomplete in `handleInputChange` in components/comments/mention-input.tsx (matching existing @ and # behavior)
+- [x] T005 [US2] Add space detection check for command autocomplete in `handleInputChange` in components/comments/mention-input.tsx (matching existing @ and # behavior)
 
-**Checkpoint**: User Story 2 complete - typing space closes command autocomplete consistent with other autocomplete types
+**Checkpoint**: ✅ DONE - User Story 2 complete - typing space closes command autocomplete consistent with other autocomplete types
 
 ---
 
@@ -70,11 +70,11 @@ N/A - All changes are modifications to existing files.
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] Update positioning `useEffect` to call `calculateViewportAwarePosition` with textarea rect in components/comments/mention-input.tsx
-- [ ] T007 [US3] Add horizontal overflow adjustment in `calculateViewportAwarePosition` in components/comments/mention-input.tsx
-- [ ] T008 [US3] Add vertical overflow adjustment in `calculateViewportAwarePosition` in components/comments/mention-input.tsx
+- [x] T006 [US3] Update positioning `useEffect` to call `calculateViewportAwarePosition` with textarea rect in components/comments/mention-input.tsx
+- [x] T007 [US3] Add horizontal overflow adjustment in `calculateViewportAwarePosition` in components/comments/mention-input.tsx
+- [x] T008 [US3] Add vertical overflow adjustment in `calculateViewportAwarePosition` in components/comments/mention-input.tsx
 
-**Checkpoint**: User Story 3 complete - dropdowns remain visible near all modal edges
+**Checkpoint**: ✅ DONE - User Story 3 complete - dropdowns remain visible near all modal edges
 
 ---
 
@@ -82,9 +82,11 @@ N/A - All changes are modifications to existing files.
 
 **Purpose**: Cleanup and state management across all user stories
 
-- [ ] T009 Add reset logic for `completedCommandPosition` when input changes and no command trigger is found in components/comments/mention-input.tsx
-- [ ] T010 Run type-check to verify no TypeScript errors
-- [ ] T011 Run quickstart.md validation scenarios
+- [x] T009 Add reset logic for `completedCommandPosition` when input changes and no command trigger is found in components/comments/mention-input.tsx
+- [x] T010 Run type-check to verify no TypeScript errors
+- [x] T011 Run quickstart.md validation scenarios
+
+**Checkpoint**: ✅ DONE - All polish tasks complete
 
 ---
 

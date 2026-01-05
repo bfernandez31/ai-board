@@ -58,6 +58,7 @@ export function MentionInput({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [triggerPosition, setTriggerPosition] = useState<number | null>(null);
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
+  const [completedCommandPosition, setCompletedCommandPosition] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isAutocompleteOpen = autocompleteType !== 'none';
@@ -244,6 +245,36 @@ export function MentionInput({
   }, []);
 
   /**
+   * Calculate viewport-aware position for autocomplete dropdown
+   * Adjusts position to prevent overflow at modal edges
+   */
+  const calculateViewportAwarePosition = useCallback((
+    coords: { top: number; left: number },
+    textareaRect: DOMRect
+  ) => {
+    const dropdownWidth = 320;  // w-80
+    const dropdownHeight = 200; // max-h-[200px]
+
+    const absoluteLeft = textareaRect.left + coords.left;
+    const absoluteTop = textareaRect.top + coords.top + 24;
+
+    let left = coords.left;
+    let top = coords.top + 24;
+
+    // Adjust horizontal if overflowing right
+    if (absoluteLeft + dropdownWidth > window.innerWidth) {
+      left = Math.max(0, window.innerWidth - textareaRect.left - dropdownWidth - 16);
+    }
+
+    // Adjust vertical if overflowing bottom
+    if (absoluteTop + dropdownHeight > window.innerHeight) {
+      top = coords.top - dropdownHeight - 8;
+    }
+
+    return { top, left };
+  }, []);
+
+  /**
    * Handle trigger detection and autocomplete triggering
    */
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -263,11 +294,17 @@ export function MentionInput({
       const aiBoardMentionPattern = /@\[[^\]]*AI-BOARD[^\]]*\]\s*$/;
       if (aiBoardMentionPattern.test(textBeforeSlash)) {
         const query = textBeforeCursor.substring(lastSlashIndex + 1);
-        setTriggerPosition(lastSlashIndex);
-        setSearchQuery(query);
-        setAutocompleteType('command');
-        setSelectedIndex(0);
-        return;
+        // Only show autocomplete if query doesn't contain spaces (matching @ and # behavior)
+        if (!query.includes(' ')) {
+          // Check if command was already selected at this position
+          if (completedCommandPosition !== lastSlashIndex) {
+            setTriggerPosition(lastSlashIndex);
+            setSearchQuery(query);
+            setAutocompleteType('command');
+            setSelectedIndex(0);
+            return;
+          }
+        }
       }
     }
 
@@ -316,8 +353,13 @@ export function MentionInput({
       }
     }
 
-    // No trigger found, close autocomplete
+    // No trigger found, close autocomplete and reset completed command position
     setAutocompleteType('none');
+    // Reset completedCommandPosition when no command trigger is found
+    // This allows new command completions to work after the user clears the input
+    if (completedCommandPosition !== null) {
+      setCompletedCommandPosition(null);
+    }
   };
 
   /**
@@ -459,6 +501,9 @@ export function MentionInput({
 
     onChange(newValue);
 
+    // Track that command was selected at this trigger position to prevent re-triggering
+    setCompletedCommandPosition(triggerPosition);
+
     // Close autocomplete
     setAutocompleteType('none');
     setSearchQuery('');
@@ -476,18 +521,16 @@ export function MentionInput({
 
   /**
    * Update autocomplete position when it opens
+   * Uses viewport-aware positioning to prevent overflow at modal edges
    */
   useEffect(() => {
     if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
       const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
-
-      // Position below the caret with line height offset
-      setAutocompletePosition({
-        top: coords.top + 24, // Add line height
-        left: coords.left,
-      });
+      const textareaRect = textareaRef.current.getBoundingClientRect();
+      const position = calculateViewportAwarePosition(coords, textareaRect);
+      setAutocompletePosition(position);
     }
-  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates]);
+  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateViewportAwarePosition]);
 
   /**
    * Auto-scroll selected item into view
