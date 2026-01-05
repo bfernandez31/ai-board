@@ -263,11 +263,14 @@ export function MentionInput({
       const aiBoardMentionPattern = /@\[[^\]]*AI-BOARD[^\]]*\]\s*$/;
       if (aiBoardMentionPattern.test(textBeforeSlash)) {
         const query = textBeforeCursor.substring(lastSlashIndex + 1);
-        setTriggerPosition(lastSlashIndex);
-        setSearchQuery(query);
-        setAutocompleteType('command');
-        setSelectedIndex(0);
-        return;
+        // Only show autocomplete if query doesn't contain spaces (still typing the command)
+        if (!query.includes(' ')) {
+          setTriggerPosition(lastSlashIndex);
+          setSearchQuery(query);
+          setAutocompleteType('command');
+          setSelectedIndex(0);
+          return;
+        }
       }
     }
 
@@ -480,11 +483,30 @@ export function MentionInput({
   useEffect(() => {
     if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
       const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
+      const textarea = textareaRef.current;
+      const textareaRect = textarea.getBoundingClientRect();
+
+      // Calculate position relative to textarea
+      let top = coords.top + 24; // Add line height
+      let left = coords.left;
+
+      // Get the autocomplete width (320px = w-80)
+      const autocompleteWidth = 320;
+
+      // Check if autocomplete would overflow on the right side of the textarea
+      const textareaWidth = textareaRect.width;
+      if (left + autocompleteWidth > textareaWidth) {
+        // Align to the right edge of the textarea with some padding
+        left = Math.max(0, textareaWidth - autocompleteWidth - 10);
+      }
+
+      // Ensure it doesn't go beyond the left edge
+      left = Math.max(0, left);
 
       // Position below the caret with line height offset
       setAutocompletePosition({
-        top: coords.top + 24, // Add line height
-        left: coords.left,
+        top,
+        left,
       });
     }
   }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates]);
