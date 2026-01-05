@@ -509,6 +509,14 @@ Create a duplicate of an existing ticket.
 
 **Performance**: <3 seconds from API call to new ticket visible in UI
 
+**Implementation Details**:
+- Database function: `duplicateTicket()` in `lib/db/tickets.ts`
+- Uses PostgreSQL sequence for generating new ticket numbers
+- Title truncation logic: Original title limited to 92 chars before adding "Copy of " prefix (total 100 chars)
+- Attachments are shallow copied (same URLs referenced, no file duplication)
+- Frontend uses optimistic cache update with `queryClient.setQueryData()` to prepend new ticket
+- Immediate cache invalidation after optimistic update ensures consistency
+
 ### PATCH /api/projects/:projectId/tickets/:id/branch
 
 Update ticket branch name (workflow-only endpoint).

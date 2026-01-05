@@ -811,6 +811,75 @@ export function useTransitionTicket(projectId: number, ticketId: number) {
 - Invalidate jobs query (new job created)
 - Toast notifications
 
+### Duplicate Ticket Mutation
+
+**Hook** (`components/board/ticket-detail-modal.tsx` inline implementation):
+
+```typescript
+const handleDuplicate = async () => {
+  try {
+    setIsDuplicating(true);
+
+    const response = await fetch(`/api/projects/${projectId}/tickets/${ticket.id}/duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to duplicate ticket');
+    }
+
+    const newTicket = await response.json();
+
+    // Optimistically update the cache with the new ticket
+    queryClient.setQueryData(['projects', projectId, 'tickets'], (oldData: unknown) => {
+      if (!oldData || !Array.isArray(oldData)) return oldData;
+      // Add the new ticket to the beginning of the array (most recent first)
+      return [newTicket, ...oldData];
+    });
+
+    // Also invalidate to ensure fresh data from server
+    await queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'tickets'] });
+
+    toast({
+      title: 'Ticket duplicated',
+      description: `Created ${newTicket.ticketKey}`,
+    });
+
+    onOpenChange(false);
+  } catch (error) {
+    console.error('Failed to duplicate ticket:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to duplicate ticket',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsDuplicating(false);
+  }
+};
+```
+
+**Features**:
+- **Optimistic prepend**: New ticket added immediately to beginning of cache array
+- **Cache invalidation**: Ensures server data is fetched after optimistic update
+- **Modal auto-close**: Closes ticket detail modal on success
+- **Toast notifications**: Success message includes new ticket key
+- **Error resilience**: Modal stays open on error to allow retry
+- **No rollback needed**: Cache invalidation after optimistic update ensures consistency
+
+**Cache Update Strategy**:
+1. Optimistically prepend new ticket to cache array with `setQueryData()`
+2. Immediately invalidate cache with `invalidateQueries()` to trigger refetch
+3. Server response overwrites optimistic data, ensuring correctness
+4. If API fails, no rollback needed (error toast shown, modal stays open)
+
+**Rationale for Combined Approach**:
+- Immediate UI feedback (optimistic update)
+- Guaranteed consistency (invalidation refetch)
+- Simpler error handling (no rollback required)
+- Works well for create operations where rollback complexity isn't needed
+
 ### Delete Ticket Mutation
 
 **Hook** (`app/lib/hooks/mutations/useDeleteTicket.ts`):

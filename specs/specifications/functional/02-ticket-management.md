@@ -299,8 +299,9 @@ Users can create a copy of any existing ticket to reuse content for similar work
 - Tooltip displays "Duplicate ticket" on hover
 - Button shows loading state during API call
 - Button is disabled while duplication is in progress
-- Success toast notification confirms creation with ticket key
+- Success toast notification confirms creation with message "Ticket duplicated"
 - Error toast displays if duplication fails
+- Modal closes automatically on success
 
 **Title Handling**:
 - Original title prefixed with "Copy of "
@@ -321,7 +322,8 @@ Users can create a copy of any existing ticket to reuse content for similar work
 
 **Performance**:
 - Duplication completes in under 3 seconds from button click to new ticket visible
-- Optimistic UI update shows new ticket immediately
+- Cache is optimistically updated to add new ticket immediately at beginning of array
+- Server data invalidation ensures fresh data after optimistic update
 - Database operation is atomic (all-or-nothing)
 
 ## Ticket Search
