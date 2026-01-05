@@ -173,6 +173,7 @@ export type SearchTicketsInput = z.infer<typeof searchTicketsSchema>;
 - Used by `/api/projects/:projectId/tickets/search` endpoint
 - Query parameter validation before database query
 - Prevents empty searches and excessive result sets
+- Supports ticket autocomplete in comment textarea (#autocomplete)
 
 ### SearchResultSchema
 
@@ -202,6 +203,61 @@ export type SearchResponse = z.infer<typeof searchResponseSchema>;
 - **ticketKey**: Human-readable identifier (e.g., "ABC-42")
 - **title**: Ticket title for display
 - **stage**: Current workflow stage enum
+
+**Usage Context**:
+- Ticket search results in search bar
+- Ticket autocomplete dropdown in comments (#autocomplete)
+- Both use same schema for consistency
+
+## AI-BOARD Command Schemas
+
+### AIBoardCommandSchema
+
+```typescript
+export interface AIBoardCommand {
+  name: string;
+  description: string;
+}
+```
+
+**Data Structure**:
+- Static command definitions stored in `/app/lib/data/ai-board-commands.ts`
+- Commands displayed in autocomplete after @ai-board mention
+- No API endpoint; client-side filtering only
+
+**Example Commands**:
+```typescript
+export const AI_BOARD_COMMANDS: AIBoardCommand[] = [
+  {
+    name: '/compare',
+    description: 'Compare ticket implementations for best code quality',
+  },
+];
+```
+
+**Validation Rules**:
+- **name**: Must start with `/` prefix
+- **description**: Max 60 characters for dropdown display
+- Commands are user-invocable (excludes internal system commands)
+
+**Filter Function**:
+```typescript
+export function filterCommands(query: string): AIBoardCommand[] {
+  if (!query) return AI_BOARD_COMMANDS;
+
+  const q = query.toLowerCase();
+  return AI_BOARD_COMMANDS.filter(
+    (cmd) =>
+      cmd.name.toLowerCase().includes(q) ||
+      cmd.description.toLowerCase().includes(q)
+  );
+}
+```
+
+**Usage**:
+- Command autocomplete in comment textarea (/autocomplete)
+- Triggered only after @ai-board mention
+- Client-side filtering for fast responsiveness
 
 ## Comment Schemas
 

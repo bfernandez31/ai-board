@@ -203,6 +203,78 @@ export function useJobPolling(projectId: number) {
 - **2-Second Interval**: Real-time feel
 - **Cache Invalidation**: Automatically invalidates tickets and ticketJobs caches when job reaches terminal state
 
+### Ticket Search Query Hook
+
+**Hook** (`app/lib/hooks/queries/useTicketSearch.ts`):
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+import type { SearchResponse } from '@/app/lib/types/search';
+
+export function useTicketSearch(
+  projectId: number,
+  query: string,
+  options?: {
+    enabled?: boolean;
+    limit?: number;
+  }
+) {
+  const enabled = options?.enabled ?? query.length >= 2;
+  const limit = options?.limit ?? 10;
+
+  return useQuery<SearchResponse>({
+    queryKey: [...queryKeys.projects.tickets(projectId), 'search', query, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        q: query,
+        limit: String(limit),
+      });
+
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/search?${params}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to search tickets');
+      }
+
+      return response.json();
+    },
+    enabled,
+    staleTime: 1000 * 60,  // 1 minute
+  });
+}
+```
+
+**Features**:
+- **Conditional Activation**: Only runs when query is 2+ characters
+- **Configurable Limit**: Defaults to 10 results
+- **Cache Integration**: Uses hierarchical query keys
+- **Type-Safe Response**: Returns `SearchResponse` with `results` and `totalCount`
+
+**Usage in Autocomplete**:
+```typescript
+function TicketAutocomplete({ projectId, query }: Props) {
+  const { data } = useTicketSearch(projectId, query);
+
+  return (
+    <DropdownMenu>
+      {data?.results.map((ticket) => (
+        <DropdownMenuItem key={ticket.id}>
+          {ticket.ticketKey} - {ticket.title}
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenu>
+  );
+}
+```
+
+**Search Endpoint**: `/api/projects/:projectId/tickets/search`
+- Searches ticket keys and titles
+- Supports fuzzy matching
+- Scoped to project (authorization enforced)
+
 ### Ticket Jobs Query Hook
 
 **Hook** (`app/lib/hooks/queries/useTicketJobs.ts`):
