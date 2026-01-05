@@ -128,9 +128,10 @@ Comments support @mentions to notify specific users:
 - Arrow keys (Up/Down) navigate the list
 - Enter key or mouse click selects a user
 - Escape key or clicking outside closes the dropdown
-- Selected user inserted as formatted mention
+- Selected user inserted as formatted mention with trailing space
 - Mentioned user receives real-time notification
 - Multiple users can be mentioned in one comment
+- Typing space after @ closes the dropdown
 
 **Keyboard Navigation**:
 - Arrow Down: Highlight next user
@@ -149,9 +150,10 @@ Comments support #ticket references to link to other tickets in the same project
 - Arrow keys (Up/Down) navigate the list
 - Enter key or mouse click selects a ticket
 - Escape key or clicking outside closes the dropdown
-- Selected ticket inserted as `#TICKET-KEY` (e.g., `#AIB-120`)
+- Selected ticket inserted as `#TICKET-KEY` with trailing space (e.g., `#AIB-120 `)
 - Only title is removed; ticket key remains with # prefix
 - Tickets scoped to current project only
+- Typing space after # closes the dropdown
 
 **Keyboard Navigation**:
 - Arrow Down: Highlight next ticket
@@ -175,8 +177,9 @@ After mentioning @ai-board, commands can be autocompleted for faster typing:
 - Arrow keys (Up/Down) navigate the list
 - Enter key or mouse click selects a command
 - Escape key or clicking outside closes the dropdown
-- Selected command inserted as text (e.g., `/compare`)
+- Selected command inserted as text with trailing space (e.g., `/compare `)
 - Commands only available after @ai-board mention
+- Typing space after / closes the dropdown (consistent with @mention and #ticket behavior)
 
 **Available Commands**:
 - `/compare`: Compare ticket implementations for best code quality
@@ -191,6 +194,12 @@ After mentioning @ai-board, commands can be autocompleted for faster typing:
 - Command autocomplete only appears when / follows an @ai-board mention
 - Typing / without preceding @ai-board inserts literal / character
 - Ensures commands are only used in appropriate context
+
+**Dropdown Positioning**:
+- Dropdown automatically repositions to remain fully visible within viewport
+- Shifts left when near right edge of modal or window
+- Flips above cursor when near bottom edge
+- Applies to all autocomplete types (mentions, tickets, commands)
 
 ### AI-BOARD Mentions
 

@@ -492,3 +492,167 @@ Date formatting and manipulation using `date-fns` library.
 - UTC conversion
 
 See [architecture/stack.md](../architecture/stack.md#date-utilities) for date-fns integration details.
+
+## Autocomplete Positioning
+
+### Purpose
+
+Provides viewport-aware positioning for autocomplete dropdowns to prevent overflow and ensure full visibility within modal and window boundaries.
+
+### File Location
+
+`components/comments/mention-input.tsx`
+
+### API Reference
+
+**Function**: `calculateBoundedPosition(coords: { top: number; left: number }, textareaRect: DOMRect): { top: number; left: number }`
+
+Calculates autocomplete dropdown position with viewport boundary detection.
+
+**Parameters**:
+- `coords` (object): Relative coordinates from `getCaretCoordinates()`
+  - `top` (number): Vertical position relative to textarea
+  - `left` (number): Horizontal position relative to textarea
+- `textareaRect` (DOMRect): Bounding rectangle of textarea element
+
+**Returns**: Adjusted position object:
+- `top` (number): Final vertical position (relative to textarea)
+- `left` (number): Final horizontal position (relative to textarea)
+
+**Constants**:
+```typescript
+const dropdownWidth = 320;     // w-80 (Tailwind class)
+const dropdownHeight = 200;    // max-h-[200px]
+const lineHeight = 24;         // Standard line height
+const buffer = 16;             // Safety margin from edges
+```
+
+**Algorithm**:
+
+1. **Convert to absolute viewport coordinates**:
+   ```typescript
+   const absoluteTop = textareaRect.top + coords.top + lineHeight;
+   const absoluteLeft = textareaRect.left + coords.left;
+   ```
+
+2. **Initialize with default position**:
+   ```typescript
+   let top = coords.top + lineHeight;  // Below cursor
+   let left = coords.left;              // Aligned with cursor
+   ```
+
+3. **Check right edge overflow**:
+   ```typescript
+   if (absoluteLeft + dropdownWidth > window.innerWidth - buffer) {
+     left = Math.max(0, window.innerWidth - textareaRect.left - dropdownWidth - buffer);
+   }
+   ```
+   - Shifts dropdown left when near right edge
+   - Ensures minimum 16px margin from viewport edge
+   - Prevents horizontal scrolling
+
+4. **Check bottom edge overflow**:
+   ```typescript
+   if (absoluteTop + dropdownHeight > window.innerHeight - buffer) {
+     const topAbove = coords.top - dropdownHeight - 8;
+     if (textareaRect.top + topAbove > 0) {
+       top = topAbove;  // Flip above cursor
+     }
+   }
+   ```
+   - Flips dropdown above cursor when near bottom edge
+   - Only flips if there's enough space above (doesn't go above viewport top)
+   - Adds 8px gap between dropdown and cursor line
+
+**Examples**:
+
+```typescript
+// Cursor in center of modal - default position
+const coords = { top: 50, left: 100 };
+const rect = textareaRef.current.getBoundingClientRect();
+const pos = calculateBoundedPosition(coords, rect);
+// → { top: 74, left: 100 } (24px below cursor)
+
+// Cursor near right edge - shift left
+const coords = { top: 50, left: 800 };  // Assuming 1024px viewport
+const pos = calculateBoundedPosition(coords, rect);
+// → { top: 74, left: 688 } (shifted to fit within viewport)
+
+// Cursor near bottom edge - flip above
+const coords = { top: 400, left: 100 };  // Assuming 600px modal height
+const pos = calculateBoundedPosition(coords, rect);
+// → { top: 192, left: 100 } (flipped above cursor)
+```
+
+### Integration
+
+**Position Calculation Hook**:
+```typescript
+useEffect(() => {
+  if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
+    const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
+    const rect = textareaRef.current.getBoundingClientRect();
+    const boundedPosition = calculateBoundedPosition(coords, rect);
+
+    setAutocompletePosition(boundedPosition);
+  }
+}, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateBoundedPosition]);
+```
+
+**Applies To**:
+- User mentions (@)
+- Ticket references (#)
+- Command autocomplete (/)
+
+### Design Rationale
+
+**Viewport-Aware Positioning**:
+- Prevents dropdowns from being cut off by modal or window edges
+- Improves usability in constrained environments (small modals, mobile)
+- Consistent behavior across all autocomplete types
+
+**Prioritization**:
+1. **Vertical adjustment** (flip above) takes priority
+2. **Horizontal adjustment** (shift left) applied second
+3. Default position (below and aligned) when space available
+
+**Edge Cases**:
+- **Insufficient space both above and below**: Dropdown positions below (user can scroll)
+- **Insufficient space left and right**: Dropdown aligns to left edge with buffer
+- **Textarea at viewport edge**: Math.max ensures non-negative positions
+
+### Performance
+
+**Execution Time**: <1ms (synchronous DOM calculations)
+
+**Triggering**:
+- Runs only when autocomplete opens or cursor moves
+- Does not run on every keystroke
+- Dependency array ensures minimal re-renders
+
+### Testing
+
+**Component Tests**: `tests/unit/components/mention-input.test.tsx`
+
+Test coverage:
+- "should shift dropdown left when near right edge"
+- "should flip dropdown above cursor when near bottom edge"
+- "should use default position when in center of viewport"
+
+**Test Pattern**:
+```typescript
+it('should shift dropdown left when near right edge', async () => {
+  const user = userEvent.setup();
+  renderWithProviders(<MentionInput value="" onChange={vi.fn()} />);
+
+  // Mock window size and textarea position
+  Object.defineProperty(window, 'innerWidth', { value: 1024 });
+
+  // Trigger autocomplete near right edge
+  await user.type(screen.getByRole('textbox'), '@');
+
+  // Verify dropdown shifted left
+  const dropdown = screen.getByTestId('autocomplete-dropdown');
+  expect(dropdown.style.left).toBeLessThan(cursorPosition);
+});
+```
