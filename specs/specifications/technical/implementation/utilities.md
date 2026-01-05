@@ -469,6 +469,152 @@ if (ticket.projectId !== projectId) {
 
 See [authentication.md](authentication.md#authorization-patterns) for detailed authorization patterns.
 
+## Autocomplete Positioning
+
+### Purpose
+
+Provides viewport-aware positioning for autocomplete dropdowns to ensure they remain fully visible within modal boundaries, preventing overflow near edges.
+
+### File Location
+
+`components/comments/mention-input.tsx` (inline utility function)
+
+### API Reference
+
+**Function**: `calculateViewportAwarePosition(caretCoords: { top: number; left: number }, textareaRect: DOMRect, dropdownDimensions: { width: number; height: number }): { top: number; left: number }`
+
+Calculates optimal dropdown position considering viewport boundaries and available space.
+
+**Parameters**:
+- `caretCoords` (object): Caret position relative to textarea
+  - `top` (number): Y coordinate from top of textarea
+  - `left` (number): X coordinate from left of textarea
+- `textareaRect` (DOMRect): Textarea bounding rectangle from `getBoundingClientRect()`
+- `dropdownDimensions` (object): Dropdown size constraints
+  - `width` (number): Dropdown width in pixels (default: 320px)
+  - `height` (number): Dropdown height in pixels (default: 200px)
+
+**Returns**: Absolute position coordinates (relative to viewport)
+- `top` (number): Y coordinate in pixels
+- `left` (number): X coordinate in pixels
+
+**Algorithm**:
+1. Calculate absolute caret position (textarea position + caret offset)
+2. Calculate default dropdown position (below and to the right of caret)
+3. Check horizontal overflow: if `left + width > viewport.width`, shift left
+4. Check vertical overflow: if `top + height > viewport.height`, position above caret
+5. Return adjusted coordinates
+
+**Example Usage**:
+```typescript
+const caretCoords = getCaretCoordinates(textareaRef.current, cursorPosition);
+const textareaRect = textareaRef.current.getBoundingClientRect();
+const dropdownDimensions = { width: 320, height: 200 };
+
+const position = calculateViewportAwarePosition(
+  caretCoords,
+  textareaRect,
+  dropdownDimensions
+);
+
+setAutocompletePosition(position);
+```
+
+### Implementation Details
+
+**Horizontal Adjustment**:
+```typescript
+const horizontalOverflow = absoluteLeft + DROPDOWN_WIDTH > window.innerWidth;
+if (horizontalOverflow) {
+  adjustedLeft = window.innerWidth - DROPDOWN_WIDTH - 16; // 16px margin
+}
+```
+
+**Vertical Adjustment**:
+```typescript
+const verticalOverflow = absoluteTop + DROPDOWN_HEIGHT > window.innerHeight;
+if (verticalOverflow) {
+  adjustedTop = absoluteTop - DROPDOWN_HEIGHT - 24; // Position above caret
+}
+```
+
+**Dropdown Dimensions**:
+- Width: 320px (standard autocomplete width)
+- Height: 200px (estimated max height with scrolling)
+- Margin: 16px minimum from viewport edges
+
+### Autocomplete Dismissal Logic
+
+**Command Selection Tracking**:
+- State: `completedCommandPosition` (number | null)
+- Tracks cursor position where command was selected
+- Prevents autocomplete from reopening at same position
+
+**Dismissal Triggers**:
+1. **Command Selection** (click or Enter):
+   - Sets `completedCommandPosition` to current trigger position
+   - Closes autocomplete immediately
+   - Blocks reopening until cursor moves away
+
+2. **Space After Trigger**:
+   - Detects space character immediately after `/` trigger
+   - Matches existing behavior for `@` and `#` autocomplete
+   - Closes autocomplete without selection
+
+**Reset Conditions**:
+- Cursor moves away from completed position
+- No trigger pattern detected in current context
+- User clears the trigger character
+
+**Example Flow**:
+```typescript
+// User types: "@ai-board /"
+// → Command autocomplete opens at position 11
+
+// User selects "/compare"
+handleSelectCommand(command) {
+  setCompletedCommandPosition(11);  // Remember this position
+  setAutocompleteType('none');       // Close dropdown
+}
+
+// User continues typing at position 11
+// → Autocomplete stays closed (position matches completedCommandPosition)
+
+// User types elsewhere or removes trigger
+// → completedCommandPosition resets to null
+```
+
+### Design Rationale
+
+**Viewport-Aware Positioning**:
+- Modal dialogs have limited viewport space
+- Autocomplete dropdowns can exceed modal boundaries
+- Positioning logic ensures dropdowns remain accessible
+- Improves usability on smaller screens and near modal edges
+
+**Consistent Dismissal Behavior**:
+- All three autocomplete types (mentions, tickets, commands) use same dismissal logic
+- Space character ends autocomplete session (common pattern)
+- Selection closes dropdown immediately (prevents unintended filtering)
+- User expectations aligned across all autocomplete interactions
+
+**Performance Considerations**:
+- Position calculation runs on every keystroke (throttled by React state updates)
+- `getBoundingClientRect()` call is fast (<1ms)
+- No layout thrashing (reads before writes)
+- Calculations cached in state until next trigger
+
+### Testing
+
+**Component Tests**: `tests/unit/components/command-autocomplete.test.tsx`
+
+Test coverage includes:
+- Dropdown positioning near right edge
+- Dropdown positioning near bottom edge
+- Autocomplete closes after command selection
+- Autocomplete closes when space typed after trigger
+- Autocomplete does not reopen at completed position
+
 ## Date Utilities
 
 ### Purpose

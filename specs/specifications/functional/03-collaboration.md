@@ -192,6 +192,31 @@ After mentioning @ai-board, commands can be autocompleted for faster typing:
 - Typing / without preceding @ai-board inserts literal / character
 - Ensures commands are only used in appropriate context
 
+**Dismissal Behavior**:
+- Autocomplete closes immediately after selecting a command (click or Enter)
+- Typing a space after `/` closes the autocomplete (same as @ and #)
+- Autocomplete does not reopen until a new `/` trigger is detected
+- Prevents unintended filtering after command selection
+
+### Autocomplete Dropdown Positioning
+
+All autocomplete dropdowns (user mentions, ticket references, commands) use viewport-aware positioning:
+
+**Horizontal Positioning**:
+- Dropdown appears at cursor position by default
+- Automatically shifts left when it would overflow the right edge of the viewport
+- Ensures dropdown remains fully visible within modal boundaries
+
+**Vertical Positioning**:
+- Dropdown appears below cursor by default
+- Automatically shifts above cursor when it would overflow the bottom edge of the viewport
+- Adapts to available space for optimal visibility
+
+**Benefits**:
+- Dropdowns always remain fully visible when triggered near modal edges
+- Consistent behavior across all three autocomplete types
+- Improved usability in comment modals with limited viewport space
+
 ### AI-BOARD Mentions
 
 **Special System User**:
