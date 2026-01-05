@@ -18,9 +18,9 @@
 
 **Purpose**: Verify existing infrastructure and imports are available
 
-- [ ] T001 Verify queryKeys utility exists and exports `projects.tickets` in app/lib/query-keys.ts
-- [ ] T002 Verify TicketWithVersion type is exported from app/lib/types/query-types.ts
-- [ ] T003 Verify test utilities exist for RTL testing in tests/utils/component-test-utils.ts
+- [x] T001 Verify queryKeys utility exists and exports `projects.tickets` in app/lib/query-keys.ts
+- [x] T002 Verify TicketWithVersion type is exported from app/lib/types/query-types.ts
+- [x] T003 Verify test utilities exist for RTL testing in tests/utils/component-test-utils.ts
 
 **Checkpoint**: All required utilities and types are confirmed available
 
@@ -46,17 +46,17 @@
 
 **NOTE: Write test FIRST, ensure it FAILS before implementation**
 
-- [ ] T004 [US1] Create test file tests/unit/components/ticket-detail-modal.test.tsx with describe block for duplicate functionality
-- [ ] T005 [US1] Write RTL test case "should add duplicated ticket to cache immediately" that verifies cache update after duplicate
+- [x] T004 [US1] Create test file tests/unit/components/ticket-detail-modal.test.tsx with describe block for duplicate functionality
+- [x] T005 [US1] Write RTL test case "should add duplicated ticket to cache immediately" that verifies cache update after duplicate
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Add import for queryKeys from @/app/lib/query-keys in components/board/ticket-detail-modal.tsx
-- [ ] T007 [US1] Add import for TicketWithVersion from @/app/lib/types/query-types in components/board/ticket-detail-modal.tsx
-- [ ] T008 [US1] Fix cache key in handleDuplicate from ['tickets', projectId] to queryKeys.projects.tickets(projectId) in components/board/ticket-detail-modal.tsx
-- [ ] T009 [US1] Add optimistic update pattern before API call in handleDuplicate in components/board/ticket-detail-modal.tsx
-- [ ] T010 [US1] Add onSuccess cache invalidation using correct queryKey in handleDuplicate in components/board/ticket-detail-modal.tsx
-- [ ] T011 [US1] Verify test T005 now passes after implementation
+- [x] T006 [US1] Add import for queryKeys from @/app/lib/query-keys in components/board/ticket-detail-modal.tsx
+- [x] T007 [US1] Add import for TicketWithVersion from @/app/lib/types/query-types in components/board/ticket-detail-modal.tsx
+- [x] T008 [US1] Fix cache key in handleDuplicate from ['tickets', projectId] to queryKeys.projects.tickets(projectId) in components/board/ticket-detail-modal.tsx
+- [x] T009 [US1] Add optimistic update pattern before API call in handleDuplicate in components/board/ticket-detail-modal.tsx
+- [x] T010 [US1] Add onSuccess cache invalidation using correct queryKey in handleDuplicate in components/board/ticket-detail-modal.tsx
+- [x] T011 [US1] Verify test T005 now passes after implementation
 
 **Checkpoint**: User Story 1 is complete - duplicated tickets appear immediately without refresh
 
@@ -70,15 +70,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [US2] Write RTL test case "should show error toast on duplicate failure" in tests/unit/components/ticket-detail-modal.test.tsx
-- [ ] T013 [US2] Write RTL test case "should rollback cache on duplicate failure" in tests/unit/components/ticket-detail-modal.test.tsx
+- [x] T012 [US2] Write RTL test case "should show error toast on duplicate failure" in tests/unit/components/ticket-detail-modal.test.tsx
+- [x] T013 [US2] Write RTL test case "should rollback cache on duplicate failure" in tests/unit/components/ticket-detail-modal.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add cache snapshot before optimistic update for rollback capability in handleDuplicate in components/board/ticket-detail-modal.tsx
-- [ ] T015 [US2] Add catch block that restores previousData to cache on error in handleDuplicate in components/board/ticket-detail-modal.tsx
-- [ ] T016 [US2] Verify error toast displays proper error message in catch block in components/board/ticket-detail-modal.tsx
-- [ ] T017 [US2] Verify tests T012 and T013 pass after implementation
+- [x] T014 [US2] Add cache snapshot before optimistic update for rollback capability in handleDuplicate in components/board/ticket-detail-modal.tsx
+- [x] T015 [US2] Add catch block that restores previousData to cache on error in handleDuplicate in components/board/ticket-detail-modal.tsx
+- [x] T016 [US2] Verify error toast displays proper error message in catch block in components/board/ticket-detail-modal.tsx
+- [x] T017 [US2] Verify tests T012 and T013 pass after implementation
 
 **Checkpoint**: User Story 2 is complete - error handling provides clear feedback and maintains cache consistency
 
@@ -88,9 +88,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T018 Run full test suite to ensure no regressions (bun run test:unit)
-- [ ] T019 Run type check to ensure no TypeScript errors (bun run type-check)
-- [ ] T020 Manual verification using quickstart.md checklist
+- [x] T018 Run full test suite to ensure no regressions (bun run test:unit)
+- [x] T019 Run type check to ensure no TypeScript errors (bun run type-check)
+- [x] T020 Manual verification using quickstart.md checklist
 
 ---
 
