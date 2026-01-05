@@ -18,8 +18,8 @@
 
 **Purpose**: Create static data and type definitions used by all autocomplete features
 
-- [ ] T001 [P] Create AI-BOARD command definitions in app/lib/data/ai-board-commands.ts
-- [ ] T002 [P] Add TicketSearchResult and AIBoardCommand types to app/lib/types/mention.ts
+- [x] T001 [P] Create AI-BOARD command definitions in app/lib/data/ai-board-commands.ts
+- [x] T002 [P] Add TicketSearchResult and AIBoardCommand types to app/lib/types/mention.ts
 
 **Checkpoint**: Foundation types and data ready for component development
 
@@ -31,7 +31,7 @@
 
 **⚠️ CRITICAL**: User Story 1 cannot function without the search hook
 
-- [ ] T003 Create useTicketSearch hook in app/lib/hooks/queries/use-ticket-search.ts
+- [x] T003 Create useTicketSearch hook in app/lib/hooks/queries/use-ticket-search.ts (already exists as useTicketSearch.ts)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Create RTL component tests for TicketAutocomplete in tests/unit/components/ticket-autocomplete.test.tsx
-- [ ] T005 [P] [US1] Create integration tests for ticket search in tests/integration/comments/autocomplete.test.ts
+- [x] T004 [P] [US1] Create RTL component tests for TicketAutocomplete in tests/unit/components/ticket-autocomplete.test.tsx
+- [x] T005 [P] [US1] Create integration tests for ticket search in tests/integration/comments/autocomplete.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Create TicketAutocomplete component in components/comments/ticket-autocomplete.tsx
-- [ ] T007 [US1] Add `#` trigger detection to MentionInput in components/comments/mention-input.tsx
-- [ ] T008 [US1] Add ticket selection handler to insert `#TICKET_KEY` format in components/comments/mention-input.tsx
+- [x] T006 [US1] Create TicketAutocomplete component in components/comments/ticket-autocomplete.tsx
+- [x] T007 [US1] Add `#` trigger detection to MentionInput in components/comments/mention-input.tsx
+- [x] T008 [US1] Add ticket selection handler to insert `#TICKET_KEY` format in components/comments/mention-input.tsx
 
 **Checkpoint**: User Story 1 fully functional - `#` autocomplete works independently
 
@@ -66,13 +66,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Create RTL component tests for CommandAutocomplete in tests/unit/components/command-autocomplete.test.tsx
+- [x] T009 [P] [US2] Create RTL component tests for CommandAutocomplete in tests/unit/components/command-autocomplete.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Create CommandAutocomplete component in components/comments/command-autocomplete.tsx
-- [ ] T011 [US2] Add `/` trigger detection (after @ai-board only) to MentionInput in components/comments/mention-input.tsx
-- [ ] T012 [US2] Add command selection handler to insert command name in components/comments/mention-input.tsx
+- [x] T010 [US2] Create CommandAutocomplete component in components/comments/command-autocomplete.tsx
+- [x] T011 [US2] Add `/` trigger detection (after @ai-board only) to MentionInput in components/comments/mention-input.tsx
+- [x] T012 [US2] Add command selection handler to insert command name in components/comments/mention-input.tsx
 
 **Checkpoint**: User Story 2 fully functional - `/` autocomplete after @ai-board works independently
 
@@ -86,13 +86,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [US3] Add keyboard navigation tests to both autocomplete test files in tests/unit/components/
+- [x] T013 [US3] Add keyboard navigation tests to both autocomplete test files in tests/unit/components/
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Verify and align keyboard handlers in TicketAutocomplete in components/comments/ticket-autocomplete.tsx
-- [ ] T015 [US3] Verify and align keyboard handlers in CommandAutocomplete in components/comments/command-autocomplete.tsx
-- [ ] T016 [US3] Ensure consistent selectedIndex behavior in MentionInput in components/comments/mention-input.tsx
+- [x] T014 [US3] Verify and align keyboard handlers in TicketAutocomplete in components/comments/ticket-autocomplete.tsx
+- [x] T015 [US3] Verify and align keyboard handlers in CommandAutocomplete in components/comments/command-autocomplete.tsx
+- [x] T016 [US3] Ensure consistent selectedIndex behavior in MentionInput in components/comments/mention-input.tsx
 
 **Checkpoint**: All autocomplete types have identical keyboard navigation behavior
 
@@ -102,9 +102,9 @@
 
 **Purpose**: Edge cases, validation, and refinements across all user stories
 
-- [ ] T017 Add empty state handling ("No tickets found", "No commands available") in both autocomplete components
-- [ ] T018 Add edge case handling for `#` inside existing mentions in components/comments/mention-input.tsx
-- [ ] T019 Run quickstart.md validation scenarios to verify all features work together
+- [x] T017 Add empty state handling ("No tickets found", "No commands available") in both autocomplete components
+- [x] T018 Add edge case handling for `#` inside existing mentions in components/comments/mention-input.tsx
+- [x] T019 Run quickstart.md validation scenarios to verify all features work together
 
 ---
 

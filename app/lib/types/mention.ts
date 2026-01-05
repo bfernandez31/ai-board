@@ -6,6 +6,12 @@ export interface User {
   email: string;
 }
 
+// Re-export search types for autocomplete
+export type { SearchResult as TicketSearchResult } from './search';
+
+// Re-export AI-BOARD command type for autocomplete
+export type { AIBoardCommand } from '../data/ai-board-commands';
+
 export interface ProjectMember extends User {
   // No additional fields for MVP
 }

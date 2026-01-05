@@ -1,14 +1,16 @@
 /**
  * MentionInput Component
  *
- * Textarea with @ detection and autocomplete for user mentions.
+ * Textarea with @ detection and autocomplete for user mentions,
+ * # detection for ticket references, and / detection for commands.
  * Handles:
- * - @ symbol detection at word boundaries
- * - Client-side user filtering
+ * - @ symbol detection at word boundaries (user mentions)
+ * - # symbol detection at word boundaries (ticket references)
+ * - / symbol detection after @ai-board mention (commands)
  * - Keyboard navigation (Arrow Up/Down, Enter, Escape)
  * - Mouse selection
- * - Mention insertion at cursor position
- * - Multiple mentions support
+ * - Insertion at cursor position
+ * - Multiple autocomplete types support
  * - AI-BOARD availability status and tooltips
  */
 
@@ -18,13 +20,21 @@ import { useState, useRef, useMemo, useCallback, KeyboardEvent, ChangeEvent, use
 import { ProjectMember } from '@/app/lib/types/mention';
 import { formatMention } from '@/app/lib/utils/mention-parser';
 import { UserAutocomplete } from './user-autocomplete';
+import { TicketAutocomplete } from './ticket-autocomplete';
+import { CommandAutocomplete } from './command-autocomplete';
 import { Textarea } from '@/components/ui/textarea';
 import { useAIBoardAvailability } from '@/app/hooks/use-ai-board-availability';
+import { useTicketSearch } from '@/app/lib/hooks/queries/useTicketSearch';
+import { filterCommands, type AIBoardCommand } from '@/app/lib/data/ai-board-commands';
+import type { SearchResult } from '@/app/lib/types/search';
+
+type AutocompleteType = 'none' | 'mention' | 'ticket' | 'command';
 
 interface MentionInputProps {
   value: string;
   onChange: (value: string) => void;
   projectMembers: ProjectMember[];
+  projectId: number;
   ticketId?: number;
   placeholder?: string;
   className?: string;
@@ -36,18 +46,21 @@ export function MentionInput({
   value,
   onChange,
   projectMembers,
+  projectId,
   ticketId,
   placeholder = 'Add a comment...',
   className,
   disabled = false,
   onAutocompleteOpenChange,
 }: MentionInputProps) {
-  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const [autocompleteType, setAutocompleteType] = useState<AutocompleteType>('none');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [atSymbolPosition, setAtSymbolPosition] = useState<number | null>(null);
+  const [triggerPosition, setTriggerPosition] = useState<number | null>(null);
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isAutocompleteOpen = autocompleteType !== 'none';
 
   // Find AI-BOARD user ID
   const aiBoardUser = useMemo(
@@ -60,6 +73,25 @@ export function MentionInput({
     ticketId,
     Boolean(ticketId && aiBoardUser)
   );
+
+  // Ticket search query - only enabled when autocomplete type is 'ticket' and query >= 2 chars
+  const { data: ticketSearchData } = useTicketSearch(
+    projectId,
+    searchQuery,
+  );
+
+  // Get filtered tickets from search results
+  const filteredTickets = useMemo(() => {
+    if (autocompleteType !== 'ticket') return [];
+    if (searchQuery.length < 2) return [];
+    return ticketSearchData?.results ?? [];
+  }, [autocompleteType, searchQuery, ticketSearchData]);
+
+  // Get filtered commands
+  const filteredCommands = useMemo(() => {
+    if (autocompleteType !== 'command') return [];
+    return filterCommands(searchQuery);
+  }, [autocompleteType, searchQuery]);
 
   /**
    * Notify parent when autocomplete opens/closes
@@ -78,7 +110,7 @@ export function MentionInput({
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        setIsAutocompleteOpen(false);
+        setAutocompleteType('none');
       }
     };
 
@@ -94,6 +126,7 @@ export function MentionInput({
    * Filter users based on search query (case-insensitive substring match)
    */
   const filteredUsers = useMemo(() => {
+    if (autocompleteType !== 'mention') return [];
     if (searchQuery === '') return projectMembers;
 
     const query = searchQuery.toLowerCase();
@@ -102,7 +135,23 @@ export function MentionInput({
         user.name?.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query)
     );
-  }, [projectMembers, searchQuery]);
+  }, [projectMembers, searchQuery, autocompleteType]);
+
+  /**
+   * Get the current list length based on autocomplete type
+   */
+  const currentListLength = useMemo(() => {
+    switch (autocompleteType) {
+      case 'mention':
+        return filteredUsers.length;
+      case 'ticket':
+        return filteredTickets.length;
+      case 'command':
+        return filteredCommands.length;
+      default:
+        return 0;
+    }
+  }, [autocompleteType, filteredUsers.length, filteredTickets.length, filteredCommands.length]);
 
   /**
    * Get caret coordinates in textarea
@@ -176,9 +225,26 @@ export function MentionInput({
     return coordinates;
   }, []);
 
+  /**
+   * Check if position is inside an existing mention markup
+   */
+  const isInsideMentionMarkup = useCallback((text: string, position: number): boolean => {
+    // Look for @[ pattern before position and ] after
+    const textBeforePos = text.substring(0, position);
+    const lastMentionStart = textBeforePos.lastIndexOf('@[');
+    if (lastMentionStart === -1) return false;
+
+    // Check if there's a closing ] after the @[
+    const textAfterMentionStart = text.substring(lastMentionStart);
+    const closingBracket = textAfterMentionStart.indexOf(']');
+    if (closingBracket === -1) return true; // Unclosed mention, we're inside
+
+    // Check if position is before the closing bracket
+    return position < lastMentionStart + closingBracket + 1;
+  }, []);
 
   /**
-   * Handle @ detection and autocomplete triggering
+   * Handle trigger detection and autocomplete triggering
    */
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -186,41 +252,72 @@ export function MentionInput({
 
     onChange(newValue);
 
-    // Find @ symbol before cursor
     const textBeforeCursor = newValue.substring(0, cursorPos);
+
+    // Check for / trigger (command autocomplete) - only after @ai-board mention
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+    if (lastSlashIndex !== -1) {
+      // Check if slash is after an AI-BOARD mention pattern @[id:AI-BOARD] or the display name
+      const textBeforeSlash = textBeforeCursor.substring(0, lastSlashIndex);
+      // Match @[...AI-BOARD] pattern followed by optional whitespace
+      const aiBoardMentionPattern = /@\[[^\]]*AI-BOARD[^\]]*\]\s*$/;
+      if (aiBoardMentionPattern.test(textBeforeSlash)) {
+        const query = textBeforeCursor.substring(lastSlashIndex + 1);
+        setTriggerPosition(lastSlashIndex);
+        setSearchQuery(query);
+        setAutocompleteType('command');
+        setSelectedIndex(0);
+        return;
+      }
+    }
+
+    // Check for # trigger (ticket autocomplete)
+    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+    if (lastHashIndex !== -1) {
+      const charBeforeHash = textBeforeCursor[lastHashIndex - 1];
+      const isHashAtWordBoundary = !charBeforeHash || /\s/.test(charBeforeHash);
+
+      // Don't trigger inside existing mention markup
+      if (isHashAtWordBoundary && !isInsideMentionMarkup(newValue, lastHashIndex)) {
+        const query = textBeforeCursor.substring(lastHashIndex + 1);
+        // Only show autocomplete if query doesn't contain spaces (still typing the reference)
+        if (!query.includes(' ')) {
+          setTriggerPosition(lastHashIndex);
+          setSearchQuery(query);
+          setAutocompleteType('ticket');
+          setSelectedIndex(0);
+          return;
+        }
+      }
+    }
+
+    // Check for @ trigger (user mention autocomplete)
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const charBeforeAt = textBeforeCursor[lastAtIndex - 1];
+      const isAtWordBoundary = !charBeforeAt || /\s/.test(charBeforeAt);
 
-    if (lastAtIndex === -1) {
-      setIsAutocompleteOpen(false);
-      return;
+      if (isAtWordBoundary) {
+        // Check if we're inside existing mention markup
+        const textAfterAt = textBeforeCursor.substring(lastAtIndex);
+        const isInsideMention = textAfterAt.includes('@[') && textAfterAt.includes(':');
+
+        if (!isInsideMention) {
+          const query = textBeforeCursor.substring(lastAtIndex + 1);
+          // Only show autocomplete if query doesn't contain spaces
+          if (!query.includes(' ')) {
+            setTriggerPosition(lastAtIndex);
+            setSearchQuery(query);
+            setAutocompleteType('mention');
+            setSelectedIndex(0);
+            return;
+          }
+        }
+      }
     }
 
-    // Check if @ is at word boundary (start of word or after whitespace)
-    const charBeforeAt = textBeforeCursor[lastAtIndex - 1];
-    const isAtWordBoundary = !charBeforeAt || /\s/.test(charBeforeAt);
-
-    if (!isAtWordBoundary) {
-      setIsAutocompleteOpen(false);
-      return;
-    }
-
-    // Check if cursor is inside existing mention markup (prevent nested mentions)
-    const textAfterAt = textBeforeCursor.substring(lastAtIndex);
-    const isInsideMention = textAfterAt.includes('@[') && textAfterAt.includes(':');
-
-    if (isInsideMention) {
-      setIsAutocompleteOpen(false);
-      return;
-    }
-
-    // Extract search query after @
-    const query = textBeforeCursor.substring(lastAtIndex + 1);
-
-    // Open autocomplete and update search query
-    setAtSymbolPosition(lastAtIndex);
-    setSearchQuery(query);
-    setIsAutocompleteOpen(true);
-    setSelectedIndex(0); // Reset selection
+    // No trigger found, close autocomplete
+    setAutocompleteType('none');
   };
 
   /**
@@ -233,7 +330,7 @@ export function MentionInput({
       case 'ArrowDown':
         e.preventDefault();
         setSelectedIndex((prev) =>
-          Math.min(prev + 1, filteredUsers.length - 1)
+          Math.min(prev + 1, currentListLength - 1)
         );
         break;
 
@@ -244,16 +341,37 @@ export function MentionInput({
 
       case 'Enter':
         e.preventDefault();
-        if (filteredUsers[selectedIndex]) {
-          handleSelectUser(filteredUsers[selectedIndex]);
-        }
+        handleEnterSelection();
         break;
 
       case 'Escape':
         e.preventDefault();
-        e.stopPropagation(); // Prevent modal from closing
-        e.nativeEvent.stopImmediatePropagation(); // Stop at native event level
-        setIsAutocompleteOpen(false);
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+        setAutocompleteType('none');
+        break;
+    }
+  };
+
+  /**
+   * Handle Enter key selection based on autocomplete type
+   */
+  const handleEnterSelection = () => {
+    switch (autocompleteType) {
+      case 'mention':
+        if (filteredUsers[selectedIndex]) {
+          handleSelectUser(filteredUsers[selectedIndex]);
+        }
+        break;
+      case 'ticket':
+        if (filteredTickets[selectedIndex]) {
+          handleSelectTicket(filteredTickets[selectedIndex]);
+        }
+        break;
+      case 'command':
+        if (filteredCommands[selectedIndex]) {
+          handleSelectCommand(filteredCommands[selectedIndex]);
+        }
         break;
     }
   };
@@ -262,14 +380,14 @@ export function MentionInput({
    * Handle user selection (mouse or keyboard)
    */
   const handleSelectUser = (user: ProjectMember) => {
-    if (!textareaRef.current || atSymbolPosition === null) return;
+    if (!textareaRef.current || triggerPosition === null) return;
 
     const currentCursorPos = textareaRef.current.selectionStart;
     const mention = formatMention(user.id, user.name || user.email);
 
     // Replace from @ to cursor with mention
     const newValue =
-      value.substring(0, atSymbolPosition) +
+      value.substring(0, triggerPosition) +
       mention +
       ' ' + // Add space after mention
       value.substring(currentCursorPos);
@@ -277,12 +395,12 @@ export function MentionInput({
     onChange(newValue);
 
     // Close autocomplete
-    setIsAutocompleteOpen(false);
+    setAutocompleteType('none');
     setSearchQuery('');
-    setAtSymbolPosition(null);
+    setTriggerPosition(null);
 
     // Position cursor after mention + space
-    const newCursorPos = atSymbolPosition + mention.length + 1;
+    const newCursorPos = triggerPosition + mention.length + 1;
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
@@ -291,13 +409,77 @@ export function MentionInput({
     }, 0);
   };
 
+  /**
+   * Handle ticket selection (mouse or keyboard)
+   */
+  const handleSelectTicket = (ticket: SearchResult) => {
+    if (!textareaRef.current || triggerPosition === null) return;
+
+    const currentCursorPos = textareaRef.current.selectionStart;
+    const ticketRef = `#${ticket.ticketKey}`;
+
+    // Replace from # to cursor with ticket reference
+    const newValue =
+      value.substring(0, triggerPosition) +
+      ticketRef +
+      ' ' + // Add space after ticket reference
+      value.substring(currentCursorPos);
+
+    onChange(newValue);
+
+    // Close autocomplete
+    setAutocompleteType('none');
+    setSearchQuery('');
+    setTriggerPosition(null);
+
+    // Position cursor after ticket reference + space
+    const newCursorPos = triggerPosition + ticketRef.length + 1;
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.focus();
+      }
+    }, 0);
+  };
+
+  /**
+   * Handle command selection (mouse or keyboard)
+   */
+  const handleSelectCommand = (command: AIBoardCommand) => {
+    if (!textareaRef.current || triggerPosition === null) return;
+
+    const currentCursorPos = textareaRef.current.selectionStart;
+
+    // Replace from / to cursor with command name
+    const newValue =
+      value.substring(0, triggerPosition) +
+      command.name +
+      ' ' + // Add space after command
+      value.substring(currentCursorPos);
+
+    onChange(newValue);
+
+    // Close autocomplete
+    setAutocompleteType('none');
+    setSearchQuery('');
+    setTriggerPosition(null);
+
+    // Position cursor after command + space
+    const newCursorPos = triggerPosition + command.name.length + 1;
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.focus();
+      }
+    }, 0);
+  };
 
   /**
    * Update autocomplete position when it opens
    */
   useEffect(() => {
-    if (isAutocompleteOpen && textareaRef.current && atSymbolPosition !== null) {
-      const coords = getCaretCoordinates(textareaRef.current, atSymbolPosition);
+    if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
+      const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
 
       // Position below the caret with line height offset
       setAutocompletePosition({
@@ -305,19 +487,28 @@ export function MentionInput({
         left: coords.left,
       });
     }
-  }, [isAutocompleteOpen, atSymbolPosition, getCaretCoordinates]);
+  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates]);
 
   /**
    * Auto-scroll selected item into view
    */
   useEffect(() => {
     if (isAutocompleteOpen && selectedIndex >= 0) {
-      const selectedElement = document.querySelector(
-        '[data-testid="mention-user-item"][data-selected="true"]'
-      );
-      selectedElement?.scrollIntoView({ block: 'nearest' });
+      // Use appropriate testid based on autocomplete type
+      const testIdMap = {
+        mention: 'mention-user-item',
+        ticket: 'ticket-autocomplete-item',
+        command: 'command-autocomplete-item',
+      };
+      const testId = testIdMap[autocompleteType as keyof typeof testIdMap];
+      if (testId) {
+        const selectedElement = document.querySelector(
+          `[data-testid="${testId}"][data-selected="true"]`
+        );
+        selectedElement?.scrollIntoView({ block: 'nearest' });
+      }
     }
-  }, [selectedIndex, isAutocompleteOpen]);
+  }, [selectedIndex, isAutocompleteOpen, autocompleteType]);
 
   /**
    * Close autocomplete when clicking outside
@@ -327,7 +518,11 @@ export function MentionInput({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const autocomplete = document.querySelector('[data-testid="mention-autocomplete"]');
+      // Check all autocomplete dropdowns
+      const autocomplete =
+        document.querySelector('[data-testid="mention-autocomplete"]') ||
+        document.querySelector('[data-testid="ticket-autocomplete"]') ||
+        document.querySelector('[data-testid="command-autocomplete"]');
       const textarea = textareaRef.current;
 
       if (
@@ -336,13 +531,52 @@ export function MentionInput({
         textarea &&
         !textarea.contains(target)
       ) {
-        setIsAutocompleteOpen(false);
+        setAutocompleteType('none');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isAutocompleteOpen]);
+
+  /**
+   * Render the appropriate autocomplete dropdown
+   */
+  const renderAutocomplete = () => {
+    switch (autocompleteType) {
+      case 'mention':
+        return (
+          <UserAutocomplete
+            users={filteredUsers}
+            onSelect={handleSelectUser}
+            selectedIndex={selectedIndex}
+            {...(aiBoardUser && {
+              aiBoardUserId: aiBoardUser.id,
+              aiBoardAvailable: availability?.available ?? false,
+              aiBoardUnavailableReason: availability?.reason ?? 'Checking availability...',
+            })}
+          />
+        );
+      case 'ticket':
+        return (
+          <TicketAutocomplete
+            tickets={filteredTickets}
+            onSelect={handleSelectTicket}
+            selectedIndex={selectedIndex}
+          />
+        );
+      case 'command':
+        return (
+          <CommandAutocomplete
+            commands={filteredCommands}
+            onSelect={handleSelectCommand}
+            selectedIndex={selectedIndex}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="relative w-full">
@@ -366,16 +600,7 @@ export function MentionInput({
             left: `${autocompletePosition.left}px`,
           }}
         >
-          <UserAutocomplete
-            users={filteredUsers}
-            onSelect={handleSelectUser}
-            selectedIndex={selectedIndex}
-            {...(aiBoardUser && {
-              aiBoardUserId: aiBoardUser.id,
-              aiBoardAvailable: availability?.available ?? false,
-              aiBoardUnavailableReason: availability?.reason ?? 'Checking availability...',
-            })}
-          />
+          {renderAutocomplete()}
         </div>
       )}
     </div>
