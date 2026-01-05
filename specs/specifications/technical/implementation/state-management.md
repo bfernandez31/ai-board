@@ -811,6 +811,107 @@ export function useTransitionTicket(projectId: number, ticketId: number) {
 - Invalidate jobs query (new job created)
 - Toast notifications
 
+### Duplicate Ticket Mutation
+
+**Implementation** (`components/board/ticket-detail-modal.tsx`):
+
+```typescript
+const handleDuplicate = async () => {
+  if (!localTicket) return;
+
+  setIsDuplicating(true);
+
+  const queryKey = queryKeys.projects.tickets(projectId);
+  const previousData = queryClient.getQueryData<TicketWithVersion[]>(queryKey) || [];
+
+  // Optimistic update: Create temporary ticket for immediate UI feedback
+  const tempId = Date.now();
+  const now = new Date().toISOString();
+  const optimisticTicket: TicketWithVersion = {
+    id: tempId,
+    ticketNumber: tempId,
+    ticketKey: `TEMP-${tempId}`,
+    title: `Copy of ${localTicket.title}`.slice(0, 100),
+    description: localTicket.description || '',
+    stage: Stage.INBOX,
+    projectId,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    branch: null,
+    autoMode: false,
+    workflowType: localTicket.workflowType || 'FULL',
+    clarificationPolicy: localTicket.clarificationPolicy || null,
+    attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
+  };
+
+  // Add to cache optimistically
+  queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) => [
+    ...(old || []),
+    optimisticTicket,
+  ]);
+
+  try {
+    const response = await fetch(
+      `/api/projects/${projectId}/tickets/${localTicket.id}/duplicate`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to duplicate ticket');
+    }
+
+    const newTicket = await response.json();
+
+    // Invalidate to replace temp with real data
+    await queryClient.invalidateQueries({ queryKey });
+
+    toast({
+      title: 'Ticket duplicated',
+      description: `Created ${newTicket.ticketKey}`,
+    });
+
+    // Close modal after successful duplication
+    onOpenChange(false);
+  } catch (error) {
+    // Rollback optimistic update on error
+    queryClient.setQueryData(queryKey, previousData);
+
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: error instanceof Error ? error.message : 'Failed to duplicate ticket',
+    });
+  } finally {
+    setIsDuplicating(false);
+  }
+};
+```
+
+**Features**:
+- **Optimistic Update**: Creates temporary ticket with placeholder data immediately
+- **Immediate Feedback**: User sees new ticket in INBOX without waiting for API response
+- **Rollback on Error**: Restores previous tickets list if API call fails
+- **Cache Replacement**: Invalidates cache after success to replace temporary ticket with real server data
+- **0ms Perceived Latency**: Ticket appears instantly in UI
+
+**Optimistic Update Flow**:
+1. **onMutate**: Create temporary ticket with placeholder ID/key, add to cache
+2. **API Call**: Send POST request to `/api/projects/:projectId/tickets/:id/duplicate`
+3. **onError**: Rollback by restoring previous cache data snapshot
+4. **onSuccess**: Invalidate cache to trigger refetch, replacing temporary with real ticket
+
+**Critical Implementation Details**:
+- Uses timestamp-based temporary ID (`Date.now()`) to avoid conflicts
+- Temporary ticket key format: `TEMP-{timestamp}` (replaced on success)
+- Attaches full optimistic ticket object to match TicketWithVersion type
+- Preserves all ticket fields (description, attachments, clarification policy)
+- Closes modal only after successful duplication (stays open on error for retry)
+
 ### Delete Ticket Mutation
 
 **Hook** (`app/lib/hooks/mutations/useDeleteTicket.ts`):
