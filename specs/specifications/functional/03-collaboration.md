@@ -114,16 +114,83 @@ Comments support rich text formatting using GitHub Flavored Markdown (GFM):
 - Filters out user's own optimistically-added comments
 - Handles deletions by other users within 10 seconds
 
-## User Mentions
+## Autocomplete Features
 
-### Mentioning Users
+The comment system provides three autocomplete triggers to speed up typing and reduce errors:
+
+### User Mentions (@)
 
 Comments support @mentions to notify specific users:
 
-- Type @ symbol to see mention suggestion list
-- Select user from project members
+- Type @ symbol to trigger user autocomplete dropdown
+- Shows all project members with names and avatars
+- Filter by typing additional characters after @
+- Arrow keys (Up/Down) navigate the list
+- Enter key or mouse click selects a user
+- Escape key or clicking outside closes the dropdown
+- Selected user inserted as formatted mention
 - Mentioned user receives real-time notification
 - Multiple users can be mentioned in one comment
+
+**Keyboard Navigation**:
+- Arrow Down: Highlight next user
+- Arrow Up: Highlight previous user
+- Enter: Select highlighted user
+- Escape: Close dropdown without selection
+
+### Ticket References (#)
+
+Comments support #ticket references to link to other tickets in the same project:
+
+- Type # symbol to trigger ticket autocomplete dropdown
+- Shows all project tickets with format: `KEY - Title`
+- Search activates after typing 2 characters (e.g., `#AI`)
+- Filter by ticket key or title as you type
+- Arrow keys (Up/Down) navigate the list
+- Enter key or mouse click selects a ticket
+- Escape key or clicking outside closes the dropdown
+- Selected ticket inserted as `#TICKET-KEY` (e.g., `#AIB-120`)
+- Only title is removed; ticket key remains with # prefix
+- Tickets scoped to current project only
+
+**Keyboard Navigation**:
+- Arrow Down: Highlight next ticket
+- Arrow Up: Highlight previous ticket
+- Enter: Select highlighted ticket
+- Escape: Close dropdown without selection
+
+**Search Behavior**:
+- Minimum 2 characters required for search activation
+- Matches against ticket key and title
+- Results limited to 10 most relevant tickets
+- Real-time filtering as you type
+
+### Command Autocomplete (/)
+
+After mentioning @ai-board, commands can be autocompleted for faster typing:
+
+- Type / symbol after @ai-board mention to trigger command dropdown
+- Shows available AI-BOARD commands with descriptions
+- Filter by typing additional characters (e.g., `/com`)
+- Arrow keys (Up/Down) navigate the list
+- Enter key or mouse click selects a command
+- Escape key or clicking outside closes the dropdown
+- Selected command inserted as text (e.g., `/compare`)
+- Commands only available after @ai-board mention
+
+**Available Commands**:
+- `/compare`: Compare ticket implementations for best code quality
+
+**Keyboard Navigation**:
+- Arrow Down: Highlight next command
+- Arrow Up: Highlight previous command
+- Enter: Select highlighted command
+- Escape: Close dropdown without selection
+
+**Context Trigger**:
+- Command autocomplete only appears when / follows an @ai-board mention
+- Typing / without preceding @ai-board inserts literal / character
+- Ensures commands are only used in appropriate context
 
 ### AI-BOARD Mentions
 
