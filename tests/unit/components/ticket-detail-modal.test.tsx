@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen, waitFor } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, waitFor, userEvent } from '@/tests/utils/component-test-utils';
 import { TicketDetailModal } from '@/components/board/ticket-detail-modal';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
@@ -332,6 +332,120 @@ describe('TicketDetailModal', () => {
 
       // Stage badge should update
       expect(screen.getByText('Plan')).toBeInTheDocument();
+    });
+  });
+
+  describe('Ticket duplication', () => {
+    it('should call duplicate API and close modal on success', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Original Ticket',
+        stage: 'SPECIFY'
+      });
+
+      const duplicatedTicket = {
+        id: 2,
+        ticketNumber: 2,
+        ticketKey: 'TEST-2',
+        title: 'Copy of Original Ticket',
+        description: ticket.description,
+        stage: 'INBOX',
+        version: 1,
+        projectId: 1,
+        branch: null,
+        previewUrl: null,
+        autoMode: false,
+        workflowType: 'FULL' as const,
+        attachments: null,
+        clarificationPolicy: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Mock the duplicate API endpoint
+      const mockFetch = vi.fn((url) => {
+        if (url === '/api/projects/1/tickets/1/duplicate') {
+          return Promise.resolve({
+            ok: true,
+            status: 201,
+            json: async () => duplicatedTicket,
+          } as Response);
+        }
+        return Promise.reject(new Error('Unexpected fetch call'));
+      });
+      global.fetch = mockFetch;
+
+      const onOpenChange = vi.fn();
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={onOpenChange}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click duplicate button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify API was called
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/projects/1/tickets/1/duplicate',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      });
+
+      // Modal should close after duplication
+      await waitFor(() => {
+        expect(onOpenChange).toHaveBeenCalledWith(false);
+      });
+    });
+
+    it('should show error message when duplication fails', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ id: 1, ticketKey: 'TEST-1' });
+
+      // Mock the duplicate API endpoint to fail
+      global.fetch = vi.fn(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Internal server error' }),
+        } as Response);
+      });
+
+      const onOpenChange = vi.fn();
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={onOpenChange}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click duplicate button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Modal should NOT close on error
+      await waitFor(() => {
+        expect(onOpenChange).not.toHaveBeenCalled();
+      });
     });
   });
 });

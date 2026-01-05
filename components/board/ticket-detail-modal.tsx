@@ -337,8 +337,15 @@ export function TicketDetailModal({
 
       const newTicket = await response.json();
 
-      // Invalidate tickets query to refresh the board
-      await queryClient.invalidateQueries({ queryKey: ['tickets', projectId] });
+      // Optimistically update the cache with the new ticket
+      queryClient.setQueryData(['projects', projectId, 'tickets'], (oldData: unknown) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        // Add the new ticket to the beginning of the array (most recent first)
+        return [newTicket, ...oldData];
+      });
+
+      // Also invalidate to ensure fresh data from server
+      await queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'tickets'] });
 
       toast({
         title: 'Ticket duplicated',
