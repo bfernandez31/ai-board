@@ -194,7 +194,9 @@ Fetch all tickets for a project, grouped by stage.
 - `projectId` (number, required): Project ID
 
 **Query Parameters**:
-- `stage` (optional): Filter by stage (INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP)
+- `stage` (optional): Filter by stage (INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED)
+
+**Note**: By default, CLOSED tickets are excluded from the board query unless explicitly filtered via `?stage=CLOSED`
 
 **Response** (200 OK):
 ```json
@@ -661,6 +663,7 @@ Search tickets within a project by key, title, or description.
 
 **Search Behavior**:
 - Searches across ticketKey, title, and description fields
+- **Includes CLOSED tickets** in search results (unlike board display which excludes them)
 - Case-insensitive matching (uses Prisma `mode: 'insensitive'`)
 - Results ordered by relevance:
   1. Exact ticket key matches (score: 4)
@@ -674,8 +677,13 @@ Search tickets within a project by key, title, or description.
 - `id`: Ticket ID (for opening modal via URL parameter)
 - `ticketKey`: Human-readable key (e.g., "ABC-42")
 - `title`: Ticket title
-- `stage`: Current workflow stage
+- `stage`: Current workflow stage (includes 'CLOSED' for closed tickets)
 - `totalCount`: Number of results returned (capped at limit)
+
+**Frontend Rendering**:
+- CLOSED tickets displayed with muted styling (reduced opacity)
+- "Closed" badge shown alongside stage indicator
+- Search results treat CLOSED tickets as accessible but read-only
 
 **Errors**:
 - `400`: Query too short (less than 2 characters) or invalid limit
@@ -719,7 +727,7 @@ Delete ticket with GitHub cleanup (permanent deletion).
 - **Idempotent Branch Deletion**: If branch already deleted (404 or 422 "reference does not exist"), operation continues successfully
 
 **Validation**:
-- Ticket cannot be in SHIP stage (400 error)
+- Ticket cannot be in SHIP or CLOSED stage (400 error)
 - Ticket cannot have PENDING or RUNNING jobs (400 error)
 
 **Errors**:
@@ -760,7 +768,7 @@ Transition ticket to target stage with workflow dispatch.
 ```
 
 **Validation**:
-- `targetStage`: Required, enum (SPECIFY|PLAN|BUILD|VERIFY|SHIP)
+- `targetStage`: Required, enum (INBOX|SPECIFY|PLAN|BUILD|VERIFY|SHIP|CLOSED)
 
 **Response** (200 OK):
 ```json
@@ -786,6 +794,15 @@ Transition ticket to target stage with workflow dispatch.
   5. Dispatches rollback-reset workflow (git reset to pre-BUILD state, preserves spec files)
   6. Creates rollback-reset job to track the git reset operation
 - **VERIFY → SHIP**: Manual transition (no workflow)
+- **VERIFY → CLOSED**: Close ticket transition:
+  1. Validates latest job is not PENDING or RUNNING
+  2. Calls `closeTicket()` which atomically:
+     - Sets `stage = 'CLOSED'`
+     - Sets `closedAt = now()`
+  3. Closes all GitHub PRs associated with ticket branch (adds comment explaining closure via ai-board)
+  4. Preserves branch (not deleted)
+  5. Returns success without creating a job
+  6. Ticket excluded from board but searchable
 
 **Errors**:
 - `400`: Invalid transition (non-sequential, job not completed, rollback not allowed)

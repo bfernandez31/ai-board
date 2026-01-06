@@ -15,12 +15,16 @@ The board displays six columns representing distinct workflow phases:
 5. **VERIFY** - Testing and verification
 6. **SHIP** - Completed and shipped features
 
+**Note**: A seventh stage (CLOSED) exists for tickets that have been abandoned or cancelled from VERIFY stage. Closed tickets do not appear on the board but remain searchable for reference.
+
 ### Stage Progression Rules
 
-Tickets move through stages sequentially with limited rollback capabilities:
+Tickets move through stages sequentially with limited rollback and closure capabilities:
 
 ```
 INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
+                                    ↓
+                                 CLOSED
 ```
 
 **Sequential Movement**:
@@ -42,6 +46,17 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
   - Reverts implementation changes while preserving spec files
   - Clears preview URL and deletes the workflow job record
   - Visual feedback: amber/red dashed border on PLAN column during drag
+
+**Ticket Closure**:
+- **VERIFY to CLOSED**: Tickets can be closed from VERIFY stage to abandon work
+  - Available when latest job is not PENDING or RUNNING
+  - Requires confirmation modal with title "Close Ticket {ticketKey}?"
+  - SHIP column splits into two drop zones when dragging from VERIFY:
+    - Ship zone (top ~60%): Normal completion path
+    - Close zone (bottom ~40%): Closure path with red dashed border and archive icon
+  - On closure: PRs closed, branch preserved, ticket removed from board
+  - CLOSED is a terminal state with no outbound transitions
+  - Closed tickets remain searchable but open in read-only mode
 
 ## Board Display
 
@@ -96,6 +111,13 @@ Tickets are ordered differently depending on their stage:
 - Shows enabled state for tickets without active jobs
 - Shows disabled state (reduced opacity, strikethrough) for tickets with pending or running jobs
 - Hidden when no drag operation is active
+
+**Close Zone**:
+- Appears at the bottom of SHIP column (~40% height) when dragging ticket from VERIFY stage
+- Displays red dashed border, archive icon, and "Close" label
+- Only highlights when hovering over the close zone (Ship zone remains unhighlighted)
+- Available only for VERIFY stage tickets without active jobs
+- Does not appear when dragging tickets from other stages (SHIP column behaves normally)
 
 **Locked State Overlays**:
 - When a ticket with an active job is dragged, all drop columns show a blocked overlay

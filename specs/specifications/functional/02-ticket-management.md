@@ -83,6 +83,9 @@ Users move tickets between stages using drag-and-drop:
 **Special Behaviors**:
 - INBOX tickets can drop on SPECIFY (normal workflow, blue highlighting) or BUILD (quick implementation, green highlighting)
 - VERIFY tickets (workflowType=FULL, job COMPLETED/FAILED/CANCELLED) can drop on PLAN (rollback, amber/red dashed highlighting)
+- VERIFY tickets can drop on SHIP column which splits into two zones:
+  - **Ship Zone** (top ~60%): Purple solid border for completing the ticket
+  - **Close Zone** (bottom ~40%): Red dashed border with archive icon for closing the ticket
 - All other transitions show next sequential stage as valid drop zone
 
 ### Stage Transition Behavior
@@ -117,6 +120,24 @@ Users move tickets between stages using drag-and-drop:
 - Not available when job is RUNNING or PENDING
 - Blocked during project cleanup (HTTP 423 Locked)
 - Creates a `rollback-reset` job to track the git reset operation
+
+**Ticket Closure (VERIFY to CLOSED)**:
+- When dropping VERIFY ticket on Close zone in SHIP column
+- Confirmation modal appears before closure with title "Close Ticket {ticketKey}?"
+- Modal explains consequences:
+  - Associated GitHub pull requests will be closed
+  - Ticket will be removed from the board
+  - Work is preserved (branch not deleted)
+  - Ticket remains searchable but read-only
+- On confirmation, system:
+  - Closes all GitHub PRs associated with ticket branch
+  - Sets `closedAt` timestamp
+  - Transitions ticket to CLOSED stage
+  - Removes ticket from board display
+- Available when latest job is not PENDING or RUNNING
+- Blocked when ticket has active jobs
+- Blocked during project cleanup (HTTP 423 Locked)
+- Closed tickets excluded from board but included in search results
 
 ### Performance
 
@@ -365,6 +386,11 @@ Users can quickly find tickets using a search input in the header:
 - Each result displays:
   - Ticket key (monospace font for easy identification)
   - Ticket title (truncated if too long)
+  - Stage badge indicating current workflow stage
+  - **Closed tickets** display with:
+    - Muted styling (reduced opacity)
+    - "Closed" badge with distinct visual treatment
+    - Included in search results alongside active tickets
 - Results ordered by relevance:
   1. Exact key matches first
   2. Partial key matches second
@@ -404,6 +430,11 @@ Users can navigate search results using keyboard for efficient workflow:
 **Modal Integration**:
 - Ticket modal opens with Details tab active by default
 - All ticket information accessible (comments, files, stats, documentation)
+- **Closed tickets** open in read-only mode:
+  - All edit controls disabled or hidden
+  - Ticket cannot be transitioned to other stages
+  - Full history remains viewable
+  - Comments, documentation, and stats accessible
 - Search state resets for next search
 
 ### Performance
@@ -507,9 +538,10 @@ All ticket data persists automatically:
 
 ### Timestamps
 
-The system tracks two timestamps for each ticket:
+The system tracks three timestamps for each ticket:
 - **Created**: When the ticket was first created (never changes)
 - **Last Updated**: When the ticket was last modified (automatically updates on any change, including stage transitions)
+- **Closed At**: When the ticket was closed (nullable, set when ticket transitions to CLOSED stage)
 
 Timestamps display in user-friendly formats:
 - Relative time for recent updates (e.g., "2 hours ago")
