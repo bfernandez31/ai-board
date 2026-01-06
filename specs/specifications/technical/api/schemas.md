@@ -182,7 +182,7 @@ export const searchResultSchema = z.object({
   id: z.number().int().positive(),
   ticketKey: z.string().min(1),
   title: z.string().min(1),
-  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']),
 });
 
 export const searchResponseSchema = z.object({
@@ -202,12 +202,35 @@ export type SearchResponse = z.infer<typeof searchResponseSchema>;
 - **id**: Ticket ID for modal navigation
 - **ticketKey**: Human-readable identifier (e.g., "ABC-42")
 - **title**: Ticket title for display
-- **stage**: Current workflow stage enum
+- **stage**: Current workflow stage enum (includes CLOSED for closed tickets)
 
 **Usage Context**:
 - Ticket search results in search bar
 - Ticket autocomplete dropdown in comments (#autocomplete)
 - Both use same schema for consistency
+
+### CloseTicketSchema
+
+```typescript
+export const closeTicketParamsSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  id: z.coerce.number().int().positive(),
+});
+
+export type CloseTicketParams = z.infer<typeof closeTicketParamsSchema>;
+```
+
+**Validation**:
+- **projectId**: Positive integer (path parameter)
+- **id**: Positive integer (path parameter)
+- No request body required
+
+**Business Validation** (performed in API route, not schema):
+- Ticket must be in VERIFY stage
+- Ticket cannot have PENDING or RUNNING jobs
+- Project cleanup must not be in progress (checked via activeCleanupJobId)
+- All open GitHub PRs for ticket branch will be closed
+- Git branch preserved (not deleted)
 
 ## AI-BOARD Command Schemas
 

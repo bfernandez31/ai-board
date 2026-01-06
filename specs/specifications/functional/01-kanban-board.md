@@ -15,12 +15,16 @@ The board displays six columns representing distinct workflow phases:
 5. **VERIFY** - Testing and verification
 6. **SHIP** - Completed and shipped features
 
+**Additional Stage** (not displayed on board):
+- **CLOSED** - Terminal state for abandoned or cancelled work (tickets removed from board but remain searchable)
+
 ### Stage Progression Rules
 
 Tickets move through stages sequentially with limited rollback capabilities:
 
 ```
 INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
+                                         → CLOSED (alternative resolution)
 ```
 
 **Sequential Movement**:
@@ -42,6 +46,15 @@ INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP
   - Reverts implementation changes while preserving spec files
   - Clears preview URL and deletes the workflow job record
   - Visual feedback: amber/red dashed border on PLAN column during drag
+
+**Alternative Resolution**:
+- **VERIFY to CLOSED**: Tickets can be closed without shipping
+  - Available when: ticket in VERIFY stage with no active jobs
+  - Requires confirmation modal explaining consequences
+  - Closes associated GitHub PRs with explanatory comment
+  - Preserves Git branch for future reference
+  - Removes ticket from board display (still searchable)
+  - Dual drop zone appears in SHIP column: Ship (top ~60%) or Close (bottom ~40%)
 
 ## Board Display
 
