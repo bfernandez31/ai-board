@@ -109,6 +109,23 @@ Tickets are ordered differently depending on their stage:
 - Shows enabled state for tickets without active jobs
 - Shows disabled state (reduced opacity, strikethrough) for tickets with pending or running jobs
 - Hidden when no drag operation is active
+- **Responsive Positioning**:
+  - Mobile (<768px): Positioned at bottom-left with 1rem spacing from edges
+  - Desktop (≥768px): Centered at bottom of viewport
+  - Adaptive sizing: smaller icons (20px) and text (14px) on mobile, larger (24px icons, 16px text) on desktop
+  - Reduced padding on mobile (12px) vs desktop (16px)
+
+**Close Zone**:
+- Appears at the bottom of the board during drag operations when dragging VERIFY tickets
+- Used for VERIFY to CLOSED transitions (alternative to shipping)
+- Shows enabled state for tickets without active jobs
+- Shows disabled state for tickets with pending or running jobs
+- Hidden when no drag operation is active
+- **Responsive Positioning**:
+  - Mobile (<768px): Positioned at bottom-right with 1rem spacing from edges
+  - Desktop (≥768px): Positioned at bottom-right with 2rem spacing from edge
+  - Adaptive sizing: smaller icons (20px) and text (14px) on mobile, larger (24px icons, 16px text) on desktop
+  - Reduced padding on mobile (12px) vs desktop (16px)
 
 **Locked State Overlays**:
 - When a ticket with an active job is dragged, all drop columns show a blocked overlay

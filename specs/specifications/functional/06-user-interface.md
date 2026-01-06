@@ -203,6 +203,14 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Visual feedback adapted for touch
 - Smooth performance on mobile devices
 
+**Mobile Drop Zone Positioning**:
+- **Trash Zone**: Positioned at bottom-left on mobile (<768px) for easy thumb access
+- **Close Zone**: Positioned at bottom-right on mobile (<768px) to complement trash zone
+- Desktop (≥768px): Trash zone centered, close zone at right with more spacing
+- Adaptive sizing ensures drop zones remain accessible on small screens
+- Smaller icons (20px) and text (14px) on mobile prevent overlap with dragged tickets
+- Reduced padding (12px) optimizes screen space usage on mobile devices
+
 ## Responsive Behavior
 
 ### Desktop (≥1024px)
