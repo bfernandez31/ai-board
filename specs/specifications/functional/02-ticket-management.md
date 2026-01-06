@@ -362,6 +362,7 @@ Users can quickly find tickets using a search input in the header:
 - Searches within the currently selected project only
 - Includes tickets in all stages (INBOX through SHIP) and CLOSED tickets
 - No cross-project search (keeps results focused and relevant)
+- Closed tickets appear alongside active tickets in search results
 
 **Search Fields**:
 - **Ticket Key**: Matches partial or complete ticket keys (e.g., "AIB-42", "42")
@@ -382,6 +383,11 @@ Users can quickly find tickets using a search input in the header:
   - Ticket key (monospace font for easy identification)
   - Ticket title (truncated if too long)
   - "Closed" badge with muted styling for closed tickets (reduced opacity, gray text)
+- Closed tickets styled with muted appearance for visual distinction
+- All text remains readable with WCAG AA contrast requirements (4.5:1 minimum) in all states:
+  - Default state: Standard muted styling (gray text, reduced opacity)
+  - Hover state: Maintains readability with appropriate contrast
+  - Selected state (keyboard navigation): Uses `bg-muted` instead of `bg-primary` to preserve text contrast
 - Results ordered by relevance:
   1. Exact key matches first
   2. Partial key matches second
@@ -417,11 +423,18 @@ Users can navigate search results using keyboard for efficient workflow:
 - Pressing Enter on highlighted result opens the ticket modal
 - Search input clears automatically after ticket opens
 - Dropdown closes after selection
+- Works for both active and closed tickets
 
 **Modal Integration**:
 - Ticket modal opens with Details tab active by default
 - All ticket information accessible (comments, files, stats, documentation)
-- Closed tickets open in read-only mode (all edit controls disabled)
+- Active tickets open with full editing capabilities
+- Closed tickets open in read-only mode:
+  - All edit controls disabled (title, description, policy)
+  - Comments section disabled (no new comments or replies)
+  - Documentation buttons accessible (spec, plan, tasks, summary)
+  - Ticket details fully readable
+  - Consistent with existing CLOSED stage behavior (AIB-148)
 - Search state resets for next search
 
 ### Performance

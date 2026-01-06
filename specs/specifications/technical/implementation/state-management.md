@@ -271,9 +271,11 @@ function TicketAutocomplete({ projectId, query }: Props) {
 ```
 
 **Search Endpoint**: `/api/projects/:projectId/tickets/search`
-- Searches ticket keys and titles
+- Searches ticket keys, titles, and descriptions
+- Includes both active tickets (INBOX through SHIP) and CLOSED tickets
 - Supports fuzzy matching
 - Scoped to project (authorization enforced)
+- Returns stage field for each ticket to identify CLOSED tickets
 
 ### Ticket Jobs Query Hook
 
@@ -1120,6 +1122,59 @@ const { data } = useQuery({
   staleTime: 0,
 });
 ```
+
+### CLOSED Ticket Cache Management
+
+**Problem**: When tickets transition to CLOSED stage, they must remain in the cache for search modal access but hidden from board columns.
+
+**Solution** (`components/board/board.tsx`):
+
+```typescript
+// When ticket transitions to CLOSED, update in cache instead of removing
+queryClient.setQueryData<Ticket[]>(
+  queryKeys.projects.tickets(projectId),
+  (old) => {
+    if (!old) return [];
+    return old.map((t) =>
+      t.id === ticketId ? { ...t, stage: Stage.CLOSED } : t
+    );
+  }
+);
+
+// Board columns filter out CLOSED tickets for display
+const ticketsByStage = useMemo(() => {
+  return {
+    INBOX: allTickets.filter((t) => t.stage === 'INBOX'),
+    SPECIFY: allTickets.filter((t) => t.stage === 'SPECIFY'),
+    PLAN: allTickets.filter((t) => t.stage === 'PLAN'),
+    BUILD: allTickets.filter((t) => t.stage === 'BUILD'),
+    VERIFY: allTickets.filter((t) => t.stage === 'VERIFY'),
+    SHIP: allTickets.filter((t) => t.stage === 'SHIP'),
+    // CLOSED tickets excluded from board display
+  };
+}, [allTickets]);
+```
+
+**Key Points**:
+- **Cache Retention**: CLOSED tickets remain in TanStack Query cache with `stage: CLOSED`
+- **Board Filtering**: Board columns filter tickets by stage, excluding CLOSED
+- **Search Access**: Search queries return CLOSED tickets from cache for modal navigation
+- **No Removal**: Never remove CLOSED tickets from cache (use `.map()` not `.filter()`)
+- **Consistent State**: Single source of truth (cache) for all ticket states
+
+**Flow**:
+1. User closes ticket (VERIFY → CLOSED transition)
+2. Optimistic update: Cache entry updated with `stage: CLOSED`
+3. Board re-renders: Ticket disappears from columns (filtered out)
+4. Cache retains: CLOSED ticket stays in `allTickets` array
+5. Search works: User can find CLOSED ticket via search
+6. Modal opens: CLOSED ticket data available from cache
+
+**Benefits**:
+- **Search Functionality**: Users can find and view closed tickets
+- **Performance**: No additional API calls needed for closed ticket modal
+- **Consistency**: Cache remains synchronized with server state
+- **Simplicity**: Single cache management pattern for all stages
 
 ## Error Handling
 
