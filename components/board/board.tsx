@@ -20,7 +20,9 @@ import { TicketDetailModal } from './ticket-detail-modal';
 import { QuickImplModal } from './quick-impl-modal';
 import { RollbackVerifyModal } from './rollback-verify-modal';
 import { TrashZone } from './trash-zone';
+import { CloseZone } from './close-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
+import { CloseConfirmationModal } from './close-confirmation-modal';
 import { CleanupInProgressBanner } from '@/components/cleanup/CleanupInProgressBanner';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
@@ -154,6 +156,12 @@ function BoardContent({
   // Delete confirmation state (T023)
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithVersion | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  // Close confirmation state (AIB-148)
+  const [pendingCloseTransition, setPendingCloseTransition] = useState<{
+    ticket: TicketWithVersion;
+  } | null>(null);
+  const [isClosingTicket, setIsClosingTicket] = useState(false);
 
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
@@ -366,6 +374,15 @@ function BoardContent({
         return;
       }
 
+      // AIB-148: Check if dropped on close zone
+      if (over.id === 'close-zone') {
+        // Only VERIFY tickets can be closed
+        if (ticket.stage === Stage.VERIFY) {
+          setPendingCloseTransition({ ticket });
+        }
+        return;
+      }
+
       const targetStage = over.data.current?.stage as Stage;
 
       if (!ticket || !targetStage || ticket.stage === targetStage) return;
@@ -389,6 +406,12 @@ function BoardContent({
       // AIB-75: Detect VERIFY → PLAN and show rollback modal
       if (ticket.stage === Stage.VERIFY && targetStage === Stage.PLAN) {
         setPendingVerifyRollback({ ticket, targetStage });
+        return;
+      }
+
+      // AIB-148: Detect VERIFY → CLOSED and show close confirmation modal
+      if (ticket.stage === Stage.VERIFY && targetStage === Stage.CLOSED) {
+        setPendingCloseTransition({ ticket });
         return;
       }
 
@@ -873,6 +896,60 @@ function BoardContent({
   // Silence unused warning - function is used via state setter
   void handleDeleteCancel;
 
+  // AIB-148: Handle close confirmation
+  const handleCloseConfirm = useCallback(async () => {
+    if (!pendingCloseTransition) return;
+
+    const { ticket } = pendingCloseTransition;
+    setIsClosingTicket(true);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticket.id}/close`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast({
+          variant: 'destructive',
+          title: 'Failed to close ticket',
+          description: error.error || 'An error occurred while closing the ticket.',
+        });
+      } else {
+        // Success - remove ticket from cache (it's now CLOSED and not on the board)
+        const updatedTickets = allTickets.filter(t => t.id !== ticket.id);
+        queryClient.setQueryData(
+          queryKeys.projects.tickets(projectId),
+          updatedTickets
+        );
+
+        toast({
+          title: 'Ticket closed',
+          description: `${ticket.ticketKey} has been closed.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error closing ticket:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Network error',
+        description: 'Could not close ticket. Please check your connection.',
+      });
+    } finally {
+      setIsClosingTicket(false);
+      setPendingCloseTransition(null);
+    }
+  }, [pendingCloseTransition, allTickets, toast, projectId, queryClient]);
+
+  // AIB-148: Handle close cancellation
+  const handleCloseCancel = useCallback(() => {
+    setPendingCloseTransition(null);
+  }, []);
+
   // Get drop zone style based on drag state (T021)
   const getDropZoneStyle = useCallback(
     (stage: Stage): string => {
@@ -972,6 +1049,17 @@ function BoardContent({
         }
       }
 
+      // AIB-148: Close mode - Dragging from VERIFY to SHIP or CLOSED
+      if (dragSource === Stage.VERIFY) {
+        if (stage === Stage.SHIP) {
+          // Normal ship - green
+          return 'border-4 border-dashed border-green-500 bg-green-500/10';
+        } else if (stage === Stage.CLOSED) {
+          // Close zone - red
+          return 'border-4 border-dashed border-red-500 bg-red-500/10';
+        }
+      }
+
       // Normal drag: Check if valid transition
       if (isValidTransition(dragSource, stage)) {
         return 'border-4 border-dashed border-blue-500 bg-blue-500/10';
@@ -982,7 +1070,8 @@ function BoardContent({
     [isDragging, dragSource, draggedTicketHasJob, isCleanupLockActive, activeTicket, initialJobs, polledJobs]
   );
 
-  const stages = getAllStages();
+  // AIB-148: Filter out CLOSED stage from board display - CLOSED tickets are not shown on the board
+  const stages = getAllStages().filter(s => s !== Stage.CLOSED);
 
   // T024: Trash zone visibility and disabled state
   const trashZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
@@ -1016,6 +1105,44 @@ function BoardContent({
       ...(reason && { disabledReason: reason }),
     };
   }, [activeTicket, isDragging, initialJobs, polledJobs]);
+
+  // AIB-148: Close zone visibility and disabled state (only for VERIFY tickets)
+  const closeZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
+    if (!activeTicket || !isDragging || activeTicket.stage !== Stage.VERIFY) {
+      return { isVisible: false, isDisabled: false };
+    }
+
+    // Check for active jobs
+    const initialTicketJobs = initialJobs.get(activeTicket.id) || [];
+    const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id);
+    const jobMap = new Map(initialTicketJobs.map(j => [j.id, j]));
+    polledTicketJobs.forEach(pj => {
+      jobMap.set(pj.id, pj as any);
+    });
+    const allTicketJobs = Array.from(jobMap.values());
+    const hasActiveJob = allTicketJobs.some(j => ['PENDING', 'RUNNING'].includes(j.status));
+
+    if (hasActiveJob) {
+      return {
+        isVisible: true,
+        isDisabled: true,
+        disabledReason: 'Cannot close ticket with active jobs',
+      };
+    }
+
+    if (isCleanupLockActive) {
+      return {
+        isVisible: true,
+        isDisabled: true,
+        disabledReason: 'Cannot close ticket during cleanup',
+      };
+    }
+
+    return {
+      isVisible: true,
+      isDisabled: false,
+    };
+  }, [activeTicket, isDragging, initialJobs, polledJobs, isCleanupLockActive]);
 
   // Check if any column is being hovered during drag
   const isAnyColumnOver = activeTicket !== null;
@@ -1096,6 +1223,15 @@ function BoardContent({
             disabledReason={trashZoneState.disabledReason}
           />
         )}
+
+        {/* Close Zone (AIB-148) - Only visible when dragging VERIFY tickets */}
+        {closeZoneState.isVisible && (
+          <CloseZone
+            isVisible={closeZoneState.isVisible}
+            isDisabled={closeZoneState.isDisabled}
+            disabledReason={closeZoneState.disabledReason}
+          />
+        )}
       </DndContext>
 
       {/* Ticket Detail Modal */}
@@ -1131,6 +1267,15 @@ function BoardContent({
         onOpenChange={setDeleteModalOpen}
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteTicketMutation.isPending}
+      />
+
+      {/* Close Confirmation Modal (AIB-148) */}
+      <CloseConfirmationModal
+        ticketKey={pendingCloseTransition?.ticket.ticketKey || null}
+        open={!!pendingCloseTransition}
+        onOpenChange={(open) => !open && handleCloseCancel()}
+        onConfirm={handleCloseConfirm}
+        isClosing={isClosingTicket}
       />
     </div>
   );

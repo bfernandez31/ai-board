@@ -115,6 +115,18 @@ const STAGE_CONFIG: Record<
     badgeTextColor: 'text-zinc-50',
     order: 5,
   },
+  [Stage.CLOSED]: {
+    label: 'CLOSED',
+    color: 'gray',
+    bgColor: 'bg-[#45475a]/10',
+    headerBgColor: 'bg-[#45475a]/30',
+    headerBorderColor: 'border-[#45475a]/40',
+    textColor: 'text-[#45475a]',
+    borderColor: 'border-[#45475a]/40',
+    badgeBgColor: 'bg-[#45475a]/70',
+    badgeTextColor: 'text-zinc-50',
+    order: 6,
+  },
 };
 
 /**

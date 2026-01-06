@@ -12,6 +12,7 @@ export enum Stage {
   BUILD = 'BUILD',
   VERIFY = 'VERIFY',
   SHIP = 'SHIP',
+  CLOSED = 'CLOSED',
 }
 
 /**
@@ -95,6 +96,11 @@ export function isValidTransition(
     return workflowType === 'FULL';
   }
 
+  // Special case: VERIFY → CLOSED (close operation)
+  if (fromStage === Stage.VERIFY && toStage === Stage.CLOSED) {
+    return true;
+  }
+
   // Normal sequential validation
   const nextStage = getNextStage(fromStage);
   return nextStage === toStage;
@@ -111,11 +117,11 @@ export function getAllStages(): Stage[] {
 }
 
 /**
- * Check if a stage is the terminal stage (no further transitions possible).
+ * Check if a stage is a terminal stage (no further transitions possible).
  *
  * @param stage - The stage to check
- * @returns true if stage is SHIP (terminal), false otherwise
+ * @returns true if stage is SHIP or CLOSED (terminal), false otherwise
  */
 export function isTerminalStage(stage: Stage): boolean {
-  return stage === Stage.SHIP;
+  return stage === Stage.SHIP || stage === Stage.CLOSED;
 }

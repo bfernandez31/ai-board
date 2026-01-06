@@ -81,6 +81,7 @@ export function useTicketsByStage(projectId: number) {
         [Stage.BUILD]: [],
         [Stage.VERIFY]: [],
         [Stage.SHIP]: [],
+        [Stage.CLOSED]: [],
       };
 
       tickets.forEach((ticket) => {

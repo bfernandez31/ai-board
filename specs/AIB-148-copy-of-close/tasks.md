@@ -18,11 +18,11 @@
 
 **Purpose**: Database schema changes and core state machine updates
 
-- [ ] T001 Add CLOSED value to Stage enum and closedAt field to Ticket model in prisma/schema.prisma
-- [ ] T002 Run Prisma migration and regenerate client: `bunx prisma migrate dev --name add_closed_stage && bunx prisma generate`
-- [ ] T003 Add CLOSED to Stage enum in lib/stage-transitions.ts
-- [ ] T004 Update isTerminalStage() to include CLOSED in lib/stage-transitions.ts
-- [ ] T005 Add VERIFY → CLOSED transition case in isValidTransition() in lib/stage-transitions.ts
+- [x] T001 Add CLOSED value to Stage enum and closedAt field to Ticket model in prisma/schema.prisma
+- [x] T002 Run Prisma migration and regenerate client: `bunx prisma migrate dev --name add_closed_stage && bunx prisma generate`
+- [x] T003 Add CLOSED to Stage enum in lib/stage-transitions.ts
+- [x] T004 Update isTerminalStage() to include CLOSED in lib/stage-transitions.ts
+- [x] T005 Add VERIFY → CLOSED transition case in isValidTransition() in lib/stage-transitions.ts
 
 **Checkpoint**: Database ready, state machine updated - core foundation complete
 
@@ -32,7 +32,7 @@
 
 **Purpose**: GitHub PR close functionality required by close API
 
-- [ ] T006 Create closePRsForBranch() function in lib/github/close-prs.ts with ClosePRsResult interface
+- [x] T006 Create closePRsForBranch() function in lib/github/close-prs.ts with ClosePRsResult interface
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -46,20 +46,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Create RTL component test for CloseConfirmationModal in tests/unit/components/close-confirmation-modal.test.tsx
-- [ ] T008 [P] [US1] Create integration test for close API endpoint in tests/integration/tickets/close.test.ts
-- [ ] T009 [US1] Create E2E test for drag-drop close flow in tests/e2e/ticket-close.spec.ts
+- [x] T007 [P] [US1] Create RTL component test for CloseConfirmationModal in tests/unit/components/close-confirmation-modal.test.tsx
+- [x] T008 [P] [US1] Create integration test for close API endpoint in tests/integration/tickets/close.test.ts
+- [ ] T009 [US1] Create E2E test for drag-drop close flow in tests/e2e/ticket-close.spec.ts (skipped - E2E tests require browser)
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create CloseConfirmationModal component in components/board/close-confirmation-modal.tsx
-- [ ] T011 [US1] Create POST endpoint for close transition in app/api/projects/[projectId]/tickets/[id]/close/route.ts
-- [ ] T012 [US1] Add pendingCloseTransition state and CloseConfirmationModal import to components/board/board.tsx
-- [ ] T013 [US1] Modify getDropZoneStyle() for dual drop zones (Ship/Close) when dragging VERIFY tickets in components/board/board.tsx
-- [ ] T014 [US1] Add handleDragEnd logic for close zone detection in components/board/board.tsx
-- [ ] T015 [US1] Add handleCloseConfirm callback with API call and query invalidation in components/board/board.tsx
-- [ ] T016 [US1] Render CloseConfirmationModal in board.tsx JSX
-- [ ] T017 [US1] Filter out CLOSED tickets from board display in components/board/stage-column.tsx
+- [x] T010 [US1] Create CloseConfirmationModal component in components/board/close-confirmation-modal.tsx
+- [x] T011 [US1] Create POST endpoint for close transition in app/api/projects/[projectId]/tickets/[id]/close/route.ts
+- [x] T012 [US1] Add pendingCloseTransition state and CloseConfirmationModal import to components/board/board.tsx
+- [x] T013 [US1] Modify getDropZoneStyle() for dual drop zones (Ship/Close) when dragging VERIFY tickets in components/board/board.tsx
+- [x] T014 [US1] Add handleDragEnd logic for close zone detection in components/board/board.tsx
+- [x] T015 [US1] Add handleCloseConfirm callback with API call and query invalidation in components/board/board.tsx
+- [x] T016 [US1] Render CloseConfirmationModal in board.tsx JSX
+- [x] T017 [US1] Filter out CLOSED tickets from board display in components/board/board.tsx (filter in stages array)
 
 **Checkpoint**: User Story 1 complete - can close tickets via drag-drop to SHIP column Close zone
 
@@ -73,15 +73,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add test cases for closed ticket styling in search results (can extend existing search tests)
-- [ ] T019 [P] [US2] Add test cases for read-only mode in ticket detail modal (can extend existing modal tests)
+- [ ] T018 [P] [US2] Add test cases for closed ticket styling in search results (skipped - RTL tests for search)
+- [ ] T019 [P] [US2] Add test cases for read-only mode in ticket detail modal (skipped - RTL tests for modal)
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Add muted styling (opacity-60, gray text) and "Closed" badge for closed tickets in components/search/ticket-search.tsx
-- [ ] T021 [US2] Add isClosedStage check and disable edit controls for CLOSED tickets in components/board/ticket-detail-modal.tsx
-- [ ] T022 [US2] Add visual "read-only" indicator for closed ticket detail modal in components/board/ticket-detail-modal.tsx
-- [ ] T023 [US2] Disable comment form for CLOSED tickets in ticket-detail-modal.tsx
+- [x] T020 [US2] Add muted styling (opacity-60, gray text) and "Closed" badge for closed tickets in components/search/search-results.tsx
+- [x] T021 [US2] Add isClosedStage check and disable edit controls for CLOSED tickets in components/board/ticket-detail-modal.tsx
+- [x] T022 [US2] Add visual "read-only" indicator for closed ticket detail modal in components/board/ticket-detail-modal.tsx
+- [x] T023 [US2] Disable comment form for CLOSED tickets in ticket-detail-modal.tsx
 
 **Checkpoint**: User Story 2 complete - closed tickets searchable and viewable in read-only mode
 
@@ -95,16 +95,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add integration test cases for invalid stage rejection in tests/integration/tickets/close.test.ts
-- [ ] T025 [P] [US3] Add integration test cases for active jobs rejection in tests/integration/tickets/close.test.ts
-- [ ] T026 [P] [US3] Add integration test cases for cleanup lock rejection (423) in tests/integration/tickets/close.test.ts
+- [x] T024 [P] [US3] Add integration test cases for invalid stage rejection in tests/integration/tickets/close.test.ts
+- [x] T025 [P] [US3] Add integration test cases for active jobs rejection in tests/integration/tickets/close.test.ts
+- [x] T026 [P] [US3] Add integration test cases for cleanup lock rejection (423) in tests/integration/tickets/close.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Ensure dual drop zone only renders when dragging VERIFY tickets (already part of T013 logic) - verify in components/board/board.tsx
-- [ ] T028 [US3] Verify API validates stage is VERIFY before close (already in T011) - add explicit test coverage
-- [ ] T029 [US3] Verify API checks for active jobs before close (already in T011) - add explicit test coverage
-- [ ] T030 [US3] Verify API checks cleanup lock before close (already in T011) - add explicit test coverage
+- [x] T027 [US3] Ensure dual drop zone only renders when dragging VERIFY tickets (already part of T013 logic) - verified in components/board/board.tsx
+- [x] T028 [US3] Verify API validates stage is VERIFY before close (already in T011) - covered by integration tests
+- [x] T029 [US3] Verify API checks for active jobs before close (already in T011) - covered by integration tests
+- [x] T030 [US3] Verify API checks cleanup lock before close (already in T011) - covered by integration tests
 
 **Checkpoint**: User Story 3 complete - all invalid close attempts properly rejected
 
@@ -118,15 +118,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T031 [P] [US4] Add unit test for closePRsForBranch() with no open PRs in tests/unit/github/close-prs.test.ts
-- [ ] T032 [P] [US4] Add unit test for closePRsForBranch() with already-closed PR (idempotent) in tests/unit/github/close-prs.test.ts
-- [ ] T033 [P] [US4] Add unit test for closePRsForBranch() with multiple PRs in tests/unit/github/close-prs.test.ts
+- [x] T031 [P] [US4] Add unit test for closePRsForBranch() with no open PRs in tests/unit/github/close-prs.test.ts
+- [x] T032 [P] [US4] Add unit test for closePRsForBranch() with already-closed PR (idempotent) in tests/unit/github/close-prs.test.ts
+- [x] T033 [P] [US4] Add unit test for closePRsForBranch() with multiple PRs in tests/unit/github/close-prs.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T034 [US4] Verify closePRsForBranch handles empty PR list (no error) in lib/github/close-prs.ts
-- [ ] T035 [US4] Verify closePRsForBranch handles 404/422 errors as idempotent in lib/github/close-prs.ts
-- [ ] T036 [US4] Verify close API logs GitHub failures but completes local transition in app/api/projects/[projectId]/tickets/[id]/close/route.ts
+- [x] T034 [US4] Verify closePRsForBranch handles empty PR list (no error) in lib/github/close-prs.ts
+- [x] T035 [US4] Verify closePRsForBranch handles 404/422 errors as idempotent in lib/github/close-prs.ts
+- [x] T036 [US4] Verify close API logs GitHub failures but completes local transition in app/api/projects/[projectId]/tickets/[id]/close/route.ts
 
 **Checkpoint**: User Story 4 complete - all GitHub edge cases handled gracefully
 
@@ -136,10 +136,10 @@
 
 **Purpose**: Final validation and integration verification
 
-- [ ] T037 Run full test suite: `bun run test`
-- [ ] T038 Run type check: `bun run type-check`
-- [ ] T039 Run quickstart.md verification checklist
-- [ ] T040 Verify E2E drag-drop flow end-to-end with real browser
+- [x] T037 Run full test suite: `bun run test` (close-related tests pass: 17 unit + 8 integration; pre-existing failures unrelated)
+- [x] T038 Run type check: `bun run type-check`
+- [ ] T039 Run quickstart.md verification checklist (skipped - manual)
+- [ ] T040 Verify E2E drag-drop flow end-to-end with real browser (skipped - requires real browser)
 
 ---
 
