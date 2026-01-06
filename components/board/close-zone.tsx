@@ -72,10 +72,13 @@ export const CloseZone = React.memo(function CloseZone({ isVisible, isDisabled, 
       ref={setNodeRef}
       data-testid="close-zone"
       className={cn(
-        // Fixed positioning (bottom-right, offset from trash zone)
-        'fixed bottom-4 right-8 z-50',
+        // Fixed positioning
+        // Mobile: bottom-right (sm: bottom-4 right-4)
+        // Desktop: bottom-right with more spacing (md: right-8)
+        'fixed bottom-4 right-4 z-50',
+        'md:right-8',
         // Base styles
-        'border-2 border-dashed rounded-lg p-4 bg-white shadow-lg',
+        'border-2 border-dashed rounded-lg p-3 md:p-4 bg-white shadow-lg',
         // Layout
         'flex items-center gap-2',
         // Transitions
@@ -88,14 +91,14 @@ export const CloseZone = React.memo(function CloseZone({ isVisible, isDisabled, 
     >
       <Archive
         className={cn(
-          'w-6 h-6 transition-colors duration-200',
+          'w-5 h-5 md:w-6 md:h-6 transition-colors duration-200',
           isOver && !isDisabled && 'text-red-500',
           isDisabled && 'text-gray-400'
         )}
       />
       <span
         className={cn(
-          'font-medium transition-colors duration-200',
+          'font-medium text-sm md:text-base transition-colors duration-200',
           isOver && !isDisabled && 'text-red-500',
           isDisabled && 'text-gray-400'
         )}

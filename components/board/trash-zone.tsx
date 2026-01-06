@@ -68,10 +68,13 @@ export const TrashZone = React.memo(function TrashZone({ isVisible, isDisabled, 
       ref={setNodeRef}
       data-testid="trash-zone"
       className={cn(
-        // Fixed positioning (bottom-center)
-        'fixed bottom-4 left-1/2 -translate-x-1/2 z-50',
+        // Fixed positioning
+        // Mobile: bottom-left (sm: bottom-4 left-4)
+        // Desktop: bottom-center (md: left-1/2 -translate-x-1/2)
+        'fixed bottom-4 left-4 z-50',
+        'md:left-1/2 md:-translate-x-1/2',
         // Base styles
-        'border-2 border-dashed rounded-lg p-4 bg-white shadow-lg',
+        'border-2 border-dashed rounded-lg p-3 md:p-4 bg-white shadow-lg',
         // Layout
         'flex items-center gap-2',
         // Transitions
@@ -84,14 +87,14 @@ export const TrashZone = React.memo(function TrashZone({ isVisible, isDisabled, 
     >
       <Trash2
         className={cn(
-          'w-6 h-6 transition-colors duration-200',
+          'w-5 h-5 md:w-6 md:h-6 transition-colors duration-200',
           isOver && !isDisabled && 'text-red-500',
           isDisabled && 'text-gray-400'
         )}
       />
       <span
         className={cn(
-          'font-medium transition-colors duration-200',
+          'font-medium text-sm md:text-base transition-colors duration-200',
           isOver && !isDisabled && 'text-red-500',
           isDisabled && 'text-gray-400'
         )}
