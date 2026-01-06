@@ -12,6 +12,7 @@ export enum Stage {
   BUILD = 'BUILD',
   VERIFY = 'VERIFY',
   SHIP = 'SHIP',
+  CLOSED = 'CLOSED',
 }
 
 /**
@@ -80,6 +81,16 @@ export function isValidTransition(
   toStage: Stage,
   workflowType?: 'QUICK' | 'FULL' | 'CLEAN'
 ): boolean {
+  // CLOSED is terminal - no transitions allowed from CLOSED
+  if (fromStage === Stage.CLOSED) {
+    return false;
+  }
+
+  // Special case: Close transition allows VERIFY → CLOSED
+  if (fromStage === Stage.VERIFY && toStage === Stage.CLOSED) {
+    return true;
+  }
+
   // Special case: Quick-impl allows INBOX → BUILD
   if (fromStage === Stage.INBOX && toStage === Stage.BUILD) {
     return true;
@@ -111,11 +122,58 @@ export function getAllStages(): Stage[] {
 }
 
 /**
- * Check if a stage is the terminal stage (no further transitions possible).
+ * Check if a stage is a terminal stage (no further transitions possible).
  *
  * @param stage - The stage to check
- * @returns true if stage is SHIP (terminal), false otherwise
+ * @returns true if stage is SHIP or CLOSED (terminal), false otherwise
  */
 export function isTerminalStage(stage: Stage): boolean {
-  return stage === Stage.SHIP;
+  return stage === Stage.SHIP || stage === Stage.CLOSED;
+}
+
+/**
+ * Check if a transition is a close transition (VERIFY → CLOSED).
+ *
+ * @param fromStage - The source stage
+ * @param toStage - The target stage
+ * @returns true if this is a close transition
+ */
+export function isCloseTransition(fromStage: Stage, toStage: Stage): boolean {
+  return fromStage === Stage.VERIFY && toStage === Stage.CLOSED;
+}
+
+/**
+ * Validation result for close ticket operation.
+ */
+export interface CloseValidationResult {
+  allowed: boolean;
+  reason?: string;
+}
+
+/**
+ * Check if a ticket can be closed.
+ * Only tickets in VERIFY stage can be closed.
+ * Closure is blocked when:
+ * - There are active jobs (PENDING or RUNNING status)
+ * - A cleanup lock is active on the project
+ *
+ * @param currentStage - The current stage of the ticket
+ * @param mostRecentJob - The most recent job for the ticket (if any)
+ * @returns Validation result with allowed flag and optional reason
+ */
+export function canCloseTicket(
+  currentStage: Stage,
+  mostRecentJob: { status: string } | null
+): CloseValidationResult {
+  // Only VERIFY can transition to CLOSED
+  if (currentStage !== Stage.VERIFY) {
+    return { allowed: false, reason: 'Only tickets in VERIFY stage can be closed' };
+  }
+
+  // Block if job is active
+  if (mostRecentJob && ['PENDING', 'RUNNING'].includes(mostRecentJob.status)) {
+    return { allowed: false, reason: 'Cannot close: workflow is still running' };
+  }
+
+  return { allowed: true };
 }

@@ -78,6 +78,7 @@ export async function GET(
         ticketKey: true,
         title: true,
         stage: true,
+        closedAt: true,
       },
       take: limit,
       orderBy: { updatedAt: 'desc' },

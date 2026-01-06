@@ -11,6 +11,7 @@ import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
 import { Ban } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
+import { CloseZone } from './close-zone';
 
 interface StageColumnProps {
   stage: Stage;
@@ -25,6 +26,12 @@ interface StageColumnProps {
   blockReason?: 'job' | 'cleanup';
   activePreviewTicket?: { ticketKey: string } | null;
   activeDeploymentTicket?: number | null;
+  // AIB-147: Whether dragging from VERIFY stage (triggers dual zone in SHIP)
+  isDraggingFromVerify?: boolean;
+  // AIB-147: Whether the close zone should be disabled (active job)
+  closeZoneDisabled?: boolean;
+  // AIB-147: Reason why close zone is disabled
+  closeZoneDisabledReason?: string | undefined;
 }
 
 // Stage configuration matching original design
@@ -115,6 +122,19 @@ const STAGE_CONFIG: Record<
     badgeTextColor: 'text-zinc-50',
     order: 5,
   },
+  // CLOSED stage - not displayed as a column but needed for type completeness
+  [Stage.CLOSED]: {
+    label: 'CLOSED',
+    color: 'gray',
+    bgColor: 'bg-[#585b70]/10',
+    headerBgColor: 'bg-[#585b70]/30',
+    headerBorderColor: 'border-[#585b70]/40',
+    textColor: 'text-[#585b70]',
+    borderColor: 'border-[#585b70]/40',
+    badgeBgColor: 'bg-[#585b70]/70',
+    badgeTextColor: 'text-zinc-50',
+    order: 6,
+  },
 };
 
 /**
@@ -133,6 +153,9 @@ export const StageColumn = React.memo(
     blockReason = 'job',
     activePreviewTicket,
     activeDeploymentTicket,
+    isDraggingFromVerify = false,
+    closeZoneDisabled = false,
+    closeZoneDisabledReason,
   }: StageColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
       id: `droppable-${stage}`,
@@ -145,6 +168,9 @@ export const StageColumn = React.memo(
     const stageConfig = STAGE_CONFIG[stage];
     const ticketCount = tickets.length;
     const showNewTicketButton = stageConfig.order === 0; // Only show in INBOX
+
+    // AIB-147: Show dual zone (Ship + Close) when dragging from VERIFY to SHIP column
+    const showDualZone = stage === Stage.SHIP && isDraggingFromVerify;
 
     // Scroll detection state for mobile scroll buttons
     const [canScrollUp, setCanScrollUp] = React.useState(false);
@@ -230,39 +256,62 @@ export const StageColumn = React.memo(
           </div>
         </div>
 
-        {/* Tickets Scroll Area */}
-        <ScrollArea className="flex-1 overscroll-none" viewportRef={scrollViewportRef}>
-          <div className="space-y-3 px-4 pb-5 pt-3 touch-pan-y">
-            {/* New Ticket Button - Only in INBOX */}
-            {showNewTicketButton && (
-              <NewTicketButton stage={stage} projectId={projectId} />
-            )}
-
-            {/* Ticket Cards */}
-            {tickets.length > 0 ? (
-              tickets.map((ticket) => {
-                const dualJobs = getTicketJobs?.(ticket.id);
-                return (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    workflowJob={dualJobs?.workflow || null}
-                    aiBoardJob={dualJobs?.aiBoard || null}
-                    deployJob={dualJobs?.deployJob || null}
-                    isDraggable={isDraggable}
-                    activePreviewTicket={activePreviewTicket || null}
-                    activeDeploymentTicket={activeDeploymentTicket || null}
-                    {...(onTicketClick && { onTicketClick })}
-                  />
-                );
-              })
-            ) : (
-              <div className="text-center text-sm text-zinc-400/90 py-12 font-medium">
-                No tickets
+        {/* AIB-147: Dual zone rendering when dragging from VERIFY to SHIP */}
+        {showDualZone ? (
+          <div className="flex-1 flex flex-col gap-2 p-3">
+            {/* Ship Zone (60%) - existing tickets with solid purple border */}
+            <div
+              className={`flex-[6] border-2 border-solid rounded-lg p-2 transition-all duration-200 ${
+                isOver ? 'border-purple-500 bg-purple-50/50' : 'border-purple-400/60 bg-purple-50/30'
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <span className="text-sm font-medium text-purple-600">Ship</span>
+                <span className="text-xs text-purple-500/80">Complete and merge</span>
               </div>
-            )}
+            </div>
+            {/* Close Zone (40%) - red dashed border */}
+            <CloseZone
+              isVisible={true}
+              isDisabled={closeZoneDisabled}
+              disabledReason={closeZoneDisabledReason}
+            />
           </div>
-        </ScrollArea>
+        ) : (
+          /* Normal Tickets Scroll Area */
+          <ScrollArea className="flex-1 overscroll-none" viewportRef={scrollViewportRef}>
+            <div className="space-y-3 px-4 pb-5 pt-3 touch-pan-y">
+              {/* New Ticket Button - Only in INBOX */}
+              {showNewTicketButton && (
+                <NewTicketButton stage={stage} projectId={projectId} />
+              )}
+
+              {/* Ticket Cards */}
+              {tickets.length > 0 ? (
+                tickets.map((ticket) => {
+                  const dualJobs = getTicketJobs?.(ticket.id);
+                  return (
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      workflowJob={dualJobs?.workflow || null}
+                      aiBoardJob={dualJobs?.aiBoard || null}
+                      deployJob={dualJobs?.deployJob || null}
+                      isDraggable={isDraggable}
+                      activePreviewTicket={activePreviewTicket || null}
+                      activeDeploymentTicket={activeDeploymentTicket || null}
+                      {...(onTicketClick && { onTicketClick })}
+                    />
+                  );
+                })
+              ) : (
+                <div className="text-center text-sm text-zinc-400/90 py-12 font-medium">
+                  No tickets
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )}
 
         {/* Mobile Scroll Buttons */}
         <MobileScrollButton

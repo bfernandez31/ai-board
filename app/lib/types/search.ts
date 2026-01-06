@@ -13,6 +13,8 @@ export interface SearchResult {
   title: string;
   /** Current stage for visual indicator */
   stage: Stage;
+  /** Timestamp when ticket was closed (null if not closed) */
+  closedAt: Date | string | null;
 }
 
 /**

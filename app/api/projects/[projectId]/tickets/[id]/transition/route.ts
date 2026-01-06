@@ -6,10 +6,14 @@ import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollb
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
+import { canCloseTicket, isCloseTransition, Stage as StageEnum } from '@/lib/stage-transitions';
+import { closeTicket } from '@/lib/db/tickets';
+import { closePRsOnly } from '@/lib/github/close-prs-only';
+import { createGitHubClient } from '@/app/lib/github/client';
 
 // Zod schema for request validation
 const TransitionRequestSchema = z.object({
-  targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+  targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']),
 });
 
 /**
@@ -131,6 +135,64 @@ export async function POST(
         });
         console.log(`[Transition] Cleared orphaned cleanup lock for project ${projectId}`);
       }
+    }
+
+    // Handle VERIFY → CLOSED transition (ticket close)
+    if (isCloseTransition(ticket.stage as StageEnum, targetStage as StageEnum)) {
+      // Get most recent workflow job
+      const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
+      const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
+
+      // Validate close eligibility
+      const validation = canCloseTicket(
+        ticket.stage as StageEnum,
+        mostRecentJob ? { status: mostRecentJob.status } : null
+      );
+
+      if (!validation.allowed) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+
+      // Fetch project for GitHub operations
+      const ticketProject = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { githubOwner: true, githubRepo: true },
+      });
+
+      if (!ticketProject) {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      }
+
+      // Close the ticket (atomic update)
+      const closedTicketResult = await closeTicket(ticket.id, ticket.version);
+
+      // Close associated PRs (best-effort, don't fail the close if PR closure fails)
+      let prsClosed = 0;
+      if (ticket.branch) {
+        try {
+          const octokit = createGitHubClient();
+          const prResult = await closePRsOnly(
+            octokit,
+            ticketProject.githubOwner,
+            ticketProject.githubRepo,
+            ticket.branch,
+            `Ticket closed without shipping. Branch preserved for reference.`
+          );
+          prsClosed = prResult.prsClosed;
+        } catch (prError) {
+          // Log error but don't fail the close - database state is already correct
+          console.error('[Transition] Failed to close PRs:', prError);
+        }
+      }
+
+      return NextResponse.json({
+        id: closedTicketResult.id,
+        ticketKey: closedTicketResult.ticketKey,
+        stage: closedTicketResult.stage,
+        closedAt: closedTicketResult.closedAt.toISOString(),
+        version: closedTicketResult.version,
+        prsClosed,
+      });
     }
 
     // Detect rollback attempt (BUILD → INBOX)

@@ -16,6 +16,7 @@ export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   BUILD: 'implement',
   VERIFY: 'verify', // Automated workflow with test execution and PR creation
   SHIP: null,
+  CLOSED: null, // Terminal stage - no automated workflow
 };
 
 /**

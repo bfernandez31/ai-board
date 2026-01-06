@@ -18,11 +18,11 @@
 
 **Purpose**: Database schema changes and foundational stage logic
 
-- [ ] T001 Add CLOSED to Stage enum and closedAt field to Ticket model in prisma/schema.prisma
-- [ ] T002 Run prisma migrate dev to create migration for CLOSED stage and closedAt field
-- [ ] T003 Add CLOSED to Stage type and update isTerminalStage() function in lib/stage-transitions.ts
-- [ ] T004 [P] Add isCloseTransition() helper function in lib/stage-transitions.ts
-- [ ] T005 [P] Add canCloseTicket() validation function in lib/stage-transitions.ts
+- [x] T001 Add CLOSED to Stage enum and closedAt field to Ticket model in prisma/schema.prisma
+- [x] T002 Run prisma migrate dev to create migration for CLOSED stage and closedAt field
+- [x] T003 Add CLOSED to Stage type and update isTerminalStage() function in lib/stage-transitions.ts
+- [x] T004 [P] Add isCloseTransition() helper function in lib/stage-transitions.ts
+- [x] T005 [P] Add canCloseTicket() validation function in lib/stage-transitions.ts
 
 ---
 
@@ -32,9 +32,9 @@
 
 **⚠️ CRITICAL**: User stories 1-3 depend on these completing first
 
-- [ ] T006 Create closePRsOnly() function in lib/github/close-prs-only.ts (find PRs by branch, add comment, close without deleting branch)
-- [ ] T007 Create closeTicket() function in lib/db/tickets.ts (atomic update of stage to CLOSED and set closedAt timestamp)
-- [ ] T008 Update board ticket query to exclude CLOSED tickets in lib/db/tickets.ts
+- [x] T006 Create closePRsOnly() function in lib/github/close-prs-only.ts (find PRs by branch, add comment, close without deleting branch)
+- [x] T007 Create closeTicket() function in lib/db/tickets.ts (atomic update of stage to CLOSED and set closedAt timestamp)
+- [x] T008 Update board ticket query to exclude CLOSED tickets in lib/db/tickets.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -48,11 +48,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Extend transition endpoint Zod schema to accept CLOSED as valid targetStage in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
-- [ ] T010 [US1] Implement VERIFY → CLOSED transition logic in app/api/projects/[projectId]/tickets/[id]/transition/route.ts (call canCloseTicket, closeTicket, closePRsOnly)
-- [ ] T011 [US1] Create CloseConfirmationModal component using AlertDialog in components/board/close-confirmation-modal.tsx
-- [ ] T012 [US1] Create useCloseTicket mutation hook in app/lib/hooks/mutations/useCloseTicket.ts
-- [ ] T013 [US1] Add Close zone drop handling and open CloseConfirmationModal in components/board/board.tsx
+- [x] T009 [US1] Extend transition endpoint Zod schema to accept CLOSED as valid targetStage in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
+- [x] T010 [US1] Implement VERIFY → CLOSED transition logic in app/api/projects/[projectId]/tickets/[id]/transition/route.ts (call canCloseTicket, closeTicket, closePRsOnly)
+- [x] T011 [US1] Create CloseConfirmationModal component using AlertDialog in components/board/close-confirmation-modal.tsx
+- [x] T012 [US1] Create useCloseTicket mutation hook in app/lib/hooks/mutations/useCloseTicket.ts
+- [x] T013 [US1] Add Close zone drop handling and open CloseConfirmationModal in components/board/board.tsx
 
 **Checkpoint**: User Story 1 complete - tickets can be closed from VERIFY stage with confirmation
 
@@ -66,9 +66,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add closedAt to search endpoint select fields in app/api/projects/[projectId]/tickets/search/route.ts
-- [ ] T015 [US2] Add muted styling and Closed badge for CLOSED tickets in components/tickets/ticket-search-result.tsx
-- [ ] T016 [US2] Add isReadOnly prop and closed state banner to ticket detail modal in components/tickets/ticket-detail-modal.tsx (disable edit controls when stage is CLOSED)
+- [x] T014 [US2] Add closedAt to search endpoint select fields in app/api/projects/[projectId]/tickets/search/route.ts
+- [x] T015 [US2] Add muted styling and Closed badge for CLOSED tickets in components/tickets/ticket-search-result.tsx
+- [x] T016 [US2] Add isReadOnly prop and closed state banner to ticket detail modal in components/tickets/ticket-detail-modal.tsx (disable edit controls when stage is CLOSED)
 
 **Checkpoint**: User Story 2 complete - closed tickets searchable and viewable in read-only mode
 
@@ -82,9 +82,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create CloseZone droppable component with red dashed border and Archive icon in components/board/close-zone.tsx
-- [ ] T018 [US3] Detect drag source stage using useDndContext in components/board/stage-column.tsx
-- [ ] T019 [US3] Implement conditional dual zone rendering (ShipZone 60% + CloseZone 40%) when dragSource is VERIFY in components/board/stage-column.tsx
+- [x] T017 [US3] Create CloseZone droppable component with red dashed border and Archive icon in components/board/close-zone.tsx
+- [x] T018 [US3] Detect drag source stage using useDndContext in components/board/stage-column.tsx
+- [x] T019 [US3] Implement conditional dual zone rendering (ShipZone 60% + CloseZone 40%) when dragSource is VERIFY in components/board/stage-column.tsx
 
 **Checkpoint**: User Story 3 complete - dual drop zones appear when dragging from VERIFY
 
@@ -98,9 +98,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Add active job check (PENDING/RUNNING status) to VERIFY → CLOSED transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
-- [ ] T021 [US4] Add cleanup lock check returning HTTP 423 for VERIFY → CLOSED transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
-- [ ] T022 [US4] Add CLOSED as terminal stage with no outbound transitions in lib/stage-transitions.ts (prevent CLOSED → any transition)
+- [x] T020 [US4] Add active job check (PENDING/RUNNING status) to VERIFY → CLOSED transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
+- [x] T021 [US4] Add cleanup lock check returning HTTP 423 for VERIFY → CLOSED transition in app/api/projects/[projectId]/tickets/[id]/transition/route.ts
+- [x] T022 [US4] Add CLOSED as terminal stage with no outbound transitions in lib/stage-transitions.ts (prevent CLOSED → any transition)
 
 **Checkpoint**: User Story 4 complete - invalid closure attempts are blocked with appropriate feedback
 
@@ -110,9 +110,9 @@
 
 **Purpose**: Final validation and integration
 
-- [ ] T023 Verify CLOSED tickets excluded from all board columns (regression check)
-- [ ] T024 Verify PR closure is idempotent (no error when no PR exists or PR already closed)
-- [ ] T025 Run quickstart.md validation checklist
+- [x] T023 Verify CLOSED tickets excluded from all board columns (regression check)
+- [x] T024 Verify PR closure is idempotent (no error when no PR exists or PR already closed)
+- [x] T025 Run quickstart.md validation checklist
 
 ---
 

@@ -143,6 +143,10 @@ const stageBadgeConfig: Record<string, { label: string; className: string }> = {
     label: 'Ship',
     className: 'bg-[#a6e3a1] text-zinc-900 border-[#a6e3a1]',
   },
+  CLOSED: {
+    label: 'Closed',
+    className: 'bg-[#585b70] text-zinc-50 border-[#585b70]',
+  },
 };
 
 /**
@@ -798,6 +802,9 @@ export function TicketDetailModal({
   // Check if description and policy can be edited based on current stage
   const isInboxStage = canEditDescriptionAndPolicy(ticket.stage as Stage);
 
+  // Check if ticket is closed (read-only mode)
+  const isClosed = ticket.stage === 'CLOSED';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -981,31 +988,48 @@ export function TicketDetailModal({
               </div>
             ) : (
               <div
-                className="flex items-center gap-3 cursor-pointer hover:bg-[#313244]/50 p-3 -ml-3 rounded-lg transition-all duration-200"
-                onClick={titleEdit.startEdit}
-                onKeyDown={(e) => {
+                className={`flex items-center gap-3 p-3 -ml-3 rounded-lg transition-all duration-200 ${
+                  isClosed ? 'cursor-default' : 'cursor-pointer hover:bg-[#313244]/50'
+                }`}
+                onClick={isClosed ? undefined : titleEdit.startEdit}
+                onKeyDown={isClosed ? undefined : (e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     titleEdit.startEdit();
                   }
                 }}
                 data-testid="ticket-title"
-                role="button"
-                tabIndex={0}
-                aria-label="Edit ticket title"
+                role={isClosed ? undefined : "button"}
+                tabIndex={isClosed ? undefined : 0}
+                aria-label={isClosed ? "Ticket title (read-only)" : "Edit ticket title"}
               >
                 <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
                   {localTicket?.title || ticket.title}
                 </DialogTitle>
-                <Pencil
-                  className="w-5 h-5 text-[#a6adc8] opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  data-testid="edit-icon-title"
-                  aria-hidden="true"
-                />
+                {!isClosed && (
+                  <Pencil
+                    className="w-5 h-5 text-[#a6adc8] opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    data-testid="edit-icon-title"
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             )}
           </div>
         </DialogHeader>
+
+        {/* Closed ticket banner */}
+        {isClosed && (
+          <div className="bg-[#585b70]/20 border border-[#585b70] rounded-md px-4 py-3 mb-4 flex items-center gap-3" data-testid="closed-banner">
+            <div className="shrink-0 w-5 h-5 rounded-full bg-[#585b70] flex items-center justify-center">
+              <span className="text-white text-xs font-bold">&#10003;</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[#cdd6f4]">This ticket is closed</p>
+              <p className="text-xs text-[#a6adc8]">Closed tickets are read-only and cannot be edited.</p>
+            </div>
+          </div>
+        )}
 
         {/* Tabs for organizing modal content */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">

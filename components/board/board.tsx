@@ -21,6 +21,7 @@ import { QuickImplModal } from './quick-impl-modal';
 import { RollbackVerifyModal } from './rollback-verify-modal';
 import { TrashZone } from './trash-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
+import { CloseConfirmationModal } from './close-confirmation-modal';
 import { CleanupInProgressBanner } from '@/components/cleanup/CleanupInProgressBanner';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
@@ -41,6 +42,7 @@ import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-fil
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
+import { useCloseTicket } from '@/app/lib/hooks/mutations/useCloseTicket';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -155,8 +157,15 @@ function BoardContent({
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithVersion | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  // Close confirmation state (AIB-147)
+  const [ticketToClose, setTicketToClose] = useState<TicketWithVersion | null>(null);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
+
+  // Close mutation hook (AIB-147)
+  const closeTicketMutation = useCloseTicket(projectId);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -363,6 +372,22 @@ function BoardContent({
         // Open delete confirmation modal
         setTicketToDelete(ticket);
         setDeleteModalOpen(true);
+        return;
+      }
+
+      // AIB-147: Check if dropped on close zone (VERIFY → CLOSED)
+      if (over.id === 'close-zone') {
+        // Only VERIFY tickets can be closed
+        if (ticket.stage === Stage.VERIFY) {
+          setTicketToClose(ticket);
+          setCloseModalOpen(true);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Cannot close ticket',
+            description: 'Only tickets in VERIFY stage can be closed.',
+          });
+        }
         return;
       }
 
@@ -873,6 +898,41 @@ function BoardContent({
   // Silence unused warning - function is used via state setter
   void handleDeleteCancel;
 
+  // Close confirmation handlers (AIB-147)
+  const handleCloseConfirm = useCallback(() => {
+    if (!ticketToClose) return;
+
+    closeTicketMutation.mutate(
+      { ticketId: ticketToClose.id, version: ticketToClose.version },
+      {
+        onSuccess: () => {
+          toast({
+            title: 'Ticket closed',
+            description: `${ticketToClose.ticketKey} has been closed. You can find it via search.`,
+          });
+          setCloseModalOpen(false);
+          setTicketToClose(null);
+        },
+        onError: (error) => {
+          toast({
+            variant: 'destructive',
+            title: 'Failed to close ticket',
+            description: error.message,
+          });
+          // Keep modal open on error to allow retry
+        },
+      }
+    );
+  }, [ticketToClose, closeTicketMutation, toast]);
+
+  // Used indirectly via setCloseModalOpen in CloseConfirmationModal
+  const handleCloseCancel = useCallback(() => {
+    setCloseModalOpen(false);
+    setTicketToClose(null);
+  }, []);
+  // Silence unused warning - function is used via state setter
+  void handleCloseCancel;
+
   // Get drop zone style based on drag state (T021)
   const getDropZoneStyle = useCallback(
     (stage: Stage): string => {
@@ -1066,6 +1126,15 @@ function BoardContent({
               // AIB-72: Determine block reason for appropriate overlay message
               const blockReason = isCleanupLockActive ? 'cleanup' as const : 'job' as const;
 
+              // AIB-147: Determine if dragging from VERIFY (for dual zone in SHIP column)
+              const isDraggingFromVerify = isDragging && dragSource === Stage.VERIFY;
+
+              // AIB-147: Check if close zone should be disabled (active job on dragged ticket)
+              const closeZoneDisabled = draggedTicketHasJob;
+              const closeZoneDisabledReason = draggedTicketHasJob
+                ? 'Cannot close: workflow is still running'
+                : undefined;
+
               return (
                 <StageColumn
                   key={stage}
@@ -1080,6 +1149,9 @@ function BoardContent({
                   blockReason={blockReason}
                   activePreviewTicket={activePreviewTicket}
                   activeDeploymentTicket={activeDeploymentTicket}
+                  isDraggingFromVerify={isDraggingFromVerify}
+                  closeZoneDisabled={closeZoneDisabled}
+                  closeZoneDisabledReason={closeZoneDisabledReason}
                 />
               );
             })}
@@ -1131,6 +1203,15 @@ function BoardContent({
         onOpenChange={setDeleteModalOpen}
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteTicketMutation.isPending}
+      />
+
+      {/* Close Confirmation Modal (AIB-147) */}
+      <CloseConfirmationModal
+        ticket={ticketToClose}
+        open={closeModalOpen}
+        onOpenChange={setCloseModalOpen}
+        onConfirm={handleCloseConfirm}
+        isClosing={closeTicketMutation.isPending}
       />
     </div>
   );

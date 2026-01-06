@@ -81,6 +81,7 @@ export function useTicketsByStage(projectId: number) {
         [Stage.BUILD]: [],
         [Stage.VERIFY]: [],
         [Stage.SHIP]: [],
+        [Stage.CLOSED]: [], // CLOSED tickets are excluded from board but needed for type
       };
 
       tickets.forEach((ticket) => {

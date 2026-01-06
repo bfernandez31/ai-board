@@ -6,6 +6,17 @@ import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import type { Ticket } from '@prisma/client';
 
 /**
+ * Result of close ticket operation
+ */
+export interface CloseTicketResult {
+  id: number;
+  ticketKey: string;
+  stage: Stage;
+  closedAt: Date;
+  version: number;
+}
+
+/**
  * Fetch all tickets for a specific project, grouped by stage
  * Sorted by most recently updated first
  * Returns tickets with version field for optimistic concurrency control
@@ -15,7 +26,10 @@ export async function getTicketsByStage(
   projectId: number
 ): Promise<Record<Stage, TicketWithVersion[]>> {
   const tickets = await prisma.ticket.findMany({
-    where: { projectId },
+    where: {
+      projectId,
+      stage: { not: 'CLOSED' }, // Exclude CLOSED tickets from board
+    },
     select: {
       id: true,
       ticketNumber: true,
@@ -156,7 +170,10 @@ export async function createTicket(
  */
 export async function getTicketsWithJobs(projectId: number) {
   const tickets = await prisma.ticket.findMany({
-    where: { projectId },
+    where: {
+      projectId,
+      stage: { not: 'CLOSED' }, // Exclude CLOSED tickets from board
+    },
     select: {
       id: true,
       ticketNumber: true,
@@ -319,4 +336,48 @@ export async function duplicateTicket(
   return await prisma.ticket.create({
     data: duplicateData,
   });
+}
+
+/**
+ * Close a ticket by transitioning it to CLOSED stage.
+ * Atomic update of stage to CLOSED and set closedAt timestamp.
+ * Uses optimistic concurrency control via version field.
+ *
+ * @param ticketId - The ID of the ticket to close
+ * @param currentVersion - The current version for OCC
+ * @returns The closed ticket result
+ * @throws Error if ticket not found or version mismatch
+ */
+export async function closeTicket(
+  ticketId: number,
+  currentVersion: number
+): Promise<CloseTicketResult> {
+  const closedAt = new Date();
+
+  const updatedTicket = await prisma.ticket.update({
+    where: {
+      id: ticketId,
+      version: currentVersion, // OCC check
+    },
+    data: {
+      stage: 'CLOSED',
+      closedAt,
+      version: { increment: 1 },
+    },
+    select: {
+      id: true,
+      ticketKey: true,
+      stage: true,
+      closedAt: true,
+      version: true,
+    },
+  });
+
+  return {
+    id: updatedTicket.id,
+    ticketKey: updatedTicket.ticketKey,
+    stage: updatedTicket.stage as Stage,
+    closedAt: updatedTicket.closedAt!,
+    version: updatedTicket.version,
+  };
 }
