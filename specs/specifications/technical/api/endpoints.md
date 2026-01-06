@@ -213,6 +213,7 @@ Fetch all tickets for a project, grouped by stage.
       "clarificationPolicy": null,
       "attachments": [],
       "version": 3,
+      "closedAt": null,
       "createdAt": "2025-01-10T14:00:00.000Z",
       "updatedAt": "2025-01-15T10:30:00.000Z"
     }
@@ -224,6 +225,10 @@ Fetch all tickets for a project, grouped by stage.
 - **INBOX**: Tickets sorted by `ticketNumber` ascending (oldest first, newest last)
 - **All Other Stages**: Tickets sorted by `updatedAt` descending (most recently updated first)
 - Sorting applied per-stage after grouping
+
+**Filtering**:
+- By default, excludes CLOSED tickets (they don't appear on board)
+- CLOSED tickets only accessible via search or direct URL
 
 **Errors**:
 - `401`: Not authenticated
@@ -740,6 +745,73 @@ Delete ticket with GitHub cleanup (permanent deletion).
 - Workflow artifacts (spec.md, plan.md, tasks.md) are deleted when branch is deleted
 - Preview deployments become orphaned (Vercel cleanup is manual)
 - TanStack Query optimistic update removes ticket immediately from UI
+
+### POST /api/projects/:projectId/tickets/:id/close
+
+Close ticket from VERIFY stage (transition to CLOSED).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Ticket ID
+
+**Request Body**: Empty
+
+**Response** (200 OK):
+```json
+{
+  "id": 42,
+  "stage": "CLOSED",
+  "closedAt": "2025-01-15T10:45:00.000Z",
+  "updatedAt": "2025-01-15T10:45:00.000Z"
+}
+```
+
+**Close Behavior**:
+1. Validates ticket is in VERIFY stage
+2. Validates no PENDING or RUNNING jobs exist
+3. Validates project cleanup is not in progress
+4. Closes all open GitHub PRs for ticket branch with comment: "Closed by ai-board - ticket moved to CLOSED state"
+5. Updates ticket stage to CLOSED and sets closedAt timestamp
+6. Preserves Git branch (not deleted)
+
+**GitHub PR Close**:
+- Finds all open PRs where head branch matches ticket branch
+- Closes each PR with explanatory comment
+- Idempotent: succeeds if PRs already closed or no PRs exist
+- GitHub API failures logged but don't block close operation
+
+**Errors**:
+- `400`: Invalid close (ticket not in VERIFY or has active jobs)
+  ```json
+  {
+    "error": "Cannot close ticket",
+    "code": "INVALID_CLOSE",
+    "details": {
+      "stage": "BUILD",
+      "message": "Ticket must be in VERIFY stage"
+    }
+  }
+  ```
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Ticket or project not found
+- `423`: Cleanup in progress
+  ```json
+  {
+    "error": "Project cleanup in progress",
+    "code": "CLEANUP_IN_PROGRESS"
+  }
+  ```
+- `500`: Database error
+
+**Notes**:
+- CLOSED tickets removed from board display
+- CLOSED tickets remain searchable
+- CLOSED is terminal state (no further transitions)
+- Branch preserved for audit trail
 
 ### POST /api/projects/:projectId/tickets/:id/transition
 

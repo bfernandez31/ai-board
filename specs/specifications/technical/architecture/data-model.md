@@ -145,6 +145,7 @@ model Ticket {
   clarificationPolicy  ClarificationPolicy?
   attachments          Json?
   version              Int                  @default(1)
+  closedAt             DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -175,7 +176,7 @@ model Ticket {
   - Used in URLs, UI displays, and API lookups
 - `title`: Short description (max 100 characters)
 - `description`: Detailed description (max 2500 characters, all UTF-8 allowed)
-- `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP)
+- `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED)
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
 - `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
@@ -188,6 +189,7 @@ model Ticket {
   - Cleared when new deployment initiated (single-preview enforcement)
   - Cleared when ticket rolls back from VERIFY to PLAN (preview becomes invalid)
 - `version`: Optimistic concurrency control (incremented on each update)
+- `closedAt`: Timestamp when ticket was closed (nullable, set when stage transitions to CLOSED)
 - `createdAt`: Creation timestamp (set once on creation)
 - `updatedAt`: Last modification timestamp (automatically updated by Prisma on any field change via `@updatedAt` directive)
 
@@ -215,18 +217,27 @@ model Ticket {
 - Ticket number assigned using thread-safe PostgreSQL sequence per project
 - Ticket key generated from project key + ticket number (e.g., "ABC-123")
 - Internal ID used for foreign keys, not exposed to users
-- Sequential stage progression (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP)
+- Sequential stage progression (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP or CLOSED)
 - Branch created by workflow during SPECIFY transition
 - workflowType set during first BUILD transition (immutable thereafter)
 - Description editable only in INBOX stage (frozen after SPECIFY)
 - Clarification policy overrides project default when set
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
-  - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP)
+  - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)
   - Deletion blocked when ticket has PENDING or RUNNING jobs
   - Deletion is transactional: GitHub cleanup (PRs, branch) must succeed before database deletion
   - On success: Ticket, Jobs, Comments cascade deleted from database
   - On failure: Ticket remains unchanged (no partial deletion)
+- **Closing**:
+  - Tickets can be closed from VERIFY stage (transition to CLOSED)
+  - Closing blocked when ticket has PENDING or RUNNING jobs
+  - Closing blocked during project cleanup (HTTP 423 Locked)
+  - Closes all open GitHub PRs for ticket branch with explanatory comment
+  - Preserves Git branch (not deleted)
+  - Sets closedAt timestamp automatically
+  - CLOSED tickets excluded from board display but included in search results
+  - CLOSED is terminal state (no outbound transitions)
 
 ### Job
 
@@ -517,15 +528,17 @@ enum Stage {
   BUILD   // Implementation
   VERIFY  // Review and testing
   SHIP    // Completed and deployed
+  CLOSED  // Closed without shipping (terminal)
 }
 ```
 
 **Transitions**:
 - Sequential progression only (one stage forward)
 - Limited rollback: BUILD → INBOX (quick-impl failed), VERIFY → PLAN (full workflow re-implementation)
+- Alternative resolution: VERIFY → CLOSED (close without shipping)
 - No skipping stages
 - Initial: INBOX
-- Terminal: SHIP
+- Terminal: SHIP, CLOSED
 
 ### JobStatus
 

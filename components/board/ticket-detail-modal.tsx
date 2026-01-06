@@ -143,6 +143,11 @@ const stageBadgeConfig: Record<string, { label: string; className: string }> = {
     label: 'Ship',
     className: 'bg-[#a6e3a1] text-zinc-900 border-[#a6e3a1]',
   },
+  // AIB-148: CLOSED stage styling
+  CLOSED: {
+    label: 'Closed',
+    className: 'bg-[#45475a] text-zinc-50 border-[#45475a]',
+  },
 };
 
 /**
@@ -798,6 +803,9 @@ export function TicketDetailModal({
   // Check if description and policy can be edited based on current stage
   const isInboxStage = canEditDescriptionAndPolicy(ticket.stage as Stage);
 
+  // AIB-148: Check if ticket is closed (read-only mode)
+  const isClosedTicket = ticket.stage === 'CLOSED';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -855,6 +863,12 @@ export function TicketDetailModal({
             >
               {stageBadge.label}
             </Badge>
+            {/* AIB-148: Read-only indicator for closed tickets */}
+            {isClosedTicket && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground border-muted-foreground/30">
+                Read-only
+              </Badge>
+            )}
             {localTicket?.project && (
               <PolicyBadge
                 policy={
@@ -978,6 +992,16 @@ export function TicketDetailModal({
                     {titleEdit.error}
                   </p>
                 )}
+              </div>
+            ) : isClosedTicket ? (
+              /* AIB-148: Read-only title display for closed tickets */
+              <div
+                className="flex items-center gap-3 p-3 -ml-3 rounded-lg"
+                data-testid="ticket-title"
+              >
+                <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
+                  {localTicket?.title || ticket.title}
+                </DialogTitle>
               </div>
             ) : (
               <div
@@ -1262,12 +1286,19 @@ export function TicketDetailModal({
           {/* Comments Tab - now Conversation Timeline */}
           <TabsContent value="comments" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4">
             <div className="space-y-4">
-              {/* Comment form at top for adding new comments */}
-              <CommentForm
-                projectId={projectId}
-                ticketId={ticket.id}
-                {...(setIsAutocompleteOpen && { onAutocompleteOpenChange: setIsAutocompleteOpen })}
-              />
+              {/* AIB-148: Hide comment form for closed tickets */}
+              {isClosedTicket ? (
+                <div className="text-sm text-muted-foreground italic px-3 py-2 bg-surface0/50 rounded">
+                  This ticket is closed. Comments are disabled.
+                </div>
+              ) : (
+                /* Comment form at top for adding new comments */
+                <CommentForm
+                  projectId={projectId}
+                  ticketId={ticket.id}
+                  {...(setIsAutocompleteOpen && { onAutocompleteOpenChange: setIsAutocompleteOpen })}
+                />
+              )}
 
               {/* Timeline separator */}
               <div className="border-t border-surface0 pt-4">

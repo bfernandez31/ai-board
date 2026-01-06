@@ -118,6 +118,21 @@ Users move tickets between stages using drag-and-drop:
 - Blocked during project cleanup (HTTP 423 Locked)
 - Creates a `rollback-reset` job to track the git reset operation
 
+**Close Ticket (VERIFY to CLOSED)**:
+- When dropping VERIFY ticket on Close zone in SHIP column
+- SHIP column displays dual drop zones when dragging VERIFY tickets:
+  - Ship zone (top ~60%, purple solid border): Normal ship behavior
+  - Close zone (bottom ~40%, red dashed border with archive icon): Close without shipping
+- Confirmation modal appears explaining consequences:
+  - Ticket will be removed from board but remains searchable
+  - Associated GitHub PRs will be closed with explanatory comment
+  - Git branch will be preserved for future reference
+  - Ticket enters terminal CLOSED state (no further transitions)
+- Available when ticket in VERIFY stage with no PENDING or RUNNING jobs
+- Not available for other stages (dual drop zone only appears for VERIFY)
+- Blocked during project cleanup (HTTP 423 Locked)
+- Sets closedAt timestamp on ticket
+
 ### Performance
 
 - Drag-and-drop operations complete with <100ms latency
@@ -345,6 +360,7 @@ Users can quickly find tickets using a search input in the header:
 
 **Search Scope**:
 - Searches within the currently selected project only
+- Includes tickets in all stages (INBOX through SHIP) and CLOSED tickets
 - No cross-project search (keeps results focused and relevant)
 
 **Search Fields**:
@@ -365,6 +381,7 @@ Users can quickly find tickets using a search input in the header:
 - Each result displays:
   - Ticket key (monospace font for easy identification)
   - Ticket title (truncated if too long)
+  - "Closed" badge with muted styling for closed tickets (reduced opacity, gray text)
 - Results ordered by relevance:
   1. Exact key matches first
   2. Partial key matches second
@@ -404,6 +421,7 @@ Users can navigate search results using keyboard for efficient workflow:
 **Modal Integration**:
 - Ticket modal opens with Details tab active by default
 - All ticket information accessible (comments, files, stats, documentation)
+- Closed tickets open in read-only mode (all edit controls disabled)
 - Search state resets for next search
 
 ### Performance
@@ -560,3 +578,8 @@ Timestamps display in user-friendly formats:
   - Accessible via clickable icon on ticket card
   - Opens preview application in new browser tab
   - Only one active preview allowed per project at a time
+
+- **Closed At**: Timestamp when ticket was closed
+  - Set automatically when ticket transitions to CLOSED
+  - Indicates ticket was closed without shipping
+  - Null for all tickets except CLOSED tickets

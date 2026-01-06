@@ -20,6 +20,7 @@ export const StageSchema = z.enum([
   'BUILD',
   'VERIFY',
   'SHIP',
+  'CLOSED',
 ]);
 
 /**
@@ -148,7 +149,7 @@ export const ticketResponseSchema = z.object({
   ticketKey: z.string().regex(/^[A-Z0-9]{3,6}-\d+$/, 'Invalid ticket key format'),
   title: z.string(),
   description: z.string(),
-  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
+  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']),
   version: z.number().int().positive(),
   projectId: z.number().int().positive(),
   branch: z.string().max(200).nullable(),

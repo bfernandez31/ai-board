@@ -25,8 +25,8 @@ import { matchesStage } from './stage-matcher';
  * - Deploy commands (excluded): deploy-preview
  */
 export function getWorkflowJob(jobs: Job[], currentStage: Stage): Job | null {
-  // INBOX and SHIP stages never have workflow jobs
-  if (currentStage === 'INBOX' || currentStage === 'SHIP') {
+  // INBOX, SHIP, and CLOSED stages never have workflow jobs
+  if (currentStage === 'INBOX' || currentStage === 'SHIP' || currentStage === 'CLOSED') {
     return null;
   }
 
