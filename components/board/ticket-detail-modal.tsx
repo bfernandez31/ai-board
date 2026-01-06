@@ -32,13 +32,16 @@ import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
-import { ClarificationPolicy, Stage } from '@prisma/client';
+import { ClarificationPolicy } from '@prisma/client';
+import { Stage } from '@/lib/stage-transitions';
 import { CommentForm } from '@/components/comments/comment-form';
 import { ConversationTimeline } from '@/components/ticket/conversation-timeline';
 import { useComments } from '@/app/lib/hooks/queries/use-comments';
 import { canEditDescriptionAndPolicy } from '@/lib/utils/field-edit-permissions';
 import { MentionDisplay } from '@/components/comments/mention-display';
 import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/app/lib/query-keys';
+import type { TicketWithVersion } from '@/app/lib/types/query-types';
 import { useComparisonCheck } from '@/hooks/use-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
 import {
@@ -315,11 +318,42 @@ export function TicketDetailModal({
   /**
    * Handle ticket duplication
    * Creates a new ticket in INBOX with "Copy of " prefix
+   * Uses optimistic update pattern for immediate UI feedback
    */
   const handleDuplicate = async () => {
     if (!localTicket) return;
 
     setIsDuplicating(true);
+
+    const queryKey = queryKeys.projects.tickets(projectId);
+    const previousData = queryClient.getQueryData<TicketWithVersion[]>(queryKey) || [];
+
+    // Optimistic update: Create temporary ticket for immediate UI feedback
+    const tempId = Date.now();
+    const now = new Date().toISOString();
+    const optimisticTicket: TicketWithVersion = {
+      id: tempId,
+      ticketNumber: tempId,
+      ticketKey: `TEMP-${tempId}`,
+      title: `Copy of ${localTicket.title}`.slice(0, 100),
+      description: localTicket.description || '',
+      stage: Stage.INBOX,
+      projectId,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      branch: null,
+      autoMode: false,
+      workflowType: localTicket.workflowType || 'FULL',
+      clarificationPolicy: localTicket.clarificationPolicy || null,
+      attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
+    };
+
+    // Add to cache optimistically
+    queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) => [
+      ...(old || []),
+      optimisticTicket,
+    ]);
 
     try {
       const response = await fetch(
@@ -337,8 +371,8 @@ export function TicketDetailModal({
 
       const newTicket = await response.json();
 
-      // Invalidate tickets query to refresh the board
-      await queryClient.invalidateQueries({ queryKey: ['tickets', projectId] });
+      // Invalidate to replace temp with real data
+      await queryClient.invalidateQueries({ queryKey });
 
       toast({
         title: 'Ticket duplicated',
@@ -348,6 +382,9 @@ export function TicketDetailModal({
       // Close modal after successful duplication
       onOpenChange(false);
     } catch (error) {
+      // Rollback optimistic update on error
+      queryClient.setQueryData(queryKey, previousData);
+
       toast({
         variant: 'destructive',
         title: 'Error',

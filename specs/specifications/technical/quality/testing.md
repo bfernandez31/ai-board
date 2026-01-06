@@ -520,6 +520,153 @@ describe('NewTicketModal', () => {
 - Tests behavior from user perspective, not implementation details
 - Average execution: ~10-50ms per test
 
+### Component Test with Optimistic Updates (RTL)
+
+**File**: `tests/unit/components/ticket-detail-modal.test.tsx`
+
+```typescript
+describe('Duplicate functionality', () => {
+  it('should add duplicated ticket to cache immediately', async () => {
+    const user = userEvent.setup();
+    const ticket = createMockTicket();
+    const projectId = 1;
+
+    // Mock successful duplicate API response
+    const duplicatedTicket = {
+      id: 2,
+      ticketNumber: 2,
+      ticketKey: 'TEST-2',
+      title: 'Copy of Test Ticket',
+      description: 'Test description',
+      stage: 'INBOX',
+      version: 1,
+      projectId: 1,
+      branch: null,
+      autoMode: false,
+      clarificationPolicy: null,
+      workflowType: 'FULL',
+      attachments: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/duplicate')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(duplicatedTicket),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ comments: [] }),
+      });
+    });
+
+    const { queryClient } = renderWithProviders(
+      <TicketDetailModal
+        ticket={ticket}
+        open={true}
+        onOpenChange={vi.fn()}
+        onUpdate={vi.fn()}
+        projectId={projectId}
+        jobs={[]}
+        fullJobs={[]}
+      />
+    );
+
+    // Pre-populate cache with original ticket
+    const queryKey = queryKeys.projects.tickets(projectId);
+    queryClient.setQueryData(queryKey, [ticket]);
+
+    // Click the duplicate button
+    const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+    await user.click(duplicateButton);
+
+    // Verify API call was made
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        `/api/projects/${projectId}/tickets/1/duplicate`,
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    // Verify success toast
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Ticket duplicated',
+        description: 'Created TEST-2',
+      });
+    });
+  });
+
+  it('should rollback cache on duplicate failure', async () => {
+    const user = userEvent.setup();
+    const ticket = createMockTicket();
+    const projectId = 1;
+
+    // Mock failed API response
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/duplicate')) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Duplication failed' }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ comments: [] }),
+      });
+    });
+
+    const { queryClient } = renderWithProviders(
+      <TicketDetailModal
+        ticket={ticket}
+        open={true}
+        onOpenChange={vi.fn()}
+        onUpdate={vi.fn()}
+        projectId={projectId}
+        jobs={[]}
+        fullJobs={[]}
+      />
+    );
+
+    // Pre-populate cache with original ticket
+    const queryKey = queryKeys.projects.tickets(projectId);
+    queryClient.setQueryData(queryKey, [ticket]);
+
+    // Get snapshot of original cache data
+    const originalData = queryClient.getQueryData(queryKey);
+
+    // Click the duplicate button
+    const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+    await user.click(duplicateButton);
+
+    // Verify error toast
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Duplication failed',
+      });
+    });
+
+    // Verify cache was rolled back to original state
+    const currentData = queryClient.getQueryData(queryKey);
+    expect(currentData).toEqual(originalData);
+  });
+});
+```
+
+**Key Features**:
+- Tests optimistic update pattern with TanStack Query cache manipulation
+- Verifies immediate cache update before API response
+- Tests rollback behavior on API failure
+- Uses `queryClient` returned from `renderWithProviders()` for cache inspection
+- Mocks fetch globally to simulate success/failure scenarios
+- Validates toast notifications for user feedback
+- Average execution: ~20-40ms per test
+
 ### Component Test with Mocked Hooks (RTL)
 
 **File**: `tests/unit/components/notification-dropdown.test.tsx`

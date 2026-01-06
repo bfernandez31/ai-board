@@ -320,9 +320,17 @@ Users can create a copy of any existing ticket to reuse content for similar work
 - User can click duplicate button again to retry after error
 
 **Performance**:
-- Duplication completes in under 3 seconds from button click to new ticket visible
-- Optimistic UI update shows new ticket immediately
+- New ticket appears immediately in INBOX via optimistic update (0ms perceived latency)
+- Optimistic ticket shows temporary placeholder data until API response received
+- Actual ticket data replaces optimistic entry within 1 second
 - Database operation is atomic (all-or-nothing)
+
+**Optimistic UI Behavior**:
+- Temporary ticket appears in INBOX immediately with "Copy of [title]" prefix
+- Placeholder uses temporary ID and ticket key until server response
+- On success: Temporary ticket replaced with actual server data including real ticket key
+- On error: Temporary ticket removed from UI, original tickets list restored
+- User sees immediate feedback without waiting for server response
 
 ## Ticket Search
 

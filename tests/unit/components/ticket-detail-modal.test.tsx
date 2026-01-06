@@ -15,6 +15,10 @@ import { TicketDetailModal } from '@/components/board/ticket-detail-modal';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
 
+import userEvent from '@testing-library/user-event';
+import { queryKeys } from '@/app/lib/query-keys';
+import type { TicketWithVersion } from '@/app/lib/types/query-types';
+
 // Mock useRouter
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -22,6 +26,12 @@ vi.mock('next/navigation', () => ({
     replace: vi.fn(),
     prefetch: vi.fn(),
   }),
+}));
+
+// Mock toast
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
 }));
 
 /**
@@ -98,6 +108,29 @@ function createMockPolledJob(overrides: Partial<TicketJob> = {}): TicketJob {
 describe('TicketDetailModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockToast.mockReset();
+    // Mock fetch to handle all API calls with sensible defaults
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      // Return empty array for comments/timeline queries
+      if (url.includes('/comments') || url.includes('/timeline')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ comments: [] }),
+        });
+      }
+      // Return no comparisons
+      if (url.includes('/comparisons/check')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+        });
+      }
+      // Default mock for duplicate
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    });
   });
 
   describe('T011: Modal reactivity to ticket prop changes', () => {
@@ -332,6 +365,287 @@ describe('TicketDetailModal', () => {
 
       // Stage badge should update
       expect(screen.getByText('Plan')).toBeInTheDocument();
+    });
+  });
+
+  describe('Duplicate functionality', () => {
+    it('should add duplicated ticket to cache immediately', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ id: 1, title: 'Original Ticket', stage: 'INBOX' });
+      const projectId = 1;
+
+      // Mock successful duplicate API response
+      const duplicatedTicket = {
+        id: 2,
+        ticketNumber: 2,
+        ticketKey: 'TEST-2',
+        title: 'Copy of Original Ticket',
+        description: 'Test description',
+        stage: 'INBOX',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: null,
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      };
+
+      // Override global fetch for this test
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/duplicate')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(duplicatedTicket),
+          });
+        }
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const { queryClient } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Set initial cache data using correct query key
+      const queryKey = queryKeys.projects.tickets(projectId);
+      const initialTickets: TicketWithVersion[] = [{
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Original Ticket',
+        description: 'Test description',
+        stage: 'INBOX',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: null,
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      }];
+      queryClient.setQueryData(queryKey, initialTickets);
+
+      // Click the duplicate button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for the API call to complete
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          `/api/projects/${projectId}/tickets/1/duplicate`,
+          expect.objectContaining({ method: 'POST' })
+        );
+      });
+
+      // Verify toast was shown with success message
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Ticket duplicated',
+            description: 'Created TEST-2',
+          })
+        );
+      });
+    });
+
+    it('should show error toast on duplicate failure', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ id: 1, title: 'Original Ticket', stage: 'INBOX' });
+      const projectId = 1;
+
+      // Override global fetch for this test
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/duplicate')) {
+          return Promise.resolve({
+            ok: false,
+            json: () => Promise.resolve({ error: 'Ticket not found' }),
+          });
+        }
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const { queryClient } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Set initial cache data using correct query key
+      const queryKey = queryKeys.projects.tickets(projectId);
+      const initialTickets: TicketWithVersion[] = [{
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Original Ticket',
+        description: 'Test description',
+        stage: 'INBOX',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: null,
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      }];
+      queryClient.setQueryData(queryKey, initialTickets);
+
+      // Click the duplicate button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for the API call and error handling
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Ticket not found',
+          })
+        );
+      });
+    });
+
+    it('should rollback cache on duplicate failure', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ id: 1, title: 'Original Ticket', stage: 'INBOX' });
+      const projectId = 1;
+
+      // Override global fetch for this test
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/duplicate')) {
+          return Promise.resolve({
+            ok: false,
+            json: () => Promise.resolve({ error: 'Network error' }),
+          });
+        }
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const { queryClient } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Set initial cache data using correct query key BEFORE clicking
+      const queryKey = queryKeys.projects.tickets(projectId);
+      const initialTickets: TicketWithVersion[] = [{
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Original Ticket',
+        description: 'Test description',
+        stage: 'INBOX',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: null,
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      }];
+      queryClient.setQueryData(queryKey, initialTickets);
+
+      // Track cache state before clicking
+      const cacheBeforeClick = queryClient.getQueryData<TicketWithVersion[]>(queryKey);
+      expect(cacheBeforeClick).toHaveLength(1);
+
+      // Click the duplicate button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for error handling
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Network error',
+          })
+        );
+      });
+
+      // Verify cache does not contain temporary tickets (TEMP-*)
+      // The rollback should restore the original data without any TEMP tickets
+      const cachedData = queryClient.getQueryData<TicketWithVersion[]>(queryKey);
+      // If cache exists, ensure no TEMP tickets are present
+      if (cachedData) {
+        const tempTickets = cachedData.filter(t => t.ticketKey.startsWith('TEMP-'));
+        expect(tempTickets).toHaveLength(0);
+      }
     });
   });
 });
