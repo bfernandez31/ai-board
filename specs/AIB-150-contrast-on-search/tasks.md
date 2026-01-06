@@ -44,7 +44,7 @@ No foundational tasks required - existing infrastructure is sufficient:
 
 ### Implementation for User Story 1
 
-- [ ] T001 [US1] Fix cache update logic to keep CLOSED tickets in components/board/board.tsx (line 923-928)
+- [x] T001 [US1] Fix cache update logic to keep CLOSED tickets in components/board/board.tsx (line 923-928) ✅ DONE
 
 **Details**:
 - Change `allTickets.filter(t => t.id !== ticket.id)` to `allTickets.map(t => t.id === ticket.id ? {...t, stage: Stage.CLOSED} : t)`
@@ -63,7 +63,7 @@ No foundational tasks required - existing infrastructure is sufficient:
 
 ### Tests for User Story 2
 
-- [ ] T002 [P] [US2] Create RTL component test file tests/unit/components/search-results.test.tsx
+- [x] T002 [P] [US2] Create RTL component test file tests/unit/components/search-results.test.tsx ✅ DONE
 
 **Test Cases**:
 1. Closed ticket default state has muted styling with opacity-60
@@ -73,7 +73,7 @@ No foundational tasks required - existing infrastructure is sufficient:
 
 ### Implementation for User Story 2
 
-- [ ] T003 [US2] Fix contrast styling for selected closed tickets in components/search/search-results.tsx (line 61-63)
+- [x] T003 [US2] Fix contrast styling for selected closed tickets in components/search/search-results.tsx (line 61-63) ✅ DONE
 
 **Details**:
 - Replace unconditional `isClosed && 'opacity-60'` with conditional styling:
@@ -89,7 +89,7 @@ No foundational tasks required - existing infrastructure is sufficient:
 
 **Purpose**: Validate changes work together
 
-- [ ] T004 Run quickstart.md validation steps in specs/AIB-150-contrast-on-search/quickstart.md
+- [x] T004 Run quickstart.md validation steps in specs/AIB-150-contrast-on-search/quickstart.md ✅ DONE
 
 **Validation Steps**:
 1. Run unit tests: `bun run test:unit`

@@ -920,8 +920,10 @@ function BoardContent({
           description: error.error || 'An error occurred while closing the ticket.',
         });
       } else {
-        // Success - remove ticket from cache (it's now CLOSED and not on the board)
-        const updatedTickets = allTickets.filter(t => t.id !== ticket.id);
+        // Success - update ticket stage in cache (keep for modal access via search)
+        const updatedTickets = allTickets.map(t =>
+          t.id === ticket.id ? { ...t, stage: Stage.CLOSED } : t
+        );
         queryClient.setQueryData(
           queryKeys.projects.tickets(projectId),
           updatedTickets

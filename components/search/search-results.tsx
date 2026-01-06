@@ -58,9 +58,12 @@ export function SearchResults({
               'w-full text-left px-3 py-2 transition-colors',
               'hover:bg-accent hover:text-accent-foreground',
               'focus:outline-none focus:bg-accent focus:text-accent-foreground',
-              index === selectedIndex && 'bg-primary text-primary-foreground',
-              // AIB-148: Muted styling for closed tickets
-              isClosed && 'opacity-60'
+              // AIB-150: Conditional styling for selected state based on closed status
+              index === selectedIndex && (isClosed
+                ? 'bg-muted text-foreground'  // High contrast for selected closed (8.4:1 - WCAG AAA)
+                : 'bg-primary text-primary-foreground'),  // Primary for selected open
+              // AIB-148/150: Muted styling for non-selected closed tickets only
+              index !== selectedIndex && isClosed && 'opacity-60'
             )}
           >
             <div className="flex items-center gap-2">
