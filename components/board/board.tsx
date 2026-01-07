@@ -251,14 +251,15 @@ function BoardContent({
       setSelectedTicketId(ticket.id);
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
-    } else {
+    } else if (pendingTicketKey !== ticketKey) {
       // AIB-156: Ticket not in board state (likely closed) - trigger fetch
-      // Use functional update to avoid setting if already same value (prevents loops)
-      setPendingTicketKey(prev => prev === ticketKey ? prev : ticketKey);
+      // Guard: only set if different from current pending (prevents loop when clearing)
+      // Clear URL immediately to prevent re-entry after second useEffect clears pendingTicketKey
+      router.replace(pathname, { scroll: false });
+      setPendingTicketKey(ticketKey);
       setModalInitialTab(initialTab);
     }
-    // Note: pendingTicketKey NOT in deps to prevent loop when cleared in second useEffect
-  }, [searchParams, allTickets, router, pathname]);
+  }, [searchParams, allTickets, router, pathname, pendingTicketKey]);
 
   // AIB-156: Handle fetched ticket for closed tickets not in board state
   useEffect(() => {
@@ -268,22 +269,19 @@ function BoardContent({
     if (!fetchedTicketSuccess && !fetchedTicketError) return;
 
     if (fetchedTicketSuccess && fetchedTicket) {
-      // Ticket found - open modal
-      router.replace(pathname, { scroll: false });
+      // Ticket found - open modal (URL already cleared by first useEffect)
       setSelectedTicketId(fetchedTicket.id);
       setIsModalOpen(true);
       setPendingTicketKey(null);
     } else if (fetchedTicketSuccess && fetchedTicket === null) {
       // Ticket not found (404) - clean up without opening modal
       setPendingTicketKey(null);
-      router.replace(pathname, { scroll: false });
     } else if (fetchedTicketError) {
       // Query failed - clean up
       console.error('Failed to fetch ticket by key:', pendingTicketKey);
       setPendingTicketKey(null);
-      router.replace(pathname, { scroll: false });
     }
-  }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey, router, pathname]);
+  }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display
