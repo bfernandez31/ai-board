@@ -138,20 +138,21 @@ model Ticket {
 }
 
 model User {
-  id                    String          @id
+  id                    String             @id
   name                  String?
-  email                 String          @unique
+  email                 String             @unique
   emailVerified         DateTime?
   image                 String?
-  createdAt             DateTime        @default(now())
+  createdAt             DateTime           @default(now())
   updatedAt             DateTime
   accounts              Account[]
   comments              Comment[]
   projects              Project[]
   sessions              Session[]
   memberships           ProjectMember[]
-  notificationsReceived Notification[]  @relation("NotificationRecipient")
-  notificationsCreated  Notification[]  @relation("NotificationActor")
+  notificationsReceived Notification[]     @relation("NotificationRecipient")
+  notificationsCreated  Notification[]     @relation("NotificationActor")
+  pushSubscriptions     PushSubscription[]
 
   @@index([email])
 }
@@ -202,6 +203,23 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PushSubscription {
+  id             Int       @id @default(autoincrement())
+  userId         String
+  endpoint       String    @unique @db.VarChar(500)
+  p256dh         String    @db.VarChar(100)
+  auth           String    @db.VarChar(50)
+  expirationTime DateTime?
+  userAgent      String?   @db.VarChar(200)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([endpoint])
 }
 
 enum AuthProvider {

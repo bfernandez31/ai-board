@@ -7,12 +7,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from './use-notifications';
 import { formatNotificationTime } from '@/app/lib/utils/date-utils';
 import { createNavigationContext, parseProjectIdFromRoute } from '@/lib/utils/navigation-utils';
 import type { NotificationWithNavData } from '@/lib/types/notification-navigation';
 import { useToast } from '@/hooks/use-toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { PushNotificationManager } from '@/app/components/push-notifications/push-notification-manager';
 
 export function NotificationDropdown() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export function NotificationDropdown() {
 
   // Track which notification is being navigated to (for loading state)
   const [navigatingNotificationId, setNavigatingNotificationId] = useState<number | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Extract current project ID from route params
   // The projectId param comes from the route: /projects/[projectId]/...
@@ -209,6 +212,33 @@ export function NotificationDropdown() {
           </Button>
         </div>
       )}
+
+      {/* Push notification settings */}
+      <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+        <CollapsibleTrigger asChild>
+          <div className="border-t">
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-between px-4 py-3 h-auto"
+            >
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4" />
+                <span className="text-sm">Push notification settings</span>
+              </div>
+              {showSettings ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t">
+            <PushNotificationManager />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

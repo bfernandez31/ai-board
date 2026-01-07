@@ -153,6 +153,16 @@ export const queryKeys = {
      */
     detail: (id: string) => ['users', id] as const,
   },
+
+  /**
+   * Push notification-related query keys
+   */
+  push: {
+    /**
+     * Push notification status for current user
+     */
+    status: ['push', 'status'] as const,
+  },
 } as const;
 
 /**

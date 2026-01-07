@@ -18,10 +18,10 @@
 
 **Purpose**: Project initialization, dependencies, and environment configuration
 
-- [ ] T001 Install web-push dependency via `bun add web-push` and `bun add -D @types/web-push`
-- [ ] T002 [P] Add VAPID environment variables to `.env.example` with placeholder values (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)
-- [ ] T003 [P] Create Zod validation schema for push subscription input in app/lib/push/subscription-schema.ts
-- [ ] T004 [P] Create VAPID configuration module in app/lib/push/web-push-config.ts
+- [x] T001 Install web-push dependency via `bun add web-push` and `bun add -D @types/web-push`
+- [x] T002 [P] Add VAPID environment variables to `.env.example` with placeholder values (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)
+- [x] T003 [P] Create Zod validation schema for push subscription input in app/lib/push/subscription-schema.ts
+- [x] T004 [P] Create VAPID configuration module in app/lib/push/web-push-config.ts
 
 ---
 
@@ -31,11 +31,11 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Add PushSubscription model to prisma/schema.prisma with User relation
-- [ ] T006 Add pushSubscriptions relation to User model in prisma/schema.prisma
-- [ ] T007 Run Prisma migration via `bunx prisma migrate dev --name add_push_subscriptions`
-- [ ] T008 Create database query functions in lib/db/push-subscriptions.ts (upsertPushSubscription, getUserPushSubscriptions, deletePushSubscription, deletePushSubscriptionById, hasActiveSubscription)
-- [ ] T009 Create service worker for push events in public/sw.js
+- [x] T005 Add PushSubscription model to prisma/schema.prisma with User relation
+- [x] T006 Add pushSubscriptions relation to User model in prisma/schema.prisma
+- [x] T007 Run Prisma migration via `bunx prisma migrate dev --name add_push_subscriptions`
+- [x] T008 Create database query functions in lib/db/push-subscriptions.ts (upsertPushSubscription, getUserPushSubscriptions, deletePushSubscription, deletePushSubscriptionById, hasActiveSubscription)
+- [x] T009 Create service worker for push events in public/sw.js
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -49,11 +49,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create POST /api/push/subscribe endpoint in app/api/push/subscribe/route.ts
-- [ ] T011 [P] [US1] Create GET /api/push/status endpoint in app/api/push/status/route.ts
-- [ ] T012 [US1] Create usePushNotifications hook with TanStack Query in app/components/push-notifications/use-push-notifications.ts
-- [ ] T013 [US1] Create PushOptInPrompt component with shadcn/ui Card in app/components/push-notifications/push-opt-in-prompt.tsx
-- [ ] T014 [US1] Add PushOptInPrompt to app/layout.tsx (render for authenticated users only)
+- [x] T010 [P] [US1] Create POST /api/push/subscribe endpoint in app/api/push/subscribe/route.ts
+- [x] T011 [P] [US1] Create GET /api/push/status endpoint in app/api/push/status/route.ts
+- [x] T012 [US1] Create usePushNotifications hook with TanStack Query in app/components/push-notifications/use-push-notifications.ts
+- [x] T013 [US1] Create PushOptInPrompt component with shadcn/ui Card in app/components/push-notifications/push-opt-in-prompt.tsx
+- [x] T014 [US1] Add PushOptInPrompt to app/layout.tsx (render for authenticated users only)
 
 **Checkpoint**: User Story 1 is fully functional - users can enable push notifications via opt-in prompt
 
@@ -67,11 +67,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Create sendNotification function in app/lib/push/send-notification.ts
-- [ ] T016 [P] [US2] Create NotificationListener component for service worker messages in app/components/push-notifications/notification-listener.tsx
-- [ ] T017 [US2] Create sendJobCompletionNotification function in app/lib/push/send-notification.ts
-- [ ] T018 [US2] Integrate job completion trigger in app/api/jobs/[id]/status/route.ts (call sendJobCompletionNotification after terminal state update)
-- [ ] T019 [US2] Add NotificationListener to app/layout.tsx for handling notification click navigation
+- [x] T015 [P] [US2] Create sendNotification function in app/lib/push/send-notification.ts
+- [x] T016 [P] [US2] Create NotificationListener component for service worker messages in app/components/push-notifications/notification-listener.tsx
+- [x] T017 [US2] Create sendJobCompletionNotification function in app/lib/push/send-notification.ts
+- [x] T018 [US2] Integrate job completion trigger in app/api/jobs/[id]/status/route.ts (call sendJobCompletionNotification after terminal state update)
+- [x] T019 [US2] Add NotificationListener to app/layout.tsx for handling notification click navigation
 
 **Checkpoint**: User Story 2 is fully functional - job completion triggers push notifications for project owners
 
@@ -85,8 +85,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Create sendMentionNotification function in app/lib/push/send-notification.ts
-- [ ] T021 [US3] Integrate @mention trigger in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (call sendMentionNotification after creating in-app notification)
+- [x] T020 [US3] Create sendMentionNotification function in app/lib/push/send-notification.ts
+- [x] T021 [US3] Integrate @mention trigger in app/api/projects/[projectId]/tickets/[id]/comments/route.ts (call sendMentionNotification after creating in-app notification)
 
 **Checkpoint**: User Story 3 is fully functional - @mentions trigger push notifications for project owners
 
@@ -100,9 +100,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Create POST /api/push/unsubscribe endpoint in app/api/push/unsubscribe/route.ts
-- [ ] T023 [US4] Create PushNotificationManager component for settings UI in app/components/push-notifications/push-notification-manager.tsx
-- [ ] T024 [US4] Add PushNotificationManager to user settings page or notification dropdown
+- [x] T022 [US4] Create POST /api/push/unsubscribe endpoint in app/api/push/unsubscribe/route.ts
+- [x] T023 [US4] Create PushNotificationManager component for settings UI in app/components/push-notifications/push-notification-manager.tsx
+- [x] T024 [US4] Add PushNotificationManager to user settings page or notification dropdown
 
 **Checkpoint**: User Story 4 is fully functional - users can manage push notification settings
 
@@ -112,10 +112,10 @@
 
 **Purpose**: Error handling, edge cases, and browser compatibility
 
-- [ ] T025 [P] Add browser support detection to hide opt-in prompt on unsupported browsers in app/components/push-notifications/push-opt-in-prompt.tsx
-- [ ] T026 [P] Add graceful error handling for failed push delivery in app/lib/push/send-notification.ts (delete invalid subscriptions on 404/410)
-- [ ] T027 Handle subscription expiration cleanup in lib/db/push-subscriptions.ts
-- [ ] T028 Verify push notifications work when browser tab is minimized/backgrounded
+- [x] T025 [P] Add browser support detection to hide opt-in prompt on unsupported browsers in app/components/push-notifications/push-opt-in-prompt.tsx
+- [x] T026 [P] Add graceful error handling for failed push delivery in app/lib/push/send-notification.ts (delete invalid subscriptions on 404/410)
+- [x] T027 Handle subscription expiration cleanup in lib/db/push-subscriptions.ts
+- [x] T028 Verify push notifications work when browser tab is minimized/backgrounded
 
 ---
 
