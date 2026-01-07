@@ -18,8 +18,8 @@
 
 **Purpose**: Add query key and hook infrastructure required by all user stories
 
-- [ ] T001 Add `ticketByKey` query key factory in app/lib/query-keys.ts
-- [ ] T002 Add `useTicketByKey` hook in app/lib/hooks/queries/useTickets.ts
+- [x] T001 Add `ticketByKey` query key factory in app/lib/query-keys.ts
+- [x] T002 Add `useTicketByKey` hook in app/lib/hooks/queries/useTickets.ts
 
 ---
 
@@ -29,8 +29,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `pendingTicketKey` state variable in components/board/board.tsx
-- [ ] T004 Add `useTicketByKey` hook call in components/board/board.tsx
+- [x] T003 Add `pendingTicketKey` state variable in components/board/board.tsx
+- [x] T004 Add `useTicketByKey` hook call in components/board/board.tsx
 
 **Checkpoint**: Foundation ready - query infrastructure in place
 
@@ -46,14 +46,14 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T005 [P] [US1] Integration test for ticket-by-key API lookup in tests/integration/tickets/ticket-by-key.test.ts
-- [ ] T006 [P] [US1] RTL component test for modal opening from search in tests/unit/components/board-modal-open.test.tsx
+- [x] T005 [P] [US1] Integration test for ticket-by-key API lookup in tests/integration/tickets/ticket-by-key.test.ts
+- [x] T006 [P] [US1] RTL component test for modal opening from search in tests/unit/components/board-modal-open.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Modify URL parameter useEffect to set pendingTicketKey when ticket not in allTickets in components/board/board.tsx
-- [ ] T008 [US1] Add useEffect to handle fetchedTicket and open modal in components/board/board.tsx
-- [ ] T009 [US1] Update selectedTicket useMemo to include fetchedTicket fallback in components/board/board.tsx
+- [x] T007 [US1] Modify URL parameter useEffect to set pendingTicketKey when ticket not in allTickets in components/board/board.tsx
+- [x] T008 [US1] Add useEffect to handle fetchedTicket and open modal in components/board/board.tsx
+- [x] T009 [US1] Update selectedTicket useMemo to include fetchedTicket fallback in components/board/board.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - clicking closed tickets in search opens the modal
 
@@ -67,13 +67,13 @@
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T010 [US2] Integration test for direct URL navigation with closed ticket in tests/integration/tickets/ticket-by-key.test.ts
+- [x] T010 [US2] Integration test for direct URL navigation with closed ticket in tests/integration/tickets/ticket-by-key.test.ts
 
 ### Implementation for User Story 2
 
 **Note**: Implementation covered by US1 - the URL parameter handling in T007 and T008 already handles direct URL access. This phase validates the behavior works for the direct URL use case.
 
-- [ ] T011 [US2] Verify URL parameter handling works for direct navigation (bookmarks, shared links) in components/board/board.tsx
+- [x] T011 [US2] Verify URL parameter handling works for direct navigation (bookmarks, shared links) in components/board/board.tsx
 
 **Checkpoint**: Direct URL access to closed tickets works - users can share/bookmark closed ticket URLs
 
@@ -87,11 +87,11 @@
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T012 [US3] Integration test for 404 response when ticket not found in tests/integration/tickets/ticket-by-key.test.ts
+- [x] T012 [US3] Integration test for 404 response when ticket not found in tests/integration/tickets/ticket-by-key.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Handle null fetchedTicket case (ticket not found) in useEffect in components/board/board.tsx
+- [x] T013 [US3] Handle null fetchedTicket case (ticket not found) in useEffect in components/board/board.tsx
 
 **Checkpoint**: Error handling complete - invalid ticket keys handled gracefully
 
@@ -101,10 +101,10 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T014 Run type-check to verify no TypeScript errors: `bun run type-check`
-- [ ] T015 Run unit tests: `bun run test:unit`
-- [ ] T016 Run integration tests: `bun run test:integration`
-- [ ] T017 Run quickstart.md manual verification steps
+- [x] T014 Run type-check to verify no TypeScript errors: `bun run type-check`
+- [x] T015 Run unit tests: `bun run test:unit`
+- [x] T016 Run integration tests: `bun run test:integration`
+- [x] T017 Run quickstart.md manual verification steps
 
 ---
 

@@ -130,3 +130,47 @@ export function useTicket(projectId: number, ticketId: number) {
     gcTime: 10 * 60 * 1000,
   });
 }
+
+/**
+ * Fetch a single ticket by key (for tickets not in board state)
+ *
+ * Use case: Loading closed tickets that aren't in the visible board columns
+ * when accessed via URL parameters or search results.
+ *
+ * @param projectId - Project ID
+ * @param ticketKey - Ticket key (e.g., "AIB-123") or null to disable
+ * @param enabled - Whether to execute the query (default: true)
+ * @returns Query result with single ticket or null if not found
+ */
+export function useTicketByKey(
+  projectId: number,
+  ticketKey: string | null,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: queryKeys.projects.ticketByKey(projectId, ticketKey ?? ''),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketKey}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`Failed to fetch ticket: HTTP ${response.status}`);
+      }
+
+      return response.json() as Promise<TicketWithVersion>;
+    },
+    enabled: enabled && !!ticketKey,
+    // Data is fresh for 5 seconds
+    staleTime: 5000,
+    // Keep in cache for 10 minutes after unmount
+    gcTime: 10 * 60 * 1000,
+  });
+}
