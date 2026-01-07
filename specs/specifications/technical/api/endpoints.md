@@ -343,6 +343,11 @@ Fetch single ticket with nested project data (legacy endpoint).
 
 **Note**: This endpoint supports both internal numeric IDs (for backward compatibility) and human-readable ticket keys. New code should use `/browse/:key` for ticket access.
 
+**Use Cases**:
+- Fetching closed tickets from search results (not in kanban cache)
+- Direct URL navigation to tickets by key
+- Modal integration for tickets not in board state
+
 **Response** (200 OK):
 ```json
 {

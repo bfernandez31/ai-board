@@ -1176,6 +1176,61 @@ const ticketsByStage = useMemo(() => {
 - **Consistency**: Cache remains synchronized with server state
 - **Simplicity**: Single cache management pattern for all stages
 
+### Closed Ticket Modal Integration
+
+**Pattern**: When users click a closed ticket from search results, the modal may need to fetch ticket data if not present in kanban cache.
+
+**Implementation** (`components/board/board.tsx`):
+
+```typescript
+useEffect(() => {
+  if (ticketParam && !ticketToShow) {
+    // Ticket not in kanban cache, fetch from API
+    const fetchTicket = async () => {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/tickets/${ticketParam}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Ticket not found');
+        }
+
+        const ticket = await response.json();
+
+        // Add to cache for modal display
+        queryClient.setQueryData(
+          queryKeys.projects.ticket(projectId, ticket.id),
+          ticket
+        );
+      } catch (error) {
+        toast.error('Failed to load ticket');
+      }
+    };
+
+    fetchTicket();
+  }
+}, [ticketParam, ticketToShow, projectId]);
+```
+
+**Key Points**:
+- **On-Demand Fetching**: Only fetches if ticket not in `allTickets` array
+- **Cache Integration**: Uses `setQueryData` to add fetched ticket to TanStack Query cache
+- **Modal Compatibility**: Modal can access ticket data from cache after fetch
+- **Error Handling**: Shows toast notification if ticket cannot be fetched
+- **API Endpoint**: GET `/api/projects/:projectId/tickets/:ticketKey` supports both ID and key
+
+**Use Cases**:
+- User searches for closed ticket and clicks result
+- Direct URL navigation to closed ticket (`?ticket=ABC-123`)
+- Ticket not present in kanban board cache (CLOSED stage)
+
+**Benefits**:
+- **Seamless UX**: Closed tickets open in modal without error
+- **API Reuse**: Existing ticket detail endpoint supports key-based lookup
+- **Cache Efficiency**: Fetched tickets cached for subsequent opens
+- **Progressive Enhancement**: Works for all tickets, not just closed ones
+
 ## Error Handling
 
 ### Global Error Handler

@@ -437,6 +437,13 @@ Users can navigate search results using keyboard for efficient workflow:
   - Consistent with existing CLOSED stage behavior (AIB-148)
 - Search state resets for next search
 
+**Closed Ticket Fetching**:
+- When a closed ticket is selected, the system automatically fetches ticket data from the API
+- Closed tickets are not present in the kanban board cache (allTickets)
+- Modal integration fetches via GET `/api/projects/{projectId}/tickets/{ticketKey}`
+- Fetched ticket is added to TanStack Query cache for modal display
+- Error handling provides user feedback if ticket cannot be fetched
+
 ### Performance
 
 **Response Time**:
