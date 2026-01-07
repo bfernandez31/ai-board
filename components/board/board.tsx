@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   DndContext,
@@ -165,6 +165,8 @@ function BoardContent({
 
   // AIB-156: State for pending ticket key lookup (for closed tickets not in board state)
   const [pendingTicketKey, setPendingTicketKey] = useState<string | null>(null);
+  // Ref to track last processed ticket key (prevents infinite loop due to async router.replace)
+  const lastProcessedTicketRef = useRef<string | null>(null);
 
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
@@ -237,6 +239,9 @@ function BoardContent({
 
     if (!shouldOpenModal || !ticketKey) return;
 
+    // Prevent re-processing same ticket (ref guards against async router.replace timing)
+    if (lastProcessedTicketRef.current === ticketKey) return;
+
     // Parse tab parameter
     const initialTab =
       tabParam === 'comments' || tabParam === 'files' ? tabParam : 'details';
@@ -246,33 +251,35 @@ function BoardContent({
 
     if (ticket) {
       // Ticket found in board - open modal directly
-      // Clear URL first to prevent re-triggering
+      lastProcessedTicketRef.current = ticketKey;
       router.replace(pathname, { scroll: false });
       setSelectedTicketId(ticket.id);
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
-    } else if (pendingTicketKey !== ticketKey) {
+    } else {
       // AIB-156: Ticket not in board state (likely closed) - trigger fetch
-      // Guard: only set if different from current pending (prevents loop when clearing)
-      // Clear URL immediately to prevent re-entry after second useEffect clears pendingTicketKey
+      lastProcessedTicketRef.current = ticketKey;
       router.replace(pathname, { scroll: false });
       setPendingTicketKey(ticketKey);
       setModalInitialTab(initialTab);
     }
-  }, [searchParams, allTickets, router, pathname, pendingTicketKey]);
+  }, [searchParams, allTickets, router, pathname]);
 
   // AIB-156: Handle fetched ticket for closed tickets not in board state
   useEffect(() => {
     if (!pendingTicketKey) return;
+    // Don't re-trigger if modal already open with this ticket
+    if (isModalOpen && selectedTicketId === fetchedTicket?.id) return;
 
     // Wait for query to complete (success or error)
     if (!fetchedTicketSuccess && !fetchedTicketError) return;
 
     if (fetchedTicketSuccess && fetchedTicket) {
       // Ticket found - open modal (URL already cleared by first useEffect)
+      // Note: Don't clear pendingTicketKey here - selectedTicket needs fetchedTicket
+      // It will be cleared when modal closes via handleModalClose
       setSelectedTicketId(fetchedTicket.id);
       setIsModalOpen(true);
-      setPendingTicketKey(null);
     } else if (fetchedTicketSuccess && fetchedTicket === null) {
       // Ticket not found (404) - clean up without opening modal
       setPendingTicketKey(null);
@@ -281,7 +288,7 @@ function BoardContent({
       console.error('Failed to fetch ticket by key:', pendingTicketKey);
       setPendingTicketKey(null);
     }
-  }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey]);
+  }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey, isModalOpen, selectedTicketId]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display
@@ -603,6 +610,10 @@ function BoardContent({
     setIsModalOpen(open);
     if (!open) {
       setSelectedTicketId(null);
+      // Reset ref to allow re-opening same ticket via search
+      lastProcessedTicketRef.current = null;
+      // Clear pending ticket key (keeps useTicketByKey query enabled until modal closes)
+      setPendingTicketKey(null);
     }
   }, []);
 
