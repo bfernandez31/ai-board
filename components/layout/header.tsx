@@ -31,6 +31,8 @@ export function Header() {
   const isLandingPage = pathname === '/';
   const isSignInPage = pathname === '/auth/signin';
   const isMarketingVariant = isLandingPage && status !== 'authenticated';
+  // Search should only be visible on the board page
+  const isBoardPage = pathname?.match(/^\/projects\/\d+\/board$/) !== null;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -135,8 +137,8 @@ export function Header() {
           </>
         )}
 
-        {/* Center: Search (when project selected) - hidden on mobile */}
-        {projectInfo && (
+        {/* Center: Search (only on board page) - hidden on mobile */}
+        {projectInfo && isBoardPage && (
           <div className="hidden md:flex flex-1 justify-center">
             <TicketSearch projectId={projectInfo.id} />
           </div>

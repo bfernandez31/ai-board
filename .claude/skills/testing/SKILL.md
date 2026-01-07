@@ -1,10 +1,6 @@
 ---
 name: testing
-description: |
-  ai-board Testing Trophy strategy. Use when writing tests, choosing test types,
-  fixing test failures, or reviewing test coverage. Covers Vitest (unit, component,
-  integration), MSW (frontend integration), and Playwright (E2E browser-only).
-  Trigger keywords: test, testing, vitest, playwright, RTL, MSW, coverage.
+description: "Use when writing, updating, or checking tests. Provides Testing Trophy patterns (unit/component/integration/E2E), decision trees for test type selection, and project conventions. Keywords: test, vitest, playwright, coverage."
 ---
 
 # ai-board Testing Skill

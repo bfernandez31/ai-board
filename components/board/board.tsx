@@ -190,7 +190,7 @@ function BoardContent({
   }, [ticketsByStage]);
 
   // AIB-156: Fetch ticket by key for closed tickets not in board state
-  const { data: fetchedTicket } = useTicketByKey(
+  const { data: fetchedTicket, isSuccess: fetchedTicketSuccess, isError: fetchedTicketError } = useTicketByKey(
     projectId,
     pendingTicketKey,
     !!pendingTicketKey
@@ -244,35 +244,44 @@ function BoardContent({
     // First check if ticket is in board state
     const ticket = allTickets.find(t => t.ticketKey === ticketKey);
 
-    if (ticket && !isModalOpen) {
+    if (ticket) {
+      // Ticket found in board - open modal directly
+      // Clear URL first to prevent re-triggering
+      router.replace(pathname, { scroll: false });
       setSelectedTicketId(ticket.id);
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
-
-      // Clean up URL params immediately after opening modal
-      // This prevents re-opening when user closes the modal
-      router.replace(pathname, { scroll: false });
-    } else if (!ticket && !isModalOpen && !pendingTicketKey) {
+    } else if (!pendingTicketKey || pendingTicketKey !== ticketKey) {
       // AIB-156: Ticket not in board state (likely closed) - trigger fetch
       setPendingTicketKey(ticketKey);
       setModalInitialTab(initialTab);
     }
-  }, [searchParams, allTickets, isModalOpen, router, pathname, pendingTicketKey]);
+  }, [searchParams, allTickets, router, pathname, pendingTicketKey]);
 
   // AIB-156: Handle fetched ticket for closed tickets not in board state
   useEffect(() => {
-    if (fetchedTicket && pendingTicketKey && !isModalOpen) {
+    if (!pendingTicketKey) return;
+
+    // Wait for query to complete (success or error)
+    if (!fetchedTicketSuccess && !fetchedTicketError) return;
+
+    if (fetchedTicketSuccess && fetchedTicket) {
       // Ticket found - open modal
+      router.replace(pathname, { scroll: false });
       setSelectedTicketId(fetchedTicket.id);
       setIsModalOpen(true);
       setPendingTicketKey(null);
-      router.replace(pathname, { scroll: false });
-    } else if (fetchedTicket === null && pendingTicketKey) {
+    } else if (fetchedTicketSuccess && fetchedTicket === null) {
       // Ticket not found (404) - clean up without opening modal
       setPendingTicketKey(null);
       router.replace(pathname, { scroll: false });
+    } else if (fetchedTicketError) {
+      // Query failed - clean up
+      console.error('Failed to fetch ticket by key:', pendingTicketKey);
+      setPendingTicketKey(null);
+      router.replace(pathname, { scroll: false });
     }
-  }, [fetchedTicket, pendingTicketKey, isModalOpen, router, pathname]);
+  }, [fetchedTicket, fetchedTicketSuccess, fetchedTicketError, pendingTicketKey, router, pathname]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display

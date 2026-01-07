@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,7 +19,6 @@ interface TicketSearchProps {
 
 export function TicketSearch({ projectId }: TicketSearchProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,19 +42,21 @@ export function TicketSearch({ projectId }: TicketSearchProps) {
     setSelectedIndex(0);
   }, [debouncedTerm]);
 
-  // Handle result selection - opens ticket modal via URL params
+  // Handle result selection - navigates to board with modal open
+  // Always navigates to board page to ensure modal handling logic is available
   const handleSelect = useCallback(
     (result: SearchResult) => {
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams();
       params.set('ticket', result.ticketKey);
       params.set('modal', 'open');
-      router.push(`?${params.toString()}`);
+      // Navigate to board page with modal params - ensures board.tsx modal logic handles it
+      router.push(`/projects/${projectId}/board?${params.toString()}`);
 
       // Clear search and close dropdown
       setSearchTerm('');
       setIsOpen(false);
     },
-    [router, searchParams]
+    [router, projectId]
   );
 
   // Keyboard navigation
