@@ -38,11 +38,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T001 [US2] Add `&modal=open` to redirect URL in app/ticket/[key]/page.tsx (line 71)
+- [x] T001 [US2] Add `&modal=open` to redirect URL in app/ticket/[key]/page.tsx (line 71)
 
 ### Test for User Story 2
 
-- [ ] T002 [US2] Create integration test verifying redirect includes modal=open in tests/integration/tickets/ticket-page-redirect.test.ts
+- [x] T002 [US2] Create unit test verifying redirect includes modal=open in tests/unit/tickets/ticket-page-redirect.test.ts
 
 **Checkpoint**: After T001 and T002, the bug is fixed and verified
 
