@@ -313,7 +313,7 @@ export function useTicketByKey(projectId: number, ticketKey: string | null) {
 
 **Use Cases**:
 - Opening closed tickets from search results (not in kanban state)
-- Direct URL navigation with ticket key parameter (`?ticketKey=ABC-123&modal=open`)
+- Direct URL navigation with ticket key parameter (`?ticket=ABC-123&modal=open`)
 - Fallback fetch when ticket not found in cached board tickets
 - Supporting deep links to tickets that may have been closed
 
@@ -321,7 +321,7 @@ export function useTicketByKey(projectId: number, ticketKey: string | null) {
 ```typescript
 function BoardWithModal({ projectId }: Props) {
   const searchParams = useSearchParams();
-  const ticketKey = searchParams.get('ticketKey');
+  const ticketKey = searchParams.get('ticket');
 
   const { data: allTickets } = useTickets(projectId);
 

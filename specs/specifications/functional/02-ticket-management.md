@@ -445,6 +445,43 @@ Users can navigate search results using keyboard for efficient workflow:
 - Modal displays immediately once data is fetched (typically <500ms)
 - Supports both search-based navigation and direct URL navigation with ticket key parameter
 
+## Direct Ticket URL Navigation
+
+### URL Format
+
+Users can navigate directly to specific tickets using shareable URLs:
+
+**Format**: `/ticket/{TICKET_KEY}`
+- Example: `/ticket/ABC-123`
+- Works from any context (browser bookmark, email link, Slack message, notification)
+- Requires authentication (unauthenticated users redirected to sign in)
+
+### Navigation Behavior
+
+When a user navigates to a direct ticket URL:
+
+1. System validates the ticket key format
+2. Fetches ticket data from database
+3. Redirects to project board: `/projects/{projectId}/board?ticket={key}&modal=open`
+4. Board page opens with ticket modal automatically displayed
+5. Modal shows full ticket details (same experience as clicking a ticket card)
+
+**Access Control**:
+- User must have access to the ticket's parent project
+- Access denied error shown for unauthorized projects
+- Ticket not found error shown for invalid or non-existent ticket keys
+
+**Ticket Availability**:
+- Works for tickets in all stages (INBOX through SHIP)
+- Works for CLOSED tickets (fetched from backend, not present on board)
+- Consistent behavior regardless of ticket stage or visibility on board
+
+**URL Parameter Handling**:
+- Redirect includes both `ticket={key}` and `modal=open` parameters
+- Board component detects `modal=open` parameter and automatically opens modal
+- URL parameters cleaned up after modal opens to prevent re-opening on refresh
+- Modal state managed independently after initial URL-triggered open
+
 ### Performance
 
 **Response Time**:

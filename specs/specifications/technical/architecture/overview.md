@@ -113,11 +113,24 @@ Stage Transition
 - Cross-user access blocked with 403 Forbidden
 
 #### URL Structure
+
+**Page Routes**:
 ```
 /projects/{projectId}/board          # Board view
+/ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
+```
+
+**API Routes**:
+```
 /api/projects/{projectId}/tickets    # Tickets API
 /api/projects/{projectId}/jobs/status # Job polling
 ```
+
+**Ticket Navigation Flow**:
+- Direct ticket URLs (`/ticket/ABC-123`) redirect to board with query parameters
+- Redirect format: `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
+- Board component detects `modal=open` parameter and automatically opens ticket modal
+- URL parameters cleaned up after modal opens to prevent re-opening on page refresh
 
 #### Authorization Pattern
 ```typescript
