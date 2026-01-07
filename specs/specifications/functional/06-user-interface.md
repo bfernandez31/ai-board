@@ -459,6 +459,8 @@ The notification bell provides access to mention notifications:
 - Loading state in modal when opening ticket
 - Spinner or skeleton for ticket details
 - Progressive content loading
+- Fetches ticket from backend when not present in kanban state (closed tickets, direct URL access)
+- Loading indicator displayed during backend fetch operation
 
 ### Operation Feedback
 
