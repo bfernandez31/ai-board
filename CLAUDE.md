@@ -19,6 +19,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
+- **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 
 ## Commands
 
@@ -89,6 +90,13 @@ bun run type-check         # TypeScript check
 - `read`, `readAt`: Read status tracking
 - `deletedAt`: Soft delete for 30-day retention
 - Polling: 15-second interval for real-time updates
+
+### PushSubscription
+- `userId`: Owner of subscription (foreign key)
+- `endpoint`: Web Push endpoint URL (unique)
+- `p256dh`, `auth`: Encryption keys (Web Push spec)
+- Multiple subscriptions per user (different browsers/devices)
+- Auto-cleanup of invalid subscriptions (410/404 responses)
 
 ## API Patterns
 
