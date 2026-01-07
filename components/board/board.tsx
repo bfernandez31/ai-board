@@ -251,12 +251,14 @@ function BoardContent({
       setSelectedTicketId(ticket.id);
       setModalInitialTab(initialTab);
       setIsModalOpen(true);
-    } else if (!pendingTicketKey || pendingTicketKey !== ticketKey) {
+    } else {
       // AIB-156: Ticket not in board state (likely closed) - trigger fetch
-      setPendingTicketKey(ticketKey);
+      // Use functional update to avoid setting if already same value (prevents loops)
+      setPendingTicketKey(prev => prev === ticketKey ? prev : ticketKey);
       setModalInitialTab(initialTab);
     }
-  }, [searchParams, allTickets, router, pathname, pendingTicketKey]);
+    // Note: pendingTicketKey NOT in deps to prevent loop when cleared in second useEffect
+  }, [searchParams, allTickets, router, pathname]);
 
   // AIB-156: Handle fetched ticket for closed tickets not in board state
   useEffect(() => {
