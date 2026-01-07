@@ -207,8 +207,9 @@ function BoardContent({
     return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
   }, [allTickets]);
 
-  // AIB-80: Parse URL params to auto-open modal with specific tab
+  // AIB-80/AIB-157: Parse URL params to auto-open modal with specific tab
   // Format: ?ticket=AIB-123&modal=open&tab=comments#comment-123
+  // AIB-157: Fetch closed tickets from API when not in kanban
   useEffect(() => {
     if (!searchParams) return;
 
@@ -222,7 +223,7 @@ function BoardContent({
     const initialTab =
       tabParam === 'comments' || tabParam === 'files' ? tabParam : 'details';
 
-    // Find ticket by ticketKey
+    // Find ticket by ticketKey in kanban
     const ticket = allTickets.find(t => t.ticketKey === ticketKey);
 
     if (ticket && !isModalOpen) {
@@ -233,8 +234,55 @@ function BoardContent({
       // Clean up URL params immediately after opening modal
       // This prevents re-opening when user closes the modal
       router.replace(pathname, { scroll: false });
+    } else if (!ticket && !isModalOpen) {
+      // AIB-157: Ticket not in kanban (e.g., closed ticket) - fetch from API
+      const fetchTicketAndOpen = async () => {
+        try {
+          const response = await fetch(`/api/projects/${projectId}/tickets/${ticketKey}`);
+
+          if (!response.ok) {
+            console.error('Failed to fetch ticket:', response.statusText);
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Failed to load ticket details',
+            });
+            router.replace(pathname, { scroll: false });
+            return;
+          }
+
+          const fetchedTicket = await response.json();
+
+          // Add fetched ticket to the cache so modal can display it
+          queryClient.setQueryData(
+            queryKeys.projects.tickets(projectId),
+            (old: TicketWithVersion[] = []) => [...old, {
+              ...fetchedTicket,
+              createdAt: new Date(fetchedTicket.createdAt),
+              updatedAt: new Date(fetchedTicket.updatedAt),
+            }]
+          );
+
+          setSelectedTicketId(fetchedTicket.id);
+          setModalInitialTab(initialTab);
+          setIsModalOpen(true);
+
+          // Clean up URL params
+          router.replace(pathname, { scroll: false });
+        } catch (error) {
+          console.error('Error fetching ticket:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load ticket details',
+          });
+          router.replace(pathname, { scroll: false });
+        }
+      };
+
+      fetchTicketAndOpen();
     }
-  }, [searchParams, allTickets, isModalOpen, router, pathname]);
+  }, [searchParams, allTickets, isModalOpen, router, pathname, projectId, queryClient, toast]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display

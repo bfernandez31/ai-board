@@ -9,9 +9,10 @@ import { renderWithProviders, screen, userEvent, waitFor } from '@/tests/utils/c
 import { TicketSearch } from '@/components/search/ticket-search';
 
 // Mock next/navigation
+const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: mockPush,
   }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -19,8 +20,14 @@ vi.mock('next/navigation', () => ({
 // Mock the search hook
 const mockSearchResults = {
   results: [
-    { ticketKey: 'TEST-1', title: 'First Ticket', stage: 'INBOX' },
-    { ticketKey: 'TEST-2', title: 'Second Ticket', stage: 'BUILD' },
+    { id: 1, ticketKey: 'TEST-1', title: 'First Ticket', stage: 'INBOX' },
+    { id: 2, ticketKey: 'TEST-2', title: 'Second Ticket', stage: 'BUILD' },
+  ],
+};
+
+const mockClosedTicketResults = {
+  results: [
+    { id: 3, ticketKey: 'TEST-3', title: 'Closed Ticket', stage: 'CLOSED' },
   ],
 };
 
@@ -43,6 +50,7 @@ describe('TicketSearch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.mockClear();
     mockUseTicketSearch.mockReturnValue({
       data: null,
       isLoading: false,
@@ -178,6 +186,42 @@ describe('TicketSearch', () => {
 
       const input = screen.getByLabelText(/search tickets/i);
       expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+    });
+  });
+
+  describe('Closed Ticket Selection', () => {
+    it('should navigate to modal URL with closed ticket key', async () => {
+      mockUseTicketSearch.mockReturnValue({
+        data: mockClosedTicketResults,
+        isLoading: false,
+        error: null,
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(<TicketSearch {...defaultProps} />);
+
+      const input = screen.getByLabelText(/search tickets/i);
+      await user.type(input, 'closed');
+
+      // Wait for debounce and results to appear
+      await waitFor(
+        () => {
+          expect(screen.getByText('TEST-3')).toBeInTheDocument();
+        },
+        { timeout: 500 }
+      );
+
+      // Click on the closed ticket
+      const closedTicketOption = screen.getByText('Closed Ticket');
+      await user.click(closedTicketOption);
+
+      // Verify that router.push was called with the correct URL
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining('ticket=TEST-3')
+      );
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining('modal=open')
+      );
     });
   });
 });
