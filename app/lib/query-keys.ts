@@ -101,6 +101,12 @@ export const queryKeys = {
      */
     ticketJobs: (projectId: number, ticketId: number) =>
       ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
+
+    /**
+     * Single ticket lookup by key (for closed tickets not in board state)
+     */
+    ticketByKey: (projectId: number, ticketKey: string) =>
+      ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
   },
 
   /**

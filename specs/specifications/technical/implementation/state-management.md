@@ -277,6 +277,82 @@ function TicketAutocomplete({ projectId, query }: Props) {
 - Scoped to project (authorization enforced)
 - Returns stage field for each ticket to identify CLOSED tickets
 
+### Ticket by Key Query Hook
+
+**Hook** (`app/lib/hooks/queries/useTickets.ts`):
+
+```typescript
+export function useTicketByKey(projectId: number, ticketKey: string | null) {
+  return useQuery({
+    queryKey: [...queryKeys.projects.tickets(projectId), 'by-key', ticketKey],
+    queryFn: async () => {
+      if (!ticketKey) return null;
+
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${ticketKey}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch ticket');
+      }
+
+      return response.json();
+    },
+    enabled: !!ticketKey,
+    staleTime: 1000 * 60,  // 1 minute
+  });
+}
+```
+
+**Features**:
+- **Ticket Key Lookup**: Fetches ticket by human-readable key (e.g., "ABC-123")
+- **Conditional Activation**: Only runs when ticketKey is provided
+- **Cache Integration**: Uses hierarchical query keys for proper cache management
+- **Null Handling**: Returns null when no ticketKey provided
+- **API Endpoint Reuse**: Uses existing `/api/projects/:projectId/tickets/:id` endpoint with ticket key support
+
+**Use Cases**:
+- Opening closed tickets from search results (not in kanban state)
+- Direct URL navigation with ticket key parameter (`?ticketKey=ABC-123&modal=open`)
+- Fallback fetch when ticket not found in cached board tickets
+- Supporting deep links to tickets that may have been closed
+
+**Integration with Board Modal**:
+```typescript
+function BoardWithModal({ projectId }: Props) {
+  const searchParams = useSearchParams();
+  const ticketKey = searchParams.get('ticketKey');
+
+  const { data: allTickets } = useTickets(projectId);
+
+  // Try to find ticket in board cache first
+  const ticketFromCache = allTickets?.find(t => t.ticketKey === ticketKey);
+
+  // Fallback to backend fetch if not in cache (closed tickets, direct URLs)
+  const { data: fetchedTicket, isLoading } = useTicketByKey(
+    projectId,
+    ticketFromCache ? null : ticketKey
+  );
+
+  const selectedTicket = ticketFromCache || fetchedTicket;
+
+  return (
+    <>
+      <Board tickets={allTickets} />
+      {selectedTicket && (
+        <TicketDetailModal ticket={selectedTicket} loading={isLoading} />
+      )}
+    </>
+  );
+}
+```
+
+**Performance**:
+- **Cache-First**: Checks board cache before making API call
+- **Conditional Fetch**: Only fetches from backend when ticket not in cache
+- **1-Minute Stale Time**: Balances freshness with network efficiency
+- **Automatic Refetch**: Refetches on window focus and reconnect for up-to-date data
+
 ### Ticket Jobs Query Hook
 
 **Hook** (`app/lib/hooks/queries/useTicketJobs.ts`):

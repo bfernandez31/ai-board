@@ -424,6 +424,7 @@ Users can navigate search results using keyboard for efficient workflow:
 - Search input clears automatically after ticket opens
 - Dropdown closes after selection
 - Works for both active and closed tickets
+- System automatically fetches ticket from backend if not present in kanban state
 
 **Modal Integration**:
 - Ticket modal opens with Details tab active by default
@@ -436,6 +437,13 @@ Users can navigate search results using keyboard for efficient workflow:
   - Ticket details fully readable
   - Consistent with existing CLOSED stage behavior (AIB-148)
 - Search state resets for next search
+
+**Backend Fetch Behavior**:
+- When opening a ticket not present in the kanban board (closed tickets, direct URL access)
+- System fetches full ticket details from `/api/projects/:projectId/tickets/:id` using ticket key lookup
+- Ticket data cached by TanStack Query for subsequent access
+- Modal displays immediately once data is fetched (typically <500ms)
+- Supports both search-based navigation and direct URL navigation with ticket key parameter
 
 ### Performance
 

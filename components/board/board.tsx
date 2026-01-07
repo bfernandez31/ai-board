@@ -33,7 +33,7 @@ import {
 } from '@/lib/optimistic-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
-import { useTicketsByStage } from '@/app/lib/hooks/queries/useTickets';
+import { useTicketsByStage, useTicketByKey } from '@/app/lib/hooks/queries/useTickets';
 import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
@@ -163,6 +163,9 @@ function BoardContent({
   } | null>(null);
   const [isClosingTicket, setIsClosingTicket] = useState(false);
 
+  // AIB-156: State for pending ticket key lookup (for closed tickets not in board state)
+  const [pendingTicketKey, setPendingTicketKey] = useState<string | null>(null);
+
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
 
@@ -186,12 +189,27 @@ function BoardContent({
     return Object.values(ticketsByStage).flat();
   }, [ticketsByStage]);
 
+  // AIB-156: Fetch ticket by key for closed tickets not in board state
+  const { data: fetchedTicket } = useTicketByKey(
+    projectId,
+    pendingTicketKey,
+    !!pendingTicketKey
+  );
+
   // Derive the selected ticket from allTickets to get the latest data
   // This ensures we always show fresh data (e.g., branch) after cache invalidation
+  // AIB-156: Includes fallback to fetchedTicket for closed tickets not in board state
   const selectedTicket = useMemo(() => {
     if (!selectedTicketId) return null;
-    return allTickets.find(t => t.id === selectedTicketId) || null;
-  }, [selectedTicketId, allTickets]);
+    // First check board tickets
+    const boardTicket = allTickets.find(t => t.id === selectedTicketId);
+    if (boardTicket) return boardTicket;
+    // Fallback to fetched ticket (for closed tickets)
+    if (fetchedTicket && fetchedTicket.id === selectedTicketId) {
+      return fetchedTicket;
+    }
+    return null;
+  }, [selectedTicketId, allTickets, fetchedTicket]);
 
   // T007: Fetch ticket jobs with telemetry for modal Stats tab
   // Only enabled when modal is open to avoid unnecessary requests
@@ -207,8 +225,9 @@ function BoardContent({
     return ticketWithPreview ? { ticketKey: ticketWithPreview.ticketKey } : null;
   }, [allTickets]);
 
-  // AIB-80: Parse URL params to auto-open modal with specific tab
+  // AIB-80 + AIB-156: Parse URL params to auto-open modal with specific tab
   // Format: ?ticket=AIB-123&modal=open&tab=comments#comment-123
+  // AIB-156: Handles both board tickets and closed tickets not in board state
   useEffect(() => {
     if (!searchParams) return;
 
@@ -222,7 +241,7 @@ function BoardContent({
     const initialTab =
       tabParam === 'comments' || tabParam === 'files' ? tabParam : 'details';
 
-    // Find ticket by ticketKey
+    // First check if ticket is in board state
     const ticket = allTickets.find(t => t.ticketKey === ticketKey);
 
     if (ticket && !isModalOpen) {
@@ -233,8 +252,27 @@ function BoardContent({
       // Clean up URL params immediately after opening modal
       // This prevents re-opening when user closes the modal
       router.replace(pathname, { scroll: false });
+    } else if (!ticket && !isModalOpen && !pendingTicketKey) {
+      // AIB-156: Ticket not in board state (likely closed) - trigger fetch
+      setPendingTicketKey(ticketKey);
+      setModalInitialTab(initialTab);
     }
-  }, [searchParams, allTickets, isModalOpen, router, pathname]);
+  }, [searchParams, allTickets, isModalOpen, router, pathname, pendingTicketKey]);
+
+  // AIB-156: Handle fetched ticket for closed tickets not in board state
+  useEffect(() => {
+    if (fetchedTicket && pendingTicketKey && !isModalOpen) {
+      // Ticket found - open modal
+      setSelectedTicketId(fetchedTicket.id);
+      setIsModalOpen(true);
+      setPendingTicketKey(null);
+      router.replace(pathname, { scroll: false });
+    } else if (fetchedTicket === null && pendingTicketKey) {
+      // Ticket not found (404) - clean up without opening modal
+      setPendingTicketKey(null);
+      router.replace(pathname, { scroll: false });
+    }
+  }, [fetchedTicket, pendingTicketKey, isModalOpen, router, pathname]);
 
   // T030: Get dual job state for a ticket (workflow + AI-BOARD + deploy jobs)
   // Merges polled job updates with initial job data for real-time status display

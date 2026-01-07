@@ -332,7 +332,7 @@ Fetch ticket by human-readable key (primary user-facing endpoint).
 
 ### GET /api/projects/:projectId/tickets/:id
 
-Fetch single ticket with nested project data (legacy endpoint).
+Fetch single ticket with nested project data.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
@@ -341,7 +341,7 @@ Fetch single ticket with nested project data (legacy endpoint).
 - `projectId` (number, required): Project ID
 - `id` (number or string, required): Ticket ID (numeric) or Ticket Key (e.g., "ABC-123")
 
-**Note**: This endpoint supports both internal numeric IDs (for backward compatibility) and human-readable ticket keys. New code should use `/browse/:key` for ticket access.
+**Note**: This endpoint supports both internal numeric IDs (for backward compatibility) and human-readable ticket keys. The ticket key lookup enables fetching tickets not present in the kanban board (e.g., closed tickets accessed via search or direct URL). New code should use `/browse/:key` for user-facing navigation.
 
 **Response** (200 OK):
 ```json
