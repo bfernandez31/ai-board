@@ -68,5 +68,5 @@ export default async function TicketBrowsePage({
 
   // Redirect to project board with ticket modal open
   // We use the ticket key as the modal identifier
-  redirect(`/projects/${ticket.projectId}/board?ticket=${key}`);
+  redirect(`/projects/${ticket.projectId}/board?ticket=${key}&modal=open`);
 }
