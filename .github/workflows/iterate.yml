@@ -59,11 +59,13 @@ jobs:
 
     steps:
       - name: Debug Inputs
+        env:
+          ISSUES_TO_FIX: ${{ inputs.issues_to_fix }}
         run: |
           echo "🔄 Iterate workflow starting"
           echo "  ticket_id: ${{ inputs.ticket_id }}"
           echo "  branch: ${{ inputs.branch }}"
-          echo "  issues: '${{ inputs.issues_to_fix }}'"
+          echo "  issues: $ISSUES_TO_FIX"
           echo "  repository: ${{ inputs.githubRepository }}"
 
       - name: Update Job Status - Running
