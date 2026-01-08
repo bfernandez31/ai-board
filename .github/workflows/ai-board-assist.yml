@@ -215,6 +215,9 @@ jobs:
           echo "🚀 Executing Claude command..."
           COMMENT="${{ inputs.comment }}"
 
+          # Use Opus model for AI-BOARD assistance
+          export ANTHROPIC_MODEL="claude-opus-4-5-20251101"
+
           # Route /compare command to dedicated skill (designed for comment usage)
           # Note: /verify and /iterate-verify are launched by their own workflows, not via comments
           if echo "$COMMENT" | grep -qE "/compare\b"; then

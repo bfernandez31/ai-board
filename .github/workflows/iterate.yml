@@ -61,7 +61,7 @@ jobs:
           echo "🔄 Iterate workflow starting"
           echo "  ticket_id: ${{ inputs.ticket_id }}"
           echo "  branch: ${{ inputs.branch }}"
-          echo "  issues: ${{ inputs.issues_to_fix }}"
+          echo "  issues: '${{ inputs.issues_to_fix }}'"
           echo "  repository: ${{ inputs.githubRepository }}"
 
       - name: Update Job Status - Running
@@ -121,6 +121,9 @@ jobs:
           echo "🔧 Executing iteration fixes..."
           echo "Issues to fix: $ISSUES"
 
+          # Use Opus model for iteration fixes
+          export ANTHROPIC_MODEL="claude-opus-4-5-20251101"
+
           # Execute Claude iterate-verify command
           claude --dangerously-skip-permissions "/iterate-verify" > output.log || true
 
@@ -137,6 +140,9 @@ jobs:
         if: steps.iterate.outputs.no_changes != 'true'
         run: |
           echo "📚 Updating global specifications..."
+
+          # Use Opus model
+          export ANTHROPIC_MODEL="claude-opus-4-5-20251101"
 
           # Update specs/specifications with changes from this iteration
           claude --dangerously-skip-permissions "/sync-specifications \
