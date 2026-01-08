@@ -56,28 +56,3 @@ export function revertTicketStage(
       : ticket
   );
 }
-
-/**
- * Update a ticket with server-confirmed data
- * @param tickets - Current array of tickets
- * @param ticketId - ID of the ticket to update
- * @param confirmedStage - Server-confirmed stage
- * @param confirmedVersion - Server-confirmed version
- * @returns Updated array of tickets with server-confirmed data
- */
-export function confirmTicketUpdate(
-  tickets: TicketWithVersion[],
-  ticketId: number,
-  confirmedStage: Stage,
-  confirmedVersion: number
-): TicketWithVersion[] {
-  return tickets.map((ticket) =>
-    ticket.id === ticketId
-      ? {
-          ...ticket,
-          stage: confirmedStage,
-          version: confirmedVersion,
-        }
-      : ticket
-  );
-}
