@@ -10,6 +10,12 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - NO README, GUIDE, or tutorial files at project root - AI learns from existing code patterns
 - Ticket specs in `specs/[ticket-key]/`, consolidated specs in `specs/specifications/`
 
+**Commit Rules:**
+- NEVER use `--no-verify` to bypass pre-commit hooks
+- If type-check or lint fails during commit, FIX ALL ERRORS before committing - even if they predate your changes
+- Run `bun run type-check` and `bun run lint` proactively before attempting commits
+- If Prisma schema changed, run `bunx prisma generate` to regenerate the client
+
 ## Tech Stack
 
 - **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
