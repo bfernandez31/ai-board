@@ -29,6 +29,9 @@ Complete mapping table for all job command types:
 **Deploy Preview Command**:
 - `deploy-preview` → "Preview deployment"
 
+**Iterate Command** (minor fixes during VERIFY):
+- `iterate` → "Verification iteration"
+
 **AI-BOARD Assistance Commands** (comment-* pattern):
 - `comment-specify` → "Specification assistance"
 - `comment-plan` → "Planning assistance"
@@ -68,6 +71,7 @@ getJobDisplayName('verify')            // → "Verification"
 getJobDisplayName('ship')              // → "Deployment"
 getJobDisplayName('quick-impl')        // → "Quick implementation"
 getJobDisplayName('deploy-preview')    // → "Preview deployment"
+getJobDisplayName('iterate')           // → "Verification iteration"
 
 // AI-BOARD assistance commands
 getJobDisplayName('comment-plan')      // → "Planning assistance"
@@ -113,10 +117,11 @@ getJobDisplayName('')                  // → "Unknown job type"
 
 **Unit Tests**: `tests/unit/job-display-names.test.ts`
 
-Test coverage (20 test cases):
+Test coverage (21 test cases):
 - Normal workflow commands (5 tests)
 - Quick-impl workflow command (1 test)
 - Deploy preview command (1 test)
+- Iterate command (1 test)
 - AI-BOARD assistance commands (5 tests)
 - Fallback patterns (6 tests)
 - Legacy commands (2 tests)
@@ -132,7 +137,7 @@ Test coverage (20 test cases):
 
 **Lookup Complexity**: O(1) for direct mappings (hash table lookup)
 
-**Memory Footprint**: Minimal (15 string mappings, ~550 bytes)
+**Memory Footprint**: Minimal (16 string mappings, ~600 bytes)
 
 **Execution Time**: <1ms per call (synchronous, no I/O)
 
@@ -346,6 +351,12 @@ getJobEventMessage('comment-plan', 'start', 'RUNNING')
 
 getJobEventMessage('deploy-preview', 'complete', 'COMPLETED')
 // → "Preview deployment completed"
+
+getJobEventMessage('iterate', 'start', 'RUNNING')
+// → "Verification iteration started"
+
+getJobEventMessage('iterate', 'complete', 'COMPLETED')
+// → "Verification iteration completed"
 
 getJobEventMessage('ship', 'complete', 'FAILED')
 // → "Deployment failed"

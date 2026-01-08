@@ -121,6 +121,7 @@ workflowInputs = {
 5. **deploy-preview.yml**: Vercel deployment
 6. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
 7. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
+8. **iterate.yml**: Minor fixes during VERIFY stage (triggered by AI-BOARD)
 
 ## Deploy Preview System
 

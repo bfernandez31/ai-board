@@ -44,6 +44,12 @@ describe('getJobDisplayName', () => {
     });
   });
 
+  describe('Iterate command', () => {
+    it('should return "Verification iteration" for iterate command', () => {
+      expect(getJobDisplayName('iterate')).toBe('Verification iteration');
+    });
+  });
+
   describe('AI-BOARD assistance commands', () => {
     it('should return "Specification assistance" for comment-specify', () => {
       expect(getJobDisplayName('comment-specify')).toBe('Specification assistance');
