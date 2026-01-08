@@ -434,7 +434,7 @@ jobs:
 
           # Create iterate job via API
           echo "📝 Creating iterate job..."
-          JOB_RESPONSE=$(curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/jobs" \
+          HTTP_RESPONSE=$(curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/jobs" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{
@@ -442,10 +442,27 @@ jobs:
               \"command\": \"iterate\",
               \"branch\": \"${{ inputs.branch }}\"
             }" \
-            -f -s -S)
+            -s -w "\n%{http_code}")
 
-          JOB_ID=$(echo "$JOB_RESPONSE" | jq -r '.id')
-          echo "✅ Created iterate job: $JOB_ID"
+          # Extract HTTP status code (last line) and response body (everything else)
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -1)
+          JOB_RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+          echo "📊 HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            JOB_ID=$(echo "$JOB_RESPONSE" | jq -r '.id')
+            if [ "$JOB_ID" = "null" ] || [ -z "$JOB_ID" ]; then
+              echo "❌ Failed to extract job ID from response"
+              echo "📋 Response: $JOB_RESPONSE"
+              exit 1
+            fi
+            echo "✅ Created iterate job: $JOB_ID"
+          else
+            echo "❌ Failed to create iterate job. HTTP $HTTP_STATUS"
+            echo "📋 Response: $JOB_RESPONSE"
+            exit 1
+          fi
 
           # Dispatch iterate workflow
           echo "🚀 Dispatching iterate.yml workflow..."
