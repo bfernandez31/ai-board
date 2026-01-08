@@ -24,6 +24,9 @@ export const JOB_COMMAND_DISPLAY_NAMES: Record<string, string> = {
   // Deploy preview command
   'deploy-preview': 'Preview deployment',
 
+  // Iterate command (minor fixes during VERIFY)
+  'iterate': 'Verification iteration',
+
   // AI-BOARD assistance commands (comment-* pattern)
   'comment-specify': 'Specification assistance',
   'comment-plan': 'Planning assistance',
