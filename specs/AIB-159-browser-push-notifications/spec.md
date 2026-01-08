@@ -162,8 +162,16 @@ As a project owner, I want to manage my push notification settings so I can enab
 
 ### Key Entities *(include if feature involves data)*
 
-- **PushSubscription**: Represents a user's browser push subscription. Contains push endpoint URL, encryption keys (p256dh, auth), subscription expiration, associated user, and creation timestamp.
+- **PushSubscription**: Represents a user's browser push subscription. Contains unique subscription ID, push endpoint URL, encryption keys (p256dh, auth), subscription expiration, associated user, and creation timestamp.
 - **User (extended)**: Existing user model extended with push subscription relationship. One user may have multiple subscriptions (multiple browsers/devices).
+
+### API Design Decisions
+
+- **Unsubscribe by ID**: The unsubscribe API accepts `subscriptionId` (integer) instead of `endpoint` (URL) because:
+  1. Client components receive subscription list with IDs from the status endpoint
+  2. Endpoint strings are not stored in the client-side subscription response for security
+  3. ID-based deletion is simpler and more reliable than endpoint matching
+  4. Prevents issues with URL encoding and special characters in endpoints
 
 ## Success Criteria *(mandatory)*
 

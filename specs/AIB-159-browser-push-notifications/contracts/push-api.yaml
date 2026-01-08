@@ -53,7 +53,7 @@ paths:
   /push/unsubscribe:
     post:
       summary: Remove push subscription
-      description: Delete a push subscription by endpoint URL.
+      description: Delete a push subscription by subscription ID.
       operationId: unsubscribePush
       tags:
         - Push Notifications
@@ -66,12 +66,12 @@ paths:
             schema:
               type: object
               required:
-                - endpoint
+                - subscriptionId
               properties:
-                endpoint:
-                  type: string
-                  format: uri
-                  description: The push subscription endpoint URL
+                subscriptionId:
+                  type: integer
+                  description: The unique subscription ID
+                  example: 42
       responses:
         '200':
           description: Subscription removed successfully
@@ -85,6 +85,12 @@ paths:
                     example: true
         '401':
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Subscription does not belong to authenticated user
           content:
             application/json:
               schema:

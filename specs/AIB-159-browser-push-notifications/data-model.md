@@ -198,6 +198,12 @@ export const pushSubscriptionInputSchema = z.object({
 });
 
 export type PushSubscriptionInput = z.infer<typeof pushSubscriptionInputSchema>;
+
+export const unsubscribeSchema = z.object({
+  subscriptionId: z.number().int().positive(),
+});
+
+export type UnsubscribeInput = z.infer<typeof unsubscribeSchema>;
 ```
 
 ## Query Functions
@@ -216,15 +222,16 @@ async function getUserPushSubscriptions(
   userId: string
 ): Promise<PushSubscription[]>
 
-// Delete subscription by endpoint
-async function deletePushSubscription(
+// Delete subscription by ID (primary method - used by unsubscribe API)
+async function deletePushSubscriptionById(
   userId: string,
-  endpoint: string
+  subscriptionId: number
 ): Promise<void>
 
-// Delete subscription by ID (for failed push cleanup)
-async function deletePushSubscriptionById(
-  id: number
+// Delete subscription by endpoint (legacy - for internal cleanup only)
+async function deletePushSubscriptionByEndpoint(
+  userId: string,
+  endpoint: string
 ): Promise<void>
 
 // Check if user has any active subscriptions

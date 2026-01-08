@@ -110,6 +110,19 @@ tests/
 | web-push dependency | Standard library for Web Push protocol compliance (VAPID, encryption) |
 | PushSubscription model | Minimal storage for subscription data per Web Push spec requirements |
 
+## API Design Decisions
+
+**Unsubscribe by ID (not endpoint)**:
+- The `/api/push/unsubscribe` endpoint accepts `subscriptionId` (integer) instead of `endpoint` (URL)
+- **Rationale**:
+  1. Client components receive subscription list with IDs from `/api/push/status`
+  2. Endpoint strings are not exposed to client-side for security reasons
+  3. ID-based deletion is simpler and more reliable than endpoint string matching
+  4. Avoids URL encoding issues and special character handling in endpoints
+  5. Aligns with standard REST patterns (resource identifier in request)
+- **Implementation**: The `PushNotificationManager` component passes `subscription.id` directly to the unsubscribe mutation
+- **Zod Schema**: `unsubscribeSchema` validates `subscriptionId` as positive integer instead of `endpoint` as URL string
+
 ## Post-Design Constitution Check
 
 *Re-evaluated after Phase 1 design completion.*
