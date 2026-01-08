@@ -482,7 +482,7 @@ jobs:
                 \"job_id\": \"$JOB_ID\",
                 \"project_id\": \"${{ inputs.project_id }}\",
                 \"branch\": \"${{ inputs.branch }}\",
-                \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c .),
+                \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c 'tojson'),
                 \"githubRepository\": \"${{ inputs.githubRepository }}\"
               }
             }"
