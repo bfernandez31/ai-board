@@ -83,7 +83,7 @@ export async function sendJobCompletionNotification(
       title: `Job ${statusText}: ${job.ticket.ticketKey}`,
       body: `${job.command} ${statusText} for "${job.ticket.title}"`,
       icon,
-      url: `/projects/${job.ticket.project.id}?ticket=${job.ticket.ticketKey}`,
+      url: `/projects/${job.ticket.project.id}/board?ticket=${job.ticket.ticketKey}&modal=open`,
       type: 'job_completion',
       ticketKey: job.ticket.ticketKey,
     };
@@ -147,7 +147,7 @@ export async function sendMentionNotification(
       title: `Mentioned in ${ticketKey}`,
       body: `${actorName} mentioned you in a comment`,
       icon: '/icon-mention.png',
-      url: `/projects/${projectId}?ticket=${ticketKey}`,
+      url: `/projects/${projectId}/board?ticket=${ticketKey}&modal=open`,
       type: 'mention',
       ticketKey,
     };
