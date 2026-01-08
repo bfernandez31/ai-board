@@ -667,3 +667,240 @@ it('should shift dropdown left when near right edge', async () => {
   expect(dropdown.style.left).toBeLessThan(cursorPosition);
 });
 ```
+
+## Push Notification Utilities
+
+### Purpose
+
+Provides server-side functions for sending browser push notifications to users for job completions and @mention events.
+
+### File Location
+
+`app/lib/push/send-notification.ts`
+
+### API Reference
+
+**Function**: `sendJobCompletionNotification(jobId: number, status: 'COMPLETED' | 'FAILED' | 'CANCELLED'): Promise<void>`
+
+Sends push notifications to project owners when jobs reach terminal states.
+
+**Parameters**:
+- `jobId` (number): Database ID of completed job
+- `status` (JobStatus): Terminal job status (COMPLETED, FAILED, or CANCELLED)
+
+**Behavior**:
+1. Fetches job with related ticket and project data
+2. Retrieves all push subscriptions for project owner
+3. Sends notification to each active subscription
+4. Cleans up invalid/expired subscriptions (404/410 responses)
+5. Logs delivery success rate
+
+**Notification Payload**:
+```typescript
+{
+  title: `Job ${status}: ${ticketKey}`,
+  body: `${command} ${status} for "${ticketTitle}"`,
+  icon: '/icon-success.png' | '/icon-error.png' | '/icon-warning.png',
+  url: `/projects/${projectId}/board?ticket=${ticketKey}&modal=open`,
+  type: 'job_completion',
+  ticketKey: string
+}
+```
+
+**URL Format**: The notification URL includes `modal=open` query parameter to automatically open the ticket modal when the push notification is clicked. This ensures users land directly on the ticket conversation rather than just the board view.
+
+**Icon Selection**:
+- COMPLETED → `/icon-success.png` (green checkmark)
+- FAILED → `/icon-error.png` (red X)
+- CANCELLED → `/icon-warning.png` (yellow warning)
+
+**Error Handling**:
+- Returns early if VAPID not configured (development mode)
+- Logs warning if job/ticket not found
+- Gracefully handles subscription cleanup failures
+- Continues sending to remaining subscriptions if one fails
+
+**Function**: `sendMentionNotification(recipientId: string, actorName: string, ticketKey: string, projectId: number): Promise<void>`
+
+Sends push notifications when users are mentioned in comments.
+
+**Parameters**:
+- `recipientId` (string): User ID of mentioned user
+- `actorName` (string): Display name of user who created mention
+- `ticketKey` (string): Ticket key where mention occurred (e.g., "ABC-123")
+- `projectId` (number): Project ID for navigation
+
+**Notification Payload**:
+```typescript
+{
+  title: `Mentioned in ${ticketKey}`,
+  body: `${actorName} mentioned you in a comment`,
+  icon: '/icon-mention.png',
+  url: `/projects/${projectId}/board?ticket=${ticketKey}&modal=open`,
+  type: 'mention',
+  ticketKey: string
+}
+```
+
+**URL Format**: The notification URL includes `modal=open` query parameter to automatically open the ticket modal when the push notification is clicked, landing users directly in the conversation context.
+
+**Recipient Filtering**:
+- Only sends to users with active push subscriptions
+- Self-mentions do not trigger notifications (handled at comment level)
+- Non-project members do not receive notifications (handled at comment level)
+
+**Examples**:
+
+```typescript
+// Job completion notification
+await sendJobCompletionNotification(42, 'COMPLETED');
+// Sends: "Job completed: ABC-123" → "specify completed for 'Add login feature'"
+// URL: /projects/1/board?ticket=ABC-123&modal=open
+
+// Mention notification
+await sendMentionNotification('user-123', 'Alice Smith', 'ABC-456', 1);
+// Sends: "Mentioned in ABC-456" → "Alice Smith mentioned you in a comment"
+// URL: /projects/1/board?ticket=ABC-456&modal=open
+```
+
+### Integration Points
+
+**Job Status Updates** (`app/api/jobs/[id]/status/route.ts`):
+- Called when job status transitions to COMPLETED, FAILED, or CANCELLED
+- Runs asynchronously (does not block API response)
+- Only project owners receive notifications
+
+**Comment Creation** (`app/api/projects/[projectId]/tickets/[ticketId]/comments/route.ts`):
+- Called after notification records created for mentions
+- Sends to each mentioned user individually
+- Skips users without push subscriptions
+
+**Service Worker Navigation** (`public/sw.js`):
+- Receives notification click events
+- Extracts URL from payload
+- Opens or focuses browser window
+- Navigates to `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
+- Modal automatically opens due to URL query parameters
+
+### Configuration
+
+**Environment Variables**:
+- `VAPID_PUBLIC_KEY`: Web Push VAPID public key
+- `VAPID_PRIVATE_KEY`: Web Push VAPID private key
+- `VAPID_SUBJECT`: Contact email (mailto: format)
+
+**VAPID Setup** (`app/lib/push/web-push-config.ts`):
+```typescript
+import webpush from 'web-push';
+
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:noreply@ai-board.app',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
+export const isPushConfigured = !!(
+  process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
+);
+```
+
+### Error Recovery
+
+**Expired Subscriptions**:
+- HTTP 404/410 responses trigger automatic cleanup
+- Subscription removed from database
+- Does not throw error or block other notifications
+
+**Rate Limiting**:
+- HTTP 429 responses logged and skipped
+- Will retry on next event (no queue)
+- Does not impact other subscriptions
+
+**Invalid Subscriptions**:
+- Malformed endpoints fail silently
+- Subscription cleaned up automatically
+- Error logged for debugging
+
+### Performance
+
+**Concurrent Delivery**: Uses `Promise.allSettled()` to send to all subscriptions in parallel
+
+**Subscription Limits**: Expected <5 subscriptions per user (multiple browsers/devices)
+
+**Delivery Time**: <5 seconds from trigger event to browser notification display
+
+**Database Queries**:
+- Job completion: 1 query (job with includes) + 1 query (subscriptions)
+- Mention: 1 query (subscriptions)
+- Cleanup: 1 delete per failed subscription (async, non-blocking)
+
+### Testing
+
+**Integration Tests**: `tests/integration/push-notifications.test.ts`
+
+Test coverage:
+- Job completion notification sending
+- Mention notification sending
+- Subscription cleanup on 404/410 errors
+- Graceful degradation when VAPID not configured
+- Multiple subscriptions per user
+
+**Test Pattern**:
+```typescript
+import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
+import { prisma } from '@/lib/db/client';
+
+it('should send job completion notification to project owner', async () => {
+  // Create test subscription
+  await prisma.pushSubscription.create({
+    data: { userId: ownerId, endpoint: 'https://...', p256dh: '...', auth: '...' }
+  });
+
+  // Send notification
+  await sendJobCompletionNotification(jobId, 'COMPLETED');
+
+  // Verify notification sent (check logs or mock webpush)
+});
+```
+
+### Security Considerations
+
+**VAPID Keys**:
+- Private key never exposed to client
+- Public key safe to expose in HTML/JavaScript
+- Keys generated via `web-push generate-vapid-keys` command
+
+**Subscription Validation**:
+- Endpoints validated by browser Push API
+- Invalid subscriptions rejected at registration
+- Expired subscriptions cleaned up automatically
+
+**Authorization**:
+- Only project owners receive job completion notifications
+- Mention notifications respect project membership
+- No cross-project notification leakage
+
+### Design Rationale
+
+**Automatic Modal Opening**:
+- Push notification URLs include `modal=open` parameter
+- Users land directly in conversation context
+- Reduces navigation friction from external notification
+- Consistent with in-app notification click behavior
+
+**Project Owner Only**:
+- Reduces notification fatigue for members
+- Owners responsible for project oversight
+- Members can opt into in-app notifications via bell icon
+
+**Icon Differentiation**:
+- Visual status indication in notification tray
+- Helps users prioritize attention (failures vs completions)
+- Consistent with in-app UI patterns
+
+**Graceful Degradation**:
+- System works without push notifications (in-app polling fallback)
+- Development mode doesn't require VAPID setup
+- Unsupported browsers hide opt-in prompt

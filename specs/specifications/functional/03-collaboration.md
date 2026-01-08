@@ -765,7 +765,8 @@ Project owners can enable browser push notifications to receive alerts when brow
 
 **Notification Behavior**:
 - Notifications appear even when browser tab is minimized, in background, or user is in different application
-- Clicking notification opens or focuses ai-board tab and navigates to relevant ticket
+- Clicking notification opens or focuses ai-board tab and navigates to relevant ticket with modal automatically opened
+- Ticket modal opens on the board with conversation tab pre-selected
 - Notifications delivered within 5 seconds of trigger event
 - Multiple simultaneous notifications displayed independently (not grouped)
 
