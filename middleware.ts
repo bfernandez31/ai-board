@@ -6,6 +6,7 @@ export default authEdge((req) => {
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isPublicApi = req.nextUrl.pathname === '/api/health'
   const isAuthApi = req.nextUrl.pathname.startsWith('/api/auth')
+  const isPushApi = req.nextUrl.pathname.startsWith('/api/push')
   const isWorkflowApi = req.nextUrl.pathname.match(/^\/api\/jobs\/\d+\/status$/) !== null
   const isProjectJobsApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/jobs$/) !== null
   const isTelemetryApi = req.nextUrl.pathname.startsWith('/api/telemetry/')
@@ -30,7 +31,9 @@ export default authEdge((req) => {
   }
 
   // Allow public pages, auth pages, public APIs, and workflow APIs
-  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isWorkflowApi || isProjectJobsApi || isTelemetryApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi || isPreviewUrlApi || isTicketSearchApi || isTicketJobsApi) {
+  // Note: isPushApi routes have their own requireAuth() check, so we let them through
+  // to avoid redirect loops and let them return proper 401 responses
+  if (isLandingPage || isAuthPage || isPublicApi || isAuthApi || isPushApi || isWorkflowApi || isProjectJobsApi || isTelemetryApi || isAIBoardCommentApi || isTicketBranchApi || isTransitionApi || isVerifyTicketsApi || isPreviewUrlApi || isTicketSearchApi || isTicketJobsApi) {
     return NextResponse.next()
   }
 
