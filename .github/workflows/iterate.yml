@@ -47,6 +47,8 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      # Use Opus model for Claude Code
+      ANTHROPIC_MODEL: "claude-opus-4-5-20251101"
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
       OTEL_LOGS_EXPORTER: "otlp"
