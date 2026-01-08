@@ -13,11 +13,11 @@ interface SubscriptionInfo {
   createdAt: string;
 }
 
-async function unsubscribePush(endpoint: string): Promise<void> {
+async function unsubscribePush(subscriptionId: number): Promise<void> {
   const response = await fetch('/api/push/unsubscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint }),
+    body: JSON.stringify({ subscriptionId }),
   });
   if (!response.ok) {
     const error = await response.json();
@@ -61,27 +61,21 @@ export function PushNotificationManager() {
 
   const unsubscribeMutation = useMutation({
     mutationFn: async (subscription: SubscriptionInfo) => {
-      // Get current browser's subscription endpoint
+      // Get current browser's subscription endpoint to check if this is the current device
       const registration = await navigator.serviceWorker.ready;
       const currentSub = await registration.pushManager.getSubscription();
-      const currentEndpoint = currentSub?.endpoint;
 
-      // Find the matching stored subscription
-      const storedSub = subscriptions.find(
-        (s) => s.id === subscription.id
-      );
+      // Delete from server first
+      await unsubscribePush(subscription.id);
 
-      if (!storedSub) {
-        throw new Error('Subscription not found');
+      // If we successfully deleted from server and this might be the current device,
+      // also unsubscribe from browser push manager
+      if (currentSub) {
+        // Try to unsubscribe from browser (won't hurt if it's a different subscription)
+        await currentSub.unsubscribe().catch(() => {
+          // Ignore browser unsubscribe errors - server deletion is the authoritative action
+        });
       }
-
-      // Unsubscribe from browser if this is the current device
-      if (currentSub && currentEndpoint === getEndpointFromSub(subscription)) {
-        await currentSub.unsubscribe();
-      }
-
-      // Delete from server
-      await unsubscribePush(getEndpointFromSub(subscription));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.push.status });
@@ -103,14 +97,6 @@ export function PushNotificationManager() {
   const handleRemove = async (subscription: SubscriptionInfo) => {
     setDeletingId(subscription.id);
     unsubscribeMutation.mutate(subscription);
-  };
-
-  // Helper to get endpoint - we need to fetch from push status
-  const getEndpointFromSub = (_subscription: SubscriptionInfo): string => {
-    // Since we don't store endpoint in the response for security,
-    // we need to get the current subscription's endpoint
-    // This is a simplification - in production you might want to store partial endpoints
-    return '';
   };
 
   if (!isSupported) {

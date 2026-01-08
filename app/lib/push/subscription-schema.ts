@@ -12,7 +12,7 @@ export const pushSubscriptionInputSchema = z.object({
 export type PushSubscriptionInput = z.infer<typeof pushSubscriptionInputSchema>;
 
 export const unsubscribeSchema = z.object({
-  endpoint: z.string().url().max(500),
+  subscriptionId: z.number().int().positive(),
 });
 
 export type UnsubscribeInput = z.infer<typeof unsubscribeSchema>;

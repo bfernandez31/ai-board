@@ -89,6 +89,12 @@ export async function getSubscriptionByEndpoint(endpoint: string) {
   });
 }
 
+export async function getSubscriptionById(id: number) {
+  return prisma.pushSubscription.findUnique({
+    where: { id },
+  });
+}
+
 export async function cleanupExpiredSubscriptions(): Promise<number> {
   const result = await prisma.pushSubscription.deleteMany({
     where: {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/db/users';
-import { deletePushSubscription, getSubscriptionByEndpoint } from '@/lib/db/push-subscriptions';
+import { getSubscriptionById, deletePushSubscriptionById } from '@/lib/db/push-subscriptions';
 import { unsubscribeSchema } from '@/app/lib/push/subscription-schema';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -28,10 +28,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { endpoint } = validationResult.data;
+    const { subscriptionId } = validationResult.data;
 
     // Verify subscription exists and belongs to user
-    const subscription = await getSubscriptionByEndpoint(endpoint);
+    const subscription = await getSubscriptionById(subscriptionId);
     if (!subscription) {
       return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await deletePushSubscription(userId, endpoint);
+    await deletePushSubscriptionById(subscriptionId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
