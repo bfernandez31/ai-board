@@ -1,0 +1,92 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Bell, X } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { usePushNotifications } from './use-push-notifications';
+
+const DISMISSED_KEY = 'push-notifications-dismissed';
+
+export function PushOptInPrompt() {
+  const { data: session, status } = useSession();
+  const [isDismissed, setIsDismissed] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const { isSupported, isEnabled, isLoading, permission, subscribe, error } = usePushNotifications();
+
+  useEffect(() => {
+    setMounted(true);
+    const dismissed = localStorage.getItem(DISMISSED_KEY);
+    setIsDismissed(dismissed === 'true');
+  }, []);
+
+  const handleDismiss = () => {
+    localStorage.setItem(DISMISSED_KEY, 'true');
+    setIsDismissed(true);
+  };
+
+  const handleEnable = async () => {
+    try {
+      await subscribe();
+      setIsDismissed(true);
+    } catch (err) {
+      console.error('[Push] Subscribe error:', err);
+    }
+  };
+
+  if (!mounted || status === 'loading') {
+    return null;
+  }
+
+  if (!session || !isSupported || isDismissed || isEnabled || permission === 'denied') {
+    return null;
+  }
+
+  return (
+    <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-[#45475a] bg-[#1e1e2e]">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-[#8B5CF6]" />
+            <CardTitle className="text-sm text-[#cdd6f4]">Enable Notifications</CardTitle>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleDismiss}
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <CardDescription className="text-xs text-[#a6adc8]">
+          Get notified when jobs complete or you&apos;re mentioned in comments.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pb-4">
+        {error && (
+          <p className="text-xs text-[#f38ba8] mb-2">{error}</p>
+        )}
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleDismiss}
+            disabled={isLoading}
+          >
+            Not now
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleEnable}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Enabling...' : 'Enable'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

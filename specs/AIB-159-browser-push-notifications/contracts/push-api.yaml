@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: Push Notifications API
+  version: 1.0.0
+  description: API endpoints for managing browser push notification subscriptions
+
+servers:
+  - url: /api
+    description: Next.js API Routes
+
+paths:
+  /push/subscribe:
+    post:
+      summary: Save push subscription
+      description: |
+        Store a push subscription for the authenticated user.
+        Creates new subscription or updates existing one (upsert by endpoint).
+      operationId: subscribePush
+      tags:
+        - Push Notifications
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushSubscriptionInput'
+      responses:
+        '200':
+          description: Subscription saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid subscription data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /push/unsubscribe:
+    post:
+      summary: Remove push subscription
+      description: Delete a push subscription by subscription ID.
+      operationId: unsubscribePush
+      tags:
+        - Push Notifications
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subscriptionId
+              properties:
+                subscriptionId:
+                  type: integer
+                  description: The unique subscription ID
+                  example: 42
+      responses:
+        '200':
+          description: Subscription removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Subscription does not belong to authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /push/status:
+    get:
+      summary: Get subscription status
+      description: |
+        Check if the authenticated user has active push subscriptions.
+        Returns subscription count and basic device info for settings UI.
+      operationId: getPushStatus
+      tags:
+        - Push Notifications
+      security:
+        - session: []
+      responses:
+        '200':
+          description: Subscription status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushStatus'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+  schemas:
+    PushSubscriptionInput:
+      type: object
+      required:
+        - endpoint
+        - keys
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          maxLength: 500
+          description: Push service endpoint URL
+          example: https://fcm.googleapis.com/fcm/send/...
+        expirationTime:
+          type: integer
+          nullable: true
+          description: Unix timestamp when subscription expires (if provided by push service)
+        keys:
+          type: object
+          required:
+            - p256dh
+            - auth
+          properties:
+            p256dh:
+              type: string
+              maxLength: 100
+              description: Base64-encoded P-256 public key
+            auth:
+              type: string
+              maxLength: 50
+              description: Base64-encoded auth secret
+
+    PushStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Whether user has any active subscriptions
+        subscriptionCount:
+          type: integer
+          description: Number of active subscriptions
+          minimum: 0
+        subscriptions:
+          type: array
+          description: List of active subscriptions with device info
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              userAgent:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code for client handling

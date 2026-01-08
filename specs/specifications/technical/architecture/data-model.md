@@ -38,7 +38,7 @@ model User {
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
-- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers, Notifications (as recipient and actor)
+- One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers, Notifications (as recipient and actor), PushSubscriptions
 
 **Constraints**:
 - Unique email address
@@ -48,6 +48,7 @@ model User {
 - Every project must have a user (required userId)
 - Email uniquely identifies users across system
 - Mock authentication uses `test@e2e.local` in development
+- Users can have multiple push subscriptions (different browsers/devices)
 
 ### Project
 
@@ -464,6 +465,68 @@ model Notification {
 - Deleted users cascade delete their received and created notifications
 - Unread notifications count towards bell badge
 - Read notifications remain visible in dropdown until deleted
+- Push notifications sent to project owners when mentioned (if subscriptions enabled)
+
+### PushSubscription
+
+Browser push notification subscriptions for project owners to receive alerts outside the application.
+
+```prisma
+model PushSubscription {
+  id             Int       @id @default(autoincrement())
+  userId         String
+  endpoint       String    @unique @db.VarChar(500)
+  p256dh         String    @db.VarChar(100)
+  auth           String    @db.VarChar(50)
+  expirationTime DateTime?
+  userAgent      String?   @db.VarChar(200)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([endpoint])
+}
+```
+
+**Purpose**: Enable browser push notifications for job completion and @mentions when browser tab is not active
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `userId`: Owner of the subscription (required foreign key)
+- `endpoint`: Web Push endpoint URL (unique, provided by browser)
+- `p256dh`: Public key for message encryption (required by Web Push spec)
+- `auth`: Authentication secret for message encryption (required by Web Push spec)
+- `expirationTime`: Optional subscription expiration timestamp
+- `userAgent`: Browser/device identifier for subscription management (optional)
+- `createdAt`: Subscription creation timestamp
+- `updatedAt`: Last modification timestamp
+
+**Relationships**:
+- Belongs to User (required, cascade delete)
+
+**Constraints**:
+- Unique endpoint URL (prevents duplicate subscriptions)
+- Index on userId for efficient subscription lookup
+- Index on endpoint for subscription validation
+- Cascade delete when user is deleted
+
+**Features**:
+- Web Push API integration with VAPID authentication
+- Automatic cleanup of invalid subscriptions (410/404 responses)
+- Multiple subscriptions per user (different browsers/devices)
+- Service worker-based notification delivery
+
+**Business Rules**:
+- Only project owners receive push notifications (not all project members)
+- Subscriptions store Web Push API encryption keys (p256dh, auth) per spec requirements
+- Invalid subscriptions fail silently and are removed during next send attempt
+- VAPID keys configured server-side for push authentication
+- Notifications sent for job completion (COMPLETED, FAILED, CANCELLED) and @mentions
+- Clicking notification opens/focuses ai-board tab and navigates to relevant ticket
+- Subscriptions automatically upserted (endpoint is unique key)
+- Graceful degradation when browser doesn't support push notifications
 
 ### ProjectMember
 

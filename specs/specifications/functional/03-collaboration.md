@@ -654,10 +654,11 @@ When a user is mentioned in a comment:
 - AI-BOARD as actor appears in notification (shows "AI-BOARD mentioned you")
 
 **Notification Delivery**:
-- Notifications appear within 15 seconds via polling
+- In-app notifications appear within 15 seconds via polling
 - Bell badge updates automatically to show unread count
 - Dropdown content refreshes to show new notifications
 - Polling continues while user is authenticated
+- Browser push notifications sent immediately for project owners (if enabled)
 
 ### Viewing Notifications
 
@@ -740,6 +741,49 @@ When notification references a ticket in a different project:
 - Remove visual highlight indicator
 - Timestamp shows when marked as read
 - Remain visible in dropdown until deleted or expired
+
+### Browser Push Notifications
+
+Project owners can enable browser push notifications to receive alerts when browser tab is not active:
+
+**Opt-In Prompt**:
+- Floating prompt appears for project owners who haven't enabled or dismissed push notifications
+- Displays "Enable Push Notifications" message with Enable and Dismiss buttons
+- Browser's native permission dialog appears when Enable clicked
+- Dismissal persists in browser local storage to prevent re-showing
+- Prompt hidden on browsers that don't support push notifications
+
+**Notification Types**:
+- **Job Completion**: Notifies when jobs reach terminal states (COMPLETED, FAILED, CANCELLED)
+  - Title format: "Job [status]: [TICKET-KEY]"
+  - Body includes command name and ticket title
+  - Example: "Job completed: ABC-123" with body "specify completed for 'Add login feature'"
+- **@Mentions**: Notifies when mentioned in comments
+  - Title format: "Mentioned in [TICKET-KEY]"
+  - Body format: "[Actor Name] mentioned you in a comment"
+  - Works with both user mentions and AI-BOARD mentions
+
+**Notification Behavior**:
+- Notifications appear even when browser tab is minimized, in background, or user is in different application
+- Clicking notification opens or focuses ai-board tab and navigates to relevant ticket
+- Notifications delivered within 5 seconds of trigger event
+- Multiple simultaneous notifications displayed independently (not grouped)
+
+**Recipient Scope**:
+- Only project owners receive push notifications (not all project members)
+- Owners receive notifications for jobs in their projects
+- Owners receive notifications when mentioned in their projects
+
+**Browser Support**:
+- Modern browsers: Chrome, Firefox, Edge, Safari 16.4+
+- Graceful degradation: unsupported browsers show no opt-in prompt
+- Users rely on in-app notifications when push notifications unavailable
+
+**Subscription Management**:
+- Users can view subscription status via notification settings
+- Multiple subscriptions supported (multiple browsers/devices per user)
+- Subscriptions automatically cleaned up when they become invalid or expired
+- Invalid subscriptions (blocked at OS/browser level) fail silently without disrupting system
 
 ## Authorization
 

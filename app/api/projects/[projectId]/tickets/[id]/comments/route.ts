@@ -8,6 +8,7 @@ import { extractMentionUserIds } from '@/app/lib/utils/mention-parser';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 import { checkAIBoardAvailability } from '@/app/lib/utils/ai-board-availability';
 import { dispatchAIBoardWorkflow } from '@/app/lib/workflows/dispatch-ai-board';
+import { sendMentionNotification } from '@/app/lib/push/send-notification';
 
 /**
  * Schema for route parameters
@@ -281,6 +282,19 @@ export async function POST(
                 ticketId,
               })),
             });
+
+            // Send push notifications for mentions (non-blocking)
+            const actorName = comment.user.name || 'Someone';
+            for (const recipientId of validRecipients) {
+              sendMentionNotification(
+                recipientId,
+                actorName,
+                ticket.ticketKey,
+                projectId
+              ).catch((err) => {
+                console.error('[comments] Push notification error:', err);
+              });
+            }
           }
         }
       }

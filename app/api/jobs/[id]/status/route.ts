@@ -7,6 +7,7 @@ import {
 } from '@/app/lib/job-state-machine';
 import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { sendJobCompletionNotification } from '@/app/lib/push/send-notification';
 
 /**
  * PATCH /api/jobs/[id]/status
@@ -220,6 +221,14 @@ export async function PATCH(
         });
         console.log(`[Job Status Update] Released cleanup lock for project ${project.id}`);
       }
+
+      // Send push notification for job completion (non-blocking)
+      sendJobCompletionNotification(
+        jobId,
+        requestedStatus as 'COMPLETED' | 'FAILED' | 'CANCELLED'
+      ).catch((err) => {
+        console.error('[Job Status Update] Push notification error:', err);
+      });
     }
 
     // Return minimal response (id, status, completedAt)

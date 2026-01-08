@@ -10,6 +10,12 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - NO README, GUIDE, or tutorial files at project root - AI learns from existing code patterns
 - Ticket specs in `specs/[ticket-key]/`, consolidated specs in `specs/specifications/`
 
+**Commit Rules:**
+- NEVER use `--no-verify` to bypass pre-commit hooks
+- If type-check or lint fails during commit, FIX ALL ERRORS before committing - even if they predate your changes
+- Run `bun run type-check` and `bun run lint` proactively before attempting commits
+- If Prisma schema changed, run `bunx prisma generate` to regenerate the client
+
 ## Tech Stack
 
 - **Core**: TypeScript 5.6 (strict), Node.js 22.20.0, Next.js 16 (App Router), React 18
@@ -19,6 +25,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
+- **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 
 ## Commands
 
@@ -89,6 +96,13 @@ bun run type-check         # TypeScript check
 - `read`, `readAt`: Read status tracking
 - `deletedAt`: Soft delete for 30-day retention
 - Polling: 15-second interval for real-time updates
+
+### PushSubscription
+- `userId`: Owner of subscription (foreign key)
+- `endpoint`: Web Push endpoint URL (unique)
+- `p256dh`, `auth`: Encryption keys (Web Push spec)
+- Multiple subscriptions per user (different browsers/devices)
+- Auto-cleanup of invalid subscriptions (410/404 responses)
 
 ## API Patterns
 

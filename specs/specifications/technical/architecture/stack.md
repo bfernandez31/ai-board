@@ -97,6 +97,22 @@
 - **Icons Used**: 50+ icons across application
 - **Format**: React components with SVG
 
+## Browser APIs
+
+### Web Push API
+- **Purpose**: Browser push notifications for job completion and @mentions
+- **Features Used**:
+  - Service Worker registration
+  - Push subscription management
+  - VAPID authentication
+  - Notification API for displaying notifications
+  - NotificationClick events for navigation
+- **Browser Support**: Chrome 90+, Firefox 88+, Safari 16.4+, Edge 90+
+- **Server Library**: `web-push` ^3.6.x (VAPID protocol implementation)
+- **Service Worker**: `/public/sw.js` (handles push events and notification clicks)
+- **Configuration**: VAPID keys in environment variables (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)
+- **Graceful Degradation**: Feature detection hides opt-in prompt on unsupported browsers
+
 ### Recharts
 - **Version**: 2.x
 - **Purpose**: React charting library for analytics dashboard
@@ -365,6 +381,9 @@
   - `CLOUDINARY_CLOUD_NAME`: Cloudinary account
   - `CLOUDINARY_API_KEY`: Cloudinary API key
   - `CLOUDINARY_API_SECRET`: Cloudinary API secret
+  - `VAPID_PUBLIC_KEY`: Web Push VAPID public key (browser push notifications)
+  - `VAPID_PRIVATE_KEY`: Web Push VAPID private key (server push authentication)
+  - `VAPID_SUBJECT`: VAPID subject (contact email or URL)
 
 ## Package Management
 
@@ -402,6 +421,7 @@
 | remark-gfm | ^4.0.1 | GFM support for markdown |
 | date-fns | Latest | Date utilities |
 | @vercel/speed-insights | ^1.2.0 | Performance monitoring |
+| web-push | ^3.6.x | Web Push protocol (VAPID) |
 
 ## Browser Support
 
@@ -414,6 +434,13 @@
 ### Mobile
 - Mobile Safari (iOS 14+)
 - Mobile Chrome (Android 10+)
+
+### Push Notification Support
+- Chrome 90+: Full support
+- Firefox 88+: Full support
+- Safari 16.4+: Full support (requires iOS 16.4+ on mobile)
+- Edge 90+: Full support
+- Older browsers: Graceful degradation (no opt-in prompt shown)
 
 ## Performance Targets
 
