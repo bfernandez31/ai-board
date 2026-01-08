@@ -47,6 +47,8 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
+      # Use Opus model for Claude Code
+      ANTHROPIC_MODEL: "claude-opus-4-5-20251101"
       # Claude Code telemetry - send to OTLP endpoint
       CLAUDE_CODE_ENABLE_TELEMETRY: "1"
       OTEL_LOGS_EXPORTER: "otlp"
@@ -121,9 +123,6 @@ jobs:
           echo "🔧 Executing iteration fixes..."
           echo "Issues to fix: $ISSUES"
 
-          # Use Opus model for iteration fixes
-          export ANTHROPIC_MODEL="claude-opus-4-5-20251101"
-
           # Execute Claude iterate-verify command
           claude --dangerously-skip-permissions "/iterate-verify" > output.log || true
 
@@ -140,9 +139,6 @@ jobs:
         if: steps.iterate.outputs.no_changes != 'true'
         run: |
           echo "📚 Updating global specifications..."
-
-          # Use Opus model
-          export ANTHROPIC_MODEL="claude-opus-4-5-20251101"
 
           # Update specs/specifications with changes from this iteration
           claude --dangerously-skip-permissions "/sync-specifications \
