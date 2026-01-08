@@ -433,8 +433,12 @@ jobs:
           fi
 
           # Create iterate job via API
+          # Remove trailing slash from APP_URL if present
+          API_BASE="${APP_URL%/}"
+          JOBS_URL="${API_BASE}/api/projects/${{ inputs.project_id }}/jobs"
           echo "📝 Creating iterate job..."
-          HTTP_RESPONSE=$(curl -X POST "${APP_URL}/api/projects/${{ inputs.project_id }}/jobs" \
+          echo "🔗 URL: $JOBS_URL"
+          HTTP_RESPONSE=$(curl -X POST "$JOBS_URL" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{
