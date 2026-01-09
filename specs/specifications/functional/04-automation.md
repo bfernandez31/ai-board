@@ -812,6 +812,13 @@ The cleanup workflow provides automated technical debt cleanup by analyzing all 
 - Available to project owners and members
 - Clicking opens confirmation dialog
 
+**Confirmation Dialog**:
+- Modal explains cleanup analysis scope
+- Lists what will be analyzed: code quality, test coverage, documentation
+- User must confirm or cancel operation
+- On confirmation, success toast displays: "Cleanup started - Analyzing N shipped ticket(s) for technical debt..."
+- N is the count of tickets shipped since last cleanup
+
 **Prerequisites**:
 - At least one ticket must have been shipped since last cleanup
 - No cleanup workflow currently in progress
