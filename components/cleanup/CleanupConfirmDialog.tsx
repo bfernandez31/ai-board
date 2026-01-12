@@ -51,7 +51,7 @@ export function CleanupConfirmDialog({
       // T022: Success toast notification
       toast({
         title: 'Cleanup started',
-        description: `Analyzing ${data.shippedBranches.length} shipped branches for technical debt...`,
+        description: `Analyzing ${data.analysis.changes.ticketsShipped} shipped ticket(s) for technical debt...`,
         variant: 'default',
       });
 
