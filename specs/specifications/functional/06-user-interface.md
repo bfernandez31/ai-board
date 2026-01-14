@@ -268,6 +268,21 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 ## Header Elements
 
+### Header Layout
+
+The header maintains consistent layout across all pages within a project:
+
+**Element Positioning**:
+- Left: Logo and project information (project key, name)
+- Center: Context-specific navigation (search on board page, empty on other pages)
+- Right: Notification bell, user menu, and mobile hamburger menu
+- Spacer element pushes right-side elements to correct position on all pages
+
+**Layout Logic**:
+- Board page: Search input provides flex spacing, spacer hidden
+- Analytics/Settings pages: Spacer element provides flex spacing to position right-side elements
+- Landing page (no project): Spacer element ensures right-side alignment
+
 ### Analytics Navigation
 
 The header provides quick access to project analytics:
