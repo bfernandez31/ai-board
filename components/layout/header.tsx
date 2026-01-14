@@ -144,8 +144,9 @@ export function Header() {
           </div>
         )}
 
-        {/* Spacer to push buttons to the right (hidden on mobile when project info exists, or when search is visible) */}
-        <div className={projectInfo ? "hidden" : "flex-1"} />
+        {/* Spacer to push buttons to the right */}
+        {/* Show spacer when: no project info, OR on non-board pages (analytics, settings, etc.) */}
+        <div className={!projectInfo || !isBoardPage ? "flex-1" : "hidden"} />
 
         {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">
