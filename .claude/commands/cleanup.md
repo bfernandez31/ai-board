@@ -78,6 +78,34 @@ Update `cleanup-tasks.md`:
 - [x] T004: Project impact assessment
 - [x] T005: Spec synchronization check
 
+### Phase 2.5: Temporary File Cleanup
+
+Detect and delete files generated during debug/development sessions:
+
+**Debug Documentation** (delete entire folders/files):
+- `docs/troubleshooting/` - Session debug documentation
+- `docs/*-setup.md` - One-time setup guides (belongs in specs)
+- Files matching: `*SUMMARY*.md`, `*FIX*.md`, `*RÉSUMÉ*.md`, `*GUIDE*.md`
+
+**One-shot Scripts** (delete after confirming not referenced):
+- `scripts/fix-*.sh` - Migration scripts already applied
+- `scripts/check-*.ts` - Debug inspection scripts
+- `scripts/*-migration*.sh` - Completed migration scripts
+- `scripts/validate-*.sh` - One-time validation scripts
+
+**Detection Commands**:
+```bash
+# Find debug documentation
+find docs -name "*.md" -type f | grep -iE "(fix|summary|résumé|guide|setup)"
+
+# Find one-shot scripts
+ls scripts/ | grep -iE "^(fix-|check-|.*migration|validate-)"
+```
+
+**Action**: Delete files directly (git preserves history). Update `cleanup-tasks.md`:
+- [ ] T005.1: Delete debug documentation files
+- [ ] T005.2: Delete one-shot scripts
+
 ### Phase 3: Fixes
 
 For each issue found, add a task to `cleanup-tasks.md`:
