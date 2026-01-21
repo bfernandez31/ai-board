@@ -1,0 +1,108 @@
+# Code Simplifier Workflow Step Contract
+# Part of verify.yml workflow (Phase 4.5)
+
+name: code-simplifier-step
+type: workflow-step
+position: after test-fixes-commit, before documentation-update
+
+description: |
+  Automated code simplification step that refines recently modified code
+  for clarity, consistency, and maintainability.
+
+# Environment variables required (set by workflow)
+env:
+  FEATURE_BRANCH:
+    description: Git branch name being processed
+    required: true
+    example: "AIB-167-add-code-simplifier"
+
+  TICKET_ID:
+    description: Ticket identifier for commit messages
+    required: true
+    example: "167"
+
+  GH_TOKEN:
+    description: GitHub token for git operations
+    required: true
+    source: secrets.GH_PAT
+
+# Step execution
+execution:
+  command: claude --dangerously-skip-permissions "/code-simplify"
+  timeout: 10m
+  continue_on_error: false  # Simplification failures should stop workflow
+
+# Input data
+inputs:
+  modified_files:
+    source: "git diff --name-only main...HEAD -- '*.ts' '*.tsx'"
+    description: TypeScript files changed on feature branch
+
+  claude_md:
+    source: "CLAUDE.md (auto-loaded)"
+    description: Project coding standards
+
+  constitution:
+    source: ".specify/memory/constitution.md"
+    description: Non-negotiable project rules
+
+# Output artifacts
+outputs:
+  code_changes:
+    description: Simplified code committed to branch
+    commit_message: "refactor(ticket-{TICKET_ID}): simplify code for clarity"
+
+  no_changes:
+    description: If no simplifications needed, step passes with no commit
+
+# Success criteria
+success_criteria:
+  - All modified tests still pass after simplification
+  - No type errors introduced (TypeScript strict mode)
+  - No lint errors introduced
+  - Functionality preserved (behavior unchanged)
+
+# Simplification patterns to apply
+patterns:
+  NESTED_TERNARY:
+    description: Flatten nested ternary operators to if/else or switch
+    example: |
+      // Before
+      const result = a ? (b ? 'x' : 'y') : 'z';
+      // After
+      if (a && b) return 'x';
+      if (a) return 'y';
+      return 'z';
+
+  REDUNDANT_ABSTRACTION:
+    description: Remove single-use abstractions or wrappers
+    example: |
+      // Before
+      function getUser(id) { return fetchUser(id); }
+      // After (direct call where used)
+      fetchUser(id);
+
+  VERBOSE_CONDITIONAL:
+    description: Simplify boolean expressions
+    example: |
+      // Before
+      if (value === true) { return true; } else { return false; }
+      // After
+      return value === true;
+
+  COMPLEX_EXPRESSION:
+    description: Extract complex expressions to named constants
+    example: |
+      // Before
+      if (user.role === 'admin' && user.status === 'active' && user.permissions.includes('write')) {}
+      // After
+      const canWrite = user.role === 'admin' && user.status === 'active' && user.permissions.includes('write');
+      if (canWrite) {}
+
+# Constraints
+constraints:
+  - MUST NOT change public API signatures
+  - MUST NOT change test behavior
+  - MUST NOT modify files outside git diff scope
+  - MUST preserve all comments and documentation
+  - MUST follow CLAUDE.md coding conventions

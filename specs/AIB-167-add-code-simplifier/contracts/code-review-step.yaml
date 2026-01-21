@@ -1,0 +1,174 @@
+# Code Review Workflow Step Contract
+# Part of verify.yml workflow (Phase 6.5)
+
+name: code-review-step
+type: workflow-step
+position: after pr-creation
+
+description: |
+  Automated PR code review that checks for CLAUDE.md compliance,
+  constitution compliance, bugs, and best practices. Posts findings
+  as a formatted PR comment.
+
+# Environment variables required (set by workflow)
+env:
+  FEATURE_BRANCH:
+    description: Git branch name being reviewed
+    required: true
+    example: "AIB-167-add-code-simplifier"
+
+  PR_NUMBER:
+    description: GitHub PR number
+    required: true
+    source: "gh pr view ${BRANCH} --json number -q '.number'"
+
+  PR_URL:
+    description: Full GitHub PR URL
+    required: true
+    source: "gh pr view ${BRANCH} --json url -q '.url'"
+
+  GH_TOKEN:
+    description: GitHub token for PR operations
+    required: true
+    source: secrets.GH_PAT
+
+  GITHUB_REPOSITORY:
+    description: Repository in owner/repo format
+    required: true
+    source: workflow input githubRepository
+
+# Step execution
+execution:
+  command: claude --dangerously-skip-permissions "/code-review"
+  timeout: 15m
+  continue_on_error: true  # Non-blocking (FR edge case)
+
+# Input data
+inputs:
+  pr_diff:
+    source: "gh pr diff ${PR_NUMBER}"
+    description: Full diff of PR changes
+
+  claude_md_root:
+    source: "CLAUDE.md"
+    description: Project root CLAUDE.md
+
+  claude_md_directories:
+    source: "CLAUDE.md files in modified directories"
+    description: Directory-specific CLAUDE.md files
+
+  constitution:
+    source: ".specify/memory/constitution.md"
+    description: Non-negotiable project rules
+
+  git_sha:
+    source: "git rev-parse HEAD"
+    description: Current commit SHA for file links
+
+# Review agents (parallel execution per FR-008)
+agents:
+  - id: claude-md-agent
+    dimension: CLAUDE_MD_COMPLIANCE
+    description: Checks code against CLAUDE.md guidelines
+    checks:
+      - ES module syntax usage
+      - Function keyword over arrow functions preference
+      - Explicit return types
+      - Component patterns
+      - API route conventions
+
+  - id: constitution-agent
+    dimension: CONSTITUTION_COMPLIANCE
+    description: Checks code against constitution non-negotiable rules
+    checks:
+      - TypeScript strict mode compliance
+      - No `any` types without justification
+      - shadcn/ui exclusive usage
+      - Prisma parameterized queries
+      - Testing Trophy compliance
+
+  - id: bug-agent
+    dimension: BUG_DETECTION
+    description: Identifies obvious bugs and issues
+    checks:
+      - Null/undefined handling
+      - Promise error handling
+      - Off-by-one errors
+      - Logic errors
+      - Race conditions
+
+  - id: history-agent
+    dimension: GIT_HISTORY_CONTEXT
+    description: Reviews changes in context of git history
+    checks:
+      - Regression risk
+      - Related file changes
+      - Breaking changes
+      - Dependency updates impact
+
+  - id: comments-agent
+    dimension: CODE_COMMENT_COMPLIANCE
+    description: Reviews code comments and documentation
+    checks:
+      - JSDoc on exported complex functions
+      - Comment accuracy
+      - TODO/FIXME resolution
+      - Dead comment removal
+
+# Confidence scoring
+confidence:
+  threshold: 80  # FR-010: Filter issues below 80
+  scoring_factors:
+    explicit_rule_violation: +30
+    pattern_match: +20
+    context_suggests: +10
+    uncertain_but_suspicious: +5
+
+# Output format (FR-011, FR-012)
+output:
+  format: markdown
+  post_to: gh pr comment ${PR_NUMBER}
+  template: |
+    ## 🔍 Automated Code Review Results
+
+    | Issue | File | Confidence | Source |
+    |-------|------|------------|--------|
+    {{#each filteredFindings}}
+    | {{description}} | [{{filePath}}:{{lineNumber}}]({{gitShaLink}}) | {{confidence}}% | {{source}} |
+    {{/each}}
+
+    **Total Issues Found**: {{filteredFindings.length}}
+    **Review Dimensions**: {{agentStatuses}}
+
+    ---
+    🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  no_issues_template: |
+    ## ✅ Automated Code Review Results
+
+    No issues found above confidence threshold (80%).
+
+    **Review Dimensions**: {{agentStatuses}}
+
+    ---
+    🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+# Constraints (FR-013)
+constraints:
+  - MUST NOT run build command
+  - MUST NOT run type-check command
+  - MUST NOT run test command
+  - CI handles all validation, code review is advisory only
+  - Review failure should not block PR creation or workflow
+
+# Error handling
+error_handling:
+  on_timeout:
+    action: log_warning
+    message: "Code review timed out. PR remains without review comment."
+    continue: true
+
+  on_api_failure:
+    action: log_warning
+    message: "Failed to post PR comment. Review completed but not posted."
+    continue: true
