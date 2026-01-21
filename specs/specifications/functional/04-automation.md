@@ -330,11 +330,48 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 4.5: Code Simplification**
+- Runs automatically after test fixes, before documentation update
+- AI analyzes all files modified in the current branch (`git diff main...HEAD`)
+- Simplifies code for clarity and maintainability while preserving functionality
+- Applies CLAUDE.md and constitution.md coding standards
+- Targets common complexity patterns:
+  - Nested ternary operators → if/else or switch statements
+  - Redundant type assertions
+  - Unused imports and dead code
+  - Complex conditionals that can be simplified
+  - Import organization and sorting
+- Runs quality checks after changes: `bun run type-check && bun run lint`
+- Commits simplification changes with message: "refactor(ticket-X): simplify code for clarity"
+- Skipped if no simplification opportunities found
+
+**Phase 5: Documentation Update**
+- Updates global documentation in `/specs/specifications/` directories
+- Synchronizes functional and technical specifications
+- Updates CLAUDE.md if new patterns or technologies were introduced
+- Commits documentation changes before PR creation
+
+**Phase 6: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 7: Automated Code Review**
+- Runs automatically after PR creation
+- AI performs comprehensive multi-pass code review
+- Reviews only code changes in the PR (not pre-existing code)
+- Five independent analysis passes:
+  1. **CLAUDE.md Compliance**: Tech stack, testing patterns, component architecture
+  2. **Constitution Compliance**: TypeScript-first, security, database integrity
+  3. **Bug Detection**: Null handling, async issues, type safety violations
+  4. **Historical Context**: Git blame analysis, related PR patterns
+  5. **Code Comment Compliance**: TODO/FIXME adherence, JSDoc accuracy
+- Each issue scored for confidence (0-100 scale)
+- Only reports issues with confidence ≥80 (high-confidence findings)
+- Posts review results as PR comment via `gh pr comment`
+- Review includes evidence citations and code links with full SHA
+- Helps identify issues before human code review
 
 ### Test Failure Categories
 
@@ -358,13 +395,41 @@ When ticket moves from BUILD to VERIFY stage:
 - Problems with test data fixtures
 - AI validates test isolation and global setup
 
+### Code Review Confidence Scoring
+
+AI code review uses confidence scoring to minimize false positives:
+
+**Scoring Rubric**:
+- **0-20**: Not confident (likely false positive or pre-existing issue)
+- **25-40**: Somewhat confident (unverified or stylistic)
+- **50-60**: Moderately confident (verified but may be nitpick)
+- **75-85**: Highly confident (real issue, explicitly mentioned in standards)
+- **90-100**: Absolutely certain (confirmed with direct evidence)
+
+**Reporting Threshold**:
+- Only issues with confidence ≥80 are reported
+- Filters out nitpicks and uncertain findings
+- Focuses on actionable, high-value feedback
+
+**False Positive Prevention**:
+Code review does NOT flag:
+- Pre-existing issues (code present before PR changes)
+- Issues caught by linters/type checkers (automated tools)
+- Pedantic nitpicks a senior engineer wouldn't mention
+- Intentional design decisions within PR scope
+- Issues on lines not modified by the PR
+- Lint-ignored issues (e.g., `// eslint-disable-next-line`)
+
 ### Verification Success
 
 When all tests pass:
 
 **Workflow Actions**:
 - Commits any test fixes to branch
+- Runs code simplifier to improve code clarity
+- Updates global documentation
 - Creates pull request for code review
+- Runs automated code review
 - Posts AI-BOARD comment with PR link
 - Updates job status to COMPLETED
 
@@ -372,6 +437,7 @@ When all tests pass:
 - Visual indicator shows "TESTING" while running
 - Status updates every 2 seconds via polling
 - Success notification when PR created
+- Code review comment posted automatically
 - Clear message that code review can begin
 
 ### Verification Failure

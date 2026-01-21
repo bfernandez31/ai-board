@@ -11,7 +11,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `speckit.yml` | workflow_dispatch | Main spec-kit execution | 120 min |
 | `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
 | `cleanup.yml` | workflow_dispatch | Diff-based technical debt cleanup | 45 min |
-| `verify.yml` | workflow_dispatch | Test verification and PR creation | 45 min |
+| `verify.yml` | workflow_dispatch | Test verification, code simplification, and PR creation | 45 min |
 | `ai-board-assist.yml` | workflow_dispatch | AI-BOARD comment assistance | 60 min |
 | `deploy-preview.yml` | workflow_dispatch | Manual Vercel preview deployment | 15 min |
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
@@ -245,6 +245,131 @@ steps:
 - **Project-Agnostic**: Reads CLAUDE.md and constitution.md for project context
 - **Impacted Tests Only**: Never runs full test suite, only affected tests
 - **Self-Healing Locks**: Transition lock cleared on job completion
+
+### Verify Workflow
+
+**File**: `.github/workflows/verify.yml`
+
+**Inputs**:
+- `ticket_id`: Ticket identifier
+- `job_id`: Job record ID for status tracking
+- `project_id`: Project identifier
+- `branch`: Feature branch to verify
+- `workflowType`: Workflow type (FULL or QUICK)
+- `githubRepository`: Target repository (format: owner/repo)
+
+**Environment Setup**:
+- PostgreSQL service container for test execution
+- Bun, Node.js 22.20.0, Python 3.11 installed
+- Playwright browsers installed and cached
+- Test environment variables configured
+
+**Execution Flow**:
+
+```yaml
+steps:
+  # Phase 1: Test Execution
+  - name: Run Unit Tests
+    run: bun run test:unit --reporter=json > unit-results.json
+    continue-on-error: true
+
+  - name: Run E2E Tests
+    run: bun run test:e2e --reporter=json > e2e-results.json
+    continue-on-error: true
+
+  # Phase 2: Generate Failure Report
+  - name: Generate Test Failure Report
+    if: ${{ env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true' }}
+    run: |
+      node .specify/scripts/generate-test-report.js \
+        --unit unit-results.json \
+        --e2e e2e-results.json \
+        --output test-failures.json
+
+  # Phase 3: Claude Fix Execution
+  - name: Execute /verify Command
+    if: ${{ env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true' }}
+    run: |
+      claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json..."
+
+  # Phase 4: Commit Test Fixes
+  - name: Commit Test Fixes
+    run: |
+      git add .
+      if ! git diff --staged --quiet; then
+        git commit -m "test(ticket-${{ inputs.ticket_id }}): fix test failures"
+      fi
+      git push origin "${{ inputs.branch }}"
+
+  # Phase 4.5: Code Simplification
+  - name: Run Code Simplifier
+    run: |
+      claude --dangerously-skip-permissions "You are running as the code-simplifier agent..."
+      git add .
+      if ! git diff --staged --quiet; then
+        git commit -m "refactor(ticket-${{ inputs.ticket_id }}): simplify code for clarity"
+        git push origin "${{ inputs.branch }}"
+      fi
+
+  # Phase 5: Documentation Update
+  - name: Update Documentation
+    run: |
+      claude --dangerously-skip-permissions "Update AI Board documentation..."
+      git add specs/specifications/ CLAUDE.md
+      if ! git diff --staged --quiet; then
+        git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation"
+        git push origin "${{ inputs.branch }}"
+      fi
+
+  # Phase 6: PR Creation
+  - name: Create Pull Request
+    run: |
+      .specify/scripts/bash/create-pr-only.sh \
+        "${TICKET_ID}" "${PROJECT_ID}" "${FEATURE_BRANCH}"
+
+  # Phase 7: Automated Code Review
+  - name: Run Code Review
+    run: |
+      claude --dangerously-skip-permissions "You are running the /code-review command..."
+```
+
+**Code Simplifier Agent**:
+- Defined in `.claude/agents/code-simplifier.md`
+- Analyzes files modified in current branch: `git diff main...HEAD --name-only`
+- Simplifies complexity patterns:
+  - Nested ternary operators → if/else or switch statements
+  - Redundant type assertions
+  - Unused imports and dead code
+  - Complex conditionals
+  - Import organization
+- Preserves all functionality (no behavior changes)
+- Applies CLAUDE.md and constitution.md standards
+- Runs `bun run type-check && bun run lint` after changes
+- Commits changes only if simplification opportunities found
+
+**Code Review Command**:
+- Defined in `.claude/commands/code-review.md`
+- Checks PR eligibility (open, not draft, needs review)
+- Reads CLAUDE.md and constitution.md for compliance requirements
+- Performs 5 independent analysis passes:
+  1. CLAUDE.md compliance (tech stack, testing, components)
+  2. Constitution compliance (TypeScript-first, security, integrity)
+  3. Bug detection (null handling, async, type safety)
+  4. Git history analysis (blame context, related PRs)
+  5. Code comment compliance (TODOs, JSDoc accuracy)
+- Scores each issue for confidence (0-100)
+- Filters issues with confidence <80 (removes low-confidence findings)
+- Posts review comment to PR via `gh pr comment`
+- Uses full git SHA in code links for accurate references
+- Avoids false positives (pre-existing issues, linter-caught problems, nitpicks)
+
+**Key Features**:
+- **Automated Quality Gates**: Code simplifier runs before documentation
+- **Multi-Pass Review**: Five independent analysis passes for comprehensive coverage
+- **Confidence Scoring**: Only reports high-confidence issues (≥80)
+- **Evidence-Based**: Every issue cited with CLAUDE.md/constitution quotes
+- **False Positive Prevention**: Excludes pre-existing code, linter issues, nitpicks
+- **Full Context**: Reviews git history and code comments for deeper analysis
 
 ### Deploy Preview Workflow
 

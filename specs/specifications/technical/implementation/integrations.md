@@ -112,6 +112,51 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+### Claude Code Integration
+
+AI-Board uses Claude Code CLI for AI-powered automation across workflows.
+
+**Installation** (in workflows):
+```bash
+bun add -g @anthropic-ai/claude-code
+```
+
+**Execution Pattern**:
+```bash
+claude --dangerously-skip-permissions "/command-name arguments"
+```
+
+**Telemetry**:
+- Claude Code metrics automatically captured via OTLP endpoint
+- Metrics sent to `/api/telemetry` with job_id in headers
+- Token usage, costs, duration, and tools aggregated per job
+- Enabled via `CLAUDE_CODE_ENABLE_TELEMETRY=1` environment variable
+
+### Claude Agents
+
+**Code Simplifier Agent** (`.claude/agents/code-simplifier.md`):
+- **Purpose**: Simplify and refine recently modified code for clarity
+- **Model**: Sonnet
+- **Scope**: Files modified in current branch (`git diff main...HEAD --name-only`)
+- **Core Principles**:
+  1. Preserve functionality (no behavior changes)
+  2. Apply CLAUDE.md and constitution.md standards
+  3. Enhance clarity (reduce complexity, improve readability)
+  4. Maintain balance (avoid over-simplification)
+  5. Focus on recent changes only
+- **Simplification Targets**:
+  - Nested ternary operators → if/else or switch statements
+  - Redundant type assertions
+  - Unused imports and dead code
+  - Complex conditionals
+  - Import organization and sorting
+- **Quality Checks**:
+  - Runs `bun run type-check` after changes
+  - Runs `bun run lint` after changes
+  - Verifies changes are cosmetic, not functional
+- **Commit Pattern**: `refactor: simplify [component/module] for clarity`
+- **Integration**: Invoked by verify workflow (Phase 4.5) before documentation update
+
 ### Claude Commands
 
 **Implementation Command** (`.claude/commands/speckit.implement.md`):
@@ -143,6 +188,45 @@ export async function dispatchWorkflow(params: {
   - Total: max 2300 chars
 - Writes to `FEATURE_DIR/summary.md`
 - Handles partial failures: includes progress and failure point
+
+**Verify Command** (`.claude/commands/verify.md`):
+- **Purpose**: Fix test failures systematically by analyzing structured failure reports
+- **Input**: `test-failures.json` with categorized test failures
+- **Context**: Tests were passing on main branch (100% baseline)
+- **Decision Framework**:
+  - If implementation violates specification → Fix implementation (bugs)
+  - If test expects old behavior, spec requires new → Update test (intentional changes)
+  - Specification is source of truth for ambiguous cases
+- **Process**:
+  1. Read specification first to understand intended behavior
+  2. Compare with git diff main...HEAD to identify changes
+  3. Analyze root causes and group similar failures
+  4. Fix highest impact issues first
+  5. Re-run affected tests after each fix
+  6. Run lint and typecheck after each fix
+  7. Maximum 3 fix attempts per root cause
+- **Output**: Fixed code or updated tests, committed changes
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Comprehensive code review with CLAUDE.md and constitution compliance
+- **Trigger**: Automatically after PR creation in verify workflow
+- **Eligibility Check**: Open PR, not draft, needs review
+- **Context Gathering**:
+  - Root `CLAUDE.md` file
+  - Root `.specify/memory/constitution.md` file
+  - Directory-specific `CLAUDE.md` files (if any)
+- **Five Analysis Passes** (parallel execution):
+  1. **CLAUDE.md Compliance**: Tech stack, testing patterns, component architecture
+  2. **Constitution Compliance**: TypeScript-first, security, database integrity
+  3. **Bug Detection**: Null handling, async issues, type safety (shallow scan)
+  4. **Git History Analysis**: Blame context, related PRs, pattern breaking
+  5. **Code Comment Compliance**: TODOs, FIXMEs, JSDoc accuracy
+- **Confidence Scoring**:
+  - Each issue scored 0-100 for confidence
+  - Only reports issues with confidence ≥80
+  - Filters out false positives and nitpicks
+- **Output**: Posted as PR comment via `gh pr comment`
+- **Citation**: Every issue includes evidence quotes and full SHA code links
 
 **Summary Template** (`.specify/templates/summary-template.md`):
 
