@@ -369,6 +369,26 @@ jobs:
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      # Phase 4.5: Code Simplification
+      - name: Run Code Simplifier
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          echo "🔧 Running code simplifier to improve code clarity..."
+          claude --dangerously-skip-permissions "/code-simplifier"
+
+          # Commit any simplification changes
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "refactor(ticket-${{ inputs.ticket_id }}): simplify code for clarity
+
+          Applied automated code simplification via /code-simplifier command.
+          No functionality changes - only code clarity improvements."
+            git push origin "${{ inputs.branch }}"
+            echo "✅ Code simplification changes committed"
+          else
+            echo "ℹ️ No code simplification needed"
+          fi
+
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
@@ -436,6 +456,16 @@ jobs:
             "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
+
+      # Phase 7: Code Review
+      - name: Run Code Review
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🔍 Running automated code review on the PR..."
+          claude --dangerously-skip-permissions "/code-review"
+          echo "✅ Code review completed"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
