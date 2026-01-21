@@ -30,10 +30,10 @@ This feature extends the existing verify workflow and follows established comman
 
 **⚠️ CRITICAL**: Must understand current workflow structure before making modifications
 
-- [ ] T001 Read existing verify workflow to understand integration points in .github/workflows/verify.yml
-- [ ] T002 [P] Read existing command patterns from .claude/commands/cleanup.md for code-simplifier reference
-- [ ] T003 [P] Read existing command patterns from .claude/commands/verify.md for code-review reference
-- [ ] T004 [P] Read constitution file structure at .specify/memory/constitution.md for review criteria integration
+- [x] T001 Read existing verify workflow to understand integration points in .github/workflows/verify.yml
+- [x] T002 [P] Read existing command patterns from .claude/commands/cleanup.md for code-simplifier reference
+- [x] T003 [P] Read existing command patterns from .claude/commands/verify.md for code-review reference
+- [x] T004 [P] Read constitution file structure at .specify/memory/constitution.md for review criteria integration
 
 **Checkpoint**: Foundation ready - existing patterns understood, command file integration points identified
 
@@ -47,14 +47,14 @@ This feature extends the existing verify workflow and follows established comman
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Create code-simplifier command file with YAML frontmatter in .claude/commands/code-simplifier.md
-- [ ] T006 [US1] Add Context Discovery section to code-simplifier command (CLAUDE.md auto-load, constitution read, git diff for changed files)
-- [ ] T007 [US1] Add Phase 1: Identify Targets section (list changed TypeScript files excluding tests)
-- [ ] T008 [US1] Add Phase 2: Analyze & Simplify section (patterns: nested ternaries, redundant abstractions, complex booleans, callback nesting, indirection)
-- [ ] T009 [US1] Add Phase 3: Commit section (commit message format: refactor(ticket-{id}): simplify code)
-- [ ] T010 [US1] Add Safety Rules section (preserve functionality, run impacted tests, revert on failure)
-- [ ] T011 [US1] Add Execute /code-simplifier step to verify.yml after "Commit Test Fixes" step (around line 370)
-- [ ] T012 [US1] Add Commit Simplification Changes step to verify.yml after code-simplifier execution
+- [x] T005 [US1] Create code-simplifier command file with YAML frontmatter in .claude/commands/code-simplifier.md
+- [x] T006 [US1] Add Context Discovery section to code-simplifier command (CLAUDE.md auto-load, constitution read, git diff for changed files)
+- [x] T007 [US1] Add Phase 1: Identify Targets section (list changed TypeScript files excluding tests)
+- [x] T008 [US1] Add Phase 2: Analyze & Simplify section (patterns: nested ternaries, redundant abstractions, complex booleans, callback nesting, indirection)
+- [x] T009 [US1] Add Phase 3: Commit section (commit message format: refactor(ticket-{id}): simplify code)
+- [x] T010 [US1] Add Safety Rules section (preserve functionality, run impacted tests, revert on failure)
+- [x] T011 [US1] Add Execute /code-simplifier step to verify.yml after "Commit Test Fixes" step (around line 370)
+- [x] T012 [US1] Add Commit Simplification Changes step to verify.yml after code-simplifier execution
 
 **Checkpoint**: User Story 1 complete - code simplifier runs in workflow, simplifies code, commits changes
 
@@ -68,13 +68,13 @@ This feature extends the existing verify workflow and follows established comman
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Create code-review command file with YAML frontmatter in .claude/commands/code-review.md
-- [ ] T014 [US2] Add Context Discovery section to code-review command (CLAUDE.md auto-load, constitution read, gh pr diff for changes)
-- [ ] T015 [US2] Add Phase 1: Gather Context section (read changed files, load constitution, understand criteria)
-- [ ] T016 [US2] Add Phase 2: Review section (check against CLAUDE.md conventions, check against constitution principles, assign confidence scores 0-100)
-- [ ] T017 [US2] Add Phase 3: Report section (filter to confidence ≥80, post comment via gh pr comment)
-- [ ] T018 [US2] Add Scoring section with confidence thresholds table (90-100 Critical, 80-89 High, <80 Do not report)
-- [ ] T019 [US2] Add Execute /code-review step to verify.yml after "Create Pull Request" step with PR_URL conditional
+- [x] T013 [US2] Create code-review command file with YAML frontmatter in .claude/commands/code-review.md
+- [x] T014 [US2] Add Context Discovery section to code-review command (CLAUDE.md auto-load, constitution read, gh pr diff for changes)
+- [x] T015 [US2] Add Phase 1: Gather Context section (read changed files, load constitution, understand criteria)
+- [x] T016 [US2] Add Phase 2: Review section (check against CLAUDE.md conventions, check against constitution principles, assign confidence scores 0-100)
+- [x] T017 [US2] Add Phase 3: Report section (filter to confidence ≥80, post comment via gh pr comment)
+- [x] T018 [US2] Add Scoring section with confidence thresholds table (90-100 Critical, 80-89 High, <80 Do not report)
+- [x] T019 [US2] Add Execute /code-review step to verify.yml after "Create Pull Request" step with PR_URL conditional
 
 **Checkpoint**: User Story 2 complete - code review runs after PR creation, posts review comment to PR
 
@@ -88,10 +88,10 @@ This feature extends the existing verify workflow and follows established comman
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Enhance code-review command constitution loading with graceful fallback if file missing in .claude/commands/code-review.md
-- [ ] T021 [US3] Add constitution compliance section to review report format (principle, status, notes)
-- [ ] T022 [US3] Add CLAUDE.md alignment section to review report format (convention, status)
-- [ ] T023 [US3] Add comment structure template matching research.md specification (Issues Found, Constitution Compliance, CLAUDE.md Alignment sections)
+- [x] T020 [US3] Enhance code-review command constitution loading with graceful fallback if file missing in .claude/commands/code-review.md
+- [x] T021 [US3] Add constitution compliance section to review report format (principle, status, notes)
+- [x] T022 [US3] Add CLAUDE.md alignment section to review report format (convention, status)
+- [x] T023 [US3] Add comment structure template matching research.md specification (Issues Found, Constitution Compliance, CLAUDE.md Alignment sections)
 
 **Checkpoint**: User Story 3 complete - code review uses constitution principles, provides structured compliance report
 
@@ -101,10 +101,10 @@ This feature extends the existing verify workflow and follows established comman
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T024 Validate code-simplifier command follows existing command patterns (compare with cleanup.md)
-- [ ] T025 Validate code-review command follows existing command patterns (compare with verify.md)
-- [ ] T026 Verify workflow step conditions are correct (success conditions, SKIP_EXECUTION checks, PR_URL availability)
-- [ ] T027 Run quickstart.md validation - verify implementation matches guide
+- [x] T024 Validate code-simplifier command follows existing command patterns (compare with cleanup.md)
+- [x] T025 Validate code-review command follows existing command patterns (compare with verify.md)
+- [x] T026 Verify workflow step conditions are correct (success conditions, SKIP_EXECUTION checks, PR_URL availability)
+- [x] T027 Run quickstart.md validation - verify implementation matches guide
 
 ---
 

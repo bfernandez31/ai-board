@@ -154,3 +154,10 @@ fi
 
 echo ""
 echo "✅ Pull Request created successfully!"
+
+# Export PR info for subsequent workflow steps
+if [ -n "$GITHUB_OUTPUT" ]; then
+  echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
+  echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+  echo "📤 Exported PR info to GITHUB_OUTPUT"
+fi
