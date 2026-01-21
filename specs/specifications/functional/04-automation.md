@@ -330,11 +330,36 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 4.5: Code Simplification**
+- Execute code simplifier after test fixes
+- Analyze modified files for simplification opportunities
+- Apply refactoring patterns to improve code clarity
+- Preserve all functionality while improving readability
+- Commit simplifications to feature branch (if any)
+- Push changes to remote
+
+**Phase 5: Documentation Synchronization**
+- Update global documentation in `/specs/specifications/`
+- Identify which functional and technical files need updates
+- Add new user-facing behaviors to functional specs
+- Document implementation details in technical specs
+- Update CLAUDE.md if new patterns or technologies introduced
+- Commit documentation updates to feature branch
+
+**Phase 6: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 6.5: Automated Code Review**
+- Execute automated code review after PR creation
+- Launch 5 parallel review agents for comprehensive analysis
+- Check CLAUDE.md compliance, constitution compliance, bugs, git history, and comments
+- Assign confidence scores (0-100) to each identified issue
+- Filter issues below 80% confidence threshold
+- Post formatted findings as PR comment
+- Non-blocking operation (workflow continues on failure)
 
 ### Test Failure Categories
 
@@ -388,6 +413,101 @@ When tests cannot be fixed automatically:
 - Manually fix remaining test failures
 - Can re-transition ticket to trigger verification again
 - Or manually create PR after fixing issues
+
+### Code Simplification
+
+**Purpose**:
+- Automatically refine recently modified code for clarity and maintainability
+- Runs after test fixes but before documentation synchronization
+- Preserves all functionality while improving code readability
+
+**Simplification Patterns**:
+- **Nested Ternary**: Flatten nested ternary operators into clear if-statements
+- **Redundant Abstraction**: Remove single-use functions that add no value
+- **Verbose Conditional**: Simplify boolean expressions and redundant conditions
+- **Complex Expression**: Extract complex logic into named constants
+- **Dead Code**: Remove unreachable code and unused imports
+- **Duplicate Logic**: Consolidate repeated patterns into shared functions
+
+**Quality Gates**:
+- All modified tests must pass after simplification
+- No TypeScript errors introduced
+- No lint errors introduced
+- Public API signatures preserved
+- Exported interfaces unchanged
+
+**Failure Handling**:
+- If simplification causes test failure, revert specific change
+- Continue with remaining simplifications
+- Log which patterns caused failures
+- Non-blocking operation
+
+### Automated Code Review
+
+**Purpose**:
+- Automatically review pull requests for compliance and quality issues
+- Runs after PR creation in verify workflow
+- Posts findings as formatted PR comment
+
+**Review Dimensions**:
+
+1. **CLAUDE.md Compliance** (75-85 base confidence):
+   - ES module syntax (import/export)
+   - Function keyword preference
+   - Explicit return types
+   - Component patterns
+   - API route conventions
+   - State management patterns
+
+2. **Constitution Compliance** (80-90 base confidence):
+   - TypeScript strict mode
+   - No `any` types without justification
+   - shadcn/ui exclusive usage
+   - Prisma parameterized queries
+   - Testing Trophy compliance
+   - Security-first patterns
+
+3. **Bug Detection** (70-95 base confidence):
+   - Null/undefined handling
+   - Promise error handling
+   - Off-by-one errors
+   - Logic errors
+   - Race conditions
+   - Missing await keywords
+
+4. **Git History Context** (65-80 base confidence):
+   - Regression risk
+   - Breaking changes
+   - Related file changes
+   - Dependency impacts
+   - Large refactors without tests
+
+5. **Code Comment Compliance** (60-75 base confidence):
+   - JSDoc on complex functions
+   - Comment accuracy
+   - TODO/FIXME resolution
+   - Dead comment removal
+   - Over-documentation
+
+**Confidence Scoring**:
+- Each issue assigned confidence score (0-100)
+- Only issues >= 80% confidence reported
+- Constitution violations: 80-100 confidence
+- CLAUDE.md style: 75-85 confidence
+- Security issues: 90+ confidence
+
+**Review Output**:
+- Formatted markdown table posted as PR comment
+- Links findings to specific file locations using full Git SHA
+- Shows review dimensions covered
+- Indicates total issues found
+- Non-blocking (workflow continues on failure)
+
+**Error Handling**:
+- Missing constitution.md: Proceed with CLAUDE.md only
+- PR creation failure: Skip review step entirely
+- API timeout: Log warning, continue workflow
+- Large PRs (>100 files): Focus on critical files
 
 ### Resource Optimization
 

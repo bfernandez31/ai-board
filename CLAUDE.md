@@ -131,11 +131,19 @@ workflowInputs = {
 1. **speckit.yml**: SPECIFY/PLAN/BUILD stages
 2. **quick-impl.yml**: Direct INBOX→BUILD
 3. **cleanup.yml**: Automated technical debt cleanup (CLEAN workflow)
-4. **verify.yml**: Test execution and PR creation
+4. **verify.yml**: Test execution, code simplification, documentation sync, PR creation, and code review
 5. **deploy-preview.yml**: Vercel deployment
 6. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
 7. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
 8. **iterate.yml**: Minor fixes during VERIFY stage (triggered by AI-BOARD)
+
+**Verify Workflow Phases**:
+- Phase 1-3: Test execution, failure analysis, systematic fixes
+- Phase 4: Final validation
+- **Phase 4.5**: Code simplification (`/code-simplify` command)
+- **Phase 5**: Documentation synchronization (updates `/specs/specifications/`)
+- Phase 6: PR creation
+- **Phase 6.5**: Automated code review (`/code-review` command, 5 parallel agents)
 
 ## Deploy Preview System
 
@@ -143,6 +151,29 @@ workflowInputs = {
 - Single preview per project (auto-replaces)
 - Requires: branch exists, latest job COMPLETED
 - Updates `ticket.previewUrl` on success
+
+## Code Quality Automation
+
+### Code Simplifier (`/code-simplify`)
+
+- **Trigger**: Automated in verify workflow (Phase 4.5)
+- **Purpose**: Refine recently modified code for clarity and maintainability
+- **Scope**: Only files changed on feature branch (`git diff main...HEAD`)
+- **Patterns**: Nested ternaries, redundant abstractions, verbose conditionals, complex expressions, dead code, duplicate logic
+- **Constraints**: Preserves functionality, public APIs, exported interfaces, test behavior
+- **Validation**: Runs affected tests after each simplification
+- **Timeout**: 10 minutes
+
+### Code Review (`/code-review`)
+
+- **Trigger**: Automated in verify workflow (Phase 6.5)
+- **Purpose**: Multi-dimensional PR analysis with confidence scoring
+- **Agents**: 5 parallel reviewers (CLAUDE.md compliance, constitution compliance, bugs, git history, comments)
+- **Confidence Threshold**: 80% (only high-confidence issues reported)
+- **Output**: Formatted PR comment with findings table
+- **Context**: Reads CLAUDE.md (root + modified directories) and constitution.md
+- **Non-blocking**: Workflow continues even if review fails
+- **Timeout**: 15 minutes
 
 ## AI-BOARD Assistant
 

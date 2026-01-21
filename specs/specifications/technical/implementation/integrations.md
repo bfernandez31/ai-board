@@ -68,10 +68,13 @@ export async function dispatchWorkflow(params: {
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository at specified branch
-- **Actions**: Runs tests and creates pull request
+- **Actions**: Runs tests, simplifies code, synchronizes documentation, creates pull request, and reviews PR
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **Code Simplification**: Executes after test fixes (Phase 4.5)
+- **Documentation Sync**: Updates global specifications (Phase 5)
+- **Code Review**: Automated PR review with parallel agents (Phase 6.5)
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -112,7 +115,110 @@ export async function dispatchWorkflow(params: {
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
+### Verify Workflow Phases
+
+The verify workflow executes multiple sequential phases to ensure code quality:
+
+**Phase 1-3**: Test Execution, Failure Analysis, Systematic Fixes
+- Run unit and E2E tests
+- Parse failures and categorize
+- Execute `/verify` command to fix issues
+- Commit test fixes to branch
+
+**Phase 4**: Final Validation
+- Re-run only test suites that had failures
+- Commit and push all fixes
+
+**Phase 4.5**: Code Simplification
+- Execute `/code-simplify` command (10-minute timeout)
+- Identify and apply simplification patterns
+- Run affected tests to verify functionality preserved
+- Commit simplifications if changes made
+- Skip if no improvements found
+
+**Phase 5**: Documentation Synchronization
+- Execute Claude prompt to update global documentation
+- Update `/specs/specifications/functional/` with user-facing behaviors
+- Update `/specs/specifications/technical/` with implementation details
+- Update CLAUDE.md only if new patterns/technologies introduced
+- Commit documentation changes if updates made
+
+**Phase 6**: Pull Request Creation
+- Create PR using `.specify/scripts/bash/create-pr-only.sh`
+- Extract PR number and URL via `gh pr view`
+- Store PR number in workflow output for code review phase
+
+**Phase 6.5**: Automated Code Review
+- Execute `/code-review` command (15-minute timeout, non-blocking)
+- Launch 5 parallel review agents
+- Post findings as PR comment
+- Continue workflow even if review fails
+
 ### Claude Commands
+
+**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+- **Purpose**: Refine recently modified code for clarity and maintainability
+- **Trigger**: Executed after test fixes in verify workflow (Phase 4.5)
+- **Input**: Modified files from `git diff --name-only main...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx'`
+- **Phases**:
+  1. **Discovery**: Identify TypeScript/JavaScript files changed on feature branch
+  2. **Analysis**: Detect simplification patterns (nested ternaries, redundant abstractions, verbose conditionals, complex expressions, dead code, duplicate logic)
+  3. **Implementation**: Apply changes using Edit tool with precise old_string/new_string
+  4. **Validation**: Run affected tests to verify functionality preserved
+  5. **Commit**: Stage and commit simplifications if changes were made
+- **Constraints**:
+  - MUST NOT change public API signatures
+  - MUST NOT modify exported interfaces or types
+  - MUST NOT alter test behavior
+  - MUST preserve all comments
+  - MUST follow CLAUDE.md conventions
+  - MUST NOT introduce `any` types
+- **Context Loading**: CLAUDE.md, .specify/memory/constitution.md
+- **Timeout**: 10 minutes
+- **Error Handling**: Revert specific change if test fails, continue with remaining files
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Automated PR review with parallel agents and confidence scoring
+- **Trigger**: Executed after PR creation in verify workflow (Phase 6.5)
+- **Environment Variables**:
+  - `FEATURE_BRANCH`: Git branch being reviewed
+  - `PR_NUMBER`: GitHub PR number
+  - `GH_TOKEN`: GitHub token for PR operations
+  - `GITHUB_REPOSITORY`: Repository in owner/repo format
+- **Phases**:
+  1. **Context Loading**: Read constitution.md, CLAUDE.md (root and modified directories)
+  2. **PR Analysis**: Get PR diff via `gh pr diff`, extract Git SHA for file links
+  3. **Parallel Agent Review**: Launch 5 agents using Task tool
+     - Agent 1: CLAUDE_MD_COMPLIANCE (75-85 base confidence)
+     - Agent 2: CONSTITUTION_COMPLIANCE (80-90 base confidence)
+     - Agent 3: BUG_DETECTION (70-95 base confidence)
+     - Agent 4: GIT_HISTORY_CONTEXT (65-80 base confidence)
+     - Agent 5: CODE_COMMENT_COMPLIANCE (60-75 base confidence)
+  4. **Confidence Scoring**: Calculate scores with base + modifiers (explicit rule violation: +30, pattern match: +20, context suggests: +10, uncertain: +5)
+  5. **Filtering**: Apply 80% confidence threshold
+  6. **Output Formatting**: Generate markdown table with findings
+  7. **Post Comment**: Post to PR using `gh pr comment`
+- **Review Output Format**:
+  ```markdown
+  ## 🔍 Automated Code Review Results
+
+  | Issue | File | Confidence | Source |
+  |-------|------|------------|--------|
+  | [description] | [link with SHA] | [%] | [CLAUDE.md/Constitution] |
+
+  **Total Issues Found**: N
+  **Review Dimensions**: CLAUDE.md ✅ | Constitution ✅ | Bugs ✅ | History ✅ | Comments ✅
+  ```
+- **Constraints**:
+  - MUST NOT run build/typecheck (CI handles this)
+  - MUST complete within 15 minutes
+  - MUST use full Git SHA in file links
+  - Non-blocking (continue-on-error: true)
+- **Error Handling**:
+  - Missing constitution.md: Proceed with CLAUDE.md only
+  - PR creation failure: Skip review entirely
+  - API timeout: Log warning, continue workflow
+  - Large PRs: Focus on critical files
 
 **Implementation Command** (`.claude/commands/speckit.implement.md`):
 - **Purpose**: Execute all tasks in tasks.md and generate implementation summary
