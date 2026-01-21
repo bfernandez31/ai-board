@@ -42,12 +42,62 @@ Synchronize the feature branch specifications to global project documentation.
    - New architectural patterns introduced
    - New commands or conventions
 
-6. **Add mermaid sequence diagrams** when the feature involves:
+6. **Add/update mermaid sequence diagrams** when the feature involves:
    - Multi-step workflows or state transitions
    - API call sequences
    - Multi-actor interactions (user, system, external services)
 
    Place diagrams in the most relevant technical doc.
+
+### Mermaid Sequence Diagrams
+
+Generate sequence diagrams for complex flows. Examples:
+
+**Workflow sequence** (user action → system response):
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as API Route
+    participant WF as Workflow
+    participant DB as Database
+
+    U->>UI: Action (drag, click)
+    UI->>API: POST /endpoint
+    API->>DB: Create record
+    API->>WF: Dispatch workflow
+    API-->>UI: 200 OK
+    WF->>API: Update status
+    UI->>API: Poll status
+    API-->>UI: Status update
+    UI->>U: Show result
+```
+
+**API sequence** (request → response):
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as Middleware
+    participant H as Handler
+    participant DB as Database
+
+    C->>M: Request + auth
+    M->>M: Validate session
+    M->>H: Authorized request
+    H->>DB: Query
+    DB-->>H: Result
+    H-->>C: JSON response
+```
+
+**When to add diagrams**:
+- New workflow stages or transitions
+- New API endpoints with multiple steps
+- Features involving external services (GitHub, Vercel, etc.)
+- Complex state machines
+
+**When to update existing diagrams**:
+- New steps added to existing workflows
+- Changed interactions between components
 
 ### Output
 
