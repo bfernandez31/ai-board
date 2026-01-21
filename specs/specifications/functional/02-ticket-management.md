@@ -4,6 +4,37 @@
 
 Tickets represent individual work items that flow through the Kanban workflow. Users can create, view, and move tickets between stages to track progress on features, bugs, and tasks.
 
+## Stage Flow Overview
+
+```mermaid
+stateDiagram-v2
+    [*] --> INBOX: Create ticket
+
+    INBOX --> SPECIFY: Normal workflow
+    INBOX --> BUILD: Quick impl ⚡
+
+    SPECIFY --> PLAN: Generate plan
+    PLAN --> BUILD: Implement
+
+    BUILD --> VERIFY: Test & PR
+
+    VERIFY --> PLAN: Rollback 🔄
+    VERIFY --> SHIP: Merge PR
+    VERIFY --> CLOSED: Close without ship
+
+    SHIP --> [*]: Complete
+
+    note right of INBOX: All tickets start here
+    note right of BUILD: FULL, QUICK, or CLEAN workflow
+    note right of VERIFY: Tests, code review, PR
+    note left of PLAN: Rollback resets git to pre-BUILD
+```
+
+**Workflow Types**:
+- **FULL**: INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP (complete documentation)
+- **QUICK**: INBOX → BUILD → VERIFY → SHIP (fast track, minimal docs)
+- **CLEAN**: (triggered) → BUILD → VERIFY → SHIP (technical debt cleanup)
+
 ## Ticket Creation
 
 ### Creation Interface

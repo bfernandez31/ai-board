@@ -4,6 +4,42 @@ GitHub Actions, Cloudinary CDN, and Vercel deployment integrations.
 
 ## GitHub Actions Integration
 
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as Next.js API
+    participant DB as Prisma/PostgreSQL
+    participant GH as GitHub Actions
+    participant CLI as Claude CLI
+    participant Ext as External Repo
+
+    Note over UI,Ext: Workflow Dispatch Pattern
+
+    UI->>API: POST /api/transition
+    API->>DB: Create Job (PENDING)
+    API->>GH: octokit.createWorkflowDispatch()
+    API-->>UI: 200 OK
+
+    GH->>GH: Checkout ai-board repo
+    GH->>Ext: Clone external repo (GH_PAT)
+    GH->>CLI: Execute Claude command
+
+    CLI->>CLI: Read specs, write code
+    CLI->>Ext: Commit changes
+
+    GH->>API: PATCH /api/jobs/:id (RUNNING)
+    Note over GH,API: WORKFLOW_API_TOKEN auth
+
+    GH->>GH: Complete workflow
+    GH->>API: PATCH /api/jobs/:id (COMPLETED)
+
+    loop Polling (2s interval)
+        UI->>API: GET /api/jobs/status
+        API->>DB: Query job
+        API-->>UI: Job status
+    end
+```
+
 ### Octokit Client
 
 **Package**: `@octokit/rest` ^22.0.0

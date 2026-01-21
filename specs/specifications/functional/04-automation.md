@@ -4,6 +4,60 @@
 
 The automation system enables AI-powered workflows that automatically generate specifications, plans, and implementations when tickets move through workflow stages.
 
+## Workflow Overview
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Board UI
+    participant API as API
+    participant GH as GitHub Actions
+    participant AI as Claude
+
+    rect rgb(240, 248, 255)
+        Note over U,AI: INBOX → SPECIFY (Specification)
+        U->>UI: Drag ticket to SPECIFY
+        UI->>API: POST /transition
+        API->>GH: Dispatch speckit.yml
+        GH->>AI: /specify command
+        AI->>GH: Generate spec.md
+        GH->>API: Job COMPLETED
+    end
+
+    rect rgb(255, 248, 240)
+        Note over U,AI: SPECIFY → PLAN (Planning)
+        U->>UI: Drag ticket to PLAN
+        UI->>API: POST /transition
+        API->>GH: Dispatch speckit.yml
+        GH->>AI: /plan + /tasks
+        AI->>GH: Generate plan.md, tasks.md
+        GH->>API: Job COMPLETED
+    end
+
+    rect rgb(240, 255, 240)
+        Note over U,AI: PLAN → BUILD (Implementation)
+        U->>UI: Drag ticket to BUILD
+        UI->>API: POST /transition
+        API->>GH: Dispatch speckit.yml
+        GH->>AI: /implement command
+        AI->>GH: Write code, summary.md
+        GH->>API: Job COMPLETED
+    end
+
+    rect rgb(255, 240, 245)
+        Note over U,AI: BUILD → VERIFY (Testing + PR)
+        U->>UI: Drag ticket to VERIFY
+        UI->>API: POST /transition
+        API->>GH: Dispatch verify.yml
+        GH->>GH: Run tests, fix failures
+        GH->>AI: /code-simplifier
+        GH->>AI: /sync-specifications
+        GH->>GH: Create PR
+        GH->>AI: /code-review
+        GH->>API: Job COMPLETED
+    end
+```
+
 ## Workflow Jobs
 
 ### Job Creation
@@ -294,6 +348,53 @@ When ticket moves from BUILD to VERIFY stage:
 
 ### Test Execution Strategy (FULL Workflow Only)
 
+```mermaid
+sequenceDiagram
+    participant WF as Workflow
+    participant Test as Test Runner
+    participant AI as Claude
+    participant GH as GitHub
+
+    rect rgb(255, 245, 238)
+        Note over WF,GH: Phase 1-4: Test & Fix
+        WF->>Test: Run unit tests
+        Test-->>WF: Results (pass/fail)
+        WF->>Test: Run E2E tests
+        Test-->>WF: Results (pass/fail)
+
+        alt Tests failed
+            WF->>WF: Generate test-failures.json
+            WF->>AI: /verify (fix failures)
+            AI->>AI: Read spec, analyze diff
+            AI->>WF: Apply fixes
+            WF->>Test: Re-run affected tests
+        end
+    end
+
+    rect rgb(240, 255, 240)
+        Note over WF,GH: Phase 4.5: Code Simplification
+        WF->>AI: /code-simplifier
+        AI->>WF: Refine code clarity
+        WF->>WF: Commit if changes
+    end
+
+    rect rgb(240, 248, 255)
+        Note over WF,GH: Phase 5: Documentation
+        WF->>AI: /sync-specifications
+        AI->>WF: Update global docs
+        WF->>WF: Commit if changes
+    end
+
+    rect rgb(255, 240, 245)
+        Note over WF,GH: Phase 6-7: PR & Review
+        WF->>GH: Create Pull Request
+        GH-->>WF: PR #number
+        WF->>AI: /code-review PR#
+        AI->>GH: Post review comment
+        WF->>WF: Job COMPLETED
+    end
+```
+
 **Phase 1: Test Execution**
 - Unit tests run first (fast feedback)
 - E2E tests run after unit tests pass
@@ -564,6 +665,39 @@ Test workflows maintain separation:
 
 ## AI-BOARD Assistant
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as API
+    participant GH as GitHub Actions
+    participant AI as Claude
+
+    U->>UI: Comment "@ai-board fix validation"
+    UI->>API: POST /comments
+    API->>API: Detect @ai-board mention
+    API->>API: Create job (comment-{stage})
+    API->>GH: Dispatch ai-board-assist.yml
+
+    GH->>AI: Process request
+    AI->>AI: Analyze ticket context
+
+    alt VERIFY Stage + Minor Issue
+        AI->>AI: Calculate divergence (<30%)
+        AI->>GH: Return: launch iterate
+        GH->>API: Create iterate job
+        GH->>GH: Dispatch iterate.yml
+        GH->>AI: Fix issues automatically
+        GH->>API: Post completion comment
+    else Other stages or major issues
+        AI->>GH: Update specs/plans
+        GH->>API: Post response comment
+    end
+
+    API-->>UI: Comment appears
+    UI->>U: See AI response
+```
+
 ### Purpose
 
 AI-BOARD Assistant provides collaborative help through ticket comments. Users mention `@ai-board` to request assistance with specifications, planning, and verification issues.
@@ -712,6 +846,44 @@ The ticket will remain in VERIFY while fixes are applied.
 ```
 
 ## Deploy Preview (VERIFY Stage)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as API
+    participant GH as GitHub Actions
+    participant V as Vercel
+
+    U->>UI: Click deploy icon 🚀
+    UI->>UI: Show confirmation modal
+    U->>UI: Confirm deployment
+
+    UI->>API: POST /deploy-preview
+    API->>API: Validate eligibility
+    API->>API: Create deploy job (PENDING)
+    API->>GH: Dispatch deploy-preview.yml
+    API-->>UI: 200 OK
+
+    loop Every 2 seconds
+        UI->>API: Poll job status
+        API-->>UI: RUNNING (show animation)
+    end
+
+    GH->>GH: Checkout branch
+    GH->>V: vercel deploy
+    V-->>GH: Preview URL
+
+    GH->>API: PATCH /jobs/:id
+    Note over GH,API: status: COMPLETED<br/>previewUrl: https://...
+
+    API->>API: Clear old preview atomically
+    API->>API: Set new preview URL
+
+    UI->>API: Poll job status
+    API-->>UI: COMPLETED + previewUrl
+    UI->>U: Show preview icon 🔗
+```
 
 ### Manual Deployment Trigger
 
