@@ -68,10 +68,12 @@ export async function dispatchWorkflow(params: {
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository at specified branch
-- **Actions**: Runs tests and creates pull request
+- **Actions**: Runs tests, simplifies code, updates docs, creates PR, reviews code
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **Quality Assurance**: Code simplification (Phase 4.5) and code review (Phase 7)
+- **Timeout**: 45 minutes maximum
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -113,6 +115,71 @@ export async function dispatchWorkflow(params: {
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
 ### Claude Commands
+
+**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+- **Purpose**: Simplify and refine code for clarity and consistency while preserving functionality
+- **Model**: Opus (deep analysis required)
+- **Trigger**: Verify workflow Phase 4.5 (after tests pass, before PR creation)
+- **Allowed Tools**: Read, Edit, Write, Glob, Grep, Bash, TodoWrite
+- **Input**: Modified files since branching (git diff --name-only main...HEAD)
+- **Context Sources**:
+  - CLAUDE.md (auto-loaded) - Project stack, commands, conventions
+  - .specify/memory/constitution.md - Project principles, non-negotiable rules
+- **Process**:
+  1. Discovery: Identify modified code files (exclude tests/configs/docs)
+  2. Analysis: Check against CLAUDE.md standards and constitution principles
+  3. Refinement: Apply targeted edits to simplify code
+  4. Validation: Run type-check and lint after each change
+  5. Commit: If changes made, commit with descriptive message
+- **Safety Rules**:
+  - Never change behavior or business logic
+  - Never modify API contracts
+  - Never remove functionality
+  - Never break tests
+  - Always revert if validation fails
+- **Exit Conditions**: Logs "no simplification needed" if code already meets standards
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Provide automated code review for pull requests
+- **Model**: Sonnet (5 parallel agents) + Haiku (eligibility and confidence scoring)
+- **Trigger**: Verify workflow Phase 7 (after PR creation)
+- **Allowed Tools**: Bash, Read, Glob, Grep, Task, TodoWrite
+- **Context Sources**:
+  - CLAUDE.md (auto-loaded) - Project conventions
+  - .specify/memory/constitution.md - Project principles
+  - Contextual CLAUDE.md files in modified directories
+- **Execution Steps**:
+  1. **Eligibility Check** (Haiku): Verify PR is open, not draft, needs review, no existing review
+  2. **Guidance Discovery** (Haiku): Find relevant CLAUDE.md files and constitution
+  3. **PR Summary** (Haiku): Analyze changes and generate summary
+  4. **Parallel Review** (5 Sonnet agents):
+     - Agent #1: CLAUDE.md + Constitution compliance audit
+     - Agent #2: Bug detection (shallow scan, large bugs only)
+     - Agent #3: Historical context analysis (git blame, commit history)
+     - Agent #4: Previous PR context (comments on related PRs)
+     - Agent #5: Code comment compliance (guidance in comments)
+  5. **Confidence Scoring** (Haiku): Score each issue 0-100 for confidence
+  6. **Filter Issues**: Keep only issues with score ≥80
+  7. **Final Eligibility Check** (Haiku): Re-verify PR still eligible
+  8. **Post Comment** (gh CLI): Brief, cited feedback with file links
+- **Confidence Score Levels**:
+  - 0: False positive, doesn't stand up to scrutiny
+  - 25: Possibly real, unverified stylistic issue
+  - 50: Real but minor, not very important
+  - 75: Highly confident, directly impacts functionality
+  - 100: Absolutely certain, happens frequently
+- **False Positive Criteria**:
+  - Pre-existing issues
+  - Linter/typechecker/compiler issues
+  - General quality issues not in CLAUDE.md/constitution
+  - Intentional functionality changes
+  - Issues on unmodified lines
+- **Output Format**:
+  - Markdown comment with issue list (if issues found)
+  - GitHub permalink format with full SHA and line ranges
+  - Citations to CLAUDE.md/constitution violations
+  - "No issues found" message (if clean)
+- **Link Format**: `https://github.com/owner/repo/blob/[full-sha]/path#L[start]-L[end]`
 
 **Implementation Command** (`.claude/commands/speckit.implement.md`):
 - **Purpose**: Execute all tasks in tasks.md and generate implementation summary

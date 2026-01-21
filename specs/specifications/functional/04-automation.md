@@ -330,11 +330,36 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 4.5: Code Simplification**
+- Executes `/code-simplifier` command after tests pass
+- Analyzes recently modified files for code clarity improvements
+- Applies project-specific coding standards from CLAUDE.md and constitution
+- Preserves all functionality while improving readability
+- Commits simplification changes separately from test fixes
+- Validation: Runs type-check and lint after each change
+- Skips if code already meets quality standards
+
+**Phase 5: Documentation Synchronization**
+- Updates global documentation in /specs/specifications/
+- Synchronizes functional specs with new user-facing behaviors
+- Updates technical documentation with implementation details
+- Updates CLAUDE.md only if new patterns/technologies added
+- Commits documentation updates before PR creation
+
+**Phase 6: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 7: Automated Code Review**
+- Executes `/code-review` command on created PR
+- Launches 5 parallel analysis agents for comprehensive review
+- Checks compliance with CLAUDE.md and constitution
+- Detects bugs, validates historical context, and code comments
+- Confidence scoring (0-100) filters out false positives
+- Posts review comment only for high-confidence issues (≥80 score)
+- Review includes citations to relevant files and code locations
 
 ### Test Failure Categories
 
@@ -688,6 +713,120 @@ Issues identified (estimated: 1-2h):
 Action: Launching iteration job #123 to fix automatically.
 The ticket will remain in VERIFY while fixes are applied.
 ```
+
+## Quality Assurance Automation
+
+### Code Simplification
+
+The verification workflow includes automated code simplification to improve code clarity and consistency:
+
+**Trigger**:
+- Automatically runs after all tests pass (Phase 4.5 of verify workflow)
+- Executes before documentation updates and PR creation
+- Uses Claude Opus model for deep analysis
+
+**Analysis Scope**:
+- Identifies all files modified since branching from main
+- Filters to code files only (*.ts, *.tsx, *.js, *.jsx)
+- Excludes test files, configs, and documentation
+- Reads CLAUDE.md for project standards
+- Reads .specify/memory/constitution.md for project principles
+
+**Refinement Goals**:
+- Preserve functionality (no behavior changes)
+- Apply project coding standards (ES modules, function keywords, type annotations)
+- Enhance clarity (reduce complexity, eliminate redundancy, improve naming)
+- Avoid nested ternary operators (prefer switch/if-else)
+- Maintain balance (avoid over-simplification)
+
+**Validation Process**:
+- Type-check after each change (bun run type-check)
+- Lint verification (bun run lint)
+- Revert and try alternative if validation fails
+- Commit only if changes improve code quality
+
+**Safety Rules**:
+- Never change behavior or business logic
+- Never modify API contracts
+- Never remove functionality
+- Never break tests
+- Exit gracefully if code already meets standards
+
+### Automated Code Review
+
+Pull requests receive automated code review to detect issues before human review:
+
+**Trigger**:
+- Automatically runs after PR creation (Phase 7 of verify workflow)
+- Executes only when PR is successfully created
+- Uses multi-agent analysis for comprehensive coverage
+
+**Eligibility Checks**:
+- PR must be open (not closed or draft)
+- Must not already have automated review
+- Must require code review (not automated/trivial PR)
+
+**Multi-Agent Analysis**:
+
+Five parallel agents analyze the PR independently:
+
+1. **CLAUDE.md + Constitution Compliance Agent**:
+   - Audits changes against CLAUDE.md coding standards
+   - Verifies compliance with constitution principles
+   - Flags violations of non-negotiable rules
+
+2. **Bug Detection Agent**:
+   - Shallow scan for obvious bugs in file changes
+   - Focuses on large bugs, avoids nitpicks
+   - Ignores likely false positives
+
+3. **Historical Context Agent**:
+   - Reads git blame and commit history
+   - Identifies bugs based on historical patterns
+   - Validates changes against previous iterations
+
+4. **Previous PR Context Agent**:
+   - Reviews comments on previous PRs touching same files
+   - Applies recurring feedback to current PR
+   - Ensures consistency with past decisions
+
+5. **Code Comment Compliance Agent**:
+   - Reads code comments in modified files
+   - Ensures changes comply with guidance in comments
+   - Validates implementation matches documented intent
+
+**Confidence Scoring**:
+- Each issue receives score from 0-100
+- Haiku agents validate each issue independently
+- Scores based on evidence strength and impact
+- Issues below 80 confidence filtered out
+- Only high-confidence issues posted to PR
+
+**Score Levels**:
+- **0**: False positive, doesn't stand up to scrutiny
+- **25**: Might be real, but unverified stylistic issue
+- **50**: Real but minor issue, not very important
+- **75**: Very likely real issue with direct impact
+- **100**: Definitely real, will happen frequently
+
+**False Positive Filtering**:
+- Pre-existing issues (not introduced in PR)
+- Issues caught by linter/typechecker/compiler
+- General quality issues not in CLAUDE.md/constitution
+- Intentional functionality changes
+- Issues on unmodified lines
+
+**Review Output**:
+- Brief issue descriptions with citations
+- Links to specific code locations (file + line range)
+- References to CLAUDE.md or constitution violations
+- "No issues found" if all checks pass
+- GitHub comment format with markdown rendering
+
+**Authentication**:
+- Uses GitHub Personal Access Token (GH_PAT)
+- Access to repository for PR comments
+- Executes via `gh` CLI tool
 
 ## Deploy Preview (VERIFY Stage)
 
