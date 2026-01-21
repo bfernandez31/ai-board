@@ -369,6 +369,39 @@ jobs:
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      # Phase 4: Code Simplification
+      - name: Execute /code-simplifier Command
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          echo "🧹 Running code simplifier on recently modified files..."
+          echo ""
+          echo "📋 Code simplification will:"
+          echo "  - Enhance code clarity and consistency"
+          echo "  - Apply project standards from CLAUDE.md and constitution"
+          echo "  - Preserve all functionality"
+          echo ""
+          claude --dangerously-skip-permissions "/code-simplifier"
+
+      - name: Commit Code Simplifications
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          git add .
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "✅ No code simplifications needed (code already clean)"
+          else
+            git commit -m "refactor(ticket-${{ inputs.ticket_id }}): code simplification
+
+          - Enhanced code clarity and consistency
+          - Applied project standards from CLAUDE.md
+          - No behavior changes
+
+          Automated code simplification by /code-simplifier command."
+            git push origin "${{ inputs.branch }}"
+            echo "✅ Code simplifications committed and pushed"
+          fi
+
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
@@ -422,6 +455,7 @@ jobs:
       # Phase 6: PR Creation (ONLY if all tests pass)
       - name: Create Pull Request
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        id: create-pr
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
@@ -436,6 +470,26 @@ jobs:
             "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
+
+          # Get PR number for code review
+          PR_NUMBER=$(gh pr view --json number -q '.number' 2>/dev/null || echo "")
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      # Phase 7: Code Review
+      - name: Execute /code-review Command
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' && steps.create-pr.outputs.PR_NUMBER != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🔍 Running automated code review on PR #${{ steps.create-pr.outputs.PR_NUMBER }}..."
+          echo ""
+          echo "📋 Code review will check for:"
+          echo "  - CLAUDE.md compliance"
+          echo "  - Constitution compliance"
+          echo "  - Common bugs and issues"
+          echo "  - Code quality standards"
+          echo ""
+          claude --dangerously-skip-permissions "/code-review ${{ steps.create-pr.outputs.PR_NUMBER }}"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
@@ -487,8 +541,9 @@ jobs:
           echo "✅ Verification completed successfully"
           echo "📍 Branch: ${{ inputs.branch }}"
           echo "🎫 Ticket: ${{ inputs.ticket_id }}"
+          echo "🧹 Code simplified for clarity and consistency"
           echo "🧪 All tests passed"
-          echo "📋 Pull Request created and ready for review"
+          echo "📋 Pull Request created and reviewed"
 
       - name: Report Failure
         if: failure()
