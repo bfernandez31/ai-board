@@ -369,6 +369,61 @@ jobs:
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      # Phase 4.5: Code Simplification
+      - name: Run Code Simplifier
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          FEATURE_BRANCH: ${{ inputs.branch }}
+        run: |
+          echo "🧹 Running code simplifier on modified files..."
+          echo ""
+          echo "📋 Code Simplifier will:"
+          echo "  - Identify files changed in this branch (git diff main...HEAD)"
+          echo "  - Simplify code for clarity and consistency"
+          echo "  - Preserve all functionality (no behavior changes)"
+          echo "  - Apply CLAUDE.md and constitution standards"
+          echo ""
+
+          claude --dangerously-skip-permissions "You are running as the code-simplifier agent. Read .claude/agents/code-simplifier.md for your full instructions.
+
+          Your task: Simplify and refine recently modified code for clarity, consistency, and maintainability.
+
+          CRITICAL CONSTRAINTS:
+          1. ONLY modify files changed in this branch (use: git diff main...HEAD --name-only)
+          2. NEVER change functionality - only improve code clarity
+          3. Follow CLAUDE.md and .specify/memory/constitution.md standards
+          4. Run type-check and lint after changes to verify compliance
+
+          Process:
+          1. Get list of modified files: git diff main...HEAD --name-only
+          2. For each modified file, look for simplification opportunities:
+             - Nested ternaries → if/else or switch
+             - Redundant type assertions
+             - Unused imports and dead code
+             - Complex conditionals that can be simplified
+             - Import organization
+          3. Make changes using the Edit tool
+          4. Run bun run type-check && bun run lint to verify
+          5. If errors, fix them before completing
+
+          DO NOT create new files. Only refine existing modified code.
+          DO NOT change test assertions or API contracts.
+          DO commit your changes with message: 'refactor: simplify code for clarity'"
+
+          # Commit any simplification changes
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "refactor(ticket-${{ inputs.ticket_id }}): simplify code for clarity
+
+          Automated code simplification by verify workflow
+          - Applied CLAUDE.md and constitution standards
+          - Improved code readability without behavior changes"
+            git push origin "${{ inputs.branch }}"
+            echo "✅ Code simplification changes committed"
+          else
+            echo "ℹ️ No simplification changes needed"
+          fi
+
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
@@ -436,6 +491,50 @@ jobs:
             "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
+
+      # Phase 7: Automated Code Review
+      - name: Run Code Review
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          FEATURE_BRANCH: ${{ inputs.branch }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🔍 Running automated code review on PR..."
+          echo ""
+          echo "📋 Code Review will check for:"
+          echo "  - CLAUDE.md compliance (tech stack, testing patterns)"
+          echo "  - Constitution compliance (TypeScript-first, security, integrity)"
+          echo "  - Bug detection (null handling, async issues, type safety)"
+          echo "  - Historical context and code comment compliance"
+          echo ""
+
+          claude --dangerously-skip-permissions "You are running the /code-review command. Read .claude/commands/code-review.md for your full instructions.
+
+          Your task: Perform a comprehensive code review on the PR for branch '${FEATURE_BRANCH}'.
+
+          CRITICAL: Read BOTH CLAUDE.md AND .specify/memory/constitution.md to understand compliance requirements.
+
+          Process:
+          1. Check PR eligibility using: gh pr view ${FEATURE_BRANCH}
+          2. If PR is closed, draft, or already reviewed, exit gracefully
+          3. Get PR diff: gh pr diff ${FEATURE_BRANCH}
+          4. Perform 5 analysis passes:
+             - CLAUDE.md compliance audit
+             - Constitution compliance audit
+             - Bug detection (focus on changes only)
+             - Git history analysis (git blame context)
+             - Code comment compliance
+          5. Score each issue (0-100 confidence)
+          6. Filter issues with confidence < 80
+          7. If issues remain, post comment: gh pr comment ${FEATURE_BRANCH} --body '...'
+          8. If no issues, post positive comment
+
+          Use the output format specified in .claude/commands/code-review.md.
+
+          IMPORTANT: Avoid false positives (pre-existing issues, nitpicks, linter-caught issues).
+          IMPORTANT: Use full git SHA in code links for accurate references."
+
+          echo "✅ Code review completed"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
