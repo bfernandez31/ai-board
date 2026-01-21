@@ -70,8 +70,25 @@ export async function dispatchWorkflow(params: {
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
 - **Repository Checkout**: Checks out external project repository at specified branch
-- **Actions**: Runs tests and creates pull request
+- **Actions**: Code simplification, documentation sync, tests, PR creation, and code review
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **Quality Steps** (FULL workflow only):
+  1. **Code Simplification**: Executes `/code-simplifier` command before tests
+     - Reviews git diff to identify recently modified files
+     - Applies project standards from CLAUDE.md and constitution.md
+     - Refactors code for clarity: reduces complexity, improves naming, consolidates logic
+     - Avoids nested ternaries, overly clever solutions
+     - Runs affected tests after each change
+     - Commits improvements incrementally
+  2. **Documentation Sync**: Updates specifications documentation
+  3. **Test Execution**: Runs unit and E2E tests with failure analysis
+  4. **Code Review**: Executes `/code-review` command after PR creation
+     - Reviews PR changes for bugs, violations, and quality issues
+     - Reads CLAUDE.md and constitution.md for project standards
+     - Assigns confidence scores (0-100) to issues
+     - Filters out issues with confidence < 80%
+     - Posts review comment to PR via `gh pr comment`
+     - Includes GitHub links to code, confidence scores, guideline citations
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -113,6 +130,70 @@ export async function dispatchWorkflow(params: {
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
 
 ### Claude Commands
+
+**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+- **Purpose**: Simplify and refine recently modified code for clarity, consistency, and maintainability
+- **Category**: Code Quality
+- **Performance Profile**: Complex (requires reading, analyzing, and modifying multiple files)
+- **Trigger**: Verify workflow (FULL only), before test execution
+- **Input**: Git diff to identify modified files, CLAUDE.md, constitution.md
+- **Process**:
+  1. **Context Discovery**: Read CLAUDE.md (auto-loaded) and constitution.md for project standards
+  2. **File Identification**: Run `git diff --name-only main...HEAD | grep -E '\.(ts|tsx|js|jsx)$'`
+  3. **Analysis**: For each modified file, identify simplification opportunities:
+     - Redundant code or unnecessary abstractions
+     - Overly complex logic (nested ternaries, dense one-liners)
+     - Inconsistent patterns with project standards
+     - Poor naming or unclear structure
+  4. **Simplification**: Make incremental changes:
+     - Replace nested ternaries with if/else chains or switch statements
+     - Consolidate related logic
+     - Improve naming clarity
+     - Remove redundant code
+  5. **Verification**: Run affected tests after each change (`bun run test:unit -- --testPathPattern="<related-test>"`)
+  6. **Validation**: Run `bun run type-check` and `bun run lint` after all changes
+  7. **Commit**: Commit each simplification with descriptive message
+- **Safety Rules**:
+  - Never change business logic or behavior
+  - Preserve all functionality exactly
+  - Revert changes that break tests
+  - Focus only on recently modified files
+- **Output**: Refactored code committed to feature branch, or graceful exit if no changes needed
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Automated code review for pull requests with confidence scoring
+- **Category**: Code Quality
+- **Performance Profile**: Complex (requires PR analysis, file reading, and git operations)
+- **Trigger**: Verify workflow (FULL only), after PR creation
+- **Input**: PR number (optional, defaults to current branch PR), CLAUDE.md, constitution.md
+- **Process**:
+  1. **Eligibility Check**: Verify PR is not closed, draft, or already reviewed
+  2. **Context Gathering**: Read CLAUDE.md, constitution.md, and CLAUDE.md files in modified directories
+  3. **PR Analysis**: Fetch PR diff, details, files, and commits via `gh` CLI
+  4. **Review Categories**:
+     - CLAUDE.md compliance (conventions, patterns, tools)
+     - Constitution compliance (TypeScript strict, Testing Trophy, security)
+     - Bug detection (logic errors, null checks, race conditions)
+     - Historical context (git log for patterns and comments)
+     - Code quality (naming, abstractions, error handling)
+  5. **Confidence Scoring**: Assign 0-100 score to each issue:
+     - 0-25: Not confident (likely false positive)
+     - 26-50: Somewhat confident (might be nitpick)
+     - 51-75: Moderately confident (real but low priority)
+     - 76-90: Highly confident (important to fix)
+     - 91-100: Absolutely certain (definite bug/violation)
+  6. **Filtering**: Remove all issues with confidence < 80%
+  7. **Posting**: Post review via `gh pr comment` with:
+     - Issue title and confidence score
+     - GitHub link to specific code lines (full SHA)
+     - Description of issue
+     - Citation of violated guideline (CLAUDE.md or constitution)
+- **False Positive Avoidance**:
+  - Exclude pre-existing issues (not in PR diff)
+  - Exclude issues linters/type-checkers already catch
+  - Exclude pedantic nitpicks not in guidelines
+  - Exclude issues explicitly silenced in code
+- **Output**: Review comment posted to PR, or approval if no issues found
 
 **Implementation Command** (`.claude/commands/speckit.implement.md`):
 - **Purpose**: Execute all tasks in tasks.md and generate implementation summary

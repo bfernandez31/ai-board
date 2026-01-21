@@ -294,20 +294,35 @@ When ticket moves from BUILD to VERIFY stage:
 
 ### Test Execution Strategy (FULL Workflow Only)
 
-**Phase 1: Test Execution**
+**Phase 1: Code Simplification**
+- AI executes `/code-simplifier` command before test execution
+- Reviews recently modified files identified via git diff
+- Applies project standards from CLAUDE.md and constitution
+- Simplifies code structure: reduces complexity, improves naming, consolidates logic
+- Avoids over-simplification that reduces clarity
+- Runs affected tests after each simplification change
+- Commits improvements incrementally to feature branch
+- Skipped if no simplifications needed
+
+**Phase 2: Documentation Sync**
+- Syncs specifications documentation with implementation changes
+- Updates functional and technical docs to reflect new features
+- Ensures documentation accuracy before PR creation
+
+**Phase 3: Test Execution**
 - Unit tests run first (fast feedback)
 - E2E tests run after unit tests pass
 - Results captured in JSON format
 - Continue workflow even if tests fail initially
 
-**Phase 2: Failure Analysis**
+**Phase 4: Failure Analysis**
 - Parse JSON test results from both test suites
 - Categorize failures: assertions, timeouts, errors, setup issues
 - Identify root causes by grouping similar error patterns
 - Calculate impact priority (number of affected tests)
 - Generate structured report: `test-failures.json`
 
-**Phase 3: Systematic Fixes**
+**Phase 5: Systematic Fixes**
 - AI executes `/verify` command with failure report
 - **Critical Context**: All tests were passing on main branch (100% baseline)
 - **Key Insight**: Test failures are expected when implementing new features
@@ -322,7 +337,7 @@ When ticket moves from BUILD to VERIFY stage:
 - Quality gates: lint and typecheck after each fix
 - Maximum 3 fix attempts per root cause
 
-**Phase 4: Final Validation**
+**Phase 6: Final Validation**
 - Run final validation only for test suites that had failures
 - If unit tests failed: Re-run unit test suite
 - If E2E tests failed: Re-run E2E test suite
@@ -330,11 +345,22 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 7: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 8: Code Review**
+- AI executes `/code-review` command after PR creation
+- Reviews PR changes for bugs, CLAUDE.md compliance, and constitution violations
+- Reads project standards from CLAUDE.md and constitution.md
+- Checks code quality: naming, abstractions, error handling, consistency
+- Assigns confidence scores (0-100) to each issue found
+- Filters out issues with confidence < 80% to avoid false positives
+- Posts review comment to PR via GitHub CLI with high-confidence issues
+- Includes GitHub links to specific lines, confidence scores, and guideline citations
+- If no issues found, posts approval comment
 
 ### Test Failure Categories
 
