@@ -1,271 +1,92 @@
 ---
-command: '/code-review'
-category: 'Code Quality'
-purpose: 'Automated code review for pull requests with confidence scoring'
-wave-enabled: false
-performance-profile: 'complex'
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*)
+description: Code review a pull request
+disable-model-invocation: false
 ---
 
-# /code-review - Pull Request Code Review Command
+Provide a code review for the given pull request.
 
-Conducts automated code review on pull requests using GitHub CLI. Reviews changes for bugs, CLAUDE.md compliance, constitution compliance, and code quality issues.
+To do this, follow these steps precisely:
 
-## Context Discovery
+1. Use a Haiku agent to check if the pull request (a) is closed, (b) is a draft, (c) does not need a code review (eg. because it is an automated pull request, or is very simple and obviously ok), or (d) already has a code review from you from earlier. If so, do not proceed.
+2. Use another Haiku agent to give you a list of file paths to (but not the contents of) any relevant CLAUDE.md files from the codebase: the root CLAUDE.md file (if one exists), as well as any CLAUDE.md files in the directories whose files the pull request modified. Also include `.specify/memory/constitution.md` for project-specific rules.
+3. Use a Haiku agent to view the pull request, and ask the agent to return a summary of the change
+4. Then, launch 5 parallel Sonnet agents to independently code review the change. The agents should do the following, then return a list of issues and the reason each issue was flagged (eg. CLAUDE.md adherence, constitution compliance, bug, historical git context, etc.):
+   a. Agent #1: Audit the changes to make sure they comply with the CLAUDE.md and constitution. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code review.
+   b. Agent #2: Read the file changes in the pull request, then do a shallow scan for obvious bugs. Avoid reading extra context beyond the changes, focusing just on the changes themselves. Focus on large bugs, and avoid small issues and nitpicks. Ignore likely false positives.
+   c. Agent #3: Read the git blame and history of the code modified, to identify any bugs in light of that historical context
+   d. Agent #4: Read previous pull requests that touched these files, and check for any comments on those pull requests that may also apply to the current pull request.
+   e. Agent #5: Read code comments in the modified files, and make sure the changes in the pull request comply with any guidance in the comments.
+5. For each issue found in #4, launch a parallel Haiku agent that takes the PR, issue description, and list of CLAUDE.md files (from step 2), and returns a score to indicate the agent's level of confidence for whether the issue is real or false positive. To do that, the agent should score each issue on a scale from 0-100, indicating its level of confidence. For issues that were flagged due to CLAUDE.md or constitution instructions, the agent should double check that the file actually calls out that issue specifically. The scale is (give this rubric to the agent verbatim):
+   a. 0: Not confident at all. This is a false positive that doesn't stand up to light scrutiny, or is a pre-existing issue.
+   b. 25: Somewhat confident. This might be a real issue, but may also be a false positive. The agent wasn't able to verify that it's a real issue. If the issue is stylistic, it is one that was not explicitly called out in the relevant CLAUDE.md or constitution.
+   c. 50: Moderately confident. The agent was able to verify this is a real issue, but it might be a nitpick or not happen very often in practice. Relative to the rest of the PR, it's not very important.
+   d. 75: Highly confident. The agent double checked the issue, and verified that it is very likely it is a real issue that will be hit in practice. The existing approach in the PR is insufficient. The issue is very important and will directly impact the code's functionality, or it is an issue that is directly mentioned in the relevant CLAUDE.md or constitution.
+   e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
+6. Filter out any issues with a score less than 80. If there are no issues that meet this criteria, do not proceed.
+7. Use a Haiku agent to repeat the eligibility check from #1, to make sure that the pull request is still eligible for code review.
+8. Finally, use the gh bash command to comment back on the pull request with the result. When writing your comment, keep in mind to:
+   a. Keep your output brief
+   b. Avoid emojis
+   c. Link and cite relevant code, files, and URLs
 
-**CRITICAL**: Before reviewing any code, you MUST read project guidelines:
+Examples of false positives, for steps 4 and 5:
 
-1. **CLAUDE.md** (auto-loaded) → Project stack, commands, conventions
-2. **Read `.specify/memory/constitution.md`** → Project principles, non-negotiable rules
+- Pre-existing issues
+- Something that looks like a bug but is not actually a bug
+- Pedantic nitpicks that a senior engineer wouldn't call out
+- Issues that a linter, typechecker, or compiler would catch (eg. missing or incorrect imports, type errors, broken tests, formatting issues, pedantic style issues like newlines). No need to run these build steps yourself -- it is safe to assume that they will be run separately as part of CI.
+- General code quality issues (eg. lack of test coverage, general security issues, poor documentation), unless explicitly required in CLAUDE.md or constitution
+- Issues that are called out in CLAUDE.md or constitution, but explicitly silenced in the code (eg. due to a lint ignore comment)
+- Changes in functionality that are likely intentional or are directly related to the broader change
+- Real issues, but on lines that the user did not modify in their pull request
 
-These files define the standards against which code will be reviewed.
+Notes:
 
-## Input
-
-`$ARGUMENTS` contains the PR number to review (optional). If not provided, reviews the current branch's PR.
-
-```bash
-/code-review 123        # Review PR #123
-/code-review            # Review current branch's PR
-```
-
-## Review Process
-
-### Step 1: Eligibility Check
-
-First, determine if the PR should be reviewed:
-
-```bash
-# Get PR info
-gh pr view --json state,isDraft,reviews
-```
-
-**Skip review if**:
-
-- PR is closed
-- PR is a draft
-- PR already has a review from this agent
-- PR is obviously correct (e.g., automated dependency updates)
-
-### Step 2: Gather Project Guidelines
-
-Read the project standards that code must comply with:
-
-1. **CLAUDE.md** (auto-loaded) → Tech stack, commands, conventions
-2. **`.specify/memory/constitution.md`** → Non-negotiable rules, principles
-3. **CLAUDE.md files in modified directories** (if they exist)
-
-### Step 3: Get PR Context
-
-```bash
-# Get PR diff
-gh pr diff
-
-# Get PR details
-gh pr view --json title,body,files
-
-# Get commit messages
-gh pr view --json commits
-```
-
-### Step 4: Review Categories
-
-Review the changes across these categories:
-
-#### Category 1: CLAUDE.md Compliance
-
-Audit changes against CLAUDE.md guidance:
-
-- Are coding conventions followed?
-- Are project patterns used correctly?
-- Are proper tools/libraries used (shadcn/ui, Prisma, etc.)?
-
-#### Category 2: Constitution Compliance
-
-Check against `.specify/memory/constitution.md`:
-
-- TypeScript strict mode compliance
-- Component architecture patterns
-- Testing requirements (Testing Trophy)
-- Security-first design
-- Database integrity rules
-
-#### Category 3: Bug Detection
-
-Shallow scan for obvious bugs:
-
-- Logic errors
-- Missing null checks
-- Incorrect type usage
-- Race conditions
-- Resource leaks
-
-#### Category 4: Historical Context
-
-Review git blame and history:
-
-```bash
-# Check what was changed and why
-git log --oneline -10 -- <modified-files>
-```
-
-- Are there patterns from previous fixes being violated?
-- Are there comments explaining why code was written a certain way?
-
-#### Category 5: Code Quality
-
-General code quality checks:
-
-- Clear naming
-- Appropriate abstraction level
-- No code duplication
-- Proper error handling
-- Consistent formatting
-
-### Step 5: Confidence Scoring
-
-For each issue found, assign a confidence score (0-100):
-
-| Score | Meaning |
-|-------|---------|
-| **0-25** | Not confident. Likely false positive, pre-existing issue, or stylistic preference |
-| **26-50** | Somewhat confident. Might be real but could be nitpick or false positive |
-| **51-75** | Moderately confident. Real issue but may be low priority |
-| **76-90** | Highly confident. Verified real issue, important to fix |
-| **91-100** | Absolutely certain. Definite bug, security issue, or constitution violation |
-
-### Step 6: Filter Results
-
-**Remove all issues with confidence score < 80.**
-
-Issues must be:
-
-- Real problems in the changed code (not pre-existing)
-- Actionable by the developer
-- Backed by evidence (CLAUDE.md, constitution, or clear bug)
-
-### Step 7: Post Review
-
-Use `gh pr comment` to post the review:
-
-```bash
-gh pr comment <PR_NUMBER> --body "$(cat <<'EOF'
-### Code review
-
-Found X issues:
-
-1. **[Issue Title]** (confidence: XX%)
-   [Link to code](https://github.com/owner/repo/blob/[FULL_SHA]/path/to/file#L[start]-L[end])
-
-   [Description of issue]
-
-   Referenced by: [CLAUDE.md|constitution|best practice]
-
-2. ...
+- Do not check build signal or attempt to build or typecheck the app. These will run separately, and are not relevant to your code review.
+- Use `gh` to interact with Github (eg. to fetch a pull request, or to create inline comments), rather than web fetch
+- Make a todo list first
+- You must cite and link each bug (eg. if referring to a CLAUDE.md or constitution, you must link it)
+- For your final comment, follow the following format precisely (assuming for this example that you found 3 issues):
 
 ---
-🤖 Generated with Claude Code
 
-- If this code review was useful, please react with 👍. Otherwise, react with 👎.
-EOF
-)"
-```
-
-## False Positives to Avoid
-
-**Do NOT flag**:
-
-- Pre-existing issues (issues in code not modified by this PR)
-- Code that looks wrong but isn't (intentional patterns)
-- Pedantic nitpicks senior engineers wouldn't call out
-- Issues linters/typecheckers already catch (imports, types, formatting)
-- General code quality issues unless explicitly mentioned in CLAUDE.md or constitution
-- Issues explicitly silenced in code (lint ignores, type assertions with comments)
-- Intentional functionality changes documented in the PR
-- Issues on lines the user didn't modify
-- Build signal or type-checking failures (CI handles these)
-
-## Output Format
-
-### If Issues Found
-
-```markdown
 ### Code review
 
 Found 3 issues:
 
-1. **Missing type annotation** (confidence: 85%)
-   https://github.com/owner/repo/blob/abc123/src/utils.ts#L42-L44
+1. <brief description of bug> (CLAUDE.md says "<...>")
 
-   Function `processData` is missing return type annotation.
+<link to file and line with full sha1 + line range for context, note that you MUST provide the full sha and not use bash here, eg. https://github.com/owner/repo/blob/1d54823877c4de72b2316a64032a54afc404e619/path/to/file.ts#L13-L17>
 
-   Constitution says: "All function parameters and return types explicitly typed"
+2. <brief description of bug> (constitution says "<...>")
 
-2. **Potential null pointer** (confidence: 92%)
-   https://github.com/owner/repo/blob/abc123/src/api/handler.ts#L18
+<link to file and line with full sha1 + line range for context>
 
-   Accessing `user.name` without null check after optional chain.
+3. <brief description of bug> (bug due to <file and code snippet>)
 
-   ```typescript
-   // Line 17-19
-   const user = await getUser(id);
-   const name = user?.profile.name;  // profile could be undefined
-   ```
+<link to file and line with full sha1 + line range for context>
 
-3. **Using any type** (confidence: 95%)
-   https://github.com/owner/repo/blob/abc123/src/types.ts#L5
+🤖 Generated with [Claude Code](https://claude.ai/code)
 
-   Implicit `any` type without justification comment.
-
-   Constitution says: "No any types unless explicitly justified in code comments"
+<sub>- If this code review was useful, please react with 👍. Otherwise, react with 👎.</sub>
 
 ---
-🤖 Generated with Claude Code
 
-- If this code review was useful, please react with 👍. Otherwise, react with 👎.
-```
+- Or, if you found no issues:
 
-### If No Issues Found
+---
 
-```markdown
 ### Code review
 
-No issues found. Checked for:
-- CLAUDE.md compliance
-- Constitution compliance
-- Common bugs
-- Code quality
+No issues found. Checked for bugs, CLAUDE.md compliance, and constitution compliance.
 
-All changes look good! ✅
+🤖 Generated with [Claude Code](https://claude.ai/code)
 
----
-🤖 Generated with Claude Code
-```
-
-## Safety Rules
-
-**NEVER**:
-
-- Flag issues outside the PR's changed lines
-- Post duplicate reviews
-- Flag stylistic issues not in CLAUDE.md or constitution
-- Block PRs for minor issues (use discretion)
-
-**ALWAYS**:
-
-- Read constitution and CLAUDE.md before reviewing
-- Include full SHA in GitHub links
-- Provide specific line numbers
-- Cite the guideline being violated
-- Use `gh` CLI for all GitHub operations
-
-## Workflow Integration
-
-This command is designed to run after PR creation in the verify workflow:
-
-1. Tests pass → PR created
-2. Code review runs → Comments posted
-3. Developer addresses feedback → Merges
-
----
-
-**Philosophy**: Code review should catch real issues that automated tools miss. Focus on CLAUDE.md and constitution violations, which define this project's specific standards. Avoid false positives that waste developer time.
+- When linking to code, follow the following format precisely, otherwise the Markdown preview won't render correctly: https://github.com/owner/repo/blob/c21d3c10bc8e898b7ac1a2d745bdc9bc4e423afe/path/to/file.ts#L10-L15
+  - Requires full git sha
+  - You must provide the full sha. Commands like `https://github.com/owner/repo/blob/$(git rev-parse HEAD)/foo/bar` will not work, since your comment will be directly rendered in Markdown.
+  - Repo name must match the repo you're code reviewing
+  - # sign after the file name
+  - Line range format is L[start]-L[end]
+  - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
