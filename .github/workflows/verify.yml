@@ -396,42 +396,13 @@ jobs:
         run: |
           echo "📚 Updating global documentation before PR creation..."
 
-          claude --dangerously-skip-permissions "Update the AI Board documentation based on the finalized specification in specs/${FEATURE_BRANCH}:
-
-          This is the FINAL documentation update before PR creation. The feature has been implemented and verified.
-
-          1. Update /specs/specifications/functional/ documentation:
-             - Identify which functional file(s) need updating (01-kanban-board.md, 02-ticket-management.md, etc.)
-             - Add or update the relevant sections with NEW user-facing behaviors
-             - Focus on WHAT the feature does, not HOW
-             - Keep descriptions from user perspective
-             - Use present tense (feature is now live)
-
-          2. Update /specs/specifications/technical/ documentation:
-             - Update relevant technical files (api/endpoints.md, architecture/data-model.md, etc.)
-             - Add new API endpoints, data models, schemas
-             - Document implementation patterns and technical details
-             - Focus on HOW it's implemented
-             - Include actual code examples where relevant
-
-          3. Update CLAUDE.md ONLY if:
-             - New technologies or dependencies were added
-             - New architectural patterns were introduced
-             - New conventions need to be documented
-             - New testing patterns were established
-
-          Remember: Documentation should reflect CURRENT STATE only, no historical information.
-          Don't commit the changes."
+          claude --dangerously-skip-permissions /sync-specifications
 
           git add specs/specifications/ CLAUDE.md
           if ! git diff --staged --quiet; then
             git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation
 
-          - Updated functional specs with new user-facing behaviors
-          - Updated technical docs with implementation details
-          - Maintained current state documentation (no history)
-
-          Final documentation update before PR creation."
+          Automated by /sync-specifications command."
             git push origin "${{ inputs.branch }}"
             echo "✅ Documentation updated and committed"
           else

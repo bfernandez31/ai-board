@@ -11,134 +11,153 @@ Synchronizes changes from a feature branch's specifications to the global projec
 ## Purpose
 
 This command ensures that after implementation or iteration:
-1. Global functional specifications reflect new user-facing behaviors
+1. Global functional specifications reflect current user-facing behaviors
 2. Global technical documentation includes implementation details
 3. CLAUDE.md is updated with any new patterns or conventions
-4. All documentation remains consistent and current
-
-## Arguments
-
-- `--branch`: The feature branch (e.g., "051-897-feature")
-- `--source`: Source directory (default: specs/$BRANCH/)
-- `--target`: Target directory (default: specs/specifications/)
+4. Sequence diagrams visualize complex workflows
+5. All documentation reflects CURRENT STATE only
 
 ## Process
 
-### Step 1: Analyze Changes
-Read and compare:
-- Source: `specs/$BRANCH/spec.md`, `plan.md`, `tasks.md`
-- Target: `specs/specifications/functional/`, `technical/`
+### Step 1: Identify Feature Context
 
-### Step 2: Extract Updates
+Determine the feature branch and locate source files:
+- `specs/{branch}/spec.md` - Feature specification
+- `specs/{branch}/plan.md` - Implementation plan
+- `specs/{branch}/tasks.md` - Task breakdown
 
-#### From spec.md → functional/
-- New user stories → Update relevant functional docs
-- Changed acceptance criteria → Update behavior descriptions
-- New UI/UX elements → Update interface documentation
-- Modified workflows → Update process documentation
+### Step 2: Update Functional Documentation
 
-#### From plan.md → technical/
-- Architecture changes → `technical/architecture/`
-- API modifications → `technical/api/`
-- New integrations → `technical/implementation/`
-- Performance improvements → `technical/quality/`
+Update `/specs/specifications/functional/` files:
 
-#### From implementation → CLAUDE.md
-- New patterns discovered
-- Technology additions
-- Convention changes
-- Best practices learned
+| Source | Target | Content |
+|--------|--------|---------|
+| User scenarios | `01-kanban-board.md` | Board interactions |
+| Ticket behaviors | `02-ticket-management.md` | Ticket operations |
+| Team features | `03-collaboration.md` | Comments, mentions |
+| Workflow changes | `04-automation.md` | AI/job workflows |
+| Project features | `05-projects.md` | Multi-project |
+| UI/UX patterns | `06-user-interface.md` | Interface behaviors |
 
-### Step 3: Update Global Documentation
+**Guidelines**:
+- Focus on WHAT the feature does, not HOW
+- Write from user perspective
+- Use present tense (feature is now live)
+- Replace outdated descriptions with current behavior
 
-Update the appropriate files in `specs/specifications/`:
+### Step 3: Update Technical Documentation
 
+Update `/specs/specifications/technical/` files:
+
+| Source | Target | Content |
+|--------|--------|---------|
+| Architecture decisions | `architecture/` | System design |
+| API changes | `api/` | Endpoints, contracts |
+| Code patterns | `implementation/` | Integrations, state |
+| Testing approach | `quality/` | Testing, deployment |
+
+**Guidelines**:
+- Focus on HOW it's implemented
+- Include code examples where relevant
+- Document API endpoints, data models, schemas
+- Replace outdated technical details
+
+### Step 4: Update CLAUDE.md
+
+Update CLAUDE.md ONLY if:
+- New technologies or dependencies were added
+- New architectural patterns were introduced
+- New conventions need to be documented
+- New testing patterns were established
+- New commands were added
+
+### Step 5: Generate/Update Sequence Diagrams
+
+For features involving workflows, API calls, or multi-step processes, generate or update mermaid sequence diagrams.
+
+**When to create diagrams**:
+- New workflow stages or transitions
+- API call sequences (frontend → backend → database)
+- Multi-actor interactions (user, system, external services)
+- Event-driven processes (webhooks, polling, notifications)
+
+**Diagram location**:
+- Place in the most relevant technical file
+- Or create dedicated `diagrams/` section in complex docs
+
+**Example - Workflow Sequence**:
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as API Route
+    participant GH as GitHub Actions
+    participant DB as Database
+
+    U->>UI: Drag ticket to VERIFY
+    UI->>API: POST /transition
+    API->>DB: Create Job (PENDING)
+    API->>GH: Dispatch verify.yml
+    API-->>UI: 200 OK
+
+    GH->>API: PATCH /jobs/:id (RUNNING)
+    GH->>GH: Run tests
+    GH->>GH: Code simplification
+    GH->>GH: Create PR
+    GH->>GH: Code review
+    GH->>API: PATCH /jobs/:id (COMPLETED)
+
+    UI->>API: Poll job status
+    API-->>UI: Job COMPLETED
+    UI->>U: Show success
 ```
-specs/specifications/
-├── functional/
-│   ├── 01-kanban-board.md     # Core board functionality
-│   ├── 02-ticket-management.md # Ticket operations
-│   ├── 03-collaboration.md     # Team features
-│   ├── 04-automation.md        # AI/workflows
-│   ├── 05-projects.md          # Multi-project
-│   └── 06-user-interface.md    # UI/UX patterns
-└── technical/
-    ├── architecture/           # System design
-    ├── api/                    # Endpoints & contracts
-    ├── implementation/         # Code patterns
-    └── quality/                # Testing & deployment
+
+**Example - API Sequence**:
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as Middleware
+    participant H as Handler
+    participant P as Prisma
+    participant D as Database
+
+    C->>M: Request with auth
+    M->>M: Validate session
+    M->>H: Authorized request
+    H->>P: Query/Mutation
+    P->>D: SQL
+    D-->>P: Result
+    P-->>H: Typed data
+    H-->>C: JSON response
 ```
 
-### Step 4: Maintain Consistency
+### Step 6: Validate Consistency
 
 Ensure:
 - No contradictions between documents
-- Terminology is consistent
-- Cross-references are updated
-- Version history is noted where applicable
+- Terminology is consistent across all files
+- Cross-references are accurate
+- Diagrams match described behavior
 
 ## Rules
 
-1. **Append, don't replace**: Add new information to existing sections
-2. **Preserve structure**: Maintain existing document organization
-3. **Keep context**: Don't remove historical information unless obsolete
-4. **Update timestamps**: Note when sections are updated
-5. **Link sources**: Reference the ticket/branch that introduced changes
-
-## Example Updates
-
-### Functional Update
-```markdown
-<!-- In functional/02-ticket-management.md -->
-
-### Ticket State Transitions
-
-Tickets can move between stages following these rules:
-
-**Updated (Ticket #897)**: Quick workflow tickets can now be rolled back to INBOX,
-which resets their workflow type to FULL and clears the branch.
-```
-
-### Technical Update
-```markdown
-<!-- In technical/implementation/state-management.md -->
-
-### Job Management
-
-**Iteration Jobs (Added in #897)**:
-A new job type `iterate` handles minor fixes during VERIFY stage without
-changing ticket state. This enables rapid iteration on testing feedback.
-
-```typescript
-command: 'specify' | 'plan' | 'implement' | 'verify' | 'iterate'
-```
-```
-
-### CLAUDE.md Update
-```markdown
-## Commands
-
-\`\`\`bash
-bun run dev          # Start dev server
-bun run test         # Run all tests
-bun run test:e2e     # Playwright tests
-bun run test:unit    # Vitest tests
-bun run type-check   # TypeScript check
-bun run iterate      # Run verify iteration (new)
-\`\`\`
-```
+1. **Current state only**: Documentation reflects how the system works NOW, not history
+2. **Replace outdated content**: Update existing sections rather than appending history
+3. **No historical markers**: Don't use "Updated in ticket #X" or "Added in version Y"
+4. **Preserve structure**: Maintain existing document organization
+5. **Diagrams for complexity**: Add sequence diagrams when words aren't enough
 
 ## Output
 
-Log what was updated:
-```markdown
+Do not commit changes. Report what was updated:
+
+```
 📚 Specifications synchronized
 
 Updated files:
-- functional/02-ticket-management.md: Added rollback behavior
-- functional/04-automation.md: Added iterate workflow
-- technical/api/endpoints.md: New /api/jobs/iterate endpoint
-- CLAUDE.md: Added iterate command
+- functional/04-automation.md: Updated verify workflow phases
+- technical/implementation/integrations.md: Added new commands
+- technical/architecture/workflows.md: Added sequence diagram
 
-All documentation is now consistent with branch: 051-897-feature
+Documentation reflects current state of branch: {branch}
 ```
