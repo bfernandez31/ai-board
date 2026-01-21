@@ -28,9 +28,9 @@
 
 **⚠️ CRITICAL**: These tasks inform all user story implementation
 
-- [ ] T001 Review existing verify.yml workflow structure in .github/workflows/verify.yml
-- [ ] T002 [P] Review existing Claude Code command patterns in .claude/commands/verify.md
-- [ ] T003 [P] Review constitution.md structure in .specify/memory/constitution.md
+- [x] T001 Review existing verify.yml workflow structure in .github/workflows/verify.yml ✅ DONE
+- [x] T002 [P] Review existing Claude Code command patterns in .claude/commands/verify.md ✅ DONE
+- [x] T003 [P] Review constitution.md structure in .specify/memory/constitution.md ✅ DONE
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -44,7 +44,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Create code simplifier command spec in .claude/commands/code-simplifier.md
+- [x] T004 [US1] Create code simplifier command spec in .claude/commands/code-simplifier.md ✅ DONE
   - YAML frontmatter with command metadata (command: '/code-simplify', category: 'Code Quality')
   - Phase 1: Discovery (get modified files via `git diff --name-only main...HEAD`)
   - Phase 2: Analysis (identify simplification patterns: NESTED_TERNARY, REDUNDANT_ABSTRACTION, VERBOSE_CONDITIONAL, COMPLEX_EXPRESSION)
@@ -53,14 +53,14 @@
   - Phase 5: Commit (if changes made)
   - Include constraints: MUST NOT change public API signatures, MUST preserve comments, focus only on modified files
 
-- [ ] T005 [US1] Add code simplifier step to verify.yml workflow in .github/workflows/verify.yml
+- [x] T005 [US1] Add code simplifier step to verify.yml workflow in .github/workflows/verify.yml ✅ DONE
   - Add new step after test-fixes-commit (Phase 4) and before documentation-update (Phase 5)
   - Execute command: `claude --dangerously-skip-permissions "/code-simplify"`
   - Set timeout: 10m
   - Set continue_on_error: false (simplification failures should stop workflow)
   - Pass environment variables: FEATURE_BRANCH, TICKET_ID, GH_TOKEN
 
-- [ ] T006 [US1] Add simplification commit step to verify.yml workflow in .github/workflows/verify.yml
+- [x] T006 [US1] Add simplification commit step to verify.yml workflow in .github/workflows/verify.yml ✅ DONE
   - Add step after code simplifier execution
   - Commit changes with message: `refactor(ticket-{TICKET_ID}): simplify code for clarity`
   - Only commit if changes exist (`git diff --staged --quiet` check)
@@ -78,7 +78,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Create code review command spec in .claude/commands/code-review.md
+- [x] T007 [US2] Create code review command spec in .claude/commands/code-review.md ✅ DONE
   - YAML frontmatter with command metadata (command: '/code-review', category: 'Code Quality')
   - Context loading section: Read CLAUDE.md (root + modified directories), constitution.md (.specify/memory/constitution.md)
   - Get PR diff via `gh pr diff ${PR_NUMBER}`
@@ -94,7 +94,7 @@
   - GitHub CLI comment posting via `gh pr comment ${PR_NUMBER}` (FR-014)
   - Include constraints: MUST NOT run build/typecheck/tests (FR-013)
 
-- [ ] T008 [US2] Add code review step to verify.yml workflow in .github/workflows/verify.yml
+- [x] T008 [US2] Add code review step to verify.yml workflow in .github/workflows/verify.yml ✅ DONE
   - Add new step after PR creation (Phase 6)
   - Execute command: `claude --dangerously-skip-permissions "/code-review"`
   - Set timeout: 15m
@@ -115,7 +115,7 @@
 
 *Note: This functionality is integrated into the code review command (T007). The tasks below ensure the scoring logic is properly implemented.*
 
-- [ ] T009 [US3] Enhance code-review.md confidence scoring section in .claude/commands/code-review.md
+- [x] T009 [US3] Enhance code-review.md confidence scoring section in .claude/commands/code-review.md ✅ DONE
   - Define confidence scoring factors from contract:
     - Explicit rule violation: +30 points
     - Pattern match: +20 points
@@ -131,7 +131,7 @@
     - Pattern violations: base confidence 70-80
   - Ensure findings reference source (CLAUDE.md or Constitution) per spec requirement
 
-- [ ] T010 [US3] Add edge case handling to code-review.md in .claude/commands/code-review.md
+- [x] T010 [US3] Add edge case handling to code-review.md in .claude/commands/code-review.md ✅ DONE
   - Handle missing constitution.md: proceed with CLAUDE.md only, log warning
   - Handle PR creation failure: skip code review step gracefully
   - Handle API timeout: log warning, continue workflow without review comment
@@ -144,10 +144,10 @@
 
 **Purpose**: Final validation and documentation
 
-- [ ] T011 Validate code simplifier command follows existing command patterns in .claude/commands/
-- [ ] T012 [P] Validate code review command follows existing command patterns in .claude/commands/
-- [ ] T013 Verify workflow step ordering matches spec requirements (simplifier before docs, review after PR)
-- [ ] T014 Run quickstart.md validation to ensure implementation matches documented steps
+- [x] T011 Validate code simplifier command follows existing command patterns in .claude/commands/ ✅ DONE
+- [x] T012 [P] Validate code review command follows existing command patterns in .claude/commands/ ✅ DONE
+- [x] T013 Verify workflow step ordering matches spec requirements (simplifier before docs, review after PR) ✅ DONE
+- [x] T014 Run quickstart.md validation to ensure implementation matches documented steps ✅ DONE
 
 ---
 

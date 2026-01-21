@@ -369,6 +369,36 @@ jobs:
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      # Phase 4.5: Code Simplification
+      - name: Execute Code Simplifier
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        timeout-minutes: 10
+        env:
+          FEATURE_BRANCH: ${{ inputs.branch }}
+          TICKET_ID: ${{ inputs.ticket_id }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🧹 Running code simplifier..."
+          echo "   Analyzing modified files for simplification opportunities..."
+          claude --dangerously-skip-permissions "/code-simplify"
+
+      - name: Commit Simplifications
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          git add .
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "ℹ️ No simplifications needed"
+          else
+            git commit -m "refactor(ticket-${{ inputs.ticket_id }}): simplify code for clarity" \
+              -m "Automated code simplification by GitHub Actions verify workflow" \
+              -m "Ticket: ${{ inputs.ticket_id }}" \
+              -m "Branch: ${{ inputs.branch }}"
+            git push origin "${{ inputs.branch }}"
+            echo "✅ Simplifications committed and pushed"
+          fi
+
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
@@ -421,6 +451,7 @@ jobs:
 
       # Phase 6: PR Creation (ONLY if all tests pass)
       - name: Create Pull Request
+        id: create-pr
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
@@ -436,6 +467,30 @@ jobs:
             "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
+
+          # Get PR number for code review step
+          PR_NUMBER=$(gh pr view "${FEATURE_BRANCH}" --json number -q '.number' 2>/dev/null || echo "")
+          PR_URL=$(gh pr view "${FEATURE_BRANCH}" --json url -q '.url' 2>/dev/null || echo "")
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "PR #${PR_NUMBER}: ${PR_URL}"
+
+      # Phase 6.5: Automated Code Review
+      - name: Execute Code Review
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' && steps.create-pr.outputs.pr_number != '' }}
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          FEATURE_BRANCH: ${{ inputs.branch }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+          PR_URL: ${{ steps.create-pr.outputs.pr_url }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
+        run: |
+          echo "🔍 Running automated code review..."
+          echo "   PR #${PR_NUMBER}: ${PR_URL}"
+          echo "   Repository: ${GITHUB_REPOSITORY}"
+          claude --dangerously-skip-permissions "/code-review"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
