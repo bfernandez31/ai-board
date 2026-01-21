@@ -70,8 +70,11 @@ export async function dispatchWorkflow(params: {
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
 - **Repository Checkout**: Checks out external project repository at specified branch
-- **Actions**: Runs tests and creates pull request
+- **Actions**: Runs tests, simplifies code, updates documentation, creates pull request, and reviews PR
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **Code Simplification**: Executes `/code-simplifier` command after tests pass
+- **Documentation Update**: Updates functional and technical documentation before PR creation
+- **Code Review**: Executes `/code-review` command after PR is created
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -175,6 +178,46 @@ export async function dispatchWorkflow(params: {
 - Placeholder format: `[PLACEHOLDER_NAME]`
 - Section headers with Markdown H2 (`##`)
 - Warning emoji (`⚠️`) for manual requirements section
+
+**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+- **Purpose**: Simplify recently modified code while preserving functionality
+- **Model**: Opus (deep analysis required)
+- **Trigger**: Automatic in verify workflow after tests pass
+- **Input**: Feature branch name (optional, defaults to current branch)
+- **Context**:
+  - CLAUDE.md (auto-loaded) → Project conventions
+  - `.specify/memory/constitution.md` → Project principles
+  - `git diff --name-only main...HEAD` → Changed files
+- **Workflow**:
+  1. Identify Targets: List changed TypeScript files (excluding tests)
+  2. Analyze & Simplify: Apply pattern-based simplifications (nested ternaries, redundant abstractions, complex booleans, callback nesting, unnecessary indirection)
+  3. Test After Each Change: Run impacted tests to verify functionality
+  4. Revert on Failure: Undo change immediately if tests fail
+  5. Commit: Stage and commit simplification changes
+- **Safety**: Preserves all functionality, never changes behavior, runs tests after each change, reverts immediately on test failure
+- **Output**: Committed simplification changes or graceful exit if no opportunities found
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Review PR changes against CLAUDE.md and constitution guidelines
+- **Model**: Opus (deep analysis required)
+- **Trigger**: Automatic in verify workflow after PR creation
+- **Input**: Pull request number (required)
+- **Context**:
+  - CLAUDE.md (auto-loaded) → Project conventions
+  - `.specify/memory/constitution.md` → Project principles (reference only)
+  - `gh pr diff <PR_NUMBER>` → PR changes
+- **Workflow**:
+  1. Gather Context: Get PR info, diff, and review criteria
+  2. Review: Analyze against CLAUDE.md conventions and constitution principles
+  3. Score Issues: Assign confidence scores (0-100) to each potential issue
+  4. Filter: Only report issues with confidence >= 80
+  5. Report: Post structured review comment to PR via `gh pr comment`
+- **Review Criteria**:
+  - CLAUDE.md: TypeScript strict mode, naming conventions, API patterns, test organization, error handling
+  - Constitution: TypeScript-First, Component-Driven, Test-Driven, Security-First, Database Integrity, AI-First
+- **Scoring**: 90-100 (Critical), 80-89 (High), 70-79 (Medium - below threshold), <70 (Low - not reported)
+- **Safety**: Read-only analysis, does not modify code, does not block PR merge, gracefully handles missing constitution file
+- **Output**: Structured PR comment with issues found, constitution compliance, and CLAUDE.md alignment
 
 ### Authentication
 

@@ -330,11 +330,51 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 5: Code Simplification**
+- AI executes `/code-simplifier` command after all tests pass
+- Analyzes recently modified TypeScript files (excluding tests)
+- Identifies and simplifies complexity patterns:
+  - Nested ternaries → if/else or switch
+  - Redundant abstractions → inline where appropriate
+  - Complex boolean expressions → named variables
+  - Deeply nested callbacks → async/await
+- Preserves all existing functionality (critical requirement)
+- Runs impacted tests after each change to verify behavior
+- Reverts changes immediately if tests fail
+- Commits simplification changes to feature branch
+- Reads project constitution (`.specify/memory/constitution.md`) for principles
+- Exits gracefully if no simplification opportunities found
+
+**Phase 6: Documentation Update**
+- AI updates global documentation based on finalized specification
+- Updates functional documentation (user-facing behaviors)
+- Updates technical documentation (implementation details)
+- Updates CLAUDE.md only if new patterns introduced
+- Commits documentation changes to feature branch
+
+**Phase 7: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 8: Code Review**
+- AI executes `/code-review` command after PR is created
+- Reviews PR changes against CLAUDE.md conventions and constitution principles
+- Analyzes changed files for potential issues:
+  - TypeScript strict mode compliance
+  - Naming conventions and patterns
+  - API route patterns
+  - Test organization
+  - Security concerns (input validation, XSS, SQL injection)
+- Assigns confidence scores to each issue (0-100 scale)
+- Filters issues to confidence >= 80 (minimizes false positives)
+- Posts structured review comment to PR with:
+  - Issues found (file, line, severity, confidence)
+  - Constitution compliance status
+  - CLAUDE.md alignment status
+- Gracefully handles missing constitution file (falls back to CLAUDE.md only)
+- Review is informational only (does not block PR merge)
 
 ### Test Failure Categories
 

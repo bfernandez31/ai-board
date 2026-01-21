@@ -1119,10 +1119,28 @@ node .specify/scripts/generate-test-report.js \
 claude --dangerously-skip-permissions "/verify"
 ```
 
-**Phase 4: Pull Request Creation**
+**Phase 4: Code Simplification**
+```bash
+# Simplify recently modified code while preserving functionality
+claude --dangerously-skip-permissions "/code-simplifier --branch ${FEATURE_BRANCH}"
+```
+
+**Phase 5: Documentation Update**
+```bash
+# Update global documentation based on finalized specification
+claude --dangerously-skip-permissions "Update the AI Board documentation..."
+```
+
+**Phase 6: Pull Request Creation**
 ```bash
 # Only if all tests pass
 .specify/scripts/bash/create-pr-only.sh
+```
+
+**Phase 7: Code Review**
+```bash
+# Review PR changes against CLAUDE.md and constitution guidelines
+claude --dangerously-skip-permissions "/code-review --pr-number ${PR_NUMBER}"
 ```
 
 ### Test Failure Report Format
