@@ -369,6 +369,25 @@ jobs:
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
+      # Phase 4.5: Code Simplification
+      - name: Run Code Simplifier
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        run: |
+          echo "🧹 Running code simplifier on recently modified code..."
+
+          claude --dangerously-skip-permissions /code-simplifier
+
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "refactor(ticket-${{ inputs.ticket_id }}): code simplification
+
+          Automated by /code-simplifier command."
+            git push origin "${{ inputs.branch }}"
+            echo "✅ Code simplification changes committed and pushed"
+          else
+            echo "ℹ️ No code simplification changes needed"
+          fi
+
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
@@ -422,6 +441,7 @@ jobs:
       # Phase 6: PR Creation (ONLY if all tests pass)
       - name: Create Pull Request
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        id: create-pr
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
@@ -436,6 +456,29 @@ jobs:
             "${FEATURE_BRANCH}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
+
+      # Phase 7: Automated Code Review
+      - name: Run Code Review
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          FEATURE_BRANCH: ${{ inputs.branch }}
+        run: |
+          echo "🔍 Running automated code review on PR..."
+
+          # Get the PR number for this branch
+          PR_NUMBER=$(gh pr list --head "$FEATURE_BRANCH" --json number --jq '.[0].number')
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "⚠️ No PR found for branch $FEATURE_BRANCH, skipping code review"
+            exit 0
+          fi
+
+          echo "   Found PR #$PR_NUMBER"
+
+          claude --dangerously-skip-permissions "/code-review $PR_NUMBER"
+
+          echo "✅ Code review completed"
 
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
