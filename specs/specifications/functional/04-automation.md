@@ -330,11 +330,33 @@ When ticket moves from BUILD to VERIFY stage:
 - Commit all test fixes to feature branch
 - Push changes to remote
 
-**Phase 5: Pull Request Creation**
+**Phase 4.5: Code Simplification**
+- Executes `/code-simplifier` command on branch changes
+- Refines code for clarity, consistency, and maintainability
+- Preserves all functionality - only improves code structure
+- Applies project coding standards from CLAUDE.md
+- Commits simplification changes if any improvements made
+
+**Phase 5: Documentation Synchronization**
+- Updates global documentation based on finalized specification
+- Updates functional specs (`/specs/specifications/functional/`)
+- Updates technical docs (`/specs/specifications/technical/`)
+- Updates CLAUDE.md if new patterns introduced
+- Commits documentation changes before PR creation
+
+**Phase 6: Pull Request Creation**
 - Create PR only if all tests pass successfully
 - PR body includes test results and implementation details
 - Comment posted to ticket with PR link
 - Ticket remains in VERIFY stage (no additional transition)
+
+**Phase 7: Automated Code Review**
+- Executes `/code-review` command on the created PR
+- Reviews for CLAUDE.md compliance
+- Reviews for constitution compliance (`.specify/memory/constitution.md`)
+- Scans for obvious bugs in changed code
+- Checks historical git context and code comments
+- Posts review findings as PR comment (issues scored 80+ confidence only)
 
 ### Test Failure Categories
 

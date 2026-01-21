@@ -176,6 +176,31 @@ export async function dispatchWorkflow(params: {
 - Section headers with Markdown H2 (`##`)
 - Warning emoji (`⚠️`) for manual requirements section
 
+**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+- **Purpose**: Simplify and refine code for clarity, consistency, and maintainability
+- **Trigger**: Verify workflow (Phase 4.5, after test fixes)
+- **Scope**: Recently modified code (git diff main...HEAD)
+- **Actions**:
+  - Preserve functionality - only improve code structure
+  - Apply project coding standards from CLAUDE.md
+  - Reduce unnecessary complexity and nesting
+  - Eliminate redundant code and abstractions
+  - Avoid nested ternary operators
+- **Output**: Refined code committed to feature branch
+
+**Code Review Command** (`.claude/commands/code-review.md`):
+- **Purpose**: Automated code review for pull requests
+- **Trigger**: Verify workflow (Phase 7, after PR creation)
+- **Input**: PR number
+- **Review Checks**:
+  - CLAUDE.md compliance
+  - Constitution compliance (`.specify/memory/constitution.md`)
+  - Obvious bugs in changed code
+  - Historical git context issues
+  - Code comment guidance adherence
+- **Confidence Scoring**: Issues scored 0-100, only 80+ reported
+- **Output**: Review findings posted as PR comment via `gh` CLI
+
 ### Authentication
 
 **GitHub Token** (Automatic):
