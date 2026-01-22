@@ -224,6 +224,11 @@ jobs:
             # Extract arguments after /compare (e.g., "#AIB-133 #AIB-134")
             ARGS=$(echo "$COMMENT" | sed -n 's/.*\/compare[[:space:]]*\(.*\)/\1/p')
             OUTPUT=$(claude --dangerously-skip-permissions "/compare \"$ARGS\"" || true)
+          elif echo "$COMMENT" | grep -qE "/review\b"; then
+            echo "📌 Detected /review command - routing to review skill"
+            # Extract arguments after /review (e.g., PR number if provided)
+            ARGS=$(echo "$COMMENT" | sed -n 's/.*\/review[[:space:]]*\(.*\)/\1/p')
+            OUTPUT=$(claude --dangerously-skip-permissions "/review \"$ARGS\"" || true)
           else
             echo "📌 Using ai-board-assist for general request"
             OUTPUT=$(claude --dangerously-skip-permissions "/ai-board-assist \"$COMMENT\"" || true)
