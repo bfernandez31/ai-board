@@ -185,6 +185,7 @@ jobs:
           USER_ID: ${{ inputs.user_id }}
           USER: ${{ inputs.user }}
           PROJECT_ID: ${{ inputs.project_id }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           echo "🤖 Executing AI-BOARD assist command..."
 
