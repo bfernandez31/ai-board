@@ -107,6 +107,15 @@ export const queryKeys = {
      */
     ticketByKey: (projectId: number, ticketKey: string) =>
       ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
+
+    /**
+     * Activity feed for a project
+     * Includes cursor for pagination
+     */
+    activity: (projectId: number, cursor?: string | null) =>
+      cursor
+        ? (['projects', projectId, 'activity', cursor] as const)
+        : (['projects', projectId, 'activity'] as const),
   },
 
   /**

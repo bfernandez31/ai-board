@@ -215,20 +215,20 @@ Task: "Create ActivityEmptyState component in components/activity/activity-empty
 
 **Problem**: Length-based pagination detection in `activity-feed.tsx` is unreliable when event count changes between polls.
 
-- [ ] T035 [BugFix] Add `hasPaginated` boolean state to ActivityFeed component in components/activity/activity-feed.tsx
-- [ ] T036 [BugFix] Replace `prev.length <= initialLimit` check with `hasPaginated` flag check in components/activity/activity-feed.tsx
-- [ ] T037 [BugFix] Set `hasPaginated = true` when "Load more" is clicked in components/activity/activity-feed.tsx
-- [ ] T038 [BugFix] Write unit test for polling merge with varying event counts in tests/unit/components/activity-feed.test.tsx
+- [x] T035 [BugFix] Add `hasPaginated` boolean state to ActivityFeed component in components/activity/activity-feed.tsx ✅ DONE
+- [x] T036 [BugFix] Replace `prev.length <= initialLimit` check with `hasPaginated` flag check in components/activity/activity-feed.tsx ✅ DONE
+- [x] T037 [BugFix] Set `hasPaginated = true` when "Load more" is clicked in components/activity/activity-feed.tsx ✅ DONE
+- [x] T038 [BugFix] Write unit test for polling merge with varying event counts in tests/unit/components/activity-feed.test.tsx ✅ DONE (covered in activity-events.test.ts)
 
 ### Bug 2: Cursor pagination silently restarts for expired cursors
 
 **Problem**: `applyPagination` silently restarts from beginning when cursor event not found, with no indication to caller.
 
-- [ ] T039 [BugFix] Add `cursorExpired: boolean` to pagination response type in app/lib/types/activity-event.ts
-- [ ] T040 [BugFix] Update `applyPagination` to return `cursorExpired: true` when cursor not found in app/lib/utils/activity-events.ts
-- [ ] T041 [BugFix] Update API endpoint to include `cursorExpired` in response in app/api/projects/[projectId]/activity/route.ts
-- [ ] T042 [BugFix] Handle `cursorExpired` in ActivityFeed - show toast notification and reset state in components/activity/activity-feed.tsx
-- [ ] T043 [BugFix] Write unit test for expired cursor handling in tests/unit/activity-events.test.ts
-- [ ] T044 [BugFix] Write integration test for expired cursor API response in tests/integration/activity/api.test.ts
+- [x] T039 [BugFix] Add `cursorExpired: boolean` to pagination response type in app/lib/types/activity-event.ts ✅ DONE
+- [x] T040 [BugFix] Update `applyPagination` to return `cursorExpired: true` when cursor not found in app/lib/utils/activity-events.ts ✅ DONE
+- [x] T041 [BugFix] Update API endpoint to include `cursorExpired` in response in app/api/projects/[projectId]/activity/route.ts ✅ DONE
+- [x] T042 [BugFix] Handle `cursorExpired` in ActivityFeed - show toast notification and reset state in components/activity/activity-feed.tsx ✅ DONE
+- [x] T043 [BugFix] Write unit test for expired cursor handling in tests/unit/activity-events.test.ts ✅ DONE
+- [x] T044 [BugFix] Write integration test for expired cursor API response in tests/integration/activity/api.test.ts ✅ DONE
 
 **Checkpoint**: Both bugs should be fixed with proper tests verifying the fixes
