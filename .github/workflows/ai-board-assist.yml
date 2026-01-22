@@ -270,8 +270,9 @@ $OUTPUT"
           fi
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
-          # Remove ```json ... ``` blocks as they cause "Invalid format" errors
-          CLAUDE_MESSAGE=$(echo "$OUTPUT" | sed '/^```json$/,/^```$/d' | sed 's/```//g')
+          # Remove code blocks as they cause "Invalid format" errors
+          BACKTICKS='```'
+          CLAUDE_MESSAGE=$(echo "$OUTPUT" | sed "/^${BACKTICKS}json$/,/^${BACKTICKS}$/d" | sed "s/${BACKTICKS}//g")
 
           # Also save raw output for debugging
           echo "📝 Raw Claude output (first 50 lines):"
