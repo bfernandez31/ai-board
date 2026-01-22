@@ -1,0 +1,515 @@
+openapi: 3.1.0
+info:
+  title: Project Activity Feed API
+  description: API for retrieving project activity events
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API base path
+
+paths:
+  /projects/{projectId}/activity:
+    get:
+      operationId: getProjectActivity
+      summary: Get project activity feed
+      description: |
+        Returns a paginated list of activity events for the project.
+        Events are sorted by timestamp in descending order (newest first).
+        Only events from the last 30 days are included.
+      tags:
+        - Activity
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          description: Number of events to return (max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Base64-encoded pagination cursor for fetching next page
+          schema:
+            type: string
+            example: eyJ0aW1lc3RhbXAiOiIyMDI2LTAxLTIyVDEyOjAwOjAwLjAwMFoiLCJpZCI6ImpvYl9jb21wbGV0ZWRfMTIzIiwiZXZlbnRUeXBlIjoiam9iX2NvbXBsZXRlZCJ9
+      responses:
+        '200':
+          description: Activity feed retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeedResponse'
+              examples:
+                withEvents:
+                  summary: Feed with events
+                  value:
+                    events:
+                      - id: job_completed_456
+                        type: job_completed
+                        timestamp: "2026-01-22T14:30:00.000Z"
+                        actor:
+                          type: system
+                          id: ai-board
+                          name: AI-BOARD
+                          image: null
+                        ticket:
+                          id: 123
+                          ticketKey: AIB-177
+                          title: Add activity feed
+                          exists: true
+                          stage: BUILD
+                        data:
+                          command: implement
+                          jobId: 456
+                          durationMs: 45000
+                      - id: comment_posted_789
+                        type: comment_posted
+                        timestamp: "2026-01-22T14:00:00.000Z"
+                        actor:
+                          type: user
+                          id: user_123
+                          name: John Doe
+                          image: https://example.com/avatar.jpg
+                        ticket:
+                          id: 123
+                          ticketKey: AIB-177
+                          title: Add activity feed
+                          exists: true
+                          stage: BUILD
+                        data:
+                          preview: "Added clarification for the activity feed requirements..."
+                          commentId: 789
+                    pagination:
+                      hasMore: true
+                      nextCursor: eyJ0aW1lc3RhbXAiOiIyMDI2LTAxLTIyVDE0OjAwOjAwLjAwMFoiLCJpZCI6ImNvbW1lbnRfcG9zdGVkXzc4OSIsImV2ZW50VHlwZSI6ImNvbW1lbnRfcG9zdGVkIn0=
+                      totalCount: 127
+                    metadata:
+                      projectId: 1
+                      rangeStart: "2025-12-23T14:30:00.000Z"
+                      rangeEnd: "2026-01-22T14:30:00.000Z"
+                      fetchedAt: "2026-01-22T14:30:00.000Z"
+                empty:
+                  summary: Empty feed
+                  value:
+                    events: []
+                    pagination:
+                      hasMore: false
+                      nextCursor: null
+                      totalCount: 0
+                    metadata:
+                      projectId: 1
+                      rangeStart: "2025-12-23T14:30:00.000Z"
+                      rangeEnd: "2026-01-22T14:30:00.000Z"
+                      fetchedAt: "2026-01-22T14:30:00.000Z"
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid cursor format
+        '403':
+          description: Access denied - not a project owner or member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Access denied
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Project not found
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+  schemas:
+    ActivityFeedResponse:
+      type: object
+      required:
+        - events
+        - pagination
+        - metadata
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityEvent'
+          description: List of activity events
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    ActivityEvent:
+      type: object
+      required:
+        - id
+        - type
+        - timestamp
+        - actor
+        - ticket
+        - data
+      discriminator:
+        propertyName: type
+        mapping:
+          ticket_created: '#/components/schemas/TicketCreatedEvent'
+          stage_changed: '#/components/schemas/StageChangedEvent'
+          comment_posted: '#/components/schemas/CommentPostedEvent'
+          job_started: '#/components/schemas/JobStartedEvent'
+          job_completed: '#/components/schemas/JobCompletedEvent'
+          job_failed: '#/components/schemas/JobFailedEvent'
+          pr_created: '#/components/schemas/PRCreatedEvent'
+          preview_deployed: '#/components/schemas/PreviewDeployedEvent'
+      properties:
+        id:
+          type: string
+          description: Unique event identifier
+          example: job_completed_456
+        type:
+          type: string
+          enum:
+            - ticket_created
+            - stage_changed
+            - comment_posted
+            - job_started
+            - job_completed
+            - job_failed
+            - pr_created
+            - preview_deployed
+          description: Event type discriminator
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred (ISO 8601)
+        actor:
+          $ref: '#/components/schemas/Actor'
+        ticket:
+          $ref: '#/components/schemas/TicketReference'
+        data:
+          type: object
+          description: Event-specific data payload
+
+    TicketCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: ticket_created
+            data:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Ticket title at creation
+                  example: Add activity feed
+
+    StageChangedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: stage_changed
+            data:
+              type: object
+              required:
+                - fromStage
+                - toStage
+              properties:
+                fromStage:
+                  $ref: '#/components/schemas/Stage'
+                toStage:
+                  $ref: '#/components/schemas/Stage'
+
+    CommentPostedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: comment_posted
+            data:
+              type: object
+              required:
+                - preview
+                - commentId
+              properties:
+                preview:
+                  type: string
+                  description: First 100 characters of comment content
+                  maxLength: 100
+                  example: "Added clarification for the activity feed requirements..."
+                commentId:
+                  type: integer
+                  description: Comment ID for deep linking
+                  example: 789
+
+    JobStartedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: job_started
+            data:
+              type: object
+              required:
+                - command
+                - jobId
+              properties:
+                command:
+                  $ref: '#/components/schemas/JobCommand'
+                jobId:
+                  type: integer
+                  example: 456
+
+    JobCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: job_completed
+            data:
+              type: object
+              required:
+                - command
+                - jobId
+              properties:
+                command:
+                  $ref: '#/components/schemas/JobCommand'
+                jobId:
+                  type: integer
+                  example: 456
+                durationMs:
+                  type: integer
+                  nullable: true
+                  description: Job duration in milliseconds
+                  example: 45000
+
+    JobFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: job_failed
+            data:
+              type: object
+              required:
+                - command
+                - jobId
+              properties:
+                command:
+                  $ref: '#/components/schemas/JobCommand'
+                jobId:
+                  type: integer
+                  example: 456
+
+    PRCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: pr_created
+            data:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: integer
+                  description: ID of the verify job that created the PR
+                  example: 456
+
+    PreviewDeployedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              const: preview_deployed
+            data:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: integer
+                  description: ID of the deploy-preview job
+                  example: 456
+                previewUrl:
+                  type: string
+                  nullable: true
+                  description: Vercel preview deployment URL
+                  example: https://ai-board-preview-123.vercel.app
+
+    Actor:
+      type: object
+      required:
+        - type
+        - id
+        - name
+        - image
+      properties:
+        type:
+          type: string
+          enum:
+            - user
+            - system
+          description: Actor type (user or system)
+        id:
+          type: string
+          nullable: true
+          description: User ID or system identifier
+          example: user_123
+        name:
+          type: string
+          description: Display name
+          example: John Doe
+        image:
+          type: string
+          nullable: true
+          description: Avatar URL
+          example: https://example.com/avatar.jpg
+
+    TicketReference:
+      type: object
+      required:
+        - id
+        - ticketKey
+        - title
+        - exists
+        - stage
+      properties:
+        id:
+          type: integer
+          description: Ticket ID
+          example: 123
+        ticketKey:
+          type: string
+          description: Ticket key (e.g., AIB-123)
+          example: AIB-177
+        title:
+          type: string
+          description: Ticket title or "[Deleted ticket]" if deleted
+          example: Add activity feed
+        exists:
+          type: boolean
+          description: Whether the ticket still exists
+          example: true
+        stage:
+          $ref: '#/components/schemas/Stage'
+          nullable: true
+          description: Current stage or null if deleted
+
+    Pagination:
+      type: object
+      required:
+        - hasMore
+        - nextCursor
+        - totalCount
+      properties:
+        hasMore:
+          type: boolean
+          description: Whether more events are available
+          example: true
+        nextCursor:
+          type: string
+          nullable: true
+          description: Base64-encoded cursor for next page
+          example: eyJ0aW1lc3RhbXAiOi...
+        totalCount:
+          type: integer
+          description: Total events in 30-day window
+          example: 127
+
+    Metadata:
+      type: object
+      required:
+        - projectId
+        - rangeStart
+        - rangeEnd
+        - fetchedAt
+      properties:
+        projectId:
+          type: integer
+          description: Project ID
+          example: 1
+        rangeStart:
+          type: string
+          format: date-time
+          description: Start of 30-day window (ISO 8601)
+        rangeEnd:
+          type: string
+          format: date-time
+          description: End of 30-day window (ISO 8601)
+        fetchedAt:
+          type: string
+          format: date-time
+          description: Query timestamp (ISO 8601)
+
+    Stage:
+      type: string
+      enum:
+        - INBOX
+        - SPECIFY
+        - PLAN
+        - BUILD
+        - VERIFY
+        - SHIP
+
+    JobCommand:
+      type: string
+      enum:
+        - specify
+        - plan
+        - implement
+        - quick-impl
+        - verify
+        - deploy-preview
+        - clean
+        - rollback-reset
+        - comment-specify
+        - comment-plan
+        - comment-build
+        - comment-verify
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Access denied
