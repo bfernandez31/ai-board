@@ -5,22 +5,50 @@ import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
 /**
  * OTLP Log Record schema (simplified for Claude Code telemetry)
+ *
+ * Per OTLP JSON spec (protobuf JSON mapping), 64-bit integers (int64) are encoded
+ * as decimal strings for precision, but implementations must accept both numbers
+ * and strings when decoding. Claude Code may send either format.
+ *
+ * @see https://opentelemetry.io/docs/specs/otlp/
+ * @see https://protobuf.dev/programming-guides/json/
  */
 const otlpAttributeSchema = z.object({
   key: z.string(),
   value: z.object({
     stringValue: z.string().optional(),
-    intValue: z.string().optional(),
+    // intValue is int64 in protobuf - accept both string (spec) and number (common)
+    intValue: z.union([z.string(), z.number()]).optional(),
     doubleValue: z.number().optional(),
+    // boolValue support for completeness
+    boolValue: z.boolean().optional(),
+    // arrayValue support for potential future use
+    arrayValue: z.object({
+      values: z.array(z.unknown()).optional(),
+    }).optional(),
   }),
 });
 
 const otlpLogRecordSchema = z.object({
-  timeUnixNano: z.string().optional(),
+  // timeUnixNano is fixed64 in protobuf - accept both string and number
+  timeUnixNano: z.union([z.string(), z.number()]).optional(),
+  // observedTimeUnixNano may also be sent
+  observedTimeUnixNano: z.union([z.string(), z.number()]).optional(),
+  // severityNumber is enum, typically sent as number
+  severityNumber: z.number().optional(),
+  // severityText is string representation
+  severityText: z.string().optional(),
   body: z.object({
     stringValue: z.string().optional(),
   }).optional(),
   attributes: z.array(otlpAttributeSchema).optional(),
+  // droppedAttributesCount may be sent
+  droppedAttributesCount: z.number().optional(),
+  // flags for trace flags
+  flags: z.number().optional(),
+  // traceId and spanId for correlation
+  traceId: z.string().optional(),
+  spanId: z.string().optional(),
 });
 
 const otlpScopeLogsSchema = z.object({
