@@ -182,13 +182,6 @@ export function transformTicketToStageChangedEvent(
     return null;
   }
 
-  const data: { fromStage?: Stage; toStage: Stage } = {
-    toStage: ticket.stage,
-  };
-  if (fromStage !== undefined) {
-    data.fromStage = fromStage;
-  }
-
   return {
     id: generateEventId('ticket_stage_changed', ticket.id.toString()),
     type: 'ticket_stage_changed',
@@ -196,7 +189,10 @@ export function transformTicketToStageChangedEvent(
     actor,
     ticket: createTicketReference(ticket),
     projectId: ticket.projectId.toString(),
-    data,
+    data: {
+      toStage: ticket.stage,
+      ...(fromStage !== undefined && { fromStage }),
+    },
   };
 }
 
@@ -293,14 +289,6 @@ export function transformJobToCompletedEvent(
     return null;
   }
 
-  const data: { command: string; displayName: string; durationMs?: number } = {
-    command: job.command,
-    displayName: getJobDisplayName(job.command),
-  };
-  if (job.startedAt && job.completedAt) {
-    data.durationMs = job.completedAt.getTime() - job.startedAt.getTime();
-  }
-
   return {
     id: generateEventId('job_completed', job.id.toString()),
     type: 'job_completed',
@@ -308,7 +296,13 @@ export function transformJobToCompletedEvent(
     actor,
     ticket: createTicketReference(job.ticket),
     projectId: job.projectId.toString(),
-    data,
+    data: {
+      command: job.command,
+      displayName: getJobDisplayName(job.command),
+      ...(job.startedAt && {
+        durationMs: job.completedAt.getTime() - job.startedAt.getTime(),
+      }),
+    },
   };
 }
 
@@ -328,14 +322,6 @@ export function transformJobToFailedEvent(
     return null;
   }
 
-  const data: { command: string; displayName: string; durationMs?: number } = {
-    command: job.command,
-    displayName: getJobDisplayName(job.command),
-  };
-  if (job.startedAt && job.completedAt) {
-    data.durationMs = job.completedAt.getTime() - job.startedAt.getTime();
-  }
-
   return {
     id: generateEventId('job_failed', job.id.toString()),
     type: 'job_failed',
@@ -343,7 +329,13 @@ export function transformJobToFailedEvent(
     actor,
     ticket: createTicketReference(job.ticket),
     projectId: job.projectId.toString(),
-    data,
+    data: {
+      command: job.command,
+      displayName: getJobDisplayName(job.command),
+      ...(job.startedAt && {
+        durationMs: job.completedAt.getTime() - job.startedAt.getTime(),
+      }),
+    },
   };
 }
 

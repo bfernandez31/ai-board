@@ -23,14 +23,6 @@ import type {
   JobCompletedEvent,
   JobFailedEvent,
 } from '@/app/lib/types/activity-event';
-import {
-  isTicketCreatedEvent,
-  isTicketStageChangedEvent,
-  isCommentPostedEvent,
-  isJobStartedEvent,
-  isJobCompletedEvent,
-  isJobFailedEvent,
-} from '@/app/lib/types/activity-event';
 
 /**
  * Stage display names for user-friendly output
@@ -303,28 +295,23 @@ export const ActivityEventItem = React.memo(function ActivityEventItem({
   event,
   projectId,
 }: ActivityEventItemProps) {
-  // Render content based on event type
-  const renderContent = () => {
-    if (isTicketCreatedEvent(event)) {
-      return <TicketCreatedContent event={event} projectId={projectId} />;
+  // Render content based on event type using switch for exhaustive checking
+  function renderContent(): React.ReactNode {
+    switch (event.type) {
+      case 'ticket_created':
+        return <TicketCreatedContent event={event} projectId={projectId} />;
+      case 'ticket_stage_changed':
+        return <TicketStageChangedContent event={event} projectId={projectId} />;
+      case 'comment_posted':
+        return <CommentPostedContent event={event} projectId={projectId} />;
+      case 'job_started':
+        return <JobStartedContent event={event} projectId={projectId} />;
+      case 'job_completed':
+        return <JobCompletedContent event={event} projectId={projectId} />;
+      case 'job_failed':
+        return <JobFailedContent event={event} projectId={projectId} />;
     }
-    if (isTicketStageChangedEvent(event)) {
-      return <TicketStageChangedContent event={event} projectId={projectId} />;
-    }
-    if (isCommentPostedEvent(event)) {
-      return <CommentPostedContent event={event} projectId={projectId} />;
-    }
-    if (isJobStartedEvent(event)) {
-      return <JobStartedContent event={event} projectId={projectId} />;
-    }
-    if (isJobCompletedEvent(event)) {
-      return <JobCompletedContent event={event} projectId={projectId} />;
-    }
-    if (isJobFailedEvent(event)) {
-      return <JobFailedContent event={event} projectId={projectId} />;
-    }
-    return null;
-  };
+  }
 
   // Determine if we should show avatar or event icon
   const showAvatar = event.type === 'comment_posted' || event.type === 'ticket_created';

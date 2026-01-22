@@ -167,10 +167,7 @@ export async function GET(
     const hasMore = offset + limit < total;
 
     // Build actors lookup object
-    const actors: Record<string, Actor> = {};
-    for (const [id, actor] of actorsMap) {
-      actors[id] = actor;
-    }
+    const actors: Record<string, Actor> = Object.fromEntries(actorsMap);
 
     const response: ActivityFeedResponse = {
       events: paginatedEvents,

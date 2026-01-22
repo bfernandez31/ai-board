@@ -7,8 +7,7 @@
 
 'use client';
 
-import * as React from 'react';
-import { useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Timeline } from '@/components/timeline/timeline';
 import { ActivityEventItem } from './activity-event-item';
 import { ActivityEmptyState } from './activity-empty-state';
@@ -36,8 +35,8 @@ interface ActivityFeedProps {
  * @param initialLimit - Initial page size (default: 50)
  */
 export function ActivityFeed({ projectId, initialLimit = 50 }: ActivityFeedProps) {
-  const [loadedEvents, setLoadedEvents] = React.useState<ActivityEvent[]>([]);
-  const [offset, setOffset] = React.useState(0);
+  const [loadedEvents, setLoadedEvents] = useState<ActivityEvent[]>([]);
+  const [offset, setOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
 
@@ -48,7 +47,7 @@ export function ActivityFeed({ projectId, initialLimit = 50 }: ActivityFeedProps
   });
 
   // Update loaded events when data changes (preserving scroll position)
-  React.useEffect(() => {
+  useEffect(() => {
     if (data?.events && offset === 0) {
       // Save scroll position before update
       if (containerRef.current) {
