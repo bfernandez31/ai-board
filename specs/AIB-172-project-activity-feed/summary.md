@@ -23,6 +23,8 @@ Implemented a project-wide activity feed at `/projects/:projectId/activity` that
 - `components/activity/*.tsx` - UI components (Feed, EventItem, Icons, EmptyState)
 - `app/projects/[projectId]/activity/page.tsx` - Activity page
 - `components/layout/header.tsx` - Header navigation link
+- `tests/unit/components/activity-feed.test.tsx` - RTL component tests (25 tests)
+- `tests/e2e/activity-feed.spec.ts` - E2E tests (7 scenarios)
 
 ## Manual Requirements
 
