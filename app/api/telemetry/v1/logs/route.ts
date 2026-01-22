@@ -1,95 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
+import {
+  otlpLogsSchema,
+  findAttribute,
+  parseIntAttribute,
+  parseFloatAttribute,
+} from '@/lib/schemas/otlp';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
-
-/**
- * OTLP Log Record schema (simplified for Claude Code telemetry)
- *
- * Per OTLP JSON spec (protobuf JSON mapping), 64-bit integers (int64) are encoded
- * as decimal strings for precision, but implementations must accept both numbers
- * and strings when decoding. Claude Code may send either format.
- *
- * @see https://opentelemetry.io/docs/specs/otlp/
- * @see https://protobuf.dev/programming-guides/json/
- */
-const otlpAttributeSchema = z.object({
-  key: z.string(),
-  value: z.object({
-    stringValue: z.string().optional(),
-    // intValue is int64 in protobuf - accept both string (spec) and number (common)
-    intValue: z.union([z.string(), z.number()]).optional(),
-    doubleValue: z.number().optional(),
-    // boolValue support for completeness
-    boolValue: z.boolean().optional(),
-    // arrayValue support for potential future use
-    arrayValue: z.object({
-      values: z.array(z.unknown()).optional(),
-    }).optional(),
-  }),
-});
-
-const otlpLogRecordSchema = z.object({
-  // timeUnixNano is fixed64 in protobuf - accept both string and number
-  timeUnixNano: z.union([z.string(), z.number()]).optional(),
-  // observedTimeUnixNano may also be sent
-  observedTimeUnixNano: z.union([z.string(), z.number()]).optional(),
-  // severityNumber is enum, typically sent as number
-  severityNumber: z.number().optional(),
-  // severityText is string representation
-  severityText: z.string().optional(),
-  body: z.object({
-    stringValue: z.string().optional(),
-  }).optional(),
-  attributes: z.array(otlpAttributeSchema).optional(),
-  // droppedAttributesCount may be sent
-  droppedAttributesCount: z.number().optional(),
-  // flags for trace flags
-  flags: z.number().optional(),
-  // traceId and spanId for correlation
-  traceId: z.string().optional(),
-  spanId: z.string().optional(),
-});
-
-const otlpScopeLogsSchema = z.object({
-  scope: z.object({
-    name: z.string().optional(),
-    version: z.string().optional(),
-  }).optional(),
-  logRecords: z.array(otlpLogRecordSchema).optional(),
-});
-
-const otlpResourceLogsSchema = z.object({
-  resource: z.object({
-    attributes: z.array(otlpAttributeSchema).optional(),
-  }).optional(),
-  scopeLogs: z.array(otlpScopeLogsSchema).optional(),
-});
-
-const otlpLogsSchema = z.object({
-  resourceLogs: z.array(otlpResourceLogsSchema),
-});
-
-type OTLPAttribute = z.infer<typeof otlpAttributeSchema>;
-
-/**
- * Extract value from OTLP attribute
- */
-function getAttributeValue(attr: OTLPAttribute): string | number | undefined {
-  if (attr.value.stringValue !== undefined) return attr.value.stringValue;
-  if (attr.value.intValue !== undefined) return attr.value.intValue;
-  if (attr.value.doubleValue !== undefined) return attr.value.doubleValue;
-  return undefined;
-}
-
-/**
- * Find attribute by key in array
- */
-function findAttribute(attributes: OTLPAttribute[] | undefined, key: string): string | number | undefined {
-  if (!attributes) return undefined;
-  const attr = attributes.find(a => a.key === key);
-  return attr ? getAttributeValue(attr) : undefined;
-}
 
 /**
  * POST /api/telemetry/v1/logs
@@ -196,21 +113,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const attrs = logRecord.attributes;
 
           if (eventName === 'claude_code.api_request') {
-            // Aggregate API request metrics
-            const inputTokens = findAttribute(attrs, 'input_tokens');
-            const outputTokens = findAttribute(attrs, 'output_tokens');
-            const cacheReadTokens = findAttribute(attrs, 'cache_read_tokens');
-            const cacheCreationTokens = findAttribute(attrs, 'cache_creation_tokens');
-            const costUsd = findAttribute(attrs, 'cost_usd');
-            const durationMs = findAttribute(attrs, 'duration_ms');
+            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
+            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
+            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
+            metrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
+            metrics.costUsd += parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
+            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
-
-            if (inputTokens) metrics.inputTokens += parseInt(String(inputTokens), 10) || 0;
-            if (outputTokens) metrics.outputTokens += parseInt(String(outputTokens), 10) || 0;
-            if (cacheReadTokens) metrics.cacheReadTokens += parseInt(String(cacheReadTokens), 10) || 0;
-            if (cacheCreationTokens) metrics.cacheCreationTokens += parseInt(String(cacheCreationTokens), 10) || 0;
-            if (costUsd) metrics.costUsd += parseFloat(String(costUsd)) || 0;
-            if (durationMs) metrics.durationMs += parseInt(String(durationMs), 10) || 0;
             if (model) metrics.model = String(model);
           }
 

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
+import {
+  otlpAttributeSchema,
+  otlpLogRecordSchema,
+  otlpLogsSchema,
+} from '@/lib/schemas/otlp';
 
 /**
  * OTLP schema validation tests
@@ -10,54 +14,6 @@ import { z } from 'zod';
  * @see https://opentelemetry.io/docs/specs/otlp/
  * @see https://protobuf.dev/programming-guides/json/
  */
-
-// Mirror the schema from route.ts for testing
-const otlpAttributeSchema = z.object({
-  key: z.string(),
-  value: z.object({
-    stringValue: z.string().optional(),
-    intValue: z.union([z.string(), z.number()]).optional(),
-    doubleValue: z.number().optional(),
-    boolValue: z.boolean().optional(),
-    arrayValue: z.object({
-      values: z.array(z.unknown()).optional(),
-    }).optional(),
-  }),
-});
-
-const otlpLogRecordSchema = z.object({
-  timeUnixNano: z.union([z.string(), z.number()]).optional(),
-  observedTimeUnixNano: z.union([z.string(), z.number()]).optional(),
-  severityNumber: z.number().optional(),
-  severityText: z.string().optional(),
-  body: z.object({
-    stringValue: z.string().optional(),
-  }).optional(),
-  attributes: z.array(otlpAttributeSchema).optional(),
-  droppedAttributesCount: z.number().optional(),
-  flags: z.number().optional(),
-  traceId: z.string().optional(),
-  spanId: z.string().optional(),
-});
-
-const otlpScopeLogsSchema = z.object({
-  scope: z.object({
-    name: z.string().optional(),
-    version: z.string().optional(),
-  }).optional(),
-  logRecords: z.array(otlpLogRecordSchema).optional(),
-});
-
-const otlpResourceLogsSchema = z.object({
-  resource: z.object({
-    attributes: z.array(otlpAttributeSchema).optional(),
-  }).optional(),
-  scopeLogs: z.array(otlpScopeLogsSchema).optional(),
-});
-
-const otlpLogsSchema = z.object({
-  resourceLogs: z.array(otlpResourceLogsSchema),
-});
 
 describe('OTLP Schema Validation', () => {
   describe('intValue field', () => {
@@ -82,7 +38,6 @@ describe('OTLP Schema Validation', () => {
     });
 
     it('should accept large intValue as string', () => {
-      // Large 64-bit integers should be strings to avoid precision loss
       const attribute = {
         key: 'large_number',
         value: { intValue: '9007199254740993' },
