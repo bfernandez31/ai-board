@@ -7,7 +7,7 @@
  * Client component for displaying the activity feed with pagination and polling
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ async function fetchActivityFeed(
 /**
  * Loading skeleton for activity feed
  */
-function ActivityFeedSkeleton() {
+function ActivityFeedSkeleton(): React.JSX.Element {
   return (
     <div className="space-y-4 py-4">
       {[1, 2, 3, 4, 5].map((i) => (
@@ -59,7 +59,7 @@ function ActivityFeedSkeleton() {
 /**
  * Error state for activity feed
  */
-function ActivityFeedError({ message }: { message: string }) {
+function ActivityFeedError({ message }: { message: string }): React.JSX.Element {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <p className="text-sm text-red-400">{message}</p>
@@ -77,11 +77,12 @@ function ActivityFeedError({ message }: { message: string }) {
  * - Pagination via "Load more" button
  * - 15-second polling for real-time updates
  */
-export function ActivityFeed({ projectId }: ActivityFeedProps) {
+export function ActivityFeed({ projectId }: ActivityFeedProps): React.JSX.Element {
   const [allEvents, setAllEvents] = useState<ActivityEvent[]>([]);
   const [currentOffset, setCurrentOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const isInitialized = useRef(false);
 
   // Initial fetch with 15-second polling
   const { data, isLoading, error, isError } = useQuery({
@@ -92,26 +93,32 @@ export function ActivityFeed({ projectId }: ActivityFeedProps) {
     refetchOnWindowFocus: true,
   });
 
-  // Update state when initial data changes
-  if (data && currentOffset === 0 && allEvents.length === 0) {
-    setAllEvents(data.events);
-    setHasMore(data.hasMore);
-    setCurrentOffset(data.offset);
-  }
+  // Handle initial data load and polling updates
+  useEffect(() => {
+    if (!data) return;
 
-  // Merge new polling data with existing events (deduplication)
-  if (data && currentOffset > 0) {
-    const existingIds = new Set(
-      allEvents.map((e) => `${e.type}-${e.timestamp}-${e.ticketKey}`)
-    );
-    const newEvents = data.events.filter(
-      (e) => !existingIds.has(`${e.type}-${e.timestamp}-${e.ticketKey}`)
-    );
-    if (newEvents.length > 0) {
-      // Prepend new events (they're more recent)
-      setAllEvents((prev) => [...newEvents, ...prev]);
+    // Initial load: populate state from first fetch
+    if (!isInitialized.current && currentOffset === 0) {
+      setAllEvents(data.events);
+      setHasMore(data.hasMore);
+      setCurrentOffset(data.offset);
+      isInitialized.current = true;
+      return;
     }
-  }
+
+    // Polling updates: merge new events (deduplication)
+    if (isInitialized.current) {
+      const existingIds = new Set(
+        allEvents.map((e) => `${e.type}-${e.timestamp}-${e.ticketKey}`)
+      );
+      const newEvents = data.events.filter(
+        (e) => !existingIds.has(`${e.type}-${e.timestamp}-${e.ticketKey}`)
+      );
+      if (newEvents.length > 0) {
+        setAllEvents((prev) => [...newEvents, ...prev]);
+      }
+    }
+  }, [data, currentOffset, allEvents]);
 
   const handleLoadMore = async () => {
     if (!hasMore || isLoadingMore) return;

@@ -175,7 +175,7 @@ function getEventMessage(event: ActivityEvent): React.ReactNode {
     }
     case 'ticket_created': {
       const ticketEvent = event as TicketCreatedActivityEvent;
-      const workflowLabel = ticketEvent.data.workflowType === 'QUICK' ? ' (quick)' : ticketEvent.data.workflowType === 'CLEAN' ? ' (cleanup)' : '';
+      const workflowLabel = getWorkflowLabel(ticketEvent.data.workflowType);
       return (
         <>
           Ticket <strong>created</strong>{workflowLabel}
@@ -239,6 +239,17 @@ function getJobStatusWord(status: JobStatus): string {
       return 'cancelled';
     default:
       return 'updated';
+  }
+}
+
+function getWorkflowLabel(workflowType: string): string {
+  switch (workflowType) {
+    case 'QUICK':
+      return ' (quick)';
+    case 'CLEAN':
+      return ' (cleanup)';
+    default:
+      return '';
   }
 }
 
