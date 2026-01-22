@@ -1,0 +1,349 @@
+openapi: 3.1.0
+info:
+  title: Project Activity Feed API
+  version: 1.0.0
+  description: API for retrieving project activity events
+
+paths:
+  /api/projects/{projectId}/activity:
+    get:
+      summary: Get project activity feed
+      description: |
+        Returns a paginated list of activity events for a project.
+        Events include ticket creation, stage changes, comments, and job lifecycle events.
+        Only events from the last 30 days are returned.
+      operationId: getProjectActivity
+      tags:
+        - Activity
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: The project ID
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: false
+          description: Number of events to skip (for pagination)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: since
+          in: query
+          required: false
+          description: Only return events after this timestamp (ISO 8601). Used for polling.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Activity feed retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeedResponse'
+        '401':
+          description: Unauthorized - user not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - user not project owner or member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth session cookie
+
+  schemas:
+    ActivityFeedResponse:
+      type: object
+      required:
+        - events
+        - pagination
+        - actors
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityEvent'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        actors:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Actor'
+          description: Lookup map of actors by ID
+
+    Pagination:
+      type: object
+      required:
+        - offset
+        - limit
+        - total
+        - hasMore
+      properties:
+        offset:
+          type: integer
+          description: Current offset
+        limit:
+          type: integer
+          description: Current limit
+        total:
+          type: integer
+          description: Total number of events in the 30-day window
+        hasMore:
+          type: boolean
+          description: Whether more events are available
+
+    Actor:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - image
+        - isSystem
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        image:
+          type: string
+          format: uri
+          nullable: true
+        isSystem:
+          type: boolean
+          description: True for AI-BOARD system actor
+
+    TicketReference:
+      type: object
+      required:
+        - ticketKey
+        - ticketId
+        - isDeleted
+      properties:
+        ticketKey:
+          type: string
+          description: Ticket key (e.g., "ABC-42")
+        ticketId:
+          type: string
+          description: Ticket ID
+        isDeleted:
+          type: boolean
+          description: True if ticket has been deleted
+
+    ActivityEvent:
+      type: object
+      required:
+        - id
+        - type
+        - timestamp
+        - actor
+        - ticket
+        - projectId
+        - data
+      discriminator:
+        propertyName: type
+        mapping:
+          ticket_created: '#/components/schemas/TicketCreatedEvent'
+          ticket_stage_changed: '#/components/schemas/TicketStageChangedEvent'
+          comment_posted: '#/components/schemas/CommentPostedEvent'
+          job_started: '#/components/schemas/JobStartedEvent'
+          job_completed: '#/components/schemas/JobCompletedEvent'
+          job_failed: '#/components/schemas/JobFailedEvent'
+      properties:
+        id:
+          type: string
+          description: Unique event identifier
+        type:
+          type: string
+          enum:
+            - ticket_created
+            - ticket_stage_changed
+            - comment_posted
+            - job_started
+            - job_completed
+            - job_failed
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        actor:
+          $ref: '#/components/schemas/Actor'
+        ticket:
+          $ref: '#/components/schemas/TicketReference'
+        projectId:
+          type: string
+        data:
+          type: object
+          description: Event-specific data
+
+    TicketCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ticket_created
+            data:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Ticket title
+
+    TicketStageChangedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ticket_stage_changed
+            data:
+              type: object
+              required:
+                - toStage
+              properties:
+                fromStage:
+                  type: string
+                  enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                  description: Previous stage (may not be available)
+                toStage:
+                  type: string
+                  enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+                  description: Current stage
+
+    CommentPostedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: comment_posted
+            data:
+              type: object
+              required:
+                - contentPreview
+                - isAiBoardMention
+              properties:
+                contentPreview:
+                  type: string
+                  maxLength: 100
+                  description: First 100 characters of comment
+                isAiBoardMention:
+                  type: boolean
+                  description: Whether comment contains @ai-board mention
+
+    JobStartedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: job_started
+            data:
+              type: object
+              required:
+                - command
+                - displayName
+              properties:
+                command:
+                  type: string
+                  description: Job command (e.g., "implement", "verify")
+                displayName:
+                  type: string
+                  description: Human-readable command name
+
+    JobCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: job_completed
+            data:
+              type: object
+              required:
+                - command
+                - displayName
+              properties:
+                command:
+                  type: string
+                displayName:
+                  type: string
+                durationMs:
+                  type: integer
+                  description: Job duration in milliseconds
+
+    JobFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: job_failed
+            data:
+              type: object
+              required:
+                - command
+                - displayName
+              properties:
+                command:
+                  type: string
+                displayName:
+                  type: string
+                durationMs:
+                  type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code for client handling
