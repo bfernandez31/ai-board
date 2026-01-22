@@ -63,8 +63,8 @@
 - [x] T016 [P] [US1] Create ActivityEmptyState component in components/activity/activity-empty-state.tsx ✅ DONE
 - [x] T017 [US1] Create ActivityFeed container component in components/activity/activity-feed.tsx ✅ DONE
 - [x] T018 [US1] Create activity page at app/projects/[projectId]/activity/page.tsx ✅ DONE
-- [ ] T019 [P] [US1] RTL component test for ActivityFeed rendering in tests/unit/components/activity-feed.test.tsx
-- [ ] T020 [P] [US1] RTL component test for ActivityEventItem variations in tests/unit/components/activity-feed.test.tsx
+- [x] T019 [P] [US1] RTL component test for ActivityFeed rendering in tests/unit/components/activity-feed.test.tsx ✅ DONE
+- [x] T020 [P] [US1] RTL component test for ActivityEventItem variations in tests/unit/components/activity-feed.test.tsx ✅ DONE
 
 **Checkpoint**: User Story 1 complete - users can view activity feed with all event types, proper formatting, and authorization
 
@@ -78,7 +78,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] RTL component test for ticket reference click in tests/unit/components/activity-feed.test.tsx
+- [x] T021 [P] [US2] RTL component test for ticket reference click in tests/unit/components/activity-feed.test.tsx ✅ DONE
 
 ### Implementation for User Story 2
 
@@ -97,7 +97,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] E2E test for polling behavior in tests/e2e/activity-feed.spec.ts
+- [x] T024 [P] [US3] E2E test for polling behavior in tests/e2e/activity-feed.spec.ts ✅ DONE
 
 ### Implementation for User Story 3
 
@@ -116,8 +116,8 @@
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] RTL component test for Load more button visibility in tests/unit/components/activity-feed.test.tsx
-- [ ] T028 [P] [US4] RTL component test for Load more click behavior in tests/unit/components/activity-feed.test.tsx
+- [x] T027 [P] [US4] RTL component test for Load more button visibility in tests/unit/components/activity-feed.test.tsx ✅ DONE
+- [x] T028 [P] [US4] RTL component test for Load more click behavior in tests/unit/components/activity-feed.test.tsx ✅ DONE
 
 ### Implementation for User Story 4
 
@@ -137,7 +137,7 @@
 
 ### Tests for User Story 5
 
-- [ ] T032 [P] [US5] E2E test for header navigation flow in tests/e2e/activity-feed.spec.ts
+- [x] T032 [P] [US5] E2E test for header navigation flow in tests/e2e/activity-feed.spec.ts ✅ DONE
 
 ### Implementation for User Story 5
 
@@ -155,7 +155,7 @@
 - [x] T035 [P] Handle deleted ticket edge case (show "(deleted)" non-clickable) in components/activity/activity-event-item.tsx ✅ DONE
 - [x] T036 [P] Handle deleted user edge case (show "Deleted user" with default avatar) in components/activity/activity-event-item.tsx ✅ DONE
 - [x] T037 [P] Implement responsive layout (desktop full-width, mobile compact) in components/activity/activity-feed.tsx ✅ DONE
-- [ ] T038 [P] E2E test for full navigation flow (header → activity → ticket modal → back) in tests/e2e/activity-feed.spec.ts
+- [x] T038 [P] E2E test for full navigation flow (header → activity → ticket modal → back) in tests/e2e/activity-feed.spec.ts ✅ DONE
 - [x] T039 Run type-check and lint, fix any errors ✅ DONE
 - [x] T040 Run all tests (unit, integration, E2E) and ensure passing ✅ DONE (activity tests passing, other failures are pre-existing)
 
