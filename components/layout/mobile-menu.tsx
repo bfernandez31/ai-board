@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, FileText, BarChart3 } from 'lucide-react';
+import { Menu, LogOut, FileText, BarChart3, Activity } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,16 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                     >
                       <FileText className="w-5 h-5" />
                     </a>
+                  )}
+                  {projectId && (
+                    <Link
+                      href={`/projects/${projectId}/activity`}
+                      aria-label="View project activity"
+                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      <Activity className="w-5 h-5" />
+                    </Link>
                   )}
                   {projectId && (
                     <Link
