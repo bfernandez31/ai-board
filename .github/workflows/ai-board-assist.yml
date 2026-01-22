@@ -230,22 +230,14 @@ jobs:
             # Stage validation: /review is only available in VERIFY stage where PRs exist
             if [ "$STAGE" != "verify" ]; then
               echo "❌ /review command is only available in VERIFY stage"
-              OUTPUT="@[$USER_ID:$USER] ❌ **Review Failed**
-
-The /review command is only available in VERIFY stage where PRs exist.
-
-Current stage: $STAGE"
+              OUTPUT=$(printf '@[%s:%s] ❌ **Review Failed**\n\nThe /review command is only available in VERIFY stage where PRs exist.\n\nCurrent stage: %s' "$USER_ID" "$USER" "$STAGE")
             else
               # Look up PR number from branch
               PR_NUMBER=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
 
               if [ -z "$PR_NUMBER" ]; then
                 echo "❌ No PR found for branch: $BRANCH"
-                OUTPUT="@[$USER_ID:$USER] ❌ **Review Failed**
-
-No PR found for branch \`$BRANCH\`.
-
-Please ensure a PR has been created before requesting a review."
+                OUTPUT=$(printf '@[%s:%s] ❌ **Review Failed**\n\nNo PR found for branch `%s`.\n\nPlease ensure a PR has been created before requesting a review.' "$USER_ID" "$USER" "$BRANCH")
               else
                 echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
                 # Invoke code-review with --force flag to allow re-reviews
@@ -255,11 +247,7 @@ Please ensure a PR has been created before requesting a review."
                 if [ -n "$OUTPUT" ]; then
                   # Check if code-review already includes summary format
                   if ! echo "$OUTPUT" | grep -q "^@\[$USER_ID"; then
-                    OUTPUT="@[$USER_ID:$USER] ✅ **Code Review Complete**
-
-Reviewed PR #$PR_NUMBER for branch \`$BRANCH\`.
-
-$OUTPUT"
+                    OUTPUT=$(printf '@[%s:%s] ✅ **Code Review Complete**\n\nReviewed PR #%s for branch `%s`.\n\n%s' "$USER_ID" "$USER" "$PR_NUMBER" "$BRANCH" "$OUTPUT")
                   fi
                 fi
               fi
