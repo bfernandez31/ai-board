@@ -381,17 +381,14 @@ export function applyPagination(
   const hasMore = startIndex + limit < events.length;
 
   // Generate next cursor if there are more events
-  let nextCursor: string | null = null;
-  if (hasMore && paginatedEvents.length > 0) {
-    const lastEvent = paginatedEvents[paginatedEvents.length - 1];
-    if (lastEvent) {
-      nextCursor = encodeCursor({
+  const lastEvent = paginatedEvents[paginatedEvents.length - 1];
+  const nextCursor = hasMore && lastEvent
+    ? encodeCursor({
         timestamp: lastEvent.timestamp,
         id: lastEvent.id,
         eventType: lastEvent.type,
-      });
-    }
-  }
+      })
+    : null;
 
   return {
     events: paginatedEvents,
