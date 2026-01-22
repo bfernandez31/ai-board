@@ -1,0 +1,419 @@
+openapi: 3.0.3
+info:
+  title: Project Activity Feed API
+  description: API for retrieving unified activity timeline for a project
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/activity:
+    get:
+      summary: Get project activity feed
+      description: |
+        Returns a unified timeline of activity events for a project, including:
+        - Job lifecycle events (started, completed, failed, cancelled)
+        - Comments posted on tickets
+        - Ticket creation events
+        - Stage change events
+        - PR creation events
+        - Preview deployment events
+
+        Events are sorted in reverse chronological order (newest first).
+        Results are limited to the last 30 days (FR-010).
+      operationId: getProjectActivity
+      tags:
+        - Activity
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of events to return (default 50, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of events to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Activity feed retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeedResponse'
+              examples:
+                mixedEvents:
+                  summary: Activity feed with various event types
+                  value:
+                    events:
+                      - type: job
+                        timestamp: "2026-01-22T15:30:00.000Z"
+                        ticketKey: "AIB-123"
+                        ticketTitle: "Add user authentication"
+                        ticketId: 456
+                        ticketDeleted: false
+                        actor:
+                          type: system
+                          id: null
+                          name: "AI-BOARD"
+                          email: null
+                          image: null
+                        data:
+                          eventType: complete
+                          jobId: 789
+                          command: implement
+                          status: COMPLETED
+                          displayName: "Implementation"
+                      - type: comment
+                        timestamp: "2026-01-22T14:00:00.000Z"
+                        ticketKey: "AIB-122"
+                        ticketTitle: "Fix login bug"
+                        ticketId: 455
+                        ticketDeleted: false
+                        actor:
+                          type: user
+                          id: "user_abc123"
+                          name: "Jane Developer"
+                          email: "jane@example.com"
+                          image: "https://example.com/avatar.jpg"
+                        data:
+                          commentId: 101
+                          content: "I've tested this fix and it works correctly now..."
+                    hasMore: true
+                    offset: 50
+                emptyFeed:
+                  summary: No activity in project
+                  value:
+                    events: []
+                    hasMore: false
+                    offset: 0
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid project ID"
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized: Please sign in"
+        '403':
+          description: User does not have access to project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Forbidden: You do not have access to this project"
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Project not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal server error"
+                code: "DATABASE_ERROR"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie
+
+  schemas:
+    ActivityFeedResponse:
+      type: object
+      required:
+        - events
+        - hasMore
+        - offset
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityEvent'
+          description: Array of activity events sorted by timestamp (newest first)
+        hasMore:
+          type: boolean
+          description: Whether more events are available for pagination
+        offset:
+          type: integer
+          description: Next offset value for pagination (current offset + returned count)
+
+    ActivityEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - ticketKey
+        - ticketTitle
+        - ticketId
+        - ticketDeleted
+        - actor
+        - data
+      discriminator:
+        propertyName: type
+        mapping:
+          job: '#/components/schemas/JobActivityEvent'
+          comment: '#/components/schemas/CommentActivityEvent'
+          ticket_created: '#/components/schemas/TicketCreatedActivityEvent'
+          stage_changed: '#/components/schemas/StageChangedActivityEvent'
+          pr_created: '#/components/schemas/PRCreatedActivityEvent'
+          preview_deployed: '#/components/schemas/PreviewDeployedActivityEvent'
+      properties:
+        type:
+          type: string
+          enum:
+            - job
+            - comment
+            - ticket_created
+            - stage_changed
+            - pr_created
+            - preview_deployed
+          description: Event type discriminator
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when event occurred
+        ticketKey:
+          type: string
+          pattern: '^[A-Z]{3,6}-\d+$'
+          description: Ticket reference (e.g., "AIB-123")
+          example: "AIB-123"
+        ticketTitle:
+          type: string
+          maxLength: 100
+          description: Ticket title for display
+        ticketId:
+          type: integer
+          description: Ticket ID for navigation
+        ticketDeleted:
+          type: boolean
+          description: Whether the ticket has been deleted/closed
+        actor:
+          $ref: '#/components/schemas/Actor'
+        data:
+          type: object
+          description: Event-specific payload (varies by type)
+
+    JobActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [job]
+            data:
+              $ref: '#/components/schemas/JobEventData'
+
+    CommentActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [comment]
+            data:
+              $ref: '#/components/schemas/CommentEventData'
+
+    TicketCreatedActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [ticket_created]
+            data:
+              $ref: '#/components/schemas/TicketCreatedEventData'
+
+    StageChangedActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [stage_changed]
+            data:
+              $ref: '#/components/schemas/StageChangedEventData'
+
+    PRCreatedActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [pr_created]
+            data:
+              $ref: '#/components/schemas/PRCreatedEventData'
+
+    PreviewDeployedActivityEvent:
+      allOf:
+        - $ref: '#/components/schemas/ActivityEvent'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [preview_deployed]
+            data:
+              $ref: '#/components/schemas/PreviewDeployedEventData'
+
+    Actor:
+      type: object
+      required:
+        - type
+        - name
+      properties:
+        type:
+          type: string
+          enum: [user, system]
+          description: Actor type
+        id:
+          type: string
+          nullable: true
+          description: User ID (null for system actor)
+        name:
+          type: string
+          description: Display name ("AI-BOARD" for system)
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Email address (null for system)
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Avatar URL (null for system)
+
+    JobEventData:
+      type: object
+      required:
+        - eventType
+        - jobId
+        - command
+        - status
+        - displayName
+      properties:
+        eventType:
+          type: string
+          enum: [start, complete]
+          description: Whether this is a job start or completion event
+        jobId:
+          type: integer
+          description: Job ID
+        command:
+          type: string
+          description: Job command (specify, plan, implement, verify, etc.)
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+          description: Job status
+        displayName:
+          type: string
+          description: Human-readable job name
+
+    CommentEventData:
+      type: object
+      required:
+        - commentId
+        - content
+      properties:
+        commentId:
+          type: integer
+          description: Comment ID
+        content:
+          type: string
+          maxLength: 200
+          description: Comment content preview (truncated to ~100 chars)
+
+    TicketCreatedEventData:
+      type: object
+      required:
+        - workflowType
+      properties:
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+          description: Ticket workflow type
+
+    StageChangedEventData:
+      type: object
+      required:
+        - fromStage
+        - toStage
+      properties:
+        fromStage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED]
+        toStage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED]
+
+    PRCreatedEventData:
+      type: object
+      properties:
+        prUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: GitHub PR URL if available
+
+    PreviewDeployedEventData:
+      type: object
+      required:
+        - previewUrl
+      properties:
+        previewUrl:
+          type: string
+          format: uri
+          description: Vercel preview deployment URL
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code for programmatic handling
