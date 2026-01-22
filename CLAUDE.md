@@ -153,110 +153,24 @@ workflowInputs = {
 
 ## Testing Guidelines
 
-### Testing Trophy Architecture
+**MANDATORY**: Invoke `/testing` skill before writing, planning, or modifying tests.
+Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
 
-**Principles**: Most tests should be fast integration tests; use E2E only for browser-required features.
+### Testing Trophy (Quick Reference)
 
-| Test Type | Tool | Location | Use For |
-|-----------|------|----------|---------|
-| Unit | Vitest | `tests/unit/` | Pure functions, utilities, hooks |
-| Component | Vitest + RTL | `tests/unit/components/` | Interactive UI (forms, modals, user interactions) |
-| Integration | Vitest | `tests/integration/` | API endpoints, database operations |
-| E2E | Playwright | `tests/e2e/` | Browser features (drag-drop, OAuth, viewport) |
+| Test Type | Location | Use For |
+|-----------|----------|---------|
+| Unit | `tests/unit/` | Pure functions, utilities |
+| Component | `tests/unit/components/` | UI interactions (forms, modals, buttons) |
+| Integration | `tests/integration/` | API endpoints, database operations |
+| E2E | `tests/e2e/` | Browser-only (drag-drop, OAuth, viewport) |
 
-### When to Use Which Test Type
+**Decision tree & patterns**: `/testing` skill
 
-**Use Vitest Unit Tests** (`tests/unit/**/*.test.ts`):
-- Pure functions with no side effects
-- Custom hooks (non-rendering)
-- Utility functions and helpers
-
-**Use RTL Component Tests** (`tests/unit/components/**/*.test.tsx`):
-- React component user interactions (forms, modals, buttons)
-- Form validation and submission flows
-- Keyboard shortcuts and accessibility
-- Component state changes from user actions
-- **Query Priority**: `getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort)
-- **User Events**: Use `userEvent` over `fireEvent` for realistic interactions
-
-**Use Vitest Integration Tests** (`tests/integration/**/*.test.ts`):
-- API endpoint validation
-- Database constraints and cascades
-- State machine transitions
-- Authorization and access control
-
-**Use Playwright E2E Tests** (`tests/e2e/**/*.spec.ts`):
-- OAuth/authentication flows (browser redirects)
-- Drag-and-drop interactions (DnD Kit)
-- Cross-component navigation requiring full page
-- Viewport-dependent behavior
-
-### Component Test Pattern (RTL)
-```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
-import { MyComponent } from '@/components/my-component';
-
-describe('MyComponent', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should handle form submission', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MyComponent onSubmit={vi.fn()} />);
-
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-    await user.click(screen.getByRole('button', { name: /submit/i }));
-
-    expect(screen.getByText(/success/i)).toBeInTheDocument();
-  });
-});
-```
-
-### Integration Test Pattern (Vitest)
-```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
-
-describe('Feature', () => {
-  let ctx: TestContext;
-
-  beforeEach(async () => {
-    ctx = await getTestContext();
-    await ctx.cleanup();
-  });
-
-  it('should test API endpoint', async () => {
-    const response = await ctx.api.post(`/api/projects/${ctx.projectId}/tickets`, {
-      title: '[e2e] Test',
-      description: 'Description',
-    });
-    expect(response.status).toBe(201);
-  });
-});
-```
-
-### E2E Test Pattern (Playwright)
-```typescript
-import { test, expect } from '../helpers/worker-isolation';
-import { cleanupDatabase } from '../helpers/db-cleanup';
-
-test.describe('Browser Feature', () => {
-  test.beforeEach(async ({ projectId }) => {
-    await cleanupDatabase(projectId);
-  });
-
-  test('should interact with browser', async ({ page }) => {
-    // Browser-required tests only
-  });
-});
-```
-
-### State Machine Testing
-- Test all valid transitions
-- Test invalid transitions (should return 400)
-- Test idempotency (same status → 200)
+### Critical Rules
+- E2E is expensive (~5s each) - default to integration tests when unsure
+- Search existing tests first - extend, don't duplicate
+- `[e2e]` prefix required for all test data
 
 ## Development Workflow
 
