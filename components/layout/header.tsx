@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { FileText, BarChart3 } from 'lucide-react';
+import { FileText, BarChart3, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
@@ -124,6 +124,13 @@ export function Header() {
                 className="text-zinc-400 hover:text-zinc-50 transition-colors"
               >
                 <BarChart3 className="w-5 h-5" />
+              </Link>
+              <Link
+                href={`/projects/${projectInfo.id}/activity`}
+                aria-label="View project activity"
+                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+              >
+                <Activity className="w-5 h-5" />
               </Link>
             </div>
 

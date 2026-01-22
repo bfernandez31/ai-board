@@ -107,6 +107,11 @@ export const queryKeys = {
      */
     ticketByKey: (projectId: number, ticketKey: string) =>
       ['projects', projectId, 'tickets', 'by-key', ticketKey] as const,
+
+    /**
+     * Project activity feed (unified timeline of jobs, comments, ticket events)
+     */
+    activity: (projectId: number) => ['projects', projectId, 'activity'] as const,
   },
 
   /**
