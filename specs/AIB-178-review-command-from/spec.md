@@ -20,16 +20,17 @@
 
 ---
 
-### Decision 2: Re-Review Behavior Default
+### Decision 2: Re-Review Behavior via --force Flag
 
-- **Decision**: The `/review` command will always force a new review, ignoring any previous reviews
+- **Decision**: Add `--force` flag to existing `/code-review` command. When provided, the command skips the previous review check (step 1d)
 - **Policy Applied**: AUTO → PRAGMATIC
-- **Confidence**: High (0.8) - User explicitly requested ability to review when previous review exists; aligns with `/compare` regeneration behavior
+- **Confidence**: High (0.9) - User explicitly requested `--force` flag for re-reviews; reuses existing code-review.md without duplication
 - **Fallback Triggered?**: No - explicit user requirement
 - **Trade-offs**:
-  1. Users can request re-reviews on demand; may generate duplicate review comments
-  2. Simpler implementation; no need to detect or manage review state
-- **Reviewer Notes**: Consider if rate limiting is needed to prevent excessive re-reviews (out of scope for this ticket)
+  1. Single command (`/code-review`) handles both normal and forced reviews
+  2. Explicit opt-in (`--force`) prevents accidental duplicate reviews
+  3. Reuses existing code-review.md - no new command file needed
+- **Reviewer Notes**: Default behavior (no `--force`) respects existing review check; `--force` explicitly overrides
 
 ---
 
@@ -62,18 +63,19 @@ A user working on a ticket in VERIFY stage wants to request an additional code r
 
 ---
 
-### User Story 2 - Re-Review After Previous Review (Priority: P2)
+### User Story 2 - Re-Review After Previous Review via --force (Priority: P2)
 
-A user has already received one code review but wants another review after making changes. They use `/review` to trigger a fresh review that ignores the existence of previous reviews.
+A user has already received one code review but wants another review after making changes. The `/code-review` command now accepts a `--force` flag that skips the previous review check. When invoked via `@ai-board /review`, the system always uses `--force`.
 
-**Why this priority**: Explicitly requested by user - the current code-review command skips PRs with existing reviews.
+**Why this priority**: Explicitly requested by user - add `--force` flag to existing code-review command rather than creating a new command.
 
-**Independent Test**: Can be tested by requesting `/review` on a PR that already has a code review comment, verifying a new review is generated.
+**Independent Test**: Can be tested by requesting `/review` on a PR that already has a code review comment, verifying a new review is generated (because `--force` is applied).
 
 **Acceptance Scenarios**:
 
-1. **Given** a PR with an existing code review comment, **When** user posts "@ai-board /review", **Then** the system performs a new code review regardless of previous reviews
-2. **Given** a PR reviewed previously, **When** new review completes, **Then** new findings are posted as a fresh comment (not an edit to previous)
+1. **Given** a PR with an existing code review comment, **When** user posts "@ai-board /review", **Then** the system performs a new code review regardless of previous reviews (using `--force`)
+2. **Given** the `/code-review` command, **When** invoked with `--force` flag, **Then** it skips step 1d (previous review check) and performs the review
+3. **Given** the `/code-review` command, **When** invoked without `--force` flag, **Then** it maintains existing behavior (skips PRs with existing reviews)
 
 ---
 
@@ -102,11 +104,12 @@ A user tries to use `/review` on a ticket that doesn't have an associated PR (e.
 
 - **FR-001**: System MUST recognize `/review` command in ai-board-assist workflow comment routing
 - **FR-002**: System MUST find the PR number associated with the ticket's branch before executing review
-- **FR-003**: System MUST execute the code-review skill with the found PR number
-- **FR-004**: System MUST instruct the code-review skill to perform review even if a previous review exists
+- **FR-003**: System MUST execute the existing `/code-review` skill (`.claude/commands/code-review.md`) with the found PR number
+- **FR-004**: The existing `/code-review` skill MUST accept a `--force` argument that skips the previous review check (step 1d)
 - **FR-005**: System MUST post a summary comment to the ticket upon completion, mentioning the requesting user
 - **FR-006**: System MUST provide clear error messages when review cannot be performed (no PR, wrong stage)
 - **FR-007**: System MUST follow the output format conventions of existing ai-board-assist commands (< 1500 chars, proper mention format)
+- **FR-008**: When `/review` is invoked via ai-board-assist, it MUST always use `--force` (re-review is the expected behavior for this command)
 
 ### Key Entities *(include if feature involves data)*
 

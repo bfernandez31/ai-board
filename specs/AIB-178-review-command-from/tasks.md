@@ -16,9 +16,9 @@
 
 ## Phase 1: Setup
 
-**Purpose**: Create the core command file that other tasks depend on
+**Purpose**: Extend existing code-review.md with `--force` flag support
 
-- [ ] T001 Create `/review` command specification in `.claude/commands/review.md` with frontmatter, stage validation, PR lookup via `gh pr list --head $BRANCH`, invocation of `/code-review` with skip-previous-review instruction, and output format (≤1500 chars)
+- [ ] T001 Modify `.claude/commands/code-review.md` to add `--force` flag support: when `--force` is provided in arguments, skip step 1d (previous review check) and proceed with review regardless of existing reviews
 
 ---
 
@@ -28,10 +28,10 @@
 
 **⚠️ CRITICAL**: User story testing depends on this phase being complete
 
-- [ ] T002 Add `/review` command routing in `.github/workflows/ai-board-assist.yml` after the `/compare` routing block (around line 222), including stage validation (`$STAGE != "verify"` error), PR lookup with `gh pr list --head "$BRANCH" --json number --jq '.[0].number'`, and Claude invocation
+- [ ] T002 Add `/review` command routing in `.github/workflows/ai-board-assist.yml` after the `/compare` routing block (around line 222), including stage validation (`$STAGE != "verify"` error), PR lookup with `gh pr list --head "$BRANCH" --json number --jq '.[0].number'`, and Claude invocation with `/code-review $PR_NUMBER --force`
 - [ ] T003 [P] Add `/review` entry to `AI_BOARD_COMMANDS` array in `app/lib/data/ai-board-commands.ts` with name `/review` and description "Request code review for the current PR"
 
-**Checkpoint**: Foundation ready - command routing, autocomplete, and command spec all in place
+**Checkpoint**: Foundation ready - command routing, autocomplete, and `--force` flag in code-review.md all in place
 
 ---
 
@@ -48,7 +48,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Verify `.claude/commands/review.md` correctly invokes `/code-review` skill with PR number and posts summary comment mentioning requesting user (acceptance criteria 1-3 from spec.md)
+- [ ] T006 [US1] Verify `/code-review` skill with `--force` flag correctly performs review and posts summary comment mentioning requesting user (acceptance criteria 1-3 from spec.md)
 
 **Checkpoint**: User Story 1 complete - users can request code reviews via ticket comments in VERIFY stage
 
@@ -62,11 +62,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [US2] Add integration test in `tests/integration/commands/review-command.test.ts` to verify re-review behavior - ensure the skip-previous-review instruction is present in command spec
+- [ ] T007 [US2] Add integration test in `tests/integration/commands/review-command.test.ts` to verify `--force` flag behavior - ensure code-review.md handles the flag correctly
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Verify `.claude/commands/review.md` includes explicit instruction to skip step 1d (previous review check) per research.md decision and FR-004
+- [ ] T008 [US2] Verify `.claude/commands/code-review.md` correctly handles `--force` flag to skip step 1d (previous review check) per research.md decision and FR-004
 
 **Checkpoint**: User Story 2 complete - re-reviews work correctly regardless of previous reviews
 
@@ -108,7 +108,7 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - creates command spec first
+- **Setup (Phase 1)**: No dependencies - modifies code-review.md with `--force` flag first
 - **Foundational (Phase 2)**: Depends on Setup - adds workflow routing and autocomplete
 - **User Stories (Phase 3-5)**: All depend on Foundational phase completion
 - **Polish (Phase 6)**: Depends on all user stories being complete
@@ -155,7 +155,7 @@ Task: "Integration test for /review command routing"
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: Setup (create review.md command spec)
+1. Complete Phase 1: Setup (add `--force` flag to code-review.md)
 2. Complete Phase 2: Foundational (workflow routing + autocomplete)
 3. Complete Phase 3: User Story 1 (core review via comment)
 4. **STOP and VALIDATE**: Test `/review` command on VERIFY stage ticket with PR

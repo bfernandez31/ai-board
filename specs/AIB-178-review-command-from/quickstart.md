@@ -5,22 +5,26 @@
 
 ## Implementation Overview
 
-Add `/review` command to AI-BOARD assistance system for on-demand code reviews in VERIFY stage.
+Add `/review` command to AI-BOARD assistance system for on-demand code reviews in VERIFY stage. **Key change**: Reuse existing `code-review.md` with new `--force` flag instead of creating a new command file.
 
-## Files to Modify/Create
+## Files to Modify
 
-### 1. Create Command Spec (NEW)
+### 1. Modify Existing Code-Review Command (MODIFY - NOT NEW)
 
-**File**: `.claude/commands/review.md`
+**File**: `.claude/commands/code-review.md`
 
-Purpose: Define the /review command skill that invokes /code-review with override.
+Purpose: Add `--force` flag support that skips step 1d (previous review check).
 
-Key sections:
-- Frontmatter with allowed tools (gh CLI)
-- Stage validation (VERIFY only)
-- PR lookup using branch
-- Code-review invocation with skip-previous-review instruction
-- Output format (summary to ticket, details to PR)
+Changes needed:
+- Add documentation for `--force` flag in the command description
+- Modify step 1 to check for `--force` argument
+- When `--force` is present: Skip step 1d (already has code review check)
+- When `--force` is absent: Maintain existing behavior
+
+Example modification to step 1:
+```markdown
+1. Use a Haiku agent to check if the pull request (a) is closed, (b) is a draft, (c) does not need a code review (...). If the `--force` flag is provided, skip check (d) for existing reviews. If so (and no --force for d), do not proceed.
+```
 
 ### 2. Update Workflow Routing
 
@@ -31,8 +35,9 @@ Location: After `/compare` routing block (around line 222)
 Add:
 ```bash
 elif echo "$COMMENT" | grep -qE "/review\b"; then
-  echo "📌 Detected /review command - routing to review skill"
-  OUTPUT=$(claude --dangerously-skip-permissions "/review" || true)
+  echo "📌 Detected /review command - routing to code-review with --force"
+  # Invoke code-review with --force flag to allow re-reviews
+  OUTPUT=$(claude --dangerously-skip-permissions "/code-review $PR_NUMBER --force" || true)
 ```
 
 ### 3. Update Autocomplete List
@@ -59,6 +64,7 @@ Add to `AI_BOARD_COMMANDS` array:
 - [ ] Test command routing detects `/review` pattern
 - [ ] Test error response when stage is not VERIFY
 - [ ] Test error response when no PR exists
+- [ ] Test `--force` flag behavior in code-review command
 
 ### Manual Verification
 
@@ -66,18 +72,20 @@ Add to `AI_BOARD_COMMANDS` array:
 2. Post comment: `@ai-board /review`
 3. Verify:
    - Job created with command `comment-verify`
-   - Code review executes on PR
+   - Code review executes on PR (even if previously reviewed)
    - Summary comment posted to ticket
    - Detailed findings posted to PR (if any)
 
 ## Key Implementation Notes
 
-1. **Re-review Behavior**: The `/review` command MUST include instruction to skip the "already reviewed" check in step 1d of code-review. This allows re-reviews after changes.
+1. **--force Flag**: The existing `/code-review` command is modified to accept `--force`. When provided, step 1d (previous review check) is skipped. This allows re-reviews after changes.
 
-2. **Stage Restriction**: Unlike other ai-board commands that work in multiple stages, `/review` is VERIFY-only because PRs only exist in that stage.
+2. **No New Command File**: We do NOT create `.claude/commands/review.md`. Instead, the workflow routing invokes `/code-review $PR_NUMBER --force` directly.
 
-3. **Output Split**:
+3. **Stage Restriction**: Unlike other ai-board commands that work in multiple stages, `/review` is VERIFY-only because PRs only exist in that stage.
+
+4. **Output Split**:
    - Brief summary (≤1500 chars) → Ticket comment
    - Detailed findings → PR comment (handled by code-review skill)
 
-4. **No Arguments**: Unlike `/compare` which takes ticket references, `/review` operates on the current ticket's branch automatically.
+5. **No Arguments**: Unlike `/compare` which takes ticket references, `/review` operates on the current ticket's branch automatically.

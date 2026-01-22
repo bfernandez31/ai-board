@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a `/review` command to the AI-BOARD assistance system that allows users in VERIFY stage to trigger an on-demand code review via ticket comments. The command will find the associated PR from the ticket's branch and invoke the existing `/code-review` skill, with the key enhancement of performing a new review even if a previous review exists.
+Add a `/review` command to the AI-BOARD assistance system that allows users in VERIFY stage to trigger an on-demand code review via ticket comments. The command will find the associated PR from the ticket's branch and invoke the existing `/code-review` skill (`.claude/commands/code-review.md`) with the new `--force` flag that skips the previous review check. No new command file is created - the existing code-review.md is extended with the `--force` argument.
 
 ## Technical Context
 
@@ -56,9 +56,10 @@ specs/AIB-178-review-command-from/
 # Files to MODIFY (existing)
 .github/workflows/ai-board-assist.yml    # Add /review command routing
 app/lib/data/ai-board-commands.ts        # Add /review to autocomplete list
+.claude/commands/code-review.md          # Add --force flag support (skip step 1d when --force provided)
 
 # Files to CREATE
-.claude/commands/review.md               # /review command specification
+None - reuses existing code-review.md
 
 # Test Files
 tests/integration/commands/              # Integration tests for command routing
@@ -80,10 +81,11 @@ tests/unit/ai-board-commands.test.ts     # Unit tests for command filtering
 | None | N/A | N/A |
 
 **Notes**: This feature has minimal complexity - it reuses existing infrastructure:
-- Existing `/code-review` skill handles the actual review logic
+- Existing `/code-review` skill (`.claude/commands/code-review.md`) handles the review logic - extended with `--force` flag
 - Existing ai-board-assist workflow handles command routing
 - Existing PR lookup pattern (`gh pr list --head $BRANCH`)
 - No new database schema or UI components required
+- No new command file created - code-review.md is modified to accept `--force` argument
 
 ## Post-Design Constitution Check
 

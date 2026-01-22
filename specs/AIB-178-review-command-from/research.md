@@ -25,23 +25,29 @@
 
 ---
 
-### 2. Re-Review Override Mechanism
+### 2. Re-Review Override Mechanism (Updated per user feedback)
 
 **Question**: How to instruct code-review skill to ignore previous reviews?
 
-**Decision**: Add preamble instruction in /review command prompt that explicitly tells the code-review skill to skip the "already reviewed" check.
+**Decision**: Add `--force` argument to existing code-review.md. When `--force` is provided, the skill skips step 1d (previous review check). The `/review` command in ai-board-assist always invokes code-review with `--force`.
 
 **Rationale**:
-- The code-review skill uses Haiku agents that interpret natural language instructions
-- Adding "This is a user-requested re-review. Skip step 1d (previous review check)" is cleaner than forking the skill
-- Maintains single source of truth for code review logic
+- User explicitly requested `--force` flag rather than a new command file
+- Reuses existing code-review.md - no duplication
+- Explicit flag makes intent clear and opt-in
+- Default behavior preserved (without `--force`, existing review check remains)
 
 **Alternatives Considered**:
-1. Fork code-review.md to code-review-forced.md - Rejected: Duplication
-2. Add environment variable check in code-review.md - Rejected: Adds complexity to existing skill
-3. Prepend override instruction when invoking skill - **Selected**: Non-invasive, user intent clear
+1. Create new review.md command file - Rejected: User explicitly requested reusing code-review.md
+2. Always force re-review - Rejected: User wanted explicit `--force` flag for control
+3. Add `--force` flag to code-review.md - **Selected**: Per user request, maintains single command with explicit opt-in
 
-**Source**: spec.md lines 23-32 (Decision 2), FR-004
+**Implementation**:
+- Modify code-review.md to check for `--force` in arguments
+- When `--force` present: Skip step 1d (previous review check)
+- When `--force` absent: Maintain existing behavior (skip if already reviewed)
+
+**Source**: User feedback (AI-BOARD comment), spec.md Decision 2, FR-004
 
 ---
 
@@ -117,17 +123,17 @@
 
 | Decision | Choice | Key Reason |
 |----------|--------|------------|
-| Re-review mechanism | Prepend instruction to skip step 1d | Non-invasive, clear intent |
+| Re-review mechanism | Add `--force` flag to code-review.md | User requested explicit flag, reuses existing command |
 | Stage validation | Workflow routing check | Early fail, good error message |
 | PR lookup | `gh pr list --head $BRANCH` | Proven pattern from verify.yml |
 | Output format | 1500 char summary to ticket, details to PR | Matches /compare pattern |
-| Command file | `.claude/commands/review.md` | Standard skill location |
+| Command file | Modify `.claude/commands/code-review.md` | No new file - extend existing per user request |
 
 ## Files to Modify
 
 1. **`.github/workflows/ai-board-assist.yml`**: Add /review routing (after /compare block)
 2. **`app/lib/data/ai-board-commands.ts`**: Add /review to autocomplete list
-3. **`.claude/commands/review.md`**: Create command specification (NEW)
+3. **`.claude/commands/code-review.md`**: Add `--force` flag support (MODIFY existing, not create new)
 
 ## Dependencies
 

@@ -13,6 +13,8 @@
 
 No arguments required. The command operates on the current ticket's branch.
 
+**Note**: This command invokes the existing `/code-review` skill with the `--force` flag. No new command file is created.
+
 ### Prerequisites
 
 | Requirement | Validation | Error Message |
@@ -107,22 +109,26 @@ if [ -z "$PR_NUMBER" ]; then
   # Return error response
 fi
 
-# Invoke code-review with override instruction
-claude --dangerously-skip-permissions "/review $PR_NUMBER"
+# Invoke code-review with --force flag to skip previous review check
+claude --dangerously-skip-permissions "/code-review $PR_NUMBER --force"
 ```
 
 ## Integration Points
 
-### Code-Review Skill
+### Code-Review Skill (Modified)
 
-The /review command delegates to the existing `/code-review` skill with an override instruction:
+The /review command delegates to the existing `/code-review` skill with the `--force` flag:
 
-**File**: `.claude/commands/review.md`
+**File**: `.claude/commands/code-review.md` (MODIFIED - no new file created)
+
+**`--force` Flag Behavior**:
+- When `--force` is provided: Skip step 1d (previous review check), perform review regardless
+- When `--force` is absent: Maintain existing behavior (skip PRs with existing reviews)
 
 The command:
-1. Validates stage and PR existence
-2. Invokes `/code-review $PR_NUMBER` with preamble instruction to skip step 1d (previous review check)
-3. Captures result (issues found or not)
+1. Validates stage and PR existence (in workflow routing)
+2. Invokes `/code-review $PR_NUMBER --force` (always with `--force` from `/review`)
+3. Code-review detects `--force` and skips step 1d
 4. Posts summary to ticket, details go to PR via code-review
 
 ### Result File Contract
