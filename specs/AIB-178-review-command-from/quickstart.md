@@ -56,15 +56,15 @@ Add to `AI_BOARD_COMMANDS` array:
 
 ### Unit Tests
 
-- [ ] `tests/unit/ai-board-commands.test.ts` - Test `/review` appears in command list
-- [ ] Test `filterCommands('review')` returns the command
+- [x] `tests/unit/ai-board-commands.test.ts` - Test `/review` appears in command list
+- [x] Test `filterCommands('review')` returns the command
 
 ### Integration Tests
 
-- [ ] Test command routing detects `/review` pattern
-- [ ] Test error response when stage is not VERIFY
-- [ ] Test error response when no PR exists
-- [ ] Test `--force` flag behavior in code-review command
+- [x] Test command routing detects `/review` pattern
+- [x] Test error response when stage is not VERIFY
+- [x] Test error response when no PR exists
+- [x] Test `--force` flag behavior in code-review command
 
 ### Manual Verification
 

@@ -31,6 +31,10 @@ export const AI_BOARD_COMMANDS: AIBoardCommand[] = [
     name: '/compare',
     description: 'Compare ticket implementations for best code quality',
   },
+  {
+    name: '/review',
+    description: 'Request code review for the current PR',
+  },
 ];
 
 /**

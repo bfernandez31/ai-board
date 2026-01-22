@@ -18,7 +18,7 @@
 
 **Purpose**: Extend existing code-review.md with `--force` flag support
 
-- [ ] T001 Modify `.claude/commands/code-review.md` to add `--force` flag support: when `--force` is provided in arguments, skip step 1d (previous review check) and proceed with review regardless of existing reviews
+- [x] T001 Modify `.claude/commands/code-review.md` to add `--force` flag support: when `--force` is provided in arguments, skip step 1d (previous review check) and proceed with review regardless of existing reviews
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: User story testing depends on this phase being complete
 
-- [ ] T002 Add `/review` command routing in `.github/workflows/ai-board-assist.yml` after the `/compare` routing block (around line 222), including stage validation (`$STAGE != "verify"` error), PR lookup with `gh pr list --head "$BRANCH" --json number --jq '.[0].number'`, and Claude invocation with `/code-review $PR_NUMBER --force`
-- [ ] T003 [P] Add `/review` entry to `AI_BOARD_COMMANDS` array in `app/lib/data/ai-board-commands.ts` with name `/review` and description "Request code review for the current PR"
+- [x] T002 Add `/review` command routing in `.github/workflows/ai-board-assist.yml` after the `/compare` routing block (around line 222), including stage validation (`$STAGE != "verify"` error), PR lookup with `gh pr list --head "$BRANCH" --json number --jq '.[0].number'`, and Claude invocation with `/code-review $PR_NUMBER --force`
+- [x] T003 [P] Add `/review` entry to `AI_BOARD_COMMANDS` array in `app/lib/data/ai-board-commands.ts` with name `/review` and description "Request code review for the current PR"
 
 **Checkpoint**: Foundation ready - command routing, autocomplete, and `--force` flag in code-review.md all in place
 
@@ -43,12 +43,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Add unit test in `tests/unit/ai-board-commands.test.ts` to verify `/review` appears in command list and `filterCommands('review')` returns the command
-- [ ] T005 [P] [US1] Add integration test in `tests/integration/commands/review-command.test.ts` to verify `/review` command routing detects the pattern and routes correctly
+- [x] T004 [P] [US1] Add unit test in `tests/unit/ai-board-commands.test.ts` to verify `/review` appears in command list and `filterCommands('review')` returns the command
+- [x] T005 [P] [US1] Add integration test in `tests/integration/commands/review-command.test.ts` to verify `/review` command routing detects the pattern and routes correctly
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Verify `/code-review` skill with `--force` flag correctly performs review and posts summary comment mentioning requesting user (acceptance criteria 1-3 from spec.md)
+- [x] T006 [US1] Verify `/code-review` skill with `--force` flag correctly performs review and posts summary comment mentioning requesting user (acceptance criteria 1-3 from spec.md)
 
 **Checkpoint**: User Story 1 complete - users can request code reviews via ticket comments in VERIFY stage
 
@@ -62,11 +62,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [US2] Add integration test in `tests/integration/commands/review-command.test.ts` to verify `--force` flag behavior - ensure code-review.md handles the flag correctly
+- [x] T007 [US2] Add integration test in `tests/integration/commands/review-command.test.ts` to verify `--force` flag behavior - ensure code-review.md handles the flag correctly
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Verify `.claude/commands/code-review.md` correctly handles `--force` flag to skip step 1d (previous review check) per research.md decision and FR-004
+- [x] T008 [US2] Verify `.claude/commands/code-review.md` correctly handles `--force` flag to skip step 1d (previous review check) per research.md decision and FR-004
 
 **Checkpoint**: User Story 2 complete - re-reviews work correctly regardless of previous reviews
 
@@ -80,13 +80,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T009 [P] [US3] Add integration test in `tests/integration/commands/review-command.test.ts` for error when stage is not VERIFY
-- [ ] T010 [P] [US3] Add integration test in `tests/integration/commands/review-command.test.ts` for error when no PR exists for branch
+- [x] T009 [P] [US3] Add integration test in `tests/integration/commands/review-command.test.ts` for error when stage is not VERIFY
+- [x] T010 [P] [US3] Add integration test in `tests/integration/commands/review-command.test.ts` for error when no PR exists for branch
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Verify `.github/workflows/ai-board-assist.yml` returns correct error message for wrong stage per contracts/review-command.md error responses
-- [ ] T012 [US3] Verify `.github/workflows/ai-board-assist.yml` returns correct error message when no PR found per contracts/review-command.md error responses
+- [x] T011 [US3] Verify `.github/workflows/ai-board-assist.yml` returns correct error message for wrong stage per contracts/review-command.md error responses
+- [x] T012 [US3] Verify `.github/workflows/ai-board-assist.yml` returns correct error message when no PR found per contracts/review-command.md error responses
 
 **Checkpoint**: User Story 3 complete - all error cases handled with user-friendly messages
 
@@ -96,11 +96,11 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T013 Run `bun run type-check` to verify no TypeScript errors
-- [ ] T014 Run `bun run lint` to verify no linting errors
-- [ ] T015 Run `bun run test:unit` to verify all unit tests pass
-- [ ] T016 Run `bun run test:integration` to verify all integration tests pass
-- [ ] T017 Validate quickstart.md checklist items are complete
+- [x] T013 Run `bun run type-check` to verify no TypeScript errors
+- [x] T014 Run `bun run lint` to verify no linting errors
+- [x] T015 Run `bun run test:unit` to verify all unit tests pass
+- [x] T016 Run `bun run test:integration` to verify all integration tests pass
+- [x] T017 Validate quickstart.md checklist items are complete
 
 ---
 
