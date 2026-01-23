@@ -22,9 +22,9 @@
 
 **Purpose**: Project initialization and package structure
 
-- [ ] T001 Create mcp-server directory structure: mcp-server/src/, mcp-server/src/tools/
-- [ ] T002 Create mcp-server/package.json with @modelcontextprotocol/sdk and zod dependencies
-- [ ] T003 [P] Create mcp-server/tsconfig.json extending root config
+- [X] T001 Create mcp-server directory structure: mcp-server/src/, mcp-server/src/tools/
+- [X] T002 Create mcp-server/package.json with @modelcontextprotocol/sdk and zod dependencies
+- [X] T003 [P] Create mcp-server/tsconfig.json extending root config
 
 ---
 
@@ -34,12 +34,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Implement config loader with zod schema in mcp-server/src/config.ts
-- [ ] T005 [P] Create error types and codes enum in mcp-server/src/errors.ts
-- [ ] T006 Implement API client with fetch, timeout, and auth headers in mcp-server/src/api-client.ts
-- [ ] T007 [P] Create shared TypeScript interfaces for API responses in mcp-server/src/types.ts
-- [ ] T008 [P] Create unit test for config loading in tests/unit/mcp-server/config.test.ts
-- [ ] T009 [P] Create unit test for API client in tests/unit/mcp-server/api-client.test.ts
+- [X] T004 Implement config loader with zod schema in mcp-server/src/config.ts
+- [X] T005 [P] Create error types and codes enum in mcp-server/src/errors.ts
+- [X] T006 Implement API client with fetch, timeout, and auth headers in mcp-server/src/api-client.ts
+- [X] T007 [P] Create shared TypeScript interfaces for API responses in mcp-server/src/types.ts
+- [X] T008 [P] Create unit test for config loading in tests/unit/mcp-server/config.test.ts
+- [X] T009 [P] Create unit test for API client in tests/unit/mcp-server/api-client.test.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -53,12 +53,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Implement list_projects tool in mcp-server/src/tools/list-projects.ts
-- [ ] T011 [P] [US1] Implement get_project tool in mcp-server/src/tools/get-project.ts
-- [ ] T012 [US1] Create MCP server initialization with stdio transport in mcp-server/src/server.ts
-- [ ] T013 [US1] Create entry point with config loading and server startup in mcp-server/src/index.ts
-- [ ] T014 [US1] Register list_projects and get_project tools with zod schemas in mcp-server/src/server.ts
-- [ ] T015 [P] [US1] Create integration test for list_projects and get_project in tests/integration/mcp-server/projects.test.ts
+- [X] T010 [P] [US1] Implement list_projects tool in mcp-server/src/tools/list-projects.ts
+- [X] T011 [P] [US1] Implement get_project tool in mcp-server/src/tools/get-project.ts
+- [X] T012 [US1] Create MCP server initialization with stdio transport in mcp-server/src/server.ts
+- [X] T013 [US1] Create entry point with config loading and server startup in mcp-server/src/index.ts
+- [X] T014 [US1] Register list_projects and get_project tools with zod schemas in mcp-server/src/server.ts
+- [X] T015 [P] [US1] Create integration test for list_projects and get_project in tests/integration/mcp-server/projects.test.ts
 
 **Checkpoint**: User Story 1 complete - users can list and view their projects
 
@@ -72,10 +72,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [P] [US2] Implement list_tickets tool with stage filter in mcp-server/src/tools/list-tickets.ts
-- [ ] T017 [P] [US2] Implement get_ticket tool for ticket details in mcp-server/src/tools/get-ticket.ts
-- [ ] T018 [US2] Register list_tickets and get_ticket tools with zod schemas in mcp-server/src/server.ts
-- [ ] T019 [P] [US2] Create integration test for list_tickets and get_ticket in tests/integration/mcp-server/tickets.test.ts
+- [X] T016 [P] [US2] Implement list_tickets tool with stage filter in mcp-server/src/tools/list-tickets.ts
+- [X] T017 [P] [US2] Implement get_ticket tool for ticket details in mcp-server/src/tools/get-ticket.ts
+- [X] T018 [US2] Register list_tickets and get_ticket tools with zod schemas in mcp-server/src/server.ts
+- [X] T019 [P] [US2] Create integration test for list_tickets and get_ticket in tests/integration/mcp-server/tickets.test.ts
 
 **Checkpoint**: User Stories 1 AND 2 complete - users can browse projects and tickets
 
@@ -89,9 +89,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Implement create_ticket tool with validation in mcp-server/src/tools/create-ticket.ts
-- [ ] T021 [US3] Register create_ticket tool with zod schema (title 1-100 chars, description 1-10000 chars) in mcp-server/src/server.ts
-- [ ] T022 [P] [US3] Create integration test for create_ticket in tests/integration/mcp-server/create-ticket.test.ts
+- [X] T020 [US3] Implement create_ticket tool with validation in mcp-server/src/tools/create-ticket.ts
+- [X] T021 [US3] Register create_ticket tool with zod schema (title 1-100 chars, description 1-10000 chars) in mcp-server/src/server.ts
+- [X] T022 [P] [US3] Create integration test for create_ticket in tests/integration/mcp-server/create-ticket.test.ts
 
 **Checkpoint**: User Stories 1, 2, AND 3 complete - users can browse and create tickets
 
@@ -105,9 +105,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Implement move_ticket tool with stage validation in mcp-server/src/tools/move-ticket.ts
-- [ ] T024 [US4] Register move_ticket tool with zod schema for targetStage in mcp-server/src/server.ts
-- [ ] T025 [P] [US4] Create integration test for move_ticket including error cases in tests/integration/mcp-server/move-ticket.test.ts
+- [X] T023 [US4] Implement move_ticket tool with stage validation in mcp-server/src/tools/move-ticket.ts
+- [X] T024 [US4] Register move_ticket tool with zod schema for targetStage in mcp-server/src/server.ts
+- [X] T025 [P] [US4] Create integration test for move_ticket including error cases in tests/integration/mcp-server/move-ticket.test.ts
 
 **Checkpoint**: All 4 user stories complete - full MCP server functionality implemented
 
@@ -117,10 +117,10 @@
 
 **Purpose**: Final validation and refinements
 
-- [ ] T026 [P] Add shebang and bin configuration for CLI execution in mcp-server/src/index.ts
-- [ ] T027 Verify all error messages follow security guidelines (no token exposure) across all tools
-- [ ] T028 Run full test suite and validate all 6 MCP tools function correctly
-- [ ] T029 Build TypeScript and verify dist/ output in mcp-server/
+- [X] T026 [P] Add shebang and bin configuration for CLI execution in mcp-server/src/index.ts
+- [X] T027 Verify all error messages follow security guidelines (no token exposure) across all tools
+- [X] T028 Run full test suite and validate all 6 MCP tools function correctly
+- [X] T029 Build TypeScript and verify dist/ output in mcp-server/
 
 ---
 
