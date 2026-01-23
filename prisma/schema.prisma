@@ -138,21 +138,22 @@ model Ticket {
 }
 
 model User {
-  id                    String             @id
+  id                    String                @id
   name                  String?
-  email                 String             @unique
+  email                 String                @unique
   emailVerified         DateTime?
   image                 String?
-  createdAt             DateTime           @default(now())
+  createdAt             DateTime              @default(now())
   updatedAt             DateTime
   accounts              Account[]
   comments              Comment[]
   projects              Project[]
   sessions              Session[]
   memberships           ProjectMember[]
-  notificationsReceived Notification[]     @relation("NotificationRecipient")
-  notificationsCreated  Notification[]     @relation("NotificationActor")
+  notificationsReceived Notification[]        @relation("NotificationRecipient")
+  notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
+  personalAccessTokens  PersonalAccessToken[]
 
   @@index([email])
 }
@@ -220,6 +221,23 @@ model PushSubscription {
 
   @@index([userId])
   @@index([endpoint])
+}
+
+// Personal Access Token for API authentication
+// Plain token shown only once at creation, then hashed for storage
+model PersonalAccessToken {
+  id           Int       @id @default(autoincrement())
+  userId       String
+  name         String    @db.VarChar(100) // User-provided label (e.g., "My MCP", "CI Pipeline")
+  tokenHash    String    @db.VarChar(100) // SHA-256 hash of token (never store plain text)
+  tokenPreview String    @db.VarChar(10)  // Last 4 chars for display: "...o5p6"
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash]) // For fast lookup during authentication
 }
 
 enum AuthProvider {

@@ -1,16 +1,21 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db/client"
 import { headers } from "next/headers"
+import { validatePersonalAccessToken } from "./personal-access-tokens"
 
 /**
  * Get the current authenticated user
+ * Supports multiple auth methods:
+ * 1. Test user header (x-test-user-id) - for testing
+ * 2. Personal Access Token (Bearer pat_xxx) - for API access
+ * 3. NextAuth session - for browser sessions
  * @throws Error if user is not authenticated
  */
 export async function getCurrentUser() {
-  // Check for test user header (bypasses NextAuth in test mode)
   const headersList = await headers()
-  const testUserId = headersList.get('x-test-user-id')
 
+  // Check for test user header (bypasses NextAuth in test mode)
+  const testUserId = headersList.get('x-test-user-id')
   if (testUserId) {
     const user = await prisma.user.findUnique({
       where: { id: testUserId }
@@ -24,6 +29,22 @@ export async function getCurrentUser() {
     }
   }
 
+  // Check for Personal Access Token in Authorization header
+  const authHeader = headersList.get('authorization')
+  if (authHeader?.startsWith('Bearer pat_')) {
+    const token = authHeader.slice(7) // Remove "Bearer " prefix
+    const user = await validatePersonalAccessToken(token)
+    if (user) {
+      return {
+        id: user.userId,
+        email: user.email,
+        name: user.name
+      }
+    }
+    throw new Error('Unauthorized')
+  }
+
+  // Fall back to NextAuth session
   const session = await auth()
   if (!session?.user?.id) {
     throw new Error('Unauthorized')

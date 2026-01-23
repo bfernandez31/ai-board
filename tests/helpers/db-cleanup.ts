@@ -161,6 +161,13 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
           },
     });
 
+    // Delete personal access tokens for the test user (for clean test state)
+    await client.personalAccessToken.deleteMany({
+      where: {
+        userId: 'test-user-id',
+      },
+    });
+
     await client.ticket.deleteMany({
       where: projectId
         ? { projectId }

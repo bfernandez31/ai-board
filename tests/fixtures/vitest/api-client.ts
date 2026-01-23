@@ -26,6 +26,9 @@ export interface APIResponse<T = unknown> {
 }
 
 export interface APIClient {
+  /** Base URL for API requests */
+  baseUrl: string;
+
   /**
    * GET request with authentication
    * @param path - API path (e.g., '/api/projects/1/tickets')
@@ -134,6 +137,8 @@ export function createAPIClient(config?: APIClientConfig): APIClient {
   };
 
   return {
+    baseUrl,
+
     get: <T>(path: string) => makeRequest<T>(path, { method: 'GET' }),
 
     post: <T>(path: string, body?: unknown) =>
