@@ -1,0 +1,263 @@
+openapi: 3.0.3
+info:
+  title: Personal Access Tokens API
+  description: API endpoints for managing Personal Access Tokens (PATs) for AI-Board external tool authentication
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: AI-Board API
+
+paths:
+  /tokens:
+    get:
+      summary: List user's tokens
+      description: Returns all personal access tokens owned by the authenticated user
+      operationId: listTokens
+      tags:
+        - Tokens
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of tokens (never includes full token values)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TokenListItem'
+              example:
+                tokens:
+                  - id: 1
+                    name: "MCP Server"
+                    tokenPreview: "c3d4"
+                    createdAt: "2026-01-23T10:00:00.000Z"
+                    lastUsedAt: "2026-01-23T15:30:00.000Z"
+                  - id: 2
+                    name: "CLI Tool"
+                    tokenPreview: "a1b2"
+                    createdAt: "2026-01-20T08:00:00.000Z"
+                    lastUsedAt: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a new token
+      description: |
+        Generates a new personal access token. The full token value is returned ONLY in this response
+        and cannot be retrieved again. Users must copy and securely store the token immediately.
+      operationId: createToken
+      tags:
+        - Tokens
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+            example:
+              name: "My MCP Server"
+      responses:
+        '201':
+          description: Token created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTokenResponse'
+              example:
+                id: 3
+                name: "My MCP Server"
+                token: "pat_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+                tokenPreview: "o5p6"
+                createdAt: "2026-01-23T16:00:00.000Z"
+        '400':
+          description: Validation error or token limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validation_error:
+                  summary: Invalid request body
+                  value:
+                    error: "Token name is required"
+                    code: "VALIDATION_ERROR"
+                limit_exceeded:
+                  summary: Maximum tokens reached
+                  value:
+                    error: "Maximum token limit (10) reached. Delete an existing token to create a new one."
+                    code: "TOKEN_LIMIT_EXCEEDED"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tokens/{id}:
+    delete:
+      summary: Revoke (delete) a token
+      description: |
+        Permanently revokes a token. The token will immediately stop working for API authentication.
+        This action cannot be undone.
+      operationId: revokeToken
+      tags:
+        - Tokens
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Token ID to revoke
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
+      responses:
+        '200':
+          description: Token revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Token revoked successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Token not found or not owned by user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Token not found"
+
+components:
+  schemas:
+    TokenListItem:
+      type: object
+      required:
+        - id
+        - name
+        - tokenPreview
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: Unique token identifier
+          example: 1
+        name:
+          type: string
+          description: User-provided token name
+          example: "MCP Server"
+        tokenPreview:
+          type: string
+          description: Last 4 characters of the token (for identification)
+          minLength: 4
+          maxLength: 4
+          example: "c3d4"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the token was created
+          example: "2026-01-23T10:00:00.000Z"
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the token was last used for authentication (null if never used)
+          example: "2026-01-23T15:30:00.000Z"
+
+    CreateTokenRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Human-readable name for the token
+          minLength: 1
+          maxLength: 50
+          example: "My MCP Server"
+
+    CreateTokenResponse:
+      type: object
+      required:
+        - id
+        - name
+        - token
+        - tokenPreview
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: Unique token identifier
+          example: 3
+        name:
+          type: string
+          description: User-provided token name
+          example: "My MCP Server"
+        token:
+          type: string
+          description: |
+            The full token value. This is the ONLY time the full token is returned.
+            Store it securely - it cannot be retrieved again.
+          pattern: "^pat_[a-f0-9]{32}$"
+          example: "pat_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+        tokenPreview:
+          type: string
+          description: Last 4 characters of the token
+          minLength: 4
+          maxLength: 4
+          example: "o5p6"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-23T16:00:00.000Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Token name is required"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie (for token management UI)
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Personal Access Token for API authentication.
+        Format: `Authorization: Bearer pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+# Note: Token management endpoints use sessionAuth (cookie-based).
+# The bearerAuth scheme is used by external tools calling other API endpoints.
