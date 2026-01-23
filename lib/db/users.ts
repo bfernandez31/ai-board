@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db/client"
 import { headers } from "next/headers"
+import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
+import type { NextRequest } from "next/server"
 
 /**
  * Get the current authenticated user
@@ -50,4 +52,49 @@ export async function getCurrentUserOrNull() {
 export async function requireAuth(): Promise<string> {
   const user = await getCurrentUser()
   return user.id
+}
+
+/**
+ * Get the current authenticated user from either Bearer token or session.
+ * Checks for PAT (Personal Access Token) first, falls back to session auth.
+ * @param request - NextRequest with Authorization header
+ * @throws Error if neither token nor session is valid
+ */
+export async function getCurrentUserOrToken(
+  request: NextRequest
+) {
+  // Check for Bearer token
+  const authHeader = request.headers.get("authorization")
+  const token = extractBearerToken(authHeader)
+
+  if (token) {
+    // Get client IP for rate limiting
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+               request.headers.get("x-real-ip") ||
+               "unknown"
+
+    const result = await validateToken(token, ip)
+
+    if (result.valid && result.userId) {
+      // Fetch user details
+      const user = await prisma.user.findUnique({
+        where: { id: result.userId },
+        select: { id: true, email: true, name: true }
+      })
+
+      if (user && user.email) {
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name
+        }
+      }
+    }
+
+    // Token provided but invalid - throw immediately
+    throw new Error(result.error || "Unauthorized")
+  }
+
+  // Fall back to session auth
+  return getCurrentUser()
 }

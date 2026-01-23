@@ -172,6 +172,16 @@ export const queryKeys = {
      */
     status: ['push', 'status'] as const,
   },
+
+  /**
+   * Personal access token-related query keys
+   */
+  tokens: {
+    /**
+     * All tokens for the current user
+     */
+    all: ['tokens'] as const,
+  },
 } as const;
 
 /**
