@@ -65,8 +65,8 @@ export async function GET(
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
     const queryResult = querySchema.safeParse({
-      limit: searchParams.get('limit') || 50,
-      cursor: searchParams.get('cursor'),
+      limit: searchParams.get('limit') ?? undefined,
+      cursor: searchParams.get('cursor') ?? undefined,
     });
 
     if (!queryResult.success) {
