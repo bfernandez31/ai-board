@@ -22,9 +22,6 @@ import {
 } from '@/app/lib/utils/activity-events';
 import type { ActivityFeedResponse } from '@/app/lib/types/activity-event';
 
-/**
- * Query parameter validation schema
- */
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(),
@@ -178,23 +175,14 @@ export async function GET(
     console.error('[Activity API Error]', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid query parameters' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
 
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
-        return NextResponse.json(
-          { error: 'Unauthorized: Please sign in' },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: 'Unauthorized: Please sign in' }, { status: 401 });
       }
-      if (
-        error.message === 'Forbidden' ||
-        error.message === 'Project not found'
-      ) {
+      if (error.message === 'Forbidden' || error.message === 'Project not found') {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
     }
