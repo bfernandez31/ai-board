@@ -9,6 +9,24 @@ import { getTicket } from "./tools/get-ticket.js";
 import { createTicket } from "./tools/create-ticket.js";
 import { moveTicket } from "./tools/move-ticket.js";
 
+type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+
+/**
+ * Wrap a tool handler with standardized error handling and JSON formatting.
+ */
+async function handleToolCall<T>(
+  fn: () => Promise<T>,
+  formatResult?: (result: T) => string
+): Promise<ToolResult> {
+  try {
+    const result = await fn();
+    const text = formatResult ? formatResult(result) : JSON.stringify(result, null, 2);
+    return { content: [{ type: "text", text }] };
+  } catch (error) {
+    return { content: [{ type: "text", text: formatError(error) }], isError: true };
+  }
+}
+
 /**
  * Create and configure the MCP server with all tools registered.
  *
@@ -29,19 +47,7 @@ export function createServer(config: Config): McpServer {
     "list_projects",
     "List all projects the authenticated user has access to. Returns projects where the user is either the owner or a member.",
     {},
-    async () => {
-      try {
-        const projects = await listProjects(config);
-        return {
-          content: [{ type: "text", text: JSON.stringify(projects, null, 2) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    () => handleToolCall(() => listProjects(config))
   );
 
   server.tool(
@@ -50,19 +56,7 @@ export function createServer(config: Config): McpServer {
     {
       projectId: z.number().int().positive().describe("Project ID to retrieve"),
     },
-    async ({ projectId }) => {
-      try {
-        const project = await getProject(config, projectId);
-        return {
-          content: [{ type: "text", text: JSON.stringify(project, null, 2) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    ({ projectId }) => handleToolCall(() => getProject(config, projectId))
   );
 
   // =====================
@@ -79,19 +73,7 @@ export function createServer(config: Config): McpServer {
         .optional()
         .describe("Optional stage filter"),
     },
-    async ({ projectId, stage }) => {
-      try {
-        const tickets = await listTickets(config, projectId, stage);
-        return {
-          content: [{ type: "text", text: JSON.stringify(tickets, null, 2) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    ({ projectId, stage }) => handleToolCall(() => listTickets(config, projectId, stage))
   );
 
   server.tool(
@@ -104,19 +86,7 @@ export function createServer(config: Config): McpServer {
         .regex(/^[A-Z]{3,6}-\d+$/)
         .describe("Ticket key (e.g., 'AIB-123')"),
     },
-    async ({ projectId, ticketKey }) => {
-      try {
-        const ticket = await getTicket(config, projectId, ticketKey);
-        return {
-          content: [{ type: "text", text: JSON.stringify(ticket, null, 2) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    ({ projectId, ticketKey }) => handleToolCall(() => getTicket(config, projectId, ticketKey))
   );
 
   // =====================
@@ -139,24 +109,11 @@ export function createServer(config: Config): McpServer {
         .max(10000, "Description must be at most 10000 characters")
         .describe("Ticket description in Markdown (1-10000 characters)"),
     },
-    async ({ projectId, title, description }) => {
-      try {
-        const ticket = await createTicket(config, { projectId, title, description });
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Created ticket ${ticket.ticketKey}\n\n${JSON.stringify(ticket, null, 2)}`,
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    ({ projectId, title, description }) =>
+      handleToolCall(
+        () => createTicket(config, { projectId, title, description }),
+        (ticket) => `Created ticket ${ticket.ticketKey}\n\n${JSON.stringify(ticket, null, 2)}`
+      )
   );
 
   // =====================
@@ -176,24 +133,11 @@ export function createServer(config: Config): McpServer {
         .enum(["INBOX", "SPECIFY", "PLAN", "BUILD", "VERIFY", "SHIP"])
         .describe("Target stage to transition to"),
     },
-    async ({ projectId, ticketKey, targetStage }) => {
-      try {
-        const result = await moveTicket(config, { projectId, ticketKey, targetStage });
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Moved ${ticketKey} to ${result.stage}\n\n${JSON.stringify(result, null, 2)}`,
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: formatError(error) }],
-          isError: true,
-        };
-      }
-    }
+    ({ projectId, ticketKey, targetStage }) =>
+      handleToolCall(
+        () => moveTicket(config, { projectId, ticketKey, targetStage }),
+        (result) => `Moved ${ticketKey} to ${result.stage}\n\n${JSON.stringify(result, null, 2)}`
+      )
   );
 
   return server;

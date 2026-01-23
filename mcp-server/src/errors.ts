@@ -122,19 +122,15 @@ export class ApiError extends McpError {
  * Ensures no sensitive information is leaked.
  */
 export function formatError(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
   if (error instanceof McpError) {
     return error.message;
   }
   if (error instanceof Error) {
     // Ensure token values are not exposed in error messages
-    const message = error.message;
-    if (message.includes("pat_")) {
+    if (error.message.includes("pat_")) {
       return "An error occurred. Please check your configuration.";
     }
-    return message;
+    return error.message;
   }
   return "An unknown error occurred.";
 }
