@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db/client"
 import { headers } from "next/headers"
+import { getUserIdFromBearerToken } from "@/lib/auth/token-auth"
 
 /**
  * Get the current authenticated user
@@ -14,6 +15,21 @@ export async function getCurrentUser() {
   if (testUserId) {
     const user = await prisma.user.findUnique({
       where: { id: testUserId }
+    })
+    if (user) {
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    }
+  }
+
+  // Check for Bearer token authentication (PAT)
+  const tokenUserId = await getUserIdFromBearerToken()
+  if (tokenUserId) {
+    const user = await prisma.user.findUnique({
+      where: { id: tokenUserId }
     })
     if (user) {
       return {

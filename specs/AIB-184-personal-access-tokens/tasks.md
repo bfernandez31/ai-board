@@ -18,11 +18,11 @@
 
 **Purpose**: Database schema and core token utilities
 
-- [ ] T001 Add PersonalAccessToken model to prisma/schema.prisma with userId relation
-- [ ] T002 Add personalAccessTokens relation to User model in prisma/schema.prisma
-- [ ] T003 Run Prisma migration: `bunx prisma migrate dev --name add-personal-access-tokens`
-- [ ] T004 [P] Create token utilities in lib/auth/token-utils.ts (generateToken, getTokenLookup, getTokenPreview, hashToken, verifyToken, isValidTokenFormat)
-- [ ] T005 [P] Create Zod validation schema in lib/validations/token.ts (createTokenSchema)
+- [x] T001 Add PersonalAccessToken model to prisma/schema.prisma with userId relation
+- [x] T002 Add personalAccessTokens relation to User model in prisma/schema.prisma
+- [x] T003 Run Prisma migration: `bunx prisma migrate dev --name add-personal-access-tokens`
+- [x] T004 [P] Create token utilities in lib/auth/token-utils.ts (generateToken, getTokenLookup, getTokenPreview, hashToken, verifyToken, isValidTokenFormat)
+- [x] T005 [P] Create Zod validation schema in lib/validations/token.ts (createTokenSchema)
 
 ---
 
@@ -32,7 +32,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create token database operations in lib/db/tokens.ts (listTokens, createToken, revokeToken, validateToken functions)
+- [x] T006 Create token database operations in lib/db/tokens.ts (listTokens, createToken, revokeToken, validateToken functions)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -46,10 +46,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Create POST /api/tokens endpoint in app/api/tokens/route.ts
-- [ ] T008 [P] [US1] Create CreateTokenDialog component in components/settings/create-token-dialog.tsx (name input, token display with copy button, warning about one-time display)
-- [ ] T009 [US1] Create token settings page at app/settings/tokens/page.tsx with heading and description
-- [ ] T010 [US1] Create TokenListCard component in components/settings/token-list-card.tsx with "Generate new token" button that opens CreateTokenDialog
+- [x] T007 [P] [US1] Create POST /api/tokens endpoint in app/api/tokens/route.ts
+- [x] T008 [P] [US1] Create CreateTokenDialog component in components/settings/create-token-dialog.tsx (name input, token display with copy button, warning about one-time display)
+- [x] T009 [US1] Create token settings page at app/settings/tokens/page.tsx with heading and description
+- [x] T010 [US1] Create TokenListCard component in components/settings/token-list-card.tsx with "Generate new token" button that opens CreateTokenDialog
 
 **Checkpoint**: User Story 1 complete - users can generate tokens and copy them
 
@@ -63,9 +63,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Create token auth helper in lib/auth/token-auth.ts (getUserIdFromBearerToken function)
-- [ ] T012 [US2] Integrate Bearer token auth into existing auth system - modify lib/db/users.ts to check Bearer token before session auth in API routes
-- [ ] T013 [US2] Update API routes to support token-based authentication via headers (test with an existing endpoint)
+- [x] T011 [US2] Create token auth helper in lib/auth/token-auth.ts (getUserIdFromBearerToken function)
+- [x] T012 [US2] Integrate Bearer token auth into existing auth system - modify lib/db/users.ts to check Bearer token before session auth in API routes
+- [x] T013 [US2] Update API routes to support token-based authentication via headers (test with an existing endpoint)
 
 **Checkpoint**: User Story 2 complete - external tools can authenticate with PATs
 
@@ -79,8 +79,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Create GET /api/tokens endpoint in app/api/tokens/route.ts (list all user tokens)
-- [ ] T015 [US3] Update TokenListCard in components/settings/token-list-card.tsx to fetch and display token list (name, tokenPreview, createdAt, lastUsedAt) with empty state
+- [x] T014 [US3] Create GET /api/tokens endpoint in app/api/tokens/route.ts (list all user tokens)
+- [x] T015 [US3] Update TokenListCard in components/settings/token-list-card.tsx to fetch and display token list (name, tokenPreview, createdAt, lastUsedAt) with empty state
 
 **Checkpoint**: User Story 3 complete - users can view all their tokens and usage info
 
@@ -94,9 +94,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T016 [P] [US4] Create DELETE /api/tokens/[id] endpoint in app/api/tokens/[id]/route.ts
-- [ ] T017 [P] [US4] Create RevokeTokenDialog component in components/settings/revoke-token-dialog.tsx (AlertDialog with token name, irreversible warning, confirm/cancel)
-- [ ] T018 [US4] Integrate RevokeTokenDialog into TokenListCard with delete button per token
+- [x] T016 [P] [US4] Create DELETE /api/tokens/[id] endpoint in app/api/tokens/[id]/route.ts
+- [x] T017 [P] [US4] Create RevokeTokenDialog component in components/settings/revoke-token-dialog.tsx (AlertDialog with token name, irreversible warning, confirm/cancel)
+- [x] T018 [US4] Integrate RevokeTokenDialog into TokenListCard with delete button per token
 
 **Checkpoint**: User Story 4 complete - users can revoke tokens with immediate effect
 
@@ -106,10 +106,10 @@
 
 **Purpose**: Validation, error handling, and final integration
 
-- [ ] T019 Verify all acceptance scenarios from spec.md work end-to-end
-- [ ] T020 Run type-check and lint, fix any errors
-- [ ] T021 Test edge cases: max token limit (10), empty name validation, invalid token format, concurrent requests
-- [ ] T022 Validate token validation adds <150ms overhead (SC-002 performance goal)
+- [x] T019 Verify all acceptance scenarios from spec.md work end-to-end
+- [x] T020 Run type-check and lint, fix any errors
+- [x] T021 Test edge cases: max token limit (10), empty name validation, invalid token format, concurrent requests
+- [x] T022 Validate token validation adds <150ms overhead (SC-002 performance goal)
 
 ---
 
