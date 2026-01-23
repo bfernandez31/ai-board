@@ -109,12 +109,14 @@ export async function validatePersonalAccessToken(token: string): Promise<{ user
   }
 
   // Update lastUsedAt asynchronously (don't block the response)
-  prisma.personalAccessToken.update({
-    where: { id: pat.id },
-    data: { lastUsedAt: new Date() },
-  }).catch((error) => {
-    console.error('Failed to update lastUsedAt for PAT:', error);
-  });
+  void prisma.personalAccessToken
+    .update({
+      where: { id: pat.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch((error) => {
+      console.error('Failed to update lastUsedAt for PAT:', error);
+    });
 
   return {
     userId: pat.user.id,
