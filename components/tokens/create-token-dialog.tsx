@@ -64,13 +64,7 @@ export function CreateTokenDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) {
-        handleClose();
-      } else {
-        setOpen(true);
-      }
-    }}>
+    <Dialog open={open} onOpenChange={(isOpen) => isOpen ? setOpen(true) : handleClose()}>
       <DialogTrigger asChild>
         <Button>
           <Key className="mr-2 h-4 w-4" />

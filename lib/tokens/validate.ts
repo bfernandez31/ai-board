@@ -1,10 +1,10 @@
-import { prisma } from "@/lib/db/client";
 import {
   extractTokenPreview,
   isValidTokenFormat,
   verifyTokenHash,
 } from "./generate";
 import { checkRateLimit, type RateLimitResult } from "./rate-limit";
+import { findTokensByPreview, updateLastUsed } from "@/lib/db/tokens";
 
 /**
  * Result of token validation
@@ -58,21 +58,13 @@ export async function validateToken(
   const preview = extractTokenPreview(token);
 
   // Find candidate tokens by preview
-  const candidates = await prisma.personalAccessToken.findMany({
-    where: { preview },
-    select: {
-      id: true,
-      userId: true,
-      hash: true,
-      salt: true,
-    },
-  });
+  const candidates = await findTokensByPreview(preview);
 
   // Verify against each candidate
   for (const candidate of candidates) {
     if (verifyTokenHash(token, candidate.salt, candidate.hash)) {
       // Update lastUsedAt (fire-and-forget)
-      updateLastUsedAsync(candidate.id);
+      updateLastUsed(candidate.id);
 
       return {
         valid: true,
@@ -89,20 +81,6 @@ export async function validateToken(
 }
 
 /**
- * Update lastUsedAt asynchronously without blocking the request.
- */
-function updateLastUsedAsync(tokenId: number): void {
-  prisma.personalAccessToken
-    .update({
-      where: { id: tokenId },
-      data: { lastUsedAt: new Date() },
-    })
-    .catch((error) => {
-      console.error("Failed to update token lastUsedAt:", error);
-    });
-}
-
-/**
  * Extract Bearer token from Authorization header.
  * @param authHeader - The Authorization header value
  * @returns The token string or null if not a Bearer token
@@ -113,13 +91,13 @@ export function extractBearerToken(authHeader: string | null): string | null {
   }
 
   const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] === undefined || parts[0].toLowerCase() !== "bearer") {
+  if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer") {
     return null;
   }
 
   const token = parts[1];
   // Only return if it looks like a PAT
-  if (token !== undefined && token.startsWith("pat_")) {
+  if (token?.startsWith("pat_")) {
     return token;
   }
 
