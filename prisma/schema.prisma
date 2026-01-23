@@ -138,21 +138,22 @@ model Ticket {
 }
 
 model User {
-  id                    String             @id
+  id                    String                @id
   name                  String?
-  email                 String             @unique
+  email                 String                @unique
   emailVerified         DateTime?
   image                 String?
-  createdAt             DateTime           @default(now())
+  createdAt             DateTime              @default(now())
   updatedAt             DateTime
   accounts              Account[]
   comments              Comment[]
   projects              Project[]
   sessions              Session[]
   memberships           ProjectMember[]
-  notificationsReceived Notification[]     @relation("NotificationRecipient")
-  notificationsCreated  Notification[]     @relation("NotificationActor")
+  notificationsReceived Notification[]        @relation("NotificationRecipient")
+  notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
+  personalAccessTokens  PersonalAccessToken[]
 
   @@index([email])
 }
@@ -203,6 +204,23 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PersonalAccessToken {
+  id         Int       @id @default(autoincrement())
+  userId     String
+  name       String    @db.VarChar(100)
+  hash       String    @db.VarChar(64)
+  salt       String    @db.VarChar(32)
+  preview    String    @db.VarChar(4)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hash])
+  @@index([userId])
+  @@index([preview])
 }
 
 model PushSubscription {

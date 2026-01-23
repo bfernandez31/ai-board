@@ -22,11 +22,11 @@
 
 **Purpose**: Database schema and token utility foundation
 
-- [ ] T001 Add PersonalAccessToken model to prisma/schema.prisma
-- [ ] T002 Add personalAccessTokens relation to User model in prisma/schema.prisma
-- [ ] T003 Run Prisma migration: `bunx prisma migrate dev --name add-personal-access-tokens`
-- [ ] T004 [P] Create token generation utility in lib/tokens/generate.ts
-- [ ] T005 [P] Create rate limiting utility in lib/tokens/rate-limit.ts
+- [x] T001 Add PersonalAccessToken model to prisma/schema.prisma ✅ DONE
+- [x] T002 Add personalAccessTokens relation to User model in prisma/schema.prisma ✅ DONE
+- [x] T003 Run Prisma migration: `bunx prisma migrate dev --name add-personal-access-tokens` ✅ DONE
+- [x] T004 [P] Create token generation utility in lib/tokens/generate.ts ✅ DONE
+- [x] T005 [P] Create rate limiting utility in lib/tokens/rate-limit.ts ✅ DONE
 
 ---
 
@@ -36,9 +36,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create token database operations (CRUD) in lib/db/tokens.ts
-- [ ] T007 Create token validation utility in lib/tokens/validate.ts
-- [ ] T008 Add getCurrentUserOrToken() helper to lib/db/users.ts
+- [x] T006 Create token database operations (CRUD) in lib/db/tokens.ts ✅ DONE
+- [x] T007 Create token validation utility in lib/tokens/validate.ts ✅ DONE
+- [x] T008 Add getCurrentUserOrToken() helper to lib/db/users.ts ✅ DONE
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -52,15 +52,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Unit test for token generation in tests/unit/tokens/generate.test.ts
-- [ ] T010 [P] [US1] Integration test for POST /api/tokens in tests/integration/tokens/api.test.ts
+- [x] T009 [P] [US1] Unit test for token generation in tests/unit/tokens/generate.test.ts ✅ DONE
+- [x] T010 [P] [US1] Integration test for POST /api/tokens in tests/integration/tokens/api.test.ts ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Create POST endpoint for token creation in app/api/tokens/route.ts
-- [ ] T012 [P] [US1] Create CreateTokenDialog component in components/tokens/create-token-dialog.tsx
-- [ ] T013 [P] [US1] Create useCreateToken mutation hook in lib/hooks/mutations/useTokens.ts
-- [ ] T014 [US1] Create token settings page shell in app/settings/tokens/page.tsx
+- [x] T011 [US1] Create POST endpoint for token creation in app/api/tokens/route.ts ✅ DONE
+- [x] T012 [P] [US1] Create CreateTokenDialog component in components/tokens/create-token-dialog.tsx ✅ DONE
+- [x] T013 [P] [US1] Create useCreateToken mutation hook in lib/hooks/mutations/useTokens.ts ✅ DONE
+- [x] T014 [US1] Create token settings page shell in app/settings/tokens/page.tsx ✅ DONE
 
 **Checkpoint**: User Story 1 complete - users can generate and copy tokens
 
@@ -74,14 +74,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Unit test for token validation in tests/unit/tokens/validate.test.ts
-- [ ] T016 [P] [US2] Integration test for Bearer auth in tests/integration/tokens/api.test.ts
+- [x] T015 [P] [US2] Unit test for token validation in tests/unit/tokens/validate.test.ts ✅ DONE
+- [x] T016 [P] [US2] Integration test for Bearer auth in tests/integration/tokens/api.test.ts ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Integrate getCurrentUserOrToken() into existing API routes pattern
-- [ ] T018 [US2] Add lastUsedAt update on successful token validation in lib/tokens/validate.ts
-- [ ] T019 [US2] Add rate limiting to token validation in lib/tokens/validate.ts
+- [x] T017 [US2] Integrate getCurrentUserOrToken() into existing API routes pattern ✅ DONE
+- [x] T018 [US2] Add lastUsedAt update on successful token validation in lib/tokens/validate.ts ✅ DONE
+- [x] T019 [US2] Add rate limiting to token validation in lib/tokens/validate.ts ✅ DONE
 
 **Checkpoint**: User Story 2 complete - external tools can authenticate via Bearer token
 
@@ -95,15 +95,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T020 [US3] Integration test for GET /api/tokens in tests/integration/tokens/api.test.ts
+- [x] T020 [US3] Integration test for GET /api/tokens in tests/integration/tokens/api.test.ts ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Create GET endpoint for listing tokens in app/api/tokens/route.ts
-- [ ] T022 [P] [US3] Create TokenList component in components/tokens/token-list.tsx
-- [ ] T023 [P] [US3] Create TokenItem component in components/tokens/token-item.tsx
-- [ ] T024 [US3] Create useTokens query hook in lib/hooks/mutations/useTokens.ts
-- [ ] T025 [US3] Integrate TokenList into settings page in app/settings/tokens/page.tsx
+- [x] T021 [US3] Create GET endpoint for listing tokens in app/api/tokens/route.ts ✅ DONE
+- [x] T022 [P] [US3] Create TokenList component in components/tokens/token-list.tsx ✅ DONE
+- [x] T023 [P] [US3] Create TokenItem component in components/tokens/token-item.tsx ✅ DONE
+- [x] T024 [US3] Create useTokens query hook in lib/hooks/mutations/useTokens.ts ✅ DONE
+- [x] T025 [US3] Integrate TokenList into settings page in app/settings/tokens/page.tsx ✅ DONE
 
 **Checkpoint**: User Story 3 complete - users can view their token list
 
@@ -117,14 +117,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T026 [US4] Integration test for DELETE /api/tokens/[id] in tests/integration/tokens/api.test.ts
+- [x] T026 [US4] Integration test for DELETE /api/tokens/[id] in tests/integration/tokens/api.test.ts ✅ DONE
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Create DELETE endpoint in app/api/tokens/[id]/route.ts
-- [ ] T028 [P] [US4] Create DeleteTokenDialog component in components/tokens/delete-token-dialog.tsx
-- [ ] T029 [US4] Create useDeleteToken mutation hook in lib/hooks/mutations/useTokens.ts
-- [ ] T030 [US4] Integrate delete functionality into TokenItem in components/tokens/token-item.tsx
+- [x] T027 [US4] Create DELETE endpoint in app/api/tokens/[id]/route.ts ✅ DONE
+- [x] T028 [P] [US4] Create DeleteTokenDialog component in components/tokens/delete-token-dialog.tsx ✅ DONE
+- [x] T029 [US4] Create useDeleteToken mutation hook in lib/hooks/mutations/useTokens.ts ✅ DONE
+- [x] T030 [US4] Integrate delete functionality into TokenItem in components/tokens/token-item.tsx ✅ DONE
 
 **Checkpoint**: User Story 4 complete - users can revoke tokens
 
@@ -134,10 +134,10 @@
 
 **Purpose**: E2E tests and final validation
 
-- [ ] T031 E2E test for token generation flow in tests/e2e/tokens.spec.ts
-- [ ] T032 E2E test for token deletion flow in tests/e2e/tokens.spec.ts
-- [ ] T033 Run full test suite and type-check: `bun run test && bun run type-check`
-- [ ] T034 Run quickstart.md validation commands
+- [x] T031 E2E test for token generation flow in tests/e2e/tokens.spec.ts ✅ DONE
+- [x] T032 E2E test for token deletion flow in tests/e2e/tokens.spec.ts ✅ DONE
+- [x] T033 Run full test suite and type-check: `bun run test && bun run type-check` ✅ DONE
+- [x] T034 Run quickstart.md validation commands ✅ DONE
 
 ---
 
