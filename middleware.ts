@@ -1,7 +1,27 @@
 import { authEdge } from "@/lib/auth-edge"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
-export default authEdge((req) => {
+// Pre-auth checks that must run BEFORE NextAuth middleware
+function preAuthCheck(req: NextRequest): NextResponse | null {
+  // Check for Bearer token (PAT authentication for MCP server)
+  // Must be checked BEFORE authEdge to avoid NextAuth redirect
+  const authHeader = req.headers.get('authorization')
+  const hasBearerToken = authHeader?.startsWith('Bearer pat_')
+  if (hasBearerToken) {
+    return NextResponse.next()
+  }
+
+  // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
+  const hasTestHeader = req.headers.get('x-test-user-id') !== null
+  if (hasTestHeader) {
+    return NextResponse.next()
+  }
+
+  return null // Continue to authEdge
+}
+
+// Main middleware handler wrapped with NextAuth
+const authMiddleware = authEdge((req) => {
   const isAuthenticated = !!req.auth
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isPublicApi = req.nextUrl.pathname === '/api/health'
@@ -19,25 +39,6 @@ export default authEdge((req) => {
   const isTicketJobsApi = req.nextUrl.pathname.match(/^\/api\/projects\/\d+\/tickets\/\d+\/jobs$/) !== null
   const isLandingPage = req.nextUrl.pathname === '/'
 
-  // Detect test mode via header (Edge Runtime can't read process.env.NODE_ENV at runtime)
-  const hasTestHeader = req.headers.get('x-test-user-id') !== null
-  const isTestMode = hasTestHeader
-
-  // In test mode, bypass auth for ALL routes (API and pages)
-  // Page routes use headers() to get x-test-user-id in getCurrentUser()
-  // API routes also use headers() for authentication
-  if (isTestMode) {
-    return NextResponse.next()
-  }
-
-  // Check for Bearer token (PAT authentication for MCP server)
-  // Let these requests through to be validated by API route handlers
-  const authHeader = req.headers.get('authorization')
-  const hasBearerToken = authHeader?.startsWith('Bearer pat_')
-  if (hasBearerToken) {
-    return NextResponse.next()
-  }
-
   // Allow public pages, auth pages, public APIs, and workflow APIs
   // Note: isPushApi routes have their own requireAuth() check, so we let them through
   // to avoid redirect loops and let them return proper 401 responses
@@ -54,6 +55,18 @@ export default authEdge((req) => {
 
   return NextResponse.next()
 })
+
+// Export middleware that runs pre-auth checks first
+export default async function middleware(
+  req: NextRequest,
+  ctx: Parameters<typeof authMiddleware>[1]
+) {
+  const preAuthResult = preAuthCheck(req)
+  if (preAuthResult) {
+    return preAuthResult
+  }
+  return authMiddleware(req, ctx)
+}
 
 export const config = {
   matcher: [
