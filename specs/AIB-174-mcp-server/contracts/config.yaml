@@ -1,0 +1,88 @@
+# Configuration Contract: AI-Board MCP Server
+# Branch: AIB-174-mcp-server
+# Date: 2026-01-23
+
+# This defines the configuration file format for the ai-board MCP server.
+
+configFile:
+  location: ~/.aiboard/config.json
+  format: JSON
+  encoding: UTF-8
+  permissions: 600 (recommended)
+
+schema:
+  type: object
+  properties:
+    apiUrl:
+      type: string
+      format: uri
+      description: |
+        Base URL of the ai-board API.
+        Should not end with a trailing slash.
+      examples:
+        - "https://ai-board.vercel.app"
+        - "http://localhost:3000"
+    token:
+      type: string
+      pattern: "^pat_[a-f0-9]{64}$"
+      description: |
+        Personal Access Token for authentication.
+        Must start with 'pat_' followed by 64 hexadecimal characters.
+        Generated from Settings → Personal Access Tokens in ai-board.
+      securityNote: |
+        This token should be treated as a secret.
+        Do not commit to version control or share publicly.
+  required:
+    - apiUrl
+    - token
+
+environmentVariables:
+  AIBOARD_CONFIG_PATH:
+    type: string
+    description: |
+      Override the default config file location.
+      Useful for CI/CD pipelines or testing.
+    example: /path/to/custom/config.json
+
+examples:
+  production:
+    description: Standard production configuration
+    content: |
+      {
+        "apiUrl": "https://ai-board.vercel.app",
+        "token": "pat_abc123def456..."
+      }
+  local:
+    description: Local development configuration
+    content: |
+      {
+        "apiUrl": "http://localhost:3000",
+        "token": "pat_..."
+      }
+
+errors:
+  - code: CONFIG_NOT_FOUND
+    message: "Config file not found at ~/.aiboard/config.json. Create it with apiUrl and token."
+    resolution: |
+      1. Create the directory: mkdir -p ~/.aiboard
+      2. Create config.json with your API URL and token
+      3. Set permissions: chmod 600 ~/.aiboard/config.json
+
+  - code: CONFIG_INVALID
+    message: "Invalid config file format"
+    resolution: |
+      Verify your config.json contains valid JSON with these fields:
+      - apiUrl: A valid URL (e.g., "https://ai-board.vercel.app")
+      - token: A PAT starting with "pat_" (generate at Settings → Personal Access Tokens)
+
+  - code: CONFIG_MISSING_FIELD
+    message: "Required field '{field}' is missing"
+    resolution: Add the missing field to your config.json
+
+  - code: CONFIG_INVALID_URL
+    message: "apiUrl is not a valid URL"
+    resolution: Ensure apiUrl is a valid URL (e.g., "https://ai-board.vercel.app")
+
+  - code: CONFIG_INVALID_TOKEN
+    message: "Token must start with 'pat_' and be at least 68 characters"
+    resolution: Generate a new token from Settings → Personal Access Tokens in ai-board

@@ -1,0 +1,378 @@
+# MCP Tools Contract: AI-Board MCP Server
+# Branch: AIB-174-mcp-server
+# Date: 2026-01-23
+
+# This defines the MCP tools exposed by the ai-board MCP server.
+# Tools follow the Model Context Protocol specification.
+
+server:
+  name: ai-board-mcp
+  version: "1.0.0"
+  description: MCP server for interacting with ai-board project management platform
+
+tools:
+  - name: list_projects
+    description: |
+      List all projects the authenticated user has access to.
+      Returns projects where the user is either the owner or a member.
+      Includes project key, name, description, GitHub repo info, and ticket counts.
+    inputSchema:
+      type: object
+      properties: {}
+      required: []
+    outputFormat:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: Unique project ID
+          key:
+            type: string
+            description: 3-6 character project key (e.g., "AIB")
+          name:
+            type: string
+            description: Project name
+          description:
+            type: string
+            description: Project description
+          githubOwner:
+            type: string
+            description: GitHub repository owner
+          githubRepo:
+            type: string
+            description: GitHub repository name
+          ticketCount:
+            type: integer
+            description: Total number of tickets in the project
+          updatedAt:
+            type: string
+            format: date-time
+            description: Last update timestamp
+    errors:
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+      - code: NETWORK_ERROR
+        description: Unable to connect to ai-board API
+
+  - name: get_project
+    description: |
+      Get detailed information about a specific project by ID.
+      Returns full project details including clarification policy and GitHub configuration.
+    inputSchema:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          description: Project ID to retrieve
+      required:
+        - projectId
+    outputFormat:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        githubOwner:
+          type: string
+        githubRepo:
+          type: string
+        deploymentUrl:
+          type: string
+          nullable: true
+        clarificationPolicy:
+          type: string
+          enum: [AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    errors:
+      - code: NOT_FOUND
+        description: Project does not exist
+      - code: ACCESS_DENIED
+        description: User does not have access to this project
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+
+  - name: create_ticket
+    description: |
+      Create a new ticket in a project's INBOX stage.
+      The ticket will be created with FULL workflow type and can then be
+      moved through the workflow stages (SPECIFY → PLAN → BUILD → VERIFY → SHIP).
+    inputSchema:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          description: Project ID to create the ticket in
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ticket title (1-100 characters)
+        description:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Ticket description in Markdown (1-10000 characters)
+      required:
+        - projectId
+        - title
+        - description
+    outputFormat:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique ticket ID
+        ticketKey:
+          type: string
+          description: Ticket key (e.g., "AIB-123")
+        title:
+          type: string
+        description:
+          type: string
+        stage:
+          type: string
+          const: INBOX
+        createdAt:
+          type: string
+          format: date-time
+    errors:
+      - code: NOT_FOUND
+        description: Project does not exist
+      - code: ACCESS_DENIED
+        description: User does not have access to this project
+      - code: VALIDATION_ERROR
+        description: Invalid title or description format
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+
+  - name: get_ticket
+    description: |
+      Get detailed information about a specific ticket by its key.
+      Returns full ticket details including stage, branch, workflow type,
+      and associated project information.
+    inputSchema:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          description: Project ID the ticket belongs to
+        ticketKey:
+          type: string
+          pattern: "^[A-Z]{3,6}-\\d+$"
+          description: Ticket key (e.g., "AIB-123")
+      required:
+        - projectId
+        - ticketKey
+    outputFormat:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+        branch:
+          type: string
+          nullable: true
+          description: Git branch name if created
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        version:
+          type: integer
+          description: Optimistic concurrency version
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        project:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            githubOwner:
+              type: string
+            githubRepo:
+              type: string
+    errors:
+      - code: NOT_FOUND
+        description: Ticket or project does not exist
+      - code: ACCESS_DENIED
+        description: User does not have access to this project
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+
+  - name: list_tickets
+    description: |
+      List all tickets in a project, optionally filtered by stage.
+      Returns tickets grouped by their current workflow stage.
+      Without a stage filter, returns all tickets across all stages.
+    inputSchema:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          description: Project ID to list tickets from
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+          description: Optional stage filter
+      required:
+        - projectId
+    outputFormat:
+      type: object
+      description: Tickets grouped by stage
+      properties:
+        INBOX:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+        SPECIFY:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+        PLAN:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+        BUILD:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+        VERIFY:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+        SHIP:
+          type: array
+          items:
+            $ref: "#/components/ticketSummary"
+    errors:
+      - code: NOT_FOUND
+        description: Project does not exist
+      - code: ACCESS_DENIED
+        description: User does not have access to this project
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+
+  - name: move_ticket
+    description: |
+      Move a ticket to a different workflow stage.
+      Valid transitions depend on current stage and workflow type:
+      - INBOX → SPECIFY (normal) or BUILD (quick-impl)
+      - SPECIFY → PLAN
+      - PLAN → BUILD
+      - BUILD → VERIFY or INBOX (rollback for QUICK workflow)
+      - VERIFY → SHIP or PLAN (rollback for FULL workflow)
+
+      Moving a ticket triggers the corresponding GitHub workflow for that stage.
+    inputSchema:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          description: Project ID the ticket belongs to
+        ticketKey:
+          type: string
+          pattern: "^[A-Z]{3,6}-\\d+$"
+          description: Ticket key (e.g., "AIB-123")
+        targetStage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+          description: Target stage to transition to
+      required:
+        - projectId
+        - ticketKey
+        - targetStage
+    outputFormat:
+      type: object
+      properties:
+        id:
+          type: integer
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        branch:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        jobId:
+          type: integer
+          nullable: true
+          description: Job ID if a workflow was triggered
+    errors:
+      - code: NOT_FOUND
+        description: Ticket or project does not exist
+      - code: ACCESS_DENIED
+        description: User does not have access to this project
+      - code: VALIDATION_ERROR
+        description: Invalid stage transition
+      - code: ACTIVE_JOB
+        description: Ticket has an active job in progress
+      - code: CLEANUP_IN_PROGRESS
+        description: Project cleanup is blocking transitions
+      - code: AUTH_FAILED
+        description: Token is invalid, expired, or revoked
+
+components:
+  ticketSummary:
+    type: object
+    properties:
+      id:
+        type: integer
+      ticketNumber:
+        type: integer
+      ticketKey:
+        type: string
+      title:
+        type: string
+      description:
+        type: string
+      stage:
+        type: string
+        enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+      version:
+        type: integer
+      projectId:
+        type: integer
+      branch:
+        type: string
+        nullable: true
+      workflowType:
+        type: string
+        enum: [FULL, QUICK, CLEAN]
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
