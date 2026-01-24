@@ -30,6 +30,14 @@ export default authEdge((req) => {
     return NextResponse.next()
   }
 
+  // Check for Bearer token (PAT authentication for MCP server)
+  // Let these requests through to be validated by API route handlers
+  const authHeader = req.headers.get('authorization')
+  const hasBearerToken = authHeader?.startsWith('Bearer pat_')
+  if (hasBearerToken) {
+    return NextResponse.next()
+  }
+
   // Allow public pages, auth pages, public APIs, and workflow APIs
   // Note: isPushApi routes have their own requireAuth() check, so we let them through
   // to avoid redirect loops and let them return proper 401 responses
