@@ -1,6 +1,6 @@
 # Authentication Implementation
 
-NextAuth.js setup, session management, and mock authentication for development/testing.
+NextAuth.js setup, session management, Personal Access Tokens (PAT), and mock authentication for development/testing.
 
 ## NextAuth.js Configuration
 
@@ -67,6 +67,136 @@ if (process.env.NODE_ENV !== 'production') {
 - No manual login in development
 - Automated E2E tests without auth complexity
 - Same security model (ownership validation still enforced)
+
+## Personal Access Token (PAT) Authentication
+
+**Purpose**: Programmatic API access for MCP server and external integrations
+
+**Token Format**: `pat_` + 64 hexadecimal characters (68 characters total)
+
+**Location**: `lib/db/users.ts`, `lib/tokens/validate.ts`
+
+### Token Validation Flow
+
+```typescript
+import { extractBearerToken, validateToken } from '@/lib/tokens/validate';
+
+export async function getCurrentUserOrToken(request: NextRequest) {
+  // Extract Bearer token from Authorization header
+  const authHeader = request.headers.get('authorization');
+  const token = extractBearerToken(authHeader);
+
+  if (token) {
+    // Get client IP for rate limiting
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+               request.headers.get('x-real-ip') || 'unknown';
+
+    const result = await validateToken(token, ip);
+
+    if (result.valid && result.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: result.userId },
+        select: { id: true, email: true, name: true }
+      });
+
+      if (user?.email) {
+        return { id: user.id, email: user.email, name: user.name };
+      }
+    }
+
+    // Token provided but invalid - throw immediately
+    throw new Error(result.error || 'Unauthorized');
+  }
+
+  // Fall back to session auth
+  return getCurrentUser();
+}
+```
+
+### Dual Authentication Pattern
+
+API routes support both session and PAT authentication via `requireAuth(request?)`:
+
+```typescript
+// lib/db/users.ts
+export async function requireAuth(request?: NextRequest): Promise<string> {
+  if (request) {
+    // Use dual auth (Bearer token OR session) when request is provided
+    const user = await getCurrentUserOrToken(request);
+    return user.id;
+  }
+  // Fall back to session-only auth
+  const user = await getCurrentUser();
+  return user.id;
+}
+```
+
+### Authorization Helpers with PAT Support
+
+```typescript
+// lib/db/auth-helpers.ts
+export async function verifyProjectAccess(
+  projectId: number,
+  request?: NextRequest
+): Promise<AuthorizedProject> {
+  const userId = await requireAuth(request);
+  // ... project access validation
+}
+
+export async function verifyTicketAccess(
+  ticketId: number,
+  request?: NextRequest
+): Promise<Ticket> {
+  const userId = await requireAuth(request);
+  // ... ticket access validation
+}
+```
+
+### API Route with PAT Support
+
+```typescript
+// Pass request to enable PAT authentication
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string }> }
+) {
+  const projectId = parseInt((await context.params).projectId, 10);
+
+  // Supports both session and PAT authentication
+  await verifyProjectAccess(projectId, request);
+
+  // ... perform operation
+}
+```
+
+### MCP Server Integration
+
+The MCP server uses PAT authentication to access AI-Board API:
+
+**Configuration**: `~/.aiboard/config.json`
+
+```json
+{
+  "apiUrl": "https://ai-board-three.vercel.app",
+  "token": "pat_<64-hex-characters>"
+}
+```
+
+**Supported Endpoints**:
+- `GET /api/projects` - List user's projects
+- `GET /api/projects/:id` - Get project details
+- `GET /api/projects/:id/tickets` - List project tickets
+- `GET /api/projects/:id/tickets/:key` - Get ticket details
+- `POST /api/projects/:id/tickets` - Create ticket
+- `POST /api/projects/:id/tickets/:key/transition` - Move ticket
+
+### Token Security
+
+- Tokens are hashed (SHA-256) before storage
+- Rate limiting per IP address
+- Tokens can be revoked by user
+- No token expiration (user-managed lifecycle)
+- Tokens never logged or exposed in error messages
 
 ## Session Management
 

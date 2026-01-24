@@ -1,5 +1,6 @@
 import { prisma } from './client';
 import type { Project, ClarificationPolicy } from '@prisma/client';
+import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 
@@ -20,9 +21,11 @@ export async function getProjectById(
 /**
  * Get all projects for the current user
  * Returns projects where user is owner OR member
+ * Supports both session auth and Bearer token (PAT) authentication.
+ * @param request - Optional NextRequest for Bearer token extraction
  */
-export async function getUserProjects() {
-  const userId = await requireAuth();
+export async function getUserProjects(request?: NextRequest) {
+  const userId = await requireAuth(request);
 
   return prisma.project.findMany({
     where: {
@@ -65,10 +68,13 @@ export async function getUserProjects() {
 /**
  * Get a single project by ID
  * Ensures the current user has access (owner OR member)
+ * Supports both session auth and Bearer token (PAT) authentication.
+ * @param projectId - The project ID to retrieve
+ * @param request - Optional NextRequest for Bearer token extraction
  * @throws Error if project not found or user doesn't have access
  */
-export async function getProject(projectId: number) {
-  const userId = await requireAuth();
+export async function getProject(projectId: number, request?: NextRequest) {
+  const userId = await requireAuth(request);
 
   const project = await prisma.project.findFirst({
     where: {

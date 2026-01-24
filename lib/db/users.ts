@@ -46,10 +46,18 @@ export async function getCurrentUserOrNull() {
 }
 
 /**
- * Require authentication and return userId
+ * Require authentication and return userId.
+ * Supports both session auth and Bearer token (PAT) authentication.
+ * @param request - Optional NextRequest for Bearer token extraction
  * @throws Error if user is not authenticated
  */
-export async function requireAuth(): Promise<string> {
+export async function requireAuth(request?: NextRequest): Promise<string> {
+  if (request) {
+    // Use dual auth (Bearer token OR session) when request is provided
+    const user = await getCurrentUserOrToken(request)
+    return user.id
+  }
+  // Fall back to session-only auth
   const user = await getCurrentUser()
   return user.id
 }

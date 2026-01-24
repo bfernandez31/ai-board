@@ -10,7 +10,7 @@ import { getProject, updateProject } from '@/lib/db/projects';
 import { projectUpdateSchema } from '@/app/lib/schemas/clarification-policy';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse> {
   try {
@@ -25,7 +25,8 @@ export async function GET(
     }
 
     // getProject now verifies userId ownership
-    const project = await getProject(projectId);
+    // Pass request for PAT authentication support
+    const project = await getProject(projectId, request);
 
     return NextResponse.json(project);
   } catch (error) {

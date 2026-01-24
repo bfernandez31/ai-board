@@ -11,9 +11,10 @@ import { Stage, JobStatus } from '@prisma/client';
 /**
  * GET /api/projects/[projectId]/tickets/[id]
  * Get a single ticket by ID with project validation
+ * Supports both session auth and Bearer token (PAT) authentication.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
@@ -33,7 +34,8 @@ export async function GET(
     const identifier = ticketIdString;
 
     // First verify project access (this will throw if project not found or no access)
-    await verifyProjectAccess(projectId);
+    // Pass request for PAT authentication support
+    await verifyProjectAccess(projectId, request);
 
     // Detect if identifier is numeric ID or ticket key
     const isNumericId = /^\d+$/.test(identifier);
@@ -45,7 +47,8 @@ export async function GET(
       const ticketId = parseInt(identifier, 10);
 
       // Verify ticket access (owner OR member via project)
-      const ticketAuth = await verifyTicketAccess(ticketId);
+      // Pass request for PAT authentication support
+      const ticketAuth = await verifyTicketAccess(ticketId, request);
 
       // Validate ticket belongs to correct project
       if (ticketAuth.projectId !== projectId) {
@@ -214,7 +217,8 @@ export async function PATCH(
     const identifier = ticketIdString;
 
     // First verify project access (this will throw if project not found or no access)
-    await verifyProjectAccess(projectId);
+    // Pass request for PAT authentication support
+    await verifyProjectAccess(projectId, request);
 
     // Detect if identifier is numeric ID or ticket key
     const isNumericId = /^\d+$/.test(identifier);
@@ -226,7 +230,8 @@ export async function PATCH(
       ticketId = parseInt(identifier, 10);
 
       // Verify ticket access (owner OR member via project)
-      const ticketAuth = await verifyTicketAccess(ticketId);
+      // Pass request for PAT authentication support
+      const ticketAuth = await verifyTicketAccess(ticketId, request);
 
       // Validate ticket belongs to correct project
       if (ticketAuth.projectId !== projectId) {
@@ -509,7 +514,7 @@ export async function PATCH(
  * - 500: GitHub API failure or database error
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
@@ -538,7 +543,8 @@ export async function DELETE(
 
     // Step 1: Authorization check
     // This verifies user is authenticated and has access to the ticket
-    const ticket = await verifyTicketAccess(ticketId);
+    // Pass request for PAT authentication support
+    const ticket = await verifyTicketAccess(ticketId, request);
 
     // Validate ticket belongs to the specified project
     if (ticket.projectId !== projectId) {

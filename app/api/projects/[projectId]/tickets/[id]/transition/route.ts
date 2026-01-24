@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Stage, type Job } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
+import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
@@ -50,8 +51,26 @@ export async function POST(
       );
     }
 
-    // Note: Authentication is handled by NextAuth middleware in production
-    // For test/dev mode, requests are allowed through
+    // Verify project access (supports both session auth and PAT authentication)
+    try {
+      await verifyProjectAccess(projectId, request);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Unauthorized') {
+          return NextResponse.json(
+            { error: 'Unauthorized', code: 'AUTH_ERROR' },
+            { status: 401 }
+          );
+        }
+        if (error.message === 'Project not found') {
+          return NextResponse.json(
+            { error: 'Project not found', code: 'NOT_FOUND' },
+            { status: 404 }
+          );
+        }
+      }
+      throw error;
+    }
 
     // Parse and validate request body
     const body = await request.json();

@@ -14,10 +14,11 @@ const createProjectSchema = z.object({
   key: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Fetch user's projects with ticket counts (userId filtering applied)
-    const projects = await getUserProjects();
+    // Pass request for PAT authentication support
+    const projects = await getUserProjects(request);
 
     // Transform to API response shape
     const response: ProjectsListResponse = projects.map((project) => ({

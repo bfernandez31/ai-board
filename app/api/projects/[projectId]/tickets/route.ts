@@ -16,9 +16,10 @@ import { prisma } from '@/lib/db/client';
 /**
  * GET /api/projects/[projectId]/tickets
  * Returns all tickets for a specific project, grouped by stage
+ * Supports both session auth and Bearer token (PAT) authentication.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ) {
   try {
@@ -39,7 +40,8 @@ export async function GET(
     const projectId = parseInt(projectIdString, 10);
 
     // Verify project access (owner OR member)
-    await verifyProjectAccess(projectId);
+    // Pass request for PAT authentication support
+    await verifyProjectAccess(projectId, request);
 
     // Fetch tickets for this project
     const ticketsByStage = await getTicketsByStage(projectId);
@@ -126,6 +128,7 @@ async function parseFormData(request: NextRequest): Promise<{ fields: Fields; fi
  * POST /api/projects/[projectId]/tickets
  * Creates a new ticket in the INBOX stage for the specified project
  * Supports both JSON and multipart/form-data (with image uploads)
+ * Supports both session auth and Bearer token (PAT) authentication.
  */
 export async function POST(
   request: NextRequest,
@@ -149,7 +152,8 @@ export async function POST(
     const projectId = parseInt(projectIdString, 10);
 
     // Verify project access (owner OR member)
-    await verifyProjectAccess(projectId);
+    // Pass request for PAT authentication support
+    await verifyProjectAccess(projectId, request);
 
     const contentType = request.headers.get('content-type') || '';
     let ticketData: { title: string; description: string; clarificationPolicy?: string };
