@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-board.dev/schemas/plugin-manifest.json",
+  "title": "AI-Board Plugin Manifest",
+  "description": "Schema for the ai-board Claude Code plugin manifest (plugin.json)",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique plugin identifier in kebab-case",
+      "const": "ai-board"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$",
+      "description": "Semantic version (MAJOR.MINOR.PATCH)",
+      "default": "1.0.0"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Brief plugin description"
+    },
+    "author": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Author or team name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Author homepage"
+        }
+      },
+      "required": ["name"]
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "Plugin documentation URL"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "Source code repository URL"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier",
+      "default": "MIT"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Discovery tags for marketplace"
+    },
+    "commands": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\./"
+          }
+        }
+      ],
+      "description": "Path(s) to command files or directories (must start with ./)"
+    },
+    "skills": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\./"
+          }
+        }
+      ],
+      "description": "Path(s) to skill directories (must start with ./)"
+    },
+    "hooks": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "$ref": "#/$defs/hooksConfig"
+        }
+      ],
+      "description": "Path to hooks.json or inline hooks configuration"
+    }
+  },
+  "$defs": {
+    "hooksConfig": {
+      "type": "object",
+      "properties": {
+        "hooks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/hookEntry"
+            }
+          }
+        }
+      }
+    },
+    "hookEntry": {
+      "type": "object",
+      "properties": {
+        "matcher": {
+          "type": "string",
+          "description": "Regex pattern to match tool names"
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hookAction"
+          }
+        }
+      },
+      "required": ["hooks"]
+    },
+    "hookAction": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["command", "prompt", "agent"]
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute (for type: command)"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "LLM prompt (for type: prompt)"
+        }
+      },
+      "required": ["type"]
+    }
+  },
+  "examples": [
+    {
+      "name": "ai-board",
+      "version": "1.0.0",
+      "description": "AI-board automated development workflow commands, scripts, and templates",
+      "author": {
+        "name": "AI-Board Team"
+      },
+      "repository": "https://github.com/ai-board/ai-board",
+      "license": "MIT",
+      "keywords": ["ai-board", "workflow", "specification", "implementation"],
+      "commands": "./commands/",
+      "skills": "./skills/",
+      "hooks": "./hooks/hooks.json"
+    }
+  ]
+}

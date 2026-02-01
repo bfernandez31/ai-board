@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-board.dev/schemas/command-file.json",
+  "title": "AI-Board Command File",
+  "description": "Schema for Claude Code command file structure (*.md files in commands/)",
+  "type": "object",
+  "properties": {
+    "frontMatter": {
+      "type": "object",
+      "description": "Optional YAML front matter at the top of the file",
+      "properties": {
+        "command": {
+          "type": "string",
+          "pattern": "^/ai-board\\.[a-z-]+$",
+          "description": "Explicit command name (e.g., /ai-board.specify)"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Brief command description for help text"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["workflow", "utility", "analysis"],
+          "description": "Command category for organization"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Detailed purpose explanation"
+        }
+      }
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown body containing command instructions"
+    },
+    "fileName": {
+      "type": "string",
+      "pattern": "^ai-board\\.[a-z-]+\\.md$",
+      "description": "Command file name convention"
+    }
+  },
+  "required": ["body", "fileName"],
+  "$defs": {
+    "commandReference": {
+      "type": "string",
+      "pattern": "^/ai-board\\.[a-z-]+$",
+      "description": "Reference to another ai-board command"
+    },
+    "scriptReference": {
+      "type": "string",
+      "pattern": "^\\$\\{CLAUDE_PLUGIN_ROOT\\}/scripts/(bash/[a-z-]+\\.sh|[a-z-]+\\.js)$",
+      "description": "Reference to plugin script using CLAUDE_PLUGIN_ROOT"
+    },
+    "templateReference": {
+      "type": "string",
+      "pattern": "^\\$\\{CLAUDE_PLUGIN_ROOT\\}/templates/[a-z-]+-template\\.md$",
+      "description": "Reference to plugin template using CLAUDE_PLUGIN_ROOT"
+    }
+  },
+  "examples": [
+    {
+      "frontMatter": {
+        "command": "/ai-board.specify",
+        "description": "Create or update feature specification",
+        "category": "workflow"
+      },
+      "body": "## User Input\n\n```text\n$ARGUMENTS\n```\n\n## Outline\n\n1. **Setup**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/bash/create-new-feature.sh --json`...",
+      "fileName": "ai-board.specify.md"
+    }
+  ]
+}

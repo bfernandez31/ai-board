@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-board.dev/schemas/hooks.json",
+  "title": "AI-Board Plugin Hooks Configuration",
+  "description": "Schema for Claude Code plugin hooks configuration (hooks.json)",
+  "type": "object",
+  "properties": {
+    "hooks": {
+      "type": "object",
+      "properties": {
+        "SessionStart": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered at the beginning of sessions"
+        },
+        "SessionEnd": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered at the end of sessions"
+        },
+        "PreToolUse": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered before tool execution"
+        },
+        "PostToolUse": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered after successful tool execution"
+        },
+        "PostToolUseFailure": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered after failed tool execution"
+        },
+        "PermissionRequest": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when permission dialog is shown"
+        },
+        "UserPromptSubmit": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when user submits a prompt"
+        },
+        "Notification": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when notifications are sent"
+        },
+        "Stop": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when Claude attempts to stop"
+        },
+        "SubagentStart": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when a subagent starts"
+        },
+        "SubagentStop": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered when a subagent stops"
+        },
+        "PreCompact": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookEntry" },
+          "description": "Hooks triggered before conversation compaction"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["hooks"],
+  "$defs": {
+    "hookEntry": {
+      "type": "object",
+      "properties": {
+        "matcher": {
+          "type": "string",
+          "description": "Regex pattern to match tool names (e.g., 'Write|Edit')"
+        },
+        "hooks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hookAction" },
+          "minItems": 1
+        }
+      },
+      "required": ["hooks"]
+    },
+    "hookAction": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["command", "prompt", "agent"],
+          "description": "Type of hook action"
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute. Use ${CLAUDE_PLUGIN_ROOT} for plugin-relative paths."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "LLM prompt to evaluate. Use $ARGUMENTS for context."
+        }
+      },
+      "required": ["type"],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "command" } }
+          },
+          "then": {
+            "required": ["command"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "prompt" } }
+          },
+          "then": {
+            "required": ["prompt"]
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "hooks": {
+        "SessionStart": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "${CLAUDE_PLUGIN_ROOT}/scripts/bash/setup-constitution.sh"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
