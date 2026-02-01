@@ -290,8 +290,8 @@ function main() {
   console.log(`   E2E failures: ${report.summary.e2eFailures}`);
   console.log(`   Root causes identified: ${report.rootCauses.length}`);
 
-  // Exit with error code if failures exist
-  process.exit(report.summary.totalFailures > 0 ? 0 : 0); // Always exit 0 (report generated successfully)
+  // Report generated successfully - always exit 0
+  process.exit(0);
 }
 
 main();
