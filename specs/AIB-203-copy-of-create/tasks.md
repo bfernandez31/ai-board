@@ -102,26 +102,26 @@
 
 **Create Renamed Commands (16 command files):**
 
-- [ ] T037 [P] [US2] Create ai-board.specify.md at commands/ai-board.specify.md (copy from .claude/commands/speckit.specify.md, rename namespace, update paths to ${CLAUDE_PLUGIN_ROOT})
-- [ ] T038 [P] [US2] Create ai-board.clarify.md at commands/ai-board.clarify.md (copy from .claude/commands/speckit.clarify.md, rename namespace, update paths)
-- [ ] T039 [P] [US2] Create ai-board.plan.md at commands/ai-board.plan.md (copy from .claude/commands/speckit.plan.md, rename namespace, update paths)
-- [ ] T040 [P] [US2] Create ai-board.tasks.md at commands/ai-board.tasks.md (copy from .claude/commands/speckit.tasks.md, rename namespace, update paths)
-- [ ] T041 [P] [US2] Create ai-board.implement.md at commands/ai-board.implement.md (copy from .claude/commands/speckit.implement.md, rename namespace, update paths)
-- [ ] T042 [P] [US2] Create ai-board.checklist.md at commands/ai-board.checklist.md (copy from .claude/commands/speckit.checklist.md, rename namespace, update paths)
-- [ ] T043 [P] [US2] Create ai-board.analyze.md at commands/ai-board.analyze.md (copy from .claude/commands/speckit.analyze.md, rename namespace, update paths)
-- [ ] T044 [P] [US2] Create ai-board.constitution.md at commands/ai-board.constitution.md (copy from .claude/commands/speckit.constitution.md, rename namespace, update paths)
-- [ ] T045 [P] [US2] Create ai-board.quick-impl.md at commands/ai-board.quick-impl.md (copy from .claude/commands/quick-impl.md, rename namespace, update paths)
-- [ ] T046 [P] [US2] Create ai-board.cleanup.md at commands/ai-board.cleanup.md (copy from .claude/commands/cleanup.md, rename namespace, update paths)
-- [ ] T047 [P] [US2] Create ai-board.verify.md at commands/ai-board.verify.md (copy from .claude/commands/verify.md, rename namespace, update paths)
-- [ ] T048 [P] [US2] Create ai-board.iterate-verify.md at commands/ai-board.iterate-verify.md (copy from .claude/commands/iterate-verify.md, rename namespace, update paths)
-- [ ] T049 [P] [US2] Create ai-board.code-review.md at commands/ai-board.code-review.md (copy from .claude/commands/code-review.md, rename namespace, update paths)
-- [ ] T050 [P] [US2] Create ai-board.code-simplifier.md at commands/ai-board.code-simplifier.md (copy from .claude/commands/code-simplifier.md, rename namespace, update paths)
-- [ ] T051 [P] [US2] Create ai-board.compare.md at commands/ai-board.compare.md (copy from .claude/commands/compare.md, rename namespace, update paths)
-- [ ] T052 [P] [US2] Create ai-board.sync-specifications.md at commands/ai-board.sync-specifications.md (copy from .claude/commands/sync-specifications.md, rename namespace, update paths)
+- [x] T037 [P] [US2] Create ai-board.specify.md at commands/ai-board.specify.md (copy from .claude/commands/speckit.specify.md, rename namespace, update paths to ${CLAUDE_PLUGIN_ROOT})
+- [x] T038 [P] [US2] Create ai-board.clarify.md at commands/ai-board.clarify.md (copy from .claude/commands/speckit.clarify.md, rename namespace, update paths)
+- [x] T039 [P] [US2] Create ai-board.plan.md at commands/ai-board.plan.md (copy from .claude/commands/speckit.plan.md, rename namespace, update paths)
+- [x] T040 [P] [US2] Create ai-board.tasks.md at commands/ai-board.tasks.md (copy from .claude/commands/speckit.tasks.md, rename namespace, update paths)
+- [x] T041 [P] [US2] Create ai-board.implement.md at commands/ai-board.implement.md (copy from .claude/commands/speckit.implement.md, rename namespace, update paths)
+- [x] T042 [P] [US2] Create ai-board.checklist.md at commands/ai-board.checklist.md (copy from .claude/commands/speckit.checklist.md, rename namespace, update paths)
+- [x] T043 [P] [US2] Create ai-board.analyze.md at commands/ai-board.analyze.md (copy from .claude/commands/speckit.analyze.md, rename namespace, update paths)
+- [x] T044 [P] [US2] Create ai-board.constitution.md at commands/ai-board.constitution.md (copy from .claude/commands/speckit.constitution.md, rename namespace, update paths)
+- [x] T045 [P] [US2] Create ai-board.quick-impl.md at commands/ai-board.quick-impl.md (copy from .claude/commands/quick-impl.md, rename namespace, update paths)
+- [x] T046 [P] [US2] Create ai-board.cleanup.md at commands/ai-board.cleanup.md (copy from .claude/commands/cleanup.md, rename namespace, update paths)
+- [x] T047 [P] [US2] Create ai-board.verify.md at commands/ai-board.verify.md (copy from .claude/commands/verify.md, rename namespace, update paths)
+- [x] T048 [P] [US2] Create ai-board.iterate-verify.md at commands/ai-board.iterate-verify.md (copy from .claude/commands/iterate-verify.md, rename namespace, update paths)
+- [x] T049 [P] [US2] Create ai-board.code-review.md at commands/ai-board.code-review.md (copy from .claude/commands/code-review.md, rename namespace, update paths)
+- [x] T050 [P] [US2] Create ai-board.code-simplifier.md at commands/ai-board.code-simplifier.md (copy from .claude/commands/code-simplifier.md, rename namespace, update paths)
+- [x] T051 [P] [US2] Create ai-board.compare.md at commands/ai-board.compare.md (copy from .claude/commands/compare.md, rename namespace, update paths)
+- [x] T052 [P] [US2] Create ai-board.sync-specifications.md at commands/ai-board.sync-specifications.md (copy from .claude/commands/sync-specifications.md, rename namespace, update paths)
 
 **Update Internal Command Cross-References in all created commands:**
 
-- [ ] T053 [US2] Update internal command cross-references in all 16 commands (change /speckit.* to /ai-board.*, /quick-impl to /ai-board.quick-impl, etc.)
+- [x] T053 [US2] Update internal command cross-references in all 16 commands (change /speckit.* to /ai-board.*, /quick-impl to /ai-board.quick-impl, etc.)
 
 **Checkpoint**: User Story 2 complete - all commands execute correctly with plugin-relative paths
 
