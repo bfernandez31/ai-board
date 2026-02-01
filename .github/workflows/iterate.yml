@@ -126,7 +126,7 @@ jobs:
           echo "Issues to fix: $ISSUES"
 
           # Execute Claude iterate-verify command
-          claude --dangerously-skip-permissions "/iterate-verify" > output.log || true
+          claude --dangerously-skip-permissions "/ai-board.iterate-verify" > output.log || true
 
           # Check if changes were made
           if git diff --quiet; then
@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "📚 Updating global specifications..."
 
-          claude --dangerously-skip-permissions /sync-specifications
+          claude --dangerously-skip-permissions /ai-board.sync-specifications
 
       - name: Commit and Push Changes
         if: steps.iterate.outputs.no_changes != 'true'

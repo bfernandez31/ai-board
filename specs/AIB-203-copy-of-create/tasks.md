@@ -135,11 +135,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T054 [P] [US3] Update .github/workflows/speckit.yml to use ai-board.* command names (speckit.specify -> ai-board.specify, speckit.plan -> ai-board.plan, speckit.tasks -> ai-board.tasks, speckit.implement -> ai-board.implement, speckit.clarify -> ai-board.clarify)
-- [ ] T055 [P] [US3] Update .github/workflows/quick-impl.yml to use /ai-board.quick-impl (replace /quick-impl)
-- [ ] T056 [P] [US3] Update .github/workflows/verify.yml to use /ai-board.verify (replace /verify)
-- [ ] T057 [P] [US3] Update .github/workflows/cleanup.yml to use /ai-board.cleanup (replace /cleanup)
-- [ ] T058 [P] [US3] Update .github/workflows/iterate.yml to use /ai-board.iterate-verify (replace /iterate-verify)
+- [x] T054 [P] [US3] Update .github/workflows/speckit.yml to use ai-board.* command names (speckit.specify -> ai-board.specify, speckit.plan -> ai-board.plan, speckit.tasks -> ai-board.tasks, speckit.implement -> ai-board.implement, speckit.clarify -> ai-board.clarify)
+- [x] T055 [P] [US3] Update .github/workflows/quick-impl.yml to use /ai-board.quick-impl (replace /quick-impl)
+- [x] T056 [P] [US3] Update .github/workflows/verify.yml to use /ai-board.verify (replace /verify)
+- [x] T057 [P] [US3] Update .github/workflows/cleanup.yml to use /ai-board.cleanup (replace /cleanup)
+- [x] T058 [P] [US3] Update .github/workflows/iterate.yml to use /ai-board.iterate-verify (replace /iterate-verify)
 
 **Checkpoint**: User Story 3 complete - all workflows invoke correct command names
 

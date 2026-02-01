@@ -241,22 +241,22 @@ jobs:
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Execute /quick-impl command with JSON payload
+          # Execute /ai-board.quick-impl command with JSON payload
           # Command will internally call create-new-feature.sh --mode=quick-impl
           payload=$(cat "$QUICK_IMPL_PAYLOAD_FILE")
 
           # Add image paths if available
           if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
             echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
+            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
           else
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
           fi
 
       - name: Capture Branch Name
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Capture the branch created by /quick-impl command
+          # Capture the branch created by /ai-board.quick-impl command
           current_branch="$(git rev-parse --abbrev-ref HEAD)"
           echo "FEATURE_BRANCH=$current_branch" >> "$GITHUB_ENV"
           echo "✅ Feature branch: $current_branch"
@@ -295,7 +295,7 @@ jobs:
             echo "✅ Changes committed"
           fi
 
-          # Always push (Claude may have committed during /quick-impl execution)
+          # Always push (Claude may have committed during /ai-board.quick-impl execution)
           git push origin "$FEATURE_BRANCH"
           echo "✅ Changes pushed to branch: ${FEATURE_BRANCH}"
 
