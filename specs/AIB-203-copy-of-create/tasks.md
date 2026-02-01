@@ -153,12 +153,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Validate plugin.json manifest against contracts/plugin-manifest.schema.json
-- [ ] T060 [US4] Validate hooks.json against contracts/hooks.schema.json
-- [ ] T061 [US4] Verify all 16 command files referenced in plugin exist and have valid format per contracts/command-file.schema.json
-- [ ] T062 [US4] Verify all script files referenced in commands exist and are executable (755 permission)
-- [ ] T063 [US4] Verify all template files referenced in commands exist
-- [ ] T064 [US4] Verify skills/testing/SKILL.md exists and has valid structure
+- [x] T059 [US4] Validate plugin.json manifest against contracts/plugin-manifest.schema.json
+- [x] T060 [US4] Validate hooks.json against contracts/hooks.schema.json
+- [x] T061 [US4] Verify all 16 command files referenced in plugin exist and have valid format per contracts/command-file.schema.json
+- [x] T062 [US4] Verify all script files referenced in commands exist and are executable (755 permission)
+- [x] T063 [US4] Verify all template files referenced in commands exist
+- [x] T064 [US4] Verify skills/testing/SKILL.md exists and has valid structure
 
 **Checkpoint**: User Story 4 complete - plugin passes all validation checks
 
@@ -168,10 +168,10 @@
 
 **Purpose**: Final verification and cleanup
 
-- [ ] T065 Run all unit tests in tests/unit/plugin/ to verify path resolution
-- [ ] T066 Run all integration tests in tests/integration/plugin/ to verify installation
-- [ ] T067 Verify constitution copy behavior (new project gets template, existing project preserves customizations)
-- [ ] T068 Run quickstart.md validation scenarios
+- [x] T065 Run all unit tests in tests/unit/plugin/ to verify path resolution
+- [x] T066 Run all integration tests in tests/integration/plugin/ to verify installation
+- [x] T067 Verify constitution copy behavior (new project gets template, existing project preserves customizations)
+- [x] T068 Run quickstart.md validation scenarios
 
 ---
 
