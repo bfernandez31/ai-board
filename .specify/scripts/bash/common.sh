@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
 # Common functions and variables for all scripts
 
+# Get plugin root for dual-mode path resolution (plugin vs standalone)
+# In plugin context, CLAUDE_PLUGIN_ROOT is set by Claude Code
+# In standalone context, falls back to git repo root or script location
+get_plugin_root() {
+    # If running in plugin context, CLAUDE_PLUGIN_ROOT is set
+    if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+        echo "$CLAUDE_PLUGIN_ROOT"
+        return
+    fi
+
+    # Otherwise, use git repo root detection (standalone mode)
+    if git rev-parse --show-toplevel >/dev/null 2>&1; then
+        git rev-parse --show-toplevel
+        return
+    fi
+
+    # Fallback: Navigate from script location
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    (cd "$script_dir/../.." && pwd)  # Up 2 levels from scripts/bash/
+}
+
 # Get repository root, with fallback for non-git repositories
 get_repo_root() {
     if git rev-parse --show-toplevel >/dev/null 2>&1; then

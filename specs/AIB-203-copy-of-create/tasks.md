@@ -18,16 +18,16 @@
 
 **Purpose**: Create plugin directory structure and configuration files
 
-- [ ] T001 Create plugin manifest directory at .claude-plugin/
-- [ ] T002 Create plugin.json manifest at .claude-plugin/plugin.json with schema from contracts/plugin-manifest.schema.json
-- [ ] T003 [P] Create hooks directory at hooks/
-- [ ] T004 [P] Create hooks.json configuration at hooks/hooks.json with schema from contracts/hooks.schema.json
-- [ ] T005 [P] Create commands directory at commands/
-- [ ] T006 [P] Create scripts directory at scripts/
-- [ ] T007 [P] Create scripts/bash directory at scripts/bash/
-- [ ] T008 [P] Create templates directory at templates/
-- [ ] T009 [P] Create skills directory at skills/
-- [ ] T010 [P] Create memory directory at memory/
+- [x] T001 Create plugin manifest directory at .claude-plugin/
+- [x] T002 Create plugin.json manifest at .claude-plugin/plugin.json with schema from contracts/plugin-manifest.schema.json
+- [x] T003 [P] Create hooks directory at hooks/
+- [x] T004 [P] Create hooks.json configuration at hooks/hooks.json with schema from contracts/hooks.schema.json
+- [x] T005 [P] Create commands directory at commands/
+- [x] T006 [P] Create scripts directory at scripts/
+- [x] T007 [P] Create scripts/bash directory at scripts/bash/
+- [x] T008 [P] Create templates directory at templates/
+- [x] T009 [P] Create skills directory at skills/
+- [x] T010 [P] Create memory directory at memory/
 
 ---
 
@@ -37,9 +37,9 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T011 Add get_plugin_root() function to .specify/scripts/bash/common.sh for dual-mode path resolution (plugin vs standalone)
-- [ ] T012 Create setup-constitution.sh script at scripts/bash/setup-constitution.sh for post-install hook (copies constitution.md only if target doesn't exist)
-- [ ] T013 Copy constitution.md template to memory/constitution.md from .specify/memory/constitution.md
+- [x] T011 Add get_plugin_root() function to .specify/scripts/bash/common.sh for dual-mode path resolution (plugin vs standalone)
+- [x] T012 Create setup-constitution.sh script at scripts/bash/setup-constitution.sh for post-install hook (copies constitution.md only if target doesn't exist)
+- [x] T013 Copy constitution.md template to memory/constitution.md from .specify/memory/constitution.md
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 

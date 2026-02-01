@@ -1,0 +1,14 @@
+{
+  "name": "ai-board",
+  "version": "1.0.0",
+  "description": "AI-board automated development workflow commands, scripts, and templates",
+  "author": {
+    "name": "AI-Board Team"
+  },
+  "repository": "https://github.com/ai-board/ai-board",
+  "license": "MIT",
+  "keywords": ["ai-board", "workflow", "specification", "implementation"],
+  "commands": "./commands/",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}
