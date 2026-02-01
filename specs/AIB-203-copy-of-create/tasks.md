@@ -53,40 +53,40 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Create unit test for get_plugin_root() path resolution in tests/unit/plugin/path-resolution.test.ts
-- [ ] T015 [P] [US1] Create integration test for plugin installation validation in tests/integration/plugin/installation.test.ts
+- [x] T014 [P] [US1] Create unit test for get_plugin_root() path resolution in tests/unit/plugin/path-resolution.test.ts
+- [x] T015 [P] [US1] Create integration test for plugin installation validation in tests/integration/plugin/installation.test.ts
 
 ### Implementation for User Story 1
 
 **Copy Scripts (10 bash + 3 JS):**
 
-- [ ] T016 [P] [US1] Copy common.sh to scripts/bash/common.sh (with get_plugin_root function already added)
-- [ ] T017 [P] [US1] Copy create-new-feature.sh to scripts/bash/create-new-feature.sh
-- [ ] T018 [P] [US1] Copy check-prerequisites.sh to scripts/bash/check-prerequisites.sh
-- [ ] T019 [P] [US1] Copy setup-plan.sh to scripts/bash/setup-plan.sh
-- [ ] T020 [P] [US1] Copy create-pr-and-transition.sh to scripts/bash/create-pr-and-transition.sh
-- [ ] T021 [P] [US1] Copy create-pr-only.sh to scripts/bash/create-pr-only.sh
-- [ ] T022 [P] [US1] Copy prepare-images.sh to scripts/bash/prepare-images.sh
-- [ ] T023 [P] [US1] Copy detect-incomplete-implementation.sh to scripts/bash/detect-incomplete-implementation.sh
-- [ ] T024 [P] [US1] Copy auto-ship-tickets.sh to scripts/bash/auto-ship-tickets.sh
-- [ ] T025 [P] [US1] Copy transition-to-verify.sh to scripts/bash/transition-to-verify.sh
-- [ ] T026 [P] [US1] Copy update-agent-context.sh to scripts/bash/update-agent-context.sh
-- [ ] T027 [P] [US1] Copy analyze-slow-tests.js to scripts/analyze-slow-tests.js
-- [ ] T028 [P] [US1] Copy analyze-test-duplicates.js to scripts/analyze-test-duplicates.js
-- [ ] T029 [P] [US1] Copy generate-test-report.js to scripts/generate-test-report.js
+- [x] T016 [P] [US1] Copy common.sh to scripts/bash/common.sh (with get_plugin_root function already added)
+- [x] T017 [P] [US1] Copy create-new-feature.sh to scripts/bash/create-new-feature.sh
+- [x] T018 [P] [US1] Copy check-prerequisites.sh to scripts/bash/check-prerequisites.sh
+- [x] T019 [P] [US1] Copy setup-plan.sh to scripts/bash/setup-plan.sh
+- [x] T020 [P] [US1] Copy create-pr-and-transition.sh to scripts/bash/create-pr-and-transition.sh
+- [x] T021 [P] [US1] Copy create-pr-only.sh to scripts/bash/create-pr-only.sh
+- [x] T022 [P] [US1] Copy prepare-images.sh to scripts/bash/prepare-images.sh
+- [x] T023 [P] [US1] Copy detect-incomplete-implementation.sh to scripts/bash/detect-incomplete-implementation.sh
+- [x] T024 [P] [US1] Copy auto-ship-tickets.sh to scripts/bash/auto-ship-tickets.sh
+- [x] T025 [P] [US1] Copy transition-to-verify.sh to scripts/bash/transition-to-verify.sh
+- [x] T026 [P] [US1] Copy update-agent-context.sh to scripts/bash/update-agent-context.sh
+- [x] T027 [P] [US1] Copy analyze-slow-tests.js to scripts/analyze-slow-tests.js
+- [x] T028 [P] [US1] Copy analyze-test-duplicates.js to scripts/analyze-test-duplicates.js
+- [x] T029 [P] [US1] Copy generate-test-report.js to scripts/generate-test-report.js
 
 **Copy Templates (6 files):**
 
-- [ ] T030 [P] [US1] Copy spec-template.md to templates/spec-template.md
-- [ ] T031 [P] [US1] Copy plan-template.md to templates/plan-template.md
-- [ ] T032 [P] [US1] Copy tasks-template.md to templates/tasks-template.md
-- [ ] T033 [P] [US1] Copy checklist-template.md to templates/checklist-template.md
-- [ ] T034 [P] [US1] Copy summary-template.md to templates/summary-template.md
-- [ ] T035 [P] [US1] Copy agent-file-template.md to templates/agent-file-template.md
+- [x] T030 [P] [US1] Copy spec-template.md to templates/spec-template.md
+- [x] T031 [P] [US1] Copy plan-template.md to templates/plan-template.md
+- [x] T032 [P] [US1] Copy tasks-template.md to templates/tasks-template.md
+- [x] T033 [P] [US1] Copy checklist-template.md to templates/checklist-template.md
+- [x] T034 [P] [US1] Copy summary-template.md to templates/summary-template.md
+- [x] T035 [P] [US1] Copy agent-file-template.md to templates/agent-file-template.md
 
 **Copy Skills (testing skill):**
 
-- [ ] T036 [P] [US1] Copy testing skill directory to skills/testing/ including SKILL.md and patterns/
+- [x] T036 [P] [US1] Copy testing skill directory to skills/testing/ including SKILL.md and patterns/
 
 **Checkpoint**: User Story 1 complete - plugin installation creates all expected files and directories
 
