@@ -331,10 +331,10 @@ jobs:
             --output test-failures.json
 
       # Phase 3: Claude Fix Execution
-      - name: Execute /verify Command
+      - name: Execute /ai-board.verify Command
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         run: |
-          echo "🤖 Executing /verify command to fix test failures..."
+          echo "🤖 Executing /ai-board.verify command to fix test failures..."
           echo ""
           echo "📋 CRITICAL CONTEXT FOR ANALYSIS:"
           echo "  ℹ️  All tests were passing on main branch (100% baseline)"
@@ -347,7 +347,7 @@ jobs:
           echo "  3. Fix implementation if it violates spec (bugs)"
           echo "  4. Update test if spec documents new behavior (intentional changes)"
           echo ""
-          claude --dangerously-skip-permissions "/verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
+          claude --dangerously-skip-permissions "/ai-board.verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -358,14 +358,14 @@ jobs:
           if git diff --staged --quiet; then
             echo "✅ No test fixes needed (all tests passed on first run)"
           else
-            git commit -m "test(ticket-${{ inputs.ticket_id }}): fix test failures from /verify" \
+            git commit -m "test(ticket-${{ inputs.ticket_id }}): fix test failures from /ai-board.verify" \
               -m "Automated test fixes by GitHub Actions verify workflow" \
               -m "Ticket: ${{ inputs.ticket_id }}" \
               -m "Branch: ${{ inputs.branch }}"
             echo "✅ Test fixes committed"
           fi
 
-          # Always push (Claude may have committed during /verify execution)
+          # Always push (Claude may have committed during /ai-board.verify execution)
           git push origin "${{ inputs.branch }}"
           echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
 
@@ -509,5 +509,5 @@ jobs:
         run: |
           echo "❌ Verification failed"
           echo "📋 Check logs above for error details"
-          echo "💡 Tests may still be failing after /verify command execution"
+          echo "💡 Tests may still be failing after /ai-board.verify command execution"
           exit 1
