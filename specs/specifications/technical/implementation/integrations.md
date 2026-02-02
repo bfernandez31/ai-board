@@ -97,7 +97,7 @@ export async function dispatchWorkflow(params: {
   - `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
 - **Repository Checkout**: Checks out external project repository
-- **Differences**: Skips full spec generation, executes `/quick-impl` command
+- **Differences**: Skips full spec generation, executes `/ai-board.quick-impl` command
 - **Same**: Environment setup, branch management, job status updates
 
 **Verify Workflow** (`.github/workflows/verify.yml`):
@@ -150,7 +150,7 @@ export async function dispatchWorkflow(params: {
 
 ### Claude Commands
 
-**Implementation Command** (`.claude/commands/speckit.implement.md`):
+**Implementation Command** (`commands/ai-board.implement.md`):
 - **Purpose**: Execute all tasks in tasks.md and generate implementation summary
 - **Input**: Tasks from tasks.md, plan from plan.md, spec from spec.md
 - **Steps**:
@@ -212,7 +212,7 @@ export async function dispatchWorkflow(params: {
 - Section headers with Markdown H2 (`##`)
 - Warning emoji (`⚠️`) for manual requirements section
 
-**Code Simplifier Command** (`.claude/commands/code-simplifier.md`):
+**Code Simplifier Command** (`commands/ai-board.code-simplifier.md`):
 - **Purpose**: Simplify and refine code for clarity, consistency, and maintainability
 - **Trigger**: Verify workflow (Phase 4.5, after test fixes)
 - **Scope**: Recently modified code (git diff main...HEAD)
@@ -224,7 +224,7 @@ export async function dispatchWorkflow(params: {
   - Avoid nested ternary operators
 - **Output**: Refined code committed to feature branch
 
-**Code Review Command** (`.claude/commands/code-review.md`):
+**Code Review Command** (`commands/ai-board.code-review.md`):
 - **Purpose**: Automated code review for pull requests
 - **Trigger**: Verify workflow (Phase 7, after PR creation)
 - **Input**: PR number
@@ -416,7 +416,7 @@ await octokit.actions.createWorkflowDispatch({
 ```
 
 **External Project Requirements**:
-- `.claude/commands/` directory with Claude command definitions
+- ai-board plugin (as git submodule) for Claude command definitions
 - `.specify/scripts/bash/` directory with automation scripts
 - Test configuration (if using verify workflow)
 - Standard project structure compatible with ai-board commands

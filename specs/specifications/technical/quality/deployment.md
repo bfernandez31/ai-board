@@ -8,7 +8,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 
 | Workflow | Trigger | Purpose | Timeout |
 |----------|---------|---------|---------|
-| `speckit.yml` | workflow_dispatch | Main spec-kit execution | 120 min |
+| `speckit.yml` | workflow_dispatch | Main ai-board workflow execution | 120 min |
 | `quick-impl.yml` | workflow_dispatch | Quick-implementation path | 120 min |
 | `cleanup.yml` | workflow_dispatch | Diff-based technical debt cleanup | 45 min |
 | `verify.yml` | workflow_dispatch | Test verification and PR creation | 45 min |
@@ -17,7 +17,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
-### Speckit Workflow
+### AI-Board Workflow
 
 **File**: `.github/workflows/speckit.yml`
 
@@ -26,7 +26,7 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 - `ticketTitle`: Ticket title (specify command only)
 - `ticketDescription`: Ticket description (specify command only)
 - `branch`: Feature branch name
-- `command`: Spec-kit command (specify|plan|task|implement|clarify)
+- `command`: ai-board command (specify|plan|task|implement|clarify)
 - `job_id`: Job record ID
 - `project_id`: Project identifier
 
@@ -98,13 +98,13 @@ steps:
           --arg policy "$EFFECTIVE_POLICY" \
           '{ticketKey: $tk, title: $title, description: $desc, clarificationPolicy: $policy}')
 
-        claude --dangerously-skip-permissions "/speckit.specify '${JSON_PAYLOAD}'"
+        claude --dangerously-skip-permissions "/ai-board.specify '${JSON_PAYLOAD}'"
 
       elif [[ "${{ inputs.command }}" == "plan" ]]; then
-        claude --dangerously-skip-permissions "/speckit.plan"
+        claude --dangerously-skip-permissions "/ai-board.plan"
 
       elif [[ "${{ inputs.command }}" == "implement" ]]; then
-        claude --dangerously-skip-permissions "/speckit.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+        claude --dangerously-skip-permissions "/ai-board.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
 
       else
         echo "Unknown command: ${{ inputs.command }}"
@@ -124,7 +124,7 @@ steps:
         exit 0
       fi
 
-      git commit -m "feat(ticket-${{ inputs.ticket_id }}): ${{ inputs.command }} - automated spec-kit execution
+      git commit -m "feat(ticket-${{ inputs.ticket_id }}): ${{ inputs.command }} - automated ai-board execution
 
       🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -173,9 +173,9 @@ steps:
 
 **File**: `.github/workflows/quick-impl.yml`
 
-**Differences from Speckit**:
+**Differences from AI-Board Workflow**:
 - No ticketTitle/ticketDescription inputs (uses minimal spec)
-- Executes `/quick-impl` instead of `/speckit.specify`
+- Executes `/ai-board.quick-impl` instead of `/ai-board.specify`
 - Creates minimal spec.md via `create-new-feature.sh --mode=quick-impl`
 - Same environment setup, Git operations, status updates
 

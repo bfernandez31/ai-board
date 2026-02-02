@@ -334,11 +334,11 @@
 - **Installation**: Global via npm (`npm install -g @anthropic-ai/claude-code`)
 - **Purpose**: AI-powered code generation and specification
 - **Commands**:
-  - `/speckit.specify`: Generate specifications
-  - `/speckit.plan`: Generate implementation plans
-  - `/speckit.tasks`: Generate task breakdowns
-  - `/speckit.implement`: Execute implementation
-  - `/quick-impl`: Fast-track simple changes
+  - `/ai-board.specify`: Generate specifications
+  - `/ai-board.plan`: Generate implementation plans
+  - `/ai-board.tasks`: Generate task breakdowns
+  - `/ai-board.implement`: Execute implementation
+  - `/ai-board.quick-impl`: Fast-track simple changes
 
 ## Deployment
 
