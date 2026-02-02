@@ -1,5 +1,5 @@
 ---
-command: "/iterate-verify"
+command: "/ai-board.iterate-verify"
 category: "Verification"
 purpose: "Apply targeted fixes during VERIFY stage without changing ticket state"
 ---
@@ -32,22 +32,22 @@ This command is executed when:
 5. **No architecture changes** - Structural changes require going back to PLAN
 
 ### Scope Limitations
-- ✅ Fix validation issues
-- ✅ Correct error messages
-- ✅ Adjust UI elements
-- ✅ Fix integration issues
-- ✅ Performance optimizations (minor)
-- ❌ Change data models
-- ❌ Modify API contracts substantially
-- ❌ Alter user workflows
-- ❌ Add new features
+- Fix validation issues
+- Correct error messages
+- Adjust UI elements
+- Fix integration issues
+- Performance optimizations (minor)
+- Change data models
+- Modify API contracts substantially
+- Alter user workflows
+- Add new features
 
 ## Process
 
 ### Step 1: Read Project Context
 ```bash
 # Read constitution for project standards
-Read .specify/memory/constitution.md
+Read ${CLAUDE_PLUGIN_ROOT}/memory/constitution.md
 
 # Read current branch specifications
 Read specs/$BRANCH/spec.md
@@ -112,7 +112,7 @@ Ensure all documentation remains aligned:
 ### Success Case
 Create a summary of changes made:
 ```markdown
-✅ Iteration completed successfully
+Iteration completed successfully
 
 Fixed issues:
 - Added email validation to signup form
@@ -129,7 +129,7 @@ All changes are minor and align with original specifications.
 ### Failure Case
 If changes would be too large:
 ```markdown
-❌ Cannot iterate - changes too substantial
+Cannot iterate - changes too substantial
 
 The requested fixes would require:
 - Data model changes

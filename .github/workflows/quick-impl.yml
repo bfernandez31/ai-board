@@ -248,9 +248,9 @@ jobs:
           # Add image paths if available
           if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
             echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
+            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
           else
-            claude --dangerously-skip-permissions "/quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
           fi
 
       - name: Capture Branch Name

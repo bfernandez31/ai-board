@@ -1,5 +1,5 @@
 ---
-command: "/cleanup"
+command: "/ai-board.cleanup"
 description: "Holistic diff-based technical debt cleanup"
 model: "opus"
 allowed-tools: ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "TodoWrite"]
@@ -26,7 +26,7 @@ The `MERGE_POINT` environment variable contains the git SHA of the last cleanup 
 ## Context Discovery
 
 1. **CLAUDE.md** (auto-loaded) → Project stack, commands, conventions
-2. **Read `.specify/memory/constitution.md`** → Project principles, non-negotiable rules
+2. **Read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md`** → Project principles, non-negotiable rules
 3. **Get merge point** → Use `$MERGE_POINT` env var (set by workflow)
 4. **Locate cleanup-tasks.md** → In the specs directory (created by Phase 0)
 
@@ -37,7 +37,7 @@ The `MERGE_POINT` environment variable contains the git SHA of the last cleanup 
 1. Parse `$ARGUMENTS` JSON to extract `TICKET_KEY`
 2. Create cleanup branch:
    ```bash
-   .specify/scripts/bash/create-new-feature.sh --json --mode=cleanup --ticket-key="$TICKET_KEY" "Cleanup"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/bash/create-new-feature.sh --json --mode=cleanup --ticket-key="$TICKET_KEY" "Cleanup"
    ```
 3. Parse JSON output for `BRANCH_NAME` and `SPEC_FILE`
 4. Verify branch was created and cleanup-tasks.md exists in the spec directory
@@ -69,8 +69,8 @@ Analyze ALL changes since merge point:
 - Performance implications
 
 **Spec Synchronization**:
-- Compare `.specify/*/spec.md` with implementation
-- Check `.specify/*/plan.md` accuracy
+- Compare `${CLAUDE_PLUGIN_ROOT}/*/spec.md` with implementation
+- Check `${CLAUDE_PLUGIN_ROOT}/*/plan.md` accuracy
 - Verify CLAUDE.md is current
 
 Update `cleanup-tasks.md`:
@@ -147,7 +147,7 @@ Update `cleanup-tasks.md`:
 - Leave codebase broken
 
 **ALWAYS**:
-- Read `.specify/memory/constitution.md` for project principles
+- Read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` for project principles
 - Use test/lint commands from CLAUDE.md
 - Test after each change
 - Revert if tests fail
@@ -174,4 +174,4 @@ If codebase is clean:
 
 ---
 
-**Philosophy**: This command is project-agnostic. It reads CLAUDE.md (auto-loaded) for stack/commands and `.specify/memory/constitution.md` for project principles. Uses cleanup-tasks.md to track progress. No hardcoded commands or assumptions about the tech stack.
+**Philosophy**: This command is project-agnostic. It reads CLAUDE.md (auto-loaded) for stack/commands and `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` for project principles. Uses cleanup-tasks.md to track progress. No hardcoded commands or assumptions about the tech stack.

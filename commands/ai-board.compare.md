@@ -1,12 +1,12 @@
 ---
-command: "/compare"
+command: "/ai-board.compare"
 category: "Ticket Comparison"
 purpose: "Evaluate which ticket implementation has the best CODE quality"
 ---
 
-# /compare - Ticket Comparison Command
+# /ai-board.compare - Ticket Comparison Command
 
-## ⛔ MANDATORY: ALWAYS REGENERATE - NO EXCEPTIONS
+## MANDATORY: ALWAYS REGENERATE - NO EXCEPTIONS
 
 **YOU MUST ALWAYS CREATE A NEW COMPARISON. NEVER SKIP.**
 
@@ -44,7 +44,7 @@ Key principles:
 - Test coverage for the feature
 - Whether consolidated specs (`specs/specifications/`) need updates for new features
 
-## ⚠️ CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
+## CRITICAL: OUTPUT DIRECTLY - NO INTRODUCTIONS!
 
 **Your output will be posted DIRECTLY as a ticket comment.**
 
@@ -54,7 +54,7 @@ Start IMMEDIATELY with the mention. Do NOT add any introductory text.
 
 **REQUIRED**:
 Start DIRECTLY with:
-@[$USER_ID:$USER] ✅ **Comparison Complete**
+@[$USER_ID:$USER] **Comparison Complete**
 
 ## Inputs
 
@@ -196,7 +196,7 @@ For **EACH ticket**, evaluate:
 
 ### Step 6: Evaluate Constitution Compliance (Code Only)
 
-Read `.specify/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
+Read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
 
 | Principle | What to Check in CODE |
 |-----------|----------------------|
@@ -289,8 +289,8 @@ Create markdown report at:
 ### Decision Point 1: [e.g., State Management]
 | Ticket | Approach | Constitution | Trade-offs |
 |--------|----------|--------------|------------|
-| AIB-128 | TanStack Query | ✅ | Proper caching |
-| AIB-124 | useState | ❌ | No cache |
+| AIB-128 | TanStack Query | Yes | Proper caching |
+| AIB-124 | useState | No | No cache |
 
 **Best**: AIB-128 - Uses proper server state management per constitution.
 
@@ -301,8 +301,8 @@ Create markdown report at:
 
 | Ticket | I. TypeScript | II. Components | III. Tests | IV. Security | V. Database | Overall |
 |--------|--------------|----------------|------------|--------------|-------------|---------|
-| AIB-128 | ✅ | ✅ | ✅ | ✅ | ✅ | 95% |
-| AIB-124 | ⚠️ 1 any | ✅ | ❌ no tests | ✅ | ✅ | 70% |
+| AIB-128 | Yes | Yes | Yes | Yes | Yes | 95% |
+| AIB-124 | Warning 1 any | Yes | No tests | Yes | Yes | 70% |
 
 ## Consolidated Specs Status
 - [ ] Feature warrants `specs/specifications/` update
@@ -358,11 +358,11 @@ Output a concise comment (< 1500 chars) with:
 
 **Success Example**:
 ```markdown
-@[cm47j3m31817281:Benoît Fernandez] ✅ **Comparison Complete**
+@[cm47j3m31817281:Benoit Fernandez] **Comparison Complete**
 
 Compared CODE quality: **AIB-128** (source), **AIB-124**, **AIB-125**
 
-### 🏆 Best: **AIB-125** (92%)
+### Best: **AIB-125** (92%)
 
 **Why**: TanStack Query (not useState), complete error handling, 2 test files covering happy + edge cases.
 
@@ -375,14 +375,14 @@ Compared CODE quality: **AIB-128** (source), **AIB-124**, **AIB-125**
 
 *Specs/workflow type NOT evaluated - code only*
 
-→ **Ship AIB-125**
+-> **Ship AIB-125**
 
-📄 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
+Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
 ```
 
 **Error Example**:
 ```markdown
-@[cm47j3m31817281:Benoît Fernandez] ❌ **Comparison Failed**
+@[cm47j3m31817281:Benoit Fernandez] **Comparison Failed**
 
 Could not find branches:
 - #XYZ-999: No branch found

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ai-board-plugin-manifest",
+  "title": "ai-board Plugin Manifest",
+  "description": "JSON Schema for the ai-board Claude Code plugin manifest (plugin.json)",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "const": "ai-board",
+      "description": "Plugin identifier (must be 'ai-board')"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9]+(\\.\\d+)?)?$",
+      "description": "Semantic version (e.g., '1.0.0', '2.0.0-beta.1')"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Brief plugin description"
+    },
+    "author": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Author or organization name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Author website or GitHub profile"
+        }
+      },
+      "required": ["name"]
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "Documentation or landing page URL"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "Source code repository URL"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g., 'MIT', 'Apache-2.0')"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "description": "Discovery tags for the plugin"
+    },
+    "commands": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\./"
+          }
+        }
+      ],
+      "description": "Additional command file paths (relative to plugin root)"
+    },
+    "agents": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\./"
+          }
+        }
+      ],
+      "description": "Agent file paths (relative to plugin root)"
+    },
+    "skills": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\./"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\./"
+          }
+        }
+      ],
+      "description": "Skill directory paths (relative to plugin root)"
+    }
+  },
+  "additionalProperties": true
+}

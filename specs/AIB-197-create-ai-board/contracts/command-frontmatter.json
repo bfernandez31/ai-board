@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ai-board-command-frontmatter",
+  "title": "ai-board Command Frontmatter",
+  "description": "JSON Schema for ai-board command file YAML frontmatter",
+  "type": "object",
+  "required": ["description"],
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Brief description of command purpose (required)"
+    },
+    "command": {
+      "type": "string",
+      "pattern": "^/ai-board",
+      "description": "Slash command invocation name (e.g., '/ai-board.verify')"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Workflow",
+        "Testing & Quality",
+        "Analysis",
+        "Configuration",
+        "Maintenance",
+        "Refactoring",
+        "Assistant"
+      ],
+      "description": "Command grouping category"
+    },
+    "purpose": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Human-readable purpose description"
+    },
+    "model": {
+      "type": "string",
+      "enum": ["opus", "haiku"],
+      "description": "Preferred Claude model for this command"
+    },
+    "wave-enabled": {
+      "type": "boolean",
+      "description": "Whether command supports Wave mode"
+    },
+    "performance-profile": {
+      "type": "string",
+      "enum": ["simple", "complex", "heavy"],
+      "description": "Complexity hint for resource allocation"
+    },
+    "allowed-tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Restricted list of allowed tools"
+    },
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "Prevent model invocation (security restriction)"
+    }
+  },
+  "additionalProperties": true
+}

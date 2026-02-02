@@ -34,7 +34,7 @@ This command implements simple features directly from ticket context without for
      ```
    - Parse JSON: extract `TICKET_KEY`, `TITLE`, and `DESCRIPTION`
    - Combine `TITLE` and `DESCRIPTION` into `FEATURE_DESCRIPTION` for spec content
-   - Run `.specify/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
+   - Run `${CLAUDE_PLUGIN_ROOT}/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
    - Script generates branch name: `{ticketKey}-{3-words}` (e.g., `ABC-123-fix-login-bug`)
    - Script creates: branch, specs/{branch}/ directory, and spec.md with feature description
    - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)
@@ -48,7 +48,7 @@ This command implements simple features directly from ticket context without for
 
 3. **Validate task simplicity**:
    - **If spec.md indicates complex requirements** (>200 words, multiple entities, API changes):
-     - **STOP** and recommend: "This task appears complex. Consider using full workflow: /speckit.specify → /speckit.plan → /speckit.implement"
+     - **STOP** and recommend: "This task appears complex. Consider using full workflow: /ai-board.specify → /ai-board.plan → /ai-board.implement"
      - Exit without implementation
    - **If task is simple**: Continue to step 4
 
@@ -118,7 +118,7 @@ This command implements simple features directly from ticket context without for
 - If dependencies are missing: Install and document in package.json
 - If tests fail: Debug and fix before proceeding
 - If type errors occur: Resolve before completion
-- If task exceeds simplicity threshold: Abort and recommend /speckit.specify
+- If task exceeds simplicity threshold: Abort and recommend /ai-board.specify
 
 ## Success Criteria
 

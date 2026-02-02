@@ -62,7 +62,7 @@ The workflow provides context through environment variables and arguments:
 ## File Locations
 
 **Project Context** (read for understanding project standards):
-- **`.specify/memory/constitution.md`**: Project principles, standards, and guidelines - MUST READ on every stage
+- **`${CLAUDE_PLUGIN_ROOT}/memory/constitution.md`**: Project principles, standards, and guidelines - MUST READ on every stage
 
 **Ticket Artifacts** in `specs/$BRANCH/` directory (using the BRANCH environment variable):
 - **spec.md**: Feature specification (SPECIFY stage)
@@ -82,7 +82,7 @@ The workflow provides context through environment variables and arguments:
 - ✅ **ONLY** modify `specs/$BRANCH/spec.md` and create `specs/$BRANCH/.ai-board-result.md`
 
 **MANDATORY Process** (you MUST do ALL these steps):
-1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md` (project principles and standards)
+1. **READ CONSTITUTION**: Use Read tool to read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` (project principles and standards)
 2. **READ SPEC**: Use Read tool to read `specs/$BRANCH/spec.md`
 3. **ANALYZE**: Understand the user request from $ARGUMENTS in context of project principles
 4. **MODIFY**: Make the requested changes to the content, respecting constitution guidelines
@@ -131,7 +131,7 @@ When a change is requested, you MUST analyze its impact across ALL artifacts and
 - Modifying API contract → Update contracts/, spec.md (acceptance criteria), plan.md (integration points)
 
 **MANDATORY Process** (you MUST do ALL these steps):
-1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md` (project principles and standards)
+1. **READ CONSTITUTION**: Use Read tool to read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` (project principles and standards)
 2. **DISCOVER**: Use Glob to list all files in `specs/$BRANCH/` directory
 3. **READ ALL**: Use Read tool to read ALL relevant files (spec.md, plan.md, tasks.md, and any others that might be impacted)
 4. **ANALYZE IMPACT**: Understand the user request from $ARGUMENTS in context of project principles, determine which files need updates
@@ -217,7 +217,7 @@ Action: Provide examples and best practices
 - Synchronizing documentation (direct for specs/, via iterate for code comments)
 
 **Process for VERIFY**:
-1. **READ CONSTITUTION**: Use Read tool to read `.specify/memory/constitution.md`
+1. **READ CONSTITUTION**: Use Read tool to read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md`
 2. **READ ALL SPECS**: Read specs/$BRANCH/ files and understand current state
 3. **READ CODE IF NEEDED**: Read the relevant code files to understand the issue
 4. **ANALYZE ISSUES**: Parse the user's request to understand what's not working

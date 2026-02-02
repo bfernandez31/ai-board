@@ -31,7 +31,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Execution Steps
 
-1. **Setup**: Run `.specify/scripts/bash/check-prerequisites.sh --json` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+1. **Setup**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/bash/check-prerequisites.sh --json` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
@@ -77,7 +77,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - spec.md: Feature requirements and scope
    - plan.md (if exists): Technical details, dependencies
    - tasks.md (if exists): Implementation tasks
-   
+
    **Context Loading Strategy**:
    - Load only necessary portions relevant to active focus areas (avoid full-file dumping)
    - Prefer summarizing long sections into concise scenario/requirement bullets
@@ -88,10 +88,10 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Create `FEATURE_DIR/checklists/` directory if it doesn't exist
    - Generate unique checklist filename:
      - Use short, descriptive name based on domain (e.g., `ux.md`, `api.md`, `security.md`)
-     - Format: `[domain].md` 
+     - Format: `[domain].md`
      - If file exists, append to existing file
    - Number items sequentially starting from CHK001
-   - Each `/speckit.checklist` run creates a NEW file (never overwrites existing checklists)
+   - Each `/ai-board.checklist` run creates a NEW file (never overwrites existing checklists)
 
    **CORE PRINCIPLE - Test the Requirements, Not the Implementation**:
    Every checklist item MUST evaluate the REQUIREMENTS THEMSELVES for:
@@ -100,7 +100,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Consistency**: Do requirements align with each other?
    - **Measurability**: Can requirements be objectively verified?
    - **Coverage**: Are all scenarios/edge cases addressed?
-   
+
    **Category Structure** - Group items by requirement quality dimensions:
    - **Requirement Completeness** (Are all necessary requirements documented?)
    - **Requirement Clarity** (Are requirements specific and unambiguous?)
@@ -111,14 +111,14 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Non-Functional Requirements** (Performance, Security, Accessibility, etc. - are they specified?)
    - **Dependencies & Assumptions** (Are they documented and validated?)
    - **Ambiguities & Conflicts** (What needs clarification?)
-   
+
    **HOW TO WRITE CHECKLIST ITEMS - "Unit Tests for English"**:
-   
+
    ❌ **WRONG** (Testing implementation):
    - "Verify landing page displays 3 episode cards"
    - "Test hover states work on desktop"
    - "Confirm logo click navigates home"
-   
+
    ✅ **CORRECT** (Testing requirements quality):
    - "Are the exact number and layout of featured episodes specified?" [Completeness]
    - "Is 'prominent display' quantified with specific sizing/positioning?" [Clarity]
@@ -127,7 +127,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - "Is the fallback behavior specified when logo image fails to load?" [Edge Cases]
    - "Are loading states defined for asynchronous episode data?" [Completeness]
    - "Does the spec define visual hierarchy for competing UI elements?" [Clarity]
-   
+
    **ITEM STRUCTURE**:
    Each item should follow this pattern:
    - Question format asking about requirement quality
@@ -135,28 +135,28 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Include quality dimension in brackets [Completeness/Clarity/Consistency/etc.]
    - Reference spec section `[Spec §X.Y]` when checking existing requirements
    - Use `[Gap]` marker when checking for missing requirements
-   
+
    **EXAMPLES BY QUALITY DIMENSION**:
-   
+
    Completeness:
    - "Are error handling requirements defined for all API failure modes? [Gap]"
    - "Are accessibility requirements specified for all interactive elements? [Completeness]"
    - "Are mobile breakpoint requirements defined for responsive layouts? [Gap]"
-   
+
    Clarity:
    - "Is 'fast loading' quantified with specific timing thresholds? [Clarity, Spec §NFR-2]"
    - "Are 'related episodes' selection criteria explicitly defined? [Clarity, Spec §FR-5]"
    - "Is 'prominent' defined with measurable visual properties? [Ambiguity, Spec §FR-4]"
-   
+
    Consistency:
    - "Do navigation requirements align across all pages? [Consistency, Spec §FR-10]"
    - "Are card component requirements consistent between landing and detail pages? [Consistency]"
-   
+
    Coverage:
    - "Are requirements defined for zero-state scenarios (no episodes)? [Coverage, Edge Case]"
    - "Are concurrent user interaction scenarios addressed? [Coverage, Gap]"
    - "Are requirements specified for partial data loading failures? [Coverage, Exception Flow]"
-   
+
    Measurability:
    - "Are visual hierarchy requirements measurable/testable? [Acceptance Criteria, Spec §FR-1]"
    - "Can 'balanced visual weight' be objectively verified? [Measurability, Spec §FR-2]"
@@ -192,7 +192,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - ❌ "Click", "navigate", "render", "load", "execute"
    - ❌ Test cases, test plans, QA procedures
    - ❌ Implementation details (frameworks, APIs, algorithms)
-   
+
    **✅ REQUIRED PATTERNS** - These test requirements quality:
    - ✅ "Are [requirement type] defined/specified/documented for [scenario]?"
    - ✅ "Is [vague term] quantified/clarified with specific criteria?"
@@ -201,7 +201,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - ✅ "Are [edge cases/scenarios] addressed in requirements?"
    - ✅ "Does the spec define [missing aspect]?"
 
-6. **Structure Reference**: Generate the checklist following the canonical template in `.specify/templates/checklist-template.md` for title, meta section, category headings, and ID formatting. If template is unavailable, use: H1 title, purpose/created meta lines, `##` category sections containing `- [ ] CHK### <requirement item>` lines with globally incrementing IDs starting at CHK001.
+6. **Structure Reference**: Generate the checklist following the canonical template in `${CLAUDE_PLUGIN_ROOT}/templates/checklist-template.md` for title, meta section, category headings, and ID formatting. If template is unavailable, use: H1 title, purpose/created meta lines, `##` category sections containing `- [ ] CHK### <requirement item>` lines with globally incrementing IDs starting at CHK001.
 
 7. **Report**: Output full path to created checklist, item count, and remind user that each run creates a new file. Summarize:
    - Focus areas selected
@@ -209,7 +209,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Actor/timing
    - Any explicit user-specified must-have items incorporated
 
-**Important**: Each `/speckit.checklist` command invocation creates a checklist file using short, descriptive names unless file already exists. This allows:
+**Important**: Each `/ai-board.checklist` command invocation creates a checklist file using short, descriptive names unless file already exists. This allows:
 
 - Multiple checklists of different types (e.g., `ux.md`, `test.md`, `security.md`)
 - Simple, memorable filenames that indicate checklist purpose
@@ -283,5 +283,5 @@ Sample items:
 - Correct: Tests if the requirements are written correctly
 - Wrong: Verification of behavior
 - Correct: Validation of requirement quality
-- Wrong: "Does it do X?" 
+- Wrong: "Does it do X?"
 - Correct: "Is X clearly specified?"

@@ -289,7 +289,7 @@ When ticket moves directly from INBOX to BUILD:
 **Workflow Differences**:
 - Bypasses specification and planning stages
 - Creates minimal spec.md with only title and description
-- Executes /quick-impl command instead of /implement
+- Executes /ai-board.quick-impl command instead of /ai-board.implement
 - AI implements based solely on title and description context
 - No formal requirements or planning documents
 - **Sets ticket.workflowType to QUICK** (atomically with job creation)

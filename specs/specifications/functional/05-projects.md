@@ -415,7 +415,7 @@ AI-Board supports managing tickets for external GitHub repositories:
 
 **Requirements**:
 - External projects must contain required AI-Board configuration:
-  - `.claude/commands/` directory with Claude command definitions
+  - ai-board plugin (as git submodule) for Claude command definitions
   - `.specify/scripts/bash/` directory with automation scripts
   - Test configuration files (if workflows use tests)
 - GitHub Personal Access Token (PAT) with repo access
