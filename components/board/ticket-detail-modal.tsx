@@ -785,7 +785,7 @@ export function TicketDetailModal({
   const descriptionEdit = useTicketEdit({
     initialValue: localTicket?.description || '',
     onSave: handleSaveDescription,
-    maxLength: 2500,
+    maxLength: 10000,
     fieldType: 'description',
   });
 
