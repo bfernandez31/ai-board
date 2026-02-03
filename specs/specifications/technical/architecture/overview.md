@@ -63,18 +63,22 @@ ai-board/
 ├── .github/workflows/            # GitHub Actions
 │   ├── speckit.yml               # Main workflow
 │   ├── quick-impl.yml            # Quick-impl workflow
+│   ├── verify.yml                # Verification workflow
+│   ├── cleanup.yml               # Technical debt cleanup
+│   ├── iterate.yml               # Minor fixes during VERIFY
 │   ├── ai-board-assist.yml       # AI assistance workflow
-│   └── auto-ship.yml             # Auto-deployment workflow
-├── .claude-plugin/               # Claude Code plugin manifest
-│   └── plugin.json               # Plugin configuration
-├── .ai-board/                    # AI-Board plugin content
+│   ├── auto-ship.yml             # Auto-deployment workflow
+│   ├── deploy-preview.yml        # Vercel preview deployment
+│   └── rollback-reset.yml        # VERIFY→PLAN rollback
+├── .claude-plugin/               # Claude Code plugin (full content)
+│   ├── plugin.json               # Plugin manifest
 │   ├── commands/                 # Slash commands (ai-board.*)
-│   ├── scripts/bash/             # Workflow scripts
-│   ├── templates/                # Spec/plan/task templates
-│   └── memory/                   # Constitution and memory
-└── .specify/                     # Project specs directory
-    ├── memory/                   # Project-specific memory
-    └── scripts/bash/             # Legacy scripts (symlinked)
+│   ├── scripts/                  # Workflow scripts
+│   │   └── bash/                 # Bash scripts
+│   └── templates/                # Spec/plan/task templates
+└── .ai-board/                    # Project-specific content
+    └── memory/                   # Constitution and memory
+        └── constitution.md       # Project conventions
 ```
 
 ### Data Flow Patterns
@@ -107,10 +111,20 @@ Stage Transition
   → Create Job Record (status: PENDING)
   → Dispatch GitHub Actions Workflow
   → Update Ticket Stage
-  → Workflow Executes (Claude Code)
+  → Workflow Executes:
+    → Sparse checkout ai-board (only .claude-plugin/)
+    → Full checkout target repository
+    → Symlink commands to target/.claude/
+    → Run Claude Code with ai-board commands
   → Workflow Updates Job Status
   → Client Polls for Status Updates
 ```
+
+**Sparse Checkout Pattern**:
+- ai-board is always checked out from `main` branch (stable commands)
+- Only `.claude-plugin/` and `.github/scripts/` directories are fetched (~1MB vs ~100MB)
+- Commands are symlinked to `target/.claude/commands/` for Claude to discover
+- Even when ai-board works on itself, it uses stable commands from main
 
 ### Multi-Tenancy Pattern
 

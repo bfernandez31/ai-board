@@ -126,17 +126,33 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
-      - name: Checkout repository
+      - name: Checkout ai-board (sparse - plugin only)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository (format: owner/repo)
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout target repository
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        uses: actions/checkout@v4
+        with:
           repository: ${{ inputs.githubRepository }}
-          # For specify command, always checkout main (branch will be created later)
-          # For other commands, checkout the provided branch
           ref: ${{ inputs.command == 'specify' && 'main' || inputs.branch || github.ref }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
+
+      - name: Setup ai-board commands
+        if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        run: |
+          # Create symlink so Claude can find ai-board commands in target repo
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ ai-board commands linked to target/.claude/commands"
 
       - name: Setup Bun
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
@@ -149,7 +165,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('target/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
@@ -167,10 +183,12 @@ jobs:
 
       - name: Install Dependencies
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        working-directory: target
         run: bun install --frozen-lockfile
 
       - name: Detect Project Dependencies
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        working-directory: target
         run: |
           echo "🔍 Detecting project dependencies..."
 
@@ -210,6 +228,7 @@ jobs:
 
       - name: Setup Test Environment
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -217,15 +236,16 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          .github/scripts/setup-test-env.sh
+          ../ai-board/.github/scripts/setup-test-env.sh
 
       - name: Prepare Images for Claude (Specify Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && inputs.attachments != '[]' }}
+        working-directory: target
         run: |
           set -e
 
           # Call reusable script to download and prepare images
-          IMAGE_PATHS=$(.ai-board/scripts/bash/prepare-images.sh \
+          IMAGE_PATHS=$(../ai-board/.claude-plugin/scripts/bash/prepare-images.sh \
             "${{ inputs.ticket_id }}" \
             '${{ inputs.attachments }}')
 
@@ -245,19 +265,23 @@ jobs:
       # Database setup steps (implement command only)
       - name: Generate Prisma Client
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx prisma generate
 
       - name: Apply Database Migrations
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx prisma migrate deploy
 
       - name: Seed Test Database
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx tsx tests/global-setup.ts
 
       # Playwright setup steps (implement command only)
       - name: Get Playwright Version
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PLAYWRIGHT == 'true' }}
+        working-directory: target
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
 
@@ -271,10 +295,12 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && env.HAS_PLAYWRIGHT == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        working-directory: target
         run: npx playwright install chromium --with-deps
 
       - name: Execute Spec-Kit Command
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           set -e
 
@@ -352,6 +378,7 @@ jobs:
 
       - name: Detect Incomplete Implementation (Implement Command)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        working-directory: target
         id: detect-incomplete
         run: |
           set -e
@@ -366,7 +393,7 @@ jobs:
 
           echo "🔍 Checking: $FEATURE_DIR"
 
-          if ! .ai-board/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
+          if ! ../ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
             cat /tmp/detection.json
             needs_continue=$(jq -r '.needs_continue' /tmp/detection.json)
             incomplete=$(jq -r '.incomplete_tasks' /tmp/detection.json)
@@ -383,6 +410,7 @@ jobs:
 
       - name: Continue Implementation (Retry Loop)
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' && steps.detect-incomplete.outputs.needs_continue == 'true' }}
+        working-directory: target
         run: |
           set -e
           MAX_RETRIES=2
@@ -393,7 +421,7 @@ jobs:
 
             claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
-            if .ai-board/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
+            if ../ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"
               break
             fi
@@ -411,6 +439,7 @@ jobs:
 
       - name: Capture Current Branch
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        working-directory: target
         env:
           DEFAULT_BRANCH: ${{ inputs.branch || github.ref_name }}
         run: |
@@ -429,6 +458,7 @@ jobs:
 
       - name: Cleanup Temporary Images Before Commit
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        working-directory: target
         run: |
           echo "🧹 Cleaning up temporary image files before commit..."
           TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
@@ -440,6 +470,7 @@ jobs:
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_SPECKIT_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           git add .
 
@@ -488,6 +519,7 @@ jobs:
 
       - name: Cleanup Temporary Images (Specify Command)
         if: ${{ always() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'specify' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        working-directory: target
         run: |
           set -e
 
@@ -540,13 +572,14 @@ jobs:
 
       - name: Transition to VERIFY (Implement Command)
         if: ${{ success() && env.SKIP_SPECKIT_EXECUTION != 'true' && inputs.command == 'implement' }}
+        working-directory: target
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .ai-board/scripts/bash/transition-to-verify.sh \
+          ../ai-board/.claude-plugin/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${APP_URL}" \

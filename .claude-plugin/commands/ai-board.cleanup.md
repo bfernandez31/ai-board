@@ -26,7 +26,7 @@ The `MERGE_POINT` environment variable contains the git SHA of the last cleanup 
 ## Context Discovery
 
 1. **CLAUDE.md** (auto-loaded) → Project stack, commands, conventions
-2. **Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md`** → Project principles, non-negotiable rules
+2. **Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md`** → Project principles, non-negotiable rules
 3. **Get merge point** → Use `$MERGE_POINT` env var (set by workflow)
 4. **Locate cleanup-tasks.md** → In the specs directory (created by Phase 0)
 
@@ -37,7 +37,7 @@ The `MERGE_POINT` environment variable contains the git SHA of the last cleanup 
 1. Parse `$ARGUMENTS` JSON to extract `TICKET_KEY`
 2. Create cleanup branch:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/create-new-feature.sh --json --mode=cleanup --ticket-key="$TICKET_KEY" "Cleanup"
+   ${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/create-new-feature.sh --json --mode=cleanup --ticket-key="$TICKET_KEY" "Cleanup"
    ```
 3. Parse JSON output for `BRANCH_NAME` and `SPEC_FILE`
 4. Verify branch was created and cleanup-tasks.md exists in the spec directory
@@ -147,7 +147,7 @@ Update `cleanup-tasks.md`:
 - Leave codebase broken
 
 **ALWAYS**:
-- Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` for project principles
+- Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md` for project principles
 - Use test/lint commands from CLAUDE.md
 - Test after each change
 - Revert if tests fail
@@ -174,4 +174,4 @@ If codebase is clean:
 
 ---
 
-**Philosophy**: This command is project-agnostic. It reads CLAUDE.md (auto-loaded) for stack/commands and `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` for project principles. Uses cleanup-tasks.md to track progress. No hardcoded commands or assumptions about the tech stack.
+**Philosophy**: This command is project-agnostic. It reads CLAUDE.md (auto-loaded) for stack/commands and `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md` for project principles. Uses cleanup-tasks.md to track progress. No hardcoded commands or assumptions about the tech stack.

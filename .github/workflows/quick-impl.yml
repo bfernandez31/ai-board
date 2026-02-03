@@ -102,15 +102,33 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
-      - name: Checkout repository
+      - name: Checkout ai-board (sparse - plugin only)
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository (format: owner/repo)
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout target repository
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/checkout@v4
+        with:
           repository: ${{ inputs.githubRepository }}
-          ref: main  # Always start from main for quick-impl
+          ref: main
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
+
+      - name: Setup ai-board commands
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          # Create symlink so Claude can find ai-board commands in target repo
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ ai-board commands linked to target/.claude/commands"
 
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -132,10 +150,12 @@ jobs:
 
       - name: Install Dependencies
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: bun install --frozen-lockfile
 
       - name: Detect Project Dependencies
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           echo "🔍 Detecting project dependencies..."
 
@@ -175,6 +195,7 @@ jobs:
 
       - name: Setup Test Environment
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -182,7 +203,7 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          .github/scripts/setup-test-env.sh
+          ../ai-board/.github/scripts/setup-test-env.sh
 
       - name: Prepare Quick-Impl Payload
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -195,11 +216,12 @@ jobs:
 
       - name: Prepare Images for Claude
         if: ${{ env.SKIP_EXECUTION != 'true' && inputs.attachments != '[]' }}
+        working-directory: target
         run: |
           set -e
 
           # Call reusable script to download and prepare images
-          IMAGE_PATHS=$(.ai-board/scripts/bash/prepare-images.sh \
+          IMAGE_PATHS=$(../ai-board/.claude-plugin/scripts/bash/prepare-images.sh \
             "${{ inputs.ticket_id }}" \
             '${{ inputs.attachments }}')
 
@@ -210,19 +232,23 @@ jobs:
       # Database setup steps
       - name: Generate Prisma Client
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx prisma generate
 
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx prisma migrate deploy
 
       - name: Seed Test Database
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PRISMA == 'true' }}
+        working-directory: target
         run: npx tsx tests/global-setup.ts
 
       # Playwright setup steps
       - name: Get Playwright Version
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PLAYWRIGHT == 'true' }}
+        working-directory: target
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
 
@@ -236,10 +262,12 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_EXECUTION != 'true' && env.HAS_PLAYWRIGHT == 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        working-directory: target
         run: npx playwright install chromium --with-deps
 
       - name: Execute Quick Implementation
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           # Execute /quick-impl command with JSON payload
           # Command will internally call create-new-feature.sh --mode=quick-impl
@@ -255,6 +283,7 @@ jobs:
 
       - name: Capture Branch Name
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           # Capture the branch created by /quick-impl command
           current_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -263,6 +292,7 @@ jobs:
 
       - name: Cleanup Temporary Images Before Commit
         if: ${{ env.SKIP_EXECUTION != 'true' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        working-directory: target
         run: |
           echo "🧹 Cleaning up temporary image files before commit..."
           TICKET_ASSETS_DIR="ticket-assets/${{ inputs.ticket_id }}"
@@ -281,6 +311,7 @@ jobs:
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           git add .
 
@@ -316,6 +347,7 @@ jobs:
 
       - name: Cleanup Temporary Images
         if: ${{ always() && env.SKIP_EXECUTION != 'true' && env.IMAGE_COUNT != '' && env.IMAGE_COUNT != '0' }}
+        working-directory: target
         run: |
           set -e
 
@@ -368,13 +400,14 @@ jobs:
 
       - name: Transition to VERIFY
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .ai-board/scripts/bash/transition-to-verify.sh \
+          ../ai-board/.claude-plugin/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${APP_URL}" \

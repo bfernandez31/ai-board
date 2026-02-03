@@ -68,9 +68,14 @@ AI-Board supports managing tickets for **external GitHub repositories**:
 
 ### Quick Setup
 1. Configure GitHub repository (owner + repo name) during project creation
-2. Ensure external project has required structure (ai-board plugin as submodule, `.ai-board/scripts/`)
-3. Configure `GH_PAT` secret in ai-board repository with `repo` scope
-4. Start creating tickets - workflows automatically execute against external repository
+2. Configure `GH_PAT` secret in ai-board repository with `repo` scope for cross-repository access
+3. Start creating tickets - workflows automatically execute against external repository
+
+### Architecture
+- **Sparse Double Checkout**: Workflows checkout ai-board (sparse: only `.claude-plugin/`) and target repository (full)
+- **Command Symlinks**: ai-board commands automatically linked to target repository during workflow execution
+- **Stable Commands**: Commands always come from main branch (stable tools), even when ai-board works on itself
+- **No Setup Required**: External projects don't need any ai-board files - everything is provided by the workflow
 
 **Learn More**:
 - [Functional: External Repository Support](./functional/05-projects.md#external-repository-support)

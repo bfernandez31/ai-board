@@ -1106,8 +1106,8 @@ The verify workflow (`.github/workflows/verify.yml`) runs automatically when tic
 
 **Phase 2: Failure Report Generation**
 ```bash
-# If tests fail, generate structured report
-node .ai-board/scripts/generate-test-report.js \
+# If tests fail, generate structured report (from ai-board checkout)
+node ../ai-board/.claude-plugin/scripts/generate-test-report.js \
   --unit unit-results.json \
   --e2e e2e-results.json \
   --output test-failures.json
@@ -1116,13 +1116,13 @@ node .ai-board/scripts/generate-test-report.js \
 **Phase 3: AI-Powered Fixes**
 ```bash
 # Claude analyzes failures and applies fixes
-claude --dangerously-skip-permissions "/verify"
+claude --dangerously-skip-permissions "/ai-board.verify"
 ```
 
 **Phase 4: Pull Request Creation**
 ```bash
-# Only if all tests pass
-.ai-board/scripts/bash/create-pr-only.sh
+# Only if all tests pass (from ai-board checkout)
+../ai-board/.claude-plugin/scripts/bash/create-pr-only.sh
 ```
 
 ### Test Failure Report Format

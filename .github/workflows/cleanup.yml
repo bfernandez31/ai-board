@@ -80,13 +80,30 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
-      - name: Checkout repository
+      - name: Checkout ai-board (sparse - plugin only)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout target repository
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: main
           token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0  # Full history for diff analysis
+          fetch-depth: 0
+          path: target
+
+      - name: Setup ai-board commands
+        run: |
+          # Create symlink so Claude can find ai-board commands in target repo
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ ai-board commands linked to target/.claude/commands"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -104,9 +121,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
+        working-directory: target
         run: bun install --frozen-lockfile
 
       - name: Setup Test Environment
+        working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -114,11 +133,12 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          if [ -f ".github/scripts/setup-test-env.sh" ]; then
-            .github/scripts/setup-test-env.sh
+          if [ -f "../ai-board/.github/scripts/setup-test-env.sh" ]; then
+            ../ai-board/.github/scripts/setup-test-env.sh
           fi
 
       - name: Install Playwright
+        working-directory: target
         run: |
           if [ -f "package.json" ] && grep -q '"@playwright/test"' package.json; then
             bunx playwright install --with-deps chromium
@@ -135,6 +155,7 @@ jobs:
       # Find the merge commit of the last cleanup (discovered from git)
       - name: Find Last Cleanup Merge Point
         id: find-merge
+        working-directory: target
         run: |
           # Try to find last cleanup merge from git history
           MERGE_SHA=$(git log --merges --grep="cleanup-" --format="%H" -1 2>/dev/null || echo "")
@@ -152,6 +173,7 @@ jobs:
       # Execute Claude cleanup command (Claude creates branch via /ai-board.cleanup command)
       - name: Execute Cleanup Analysis
         id: cleanup
+        working-directory: target
         env:
           MERGE_POINT: ${{ steps.find-merge.outputs.merge_sha }}
         run: |
@@ -178,6 +200,7 @@ jobs:
       # Capture branch name after Claude execution (harmonized with speckit/quick-impl)
       - name: Capture Branch Name
         id: capture-branch
+        working-directory: target
         run: |
           CLEANUP_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           echo "branch=$CLEANUP_BRANCH" >> $GITHUB_OUTPUT
@@ -185,6 +208,7 @@ jobs:
 
       # Commit and push changes
       - name: Commit and Push Changes
+        working-directory: target
         run: |
           CLEANUP_BRANCH="${{ steps.capture-branch.outputs.branch }}"
 
@@ -208,6 +232,7 @@ jobs:
       # Update ticket branch
       - name: Update Ticket Branch
         if: success()
+        working-directory: target
         run: |
           CLEANUP_BRANCH="${{ steps.capture-branch.outputs.branch }}"
           curl -X PATCH "${APP_URL}/api/projects/${{ inputs.project_id }}/tickets/${{ inputs.ticket_id }}/branch" \
@@ -231,10 +256,11 @@ jobs:
       # Transition to VERIFY (triggers verify workflow which runs tests and creates PR)
       - name: Transition to VERIFY
         if: success()
+        working-directory: target
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .ai-board/scripts/bash/transition-to-verify.sh \
+          ../ai-board/.claude-plugin/scripts/bash/transition-to-verify.sh \
             "${{ inputs.ticket_id }}" \
             "${{ inputs.project_id }}" \
             "${APP_URL}" \

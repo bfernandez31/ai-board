@@ -414,10 +414,13 @@ AI-Board supports managing tickets for external GitHub repositories:
 - Changes committed and pushed to external project branches
 
 **Requirements**:
-- External projects must contain required AI-Board configuration:
-  - ai-board plugin (as git submodule) for Claude command definitions
-  - `.ai-board/scripts/bash/` directory with automation scripts
-  - Test configuration files (if workflows use tests)
+- External projects do NOT need any AI-Board configuration files
+- All scripts, commands, and templates are provided by ai-board workflows via double checkout pattern
+- Workflows automatically:
+  - Checkout ai-board repository (for scripts/commands)
+  - Checkout target repository (external project)
+  - Symlink ai-board commands to target's `.claude/commands/`
+- Test configuration files (if workflows use tests)
 - GitHub Personal Access Token (PAT) with repo access
 - PAT configured as `GH_PAT` secret in ai-board repository
 

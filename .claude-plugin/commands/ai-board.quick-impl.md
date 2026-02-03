@@ -34,7 +34,7 @@ This command implements simple features directly from ticket context without for
      ```
    - Parse JSON: extract `TICKET_KEY`, `TITLE`, and `DESCRIPTION`
    - Combine `TITLE` and `DESCRIPTION` into `FEATURE_DESCRIPTION` for spec content
-   - Run `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
+   - Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/create-new-feature.sh --json --mode=quick-impl --ticket-key="$TICKET_KEY" "$TITLE"` from repo root
    - Script generates branch name: `{ticketKey}-{3-words}` (e.g., `ABC-123-fix-login-bug`)
    - Script creates: branch, specs/{branch}/ directory, and spec.md with feature description
    - Parse JSON output for BRANCH_NAME and SPEC_FILE (absolute paths)

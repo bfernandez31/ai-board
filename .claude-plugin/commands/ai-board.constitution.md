@@ -12,11 +12,11 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-You are updating the project constitution at `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md`. This file is a TEMPLATE containing placeholder tokens in square brackets (e.g. `[PROJECT_NAME]`, `[PRINCIPLE_1_NAME]`). Your job is to (a) collect/derive concrete values, (b) fill the template precisely, and (c) propagate any amendments across dependent artifacts.
+You are updating the project constitution at `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md`. This file is a TEMPLATE containing placeholder tokens in square brackets (e.g. `[PROJECT_NAME]`, `[PRINCIPLE_1_NAME]`). Your job is to (a) collect/derive concrete values, (b) fill the template precisely, and (c) propagate any amendments across dependent artifacts.
 
 Follow this execution flow:
 
-1. Load the existing constitution template at `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md`.
+1. Load the existing constitution template at `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md`.
    - Identify every placeholder token of the form `[ALL_CAPS_IDENTIFIER]`.
    **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template. You will update the doc accordingly.
 
@@ -37,10 +37,10 @@ Follow this execution flow:
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
 4. Consistency propagation checklist (convert prior checklist into active validations):
-   - Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
-   - Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
-   - Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/templates/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
-   - Read each command file in `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/commands/*.md` (including this one) to verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
+   - Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
+   - Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
+   - Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/templates/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
+   - Read each command file in `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/commands/*.md` (including this one) to verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
    - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed.
 
 5. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
@@ -57,7 +57,7 @@ Follow this execution flow:
    - Dates ISO format YYYY-MM-DD.
    - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
 
-7. Write the completed constitution back to `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` (overwrite).
+7. Write the completed constitution back to `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md` (overwrite).
 
 8. Output a final summary to the user with:
    - New version and bump rationale.
@@ -74,4 +74,4 @@ If the user supplies partial updates (e.g., only one principle revision), still 
 
 If critical info missing (e.g., ratification date truly unknown), insert `TODO(<FIELD_NAME>): explanation` and include in the Sync Impact Report under deferred items.
 
-Do not create a new template; always operate on the existing `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` file.
+Do not create a new template; always operate on the existing `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md` file.

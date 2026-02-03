@@ -47,7 +47,7 @@ This command is executed when:
 ### Step 1: Read Project Context
 ```bash
 # Read constitution for project standards
-Read ${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md
+Read ${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md
 
 # Read current branch specifications
 Read specs/$BRANCH/spec.md

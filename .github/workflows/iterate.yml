@@ -83,13 +83,29 @@ jobs:
           echo "ℹ️ Skipping iteration for [e2e] test ticket"
           exit 0
 
-      - name: Checkout Repository
+      - name: Checkout ai-board (sparse - plugin only)
+        uses: actions/checkout@v4
+        with:
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout target repository
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
+
+      - name: Setup ai-board commands
+        run: |
+          # Create symlink so Claude can find ai-board commands in target repo
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ ai-board commands linked to target/.claude/commands"
 
       - name: Setup Environment
         run: |
@@ -116,6 +132,7 @@ jobs:
 
       - name: Execute Iteration Fixes
         id: iterate
+        working-directory: target
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           BRANCH: ${{ inputs.branch }}
@@ -139,6 +156,7 @@ jobs:
 
       - name: Update Global Specifications
         if: steps.iterate.outputs.no_changes != 'true'
+        working-directory: target
         run: |
           echo "📚 Updating global specifications..."
 
@@ -146,6 +164,7 @@ jobs:
 
       - name: Commit and Push Changes
         if: steps.iterate.outputs.no_changes != 'true'
+        working-directory: target
         env:
           ISSUES_TO_FIX: ${{ inputs.issues_to_fix }}
         run: |

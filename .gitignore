@@ -72,3 +72,6 @@ specs/**/.telemetry-context.json
 # mcp-server build output and dependencies
 mcp-server/dist/
 mcp-server/node_modules/
+
+# local Claude Code settings and symlinks
+.claude/

@@ -106,15 +106,33 @@ jobs:
             -d '{"status": "RUNNING"}' \
             -f -s -S || echo "⚠️ Failed to update job status to RUNNING"
 
-      - name: Checkout repository
+      - name: Checkout ai-board (sparse - plugin only)
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository (format: owner/repo)
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout target repository
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        uses: actions/checkout@v4
+        with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
+
+      - name: Setup ai-board commands
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        run: |
+          # Create symlink so Claude can find ai-board commands in target repo
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ ai-board commands linked to target/.claude/commands"
 
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -136,6 +154,7 @@ jobs:
 
       - name: Install Dependencies
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: bun install --frozen-lockfile
 
       - name: Install Claude Code CLI
@@ -150,6 +169,7 @@ jobs:
 
       - name: Setup Test Environment
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -157,24 +177,28 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          .github/scripts/setup-test-env.sh
+          ../ai-board/.github/scripts/setup-test-env.sh
 
       # Database setup steps
       - name: Generate Prisma Client
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         run: npx prisma generate
 
       - name: Apply Database Migrations
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         run: npx prisma migrate deploy
 
       - name: Seed Test Database
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         run: npx tsx tests/global-setup.ts
 
       # Playwright setup - GitHub runners have system deps pre-installed
       - name: Get Playwright Version
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
 
@@ -188,11 +212,13 @@ jobs:
 
       - name: Install Playwright Browsers
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        working-directory: target
         run: npx playwright install chromium
 
       # Phase 1: Test Execution
       - name: Run Unit Tests
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         id: unit-tests
         continue-on-error: true
         run: |
@@ -227,6 +253,7 @@ jobs:
 
       - name: Run E2E Tests
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' }}
+        working-directory: target
         id: e2e-tests
         continue-on-error: true
         timeout-minutes: 15  # Hard timeout at 15 minutes
@@ -323,9 +350,10 @@ jobs:
       # Phase 2: Generate Failure Report
       - name: Generate Test Failure Report
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        working-directory: target
         run: |
           echo "📊 Generating structured test failure report..."
-          node .ai-board/scripts/generate-test-report.js \
+          node ../ai-board/.claude-plugin/scripts/generate-test-report.js \
             --unit unit-results.json \
             --e2e e2e-results.json \
             --output test-failures.json
@@ -333,6 +361,7 @@ jobs:
       # Phase 3: Claude Fix Execution
       - name: Execute /ai-board.verify Command
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
+        working-directory: target
         run: |
           echo "🤖 Executing /ai-board.verify command to fix test failures..."
           echo ""
@@ -351,6 +380,7 @@ jobs:
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           git add .
 
@@ -372,6 +402,7 @@ jobs:
       # Phase 4.5: Code Simplification
       - name: Run Code Simplifier
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         run: |
           echo "🧹 Running code simplifier on recently modified code..."
 
@@ -391,6 +422,7 @@ jobs:
       # Phase 5: Update Global Documentation
       - name: Update Documentation
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         env:
           FEATURE_BRANCH: ${{ inputs.branch }}
         run: |
@@ -413,6 +445,7 @@ jobs:
       - name: Create Pull Request
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
         id: create-pr
+        working-directory: target
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           PROJECT_ID: ${{ inputs.project_id }}
@@ -421,7 +454,7 @@ jobs:
         run: |
           echo "🚀 All tests passed! Creating PR..."
           echo "   Note: Ticket is already in VERIFY stage, no transition needed"
-          .ai-board/scripts/bash/create-pr-only.sh \
+          ../ai-board/.claude-plugin/scripts/bash/create-pr-only.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${FEATURE_BRANCH}" \
@@ -431,6 +464,7 @@ jobs:
       # Phase 7: Automated Code Review
       - name: Run Code Review
         if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           FEATURE_BRANCH: ${{ inputs.branch }}

@@ -14,6 +14,5 @@
     "workflow",
     "automation",
     "code-generation"
-  ],
-  "commands": ["./.ai-board/commands/"]
+  ]
 }

@@ -30,15 +30,56 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 - `job_id`: Job record ID
 - `project_id`: Project identifier
 
-**Environment Setup**:
+**Environment Setup** (Double Checkout with Sparse Pattern):
+
+All workflows use a **double checkout pattern** with **sparse checkout** for efficiency:
+- **ai-board** is checked out first with sparse checkout (only `.claude-plugin/` and `.github/scripts/`)
+- **target repository** is checked out second (full checkout of the project being worked on)
+- Commands are symlinked so Claude can find them in the target context
+- Commands always come from **main branch** (stable tools), even when ai-board works on itself
+
+**Why sparse checkout?**
+- Downloads only ~1MB instead of full repo (~100MB+)
+- Faster workflow startup (~1-2s vs ~5-10s)
+- Cleaner separation: ai-board provides tools, target is where work happens
+
+**Why always from main?**
+- Commands are **tools** used to do the work
+- New/modified commands are the **result** of the work
+- Using stable commands ensures predictable behavior
 
 ```yaml
 steps:
-  - name: Checkout repository
+  # Sparse checkout ai-board - only plugin and scripts
+  - name: Checkout ai-board (sparse - plugin only)
     uses: actions/checkout@v4
     with:
+      path: ai-board
+      sparse-checkout: |
+        .claude-plugin
+        .github/scripts
+      sparse-checkout-cone-mode: true
+
+  # Full checkout target repository
+  - name: Checkout target repository
+    uses: actions/checkout@v4
+    with:
+      repository: ${{ inputs.githubRepository }}
       ref: ${{ inputs.branch || 'main' }}
+      token: ${{ secrets.GH_PAT }}
       fetch-depth: 0
+      path: target
+
+  # Symlink ai-board commands to target context
+  - name: Setup ai-board commands
+    run: |
+      mkdir -p target/.claude
+      ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+
+  - name: Setup Bun
+    uses: oven-sh/setup-bun@v1
+    with:
+      bun-version: 1.3.1
 
   - name: Setup Node.js
     uses: actions/setup-node@v4
@@ -50,13 +91,17 @@ steps:
     with:
       python-version: '3.11'
 
+  - name: Install Dependencies
+    working-directory: target
+    run: bun install --frozen-lockfile
+
   - name: Install Claude Code CLI
-    run: npm install -g @anthropic-ai/claude-code
+    run: bun add -g @anthropic-ai/claude-code
 
   - name: Configure Git
     run: |
-      git config user.name "ai-board[bot]"
-      git config user.email "bot@ai-board.app"
+      git config --global user.name "ai-board[bot]"
+      git config --global user.email "bot@ai-board.app"
 ```
 
 **Database Setup** (implement command only):
@@ -141,7 +186,7 @@ steps:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     run: |
-      .ai-board/scripts/bash/create-pr-and-transition.sh \
+      .claude-plugin/scripts/bash/create-pr-and-transition.sh \
         "${{ inputs.ticket_id }}" \
         "${{ inputs.project_id }}" \
         "${CURRENT_BRANCH}" \
@@ -182,7 +227,7 @@ steps:
 **Minimal Spec Creation**:
 
 ```bash
-.ai-board/scripts/bash/create-new-feature.sh \
+.claude-plugin/scripts/bash/create-new-feature.sh \
   --mode=quick-impl \
   --ticket-id="${{ inputs.ticket_id }}" \
   --title="${{ inputs.ticketTitle }}" \
@@ -222,7 +267,7 @@ steps:
   - name: Create Cleanup Branch
     run: |
       # Uses create-new-feature.sh with cleanup mode
-      .ai-board/scripts/bash/create-new-feature.sh \
+      .claude-plugin/scripts/bash/create-new-feature.sh \
         --json --mode=cleanup "Clean $(date +%Y-%m-%d)"
 
   - name: Execute Cleanup Analysis
@@ -235,7 +280,7 @@ steps:
   - name: Transition to VERIFY
     run: |
       # Triggers verify workflow for tests and PR creation
-      .ai-board/scripts/bash/transition-to-verify.sh \
+      .claude-plugin/scripts/bash/transition-to-verify.sh \
         "${{ inputs.ticket_id }}" \
         "${{ inputs.project_id }}"
 ```
@@ -349,13 +394,13 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
     run: |
-      .ai-board/scripts/bash/auto-ship-tickets.sh \
+      .claude-plugin/scripts/bash/auto-ship-tickets.sh \
         "${DEPLOYMENT_SHA}" \
         "${APP_URL}" \
         "${WORKFLOW_API_TOKEN}"
 ```
 
-**Script Logic** (`.ai-board/scripts/bash/auto-ship-tickets.sh`):
+**Script Logic** (`.claude-plugin/scripts/bash/auto-ship-tickets.sh`):
 
 ```bash
 #!/bin/bash
