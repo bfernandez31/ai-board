@@ -2,19 +2,7 @@
  * Comparison Component Types
  *
  * TypeScript interfaces specific to comparison UI components.
- * Re-exports core types from lib/types/comparison.ts for convenience.
  */
-
-// Re-export core comparison types
-export type {
-  ComparisonReport,
-  ComparisonSummary,
-  ComparisonCheckResult,
-  FeatureAlignmentScore,
-  ConstitutionComplianceScore,
-  TicketTelemetry,
-  ImplementationMetrics,
-} from '@/lib/types/comparison';
 
 /**
  * ComparisonViewerProps
