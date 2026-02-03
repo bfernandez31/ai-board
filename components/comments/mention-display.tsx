@@ -41,8 +41,7 @@ const MENTION_TOKEN_REGEX = /\{\{MENTION:([^:]+):(\d+)\}\}/g;
 export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps) {
   const mentions = parseMentions(content);
 
-  // Replace mentions with placeholder tokens that won't be affected by markdown parsing
-  // Using {{MENTION:userId:index}} format to avoid markdown interpretation
+  // Replace mentions with placeholder tokens to avoid markdown interpretation
   let processedContent = content;
   const mentionMap = new Map<string, { user: User | undefined; displayName: string; userId: string; isDeleted: boolean }>();
 
@@ -83,7 +82,6 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
         parts.push(
           <MentionChip
             key={`mention-${match.index}-${match[1]}`}
-            userId={mentionData.userId}
             displayName={mentionData.displayName}
             email={mentionData.user?.email}
             isDeleted={mentionData.isDeleted}
@@ -195,11 +193,7 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
   );
 }
 
-/**
- * Individual mention chip/badge component
- */
 interface MentionChipProps {
-  userId: string;
   displayName: string;
   email: string | undefined;
   isDeleted: boolean;
