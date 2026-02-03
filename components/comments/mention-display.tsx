@@ -181,9 +181,9 @@ export function MentionDisplay({ content, mentionedUsers }: MentionDisplayProps)
         {processChildren(children)}
       </blockquote>
     ),
-    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{processChildren(children)}</h1>,
-    h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{processChildren(children)}</h2>,
-    h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{processChildren(children)}</h3>,
+    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2 text-zinc-50">{processChildren(children)}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2 text-zinc-50">{processChildren(children)}</h2>,
+    h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1 text-zinc-100">{processChildren(children)}</h3>,
   };
 
   return (
