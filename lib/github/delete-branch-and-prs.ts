@@ -58,16 +58,28 @@ export async function deleteBranchAndPRs(
 ): Promise<GitHubCleanupResult> {
   try {
     // Step 1: Find all open PRs with matching head branch
-    const { data: prs } = await octokit.rest.pulls.list({
-      owner,
-      repo,
-      head: `${owner}:${branchName}`,
-      state: 'open',
-    });
+    let prs: Array<{ number: number }> = [];
+    try {
+      const { data } = await octokit.rest.pulls.list({
+        owner,
+        repo,
+        head: `${owner}:${branchName}`,
+        state: 'open',
+      });
+      prs = data;
+    } catch (error: any) {
+      // 404 errors mean the branch or repo doesn't exist - treat as no PRs to close
+      if (error.status === 404) {
+        prs = [];
+      } else {
+        throw error;
+      }
+    }
 
     // Step 2: Close all matching PRs
     // GitHub API requires PRs to be closed before branch deletion
-    const closedPRs = await Promise.all(
+    const prCount = prs.length;
+    await Promise.all(
       prs.map((pr) =>
         octokit.rest.pulls.update({
           owner,
@@ -106,7 +118,7 @@ export async function deleteBranchAndPRs(
     }
 
     return {
-      prsClosed: closedPRs.length,
+      prsClosed: prCount,
       branchDeleted,
     };
   } catch (error: any) {

@@ -101,6 +101,29 @@ describe('deleteBranchAndPRs', () => {
     });
   });
 
+  it('should handle 404 error from pulls.list when branch does not exist', async () => {
+    // Mock 404 error from pulls.list (branch doesn't exist)
+    const error404 = new Error('Not Found');
+    (error404 as any).status = 404;
+    (mockOctokit.rest.pulls.list as any).mockRejectedValue(error404);
+
+    // Mock 404 error for branch deletion (branch doesn't exist)
+    (mockOctokit.rest.git.deleteRef as any).mockRejectedValue(error404);
+
+    const result = await deleteBranchAndPRs(
+      mockOctokit,
+      'testowner',
+      'testrepo',
+      'non-existent-branch'
+    );
+
+    // Should succeed with branchDeleted = false (branch never existed)
+    expect(result).toEqual({
+      prsClosed: 0,
+      branchDeleted: false,
+    });
+  });
+
   it('should handle "reference does not exist" error gracefully', async () => {
     // Mock empty PR list
     (mockOctokit.rest.pulls.list as any).mockResolvedValue({

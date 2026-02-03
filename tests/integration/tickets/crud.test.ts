@@ -400,5 +400,32 @@ describe('Tickets CRUD', () => {
       const response = await ctx.api.delete(`/api/projects/${ctx.projectId}/tickets/999999`);
       expect(response.status).toBe(404);
     });
+
+    it('should delete ticket with branch that does not exist on GitHub', async () => {
+      // Create ticket in SPECIFY stage with a branch that does not exist on GitHub
+      const { id: ticketId } = await ctx.createTicket({
+        title: '[e2e] Ticket with non-existent branch',
+        description: 'This ticket has a branch field set but branch does not exist on GitHub',
+        stage: 'SPECIFY',
+      });
+
+      // Update ticket to have a branch name that doesn't exist
+      const patchResponse = await ctx.api.patch<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { branch: 'non-existent-branch-that-does-not-exist', version: 1 }
+      );
+      expect(patchResponse.status).toBe(200);
+
+      // Delete should succeed even though branch doesn't exist on GitHub
+      const deleteResponse = await ctx.api.delete<{ success: boolean }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`
+      );
+      expect(deleteResponse.status).toBe(200);
+      expect(deleteResponse.data.success).toBe(true);
+
+      // Verify deletion
+      const getResponse = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets/${ticketId}`);
+      expect(getResponse.status).toBe(404);
+    });
   });
 });
