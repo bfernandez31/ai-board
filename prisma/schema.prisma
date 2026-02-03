@@ -109,7 +109,7 @@ model Session {
 model Ticket {
   id                  Int                  @id @default(autoincrement())
   title               String               @db.VarChar(100)
-  description         String               @db.VarChar(2500)
+  description         String               @db.VarChar(10000)
   stage               Stage                @default(INBOX)
   version             Int                  @default(1)
   projectId           Int

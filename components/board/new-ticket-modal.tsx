@@ -259,7 +259,7 @@ export function NewTicketModal({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Enter ticket description (max 2500 characters)"
+              placeholder="Enter ticket description (max 10000 characters)"
               value={formData.description}
               onChange={(e) => handleFieldChange('description', e.target.value)}
               onBlur={(e) => validateField('description', e.target.value)}
@@ -271,7 +271,7 @@ export function NewTicketModal({
               <p className="text-sm text-red-500">{errors.description}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              {formData.description.length}/2500 characters
+              {formData.description.length}/10000 characters
             </p>
           </div>
 

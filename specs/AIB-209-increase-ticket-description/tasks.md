@@ -18,9 +18,9 @@
 
 **Purpose**: Update database schema to support 10000-character descriptions
 
-- [ ] T001 Update Prisma schema to change description column from VARCHAR(2500) to VARCHAR(10000) in prisma/schema.prisma
-- [ ] T002 Generate and apply Prisma migration with name "increase-description-limit"
-- [ ] T003 Regenerate Prisma client with `bunx prisma generate`
+- [x] T001 Update Prisma schema to change description column from VARCHAR(2500) to VARCHAR(10000) in prisma/schema.prisma
+- [x] T002 Generate and apply Prisma migration with name "increase-description-limit"
+- [x] T003 Regenerate Prisma client with `bunx prisma generate`
 
 ---
 
@@ -30,10 +30,10 @@
 
 **⚠️ CRITICAL**: API validation must be updated before UI to ensure consistency
 
-- [ ] T004 Update DescriptionFieldSchema max length from 2500 to 10000 in lib/validations/ticket.ts
-- [ ] T005 Update CreateTicketSchema refinement from 2500 to 10000 in lib/validations/ticket.ts
-- [ ] T006 Update descriptionSchema (PATCH) max length from 2500 to 10000 in lib/validations/ticket.ts
-- [ ] T007 Update all error messages from "2500 characters" to "10000 characters" in lib/validations/ticket.ts
+- [x] T004 Update DescriptionFieldSchema max length from 2500 to 10000 in lib/validations/ticket.ts
+- [x] T005 Update CreateTicketSchema refinement from 2500 to 10000 in lib/validations/ticket.ts
+- [x] T006 Update descriptionSchema (PATCH) max length from 2500 to 10000 in lib/validations/ticket.ts
+- [x] T007 Update all error messages from "2500 characters" to "10000 characters" in lib/validations/ticket.ts
 
 **Checkpoint**: Validation layer ready - user story implementation can now begin
 
@@ -47,10 +47,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Update placeholder text referencing character limit in components/board/new-ticket-modal.tsx
-- [ ] T009 [US1] Update character counter max value from 2500 to 10000 in components/board/new-ticket-modal.tsx
-- [ ] T010 [US1] Update validation test for max description length (2500→10000 chars) in tests/unit/ticket-validation.test.ts
-- [ ] T011 [US1] Update validation test for over-limit description (2501→10001 chars) in tests/unit/ticket-validation.test.ts
+- [x] T008 [US1] Update placeholder text referencing character limit in components/board/new-ticket-modal.tsx
+- [x] T009 [US1] Update character counter max value from 2500 to 10000 in components/board/new-ticket-modal.tsx
+- [x] T010 [US1] Update validation test for max description length (2500→10000 chars) in tests/unit/ticket-validation.test.ts
+- [x] T011 [US1] Update validation test for over-limit description (2501→10001 chars) in tests/unit/ticket-validation.test.ts
 
 **Checkpoint**: User Story 1 complete - creating tickets with long descriptions works
 
@@ -64,9 +64,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Verify and update placeholder text in components/board/ticket-detail-modal.tsx (if hardcoded)
-- [ ] T013 [US2] Verify and update character counter in components/board/ticket-detail-modal.tsx (if hardcoded)
-- [ ] T014 [US2] Verify integration test handles larger descriptions in tests/integration/tickets/crud.test.ts
+- [x] T012 [US2] Verify and update placeholder text in components/board/ticket-detail-modal.tsx (if hardcoded)
+- [x] T013 [US2] Verify and update character counter in components/board/ticket-detail-modal.tsx (if hardcoded)
+- [x] T014 [US2] Verify integration test handles larger descriptions in tests/integration/tickets/crud.test.ts
 
 **Checkpoint**: User Story 2 complete - editing tickets with long descriptions works
 
@@ -80,8 +80,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Verify ticket detail modal scrolling behavior with long descriptions in components/board/ticket-detail-modal.tsx
-- [ ] T016 [US3] Verify ticket list view performance with varying description lengths (no code change expected - verification only)
+- [x] T015 [US3] Verify ticket detail modal scrolling behavior with long descriptions in components/board/ticket-detail-modal.tsx
+- [x] T016 [US3] Verify ticket list view performance with varying description lengths (no code change expected - verification only)
 
 **Checkpoint**: User Story 3 complete - viewing long descriptions works correctly
 
@@ -91,10 +91,10 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T017 Run type-check to verify no TypeScript errors: `bun run type-check`
-- [ ] T018 Run unit tests to verify validation updates: `bun run test:unit`
-- [ ] T019 Run integration tests to verify API behavior: `bun run test:integration`
-- [ ] T020 Manual validation per quickstart.md: create ticket with ~5000 chars, edit to ~9000 chars, verify counters
+- [x] T017 Run type-check to verify no TypeScript errors: `bun run type-check`
+- [x] T018 Run unit tests to verify validation updates: `bun run test:unit`
+- [x] T019 Run integration tests to verify API behavior: `bun run test:integration`
+- [x] T020 Manual validation per quickstart.md: create ticket with ~5000 chars, edit to ~9000 chars, verify counters
 
 ---
 
