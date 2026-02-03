@@ -78,7 +78,8 @@ export async function deleteBranchAndPRs(
 
     // Step 2: Close all matching PRs
     // GitHub API requires PRs to be closed before branch deletion
-    const closedPRs = await Promise.all(
+    const prCount = prs.length;
+    await Promise.all(
       prs.map((pr) =>
         octokit.rest.pulls.update({
           owner,
@@ -117,7 +118,7 @@ export async function deleteBranchAndPRs(
     }
 
     return {
-      prsClosed: closedPRs.length,
+      prsClosed: prCount,
       branchDeleted,
     };
   } catch (error: any) {
