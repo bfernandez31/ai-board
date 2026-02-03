@@ -123,15 +123,37 @@ jobs:
           # Exit successfully (skip is not a failure)
           exit 0
 
-      - name: Checkout repository
+      # --- Double Checkout Pattern ---
+      # 1. Sparse checkout ai-board for commands and scripts (always from main = stable tools)
+      - name: Checkout ai-board (sparse - plugin and scripts only)
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         uses: actions/checkout@v4
         with:
-          # Checkout external project repository (format: owner/repo)
+          path: ai-board
+          sparse-checkout: |
+            .claude-plugin
+            .github/scripts
+          sparse-checkout-cone-mode: true
+
+      # 2. Full checkout of target repository
+      - name: Checkout target repository
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        uses: actions/checkout@v4
+        with:
           repository: ${{ inputs.githubRepository }}
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          path: target
+
+      # 3. Setup ai-board commands symlink in target
+      - name: Setup ai-board commands
+        if: ${{ env.SKIP_CLAUDE != 'true' }}
+        run: |
+          mkdir -p target/.claude
+          ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          echo "✅ Commands symlinked: target/.claude/commands -> ai-board/.claude-plugin/commands"
+          ls -la target/.claude/
 
       - name: Setup Bun
         if: ${{ env.SKIP_CLAUDE != 'true' }}
@@ -157,6 +179,7 @@ jobs:
 
       - name: Setup Test Environment
         if: ${{ env.SKIP_CLAUDE != 'true' }}
+        working-directory: target
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
@@ -164,20 +187,30 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           echo "🔧 Setting up test environment..."
-          .github/scripts/setup-test-env.sh
+          if [ -f "../ai-board/.github/scripts/setup-test-env.sh" ]; then
+            ../ai-board/.github/scripts/setup-test-env.sh
+          else
+            echo "⚠️ setup-test-env.sh not found, skipping test environment setup"
+          fi
 
       - name: Fetch Telemetry for Compare
         if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') }}
+        working-directory: target
         env:
           BRANCH: ${{ inputs.branch }}
           PROJECT_ID: ${{ inputs.project_id }}
         run: |
           echo "📊 Fetching telemetry for /compare command..."
-          .github/scripts/fetch-telemetry.sh "${{ inputs.comment }}"
+          if [ -f "../ai-board/.github/scripts/fetch-telemetry.sh" ]; then
+            ../ai-board/.github/scripts/fetch-telemetry.sh "${{ inputs.comment }}"
+          else
+            echo "⚠️ fetch-telemetry.sh not found, skipping telemetry fetch"
+          fi
 
       - name: Execute AI-BOARD Command
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         id: claude
+        working-directory: target
         env:
           TICKET_ID: ${{ inputs.ticket_id }}
           STAGE: ${{ inputs.stage }}
@@ -370,6 +403,7 @@ jobs:
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
+        working-directory: target
         run: |
           echo "💾 Committing modified files..."
 
@@ -452,6 +486,7 @@ jobs:
       - name: Dispatch Iterate Workflow if Required
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'iterate_required' }}
         id: iterate
+        working-directory: target
         env:
           RESULT_FILE: specs/${{ inputs.branch }}/.ai-board-result.md
         run: |
