@@ -325,7 +325,7 @@ jobs:
         if: ${{ env.SKIP_EXECUTION != 'true' && env.SKIP_TESTS != 'true' && (env.UNIT_FAILED == 'true' || env.E2E_FAILED == 'true') }}
         run: |
           echo "📊 Generating structured test failure report..."
-          node .specify/scripts/generate-test-report.js \
+          node .ai-board/scripts/generate-test-report.js \
             --unit unit-results.json \
             --e2e e2e-results.json \
             --output test-failures.json
@@ -421,7 +421,7 @@ jobs:
         run: |
           echo "🚀 All tests passed! Creating PR..."
           echo "   Note: Ticket is already in VERIFY stage, no transition needed"
-          .specify/scripts/bash/create-pr-only.sh \
+          .ai-board/scripts/bash/create-pr-only.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${FEATURE_BRANCH}" \

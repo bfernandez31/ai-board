@@ -199,7 +199,7 @@ jobs:
           set -e
 
           # Call reusable script to download and prepare images
-          IMAGE_PATHS=$(.specify/scripts/bash/prepare-images.sh \
+          IMAGE_PATHS=$(.ai-board/scripts/bash/prepare-images.sh \
             "${{ inputs.ticket_id }}" \
             '${{ inputs.attachments }}')
 
@@ -374,7 +374,7 @@ jobs:
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .specify/scripts/bash/transition-to-verify.sh \
+          .ai-board/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${APP_URL}" \

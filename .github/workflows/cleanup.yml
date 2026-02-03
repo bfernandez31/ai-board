@@ -234,7 +234,7 @@ jobs:
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .specify/scripts/bash/transition-to-verify.sh \
+          .ai-board/scripts/bash/transition-to-verify.sh \
             "${{ inputs.ticket_id }}" \
             "${{ inputs.project_id }}" \
             "${APP_URL}" \

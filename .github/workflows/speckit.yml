@@ -225,7 +225,7 @@ jobs:
           set -e
 
           # Call reusable script to download and prepare images
-          IMAGE_PATHS=$(.specify/scripts/bash/prepare-images.sh \
+          IMAGE_PATHS=$(.ai-board/scripts/bash/prepare-images.sh \
             "${{ inputs.ticket_id }}" \
             '${{ inputs.attachments }}')
 
@@ -366,7 +366,7 @@ jobs:
 
           echo "🔍 Checking: $FEATURE_DIR"
 
-          if ! .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
+          if ! .ai-board/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/detection.json; then
             cat /tmp/detection.json
             needs_continue=$(jq -r '.needs_continue' /tmp/detection.json)
             incomplete=$(jq -r '.incomplete_tasks' /tmp/detection.json)
@@ -393,7 +393,7 @@ jobs:
 
             claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
-            if .specify/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
+            if .ai-board/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"
               break
             fi
@@ -546,7 +546,7 @@ jobs:
         run: |
           echo "🔄 Transitioning ticket to VERIFY stage..."
           echo "   This will trigger the verify workflow to run tests and create PR"
-          .specify/scripts/bash/transition-to-verify.sh \
+          .ai-board/scripts/bash/transition-to-verify.sh \
             "${TICKET_ID}" \
             "${PROJECT_ID}" \
             "${APP_URL}" \

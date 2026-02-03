@@ -39,7 +39,7 @@ jobs:
 
       - name: Find and Transition VERIFY Tickets
         run: |
-          .specify/scripts/bash/auto-ship-tickets.sh \
+          .ai-board/scripts/bash/auto-ship-tickets.sh \
             "${{ github.event.deployment.sha }}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
