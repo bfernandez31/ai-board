@@ -66,7 +66,17 @@ AI-Board supports managing tickets for **external GitHub repositories**:
 - **Unified Management**: Single interface to manage multiple projects across different repositories
 - **Automated Workflows**: Same automation (spec generation, testing, deployment) for all projects
 
-### Quick Setup
+### Plugin Installation
+
+Install the ai-board plugin in Claude Code:
+
+```bash
+/plugin install ai-board@github:bfernandez31/ai-board
+```
+
+This gives you access to all `/ai-board.*` commands locally.
+
+### Quick Setup (for CI/CD workflows)
 1. Configure GitHub repository (owner + repo name) during project creation
 2. Configure `GH_PAT` secret in ai-board repository with `repo` scope for cross-repository access
 3. Start creating tickets - workflows automatically execute against external repository

@@ -424,6 +424,12 @@ AI-Board supports managing tickets for external GitHub repositories:
 - GitHub Personal Access Token (PAT) with repo access
 - PAT configured as `GH_PAT` secret in ai-board repository
 
+**Optional: Local Plugin Installation**:
+For local development with ai-board commands, install the plugin:
+```bash
+/plugin install ai-board@github:bfernandez31/ai-board
+```
+
 **Workflow Authentication**:
 - AI-Board uses GitHub PAT to access external repositories
 - PAT must have `repo` scope for full repository access
