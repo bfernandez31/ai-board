@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Ticket" ALTER COLUMN "description" SET DATA TYPE VARCHAR(10000);

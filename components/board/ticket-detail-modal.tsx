@@ -1087,7 +1087,7 @@ export function TicketDetailModal({
                           event.stopPropagation();
                         }
                       }}
-                      maxLength={2500}
+                      maxLength={10000}
                       className="bg-[#313244] border-2 border-[#8B5CF6] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed min-h-[200px] !text-white"
                       disabled={descriptionEdit.isSaving}
                       data-testid="description-textarea"
@@ -1102,7 +1102,7 @@ export function TicketDetailModal({
                     />
                     <CharacterCounter
                       current={descriptionEdit.value.length}
-                      max={2500}
+                      max={10000}
                     />
                     {descriptionEdit.error && (
                       <p

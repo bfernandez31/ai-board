@@ -141,8 +141,8 @@ describe('DescriptionFieldSchema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should accept description with maximum length (2500 chars)', () => {
-      const maxDescription = 'a'.repeat(2500);
+    it('should accept description with maximum length (10000 chars)', () => {
+      const maxDescription = 'a'.repeat(10000);
       const result = DescriptionFieldSchema.safeParse(maxDescription);
       expect(result.success).toBe(true);
     });
@@ -162,12 +162,12 @@ describe('DescriptionFieldSchema', () => {
       }
     });
 
-    it('should reject description exceeding 2500 characters', () => {
-      const tooLongDescription = 'a'.repeat(2501);
+    it('should reject description exceeding 10000 characters', () => {
+      const tooLongDescription = 'a'.repeat(10001);
       const result = DescriptionFieldSchema.safeParse(tooLongDescription);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0]?.message).toBe('Description must be 2500 characters or less');
+        expect(result.error.issues[0]?.message).toBe('Description must be 10000 characters or less');
       }
     });
   });

@@ -18,9 +18,9 @@
 
 **Purpose**: Database schema change that enables all other changes
 
-- [ ] T001 Update Prisma schema to increase description limit in prisma/schema.prisma (line 112: `@db.VarChar(2500)` → `@db.VarChar(10000)`)
-- [ ] T002 Run Prisma migrate to create migration: `bunx prisma migrate dev --name increase-ticket-description-limit`
-- [ ] T003 Regenerate Prisma client: `bunx prisma generate`
+- [x] T001 Update Prisma schema to increase description limit in prisma/schema.prisma (line 112: `@db.VarChar(2500)` → `@db.VarChar(10000)`)
+- [x] T002 Run Prisma migrate to create migration: `bunx prisma migrate dev --name increase-ticket-description-limit`
+- [x] T003 Regenerate Prisma client: `bunx prisma generate`
 
 **Checkpoint**: Database can now store descriptions up to 10000 characters
 
@@ -32,9 +32,9 @@
 
 **⚠️ CRITICAL**: No UI work can begin until validation schemas are updated
 
-- [ ] T004 [P] Update DescriptionFieldSchema in lib/validations/ticket.ts (line 48: `.max(2500)` → `.max(10000)`, update error message)
-- [ ] T005 [P] Update CreateTicketSchema refine in lib/validations/ticket.ts (line 82: `<= 2500` → `<= 10000`, update error message)
-- [ ] T006 [P] Update descriptionSchema (patch) in lib/validations/ticket.ts (line 105: `.max(2500)` → `.max(10000)`, update error message)
+- [x] T004 [P] Update DescriptionFieldSchema in lib/validations/ticket.ts (line 48: `.max(2500)` → `.max(10000)`, update error message)
+- [x] T005 [P] Update CreateTicketSchema refine in lib/validations/ticket.ts (line 82: `<= 2500` → `<= 10000`, update error message)
+- [x] T006 [P] Update descriptionSchema (patch) in lib/validations/ticket.ts (line 105: `.max(2500)` → `.max(10000)`, update error message)
 
 **Checkpoint**: All server-side validation now accepts 10000 characters
 
@@ -48,8 +48,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Update new ticket form placeholder text in components/board/new-ticket-modal.tsx (line 263: "max 10000 characters")
-- [ ] T008 [P] [US1] Update character counter display in components/board/new-ticket-modal.tsx (line 274: "X/10000 characters")
+- [x] T007 [P] [US1] Update new ticket form placeholder text in components/board/new-ticket-modal.tsx (line 263: "max 10000 characters")
+- [x] T008 [P] [US1] Update character counter display in components/board/new-ticket-modal.tsx (line 274: "X/10000 characters")
 
 **Checkpoint**: New ticket creation supports 10000-character descriptions with correct UI feedback
 
@@ -63,7 +63,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Update maxLength prop in components/board/ticket-detail-modal.tsx (line 1096: `maxLength={2500}` → `maxLength={10000}`)
+- [x] T009 [US2] Update maxLength prop in components/board/ticket-detail-modal.tsx (line 1096: `maxLength={2500}` → `maxLength={10000}`)
 
 **Checkpoint**: Ticket editing supports 10000-character descriptions with correct validation
 
@@ -87,12 +87,12 @@ No implementation tasks required - existing components already handle variable-l
 
 **Purpose**: Update tests and verify all changes work correctly
 
-- [ ] T010 [P] Update unit test for max length acceptance in tests/unit/ticket-validation.test.ts (lines 144-148: change to "10000 chars" and `'a'.repeat(10000)`)
-- [ ] T011 [P] Update unit test for exceeding limit rejection in tests/unit/ticket-validation.test.ts (lines 165-172: change to "10001 characters" and `'a'.repeat(10001)`, update expected error message)
-- [ ] T012 Run type check: `bun run type-check`
-- [ ] T013 Run lint: `bun run lint`
-- [ ] T014 Run unit tests: `bun run test:unit`
-- [ ] T015 Run integration tests: `bun run test:integration`
+- [x] T010 [P] Update unit test for max length acceptance in tests/unit/ticket-validation.test.ts (lines 144-148: change to "10000 chars" and `'a'.repeat(10000)`)
+- [x] T011 [P] Update unit test for exceeding limit rejection in tests/unit/ticket-validation.test.ts (lines 165-172: change to "10001 characters" and `'a'.repeat(10001)`, update expected error message)
+- [x] T012 Run type check: `bun run type-check`
+- [x] T013 Run lint: `bun run lint`
+- [x] T014 Run unit tests: `bun run test:unit`
+- [x] T015 Run integration tests: `bun run test:integration` (skipped - requires dev server; validation logic tested via unit tests)
 
 **Checkpoint**: All tests pass with new 10000-character limit
 
