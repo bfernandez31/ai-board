@@ -3,6 +3,7 @@ import { Stage, type Job } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/transition';
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
@@ -51,25 +52,30 @@ export async function POST(
       );
     }
 
-    // Verify project access (supports both session auth and PAT authentication)
-    try {
-      await verifyProjectAccess(projectId, request);
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === 'Unauthorized') {
-          return NextResponse.json(
-            { error: 'Unauthorized', code: 'AUTH_ERROR' },
-            { status: 401 }
-          );
+    // Check for workflow token first (used by GitHub Actions workflows)
+    const isWorkflowAuth = await verifyWorkflowToken(request);
+
+    // If not workflow auth, verify project access (session or PAT)
+    if (!isWorkflowAuth) {
+      try {
+        await verifyProjectAccess(projectId, request);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Unauthorized') {
+            return NextResponse.json(
+              { error: 'Unauthorized', code: 'AUTH_ERROR' },
+              { status: 401 }
+            );
+          }
+          if (error.message === 'Project not found') {
+            return NextResponse.json(
+              { error: 'Project not found', code: 'NOT_FOUND' },
+              { status: 404 }
+            );
+          }
         }
-        if (error.message === 'Project not found') {
-          return NextResponse.json(
-            { error: 'Project not found', code: 'NOT_FOUND' },
-            { status: 404 }
-          );
-        }
+        throw error;
       }
-      throw error;
     }
 
     // Parse and validate request body

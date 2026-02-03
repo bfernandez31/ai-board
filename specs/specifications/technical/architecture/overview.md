@@ -65,8 +65,16 @@ ai-board/
 │   ├── quick-impl.yml            # Quick-impl workflow
 │   ├── ai-board-assist.yml       # AI assistance workflow
 │   └── auto-ship.yml             # Auto-deployment workflow
-└── .specify/                     # Spec-kit configuration
-    └── scripts/bash/             # Workflow scripts
+├── .claude-plugin/               # Claude Code plugin manifest
+│   └── plugin.json               # Plugin configuration
+├── .ai-board/                    # AI-Board plugin content
+│   ├── commands/                 # Slash commands (ai-board.*)
+│   ├── scripts/bash/             # Workflow scripts
+│   ├── templates/                # Spec/plan/task templates
+│   └── memory/                   # Constitution and memory
+└── .specify/                     # Project specs directory
+    ├── memory/                   # Project-specific memory
+    └── scripts/bash/             # Legacy scripts (symlinked)
 ```
 
 ### Data Flow Patterns

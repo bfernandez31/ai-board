@@ -196,7 +196,7 @@ For **EACH ticket**, evaluate:
 
 ### Step 6: Evaluate Constitution Compliance (Code Only)
 
-Read `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
+Read `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
 
 | Principle | What to Check in CODE |
 |-----------|----------------------|

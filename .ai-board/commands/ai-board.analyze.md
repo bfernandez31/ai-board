@@ -18,13 +18,13 @@ Identify inconsistencies, duplications, ambiguities, and underspecified items ac
 
 **STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
 
-**Constitution Authority**: The project constitution (`${CLAUDE_PLUGIN_ROOT}/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/ai-board.analyze`.
+**Constitution Authority**: The project constitution (`${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/ai-board.analyze`.
 
 ## Execution Steps
 
 ### 1. Initialize Analysis Context
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
+Run `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md
@@ -62,7 +62,7 @@ Load only the minimal necessary context from each artifact:
 
 **From constitution:**
 
-- Load `${CLAUDE_PLUGIN_ROOT}/memory/constitution.md` for principle validation
+- Load `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md` for principle validation
 
 ### 3. Build Semantic Models
 

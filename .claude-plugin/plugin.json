@@ -1,12 +1,12 @@
 {
   "name": "ai-board",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered specification-driven development workflow automation",
   "author": {
     "name": "ai-board",
-    "url": "https://github.com/ai-board/ai-board"
+    "url": "https://github.com/bfernandez31/ai-board"
   },
-  "repository": "https://github.com/ai-board/ai-board",
+  "repository": "https://github.com/bfernandez31/ai-board",
   "license": "MIT",
   "keywords": [
     "ai-development",
@@ -14,5 +14,6 @@
     "workflow",
     "automation",
     "code-generation"
-  ]
+  ],
+  "commands": ["./.ai-board/commands/"]
 }

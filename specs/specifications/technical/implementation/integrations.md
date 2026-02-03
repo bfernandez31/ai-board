@@ -166,7 +166,7 @@ export async function dispatchWorkflow(params: {
 - **Output**: Implemented code, marked tasks, summary.md file
 
 **Summary Generation (Step 10)**:
-- Reads summary template from `.specify/templates/summary-template.md`
+- Reads summary template from `.ai-board/templates/summary-template.md`
 - Generates content following template structure exactly
 - Extracts feature name from spec.md header (first `#` line)
 - Gets current git branch (`git branch --show-current`)
@@ -180,7 +180,7 @@ export async function dispatchWorkflow(params: {
 - Writes to `FEATURE_DIR/summary.md`
 - Handles partial failures: includes progress and failure point
 
-**Summary Template** (`.specify/templates/summary-template.md`):
+**Summary Template** (`.ai-board/templates/summary-template.md`):
 
 ```markdown
 # Implementation Summary: [FEATURE_NAME]
@@ -207,7 +207,7 @@ export async function dispatchWorkflow(params: {
 
 **Template Pattern**:
 - Follows existing template conventions (spec-template.md, plan-template.md)
-- Located in `.specify/templates/` directory
+- Located in `.ai-board/templates/` directory
 - Placeholder format: `[PLACEHOLDER_NAME]`
 - Section headers with Markdown H2 (`##`)
 - Warning emoji (`⚠️`) for manual requirements section
@@ -230,7 +230,7 @@ export async function dispatchWorkflow(params: {
 - **Input**: PR number
 - **Review Checks**:
   - CLAUDE.md compliance
-  - Constitution compliance (`.specify/memory/constitution.md`)
+  - Constitution compliance (`.ai-board/memory/constitution.md`)
   - Obvious bugs in changed code
   - Historical git context issues
   - Code comment guidance adherence
@@ -416,8 +416,8 @@ await octokit.actions.createWorkflowDispatch({
 ```
 
 **External Project Requirements**:
-- ai-board plugin (as git submodule) for Claude command definitions
-- `.specify/scripts/bash/` directory with automation scripts
+- ai-board plugin installed via Claude Code plugin system
+- `.ai-board/` directory with commands, scripts, templates, and memory
 - Test configuration (if using verify workflow)
 - Standard project structure compatible with ai-board commands
 
@@ -703,13 +703,13 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
         run: |
-          .specify/scripts/bash/auto-ship-tickets.sh \
+          .ai-board/scripts/bash/auto-ship-tickets.sh \
             "${DEPLOYMENT_SHA}" \
             "${APP_URL}" \
             "${WORKFLOW_API_TOKEN}"
 ```
 
-**Script Logic** (`.specify/scripts/bash/auto-ship-tickets.sh`):
+**Script Logic** (`.ai-board/scripts/bash/auto-ship-tickets.sh`):
 
 1. Fetch all VERIFY stage tickets via API
 2. For each ticket with branch:

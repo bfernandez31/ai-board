@@ -1107,7 +1107,7 @@ The verify workflow (`.github/workflows/verify.yml`) runs automatically when tic
 **Phase 2: Failure Report Generation**
 ```bash
 # If tests fail, generate structured report
-node .specify/scripts/generate-test-report.js \
+node .ai-board/scripts/generate-test-report.js \
   --unit unit-results.json \
   --e2e e2e-results.json \
   --output test-failures.json
@@ -1122,7 +1122,7 @@ claude --dangerously-skip-permissions "/verify"
 **Phase 4: Pull Request Creation**
 ```bash
 # Only if all tests pass
-.specify/scripts/bash/create-pr-only.sh
+.ai-board/scripts/bash/create-pr-only.sh
 ```
 
 ### Test Failure Report Format

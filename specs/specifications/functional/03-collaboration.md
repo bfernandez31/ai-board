@@ -458,7 +458,7 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 - Data sourced from workflow-generated telemetry context file
 
 **Constitution Compliance** (Dynamic):
-- Reads project's `.specify/memory/constitution.md` file dynamically
+- Reads project's `.ai-board/memory/constitution.md` file dynamically
 - Extracts principles from the document (technology-agnostic)
 - Evaluates each ticket against those project-specific principles
 - Works with any technology stack (TypeScript, Python, Go, etc.)

@@ -181,7 +181,7 @@ Provides utility functions for fetching and managing constitution files from Git
 
 **Function**: `fetchConstitutionContent(githubOwner: string, githubRepo: string): Promise<{ content: string; exists: boolean }>`
 
-Fetches constitution markdown content from `.specify/memory/constitution.md` in the project repository.
+Fetches constitution markdown content from `.ai-board/memory/constitution.md` in the project repository.
 
 **Parameters**:
 - `githubOwner` (string): GitHub repository owner (org or user)

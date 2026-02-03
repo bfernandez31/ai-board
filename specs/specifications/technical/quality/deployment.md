@@ -141,7 +141,7 @@ steps:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     run: |
-      .specify/scripts/bash/create-pr-and-transition.sh \
+      .ai-board/scripts/bash/create-pr-and-transition.sh \
         "${{ inputs.ticket_id }}" \
         "${{ inputs.project_id }}" \
         "${CURRENT_BRANCH}" \
@@ -182,7 +182,7 @@ steps:
 **Minimal Spec Creation**:
 
 ```bash
-.specify/scripts/bash/create-new-feature.sh \
+.ai-board/scripts/bash/create-new-feature.sh \
   --mode=quick-impl \
   --ticket-id="${{ inputs.ticket_id }}" \
   --title="${{ inputs.ticketTitle }}" \
@@ -222,7 +222,7 @@ steps:
   - name: Create Cleanup Branch
     run: |
       # Uses create-new-feature.sh with cleanup mode
-      .specify/scripts/bash/create-new-feature.sh \
+      .ai-board/scripts/bash/create-new-feature.sh \
         --json --mode=cleanup "Clean $(date +%Y-%m-%d)"
 
   - name: Execute Cleanup Analysis
@@ -235,7 +235,7 @@ steps:
   - name: Transition to VERIFY
     run: |
       # Triggers verify workflow for tests and PR creation
-      .specify/scripts/bash/transition-to-verify.sh \
+      .ai-board/scripts/bash/transition-to-verify.sh \
         "${{ inputs.ticket_id }}" \
         "${{ inputs.project_id }}"
 ```
@@ -349,13 +349,13 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
     run: |
-      .specify/scripts/bash/auto-ship-tickets.sh \
+      .ai-board/scripts/bash/auto-ship-tickets.sh \
         "${DEPLOYMENT_SHA}" \
         "${APP_URL}" \
         "${WORKFLOW_API_TOKEN}"
 ```
 
-**Script Logic** (`.specify/scripts/bash/auto-ship-tickets.sh`):
+**Script Logic** (`.ai-board/scripts/bash/auto-ship-tickets.sh`):
 
 ```bash
 #!/bin/bash

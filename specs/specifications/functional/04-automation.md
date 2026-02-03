@@ -454,7 +454,7 @@ sequenceDiagram
 **Phase 7: Automated Code Review**
 - Executes `/code-review` command on the created PR
 - Reviews for CLAUDE.md compliance
-- Reviews for constitution compliance (`.specify/memory/constitution.md`)
+- Reviews for constitution compliance (`.ai-board/memory/constitution.md`)
 - Scans for obvious bugs in changed code
 - Checks historical git context and code comments
 - Posts review findings as PR comment (issues scored 80+ confidence only)

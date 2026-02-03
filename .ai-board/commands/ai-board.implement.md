@@ -12,7 +12,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. Run `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory
@@ -122,7 +122,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 10. **Summary Generation**:
    Generate an implementation summary after completion OR if implementation fails partway through:
 
-   a. Read the summary template from `${CLAUDE_PLUGIN_ROOT}/templates/summary-template.md`
+   a. Read the summary template from `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/templates/summary-template.md`
 
    b. Generate summary content following template structure exactly. ALL sections are required:
       - **FEATURE_NAME**: Extract from spec.md header (first `#` line)

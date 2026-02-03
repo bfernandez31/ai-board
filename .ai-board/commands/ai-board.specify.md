@@ -41,7 +41,7 @@ Given that feature description, do this:
    ```bash
    if [ ! -f ".specify/memory/constitution.md" ]; then
      mkdir -p .specify/memory
-     cp "${CLAUDE_PLUGIN_ROOT}/memory/constitution.md" ".specify/memory/constitution.md"
+     cp "${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/memory/constitution.md" ".specify/memory/constitution.md"
      echo "Copied constitution template to .specify/memory/constitution.md"
    fi
    ```
@@ -67,12 +67,12 @@ Given that feature description, do this:
 
 2. Run the script to create the branch:
    - If `TICKET_KEY` is set (JSON mode from ai-board):
-     `${CLAUDE_PLUGIN_ROOT}/scripts/bash/create-new-feature.sh --json --ticket-key="$TICKET_KEY" "$TITLE"`
+     `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/create-new-feature.sh --json --ticket-key="$TICKET_KEY" "$TITLE"`
    - Else (CLI mode):
-     `${CLAUDE_PLUGIN_ROOT}/scripts/bash/create-new-feature.sh --json "$FEATURE_DESCRIPTION"`
+     `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/scripts/bash/create-new-feature.sh --json "$FEATURE_DESCRIPTION"`
    - Parse JSON output for BRANCH_NAME and SPEC_FILE. When values come from JSON, use a helper (e.g., `python - <<'PY'`) to emit a safely escaped string before invoking the script. All file paths must be absolute.
    **IMPORTANT** You must only ever run this script once. The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
-3. Load `${CLAUDE_PLUGIN_ROOT}/templates/spec-template.md` to understand required sections.
+3. Load `${CLAUDE_PLUGIN_ROOT:-.}/.ai-board/templates/spec-template.md` to understand required sections.
 
 4. Follow this execution flow:
 
