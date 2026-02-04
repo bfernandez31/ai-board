@@ -161,11 +161,11 @@ describe('MentionInput', () => {
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, '@');
 
-      // The dropdown should have positioning styles
+      // The dropdown should have fixed positioning styles (rendered via portal)
       const dropdown = screen.queryByTestId('mention-autocomplete')?.parentElement;
       expect(dropdown).toBeInTheDocument();
       if (dropdown) {
-        expect(dropdown).toHaveClass('absolute');
+        expect(dropdown).toHaveClass('fixed');
         expect(dropdown.style.top).toBeDefined();
         expect(dropdown.style.left).toBeDefined();
       }

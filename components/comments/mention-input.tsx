@@ -17,6 +17,7 @@
 'use client';
 
 import { useState, useRef, useMemo, useCallback, KeyboardEvent, ChangeEvent, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ProjectMember } from '@/app/lib/types/mention';
 import { formatMention } from '@/app/lib/utils/mention-parser';
 import { UserAutocomplete } from './user-autocomplete';
@@ -226,10 +227,11 @@ export function MentionInput({
   }, []);
 
   /**
-   * Calculate bounded position to keep dropdown within viewport
+   * Calculate fixed (viewport) position to keep dropdown within viewport
+   * Uses position: fixed to avoid clipping by parent overflow constraints
    * Shifts dropdown left when near right edge, flips above when near bottom
    */
-  const calculateBoundedPosition = useCallback((
+  const calculateFixedPosition = useCallback((
     coords: { top: number; left: number },
     textareaRect: DOMRect
   ): { top: number; left: number } => {
@@ -238,22 +240,24 @@ export function MentionInput({
     const lineHeight = 24;
     const buffer = 16;
 
-    // Calculate absolute viewport position
-    const absoluteTop = textareaRect.top + coords.top + lineHeight;
-    const absoluteLeft = textareaRect.left + coords.left;
+    // Calculate absolute viewport position for the dropdown
+    let top = textareaRect.top + coords.top + lineHeight;
+    let left = textareaRect.left + coords.left;
 
-    let top = coords.top + lineHeight;
-    let left = coords.left;
+    // Check right edge overflow - shift left
+    if (left + dropdownWidth > window.innerWidth - buffer) {
+      left = Math.max(buffer, window.innerWidth - dropdownWidth - buffer);
+    }
 
-    // Check right edge overflow
-    if (absoluteLeft + dropdownWidth > window.innerWidth - buffer) {
-      left = Math.max(0, window.innerWidth - textareaRect.left - dropdownWidth - buffer);
+    // Check left edge overflow
+    if (left < buffer) {
+      left = buffer;
     }
 
     // Check bottom edge overflow - flip above if needed
-    if (absoluteTop + dropdownHeight > window.innerHeight - buffer) {
-      const topAbove = coords.top - dropdownHeight - 8;
-      if (textareaRect.top + topAbove > 0) {
+    if (top + dropdownHeight > window.innerHeight - buffer) {
+      const topAbove = textareaRect.top + coords.top - dropdownHeight - 8;
+      if (topAbove > buffer) {
         top = topAbove;
       }
     }
@@ -514,17 +518,32 @@ export function MentionInput({
   };
 
   /**
-   * Update autocomplete position when it opens
+   * Update autocomplete position when it opens and on scroll
+   * Uses fixed positioning for viewport-based coordinates
    */
   useEffect(() => {
-    if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
+    if (!isAutocompleteOpen || !textareaRef.current || triggerPosition === null) {
+      return;
+    }
+
+    const updatePosition = () => {
+      if (!textareaRef.current || triggerPosition === null) return;
       const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
       const rect = textareaRef.current.getBoundingClientRect();
-      const boundedPosition = calculateBoundedPosition(coords, rect);
+      const fixedPosition = calculateFixedPosition(coords, rect);
+      setAutocompletePosition(fixedPosition);
+    };
 
-      setAutocompletePosition(boundedPosition);
-    }
-  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateBoundedPosition]);
+    // Initial position
+    updatePosition();
+
+    // Update position on scroll (capture phase to catch all scroll events)
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateFixedPosition]);
 
   /**
    * Auto-scroll selected item into view
@@ -628,9 +647,9 @@ export function MentionInput({
         rows={3}
       />
 
-      {isAutocompleteOpen && (
+      {isAutocompleteOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="absolute w-80"
+          className="fixed w-80"
           style={{
             zIndex: 9999,
             top: `${autocompletePosition.top}px`,
@@ -638,7 +657,8 @@ export function MentionInput({
           }}
         >
           {renderAutocomplete()}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
