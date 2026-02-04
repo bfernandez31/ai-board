@@ -1034,7 +1034,11 @@ export function TicketDetailModal({
                         ) : (
                           <Copy className="w-3 h-3 mr-1" />
                         )}
-                        {isDuplicating ? 'Duplicating...' : isCloning ? 'Cloning...' : 'Duplicate'}
+                        {(() => {
+                          if (isDuplicating) return 'Duplicating...';
+                          if (isCloning) return 'Cloning...';
+                          return 'Duplicate';
+                        })()}
                         <ChevronDown className="w-3 h-3 ml-1" />
                       </Button>
                     </DropdownMenuTrigger>

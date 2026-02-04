@@ -7,6 +7,18 @@ import type { Ticket } from '@prisma/client';
 import { createGitHubClient } from '@/app/lib/github/client';
 
 /**
+ * Creates a prefixed title for duplicated/cloned tickets
+ * Truncates source title if needed to stay within 100 character limit
+ */
+function createPrefixedTitle(sourceTitle: string, prefix: string): string {
+  const maxSourceLength = 100 - prefix.length;
+  const truncatedTitle = sourceTitle.length > maxSourceLength
+    ? sourceTitle.substring(0, maxSourceLength)
+    : sourceTitle;
+  return `${prefix}${truncatedTitle}`;
+}
+
+/**
  * Fetch all tickets for a specific project, grouped by stage
  * Sorted by most recently updated first
  * Returns tickets with version field for optimistic concurrency control
@@ -291,14 +303,7 @@ export async function duplicateTicket(
   const ticketNumber = await getNextTicketNumber(projectId);
   const ticketKey = `${sourceTicket.project.key}-${ticketNumber}`;
 
-  // Apply "Copy of " prefix, truncating source title to 92 chars if needed
-  const PREFIX = 'Copy of ';
-  const maxSourceLength = 100 - PREFIX.length; // 92 chars
-  const truncatedTitle =
-    sourceTicket.title.length > maxSourceLength
-      ? sourceTicket.title.substring(0, maxSourceLength)
-      : sourceTicket.title;
-  const newTitle = `${PREFIX}${truncatedTitle}`;
+  const newTitle = createPrefixedTitle(sourceTicket.title, 'Copy of ');
 
   // Build data object for new ticket
   const duplicateData = {
@@ -424,14 +429,7 @@ export async function fullCloneTicket(
     throw new Error(`Failed to create branch ${newBranch}: ${errorMessage}`);
   }
 
-  // Apply "Clone of " prefix, truncating source title to 91 chars if needed (100 - 9 = 91)
-  const PREFIX = 'Clone of ';
-  const maxSourceLength = 100 - PREFIX.length;
-  const truncatedTitle =
-    sourceTicket.title.length > maxSourceLength
-      ? sourceTicket.title.substring(0, maxSourceLength)
-      : sourceTicket.title;
-  const newTitle = `${PREFIX}${truncatedTitle}`;
+  const newTitle = createPrefixedTitle(sourceTicket.title, 'Clone of ');
 
   // Create the cloned ticket and jobs in a transaction
   const newTicket = await prisma.$transaction(async (tx) => {

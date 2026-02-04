@@ -79,38 +79,27 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    // Handle specific errors
+    // Map known error messages to HTTP responses
+    const errorResponses: Record<string, { code: string; status: number }> = {
+      'Unauthorized': { code: 'AUTH_ERROR', status: 401 },
+      'Project not found': { code: 'PROJECT_NOT_FOUND', status: 404 },
+      'Ticket not found': { code: 'TICKET_NOT_FOUND', status: 404 },
+      'Full clone is only available for tickets in SPECIFY, PLAN, BUILD, or VERIFY stages': { code: 'INVALID_STAGE', status: 400 },
+      'Source ticket has no branch to clone': { code: 'NO_BRANCH', status: 400 },
+      'Project is not linked to a GitHub repository': { code: 'NO_GITHUB_LINK', status: 400 },
+    };
+
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
+      // Check for exact matches first
+      const mapped = errorResponses[error.message];
+      if (mapped) {
         return NextResponse.json(
-          { error: 'Unauthorized', code: 'AUTH_ERROR' },
-          { status: 401 }
+          { error: error.message, code: mapped.code },
+          { status: mapped.status }
         );
       }
-      if (error.message === 'Project not found') {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-      if (error.message === 'Ticket not found') {
-        return NextResponse.json(
-          { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-      if (error.message === 'Full clone is only available for tickets in SPECIFY, PLAN, BUILD, or VERIFY stages') {
-        return NextResponse.json(
-          { error: error.message, code: 'INVALID_STAGE' },
-          { status: 400 }
-        );
-      }
-      if (error.message === 'Source ticket has no branch to clone') {
-        return NextResponse.json(
-          { error: error.message, code: 'NO_BRANCH' },
-          { status: 400 }
-        );
-      }
+
+      // Check for prefix matches (e.g., GitHub errors)
       if (error.message.startsWith('Failed to create branch')) {
         return NextResponse.json(
           { error: error.message, code: 'GITHUB_ERROR' },
@@ -121,10 +110,7 @@ export async function POST(
 
     console.error('Error cloning ticket:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to clone ticket',
-        code: 'DATABASE_ERROR',
-      },
+      { error: 'Failed to clone ticket', code: 'DATABASE_ERROR' },
       { status: 500 }
     );
   }
