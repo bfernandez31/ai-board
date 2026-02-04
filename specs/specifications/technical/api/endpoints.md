@@ -255,7 +255,7 @@ Create a new ticket.
 
 **Validation**:
 - `title`: Required, 1-100 characters, alphanumeric + basic punctuation
-- `description`: Required, 1-2500 characters, all UTF-8 characters allowed
+- `description`: Required, 1-10000 characters, all UTF-8 characters allowed
 
 **Response** (201 Created):
 ```json
@@ -407,7 +407,7 @@ Update ticket fields with optimistic concurrency control.
 
 **Validation**:
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
-- `description`: Optional, 1-2500 characters (editable only in INBOX stage)
+- `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
 - `version`: Required for concurrency control
 

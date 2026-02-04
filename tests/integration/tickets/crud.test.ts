@@ -105,8 +105,8 @@ describe('Tickets CRUD', () => {
       expect(response.data.title.length).toBe(100);
     });
 
-    it('should return 400 for description exceeding max length (2500 chars)', async () => {
-      const longDescription = 'B'.repeat(2501);
+    it('should return 400 for description exceeding max length (10000 chars)', async () => {
+      const longDescription = 'B'.repeat(10001);
 
       const response = await ctx.api.post<{ error: string; code: string }>(
         `/api/projects/${ctx.projectId}/tickets`,
@@ -117,8 +117,8 @@ describe('Tickets CRUD', () => {
       expect(response.data.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should accept description at max length (2500 chars)', async () => {
-      const maxDescription = 'B'.repeat(2500);
+    it('should accept description at max length (10000 chars)', async () => {
+      const maxDescription = 'B'.repeat(10000);
 
       const response = await ctx.api.post<{ description: string }>(
         `/api/projects/${ctx.projectId}/tickets`,
@@ -127,7 +127,7 @@ describe('Tickets CRUD', () => {
 
       expect(response.status).toBe(201);
       expect(response.data.description).toBe(maxDescription);
-      expect(response.data.description.length).toBe(2500);
+      expect(response.data.description.length).toBe(10000);
     });
 
     it('should handle allowed punctuation in title and description', async () => {

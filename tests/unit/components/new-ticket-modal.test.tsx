@@ -49,7 +49,7 @@ describe('NewTicketModal', () => {
     it('should display character count for description field', () => {
       renderWithProviders(<NewTicketModal {...defaultProps} />);
 
-      expect(screen.getByText(/0\/2500 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/0\/10000 characters/i)).toBeInTheDocument();
     });
 
     it('should display create and cancel buttons', () => {

@@ -191,7 +191,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
 
     // Verify counter shows correct count
     const textareaValue = await textarea.inputValue();
-    const remaining = 2500 - textareaValue.length;
+    const remaining = 10000 - textareaValue.length;
     await expect(counter).toContainText(`${remaining} characters remaining`);
   });
 
@@ -316,30 +316,30 @@ test.describe('Inline Ticket Editing - User Interface', () => {
     await descriptionElement.click();
     const textarea = page.getByTestId('description-textarea');
 
-    // Type exactly 2251 characters (>90% of 2500, since 2500 * 0.9 = 2250)
-    const text2251 = 'A'.repeat(2251);
-    await textarea.fill(text2251);
+    // Type exactly 9001 characters (>90% of 10000, since 10000 * 0.9 = 9000)
+    const text9001 = 'A'.repeat(9001);
+    await textarea.fill(text9001);
 
-    // Assert: counter shows "249 characters remaining"
+    // Assert: counter shows "999 characters remaining"
     const counter = page.getByTestId('character-counter');
-    await expect(counter).toContainText('249 characters remaining');
+    await expect(counter).toContainText('999 characters remaining');
 
     // Assert: warning indicator visible (yellow/orange)
     const warningIcon = counter.locator('svg').first();
     await expect(warningIcon).toBeVisible();
 
-    // Continue typing to 2500 characters
-    const text2500 = 'A'.repeat(2500);
-    await textarea.fill(text2500);
+    // Continue typing to 10000 characters
+    const text10000 = 'A'.repeat(10000);
+    await textarea.fill(text10000);
 
     // Assert: counter shows "0 characters remaining"
     await expect(counter).toContainText('0 characters remaining');
 
     // Assert: input prevents further typing (maxLength)
     const inputValue = await textarea.inputValue();
-    expect(inputValue.length).toBe(2500);
+    expect(inputValue.length).toBe(10000);
 
-    // Save button should still be enabled (2500 is valid)
+    // Save button should still be enabled (10000 is valid)
     const saveButton = page.locator('button:has-text("Save")');
     await expect(saveButton).toBeEnabled();
 

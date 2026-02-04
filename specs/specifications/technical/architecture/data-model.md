@@ -176,7 +176,7 @@ model Ticket {
   - Unique constraint across all tickets
   - Used in URLs, UI displays, and API lookups
 - `title`: Short description (max 100 characters)
-- `description`: Detailed description (max 2500 characters, all UTF-8 allowed)
+- `description`: Detailed description (max 10000 characters, all UTF-8 allowed)
 - `stage`: Current workflow stage (enum: INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED)
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
@@ -208,7 +208,7 @@ model Ticket {
 
 **Validation Rules**:
 - Title: 1-100 characters, alphanumeric + basic punctuation, no emojis
-- Description: 1-2500 characters, all UTF-8 characters allowed (including emojis, Chinese, Arabic, etc.)
+- Description: 1-10000 characters, all UTF-8 characters allowed (including emojis, Chinese, Arabic, etc.)
 - Branch: Max 200 characters
 - Attachments: Max 5 images, 10MB each, formats: JPEG/PNG/GIF/WebP
 - Stage: Sequential progression only (no skipping or backwards)
@@ -784,7 +784,7 @@ type Attachments = TicketAttachment[];  // Max 5 items
 | Field | Max Length | Database Type |
 |-------|------------|---------------|
 | Ticket.title | 100 | VARCHAR(100) |
-| Ticket.description | 2500 | TEXT |
+| Ticket.description | 10000 | TEXT |
 | Ticket.branch | 200 | VARCHAR(200) |
 | Job.command | 50 | VARCHAR(50) |
 | Job.branch | 200 | VARCHAR(200) |
