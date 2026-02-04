@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: AI-Board Ticket Clone API
+  description: API contract for full clone ticket duplication
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/tickets/{id}/duplicate:
+    post:
+      summary: Duplicate a ticket
+      description: |
+        Creates a copy of an existing ticket. With `fullClone=true`, preserves stage,
+        creates a new branch from source, and copies all job history with telemetry.
+        Without the parameter (default), creates a simple copy in INBOX stage.
+      operationId: duplicateTicket
+      tags:
+        - tickets
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: id
+          in: path
+          required: true
+          description: Source ticket ID
+          schema:
+            type: integer
+            minimum: 1
+        - name: fullClone
+          in: query
+          required: false
+          description: |
+            When true, performs a full clone (preserves stage, creates branch, copies jobs).
+            When false or omitted, performs simple copy (INBOX stage, no branch/jobs).
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+              examples:
+                simpleCopy:
+                  summary: Simple copy result
+                  value:
+                    id: 456
+                    ticketNumber: 124
+                    ticketKey: "ABC-124"
+                    title: "Copy of Original ticket"
+                    description: "Ticket description"
+                    stage: "INBOX"
+                    version: 1
+                    projectId: 1
+                    branch: null
+                    previewUrl: null
+                    autoMode: false
+                    workflowType: "FULL"
+                    attachments: []
+                    clarificationPolicy: "AUTO"
+                    createdAt: "2026-02-04T12:00:00.000Z"
+                    updatedAt: "2026-02-04T12:00:00.000Z"
+                fullClone:
+                  summary: Full clone result
+                  value:
+                    id: 457
+                    ticketNumber: 125
+                    ticketKey: "ABC-125"
+                    title: "Clone of Original ticket"
+                    description: "Ticket description"
+                    stage: "BUILD"
+                    version: 1
+                    projectId: 1
+                    branch: "125-clone-of-original"
+                    previewUrl: null
+                    autoMode: false
+                    workflowType: "FULL"
+                    attachments: []
+                    clarificationPolicy: "AUTO"
+                    createdAt: "2026-02-04T12:00:00.000Z"
+                    updatedAt: "2026-02-04T12:00:00.000Z"
+                    jobsCloned: 5
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidProjectId:
+                  value:
+                    error: "Invalid project ID"
+                    code: "VALIDATION_ERROR"
+                invalidTicketId:
+                  value:
+                    error: "Invalid ticket ID"
+                    code: "VALIDATION_ERROR"
+                fullCloneNotAllowed:
+                  value:
+                    error: "Full clone not available for tickets in INBOX or SHIP stage"
+                    code: "VALIDATION_ERROR"
+                noBranch:
+                  value:
+                    error: "Source ticket has no branch to clone"
+                    code: "VALIDATION_ERROR"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+                code: "AUTH_ERROR"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                projectNotFound:
+                  value:
+                    error: "Project not found"
+                    code: "PROJECT_NOT_FOUND"
+                ticketNotFound:
+                  value:
+                    error: "Ticket not found"
+                    code: "TICKET_NOT_FOUND"
+                branchNotFound:
+                  value:
+                    error: "Source branch not found in GitHub"
+                    code: "BRANCH_NOT_FOUND"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                databaseError:
+                  value:
+                    error: "Failed to duplicate ticket"
+                    code: "DATABASE_ERROR"
+                githubError:
+                  value:
+                    error: "Failed to create branch in GitHub"
+                    code: "GITHUB_ERROR"
+
+components:
+  schemas:
+    TicketResponse:
+      type: object
+      required:
+        - id
+        - ticketNumber
+        - ticketKey
+        - title
+        - description
+        - stage
+        - version
+        - projectId
+        - autoMode
+        - workflowType
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          description: Unique ticket ID
+        ticketNumber:
+          type: integer
+          description: Ticket number within project
+        ticketKey:
+          type: string
+          description: Human-readable key (e.g., ABC-123)
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 10000
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED]
+        version:
+          type: integer
+          minimum: 1
+        projectId:
+          type: integer
+        branch:
+          type: string
+          nullable: true
+          maxLength: 200
+        previewUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+        autoMode:
+          type: boolean
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        attachments:
+          type: array
+          items:
+            type: object
+        clarificationPolicy:
+          type: string
+          nullable: true
+          enum: [AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        jobsCloned:
+          type: integer
+          description: Number of jobs cloned (only present for full clone)
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - VALIDATION_ERROR
+            - AUTH_ERROR
+            - PROJECT_NOT_FOUND
+            - TICKET_NOT_FOUND
+            - BRANCH_NOT_FOUND
+            - DATABASE_ERROR
+            - GITHUB_ERROR
