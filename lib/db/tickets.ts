@@ -2,8 +2,26 @@ import { prisma } from './client';
 import { Stage, getAllStages } from '../stage-transitions';
 import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
+import { FULL_CLONE_ELIGIBLE_STAGES } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import type { Ticket } from '@prisma/client';
+import { createBranchFrom, BranchNotFoundError, GitHubPermissionError } from '../github/create-branch-from';
+import { Octokit } from '@octokit/rest';
+
+/**
+ * Error thrown when full clone eligibility validation fails
+ */
+export class FullCloneValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FullCloneValidationError';
+  }
+}
+
+/**
+ * Re-export GitHub errors for API error handling
+ */
+export { BranchNotFoundError, GitHubPermissionError };
 
 /**
  * Fetch all tickets for a specific project, grouped by stage
@@ -319,4 +337,177 @@ export async function duplicateTicket(
   return await prisma.ticket.create({
     data: duplicateData,
   });
+}
+
+/**
+ * Checks if a ticket is eligible for full clone operation
+ * @param stage - The ticket's current stage
+ * @param branch - The ticket's branch (can be null)
+ * @returns true if eligible, throws FullCloneValidationError if not
+ */
+export function validateFullCloneEligibility(
+  stage: string,
+  branch: string | null
+): void {
+  // Check stage eligibility
+  if (!FULL_CLONE_ELIGIBLE_STAGES.includes(stage as typeof FULL_CLONE_ELIGIBLE_STAGES[number])) {
+    throw new FullCloneValidationError(
+      `Full clone not available for tickets in ${stage} stage. Only tickets in SPECIFY, PLAN, BUILD, or VERIFY stages can be fully cloned.`
+    );
+  }
+
+  // Check branch exists
+  if (!branch) {
+    throw new FullCloneValidationError(
+      'Source ticket has no branch to clone. Full clone requires a branch.'
+    );
+  }
+}
+
+/**
+ * Generate a branch name for a cloned ticket
+ * Follows the pattern: {ticketNumber}-{slugified-title}
+ */
+function generateBranchName(ticketNumber: number, title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 50);
+  return `${ticketNumber}-${slug}`;
+}
+
+/**
+ * Full clone result type including jobs count
+ */
+export interface FullCloneResult extends Ticket {
+  jobsCloned: number;
+}
+
+/**
+ * Full clone a ticket within the same project
+ * Creates a new ticket preserving stage, creating a new branch from source,
+ * and copying all job records with telemetry data.
+ *
+ * @param projectId - The project ID containing the source ticket
+ * @param sourceTicketId - The ID of the ticket to clone
+ * @param githubToken - GitHub token for branch creation
+ * @returns The newly created ticket with jobsCloned count
+ * @throws FullCloneValidationError if ticket is not eligible
+ * @throws BranchNotFoundError if source branch doesn't exist in GitHub
+ * @throws GitHubPermissionError if GitHub token lacks permissions
+ */
+export async function fullCloneTicket(
+  projectId: number,
+  sourceTicketId: number,
+  githubToken: string
+): Promise<FullCloneResult> {
+  // Fetch source ticket with project and jobs
+  const sourceTicket = await prisma.ticket.findFirst({
+    where: {
+      id: sourceTicketId,
+      projectId: projectId,
+    },
+    include: {
+      project: {
+        select: {
+          key: true,
+          githubOwner: true,
+          githubRepo: true,
+        },
+      },
+      jobs: true,
+    },
+  });
+
+  if (!sourceTicket) {
+    throw new Error('Ticket not found');
+  }
+
+  // Validate eligibility
+  validateFullCloneEligibility(sourceTicket.stage, sourceTicket.branch);
+
+  // Generate new ticket number and key
+  const ticketNumber = await getNextTicketNumber(projectId);
+  const ticketKey = `${sourceTicket.project.key}-${ticketNumber}`;
+
+  // Apply "Clone of " prefix, truncating source title to 91 chars if needed
+  const PREFIX = 'Clone of ';
+  const maxSourceLength = 100 - PREFIX.length; // 91 chars
+  const truncatedTitle =
+    sourceTicket.title.length > maxSourceLength
+      ? sourceTicket.title.substring(0, maxSourceLength)
+      : sourceTicket.title;
+  const newTitle = `${PREFIX}${truncatedTitle}`;
+
+  // Generate new branch name
+  const newBranchName = generateBranchName(ticketNumber, newTitle);
+
+  // Create GitHub branch from source branch
+  const octokit = new Octokit({ auth: githubToken });
+  await createBranchFrom(
+    octokit,
+    sourceTicket.project.githubOwner,
+    sourceTicket.project.githubRepo,
+    sourceTicket.branch!, // Already validated non-null
+    newBranchName
+  );
+
+  // Use transaction to create ticket and copy jobs atomically
+  const result = await prisma.$transaction(async (tx) => {
+    // Create new ticket preserving stage
+    const newTicket = await tx.ticket.create({
+      data: {
+        title: newTitle,
+        description: sourceTicket.description,
+        stage: sourceTicket.stage as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP' | 'CLOSED',
+        version: 1,
+        projectId: projectId,
+        ticketNumber,
+        ticketKey,
+        branch: newBranchName,
+        previewUrl: null, // New deployment needed
+        autoMode: false,
+        workflowType: sourceTicket.workflowType,
+        attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
+        clarificationPolicy: sourceTicket.clarificationPolicy,
+      },
+    });
+
+    // Copy all jobs with telemetry data
+    if (sourceTicket.jobs.length > 0) {
+      const jobCopies = sourceTicket.jobs.map((job) => ({
+        ticketId: newTicket.id,
+        projectId: projectId,
+        command: job.command,
+        status: job.status,
+        branch: newBranchName, // Update to new branch name
+        commitSha: job.commitSha,
+        logs: job.logs,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+        updatedAt: new Date(), // Required field
+        // Telemetry fields
+        inputTokens: job.inputTokens,
+        outputTokens: job.outputTokens,
+        cacheReadTokens: job.cacheReadTokens,
+        cacheCreationTokens: job.cacheCreationTokens,
+        costUsd: job.costUsd,
+        durationMs: job.durationMs,
+        model: job.model,
+        toolsUsed: job.toolsUsed,
+      }));
+
+      await tx.job.createMany({
+        data: jobCopies,
+      });
+    }
+
+    return newTicket;
+  });
+
+  return {
+    ...result,
+    jobsCloned: sourceTicket.jobs.length,
+  };
 }

@@ -174,3 +174,20 @@ export type PatchTicketInput = z.infer<typeof patchTicketSchema>;
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
 export type TransitionRequest = z.infer<typeof TransitionRequestSchema>;
 export type TicketResponse = z.infer<typeof ticketResponseSchema>;
+
+/**
+ * Validation schema for fullClone query parameter
+ * Used in duplicate API endpoint to determine clone behavior
+ */
+export const FullCloneQuerySchema = z
+  .string()
+  .optional()
+  .transform((val) => val === 'true');
+
+/**
+ * Stages that are eligible for full clone operation
+ * Full clone requires the ticket to have progressed past INBOX and not yet shipped
+ */
+export const FULL_CLONE_ELIGIBLE_STAGES = ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'] as const;
+
+export type FullCloneEligibleStage = (typeof FULL_CLONE_ELIGIBLE_STAGES)[number];

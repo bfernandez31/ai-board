@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -45,11 +45,12 @@ import type { TicketWithVersion } from '@/app/lib/types/query-types';
 import { useComparisonCheck } from '@/hooks/use-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FULL_CLONE_ELIGIBLE_STAGES } from '@/lib/validations/ticket';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -320,12 +321,22 @@ export function TicketDetailModal({
   // Summary button visibility: FULL workflow with completed implement job
   const showSummaryButton = localTicket?.workflowType === 'FULL' && hasCompletedImplementJob;
 
+  // Check if full clone is available for this ticket
+  const showFullCloneOption = useMemo(() => {
+    if (!localTicket) return false;
+    return (
+      FULL_CLONE_ELIGIBLE_STAGES.includes(localTicket.stage as typeof FULL_CLONE_ELIGIBLE_STAGES[number]) &&
+      localTicket.branch !== null &&
+      localTicket.branch.length > 0
+    );
+  }, [localTicket]);
+
   /**
-   * Handle ticket duplication
+   * Handle simple copy (existing behavior)
    * Creates a new ticket in INBOX with "Copy of " prefix
    * Uses optimistic update pattern for immediate UI feedback
    */
-  const handleDuplicate = async () => {
+  const handleSimpleCopy = async () => {
     if (!localTicket) return;
 
     setIsDuplicating(true);
@@ -394,6 +405,86 @@ export function TicketDetailModal({
         variant: 'destructive',
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to duplicate ticket',
+      });
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
+  /**
+   * Handle full clone
+   * Creates a new ticket preserving stage, creates branch, copies jobs
+   * Uses optimistic update pattern for immediate UI feedback
+   */
+  const handleFullClone = async () => {
+    if (!localTicket) return;
+
+    setIsDuplicating(true);
+
+    const queryKey = queryKeys.projects.tickets(projectId);
+    const previousData = queryClient.getQueryData<TicketWithVersion[]>(queryKey) || [];
+
+    // Optimistic update: Create temporary ticket for immediate UI feedback
+    const tempId = Date.now();
+    const now = new Date().toISOString();
+    const optimisticTicket: TicketWithVersion = {
+      id: tempId,
+      ticketNumber: tempId,
+      ticketKey: `TEMP-${tempId}`,
+      title: `Clone of ${localTicket.title}`.slice(0, 100),
+      description: localTicket.description || '',
+      stage: localTicket.stage as Stage, // Preserve stage for full clone
+      projectId,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      branch: `${tempId}-clone`, // Temporary branch name
+      autoMode: false,
+      workflowType: localTicket.workflowType || 'FULL',
+      clarificationPolicy: localTicket.clarificationPolicy || null,
+      attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
+    };
+
+    // Add to cache optimistically
+    queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) => [
+      ...(old || []),
+      optimisticTicket,
+    ]);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}/duplicate?fullClone=true`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to clone ticket');
+      }
+
+      const newTicket = await response.json();
+
+      // Invalidate to replace temp with real data
+      await queryClient.invalidateQueries({ queryKey });
+
+      toast({
+        title: 'Ticket cloned',
+        description: `Created ${newTicket.ticketKey} with ${newTicket.jobsCloned} jobs`,
+      });
+
+      // Close modal after successful clone
+      onOpenChange(false);
+    } catch (error) {
+      // Rollback optimistic update on error
+      queryClient.setQueryData(queryKey, previousData);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to clone ticket',
       });
     } finally {
       setIsDuplicating(false);
@@ -929,31 +1020,38 @@ export function TicketDetailModal({
                 Edit Policy
               </Button>
             )}
-            {/* Duplicate button - always visible */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDuplicate}
-                    disabled={isDuplicating}
-                    className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
-                    data-testid="duplicate-ticket-button"
-                  >
-                    {isDuplicating ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Copy className="w-3 h-3 mr-1" />
-                    )}
-                    {isDuplicating ? 'Duplicating...' : 'Duplicate'}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Duplicate ticket</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Duplicate dropdown menu - always visible */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isDuplicating}
+                  className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
+                  data-testid="duplicate-ticket-button"
+                >
+                  {isDuplicating ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Copy className="w-3 h-3 mr-1" />
+                  )}
+                  {isDuplicating ? 'Duplicating...' : 'Duplicate'}
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleSimpleCopy} data-testid="simple-copy-option">
+                  <Copy className="mr-2 h-4 w-4" />
+                  Simple copy
+                </DropdownMenuItem>
+                {showFullCloneOption && (
+                  <DropdownMenuItem onClick={handleFullClone} data-testid="full-clone-option">
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    Full clone
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="group">
