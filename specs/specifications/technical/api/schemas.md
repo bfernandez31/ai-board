@@ -26,7 +26,7 @@ export const createTicketSchema = z.object({
 
   description: z.string()
     .min(1, 'Description is required')
-    .max(2500, 'Description must be 2500 characters or less'),
+    .max(10000, 'Description must be 10000 characters or less'),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
@@ -34,7 +34,7 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
 **Validation Rules**:
 - **title**: Required, 1-100 characters, alphanumeric + basic punctuation only
-- **description**: Required, 1-2500 characters, all UTF-8 characters allowed
+- **description**: Required, 1-10000 characters, all UTF-8 characters allowed
 
 **Rejected Characters (title)**:
 - Emojis (🚀, 😀, etc.)
@@ -57,7 +57,7 @@ export const updateTicketSchema = z.object({
 
   description: z.string()
     .min(1)
-    .max(2500)
+    .max(10000)
     .optional(),
 
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE'])
