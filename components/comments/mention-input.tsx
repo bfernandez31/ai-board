@@ -518,17 +518,31 @@ export function MentionInput({
   };
 
   /**
-   * Update autocomplete position when it opens
+   * Update autocomplete position when it opens and on scroll
    * Uses fixed positioning for viewport-based coordinates
    */
   useEffect(() => {
-    if (isAutocompleteOpen && textareaRef.current && triggerPosition !== null) {
+    if (!isAutocompleteOpen || !textareaRef.current || triggerPosition === null) {
+      return;
+    }
+
+    const updatePosition = () => {
+      if (!textareaRef.current || triggerPosition === null) return;
       const coords = getCaretCoordinates(textareaRef.current, triggerPosition);
       const rect = textareaRef.current.getBoundingClientRect();
       const fixedPosition = calculateFixedPosition(coords, rect);
-
       setAutocompletePosition(fixedPosition);
-    }
+    };
+
+    // Initial position
+    updatePosition();
+
+    // Update position on scroll (capture phase to catch all scroll events)
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+    };
   }, [isAutocompleteOpen, triggerPosition, getCaretCoordinates, calculateFixedPosition]);
 
   /**
