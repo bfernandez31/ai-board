@@ -15,6 +15,48 @@ import { z } from 'zod';
 const TicketIdSchema = z.string().regex(/^\d+$/, 'Ticket ID must be a positive integer');
 
 /**
+ * Serializes a ticket to the API response format
+ */
+function serializeTicketResponse(ticket: {
+  id: number;
+  ticketNumber: number;
+  ticketKey: string;
+  title: string;
+  description: string | null;
+  stage: string;
+  version: number;
+  projectId: number;
+  branch: string | null;
+  previewUrl: string | null;
+  autoMode: boolean;
+  workflowType: string;
+  attachments: unknown;
+  clarificationPolicy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}, jobsCloned?: number) {
+  return {
+    id: ticket.id,
+    ticketNumber: ticket.ticketNumber,
+    ticketKey: ticket.ticketKey,
+    title: ticket.title,
+    description: ticket.description,
+    stage: ticket.stage,
+    version: ticket.version,
+    projectId: ticket.projectId,
+    branch: ticket.branch,
+    previewUrl: ticket.previewUrl,
+    autoMode: ticket.autoMode,
+    workflowType: ticket.workflowType,
+    attachments: ticket.attachments,
+    clarificationPolicy: ticket.clarificationPolicy,
+    createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
+    ...(jobsCloned !== undefined && { jobsCloned }),
+  };
+}
+
+/**
  * POST /api/projects/[projectId]/tickets/[id]/duplicate
  *
  * Duplicates an existing ticket. Supports two modes:
@@ -89,61 +131,18 @@ export async function POST(
 
       // Perform full clone
       const newTicket = await fullCloneTicket(projectId, ticketId, githubToken);
-
-      // Revalidate the project board page
       revalidatePath(`/projects/${projectId}/board`);
-
-      // Return the new ticket with jobsCloned count
       return NextResponse.json(
-        {
-          id: newTicket.id,
-          ticketNumber: newTicket.ticketNumber,
-          ticketKey: newTicket.ticketKey,
-          title: newTicket.title,
-          description: newTicket.description,
-          stage: newTicket.stage,
-          version: newTicket.version,
-          projectId: newTicket.projectId,
-          branch: newTicket.branch,
-          previewUrl: newTicket.previewUrl,
-          autoMode: newTicket.autoMode,
-          workflowType: newTicket.workflowType,
-          attachments: newTicket.attachments,
-          clarificationPolicy: newTicket.clarificationPolicy,
-          createdAt: newTicket.createdAt.toISOString(),
-          updatedAt: newTicket.updatedAt.toISOString(),
-          jobsCloned: newTicket.jobsCloned,
-        },
+        serializeTicketResponse(newTicket, newTicket.jobsCloned),
         { status: 201 }
       );
     }
 
     // Simple copy (default behavior)
     const newTicket = await duplicateTicket(projectId, ticketId);
-
-    // Revalidate the project board page
     revalidatePath(`/projects/${projectId}/board`);
-
-    // Return the new ticket with 201 Created status
     return NextResponse.json(
-      {
-        id: newTicket.id,
-        ticketNumber: newTicket.ticketNumber,
-        ticketKey: newTicket.ticketKey,
-        title: newTicket.title,
-        description: newTicket.description,
-        stage: newTicket.stage,
-        version: newTicket.version,
-        projectId: newTicket.projectId,
-        branch: newTicket.branch,
-        previewUrl: newTicket.previewUrl,
-        autoMode: newTicket.autoMode,
-        workflowType: newTicket.workflowType,
-        attachments: newTicket.attachments,
-        clarificationPolicy: newTicket.clarificationPolicy,
-        createdAt: newTicket.createdAt.toISOString(),
-        updatedAt: newTicket.updatedAt.toISOString(),
-      },
+      serializeTicketResponse(newTicket),
       { status: 201 }
     );
   } catch (error) {

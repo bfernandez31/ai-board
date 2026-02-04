@@ -323,11 +323,9 @@ export function TicketDetailModal({
 
   // Check if full clone is available for this ticket
   const showFullCloneOption = useMemo(() => {
-    if (!localTicket) return false;
-    return (
-      FULL_CLONE_ELIGIBLE_STAGES.includes(localTicket.stage as typeof FULL_CLONE_ELIGIBLE_STAGES[number]) &&
-      localTicket.branch !== null &&
-      localTicket.branch.length > 0
+    if (!localTicket?.branch) return false;
+    return FULL_CLONE_ELIGIBLE_STAGES.includes(
+      localTicket.stage as typeof FULL_CLONE_ELIGIBLE_STAGES[number]
     );
   }, [localTicket]);
 
