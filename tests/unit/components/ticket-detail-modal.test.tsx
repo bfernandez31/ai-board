@@ -369,7 +369,7 @@ describe('TicketDetailModal', () => {
   });
 
   describe('Duplicate functionality', () => {
-    it('should add duplicated ticket to cache immediately', async () => {
+    it('should add duplicated ticket to cache immediately via dropdown', async () => {
       const user = userEvent.setup();
       const ticket = createMockTicket({ id: 1, title: 'Original Ticket', stage: 'INBOX' });
       const projectId = 1;
@@ -452,9 +452,13 @@ describe('TicketDetailModal', () => {
       }];
       queryClient.setQueryData(queryKey, initialTickets);
 
-      // Click the duplicate button
+      // Click the duplicate dropdown button to open menu
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+
+      // Click the "Simple copy" option from dropdown
+      const simpleCopyOption = await screen.findByTestId('simple-copy-option');
+      await user.click(simpleCopyOption);
 
       // Wait for the API call to complete
       await waitFor(() => {
@@ -539,9 +543,13 @@ describe('TicketDetailModal', () => {
       }];
       queryClient.setQueryData(queryKey, initialTickets);
 
-      // Click the duplicate button
+      // Click the duplicate dropdown button to open menu
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+
+      // Click the "Simple copy" option from dropdown
+      const simpleCopyOption = await screen.findByTestId('simple-copy-option');
+      await user.click(simpleCopyOption);
 
       // Wait for the API call and error handling
       await waitFor(() => {
@@ -623,9 +631,13 @@ describe('TicketDetailModal', () => {
       const cacheBeforeClick = queryClient.getQueryData<TicketWithVersion[]>(queryKey);
       expect(cacheBeforeClick).toHaveLength(1);
 
-      // Click the duplicate button
+      // Click the duplicate dropdown button to open menu
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+
+      // Click the "Simple copy" option from dropdown
+      const simpleCopyOption = await screen.findByTestId('simple-copy-option');
+      await user.click(simpleCopyOption);
 
       // Wait for error handling
       await waitFor(() => {
@@ -646,6 +658,373 @@ describe('TicketDetailModal', () => {
         const tempTickets = cachedData.filter(t => t.ticketKey.startsWith('TEMP-'));
         expect(tempTickets).toHaveLength(0);
       }
+    });
+  });
+
+  describe('Full clone functionality', () => {
+    it('should show Full clone option for tickets in SPECIFY stage with branch', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Cloneable Ticket',
+        stage: 'SPECIFY',
+        branch: 'TEST-1-feature-branch',
+      });
+      const projectId = 1;
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Full clone option should be visible
+      const fullCloneOption = await screen.findByTestId('full-clone-option');
+      expect(fullCloneOption).toBeInTheDocument();
+    });
+
+    it('should show Full clone option for tickets in BUILD stage with branch', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Build Stage Ticket',
+        stage: 'BUILD',
+        branch: 'TEST-1-build-branch',
+      });
+      const projectId = 1;
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Full clone option should be visible
+      const fullCloneOption = await screen.findByTestId('full-clone-option');
+      expect(fullCloneOption).toBeInTheDocument();
+    });
+
+    it('should NOT show Full clone option for tickets in INBOX stage', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Inbox Ticket',
+        stage: 'INBOX',
+        branch: null,
+      });
+      const projectId = 1;
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for dropdown to appear
+      await screen.findByTestId('simple-copy-option');
+
+      // Full clone option should NOT be visible
+      expect(screen.queryByTestId('full-clone-option')).not.toBeInTheDocument();
+    });
+
+    it('should NOT show Full clone option for tickets in SHIP stage', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Shipped Ticket',
+        stage: 'SHIP',
+        branch: 'TEST-1-shipped-branch',
+      });
+      const projectId = 1;
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for dropdown to appear
+      await screen.findByTestId('simple-copy-option');
+
+      // Full clone option should NOT be visible
+      expect(screen.queryByTestId('full-clone-option')).not.toBeInTheDocument();
+    });
+
+    it('should NOT show Full clone option for tickets without branch', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'No Branch Ticket',
+        stage: 'SPECIFY',
+        branch: null,
+      });
+      const projectId = 1;
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Wait for dropdown to appear
+      await screen.findByTestId('simple-copy-option');
+
+      // Full clone option should NOT be visible
+      expect(screen.queryByTestId('full-clone-option')).not.toBeInTheDocument();
+    });
+
+    it('should call clone API when Full clone is clicked', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Cloneable Ticket',
+        stage: 'VERIFY',
+        branch: 'TEST-1-verify-branch',
+      });
+      const projectId = 1;
+
+      // Mock successful clone API response
+      const clonedTicket = {
+        id: 2,
+        ticketNumber: 2,
+        ticketKey: 'TEST-2',
+        title: 'Clone of Cloneable Ticket',
+        description: 'Test description',
+        stage: 'VERIFY',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: 'TEST-2-verify-branch',
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      };
+
+      // Override global fetch for this test
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/clone')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(clonedTicket),
+          });
+        }
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const { queryClient } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Set initial cache data
+      const queryKey = queryKeys.projects.tickets(projectId);
+      const initialTickets: TicketWithVersion[] = [{
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Cloneable Ticket',
+        description: 'Test description',
+        stage: 'VERIFY',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: 'TEST-1-verify-branch',
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      }];
+      queryClient.setQueryData(queryKey, initialTickets);
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Click the "Full clone" option from dropdown
+      const fullCloneOption = await screen.findByTestId('full-clone-option');
+      await user.click(fullCloneOption);
+
+      // Wait for the API call to complete
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          `/api/projects/${projectId}/tickets/1/clone`,
+          expect.objectContaining({ method: 'POST' })
+        );
+      });
+
+      // Verify toast was shown with success message
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Ticket cloned',
+            description: expect.stringContaining('TEST-2'),
+          })
+        );
+      });
+    });
+
+    it('should show error toast on clone failure', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({
+        id: 1,
+        title: 'Cloneable Ticket',
+        stage: 'PLAN',
+        branch: 'TEST-1-plan-branch',
+      });
+      const projectId = 1;
+
+      // Override global fetch for this test
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/clone')) {
+          return Promise.resolve({
+            ok: false,
+            json: () => Promise.resolve({ error: 'Failed to create branch' }),
+          });
+        }
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const { queryClient } = renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={projectId}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Set initial cache data
+      const queryKey = queryKeys.projects.tickets(projectId);
+      const initialTickets: TicketWithVersion[] = [{
+        id: 1,
+        ticketNumber: 1,
+        ticketKey: 'TEST-1',
+        title: 'Cloneable Ticket',
+        description: 'Test description',
+        stage: 'PLAN',
+        projectId: 1,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        branch: 'TEST-1-plan-branch',
+        autoMode: false,
+        workflowType: 'FULL',
+        clarificationPolicy: null,
+        attachments: [],
+      }];
+      queryClient.setQueryData(queryKey, initialTickets);
+
+      // Click the duplicate dropdown button to open menu
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Click the "Full clone" option from dropdown
+      const fullCloneOption = await screen.findByTestId('full-clone-option');
+      await user.click(fullCloneOption);
+
+      // Wait for the API call and error handling
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to create branch',
+          })
+        );
+      });
     });
   });
 });

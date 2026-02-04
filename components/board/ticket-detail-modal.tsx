@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, GitFork, ChevronDown } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -50,6 +50,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 /**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
@@ -206,6 +212,7 @@ export function TicketDetailModal({
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
 
   // Fetch comment count for badge
@@ -397,6 +404,86 @@ export function TicketDetailModal({
       });
     } finally {
       setIsDuplicating(false);
+    }
+  };
+
+  /**
+   * Handle full ticket clone
+   * Creates a new ticket with all jobs, same stage, and a new Git branch from source branch
+   * Only available for SPECIFY, PLAN, BUILD, and VERIFY stages
+   */
+  const handleClone = async () => {
+    if (!localTicket) return;
+
+    setIsCloning(true);
+
+    const queryKey = queryKeys.projects.tickets(projectId);
+    const previousData = queryClient.getQueryData<TicketWithVersion[]>(queryKey) || [];
+
+    // Optimistic update: Create temporary ticket for immediate UI feedback
+    const tempId = Date.now();
+    const now = new Date().toISOString();
+    const optimisticTicket: TicketWithVersion = {
+      id: tempId,
+      ticketNumber: tempId,
+      ticketKey: `TEMP-${tempId}`,
+      title: `Clone of ${localTicket.title}`.slice(0, 100),
+      description: localTicket.description || '',
+      stage: localTicket.stage as Stage,
+      projectId,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      branch: localTicket.branch, // Will be updated with new branch
+      autoMode: localTicket.autoMode,
+      workflowType: localTicket.workflowType || 'FULL',
+      clarificationPolicy: localTicket.clarificationPolicy || null,
+      attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],
+    };
+
+    // Add to cache optimistically
+    queryClient.setQueryData<TicketWithVersion[]>(queryKey, (old) => [
+      ...(old || []),
+      optimisticTicket,
+    ]);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}/clone`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to clone ticket');
+      }
+
+      const newTicket = await response.json();
+
+      // Invalidate to replace temp with real data
+      await queryClient.invalidateQueries({ queryKey });
+
+      toast({
+        title: 'Ticket cloned',
+        description: `Created ${newTicket.ticketKey} with branch ${newTicket.branch}`,
+      });
+
+      // Close modal after successful cloning
+      onOpenChange(false);
+    } catch (error) {
+      // Rollback optimistic update on error
+      queryClient.setQueryData(queryKey, previousData);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to clone ticket',
+      });
+    } finally {
+      setIsCloning(false);
     }
   };
 
@@ -929,31 +1016,64 @@ export function TicketDetailModal({
                 Edit Policy
               </Button>
             )}
-            {/* Duplicate button - always visible */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDuplicate}
-                    disabled={isDuplicating}
-                    className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
-                    data-testid="duplicate-ticket-button"
+            {/* Duplicate dropdown menu - always visible */}
+            <DropdownMenu>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isDuplicating || isCloning}
+                        className={`h-6 px-2 text-xs ${!isInboxStage && !localTicket?.project ? 'ml-auto' : ''}`}
+                        data-testid="duplicate-ticket-button"
+                      >
+                        {isDuplicating || isCloning ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <Copy className="w-3 h-3 mr-1" />
+                        )}
+                        {isDuplicating ? 'Duplicating...' : isCloning ? 'Cloning...' : 'Duplicate'}
+                        <ChevronDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Duplicate or clone ticket</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={handleDuplicate}
+                  disabled={isDuplicating || isCloning}
+                  className="cursor-pointer"
+                  data-testid="simple-copy-option"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  <div className="flex flex-col">
+                    <span>Simple copy</span>
+                    <span className="text-xs text-muted-foreground">Copy to INBOX, no jobs</span>
+                  </div>
+                </DropdownMenuItem>
+                {/* Full clone option - only visible for SPECIFY, PLAN, BUILD, VERIFY stages with a branch */}
+                {['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'].includes(localTicket?.stage || '') && localTicket?.branch && (
+                  <DropdownMenuItem
+                    onClick={handleClone}
+                    disabled={isDuplicating || isCloning}
+                    className="cursor-pointer"
+                    data-testid="full-clone-option"
                   >
-                    {isDuplicating ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Copy className="w-3 h-3 mr-1" />
-                    )}
-                    {isDuplicating ? 'Duplicating...' : 'Duplicate'}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Duplicate ticket</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                    <GitFork className="w-4 h-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span>Full clone</span>
+                      <span className="text-xs text-muted-foreground">Clone with jobs & branch</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="group">

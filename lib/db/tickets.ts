@@ -4,6 +4,7 @@ import { TicketWithVersion } from '../types';
 import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import type { Ticket } from '@prisma/client';
+import { createGitHubClient } from '@/app/lib/github/client';
 
 /**
  * Fetch all tickets for a specific project, grouped by stage
@@ -319,4 +320,169 @@ export async function duplicateTicket(
   return await prisma.ticket.create({
     data: duplicateData,
   });
+}
+
+/**
+ * Stages that are eligible for full clone operation
+ */
+const CLONEABLE_STAGES = ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'] as const;
+
+/**
+ * Full clone a ticket with all jobs and a new Git branch
+ *
+ * Creates a complete copy including:
+ * - All ticket data (title with "Clone of " prefix, description, attachments, stage, workflowType)
+ * - All jobs with complete telemetry data
+ * - A new Git branch created from the source branch
+ *
+ * @param projectId - The project ID containing the source ticket
+ * @param sourceTicketId - The ID of the ticket to clone
+ * @returns The newly created cloned ticket
+ * @throws Error if ticket not in cloneable stage, has no branch, or GitHub operation fails
+ */
+export async function fullCloneTicket(
+  projectId: number,
+  sourceTicketId: number
+): Promise<Ticket> {
+  // Fetch source ticket with project and jobs data
+  const sourceTicket = await prisma.ticket.findFirst({
+    where: {
+      id: sourceTicketId,
+      projectId: projectId,
+    },
+    include: {
+      project: {
+        select: {
+          key: true,
+          githubOwner: true,
+          githubRepo: true,
+        },
+      },
+      jobs: {
+        orderBy: { startedAt: 'asc' },
+      },
+    },
+  });
+
+  if (!sourceTicket) {
+    throw new Error('Ticket not found');
+  }
+
+  // Validate stage is eligible for full clone
+  if (!CLONEABLE_STAGES.includes(sourceTicket.stage as typeof CLONEABLE_STAGES[number])) {
+    throw new Error('Full clone is only available for tickets in SPECIFY, PLAN, BUILD, or VERIFY stages');
+  }
+
+  // Validate source ticket has a branch
+  if (!sourceTicket.branch) {
+    throw new Error('Source ticket has no branch to clone');
+  }
+
+  // Generate new ticket number and key
+  const ticketNumber = await getNextTicketNumber(projectId);
+  const ticketKey = `${sourceTicket.project.key}-${ticketNumber}`;
+
+  // Generate new branch name by replacing ticket key in source branch
+  // Source: "AIB-123-fix-login" -> Target: "AIB-124-fix-login"
+  const branchSlug = sourceTicket.branch.replace(/^[A-Z]+-\d+-/, '');
+  const newBranch = `${ticketKey}-${branchSlug}`;
+
+  // Create Git branch from source branch
+  const owner = sourceTicket.project.githubOwner;
+  const repo = sourceTicket.project.githubRepo;
+
+  if (!owner || !repo) {
+    throw new Error('Project is not linked to a GitHub repository');
+  }
+
+  const octokit = createGitHubClient();
+
+  // Get the SHA of the source branch
+  let sourceSha: string;
+  try {
+    const { data: refData } = await octokit.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${sourceTicket.branch}`,
+    });
+    sourceSha = refData.object.sha;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to create branch: Could not find source branch ${sourceTicket.branch}. ${errorMessage}`);
+  }
+
+  // Create new branch from source SHA
+  try {
+    await octokit.rest.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${newBranch}`,
+      sha: sourceSha,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to create branch ${newBranch}: ${errorMessage}`);
+  }
+
+  // Apply "Clone of " prefix, truncating source title to 91 chars if needed (100 - 9 = 91)
+  const PREFIX = 'Clone of ';
+  const maxSourceLength = 100 - PREFIX.length;
+  const truncatedTitle =
+    sourceTicket.title.length > maxSourceLength
+      ? sourceTicket.title.substring(0, maxSourceLength)
+      : sourceTicket.title;
+  const newTitle = `${PREFIX}${truncatedTitle}`;
+
+  // Create the cloned ticket and jobs in a transaction
+  const newTicket = await prisma.$transaction(async (tx) => {
+    // Create the ticket with same stage and workflowType
+    const clonedTicket = await tx.ticket.create({
+      data: {
+        title: newTitle,
+        description: sourceTicket.description,
+        stage: sourceTicket.stage,
+        version: 1,
+        projectId: projectId,
+        ticketNumber,
+        ticketKey,
+        branch: newBranch,
+        previewUrl: null, // Preview URL is not cloned
+        autoMode: sourceTicket.autoMode,
+        workflowType: sourceTicket.workflowType,
+        attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
+        clarificationPolicy: sourceTicket.clarificationPolicy,
+      },
+    });
+
+    // Clone all jobs from source ticket
+    if (sourceTicket.jobs.length > 0) {
+      await tx.job.createMany({
+        data: sourceTicket.jobs.map((job) => ({
+          ticketId: clonedTicket.id,
+          projectId: projectId,
+          command: job.command,
+          status: job.status,
+          branch: newBranch, // Use new branch
+          commitSha: job.commitSha,
+          logs: job.logs,
+          startedAt: job.startedAt,
+          completedAt: job.completedAt,
+          updatedAt: job.updatedAt,
+          // Telemetry fields
+          inputTokens: job.inputTokens,
+          outputTokens: job.outputTokens,
+          cacheReadTokens: job.cacheReadTokens,
+          cacheCreationTokens: job.cacheCreationTokens,
+          costUsd: job.costUsd,
+          durationMs: job.durationMs,
+          model: job.model,
+          toolsUsed: job.toolsUsed,
+        })),
+      });
+    }
+
+    return clonedTicket;
+  });
+
+  return newTicket;
 }
