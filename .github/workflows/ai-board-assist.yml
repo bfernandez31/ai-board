@@ -407,15 +407,24 @@ jobs:
         run: |
           echo "💾 Committing modified files..."
 
-          # Add modified files from the ticket's branch directory
-          git add specs/${{ inputs.branch }}/ || true
+          # In VERIFY stage, commit all changes (code fixes)
+          # In other stages, only commit spec artifacts
+          if [ "${{ inputs.stage }}" = "verify" ]; then
+            echo "📦 VERIFY stage: adding all modified files"
+            git add .
+          else
+            echo "📦 ${{ inputs.stage }} stage: adding spec artifacts only"
+            git add specs/${{ inputs.branch }}/ || true
+          fi
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "ℹ️ No changes to commit (Claude may have already committed)"
           else
-            # Use files list if available, otherwise detect changed files
-            if [ -n "${{ steps.parse.outputs.files }}" ]; then
+            # Detect changed files for commit message
+            if [ "${{ inputs.stage }}" = "verify" ]; then
+              MODIFIED_FILES=$(git diff --staged --name-only | tr '\n' ', ' | sed 's/,$//' || echo "files")
+            elif [ -n "${{ steps.parse.outputs.files }}" ]; then
               MODIFIED_FILES="${{ steps.parse.outputs.files }}"
             else
               MODIFIED_FILES=$(git diff --staged --name-only | grep "^specs/" | xargs -I {} basename {} | tr '\n' ', ' | sed 's/,$//' || echo "spec artifacts")

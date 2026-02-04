@@ -186,20 +186,22 @@ Action: Provide examples and best practices
 
 ### VERIFY Stage
 
-**Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for minor fixes.
+**Goal**: Handle issues discovered during testing with intelligent quantification and automated iteration for larger fixes.
 
-**🚨 CRITICAL RESTRICTION - READ THIS FIRST**:
-- ❌ **DO NOT MODIFY CODE FILES DIRECTLY** - You cannot edit source code (*.tsx, *.ts, *.js, *.css, etc.)
-- ❌ **DO NOT USE Edit/Write ON CODE** - The workflow only commits `specs/` directory
-- ✅ **USE ITERATE_REQUIRED STATUS** - For code fixes, write status `ITERATE_REQUIRED` in result file
-- ✅ **THE WORKFLOW WILL LAUNCH iterate.yml** - Which has permission to modify and commit all files
+**✅ CODE MODIFICATIONS ALLOWED**:
+- ✅ **CAN MODIFY CODE DIRECTLY** - In VERIFY stage, the workflow commits ALL files (`git add .`)
+- ✅ **USE Edit/Write ON CODE** - Your code changes WILL be committed
+- ✅ **USE ITERATE_REQUIRED STATUS** - For larger fixes that need multiple iterations or spec sync
+- ✅ **ITERATE.YML FOR COMPLEX FIXES** - Use when changes need global spec synchronization
 
-**Why?** The `ai-board-assist` workflow only commits files in `specs/$BRANCH/`. If you modify code directly, those changes are LOST. The `iterate.yml` workflow does `git add .` and also syncs global specifications.
+**When to use ITERATE_REQUIRED vs direct fix**:
+- **Direct fix**: Simple, isolated code changes (typos, validation fixes, UI tweaks)
+- **ITERATE_REQUIRED**: Complex multi-file changes, changes that need spec synchronization
 
 **✅ VERIFY STAGE CAPABILITIES**:
-- ✅ **CAN REQUEST CODE FIXES**: Write `ITERATE_REQUIRED` status → workflow launches iterate job
-- ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md directly (these ARE committed)
-- ✅ **AUTOMATED FIXES**: Small bugs, validation issues, UI adjustments via iterate job
+- ✅ **CAN FIX CODE DIRECTLY**: Edit source files (*.tsx, *.ts, *.js, *.css) - changes ARE committed
+- ✅ **CAN UPDATE SPECS**: Update spec.md, plan.md, tasks.md directly
+- ✅ **CAN REQUEST ITERATE**: For complex multi-file changes needing spec sync
 - ❌ **CANNOT**: Make architectural changes, major refactoring, or changes exceeding 60% divergence
 
 **⚠️ CRITICAL APPROACH**:
@@ -208,13 +210,13 @@ Action: Provide examples and best practices
 - **INFORM MAJOR**: Explain options for larger changes (no iterate, user decides)
 
 **What I Can Help With in VERIFY Stage**:
-- Requesting code fixes via iterate job (validation, UI, error messages)
-- Adjusting validation logic (via iterate)
-- UI/UX tweaks and alignments (via iterate)
-- Error message corrections (via iterate)
-- Small performance optimizations (via iterate)
-- Updating specifications to match implementation (direct - specs ARE committed)
-- Synchronizing documentation (direct for specs/, via iterate for code comments)
+- Fix code directly (validation, UI, error messages) - changes ARE committed
+- Adjust validation logic directly
+- UI/UX tweaks and alignments directly
+- Error message corrections directly
+- Small performance optimizations directly
+- Update specifications to match implementation
+- For complex multi-file changes: use ITERATE_REQUIRED to launch iterate workflow
 
 **Process for VERIFY**:
 1. **READ CONSTITUTION**: Use Read tool to read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md`
@@ -312,12 +314,16 @@ When you write `ITERATE_REQUIRED` status, the workflow automatically:
 
 **Example Request**: "@ai-board the validation isn't working correctly on the form"
 
-**Correct Action**:
+**Correct Action** (simple fix):
 1. Read the code to understand the issue
-2. Determine it's a minor fix (< 30% divergence)
-3. Write result file with `ITERATE_REQUIRED` status and issues list
-4. Output message saying iterate job will fix it
-5. **DO NOT modify the code yourself** - iterate.yml will do it
+2. Fix the validation code directly using Edit tool
+3. Write result file with `SUCCESS` status
+4. Output message confirming the fix
+
+**Alternative** (complex fix needing spec sync):
+1. Read the code to understand the issue
+2. Write result file with `ITERATE_REQUIRED` status and issues list
+3. Output message saying iterate job will handle it
 
 ## Output Format
 
