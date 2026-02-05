@@ -53,6 +53,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /**
+ * Get attachment count, handling type guard validation
+ */
+function getAttachmentCount(attachments: unknown): number {
+  if (attachments && isTicketAttachmentArray(attachments)) {
+    return attachments.length;
+  }
+  return 0;
+}
+
+/**
  * Ticket type for modal (compatible with both Prisma Ticket and TicketWithVersion)
  */
 interface TicketData {
@@ -1341,13 +1351,7 @@ export function TicketDetailModal({
               ticketId={localTicket?.id || ticket.id}
               ticketStage={localTicket?.stage as Stage || ticket.stage as Stage}
               ticketVersion={localTicket?.version || ticket.version}
-              attachmentCount={
-                (localTicket?.attachments && isTicketAttachmentArray(localTicket.attachments)
-                  ? localTicket.attachments.length
-                  : ticket.attachments && isTicketAttachmentArray(ticket.attachments)
-                  ? ticket.attachments.length
-                  : 0)
-              }
+              attachmentCount={getAttachmentCount(localTicket?.attachments ?? ticket.attachments)}
               onAttachmentsUpdated={refreshTicketFromServer}
             />
           </TabsContent>

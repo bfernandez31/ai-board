@@ -143,6 +143,14 @@ function getJobIcon(command: string) {
 }
 
 /**
+ * Chevron indicator for collapsible state
+ */
+function ChevronIcon({ isOpen }: { isOpen: boolean }) {
+  const Icon = isOpen ? ChevronDown : ChevronRight;
+  return <Icon className="w-4 h-4 text-[#6c7086]" />;
+}
+
+/**
  * TimelineJobRow Component
  *
  * Single job entry with expandable details showing:
@@ -218,11 +226,7 @@ function TimelineJobRow({ job }: { job: TicketJobWithTelemetry }) {
 
           {/* Expand/Collapse Indicator */}
           {hasTelemetry && (
-            isOpen ? (
-              <ChevronDown className="w-4 h-4 text-[#6c7086]" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-[#6c7086]" />
-            )
+            <ChevronIcon isOpen={isOpen} />
           )}
         </div>
       </CollapsibleTrigger>
