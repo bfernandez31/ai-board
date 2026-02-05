@@ -434,7 +434,55 @@ Update ticket fields with optimistic concurrency control.
 
 ### POST /api/projects/:projectId/tickets/:id/duplicate
 
-Create a duplicate of an existing ticket.
+Create a duplicate of an existing ticket using simple copy or full clone mode.
+
+**Full Clone Workflow Sequence**:
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Frontend
+    participant API as Duplicate API
+    participant GH as GitHub API
+    participant DB as Database
+
+    U->>UI: Click "Full clone"
+    UI->>API: POST /duplicate (mode: full)
+    API->>DB: Fetch source ticket
+    DB-->>API: Ticket + project data
+
+    alt Source ticket has no branch
+        API-->>UI: 400 MISSING_BRANCH
+        UI->>U: Error toast
+    else Source ticket has branch
+        API->>DB: Get next ticket number
+        DB-->>API: Ticket number
+        API->>API: Generate branch name
+
+        API->>GH: Get source branch commit
+        GH-->>API: Commit SHA
+
+        API->>GH: Create new branch ref
+        alt Branch creation fails
+            GH-->>API: 404/422/500 error
+            API-->>UI: 400/500 error
+            UI->>U: Error toast
+        else Branch created
+            GH-->>API: New ref created
+
+            API->>DB: Transaction start
+            API->>DB: Clone ticket with stage
+            API->>DB: Copy all jobs + telemetry
+            API->>DB: Update ticket with branch
+            API->>DB: Transaction commit
+            DB-->>API: Cloned ticket + jobs
+
+            API-->>UI: 201 Created
+            UI->>U: Success toast
+            UI->>UI: Show cloned ticket
+        end
+    end
+```
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
@@ -443,9 +491,19 @@ Create a duplicate of an existing ticket.
 - `projectId` (number, required): Project ID
 - `id` (number, required): Source ticket ID to duplicate
 
-**Request Body**: Empty (all data copied from source ticket)
+**Request Body**:
+```json
+{
+  "mode": "simple" | "full"
+}
+```
 
-**Response** (201 Created):
+**Validation**:
+- `mode` (optional): Duplication mode (default: "simple")
+  - "simple": Create copy in INBOX with no jobs or branch
+  - "full": Preserve stage, copy all jobs with telemetry, create new branch
+
+**Response - Simple Copy** (201 Created):
 ```json
 {
   "id": 107,
@@ -477,7 +535,75 @@ Create a duplicate of an existing ticket.
 }
 ```
 
-**Duplication Behavior**:
+**Response - Full Clone** (201 Created):
+```json
+{
+  "id": 219,
+  "ticketNumber": 219,
+  "ticketKey": "AIB-219",
+  "title": "Clone of Add login button",
+  "description": "User story: As a user, I want to log in...",
+  "stage": "PLAN",
+  "version": 1,
+  "projectId": 3,
+  "branch": "219-add-login-button",
+  "previewUrl": null,
+  "autoMode": false,
+  "workflowType": "FULL",
+  "attachments": [
+    {
+      "type": "uploaded",
+      "url": "https://res.cloudinary.com/xxx/image/upload/v1/ai-board/tickets/42/mockup.png",
+      "filename": "mockup.png",
+      "mimeType": "image/png",
+      "sizeBytes": 245760,
+      "uploadedAt": "2025-01-15T10:30:00.000Z",
+      "cloudinaryPublicId": "ai-board/tickets/42/mockup"
+    }
+  ],
+  "clarificationPolicy": "PRAGMATIC",
+  "createdAt": "2025-01-20T14:22:00.000Z",
+  "updatedAt": "2025-01-20T14:22:00.000Z",
+  "jobs": [
+    {
+      "id": 456,
+      "command": "specify",
+      "status": "COMPLETED",
+      "branch": "219-add-login-button",
+      "commitSha": "abc123...",
+      "startedAt": "2025-01-20T14:00:00.000Z",
+      "completedAt": "2025-01-20T14:05:00.000Z",
+      "inputTokens": 5000,
+      "outputTokens": 1500,
+      "cacheReadTokens": 2000,
+      "cacheCreationTokens": 500,
+      "costUsd": 0.025,
+      "durationMs": 300000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Read", "Edit", "Write"]
+    },
+    {
+      "id": 457,
+      "command": "plan",
+      "status": "COMPLETED",
+      "branch": "219-add-login-button",
+      "commitSha": "def456...",
+      "startedAt": "2025-01-20T14:10:00.000Z",
+      "completedAt": "2025-01-20T14:18:00.000Z",
+      "inputTokens": 8000,
+      "outputTokens": 2500,
+      "cacheReadTokens": 3000,
+      "cacheCreationTokens": 1000,
+      "costUsd": 0.045,
+      "durationMs": 480000,
+      "model": "claude-sonnet-4-5-20250929",
+      "toolsUsed": ["Read", "Glob", "Write"]
+    }
+  ]
+}
+```
+
+**Simple Copy Behavior** (mode: "simple"):
 - **New Ticket Created**: Always in INBOX stage with new ticket number and key
 - **Title**: Prefixed with "Copy of " (truncated to 100 chars if needed)
 - **Description**: Exact copy from source ticket
@@ -490,29 +616,61 @@ Create a duplicate of an existing ticket.
 - **Preview URL**: Always null (new tickets have no preview)
 - **Workflow Type**: Always FULL (standard workflow path)
 - **Version**: Always 1 (new ticket version)
+- **Jobs**: None (clean slate)
+
+**Full Clone Behavior** (mode: "full"):
+- **New Ticket Created**: In same stage as source ticket with new ticket number and key
+- **Title**: Prefixed with "Clone of " (truncated to 100 chars if needed)
+- **Description**: Exact copy from source ticket
+- **Stage**: Preserved from source ticket (SPECIFY, PLAN, BUILD, or VERIFY)
+- **Clarification Policy**: Copied from source
+- **Attachments**: Copied by reference (same as simple copy)
+- **Branch**: New Git branch created from source branch
+  - Format: `{TICKET_NUMBER}-{slug}` (e.g., "219-add-login-button")
+  - Slug: First 3 words of title, lowercase, hyphenated
+  - Points to same commit as source branch
+- **Jobs**: All jobs copied with complete telemetry data:
+  - Command, status, branch, commit SHA
+  - Timestamps (startedAt, completedAt)
+  - Token metrics (input, output, cache read, cache creation)
+  - Cost and performance (costUsd, durationMs)
+  - Model identifier and tools used
+  - Jobs reference new ticket ID
+- **Workflow Type**: Copied from source
+- **Version**: Always 1 (new ticket version)
+
+**Branch Creation**:
+- Creates new Git branch via GitHub API
+- Uses `git.createRef()` to create `refs/heads/{newBranchName}`
+- New branch points to same commit SHA as source branch
+- Preserves complete Git history for comparison
 
 **Title Truncation**:
-- If "Copy of [original title]" exceeds 100 characters:
+- If "Copy of [original title]" or "Clone of [original title]" exceeds 100 characters:
   - Original title is truncated first
-  - "Copy of " prefix is preserved
+  - Prefix ("Copy of " or "Clone of ") is preserved
   - Final title stays within 100 character limit
 
+**Full Clone Eligibility**:
+- Source ticket must have a branch (tickets in SPECIFY, PLAN, BUILD, VERIFY stages)
+- Source branch must exist on GitHub
+- Returns 400 error if ticket has no branch
+
 **Errors**:
-- `400`: Invalid projectId or ticketId format
+- `400`: Invalid mode parameter, projectId, ticketId format, or full clone precondition failure
+  - Invalid mode: `{ "error": "Invalid mode parameter. Must be 'simple' or 'full'", "code": "VALIDATION_ERROR" }`
+  - Missing branch: `{ "error": "Source ticket has no branch. Full clone requires a branch.", "code": "MISSING_BRANCH" }`
+  - Branch not found: `{ "error": "Source branch '{branch}' not found on GitHub", "code": "BRANCH_NOT_FOUND" }`
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project or source ticket not found
-- `500`: Database error
+- `500`: Database error, GitHub API error, or branch creation failure
+  - Branch exists: `{ "error": "Branch '{newBranchName}' already exists", "code": "BRANCH_CREATION_FAILED" }`
+  - GitHub error: `{ "error": "Failed to create branch on GitHub", "code": "BRANCH_CREATION_FAILED" }`
 
-**Error Response** (404):
-```json
-{
-  "error": "Ticket not found",
-  "code": "TICKET_NOT_FOUND"
-}
-```
-
-**Performance**: <3 seconds from API call to new ticket visible in UI
+**Performance**:
+- Simple copy: <3 seconds from API call to new ticket visible in UI
+- Full clone: <5 seconds (includes GitHub API branch creation + database transaction)
 
 ### PATCH /api/projects/:projectId/tickets/:id/branch
 
