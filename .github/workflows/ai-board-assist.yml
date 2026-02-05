@@ -201,10 +201,11 @@ jobs:
         env:
           BRANCH: ${{ inputs.branch }}
           PROJECT_ID: ${{ inputs.project_id }}
+          COMMENT: ${{ inputs.comment }}
         run: |
           echo "📊 Fetching telemetry for /compare command..."
           if [ -f "../ai-board/.github/scripts/fetch-telemetry.sh" ]; then
-            ../ai-board/.github/scripts/fetch-telemetry.sh "${{ inputs.comment }}"
+            ../ai-board/.github/scripts/fetch-telemetry.sh "$COMMENT"
           else
             echo "⚠️ fetch-telemetry.sh not found, skipping telemetry fetch"
           fi
@@ -221,6 +222,7 @@ jobs:
           USER: ${{ inputs.user }}
           PROJECT_ID: ${{ inputs.project_id }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          COMMENT: ${{ inputs.comment }}
         run: |
           echo "🤖 Executing AI-BOARD assist command..."
 
@@ -229,29 +231,28 @@ jobs:
           echo "  Stage: $STAGE"
           echo "  Branch: $BRANCH"
           echo "  User: @$USER"
-          echo "  Comment: ${{ inputs.comment }}"
+          echo "  Comment: (see COMMENT env var)"
 
           # Debug: Show current directory and branch
           echo "📂 Current directory: $(pwd)"
           echo "🌿 Current branch: $(git branch --show-current)"
 
           # Debug: Check if spec files exist
-          if [ -d "specs/${{ inputs.branch }}" ]; then
-            echo "✅ Spec directory exists: specs/${{ inputs.branch }}"
-            ls -la "specs/${{ inputs.branch }}/" || true
+          if [ -d "specs/$BRANCH" ]; then
+            echo "✅ Spec directory exists: specs/$BRANCH"
+            ls -la "specs/$BRANCH/" || true
           else
-            echo "⚠️ Spec directory not found: specs/${{ inputs.branch }}"
+            echo "⚠️ Spec directory not found: specs/$BRANCH"
           fi
 
           # For /compare commands, clean up old result file to force fresh analysis
-          if echo "${{ inputs.comment }}" | grep -q "/compare"; then
+          if echo "$COMMENT" | grep -q "/compare"; then
             echo "🧹 Cleaning up old result file for /compare command..."
-            rm -f "specs/${{ inputs.branch }}/.ai-board-result.md" || true
+            rm -f "specs/$BRANCH/.ai-board-result.md" || true
           fi
 
           # Detect skill command in comment and route appropriately
           echo "🚀 Executing Claude command..."
-          COMMENT="${{ inputs.comment }}"
 
           # Route /compare command to ai-board.compare (designed for comment usage)
           # Note: /verify and /iterate are launched by their own workflows, not via comments
@@ -303,7 +304,7 @@ jobs:
           echo "$OUTPUT" | head -n 50
 
           # Check if result file was created for status determination
-          RESULT_FILE="specs/${{ inputs.branch }}/.ai-board-result.md"
+          RESULT_FILE="specs/$BRANCH/.ai-board-result.md"
           if [ -f "$RESULT_FILE" ]; then
             echo "✅ Result file found: $RESULT_FILE"
 
@@ -406,17 +407,23 @@ jobs:
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
         working-directory: target
+        env:
+          TICKET_ID: ${{ inputs.ticket_id }}
+          STAGE: ${{ inputs.stage }}
+          BRANCH: ${{ inputs.branch }}
+          USER: ${{ inputs.user }}
+          FILES: ${{ steps.parse.outputs.files }}
         run: |
           echo "💾 Committing modified files..."
 
           # In VERIFY stage, commit all changes (code fixes)
           # In other stages, only commit spec artifacts
-          if [ "${{ inputs.stage }}" = "verify" ]; then
+          if [ "$STAGE" = "verify" ]; then
             echo "📦 VERIFY stage: adding all modified files"
             git add .
           else
-            echo "📦 ${{ inputs.stage }} stage: adding spec artifacts only"
-            git add specs/${{ inputs.branch }}/ || true
+            echo "📦 $STAGE stage: adding spec artifacts only"
+            git add "specs/$BRANCH/" || true
           fi
 
           # Check if there are changes to commit
@@ -424,19 +431,19 @@ jobs:
             echo "ℹ️ No changes to commit (Claude may have already committed)"
           else
             # Detect changed files for commit message
-            if [ "${{ inputs.stage }}" = "verify" ]; then
+            if [ "$STAGE" = "verify" ]; then
               MODIFIED_FILES=$(git diff --staged --name-only | tr '\n' ', ' | sed 's/,$//' || echo "files")
-            elif [ -n "${{ steps.parse.outputs.files }}" ]; then
-              MODIFIED_FILES="${{ steps.parse.outputs.files }}"
+            elif [ -n "$FILES" ]; then
+              MODIFIED_FILES="$FILES"
             else
               MODIFIED_FILES=$(git diff --staged --name-only | grep "^specs/" | xargs -I {} basename {} | tr '\n' ', ' | sed 's/,$//' || echo "spec artifacts")
             fi
 
             COMMIT_MSG="AI-BOARD: Update ticket artifacts per user request
 
-          Ticket: ${{ inputs.ticket_id }}
-          Stage: ${{ inputs.stage }}
-          Requester: @${{ inputs.user }}
+          Ticket: $TICKET_ID
+          Stage: $STAGE
+          Requester: @$USER
           Modified: ${MODIFIED_FILES}
 
           Generated by AI-BOARD Assistant workflow"
@@ -446,8 +453,8 @@ jobs:
           fi
 
           # Always push (Claude may have committed during command execution)
-          git push origin ${{ inputs.branch }}
-          echo "✅ Changes pushed to branch: ${{ inputs.branch }}"
+          git push origin "$BRANCH"
+          echo "✅ Changes pushed to branch: $BRANCH"
 
       - name: Post AI-BOARD Response Comment
         if: ${{ env.SKIP_CLAUDE != 'true' }}
@@ -499,11 +506,17 @@ jobs:
         id: iterate
         working-directory: target
         env:
-          RESULT_FILE: specs/${{ inputs.branch }}/.ai-board-result.md
+          BRANCH: ${{ inputs.branch }}
+          TICKET_ID: ${{ inputs.ticket_id }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          GITHUB_REPOSITORY_INPUT: ${{ inputs.githubRepository }}
+          GH_PAT_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
         run: |
           echo "🔄 Preparing to dispatch iterate.yml workflow..."
 
           # Extract issues to fix from result file
+          RESULT_FILE="specs/$BRANCH/.ai-board-result.md"
           ISSUES_JSON="[]"
           if [ -f "$RESULT_FILE" ]; then
             ISSUES=$(sed -n '/^## Issues To Fix/,/^##/p' "$RESULT_FILE" | grep "^- " | sed 's/^- //' | jq -Rs 'split("\n") | map(select(. != ""))')
@@ -513,16 +526,16 @@ jobs:
           # Create iterate job via API
           # Remove trailing slash from APP_URL if present
           API_BASE="${APP_URL%/}"
-          JOBS_URL="${API_BASE}/api/projects/${{ inputs.project_id }}/jobs"
+          JOBS_URL="${API_BASE}/api/projects/${PROJECT_ID}/jobs"
           echo "📝 Creating iterate job..."
           echo "🔗 URL: $JOBS_URL"
           HTTP_RESPONSE=$(curl -X POST "$JOBS_URL" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
             -d "{
-              \"ticketId\": ${{ inputs.ticket_id }},
+              \"ticketId\": ${TICKET_ID},
               \"command\": \"iterate\",
-              \"branch\": \"${{ inputs.branch }}\"
+              \"branch\": \"${BRANCH}\"
             }" \
             -s -w "\n%{http_code}")
 
@@ -550,18 +563,18 @@ jobs:
           # Note: GITHUB_TOKEN cannot trigger workflow_dispatch, must use GH_PAT
           echo "🚀 Dispatching iterate.yml workflow..."
           DISPATCH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Authorization: token ${GH_PAT_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/iterate.yml/dispatches" \
+            "https://api.github.com/repos/${REPO}/actions/workflows/iterate.yml/dispatches" \
             -d "{
               \"ref\": \"main\",
               \"inputs\": {
-                \"ticket_id\": \"${{ inputs.ticket_id }}\",
+                \"ticket_id\": \"${TICKET_ID}\",
                 \"job_id\": \"$JOB_ID\",
-                \"project_id\": \"${{ inputs.project_id }}\",
-                \"branch\": \"${{ inputs.branch }}\",
+                \"project_id\": \"${PROJECT_ID}\",
+                \"branch\": \"${BRANCH}\",
                 \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c 'tojson'),
-                \"githubRepository\": \"${{ inputs.githubRepository }}\"
+                \"githubRepository\": \"${GITHUB_REPOSITORY_INPUT}\"
               }
             }")
 
