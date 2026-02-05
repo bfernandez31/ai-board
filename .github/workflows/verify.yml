@@ -429,10 +429,14 @@ jobs:
           FEATURE_BRANCH: ${{ inputs.branch }}
         run: |
           echo "📚 Updating global documentation before PR creation..."
+          echo "   Working directory: $(pwd)"
+          echo "   Current branch: $(git branch --show-current)"
+          echo "   Feature specs: $(ls specs/$(git branch --show-current)/ 2>/dev/null | head -5 || echo 'None found')"
+          echo "   Global specs: $(ls specs/specifications/ 2>/dev/null | head -5 || echo 'None found')"
 
           claude --dangerously-skip-permissions /ai-board.sync-specifications
 
-          git add specs/specifications/ CLAUDE.md
+          git add specs/specifications/ CLAUDE.md 2>/dev/null || echo "   Warning: specs/specifications/ or CLAUDE.md not found"
           if ! git diff --staged --quiet; then
             git commit -m "docs(ticket-${{ inputs.ticket_id }}): update documentation
 
@@ -441,6 +445,7 @@ jobs:
             echo "✅ Documentation updated and committed"
           else
             echo "ℹ️ No documentation changes needed"
+            echo "   (This may be expected if feature doesn't introduce new patterns)"
           fi
 
       # Phase 6: PR Creation (ONLY if all tests pass)

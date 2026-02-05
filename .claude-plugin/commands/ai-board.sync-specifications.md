@@ -1,14 +1,17 @@
 ---
-allowed-tools: Read, Edit, Write, Glob, Grep
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 description: Synchronize branch specifications with global project documentation
 ---
 
 ## Context
 
-- Current branch: !`git branch --show-current`
-- Changed files: !`git diff main --name-only`
-- Feature spec directory: !`ls specs/$(git branch --show-current)/ 2>/dev/null || echo "No feature specs found"`
-- Global specs structure: !`find specs/specifications -type f -name "*.md" | head -20`
+1. Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/check-prerequisites.sh --json --paths-only` from repo root and parse the output:
+   - Extract `BRANCH` for the current branch name
+   - Extract `FEATURE_DIR` for the feature specs directory path
+
+2. Get changed files by running: `git diff main --name-only`
+
+3. List global specs structure by running: `find specs/specifications -type f -name "*.md" | head -20`
 
 ## Your task
 
@@ -23,7 +26,7 @@ Synchronize the feature branch specifications to global project documentation.
 
 ### Process
 
-1. **Read feature specs** from `specs/{branch}/` (spec.md, plan.md, tasks.md if they exist)
+1. **Read feature specs** from `FEATURE_DIR` (spec.md, plan.md, tasks.md if they exist)
 
 2. **Identify what changed** - new behaviors, APIs, patterns, workflows
 
