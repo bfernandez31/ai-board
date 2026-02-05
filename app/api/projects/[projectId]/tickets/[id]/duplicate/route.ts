@@ -59,23 +59,18 @@ export async function POST(
     const ticketId = parseInt(ticketIdString, 10);
 
     // Parse request body for mode parameter
-    let mode: 'simple' | 'full' = 'simple';
-    try {
-      const body = await request.json().catch(() => ({}));
-      const bodyResult = DuplicateRequestSchema.safeParse(body);
-      if (!bodyResult.success) {
-        return NextResponse.json(
-          {
-            error: 'Invalid mode parameter. Must be "simple" or "full"',
-            code: 'VALIDATION_ERROR',
-          },
-          { status: 400 }
-        );
-      }
-      mode = bodyResult.data.mode;
-    } catch {
-      // Empty body is OK, defaults to simple
+    const body = await request.json().catch(() => ({}));
+    const bodyResult = DuplicateRequestSchema.safeParse(body);
+    if (!bodyResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid mode parameter. Must be "simple" or "full"',
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
     }
+    const mode = bodyResult.data.mode;
 
     // Verify project access (owner OR member)
     await verifyProjectAccess(projectId);
@@ -245,9 +240,7 @@ async function handleFullClone(projectId: number, ticketId: number) {
     );
   }
 
-  // Clone the ticket with jobs (uses the already-incremented ticket number via sequence)
-  // We need to re-fetch ticket number since fullCloneTicket will call getNextTicketNumber again
-  // Actually, let's refactor fullCloneTicket to accept the branch name and it handles ticket number
+  // Clone the ticket with jobs
   const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName);
 
   // Revalidate the project board page
