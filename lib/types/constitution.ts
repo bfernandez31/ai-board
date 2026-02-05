@@ -132,4 +132,4 @@ export interface ConstitutionError {
 /**
  * Path to constitution file in repository
  */
-export const CONSTITUTION_PATH = '.specify/memory/constitution.md';
+export const CONSTITUTION_PATH = '.ai-board/memory/constitution.md';

@@ -1,7 +1,7 @@
 /**
  * GitHub API Integration for Constitution File
  *
- * Fetches the constitution markdown file from `.specify/memory/constitution.md`.
+ * Fetches the constitution markdown file from `.ai-board/memory/constitution.md`.
  * Uses the same pattern as doc-fetcher.ts but with a fixed file path.
  */
 

@@ -153,7 +153,7 @@ workflowInputs = {
 
 ## Testing Guidelines
 
-**MANDATORY**: Invoke `/testing` skill before writing, planning, or modifying tests.
+**MANDATORY**: Invoke `/ai-board:testing` skill before writing, planning, or modifying tests.
 Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
 
 ### Testing Trophy (Quick Reference)
@@ -165,7 +165,7 @@ Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
 | Integration | `tests/integration/` | API endpoints, database operations |
 | E2E | `tests/e2e/` | Browser-only (drag-drop, OAuth, viewport) |
 
-**Decision tree & patterns**: `/testing` skill
+**Decision tree & patterns**: `/ai-board:testing` skill
 
 ### Critical Rules
 - E2E is expensive (~5s each) - default to integration tests when unsure

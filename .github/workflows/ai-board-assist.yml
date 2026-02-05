@@ -146,13 +146,15 @@ jobs:
           fetch-depth: 0
           path: target
 
-      # 3. Setup ai-board commands symlink in target
-      - name: Setup ai-board commands
+      # 3. Setup ai-board commands and skills symlink in target
+      - name: Setup ai-board commands and skills
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         run: |
           mkdir -p target/.claude
           ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
           echo "✅ Commands symlinked: target/.claude/commands -> ai-board/.claude-plugin/commands"
+          echo "✅ Skills symlinked: target/.claude/skills -> ai-board/.claude-plugin/skills"
           ls -la target/.claude/
 
       - name: Setup Bun

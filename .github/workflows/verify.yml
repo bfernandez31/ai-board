@@ -126,13 +126,15 @@ jobs:
           fetch-depth: 0
           path: target
 
-      - name: Setup ai-board commands
+      - name: Setup ai-board commands and skills
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
-          # Create symlink so Claude can find ai-board commands in target repo
+          # Create symlinks so Claude can find ai-board commands and skills in target repo
           mkdir -p target/.claude
           ln -sf ../../ai-board/.claude-plugin/commands target/.claude/commands
+          ln -sf ../../ai-board/.claude-plugin/skills target/.claude/skills
           echo "✅ ai-board commands linked to target/.claude/commands"
+          echo "✅ ai-board skills linked to target/.claude/skills"
 
       - name: Setup Bun
         if: ${{ env.SKIP_EXECUTION != 'true' }}
