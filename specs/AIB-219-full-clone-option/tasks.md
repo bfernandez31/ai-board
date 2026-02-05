@@ -18,8 +18,8 @@
 
 **Purpose**: Create new utility files and prepare imports
 
-- [ ] T001 [P] Create branch operations utility file at lib/github/branch-operations.ts with type exports from contracts/branch-operations.ts
-- [ ] T002 [P] Verify shadcn/ui DropdownMenu component exists at components/ui/dropdown-menu.tsx
+- [X] T001 [P] Create branch operations utility file at lib/github/branch-operations.ts with type exports from contracts/branch-operations.ts
+- [X] T002 [P] Verify shadcn/ui DropdownMenu component exists at components/ui/dropdown-menu.tsx
 
 ---
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement generateBranchName() function in lib/github/branch-operations.ts (slugify title, format: {ticketNumber}-{slug})
-- [ ] T004 Implement createBranchFromSource() function in lib/github/branch-operations.ts using Octokit git.createRef() API
-- [ ] T005 Add fullCloneTicket() function signature to lib/db/tickets.ts with proper TypeScript types
+- [X] T003 Implement generateBranchName() function in lib/github/branch-operations.ts (slugify title, format: {ticketNumber}-{slug})
+- [X] T004 Implement createBranchFromSource() function in lib/github/branch-operations.ts using Octokit git.createRef() API
+- [X] T005 Add fullCloneTicket() function signature to lib/db/tickets.ts with proper TypeScript types
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -47,17 +47,17 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Create unit test for generateBranchName() in tests/unit/lib/branch-slug.test.ts (slugify, special chars, 3-word limit)
-- [ ] T007 [P] [US1] Add integration test for full clone in tests/integration/tickets/duplicate.test.ts (creates ticket with correct stage, copies all jobs with telemetry)
+- [X] T006 [P] [US1] Create unit test for generateBranchName() in tests/unit/lib/branch-slug.test.ts (slugify, special chars, 3-word limit)
+- [X] T007 [P] [US1] Add integration test for full clone in tests/integration/tickets/duplicate.test.ts (creates ticket with correct stage, copies all jobs with telemetry)
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement fullCloneTicket() in lib/db/tickets.ts using Prisma $transaction (copy ticket with "Clone of " prefix, preserve stage, copy all jobs with telemetry)
-- [ ] T009 [US1] Extend POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts to accept mode parameter and handle full clone
-- [ ] T010 [US1] Add Zod validation for mode parameter ("simple" | "full") in duplicate route.ts
-- [ ] T011 [US1] Integrate createBranchFromSource() call in duplicate route.ts for full clone mode
-- [ ] T012 [US1] Add error handling for missing source branch (400 error with MISSING_BRANCH code)
-- [ ] T013 [US1] Add error handling for branch creation failures (500 error with BRANCH_CREATION_FAILED code)
+- [X] T008 [US1] Implement fullCloneTicket() in lib/db/tickets.ts using Prisma $transaction (copy ticket with "Clone of " prefix, preserve stage, copy all jobs with telemetry)
+- [X] T009 [US1] Extend POST handler in app/api/projects/[projectId]/tickets/[id]/duplicate/route.ts to accept mode parameter and handle full clone
+- [X] T010 [US1] Add Zod validation for mode parameter ("simple" | "full") in duplicate route.ts
+- [X] T011 [US1] Integrate createBranchFromSource() call in duplicate route.ts for full clone mode
+- [X] T012 [US1] Add error handling for missing source branch (400 error with MISSING_BRANCH code)
+- [X] T013 [US1] Add error handling for branch creation failures (500 error with BRANCH_CREATION_FAILED code)
 
 **Checkpoint**: Full clone API is functional - can be tested via API calls
 
@@ -71,13 +71,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [US2] Add integration test in tests/integration/tickets/duplicate.test.ts verifying simple copy still works (INBOX stage, "Copy of " prefix, no jobs, no branch)
+- [X] T014 [US2] Add integration test in tests/integration/tickets/duplicate.test.ts verifying simple copy still works (INBOX stage, "Copy of " prefix, no jobs, no branch)
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Replace Duplicate button with DropdownMenu in components/board/ticket-detail-modal.tsx
-- [ ] T016 [US2] Add "Simple copy" DropdownMenuItem that calls existing duplicate logic with mode="simple"
-- [ ] T017 [US2] Add ChevronDown icon to dropdown trigger button in ticket-detail-modal.tsx
+- [X] T015 [US2] Replace Duplicate button with DropdownMenu in components/board/ticket-detail-modal.tsx
+- [X] T016 [US2] Add "Simple copy" DropdownMenuItem that calls existing duplicate logic with mode="simple"
+- [X] T017 [US2] Add ChevronDown icon to dropdown trigger button in ticket-detail-modal.tsx
 
 **Checkpoint**: Simple copy and Full clone both work from dropdown menu
 
@@ -91,13 +91,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [US3] Create E2E test in tests/e2e/ticket-duplication.spec.ts for dropdown visibility by stage (Full clone hidden on INBOX/SHIP)
+- [X] T018 [US3] Create E2E test in tests/e2e/ticket-duplication.spec.ts for dropdown visibility by stage (Full clone hidden on INBOX/SHIP)
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add showFullClone computed variable in ticket-detail-modal.tsx based on ticket.stage
-- [ ] T020 [US3] Conditionally render "Full clone" DropdownMenuItem only when showFullClone is true
-- [ ] T021 [US3] Add GitBranch icon for "Full clone" option, Copy icon for "Simple copy" option
+- [X] T019 [US3] Add showFullClone computed variable in ticket-detail-modal.tsx based on ticket.stage
+- [X] T020 [US3] Conditionally render "Full clone" DropdownMenuItem only when showFullClone is true
+- [X] T021 [US3] Add GitBranch icon for "Full clone" option, Copy icon for "Simple copy" option
 
 **Checkpoint**: Full clone option appears only on eligible stages
 
@@ -111,10 +111,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Add success toast notification in ticket-detail-modal.tsx showing "Cloned to {NEW_TICKET_KEY}" for full clone
-- [ ] T023 [US4] Add success toast notification showing "Copied to {NEW_TICKET_KEY}" for simple copy
-- [ ] T024 [US4] Add error toast notifications for full clone failures (branch not found, API errors)
-- [ ] T025 [US4] Add loading state (Loader2 spinner) to dropdown trigger during duplication
+- [X] T022 [US4] Add success toast notification in ticket-detail-modal.tsx showing "Cloned to {NEW_TICKET_KEY}" for full clone
+- [X] T023 [US4] Add success toast notification showing "Copied to {NEW_TICKET_KEY}" for simple copy
+- [X] T024 [US4] Add error toast notifications for full clone failures (branch not found, API errors)
+- [X] T025 [US4] Add loading state (Loader2 spinner) to dropdown trigger during duplication
 
 **Checkpoint**: User receives clear feedback for all duplication operations
 
@@ -124,9 +124,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T026 Run quickstart.md validation - verify all implementation steps complete
-- [ ] T027 Verify all edge cases from spec.md are handled (missing branch, running jobs, rate limits, nested clones)
-- [ ] T028 Run full test suite (unit + integration + E2E) to ensure all tests pass
+- [X] T026 Run quickstart.md validation - verify all implementation steps complete
+- [X] T027 Verify all edge cases from spec.md are handled (missing branch, running jobs, rate limits, nested clones)
+- [X] T028 Run full test suite (unit + integration + E2E) to ensure all tests pass
 
 ---
 
