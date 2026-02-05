@@ -38,7 +38,7 @@ export function UserAutocomplete({
     return (
       <div
         data-testid="mention-autocomplete"
-        className="bg-popover border border-border rounded-md shadow-md p-2 max-h-[200px] overflow-y-auto"
+        className="bg-popover border border-border rounded-md shadow-md p-2 max-h-[280px] overflow-y-auto"
         role="listbox"
       >
         <div className="text-sm text-muted-foreground p-2 text-center">
@@ -52,7 +52,7 @@ export function UserAutocomplete({
     <TooltipProvider>
       <div
         data-testid="mention-autocomplete"
-        className="bg-popover border border-border rounded-md shadow-md max-h-[200px] overflow-y-auto"
+        className="bg-popover border border-border rounded-md shadow-md max-h-[280px] overflow-y-auto"
         role="listbox"
         aria-label="User autocomplete"
       >

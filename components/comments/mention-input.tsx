@@ -235,8 +235,8 @@ export function MentionInput({
     coords: { top: number; left: number },
     textareaRect: DOMRect
   ): { top: number; left: number } => {
-    const dropdownWidth = 320; // w-80
-    const dropdownHeight = 200; // max-h-[200px]
+    const dropdownWidth = 448; // max-w-md
+    const dropdownHeight = 280; // max-h-[280px]
     const lineHeight = 24;
     const buffer = 16;
 
@@ -649,12 +649,13 @@ export function MentionInput({
 
       {isAutocompleteOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed w-80"
+          className="fixed w-auto min-w-80 max-w-md"
           style={{
             zIndex: 9999,
             top: `${autocompletePosition.top}px`,
             left: `${autocompletePosition.left}px`,
           }}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           {renderAutocomplete()}
         </div>,

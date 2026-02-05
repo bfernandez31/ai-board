@@ -27,7 +27,7 @@ export function CommandAutocomplete({
     return (
       <div
         data-testid="command-autocomplete"
-        className="bg-popover border border-border rounded-md shadow-md p-2 max-h-[200px] overflow-y-auto"
+        className="bg-popover border border-border rounded-md shadow-md p-2 max-h-[280px] overflow-y-auto"
         role="listbox"
         aria-label="Command autocomplete"
       >
@@ -41,7 +41,7 @@ export function CommandAutocomplete({
   return (
     <div
       data-testid="command-autocomplete"
-      className="bg-popover border border-border rounded-md shadow-md max-h-[200px] overflow-y-auto"
+      className="bg-popover border border-border rounded-md shadow-md max-h-[280px] overflow-y-auto"
       role="listbox"
       aria-label="Command autocomplete"
     >
