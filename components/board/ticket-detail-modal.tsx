@@ -2,12 +2,13 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown, History } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { TicketStats } from '@/components/ticket/ticket-stats';
+import { WorkflowTimeline } from '@/components/ticket/workflow-timeline';
 import {
   Dialog,
   DialogContent,
@@ -106,7 +107,7 @@ interface TicketDetailModalProps {
   projectId: number;
 
   /** Optional initial tab to display when modal opens. Defaults to 'details'. */
-  initialTab?: 'details' | 'comments' | 'files' | 'stats';
+  initialTab?: 'details' | 'comments' | 'files' | 'history' | 'stats';
 
   /** Jobs for this ticket, passed from parent for real-time polling updates */
   jobs?: TicketJob[];
@@ -203,7 +204,7 @@ export function TicketDetailModal({
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'history' | 'stats'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
@@ -278,8 +279,13 @@ export function TicketDetailModal({
         e.preventDefault();
         setActiveTab('files');
       }
-      // Cmd+4 or Ctrl+4 for Stats tab (only when jobs exist)
+      // Cmd+4 or Ctrl+4 for History tab (only when jobs exist)
       if ((e.metaKey || e.ctrlKey) && e.key === '4' && hasJobs) {
+        e.preventDefault();
+        setActiveTab('history');
+      }
+      // Cmd+5 or Ctrl+5 for Stats tab (only when jobs exist)
+      if ((e.metaKey || e.ctrlKey) && e.key === '5' && hasJobs) {
         e.preventDefault();
         setActiveTab('stats');
       }
@@ -1043,8 +1049,8 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
-          <TabsList className={`flex-shrink-0 grid w-full ${hasJobs ? 'grid-cols-4' : 'grid-cols-3'} mb-0 sm:mb-4`}>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'history' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
+          <TabsList className={`flex-shrink-0 grid w-full ${hasJobs ? 'grid-cols-5' : 'grid-cols-3'} mb-0 sm:mb-4`}>
             <TabsTrigger value="details" className="text-sm">
               Details
             </TabsTrigger>
@@ -1064,6 +1070,12 @@ export function TicketDetailModal({
                 </Badge>
               )}
             </TabsTrigger>
+            {hasJobs && (
+              <TabsTrigger value="history" className="text-sm relative" data-testid="history-tab-trigger">
+                <History className="w-4 h-4 mr-1.5" />
+                History
+              </TabsTrigger>
+            )}
             {hasJobs && (
               <TabsTrigger value="stats" className="text-sm relative" data-testid="stats-tab-trigger">
                 <BarChart3 className="w-4 h-4 mr-1.5" />
@@ -1339,6 +1351,17 @@ export function TicketDetailModal({
               onAttachmentsUpdated={refreshTicketFromServer}
             />
           </TabsContent>
+
+          {/* History Tab - Workflow Execution Timeline */}
+          {hasJobs && (
+            <TabsContent value="history" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="history-tab-content">
+              <WorkflowTimeline
+                jobs={fullJobs}
+                githubOwner={localTicket?.project?.githubOwner}
+                githubRepo={localTicket?.project?.githubRepo}
+              />
+            </TabsContent>
+          )}
 
           {/* Stats Tab - only rendered when jobs exist */}
           {hasJobs && (
