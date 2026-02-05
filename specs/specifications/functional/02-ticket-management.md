@@ -320,38 +320,79 @@ Users can close the detail modal by:
 
 ## Ticket Duplication
 
-### Duplicate Button
+### Duplicate Dropdown Menu
 
-Users can create a copy of any existing ticket to reuse content for similar work items:
+Users can create a copy of existing tickets using two duplication modes:
 
 **Button Location**:
-- Appears in the ticket detail modal header row
+- Appears in the ticket detail modal header row as a dropdown menu
 - Located next to other metadata actions (Edit Policy button)
 - Visible for tickets in all stages (INBOX through SHIP)
 
-**Duplication Process**:
-1. User opens any ticket detail modal
-2. User clicks the duplicate button (with copy icon)
-3. System creates a new ticket in INBOX with:
+**Duplication Modes**:
+
+**Simple Copy** (available for all stages):
+- Creates fresh copy in INBOX stage
+- Title prefixed with "Copy of "
+- No jobs or branch copied
+- Resets to clean state for new work
+- Use case: Reusing ticket template or description for unrelated work
+
+**Full Clone** (available for SPECIFY, PLAN, BUILD, VERIFY stages only):
+- Preserves source ticket's stage
+- Copies all jobs with complete telemetry data
+- Creates new Git branch from source branch
+- Title prefixed with "Clone of "
+- Use case: A/B testing alternative implementations, exploring different approaches
+
+**Dropdown Menu Behavior**:
+- Single button with chevron-down icon
+- Opens dropdown menu on click
+- Menu items:
+  - "Simple copy" (Copy icon) - always visible
+  - "Full clone" (GitBranch icon) - only for SPECIFY/PLAN/BUILD/VERIFY stages
+- Keyboard accessible
+
+**Simple Copy Process**:
+1. User opens ticket detail modal
+2. User clicks Duplicate dropdown
+3. User selects "Simple copy"
+4. System creates new ticket in INBOX with:
    - Title: "Copy of [original title]" (truncated if needed to stay within 100 chars)
    - Description: Exact copy of original description
    - Clarification Policy: Same as original (or null if using project default)
    - Image Attachments: References to same images (uploaded and external URLs)
-4. Modal closes automatically
-5. New ticket appears immediately at the bottom of INBOX column
-6. Success toast displays with new ticket key (e.g., "Ticket ABC-107 duplicated")
+   - No branch, no jobs
+5. Success toast displays: "Copied to {NEW_TICKET_KEY}"
+6. Modal closes automatically
+7. New ticket appears immediately at the bottom of INBOX column
+
+**Full Clone Process**:
+1. User opens ticket in SPECIFY, PLAN, BUILD, or VERIFY stage
+2. User clicks Duplicate dropdown
+3. User selects "Full clone"
+4. System performs full clone:
+   - Creates new ticket with same stage as source
+   - Title: "Clone of [original title]"
+   - Description: Exact copy of original description
+   - Copies all jobs with complete telemetry (tokens, cost, duration, model, tools)
+   - Creates new Git branch from source branch commit (format: {TICKET_NUMBER}-{slug})
+   - Copies clarification policy and attachments
+5. Success toast displays: "Cloned to {NEW_TICKET_KEY}"
+6. Modal closes automatically
+7. New ticket appears in same column as source ticket
 
 **Visual Feedback**:
-- Tooltip displays "Duplicate ticket" on hover
-- Button shows loading state during API call
-- Button is disabled while duplication is in progress
-- Success toast notification confirms creation with ticket key
-- Error toast displays if duplication fails
+- Loading state (Loader2 spinner) on dropdown trigger during duplication
+- Success toast notification with new ticket key
+- Error toast for failures (branch not found, GitHub API errors)
+- Dropdown remains open on error to allow retry
 
 **Title Handling**:
-- Original title prefixed with "Copy of "
+- Simple copy: "Copy of " prefix
+- Full clone: "Clone of " prefix
 - If prefix would exceed 100 character limit, original title is truncated first
-- Truncation preserves "Copy of " prefix and includes as much of original title as fits
+- Truncation preserves prefix and includes as much of original title as fits
 
 **Attachment Handling**:
 - All image attachments (up to 5) are copied by reference
@@ -359,22 +400,43 @@ Users can create a copy of any existing ticket to reuse content for similar work
 - External image URLs are copied as-is
 - No re-uploading or duplication of image files
 
+**Branch Creation**:
+- Full clone creates new branch via GitHub API
+- Branch name follows project convention: {TICKET_NUMBER}-{slug}
+- Slug derived from title: first 3 words, lowercase, hyphenated
+- New branch points to same commit as source branch
+- Preserves complete Git history from source
+
+**Job Duplication**:
+- All jobs copied with complete data:
+  - Command, status, branch, commit SHA
+  - Timestamps (startedAt, completedAt)
+  - Telemetry (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens)
+  - Cost and performance metrics (costUsd, durationMs)
+  - Model identifier and tools used
+- Jobs reference new ticket ID
+- Job history provides point-in-time snapshot for comparison
+
 **Error Handling**:
-- Network failures show error toast with descriptive message
+- **Simple copy errors**: Network failures, validation errors
+- **Full clone errors**:
+  - Source ticket has no branch → 400 error with actionable message
+  - Source branch not found on GitHub → 400 error, user can still use simple copy
+  - Branch creation fails → 500 error with retry guidance
+  - GitHub API rate limit exceeded → 500 error with actionable message
 - Modal remains open on error to allow retry
-- Validation errors prevent duplication (e.g., source ticket not found)
-- User can click duplicate button again to retry after error
+- User can click dropdown menu again to retry after error
 
 **Performance**:
-- New ticket appears immediately in INBOX via optimistic update (0ms perceived latency)
-- Optimistic ticket shows temporary placeholder data until API response received
-- Actual ticket data replaces optimistic entry within 1 second
+- Simple copy: New ticket appears immediately via optimistic update (0ms perceived latency)
+- Full clone: <5 seconds total (GitHub API + database transaction)
 - Database operation is atomic (all-or-nothing)
+- Branch creation synchronous (provides immediate feedback on errors)
 
 **Optimistic UI Behavior**:
-- Temporary ticket appears in INBOX immediately with "Copy of [title]" prefix
+- Temporary ticket appears in target column immediately
 - Placeholder uses temporary ID and ticket key until server response
-- On success: Temporary ticket replaced with actual server data including real ticket key
+- On success: Temporary ticket replaced with actual server data
 - On error: Temporary ticket removed from UI, original tickets list restored
 - User sees immediate feedback without waiting for server response
 

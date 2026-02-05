@@ -464,12 +464,12 @@ describe('TicketDetailModal', () => {
         );
       });
 
-      // Verify toast was shown with success message
+      // Verify toast was shown with success message (simple copy shows "Ticket copied")
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Ticket duplicated',
-            description: 'Created TEST-2',
+            title: 'Ticket copied',
+            description: 'Copied to TEST-2',
           })
         );
       });
@@ -646,6 +646,162 @@ describe('TicketDetailModal', () => {
         const tempTickets = cachedData.filter(t => t.ticketKey.startsWith('TEMP-'));
         expect(tempTickets).toHaveLength(0);
       }
+    });
+  });
+
+  describe('Duplication dropdown visibility by stage', () => {
+    it('should show only Simple copy for INBOX stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'INBOX', branch: null });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify Simple copy is visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+
+      // Verify Full clone is NOT visible for INBOX tickets
+      expect(screen.queryByText('Full clone')).not.toBeInTheDocument();
+    });
+
+    it('should show only Simple copy for SHIP stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'SHIP', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify Simple copy is visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+
+      // Verify Full clone is NOT visible for SHIP tickets
+      expect(screen.queryByText('Full clone')).not.toBeInTheDocument();
+    });
+
+    it('should show both Simple copy and Full clone for SPECIFY stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'SPECIFY', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify both options are visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
+    });
+
+    it('should show both Simple copy and Full clone for PLAN stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'PLAN', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify both options are visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
+    });
+
+    it('should show both Simple copy and Full clone for BUILD stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'BUILD', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify both options are visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
+    });
+
+    it('should show both Simple copy and Full clone for VERIFY stage tickets', async () => {
+      const user = userEvent.setup();
+      const ticket = createMockTicket({ stage: 'VERIFY', branch: 'feature/test' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      // Click the duplicate dropdown button
+      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
+      await user.click(duplicateButton);
+
+      // Verify both options are visible
+      expect(screen.getByText('Simple copy')).toBeInTheDocument();
+      expect(screen.getByText('Full clone')).toBeInTheDocument();
     });
   });
 });
