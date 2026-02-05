@@ -120,7 +120,7 @@ export async function POST(
  * Handle simple copy (existing behavior)
  * Creates copy in INBOX with "Copy of " prefix, no branch, no jobs
  */
-async function handleSimpleCopy(projectId: number, ticketId: number) {
+async function handleSimpleCopy(projectId: number, ticketId: number): Promise<NextResponse> {
   const newTicket = await duplicateTicket(projectId, ticketId);
 
   // Revalidate the project board page
@@ -153,7 +153,7 @@ async function handleSimpleCopy(projectId: number, ticketId: number) {
  * Handle full clone
  * Preserves stage, copies all jobs with telemetry, creates new branch from source
  */
-async function handleFullClone(projectId: number, ticketId: number) {
+async function handleFullClone(projectId: number, ticketId: number): Promise<NextResponse> {
   // Fetch source ticket with project info
   const sourceTicket = await prisma.ticket.findFirst({
     where: {
@@ -189,11 +189,11 @@ async function handleFullClone(projectId: number, ticketId: number) {
     );
   }
 
-  // Get next ticket number for branch name generation
+  // Get next ticket number ONCE for both branch name and ticket creation
   const { getNextTicketNumber } = await import('@/app/lib/db/ticket-sequence');
   const nextTicketNumber = await getNextTicketNumber(projectId);
 
-  // Generate new branch name
+  // Generate new branch name using the ticket number
   const newBranchName = generateBranchName(nextTicketNumber, sourceTicket.title);
 
   // Create new branch from source branch on GitHub
@@ -240,8 +240,8 @@ async function handleFullClone(projectId: number, ticketId: number) {
     );
   }
 
-  // Clone the ticket with jobs
-  const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName);
+  // Clone the ticket with jobs, passing the ticket number to avoid double increment
+  const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName, nextTicketNumber);
 
   // Revalidate the project board page
   revalidatePath(`/projects/${projectId}/board`);

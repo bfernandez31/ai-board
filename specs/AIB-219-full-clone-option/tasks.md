@@ -91,7 +91,7 @@
 
 ### Tests for User Story 3
 
-- [X] T018 [US3] Create E2E test in tests/e2e/ticket-duplication.spec.ts for dropdown visibility by stage (Full clone hidden on INBOX/SHIP)
+- [X] T018 [US3] Add component tests in tests/unit/components/ticket-detail-modal.test.tsx for dropdown visibility by stage (Full clone hidden on INBOX/SHIP) - MOVED from E2E per constitution (UI interactions don't require browser)
 
 ### Implementation for User Story 3
 

@@ -328,12 +328,14 @@ export async function duplicateTicket(
  * @param projectId - The project ID containing the source ticket
  * @param sourceTicketId - The ID of the ticket to clone
  * @param newBranch - The new branch name created for the cloned ticket
+ * @param ticketNumber - The pre-generated ticket number (to avoid double increment)
  * @returns The newly created ticket with all copied jobs
  */
 export async function fullCloneTicket(
   projectId: number,
   sourceTicketId: number,
-  newBranch: string
+  newBranch: string,
+  ticketNumber: number
 ): Promise<Ticket & { jobs: Job[] }> {
   // Fetch source ticket with jobs and project key for generating new ticketKey
   const sourceTicket = await prisma.ticket.findFirst({
@@ -353,8 +355,7 @@ export async function fullCloneTicket(
     throw new Error('Ticket not found');
   }
 
-  // Generate new ticket number using PostgreSQL sequence
-  const ticketNumber = await getNextTicketNumber(projectId);
+  // Use pre-generated ticket number to construct ticketKey
   const ticketKey = `${sourceTicket.project.key}-${ticketNumber}`;
 
   // Apply "Clone of " prefix, truncating source title to 91 chars if needed
