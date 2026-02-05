@@ -92,6 +92,8 @@ jobs:
       SKIP_SPECKIT_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+      # Use Opus model for Claude Code
+      ANTHROPIC_MODEL: "claude-opus-4-6"
       # Database connection string for test environment
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
       # Claude Code telemetry - send to OTLP endpoint
@@ -316,14 +318,14 @@ jobs:
               # Add image paths if available
               if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
                 echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-                claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.specify $payload" $IMAGE_PATHS
+                claude --dangerously-skip-permissions "/ai-board.specify $payload" $IMAGE_PATHS
               else
-                claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.specify $payload"
+                claude --dangerously-skip-permissions "/ai-board.specify $payload"
               fi
               ;;
             plan)
               echo "📋 Executing /ai-board.plan command..."
-              claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions /ai-board.plan
+              claude --dangerously-skip-permissions /ai-board.plan
 
               # Commit plan changes
               git add .
@@ -343,7 +345,7 @@ jobs:
               fi
 
               echo "📋 Executing /ai-board.tasks command..."
-              claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions /ai-board.tasks
+              claude --dangerously-skip-permissions /ai-board.tasks
 
               # Commit tasks changes
               git add .
@@ -363,14 +365,14 @@ jobs:
               fi
               ;;
             task)
-              claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions /ai-board.tasks
+              claude --dangerously-skip-permissions /ai-board.tasks
               ;;
             implement)
-              claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
+              claude --dangerously-skip-permissions "/ai-board.implement IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed"
               ;;
             clarify)
               echo '${{ inputs.answers_json }}' > clarifications.json
-              claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions /ai-board.clarify --answers clarifications.json
+              claude --dangerously-skip-permissions /ai-board.clarify --answers clarifications.json
               ;;
             *)
               echo "❌ Unknown command: ${{ inputs.command }}"
@@ -421,7 +423,7 @@ jobs:
           for retry in $(seq 1 $MAX_RETRIES); do
             echo "🔄 Retry $retry/$MAX_RETRIES"
 
-            claude --model claude-opus-4-5-20251101 --dangerously-skip-permissions "/ai-board.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
+            claude --dangerously-skip-permissions "/ai-board.implement --continue IMPORTANT: never prompt me; you must always fix and complete the implementation, never run the full test suite, only impacted tests. CRITICAL: After completing each task, immediately update tasks.md to mark it as ✅ DONE. Do the commit and push, continue fix if needed" || true
 
             if ../ai-board/.claude-plugin/scripts/bash/detect-incomplete-implementation.sh "$FEATURE_DIR" --json > /tmp/retry.json; then
               echo "✅ Complete after $retry retries"

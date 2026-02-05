@@ -114,7 +114,7 @@ Each workflow job captures Claude usage metrics:
 
 **Performance**:
 - Total duration of Claude API calls in milliseconds
-- Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-5)
+- Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-6)
 
 **Tool Usage**:
 - List of Claude tools used during execution (Edit, Write, Read, Bash, Glob, Grep, etc.)

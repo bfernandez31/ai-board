@@ -138,7 +138,7 @@ export async function dispatchWorkflow(params: {
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, Bun 1.3.1, PostgreSQL 14
 - **Services**: PostgreSQL for test execution
 - **Dependencies**: Playwright with chromium browser
-- **Command**: Executes `/cleanup` Claude command with opus model
+- **Command**: Executes `/cleanup` Claude command
 - **Actions**: Diff-based technical debt analysis, creates cleanup branch, transitions to VERIFY
 - **Timeout**: 45 minutes maximum
 
