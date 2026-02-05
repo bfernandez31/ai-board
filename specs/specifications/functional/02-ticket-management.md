@@ -203,6 +203,7 @@ Clicking any ticket card opens a detail modal displaying:
   - Last updated date
   - Branch name (when available)
   - Workflow type indicator (⚡ for quick implementation, ✨ for cleanup)
+- **Tabs**: Details, Conversation, Files, History (when jobs exist), Stats (when jobs exist)
 
 ### Documentation Buttons
 
@@ -269,6 +270,61 @@ The detail modal:
 - Prevents unintended actions from keyboard input immediately after modal opens
 - Users can navigate to interactive elements using Tab key
 
+### History Tab
+
+The History tab displays a chronological timeline of all workflow executions for a ticket with filtering capabilities. This tab provides visibility into workflow execution history and resource consumption.
+
+**Visibility**:
+- History tab only appears when the ticket has at least one associated job
+- Automatically shown/hidden based on job presence
+- Keyboard shortcut: Cmd/Ctrl+4
+
+**Timeline Display**:
+- Chronological list of all jobs (most recent first)
+- Each job displays:
+  - Job type icon (FileText for specify, Settings2 for plan, Cog for implement, CheckSquare for verify)
+  - Status indicator (success checkmark, error icon, pending spinner, running animation)
+  - Command name (e.g., "Specify", "Plan", "Implement", "Quick Impl")
+  - Model badge (e.g., "claude-sonnet-4-5")
+  - Relative timestamp (e.g., "2 hours ago")
+  - Duration (formatted as "Xm Xs" or "-")
+  - Cost (formatted as "$X.XX" or "-")
+
+**Expandable Job Details**:
+- Click job row to expand detailed telemetry breakdown
+- Token breakdown:
+  - Input tokens (formatted with K/M abbreviations)
+  - Output tokens
+  - Cache read tokens
+  - Cache creation tokens
+- Artifacts created (for COMPLETED jobs):
+  - spec.md (specify jobs)
+  - plan.md, tasks.md (plan jobs)
+  - summary.md (implement jobs)
+- Tools used (badge list with tool names)
+- Full timestamps (started and completed times)
+
+**Filtering Options**:
+- **Job Type Filter**: Filter by command (specify, plan, implement, verify, etc.)
+- **Status Filter**: Filter by job status (COMPLETED, FAILED, CANCELLED, RUNNING, PENDING)
+- **Date Range Filter**: All time, Last 7 days, Last 30 days
+- Results counter shows "X of Y jobs" with active filters
+- Clear all filters button when no results match
+
+**Empty States**:
+- "No workflow executions yet" when ticket has no jobs
+- "No jobs match the selected filters" when filters produce no results
+
+**GitHub Actions Link**:
+- Footer link to view all workflow runs in GitHub Actions (when GitHub repo configured)
+- Opens in new tab with external link icon
+
+**Real-Time Updates**:
+- History automatically updates as jobs complete via existing 2-second job polling
+- Job status transitions reflect immediately (PENDING → RUNNING → COMPLETED/FAILED)
+- No manual refresh required
+- Modal content synchronizes automatically when jobs transition to terminal states
+
 ### Stats Tab
 
 The Stats tab displays aggregated telemetry metrics from all workflow jobs associated with the ticket. This tab provides visibility into resource consumption, costs, and workflow efficiency.
@@ -276,6 +332,7 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 **Visibility**:
 - Stats tab only appears when the ticket has at least one associated job
 - Automatically shown/hidden based on job presence
+- Keyboard shortcut: Cmd/Ctrl+5
 - No empty state shown when tab is absent
 
 **Summary Metrics**:

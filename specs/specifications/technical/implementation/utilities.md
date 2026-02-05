@@ -1,6 +1,193 @@
 # Utilities - Technical Documentation
 
-Shared utility functions and helpers used across the application.
+Shared utility functions, helpers, and UI components used across the application.
+
+## WorkflowTimeline Component
+
+### Purpose
+
+Displays a filterable, chronological timeline of all workflow executions for a ticket with expandable telemetry details. Provides users with visibility into job history, resource consumption, and execution status.
+
+### File Location
+
+`components/ticket/workflow-timeline.tsx`
+
+### Component Interface
+
+```typescript
+interface WorkflowTimelineProps {
+  jobs: TicketJobWithTelemetry[];
+  githubOwner?: string | undefined;
+  githubRepo?: string | undefined;
+}
+```
+
+**Props**:
+- `jobs`: Array of job records with full telemetry data (tokens, cost, duration, model, tools)
+- `githubOwner`: Optional GitHub repository owner for workflow links
+- `githubRepo`: Optional GitHub repository name for workflow links
+
+### Features
+
+**Timeline Display**:
+- Jobs sorted chronologically (most recent first)
+- Each row shows:
+  - Job type icon (FileText, Settings2, Cog, CheckSquare, MessageSquare, Rocket)
+  - Status icon with color coding (green=completed, red=failed, amber=cancelled, blue=running/pending)
+  - Command name (formatted from job.command)
+  - Model badge (e.g., "claude-sonnet-4-5")
+  - Relative timestamp (e.g., "2 hours ago")
+  - Duration (formatted as "Xm Xs" or "-")
+  - Cost (formatted as "$X.XX" or "-")
+
+**Status Icons**:
+- COMPLETED: CheckCircle2 (green)
+- FAILED: XCircle (red)
+- CANCELLED: Ban (amber)
+- RUNNING: Loader2 (blue, animated spin)
+- PENDING: Clock (gray)
+
+**Job Type Icons**:
+- specify: FileText
+- plan: Settings2
+- implement/quick-impl/clean: Cog
+- verify: CheckSquare
+- comment-*: MessageSquare
+- deploy-preview: Rocket
+
+**Expandable Details** (click to reveal):
+- Token breakdown (input, output, cache read, cache creation)
+- Artifacts created (spec.md, plan.md, tasks.md, summary.md - only for COMPLETED jobs)
+- Tools used (badge list)
+- Full timestamps (started and completed)
+
+**Filtering Controls**:
+- Job type filter (dropdown): All Types, Specify, Plan, Implement, Verify, Quick Impl, etc.
+- Status filter (dropdown): All Status, COMPLETED, FAILED, CANCELLED, RUNNING, PENDING
+- Date range filter (dropdown): All time, Last 7 days, Last 30 days
+- Results counter: "X of Y jobs"
+- Clear all filters button (appears when filters active and no results)
+
+**Empty States**:
+- No jobs: "No workflow executions yet"
+- No results after filtering: "No jobs match the selected filters"
+
+**GitHub Actions Link**:
+- Footer link to repository actions page (when githubOwner and githubRepo provided)
+- Format: `https://github.com/{owner}/{repo}/actions`
+- Opens in new tab with external link icon
+
+### Implementation Details
+
+**Job Command Formatting**:
+```typescript
+function formatCommandName(command: string): string {
+  const config = JOB_TYPE_CONFIG[command];
+  if (config) return config.label;
+
+  return command
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+```
+
+**Job Artifacts Mapping**:
+```typescript
+const JOB_ARTIFACTS: Record<string, string[]> = {
+  specify: ['spec.md'],
+  plan: ['plan.md', 'tasks.md'],
+  implement: ['summary.md'],
+  'quick-impl': ['summary.md'],
+  verify: [],
+  'deploy-preview': [],
+  clean: ['summary.md'],
+};
+```
+
+**Filtering Logic**:
+- Command filter: Exact match on `job.command`
+- Status filter: Exact match on `job.status`
+- Date filter: `isAfter(job.startedAt, cutoffDate)` using date-fns
+- Filters combine with AND logic (all active filters must match)
+- Results sorted by `startedAt` descending after filtering
+
+**Null Safety**:
+- Duration/cost display "-" when value is null
+- Token fields treat null as 0 for calculations
+- Tools used checks `Array.isArray(job.toolsUsed)` before rendering
+- Expandable details disabled when no telemetry data available
+
+### Usage Example
+
+```typescript
+import { WorkflowTimeline } from '@/components/ticket/workflow-timeline';
+import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
+
+function TicketHistoryTab({ ticketId, projectId, project }: Props) {
+  const { data: ticketJobs } = useTicketJobs(projectId, ticketId);
+
+  return (
+    <WorkflowTimeline
+      jobs={ticketJobs?.jobs || []}
+      githubOwner={project.githubOwner}
+      githubRepo={project.githubRepo}
+    />
+  );
+}
+```
+
+### Real-Time Updates
+
+The component receives job data from TanStack Query hooks that automatically refetch when jobs reach terminal states:
+
+```typescript
+// Parent component (ticket detail modal)
+const { data: fullJobs } = useTicketJobs(projectId, ticketId);
+
+// Job polling hook automatically invalidates ticketJobs cache when job completes
+// WorkflowTimeline re-renders with updated data
+```
+
+**Update Flow**:
+1. Job polling detects terminal state (COMPLETED/FAILED/CANCELLED)
+2. TanStack Query invalidates `ticketJobs` cache
+3. `useTicketJobs` refetches from `/api/projects/:projectId/tickets/:ticketId/jobs`
+4. WorkflowTimeline re-renders with updated jobs array
+5. New job appears in timeline, status updates reflect immediately
+
+### Accessibility
+
+- Keyboard accessible collapsible rows (Enter/Space to expand)
+- ARIA labels on status icons (e.g., `aria-label="Completed"`)
+- Screen reader compatible filter controls
+- Focus indicators on interactive elements
+
+### Performance
+
+- Memoized filtering with `useMemo` to avoid unnecessary recalculations
+- Collapsible details lazy-render telemetry breakdown
+- Efficient sorting using single pass over jobs array
+- No additional API calls (uses existing job polling infrastructure)
+
+### Testing
+
+**Unit Tests** (`tests/unit/components/workflow-timeline.test.tsx`):
+- Empty state rendering
+- Job sorting (chronological order)
+- Command name formatting
+- Duration/cost display with null handling
+- Filter controls presence
+- Expandable details interaction
+- Artifacts display (COMPLETED vs FAILED)
+- Tools used rendering
+- GitHub Actions link generation
+- Status icon rendering
+
+**Integration Coverage**:
+- Filtering interactions tested via Playwright (Radix UI Select not compatible with happy-dom)
+- Full filter workflows including clear all button
+- Multi-filter combinations (command + status + date)
 
 ## Job Display Names
 
@@ -91,9 +278,15 @@ getJobDisplayName('')                  // → "Unknown job type"
 - Combines display name with event type (started/completed/failed)
 - Adds quick indicator (⚡) for quick-impl commands
 
+**Workflow Timeline** (`components/ticket/workflow-timeline.tsx`):
+- Used by `formatCommandName()` to display job types in History tab
+- Provides short labels for timeline job entries
+- Integrated with filtering dropdown for job type selection
+
 **Frontend Components**:
 - Job status displays in ticket detail view
-- Timeline rendering in Comments tab
+- Timeline rendering in Conversation tab
+- History tab workflow execution list
 - Job event notifications
 
 ### Design Considerations
