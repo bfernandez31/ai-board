@@ -46,42 +46,36 @@ This command implements simple features directly from ticket context without for
      - Ticket description (from Description section)
      - Any implementation hints or requirements
 
-3. **Validate task simplicity**:
-   - **If spec.md indicates complex requirements** (>200 words, multiple entities, API changes):
-     - **STOP** and recommend: "This task appears complex. Consider using full workflow: /ai-board.specify → /ai-board.plan → /ai-board.implement"
-     - Exit without implementation
-   - **If task is simple**: Continue to step 4
-
-4. **Understand project context**:
+3. **Understand project context**:
    - Read project CLAUDE.md for tech stack, conventions, and architecture
    - Identify relevant source files based on ticket description
    - Review existing patterns and code style
 
-5. **Test-Driven Development (TDD) approach**:
+4. **Test-Driven Development (TDD) approach**:
    - **ALWAYS write tests first** before implementation if the feature change the behavior
    - Create or update test files based on ticket requirements
    - Follow existing test patterns (Playwright for E2E, Vitest for unit tests)
    - Ensure tests FAIL initially (red phase)
 
-6. **Implement the change**:
+5. **Implement the change**:
    - Make minimal changes to achieve ticket goals
    - Follow existing code patterns and conventions
    - Maintain consistency with project architecture
    - Add inline comments for non-obvious logic
 
-7. **Validate implementation**:
+6. **Validate implementation**:
    - Run relevant tests and verify they PASS (green phase)
    - Perform type checking
    - Run linter
    - Fix any type errors or lint warnings
 
-8. **Refactor if needed**:
+7. **Refactor if needed**:
    - Clean up code for readability (refactor phase)
    - Remove any duplication
    - Ensure code meets project quality standards
    - Re-run tests to ensure changes still pass
 
-9. **Document changes**:
+8. **Document changes**:
    - Update inline documentation if public APIs changed
    - Add JSDoc comments for new functions
    - Update README.md ONLY if user-facing behavior changed
@@ -89,7 +83,7 @@ This command implements simple features directly from ticket context without for
    - **DO NOT** update CLAUDE.md (handled by workflow)
    - **DO NOT** create separate feature documentation (this is quick-impl)
 
-10. **Completion checklist**:
+9. **Completion checklist**:
 
 - ✓ Tests written and passing
 - ✓ Type check passes
@@ -99,7 +93,7 @@ This command implements simple features directly from ticket context without for
 - ✓ Implementation matches ticket requirements
 - ✓ Documentation updated (functional & technical specs if behavior changed)
 
-11. **Report completion**:
+10. **Report completion**:
     - Summarize changes made (files modified, tests added)
     - Confirm all validation checks passed
     - Note any deviations from ticket description
@@ -110,7 +104,6 @@ This command implements simple features directly from ticket context without for
 - **Minimal planning**: Focus on immediate implementation, not long-term architecture
 - **Fast iteration**: Prioritize speed while maintaining quality (tests + type safety)
 - **TDD mandatory**: Tests must be written before implementation code if new behavior
-- **Simplicity threshold**: If task feels complex during implementation, STOP and recommend full workflow
 
 ## Error Handling
 
@@ -118,7 +111,6 @@ This command implements simple features directly from ticket context without for
 - If dependencies are missing: Install and document in package.json
 - If tests fail: Debug and fix before proceeding
 - If type errors occur: Resolve before completion
-- If task exceeds simplicity threshold: Abort and recommend /ai-board.specify
 
 ## Success Criteria
 
