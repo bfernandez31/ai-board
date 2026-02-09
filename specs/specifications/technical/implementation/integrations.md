@@ -94,11 +94,14 @@ export async function dispatchWorkflow(params: {
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `ticketTitle`, `ticketDescription`, `job_id`, `project_id`
-  - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`
+  - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository
-- **Differences**: Skips full spec generation, executes `/ai-board.quick-impl` command
-- **Same**: Environment setup, branch management, job status updates
+- **Environment**: Same as speckit.yml (ubuntu-latest, Node.js, Python, PostgreSQL 14, Playwright)
+- **Command**: Executes `/ai-board.quick-impl` with JSON payload
+- **Timeout**: 120 minutes maximum (matches full spec-kit workflow)
+- **Differences**: Skips full spec generation, creates minimal spec.md
+- **Same**: Test execution, branch management, job status updates
 
 **Verify Workflow** (`.github/workflows/verify.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -211,6 +214,21 @@ export async function dispatchWorkflow(params: {
 - Placeholder format: `[PLACEHOLDER_NAME]`
 - Section headers with Markdown H2 (`##`)
 - Warning emoji (`⚠️`) for manual requirements section
+
+**Quick-Impl Command** (`commands/ai-board.quick-impl.md`):
+- **Purpose**: Fast-track implementation bypassing formal spec/plan/tasks generation
+- **Input**: JSON payload with ticketKey, title, description (from quickImplPayload workflow input)
+- **Process**:
+  1. Create feature branch via `create-new-feature.sh --mode=quick-impl`
+  2. Generate minimal spec.md with title and description only
+  3. Load project context from CLAUDE.md
+  4. Implement changes directly based on ticket description
+  5. Follow TDD approach (write tests first if behavior changes)
+  6. Run validation (tests, type-check, linter)
+- **Flexibility**: No artificial complexity limits or validation gates
+- **Output**: Implemented code, minimal spec.md, all validation passed
+- **Use Cases**: Bug fixes, UI tweaks, simple refactoring, documentation updates
+- **Timeout**: 120 minutes (same as full workflow)
 
 **Code Simplifier Command** (`commands/ai-board.code-simplifier.md`):
 - **Purpose**: Simplify and refine code for clarity, consistency, and maintainability

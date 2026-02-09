@@ -39,7 +39,7 @@ on:
 jobs:
   quick-impl:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Shorter timeout for quick-impl (vs 120 for full spec-kit)
+    timeout-minutes: 120  # Temporarily matched to full spec-kit timeout (AIB-225)
 
     permissions:
       contents: write
