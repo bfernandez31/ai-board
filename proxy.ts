@@ -1,10 +1,10 @@
-import { authEdge } from "@/lib/auth-edge"
+import { auth } from "@/lib/auth"
 import { NextRequest, NextResponse } from "next/server"
 
 // Pre-auth checks that must run BEFORE NextAuth middleware
 function preAuthCheck(req: NextRequest): NextResponse | null {
   // Check for Bearer token (PAT authentication for MCP server)
-  // Must be checked BEFORE authEdge to avoid NextAuth redirect
+  // Must be checked BEFORE auth to avoid NextAuth redirect
   const authHeader = req.headers.get('authorization')
   const hasBearerToken = authHeader?.startsWith('Bearer pat_')
   if (hasBearerToken) {
@@ -17,11 +17,11 @@ function preAuthCheck(req: NextRequest): NextResponse | null {
     return NextResponse.next()
   }
 
-  return null // Continue to authEdge
+  return null // Continue to auth
 }
 
-// Main middleware handler wrapped with NextAuth
-const authMiddleware = authEdge((req) => {
+// Main auth handler wrapped with NextAuth
+const authProxy = auth((req) => {
   const isAuthenticated = !!req.auth
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isPublicApi = req.nextUrl.pathname === '/api/health'
@@ -56,16 +56,16 @@ const authMiddleware = authEdge((req) => {
   return NextResponse.next()
 })
 
-// Export middleware that runs pre-auth checks first
-export default async function middleware(
+// Export proxy that runs pre-auth checks first
+export default async function proxy(
   req: NextRequest,
-  ctx: Parameters<typeof authMiddleware>[1]
+  ctx: Parameters<typeof authProxy>[1]
 ) {
   const preAuthResult = preAuthCheck(req)
   if (preAuthResult) {
     return preAuthResult
   }
-  return authMiddleware(req, ctx)
+  return authProxy(req, ctx)
 }
 
 export const config = {
