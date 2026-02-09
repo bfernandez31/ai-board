@@ -307,11 +307,11 @@ When ticket moves directly from INBOX to BUILD:
 - Simple refactoring (renaming, organization)
 - Documentation updates
 
-**Not Recommended For**:
-- Complex features requiring architecture
-- Changes affecting multiple modules
-- New APIs or database changes
-- Features requiring detailed planning
+**Quick-Impl Flexibility**:
+- Originally designed for simple tasks (bug fixes, UI tweaks, refactoring)
+- Now capable of handling complex features without artificial limitations
+- Timeout: 120 minutes (same as full workflow)
+- No automatic blocking based on task complexity
 
 ## Test Verification (BUILD → VERIFY)
 
@@ -601,6 +601,7 @@ Workflows execute on GitHub Actions infrastructure:
 
 **Default Limits**:
 - Specification/Planning/Implementation: 120 minutes maximum
+- Quick implementation: 120 minutes maximum
 - Verification workflow: 45 minutes maximum
 - Typical execution: 2-5 minutes for specification
 - Typical execution: 5-15 minutes for verification (with test fixes)
