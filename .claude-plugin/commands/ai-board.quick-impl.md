@@ -52,7 +52,7 @@ This command implements simple features directly from ticket context without for
    - Review existing patterns and code style
 
 4. **Test-Driven Development (TDD) approach**:
-   - **ALWAYS write tests first** before implementation if the feature change the behavior
+   - **ALWAYS write tests first** before implementation if the feature changes the behavior
    - Create or update test files based on ticket requirements
    - Follow existing test patterns (Playwright for E2E, Vitest for unit tests)
    - Ensure tests FAIL initially (red phase)
