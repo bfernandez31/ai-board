@@ -1,50 +1,26 @@
-/**
- * GitHub API Integration for Constitution File
- *
- * Fetches the constitution markdown file from `.ai-board/memory/constitution.md`.
- * Uses the same pattern as doc-fetcher.ts but with a fixed file path.
- */
-
 import { Octokit } from '@octokit/rest';
 import { CONSTITUTION_PATH, type ConstitutionContent } from '@/lib/types/constitution';
 
-/**
- * Parameters for fetching constitution from GitHub
- */
 export interface ConstitutionFetchParams {
-  /** GitHub repository owner/organization */
   owner: string;
-  /** GitHub repository name */
   repo: string;
-  /** Git branch to read from (defaults to 'main') */
   branch?: string;
 }
 
-/**
- * Fetches constitution content from GitHub repository
- *
- * @param params - Repository and optional branch information
- * @returns Constitution content with metadata
- * @throws Error if file not found or GitHub API fails
- *
- * @example
- * const constitution = await fetchConstitutionContent({
- *   owner: 'myorg',
- *   repo: 'myrepo',
- * });
- */
-export async function fetchConstitutionContent(
-  params: ConstitutionFetchParams
-): Promise<ConstitutionContent> {
-  const { owner, repo, branch = 'main' } = params;
+function getValidatedToken(): string {
+  const token = process.env.GITHUB_TOKEN;
 
-  // Use custom TEST_MODE variable since Next.js always runs in development mode with npm run dev
-  const isTestEnvironment = process.env.TEST_MODE === 'true';
+  if (!token) {
+    throw new Error('GITHUB_TOKEN not configured');
+  }
+  if (token.includes('test') || token.includes('placeholder')) {
+    throw new Error('GITHUB_TOKEN is using a placeholder value');
+  }
 
-  if (isTestEnvironment) {
-    // Return mock content for E2E tests
-    return {
-      content: `# Project Constitution
+  return token;
+}
+
+const MOCK_CONSTITUTION_CONTENT = `# Project Constitution
 
 This is mock content for the constitution in test mode.
 
@@ -60,26 +36,27 @@ This is mock content for the constitution in test mode.
 
 \`\`\`typescript
 const example = 'mock constitution example';
-\`\`\``,
+\`\`\``;
+
+export async function fetchConstitutionContent(
+  params: ConstitutionFetchParams
+): Promise<ConstitutionContent> {
+  const { owner, repo, branch = 'main' } = params;
+
+  // TEST_MODE is custom since Next.js always runs in development mode with `bun run dev`
+  if (process.env.TEST_MODE === 'true') {
+    return {
+      content: MOCK_CONSTITUTION_CONTENT,
       sha: 'mock-sha-' + Date.now(),
       path: CONSTITUTION_PATH,
       updatedAt: new Date().toISOString(),
     };
   }
 
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  if (!githubToken) {
-    throw new Error('GITHUB_TOKEN not configured');
-  }
-
-  if (githubToken.includes('test') || githubToken.includes('placeholder')) {
-    throw new Error('GITHUB_TOKEN is using a placeholder value');
-  }
+  const token = getValidatedToken();
+  const octokit = new Octokit({ auth: token });
 
   try {
-    const octokit = new Octokit({ auth: githubToken });
-
     const response = await octokit.repos.getContent({
       owner,
       repo,
@@ -87,12 +64,10 @@ const example = 'mock constitution example';
       ref: branch,
     });
 
-    // Check if response contains content (not a directory)
     if (!('content' in response.data) || !response.data.content) {
       throw new Error('Constitution file not found - response does not contain content');
     }
 
-    // Decode base64 content
     const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
 
     return {
@@ -102,7 +77,6 @@ const example = 'mock constitution example';
       updatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    // Re-throw with more context
     if (error instanceof Error) {
       if (error.message.includes('Not Found')) {
         throw new Error(`Constitution file not found at ${CONSTITUTION_PATH}`);
@@ -116,13 +90,6 @@ const example = 'mock constitution example';
   }
 }
 
-/**
- * Updates constitution content in GitHub repository
- *
- * @param params - Update parameters including content and optional commit message
- * @returns Commit SHA and update timestamp
- * @throws Error if update fails
- */
 export async function updateConstitutionContent(params: {
   owner: string;
   repo: string;
@@ -133,14 +100,8 @@ export async function updateConstitutionContent(params: {
 }): Promise<{ commitSha: string; updatedAt: string }> {
   const { owner, repo, branch = 'main', content, sha, commitMessage } = params;
 
-  const githubToken = process.env.GITHUB_TOKEN;
-
-  if (!githubToken) {
-    throw new Error('GITHUB_TOKEN not configured');
-  }
-
-  const octokit = new Octokit({ auth: githubToken });
-
+  const token = getValidatedToken();
+  const octokit = new Octokit({ auth: token });
   const message = commitMessage || 'docs(constitution): Update project constitution';
 
   try {

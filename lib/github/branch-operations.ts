@@ -1,6 +1,5 @@
 import { Octokit } from '@octokit/rest';
 
-// Re-export types from contracts
 export type {
   CreateBranchFromSourceInput,
   CreateBranchResult,

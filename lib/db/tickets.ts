@@ -44,7 +44,6 @@ export async function getTicketsByStage(
     // No orderBy here - we'll sort per-stage after grouping
   });
 
-  // Group tickets by stage with new stage names
   const grouped = getAllStages().reduce(
     (acc, stage) => {
       acc[stage] = [];
@@ -53,46 +52,44 @@ export async function getTicketsByStage(
     {} as Record<Stage, TicketWithVersion[]>
   );
 
-  tickets.forEach((ticket) => {
-    if (ticket.stage in grouped) {
-      grouped[ticket.stage as Stage].push({
-        id: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-        ticketKey: ticket.ticketKey,
-        title: ticket.title,
-        description: ticket.description,
-        stage: ticket.stage as Stage,
-        version: ticket.version,
-        projectId: ticket.projectId,
-        branch: ticket.branch,
-        previewUrl: ticket.previewUrl,
-        autoMode: ticket.autoMode,
-        clarificationPolicy: ticket.clarificationPolicy,
-        workflowType: ticket.workflowType,
-        attachments: ticket.attachments,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
-        project: {
-          clarificationPolicy: ticket.project.clarificationPolicy,
-          githubOwner: ticket.project.githubOwner,
-          githubRepo: ticket.project.githubRepo,
-        },
-      });
-    }
-  });
+  for (const ticket of tickets) {
+    const stage = ticket.stage as Stage;
+    if (!(stage in grouped)) continue;
 
-  // Sort tickets per stage: INBOX by ticketNumber ASC, others by updatedAt DESC
-  getAllStages().forEach((stage) => {
+    grouped[stage].push({
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      ticketKey: ticket.ticketKey,
+      title: ticket.title,
+      description: ticket.description,
+      stage,
+      version: ticket.version,
+      projectId: ticket.projectId,
+      branch: ticket.branch,
+      previewUrl: ticket.previewUrl,
+      autoMode: ticket.autoMode,
+      clarificationPolicy: ticket.clarificationPolicy,
+      workflowType: ticket.workflowType,
+      attachments: ticket.attachments,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+      project: {
+        clarificationPolicy: ticket.project.clarificationPolicy,
+        githubOwner: ticket.project.githubOwner,
+        githubRepo: ticket.project.githubRepo,
+      },
+    });
+  }
+
+  for (const stage of getAllStages()) {
     if (stage === 'INBOX') {
-      // INBOX: sort by ticketNumber ascending (oldest first, newest last)
       grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
     } else {
-      // Other stages: sort by updatedAt descending (most recently updated first)
       grouped[stage].sort((a, b) => {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
     }
-  });
+  }
 
   return grouped;
 }
@@ -188,8 +185,7 @@ export async function getTicketsWithJobs(projectId: number) {
     // No orderBy here - we'll sort per-stage after grouping
   });
 
-  // Group tickets by stage with new stage names
-  const grouped = getAllStages().reduce(
+  const rawByStage = getAllStages().reduce(
     (acc, stage) => {
       acc[stage] = [];
       return acc;
@@ -197,8 +193,7 @@ export async function getTicketsWithJobs(projectId: number) {
     {} as Record<Stage, typeof tickets>
   );
 
-  // Transform tickets to TicketWithVersion format (with jobs for deployment eligibility)
-  const groupedTickets = getAllStages().reduce(
+  const ticketsByStage = getAllStages().reduce(
     (acc, stage) => {
       acc[stage] = [];
       return acc;
@@ -206,56 +201,52 @@ export async function getTicketsWithJobs(projectId: number) {
     {} as Record<Stage, TicketWithVersion[]>
   );
 
-  tickets.forEach((ticket) => {
-    if (ticket.stage in groupedTickets) {
-      groupedTickets[ticket.stage as Stage].push({
-        id: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-        ticketKey: ticket.ticketKey,
-        title: ticket.title,
-        description: ticket.description,
-        stage: ticket.stage as Stage,
-        version: ticket.version,
-        projectId: ticket.projectId,
-        branch: ticket.branch,
-        previewUrl: ticket.previewUrl,
-        autoMode: ticket.autoMode,
-        clarificationPolicy: ticket.clarificationPolicy,
-        workflowType: ticket.workflowType,
-        attachments: ticket.attachments,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
-        project: ticket.project,
-        // Add jobs for deployment eligibility check
-        jobs: ticket.jobs.map((job) => ({
-          status: job.status,
-          command: job.command,
-          createdAt: job.createdAt,
-        })),
-      });
-      // Keep original tickets with jobs for job map
-      grouped[ticket.stage as Stage].push(ticket);
-    }
-  });
+  for (const ticket of tickets) {
+    const stage = ticket.stage as Stage;
+    if (!(stage in ticketsByStage)) continue;
 
-  // Sort tickets per stage: INBOX by ticketNumber ASC, others by updatedAt DESC
-  getAllStages().forEach((stage) => {
+    ticketsByStage[stage].push({
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      ticketKey: ticket.ticketKey,
+      title: ticket.title,
+      description: ticket.description,
+      stage,
+      version: ticket.version,
+      projectId: ticket.projectId,
+      branch: ticket.branch,
+      previewUrl: ticket.previewUrl,
+      autoMode: ticket.autoMode,
+      clarificationPolicy: ticket.clarificationPolicy,
+      workflowType: ticket.workflowType,
+      attachments: ticket.attachments,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+      project: ticket.project,
+      jobs: ticket.jobs.map((job) => ({
+        status: job.status,
+        command: job.command,
+        createdAt: job.createdAt,
+      })),
+    });
+    rawByStage[stage].push(ticket);
+  }
+
+  for (const stage of getAllStages()) {
     if (stage === 'INBOX') {
-      // INBOX: sort by ticketNumber ascending (oldest first, newest last)
-      groupedTickets[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
-      grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+      ticketsByStage[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+      rawByStage[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
     } else {
-      // Other stages: sort by updatedAt descending (most recently updated first)
-      groupedTickets[stage].sort((a, b) => {
+      ticketsByStage[stage].sort((a, b) => {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
-      grouped[stage].sort((a, b) => {
+      rawByStage[stage].sort((a, b) => {
         return b.updatedAt.getTime() - a.updatedAt.getTime();
       });
     }
-  });
+  }
 
-  return { ticketsByStage: groupedTickets, ticketsWithJobs: grouped };
+  return { ticketsByStage, ticketsWithJobs: rawByStage };
 }
 
 /**

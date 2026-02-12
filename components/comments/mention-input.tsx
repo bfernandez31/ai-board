@@ -1,19 +1,3 @@
-/**
- * MentionInput Component
- *
- * Textarea with @ detection and autocomplete for user mentions,
- * # detection for ticket references, and / detection for commands.
- * Handles:
- * - @ symbol detection at word boundaries (user mentions)
- * - # symbol detection at word boundaries (ticket references)
- * - / symbol detection after @ai-board mention (commands)
- * - Keyboard navigation (Arrow Up/Down, Enter, Escape)
- * - Mouse selection
- * - Insertion at cursor position
- * - Multiple autocomplete types support
- * - AI-BOARD availability status and tooltips
- */
-
 'use client';
 
 import { useState, useRef, useMemo, useCallback, KeyboardEvent, ChangeEvent, useEffect } from 'react';
@@ -419,102 +403,34 @@ export function MentionInput({
     }
   };
 
-  /**
-   * Handle user selection (mouse or keyboard)
-   */
+  const insertAtCursor = (text: string) => {
+    if (!textareaRef.current || triggerPosition === null) return;
+    const cursorPos = textareaRef.current.selectionStart;
+    const newValue =
+      value.substring(0, triggerPosition) + text + ' ' + value.substring(cursorPos);
+    onChange(newValue);
+    setAutocompleteType('none');
+    setSearchQuery('');
+    setTriggerPosition(null);
+    const newCursorPos = triggerPosition + text.length + 1;
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.focus();
+      }
+    }, 0);
+  };
+
   const handleSelectUser = (user: ProjectMember) => {
-    if (!textareaRef.current || triggerPosition === null) return;
-
-    const currentCursorPos = textareaRef.current.selectionStart;
-    const mention = formatMention(user.id, user.name || user.email);
-
-    // Replace from @ to cursor with mention
-    const newValue =
-      value.substring(0, triggerPosition) +
-      mention +
-      ' ' + // Add space after mention
-      value.substring(currentCursorPos);
-
-    onChange(newValue);
-
-    // Close autocomplete
-    setAutocompleteType('none');
-    setSearchQuery('');
-    setTriggerPosition(null);
-
-    // Position cursor after mention + space
-    const newCursorPos = triggerPosition + mention.length + 1;
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        textareaRef.current.focus();
-      }
-    }, 0);
+    insertAtCursor(formatMention(user.id, user.name || user.email));
   };
 
-  /**
-   * Handle ticket selection (mouse or keyboard)
-   */
   const handleSelectTicket = (ticket: SearchResult) => {
-    if (!textareaRef.current || triggerPosition === null) return;
-
-    const currentCursorPos = textareaRef.current.selectionStart;
-    const ticketRef = `#${ticket.ticketKey}`;
-
-    // Replace from # to cursor with ticket reference
-    const newValue =
-      value.substring(0, triggerPosition) +
-      ticketRef +
-      ' ' + // Add space after ticket reference
-      value.substring(currentCursorPos);
-
-    onChange(newValue);
-
-    // Close autocomplete
-    setAutocompleteType('none');
-    setSearchQuery('');
-    setTriggerPosition(null);
-
-    // Position cursor after ticket reference + space
-    const newCursorPos = triggerPosition + ticketRef.length + 1;
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        textareaRef.current.focus();
-      }
-    }, 0);
+    insertAtCursor(`#${ticket.ticketKey}`);
   };
 
-  /**
-   * Handle command selection (mouse or keyboard)
-   */
   const handleSelectCommand = (command: AIBoardCommand) => {
-    if (!textareaRef.current || triggerPosition === null) return;
-
-    const currentCursorPos = textareaRef.current.selectionStart;
-
-    // Replace from / to cursor with command name
-    const newValue =
-      value.substring(0, triggerPosition) +
-      command.name +
-      ' ' + // Add space after command
-      value.substring(currentCursorPos);
-
-    onChange(newValue);
-
-    // Close autocomplete
-    setAutocompleteType('none');
-    setSearchQuery('');
-    setTriggerPosition(null);
-
-    // Position cursor after command + space
-    const newCursorPos = triggerPosition + command.name.length + 1;
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        textareaRef.current.focus();
-      }
-    }, 0);
+    insertAtCursor(command.name);
   };
 
   /**

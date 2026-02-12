@@ -165,28 +165,6 @@ const buildGitHubBranchUrl = (
   return `https://github.com/${owner}/${repo}/compare/main...${encodeURIComponent(branch)}`;
 };
 
-/**
- * TicketDetailModal Component
- *
- * Displays full ticket details in a modal dialog with inline editing capabilities.
- * The modal is responsive:
- * - Mobile (<768px): Full-screen layout
- * - Desktop (≥768px): Centered modal with max-width
- *
- * Features:
- * - Display ticket title, description, stage, and dates
- * - Inline editing for title and description
- * - Optimistic updates with rollback on error
- * - Version-based concurrency control
- * - Close via button, ESC key, or clicking outside
- * - Keyboard accessible with focus trap
- * - Dark theme styling consistent with app
- *
- * @param ticket - The ticket object to display, or null to hide content
- * @param open - Boolean controlling modal visibility
- * @param onOpenChange - Callback for state changes (e.g., when user closes modal)
- * @param onUpdate - Callback to refresh parent board state after successful update
- */
 export function TicketDetailModal({
   ticket,
   open,
@@ -252,36 +230,23 @@ export function TicketDetailModal({
     setActiveTab(initialTab);
   }, [open, initialTab]);
 
-  // Jobs are now passed from parent (board) for real-time polling updates
-  // No need to fetch locally - parent's useJobPolling provides live updates
-
-  // Check if Stats tab should be visible (only when jobs exist)
   const hasJobs = fullJobs.length > 0;
 
-  // Keyboard shortcuts for tab navigation
   useEffect(() => {
     if (!open) return;
 
+    const tabKeys: Record<string, typeof activeTab> = {
+      '1': 'details',
+      '2': 'comments',
+      '3': 'files',
+      ...(hasJobs ? { '4': 'stats' } : {}),
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+1 or Ctrl+1 for Details tab
-      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+      const tab = (e.metaKey || e.ctrlKey) ? tabKeys[e.key] : undefined;
+      if (tab) {
         e.preventDefault();
-        setActiveTab('details');
-      }
-      // Cmd+2 or Ctrl+2 for Conversation tab
-      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
-        e.preventDefault();
-        setActiveTab('comments');
-      }
-      // Cmd+3 or Ctrl+3 for Files tab
-      if ((e.metaKey || e.ctrlKey) && e.key === '3') {
-        e.preventDefault();
-        setActiveTab('files');
-      }
-      // Cmd+4 or Ctrl+4 for Stats tab (only when jobs exist)
-      if ((e.metaKey || e.ctrlKey) && e.key === '4' && hasJobs) {
-        e.preventDefault();
-        setActiveTab('stats');
+        setActiveTab(tab);
       }
     };
 
@@ -289,36 +254,17 @@ export function TicketDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, hasJobs]);
 
-  // Check if "View Specification" button should be visible
-  const hasCompletedSpecifyJob = useMemo(() => {
-    if (!localTicket?.branch || jobs.length === 0) return false;
-    return jobs.some(
-      (job) => job.command === 'specify' && job.status === 'COMPLETED'
-    );
+  const completedJobs = useMemo(() => {
+    if (!localTicket?.branch || jobs.length === 0) {
+      return { specify: false, plan: false, implement: false };
+    }
+    const has = (cmd: string) => jobs.some(j => j.command === cmd && j.status === 'COMPLETED');
+    return { specify: has('specify'), plan: has('plan'), implement: has('implement') };
   }, [localTicket?.branch, jobs]);
 
-  // Check if "View Plan" button should be visible
-  const hasCompletedPlanJob = useMemo(() => {
-    if (!localTicket?.branch || jobs.length === 0) return false;
-    return jobs.some(
-      (job) => job.command === 'plan' && job.status === 'COMPLETED'
-    );
-  }, [localTicket?.branch, jobs]);
-
-  // Check if "View Summary" button should be visible
-  const hasCompletedImplementJob = useMemo(() => {
-    if (!localTicket?.branch || jobs.length === 0) return false;
-    return jobs.some(
-      (job) => job.command === 'implement' && job.status === 'COMPLETED'
-    );
-  }, [localTicket?.branch, jobs]);
-
-  // Both plan and tasks buttons have the same visibility logic
-  // (tasks.md is generated at the same time as plan.md by the plan job)
-  const showPlanButton = localTicket?.workflowType === 'FULL' && hasCompletedPlanJob;
-  const showTasksButton = showPlanButton; // Same rule: both docs created by plan job
-  // Summary button visibility: FULL workflow with completed implement job
-  const showSummaryButton = localTicket?.workflowType === 'FULL' && hasCompletedImplementJob;
+  const showPlanButton = localTicket?.workflowType === 'FULL' && completedJobs.plan;
+  const showTasksButton = showPlanButton;
+  const showSummaryButton = localTicket?.workflowType === 'FULL' && completedJobs.implement;
 
   // Full clone option visibility: Only for stages with branch (SPECIFY, PLAN, BUILD, VERIFY)
   const showFullClone = localTicket?.stage && ['SPECIFY', 'PLAN', 'BUILD', 'VERIFY'].includes(localTicket.stage);
@@ -438,14 +384,15 @@ export function TicketDetailModal({
     }
   };
 
-  // Save handler for title
-  const handleSaveTitle = async (newTitle: string): Promise<void> => {
+  const saveTicketField = async (
+    fieldName: string,
+    fieldValue: string,
+    successMessage: string
+  ): Promise<void> => {
     if (!localTicket) return;
 
     const originalTicket = { ...localTicket };
-
-    // Optimistic update
-    setLocalTicket({ ...localTicket, title: newTitle });
+    setLocalTicket({ ...localTicket, [fieldName]: fieldValue } as TicketData);
 
     try {
       const response = await fetch(
@@ -454,7 +401,7 @@ export function TicketDetailModal({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: newTitle,
+            [fieldName]: fieldValue,
             version: localTicket.version,
           }),
         }
@@ -464,90 +411,52 @@ export function TicketDetailModal({
         const error = await response.json();
 
         if (response.status === 409) {
-          // Conflict: ticket modified by another user
-          // Revert optimistic update immediately
           setLocalTicket(originalTicket);
-
           toast({
             variant: 'destructive',
             title: 'Conflict',
-            description:
-              'Ticket was modified by another user. Please refresh to see the latest changes.',
+            description: 'Ticket was modified by another user. Please refresh to see the latest changes.',
           });
-
-          // Refresh ticket from server to get the actual current state
           refreshTicketFromServer();
-          return; // Don't throw, just return
-        } else if (response.status === 400) {
-          // Validation error
-          toast({
-            variant: 'destructive',
-            title: 'Validation Error',
-            description: error.issues?.[0]?.message || 'Invalid title',
-          });
-
-          // Rollback after short delay to allow optimistic state to show
-          setTimeout(() => {
-            setLocalTicket(originalTicket);
-          }, 500);
-          return; // Don't throw, just return
-        } else {
-          // Network or other error
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description:
-              'Failed to save changes while offline. Changes reverted.',
-          });
-
-          // Rollback after short delay to allow optimistic state to show
-          setTimeout(() => {
-            setLocalTicket(originalTicket);
-          }, 500);
-          return; // Don't throw, just return
+          return;
         }
+
+        toast({
+          variant: 'destructive',
+          title: response.status === 400 ? 'Validation Error' : 'Error',
+          description: response.status === 400
+            ? (error.issues?.[0]?.message || `Invalid ${fieldName}`)
+            : 'Failed to save changes while offline. Changes reverted.',
+        });
+        setTimeout(() => setLocalTicket(originalTicket), 500);
+        return;
       }
 
       const updatedTicket = await response.json();
-
       const normalizedTicket: TicketData = {
         ...updatedTicket,
         createdAt: new Date(updatedTicket.createdAt),
         updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve fields that API doesn't return on updates
         project: localTicket.project,
         attachments: localTicket.attachments,
-        // Ensure ticket number and key are preserved (from response or fallback to current)
         ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
         ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
       };
 
-      // Update local ticket with all fields including new version
       setLocalTicket(normalizedTicket);
-
-      toast({
-        title: 'Success',
-        description: 'Ticket updated',
-      });
-
-      // Notify parent to refresh board
-      if (onUpdate) {
-        onUpdate(normalizedTicket);
-      }
-    } catch (error) {
-      // Network error (e.g., offline, fetch failed completely)
+      toast({ title: 'Success', description: successMessage });
+      onUpdate?.(normalizedTicket);
+    } catch {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to save changes while offline. Changes reverted.',
       });
-
-      // Rollback after short delay to allow optimistic state to show
-      setTimeout(() => {
-        setLocalTicket(originalTicket);
-      }, 500);
+      setTimeout(() => setLocalTicket(originalTicket), 500);
     }
   };
+
+  const handleSaveTitle = (newTitle: string) => saveTicketField('title', newTitle, 'Ticket updated');
 
   // Save handler for clarification policy
   const handleSavePolicy = async (
@@ -666,118 +575,7 @@ export function TicketDetailModal({
     }
   };
 
-  // Save handler for description
-  const handleSaveDescription = async (
-    newDescription: string
-  ): Promise<void> => {
-    if (!localTicket) return;
-
-    const originalTicket = { ...localTicket };
-
-    // Optimistic update
-    setLocalTicket({ ...localTicket, description: newDescription });
-
-    try {
-      const response = await fetch(
-        `/api/projects/${projectId}/tickets/${localTicket.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: newDescription,
-            version: localTicket.version,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-
-        if (response.status === 409) {
-          // Conflict: ticket modified by another user
-          // Revert optimistic update immediately
-          setLocalTicket(originalTicket);
-
-          toast({
-            variant: 'destructive',
-            title: 'Conflict',
-            description:
-              'Ticket was modified by another user. Please refresh to see the latest changes.',
-          });
-
-          // Refresh ticket from server to get the actual current state
-          refreshTicketFromServer();
-          return; // Don't throw, just return
-        } else if (response.status === 400) {
-          // Validation error
-          toast({
-            variant: 'destructive',
-            title: 'Validation Error',
-            description: error.issues?.[0]?.message || 'Invalid description',
-          });
-
-          // Rollback after short delay to allow optimistic state to show
-          setTimeout(() => {
-            setLocalTicket(originalTicket);
-          }, 500);
-          return; // Don't throw, just return
-        } else {
-          // Network or other error
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description:
-              'Failed to save changes while offline. Changes reverted.',
-          });
-
-          // Rollback after short delay to allow optimistic state to show
-          setTimeout(() => {
-            setLocalTicket(originalTicket);
-          }, 500);
-          return; // Don't throw, just return
-        }
-      }
-
-      const updatedTicket = await response.json();
-
-      const normalizedTicket: TicketData = {
-        ...updatedTicket,
-        createdAt: new Date(updatedTicket.createdAt),
-        updatedAt: new Date(updatedTicket.updatedAt),
-        // Preserve fields that API doesn't return on updates
-        project: localTicket.project,
-        attachments: localTicket.attachments,
-        // Ensure ticket number and key are preserved (from response or fallback to current)
-        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
-        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
-      };
-
-      // Update local ticket with all fields including new version
-      setLocalTicket(normalizedTicket);
-
-      toast({
-        title: 'Success',
-        description: 'Ticket updated',
-      });
-
-      // Notify parent to refresh board
-      if (onUpdate) {
-        onUpdate(normalizedTicket);
-      }
-    } catch (error) {
-      // Network error (e.g., offline, fetch failed completely)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save changes while offline. Changes reverted.',
-      });
-
-      // Rollback after short delay to allow optimistic state to show
-      setTimeout(() => {
-        setLocalTicket(originalTicket);
-      }, 500);
-    }
-  };
+  const handleSaveDescription = (newDescription: string) => saveTicketField('description', newDescription, 'Ticket updated');
 
   // Initialize inline edit hooks
   const titleEdit = useTicketEdit({
@@ -1201,11 +999,11 @@ export function TicketDetailModal({
             <div className="flex-shrink-0 pt-4 space-y-4 bg-[#181825]">
               {/* Action buttons section - compact horizontal layout */}
               {/* Show section when any button should be visible (documents OR comparisons) */}
-              {(hasCompletedSpecifyJob || comparisonCheck?.hasComparisons) && (
+              {(completedJobs.specify || comparisonCheck?.hasComparisons) && (
                 <div className="border-t-2 border-[#313244]/50 pt-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Document buttons - only for FULL workflow with completed specify job */}
-                    {hasCompletedSpecifyJob && (
+                    {completedJobs.specify && (
                       <Button
                         onClick={() => {
                           setDocViewerType('spec');

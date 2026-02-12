@@ -7,11 +7,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 import { createGitHubClient } from '@/app/lib/github/client';
 import { createBranchFromSource, generateBranchName } from '@/lib/github/branch-operations';
+import type { Ticket } from '@prisma/client';
 
-// Schema for validating ticket ID parameter
 const TicketIdSchema = z.string().regex(/^\d+$/, 'Ticket ID must be a positive integer');
 
-// Schema for validating request body
 const DuplicateRequestSchema = z.object({
   mode: z.enum(['simple', 'full']).optional().default('simple'),
 });
@@ -76,77 +75,56 @@ export async function POST(
     await verifyProjectAccess(projectId);
 
     if (mode === 'full') {
-      // Full clone: preserve stage, copy jobs, create new branch
       return await handleFullClone(projectId, ticketId);
-    } else {
-      // Simple copy: existing behavior
-      return await handleSimpleCopy(projectId, ticketId);
     }
+    return await handleSimpleCopy(projectId, ticketId);
   } catch (error) {
-    // Handle specific errors
+    const knownErrors: Record<string, { code: string; status: number }> = {
+      'Unauthorized': { code: 'AUTH_ERROR', status: 401 },
+      'Project not found': { code: 'PROJECT_NOT_FOUND', status: 404 },
+      'Ticket not found': { code: 'TICKET_NOT_FOUND', status: 404 },
+    };
+
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json(
-          { error: 'Unauthorized', code: 'AUTH_ERROR' },
-          { status: 401 }
-        );
-      }
-      if (error.message === 'Project not found') {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-      if (error.message === 'Ticket not found') {
-        return NextResponse.json(
-          { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-          { status: 404 }
-        );
+      const known = knownErrors[error.message];
+      if (known) {
+        return NextResponse.json({ error: error.message, code: known.code }, { status: known.status });
       }
     }
 
     console.error('Error duplicating ticket:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to duplicate ticket',
-        code: 'DATABASE_ERROR',
-      },
+      { error: 'Failed to duplicate ticket', code: 'DATABASE_ERROR' },
       { status: 500 }
     );
   }
 }
 
-/**
- * Handle simple copy (existing behavior)
- * Creates copy in INBOX with "Copy of " prefix, no branch, no jobs
- */
+function serializeTicket(ticket: Ticket) {
+  return {
+    id: ticket.id,
+    ticketNumber: ticket.ticketNumber,
+    ticketKey: ticket.ticketKey,
+    title: ticket.title,
+    description: ticket.description,
+    stage: ticket.stage,
+    version: ticket.version,
+    projectId: ticket.projectId,
+    branch: ticket.branch,
+    previewUrl: ticket.previewUrl,
+    autoMode: ticket.autoMode,
+    workflowType: ticket.workflowType,
+    attachments: ticket.attachments,
+    clarificationPolicy: ticket.clarificationPolicy,
+    createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
+  };
+}
+
 async function handleSimpleCopy(projectId: number, ticketId: number): Promise<NextResponse> {
   const newTicket = await duplicateTicket(projectId, ticketId);
-
-  // Revalidate the project board page
   revalidatePath(`/projects/${projectId}/board`);
-
-  return NextResponse.json(
-    {
-      id: newTicket.id,
-      ticketNumber: newTicket.ticketNumber,
-      ticketKey: newTicket.ticketKey,
-      title: newTicket.title,
-      description: newTicket.description,
-      stage: newTicket.stage,
-      version: newTicket.version,
-      projectId: newTicket.projectId,
-      branch: newTicket.branch,
-      previewUrl: newTicket.previewUrl,
-      autoMode: newTicket.autoMode,
-      workflowType: newTicket.workflowType,
-      attachments: newTicket.attachments,
-      clarificationPolicy: newTicket.clarificationPolicy,
-      createdAt: newTicket.createdAt.toISOString(),
-      updatedAt: newTicket.updatedAt.toISOString(),
-    },
-    { status: 201 }
-  );
+  return NextResponse.json(serializeTicket(newTicket), { status: 201 });
 }
 
 /**
@@ -243,27 +221,11 @@ async function handleFullClone(projectId: number, ticketId: number): Promise<Nex
   // Clone the ticket with jobs, passing the ticket number to avoid double increment
   const newTicket = await fullCloneTicket(projectId, ticketId, newBranchName, nextTicketNumber);
 
-  // Revalidate the project board page
   revalidatePath(`/projects/${projectId}/board`);
 
   return NextResponse.json(
     {
-      id: newTicket.id,
-      ticketNumber: newTicket.ticketNumber,
-      ticketKey: newTicket.ticketKey,
-      title: newTicket.title,
-      description: newTicket.description,
-      stage: newTicket.stage,
-      version: newTicket.version,
-      projectId: newTicket.projectId,
-      branch: newTicket.branch,
-      previewUrl: newTicket.previewUrl,
-      autoMode: newTicket.autoMode,
-      workflowType: newTicket.workflowType,
-      attachments: newTicket.attachments,
-      clarificationPolicy: newTicket.clarificationPolicy,
-      createdAt: newTicket.createdAt.toISOString(),
-      updatedAt: newTicket.updatedAt.toISOString(),
+      ...serializeTicket(newTicket),
       jobs: newTicket.jobs.map((job) => ({
         id: job.id,
         command: job.command,
