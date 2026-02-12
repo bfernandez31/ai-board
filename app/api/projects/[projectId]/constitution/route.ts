@@ -1,37 +1,20 @@
-/**
- * Constitution API Routes
- *
- * GET /api/projects/[projectId]/constitution
- * - Fetches the constitution markdown file from the project's GitHub repository
- *
- * PUT /api/projects/[projectId]/constitution
- * - Updates the constitution content in the project's GitHub repository
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { fetchConstitutionContent, updateConstitutionContent } from '@/lib/github/constitution-fetcher';
 import { validateMarkdown } from '@/app/lib/git/validate';
 import {
-  CONSTITUTION_PATH,
   type ConstitutionContent,
   type ConstitutionNotFound,
   type ConstitutionUpdateResponse,
   type ConstitutionError,
 } from '@/lib/types/constitution';
 
-/**
- * Zod schema for validating projectId path parameter
- */
 const ProjectIdSchema = z
   .string()
   .regex(/^\d+$/, 'Project ID must be a number')
   .transform((val) => parseInt(val, 10));
 
-/**
- * Zod schema for constitution update request
- */
 const ConstitutionUpdateSchema = z.object({
   content: z
     .string()
@@ -43,28 +26,15 @@ const ConstitutionUpdateSchema = z.object({
     .optional(),
 });
 
-/**
- * GET /api/projects/[projectId]/constitution
- *
- * Fetches the constitution content from the project's GitHub repository.
- *
- * @returns ConstitutionContent on success, ConstitutionNotFound if file doesn't exist
- */
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse<ConstitutionContent | ConstitutionNotFound | ConstitutionError>> {
   try {
-    const params = await context.params;
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
-    // Validate projectId
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
     if (!projectIdResult.success) {
-      console.error('[constitution/GET] Invalid project ID:', {
-        projectId: projectIdString,
-        error: projectIdResult.error.message,
-      });
       return NextResponse.json(
         { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
         { status: 400 }
@@ -73,43 +43,24 @@ export async function GET(
 
     const projectId = projectIdResult.data;
 
-    // Verify project access (owner or member)
     let project;
     try {
       project = await verifyProjectAccess(projectId);
     } catch (error) {
       if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
       }
-      // Unauthorized
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
     }
 
-    // Fetch constitution content from GitHub
     try {
       const constitution = await fetchConstitutionContent({
         owner: project.githubOwner,
         repo: project.githubRepo,
       });
-
-      console.log('[constitution/GET] Successfully fetched constitution:', {
-        projectId,
-        contentLength: constitution.content.length,
-      });
-
       return NextResponse.json(constitution);
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {
-        console.log('[constitution/GET] Constitution file not found:', {
-          projectId,
-          path: CONSTITUTION_PATH,
-        });
         return NextResponse.json(
           {
             error: 'Constitution file not found',
@@ -130,55 +81,30 @@ export async function GET(
   }
 }
 
-/**
- * PUT /api/projects/[projectId]/constitution
- *
- * Updates the constitution content in the project's GitHub repository.
- *
- * @returns ConstitutionUpdateResponse on success
- */
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse<ConstitutionUpdateResponse | ConstitutionError>> {
   try {
-    const params = await context.params;
-    const { projectId: projectIdString } = params;
+    const { projectId: projectIdString } = await context.params;
 
-    // Validate projectId
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
     if (!projectIdResult.success) {
-      console.error('[constitution/PUT] Invalid project ID:', {
-        projectId: projectIdString,
-        error: projectIdResult.error.message,
-      });
-      return NextResponse.json(
-        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid project ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     const projectId = projectIdResult.data;
 
-    // Verify project access (owner or member)
     let project;
     try {
       project = await verifyProjectAccess(projectId);
     } catch (error) {
       if (error instanceof Error && error.message === 'Project not found') {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
       }
-      // Unauthorized
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
     }
 
-    // Parse and validate request body
     let body;
     try {
       body = await request.json();
@@ -199,11 +125,6 @@ export async function PUT(
         )
         .join('; ');
 
-      console.error('[constitution/PUT] Validation failed:', {
-        projectId,
-        issues: parseResult.error.issues,
-      });
-
       return NextResponse.json(
         { error: fieldErrorMessages || 'Validation error', code: 'VALIDATION_ERROR' },
         { status: 400 }
@@ -212,20 +133,14 @@ export async function PUT(
 
     const { content, commitMessage } = parseResult.data;
 
-    // Validate markdown syntax
     const validation = await validateMarkdown(content);
     if (!validation.valid) {
-      console.error('[constitution/PUT] Invalid markdown:', {
-        projectId,
-        error: validation.error,
-      });
       return NextResponse.json(
         { error: `Invalid markdown: ${validation.error}`, code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
     }
 
-    // First, fetch current constitution to get SHA
     let currentSha: string;
     try {
       const current = await fetchConstitutionContent({
@@ -235,7 +150,6 @@ export async function PUT(
       currentSha = current.sha;
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {
-        // File doesn't exist yet, we can't update it
         return NextResponse.json(
           {
             error: 'Constitution file not found. Create it first using /speckit.constitution command.',
@@ -247,7 +161,6 @@ export async function PUT(
       throw error;
     }
 
-    // Update constitution content
     try {
       const updateParams: Parameters<typeof updateConstitutionContent>[0] = {
         owner: project.githubOwner,
@@ -259,11 +172,6 @@ export async function PUT(
         updateParams.commitMessage = commitMessage;
       }
       const result = await updateConstitutionContent(updateParams);
-
-      console.log('[constitution/PUT] Successfully updated constitution:', {
-        projectId,
-        commitSha: result.commitSha,
-      });
 
       return NextResponse.json({
         success: true,
@@ -289,10 +197,7 @@ export async function PUT(
       throw error;
     }
   } catch (error: unknown) {
-    console.error('[constitution/PUT] Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    console.error('[constitution/PUT] Error:', error);
+    return NextResponse.json({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

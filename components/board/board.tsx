@@ -68,18 +68,19 @@ interface BoardProps {
   activeCleanupJobId?: number | null; // T063-T064: Active cleanup job ID for lock banner
 }
 
-/**
- * BoardContent Component - Internal Board Logic
- *
- * Main kanban board with drag-and-drop functionality
- * - Optimistic UI updates
- * - Version-based conflict detection
- * - Sequential stage validation
- * - Touch and pointer support
- * - Project-scoped API calls
- * - Real-time job status updates
- */
-function BoardContent({
+/** Default merge: apply server response fields to optimistic ticket */
+function mergeTransitionFields(serverData: Record<string, any>, current: TicketWithVersion): TicketWithVersion {
+  return {
+    ...current,
+    stage: serverData.stage || current.stage,
+    version: serverData.version || current.version,
+    branch: serverData.branch !== undefined ? serverData.branch : current.branch,
+    workflowType: serverData.workflowType || current.workflowType,
+    updatedAt: serverData.updatedAt || current.updatedAt,
+  };
+}
+
+export function Board({
   ticketsByStage: initialTicketsByStage,
   projectId,
   initialJobs = new Map(),
@@ -406,6 +407,73 @@ function BoardContent({
     }
   }, [getTicketJobs]);
 
+  // Shared transition helper: optimistic update → API call → merge/rollback
+  const performTransition = useCallback(
+    async (
+      ticket: TicketWithVersion,
+      targetStage: Stage,
+      config: {
+        mergeServerData?: (serverData: Record<string, any>, current: TicketWithVersion) => TicketWithVersion;
+        onApiError?: (error: Record<string, any>, status: number) => void;
+        successToast: { title: string; description: string };
+        networkErrorToast: { title: string; description: string };
+      }
+    ) => {
+      const originalStage = ticket.stage;
+      const originalVersion = ticket.version;
+
+      const updatedTickets = updateTicketStageOptimistically(
+        allTickets, ticket.id, targetStage
+      );
+      queryClient.setQueryData(queryKeys.projects.tickets(projectId), updatedTickets);
+
+      const revert = () => {
+        const reverted = revertTicketStage(updatedTickets, ticket.id, originalStage, originalVersion);
+        queryClient.setQueryData(queryKeys.projects.tickets(projectId), reverted);
+      };
+
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetStage }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          revert();
+          if (config.onApiError) {
+            config.onApiError(error, response.status);
+          } else {
+            toast({
+              variant: 'destructive',
+              title: 'Failed to update ticket',
+              description: error.error || error.message || 'An error occurred.',
+            });
+          }
+          return;
+        }
+
+        const serverData = await response.json();
+        const merge = config.mergeServerData ?? mergeTransitionFields;
+        const finalTickets = updatedTickets.map((t) =>
+          t.id === ticket.id ? merge(serverData, t) : t
+        );
+        queryClient.setQueryData(queryKeys.projects.tickets(projectId), finalTickets);
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.jobsStatus(projectId) });
+        toast(config.successToast);
+      } catch (err) {
+        console.error('Transition error:', err);
+        revert();
+        toast({ variant: 'destructive', ...config.networkErrorToast });
+      }
+    },
+    [allTickets, projectId, queryClient, toast]
+  );
+
   // Handle drag end with API call
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -469,65 +537,21 @@ function BoardContent({
         return;
       }
 
-      // Store original state for rollback
-      const originalStage = ticket.stage;
-      const originalVersion = ticket.version;
-
-      // Optimistic update - update cache directly
-      const updatedTickets = updateTicketStageOptimistically(
-        allTickets,
-        ticket.id,
-        targetStage
-      );
-      queryClient.setQueryData(
-        queryKeys.projects.tickets(projectId),
-        updatedTickets
-      );
-
-      // Send update to server using /transition endpoint for all stage changes
-      try {
-        const response = await fetch(
-          `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              targetStage: targetStage,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-
-          // Rollback optimistic update - revert cache
-          const revertedTickets = revertTicketStage(
-            updatedTickets,
-            ticket.id,
-            originalStage,
-            originalVersion
-          );
-          queryClient.setQueryData(
-            queryKeys.projects.tickets(projectId),
-            revertedTickets
-          );
-
-          // Show error message with backend-provided details
-          // T068-T069: Handle 423 Locked response for cleanup in progress
-          if (response.status === 423) {
+      await performTransition(ticket, targetStage, {
+        onApiError: (error, status) => {
+          if (status === 423) {
             toast({
               variant: 'destructive',
               title: 'Transition blocked',
               description: 'Project cleanup is in progress. Please wait for it to complete. You can still update ticket descriptions, documents, and preview deployments.',
             });
-          } else if (response.status === 409) {
+          } else if (status === 409) {
             toast({
               variant: 'destructive',
               title: 'Ticket modified by another user',
               description: 'Please refresh the page and try again.',
             });
-          } else if (response.status === 500 && error.error) {
-            // Display server-provided error message directly
+          } else if (status === 500 && error.error) {
             toast({
               variant: 'destructive',
               title: 'Cannot move ticket',
@@ -537,64 +561,21 @@ function BoardContent({
             toast({
               variant: 'destructive',
               title: 'Failed to update ticket',
-              description:
-                error.error || error.message || 'An error occurred while updating the ticket.',
+              description: error.error || error.message || 'An error occurred while updating the ticket.',
             });
           }
-        } else {
-          // Success - merge server response with optimistic update
-          const serverData = await response.json();
-
-          const finalTickets = updatedTickets.map((t) =>
-            t.id === ticket.id
-              ? {
-                  ...t,
-                  stage: serverData.stage || t.stage,
-                  version: serverData.version || t.version,
-                  branch: serverData.branch !== undefined ? serverData.branch : t.branch,
-                  workflowType: serverData.workflowType || t.workflowType,
-                  updatedAt: serverData.updatedAt || t.updatedAt,
-                }
-              : t
-          );
-          queryClient.setQueryData(
-            queryKeys.projects.tickets(projectId),
-            finalTickets
-          );
-
-          // Invalidate jobs status to resume polling if new job created
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.projects.jobsStatus(projectId),
-          });
-
-          toast({
-            title: 'Ticket updated',
-            description: `Moved to ${targetStage}`,
-          });
-        }
-      } catch (error) {
-        console.error('Error updating ticket:', error);
-
-        // Rollback on network error - revert cache
-        const revertedTickets = revertTicketStage(
-          updatedTickets,
-          ticket.id,
-          originalStage,
-          originalVersion
-        );
-        queryClient.setQueryData(
-          queryKeys.projects.tickets(projectId),
-          revertedTickets
-        );
-
-        toast({
-          variant: 'destructive',
+        },
+        successToast: {
+          title: 'Ticket updated',
+          description: `Moved to ${targetStage}`,
+        },
+        networkErrorToast: {
           title: 'Network error',
           description: 'Could not update ticket. Please check your connection.',
-        });
-      }
+        },
+      });
     },
-    [allTickets, isOnline, toast, projectId, queryClient]
+    [isOnline, toast, performTransition]
   );
 
   // Handle ticket click to open modal
@@ -698,109 +679,17 @@ function BoardContent({
     const { ticket, targetStage } = pendingTransition;
     setPendingTransition(null);
 
-    // Store original state for rollback
-    const originalStage = ticket.stage;
-    const originalVersion = ticket.version;
-
-    // Optimistic update - update cache directly
-    const updatedTickets = updateTicketStageOptimistically(
-      allTickets,
-      ticket.id,
-      targetStage
-    );
-    queryClient.setQueryData(
-      queryKeys.projects.tickets(projectId),
-      updatedTickets
-    );
-
-    // Send update to server using transition endpoint
-    try {
-      const response = await fetch(
-        `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetStage,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-
-        // Rollback optimistic update - revert cache
-        const revertedTickets = revertTicketStage(
-          updatedTickets,
-          ticket.id,
-          originalStage,
-          originalVersion
-        );
-        queryClient.setQueryData(
-          queryKeys.projects.tickets(projectId),
-          revertedTickets
-        );
-
-        // Show error message
-        toast({
-          variant: 'destructive',
-          title: 'Failed to start quick implementation',
-          description:
-            error.message || 'An error occurred while starting the workflow.',
-        });
-      } else {
-        // Success - merge server response with optimistic update
-        const serverData = await response.json();
-
-        const finalTickets = updatedTickets.map((t) =>
-          t.id === ticket.id
-            ? {
-                ...t,
-                stage: serverData.stage || t.stage,
-                version: serverData.version || t.version,
-                branch: serverData.branch !== undefined ? serverData.branch : t.branch,
-                workflowType: serverData.workflowType || t.workflowType,
-                updatedAt: serverData.updatedAt || t.updatedAt,
-              }
-            : t
-        );
-        queryClient.setQueryData(
-          queryKeys.projects.tickets(projectId),
-          finalTickets
-        );
-
-        // Invalidate jobs status to resume polling (new job created for quick-impl)
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.projects.jobsStatus(projectId),
-        });
-
-        toast({
-          title: 'Quick implementation started',
-          description: `Workflow dispatched for ticket ${ticket.ticketKey}`,
-        });
-      }
-    } catch (error) {
-      console.error('Error starting quick-impl:', error);
-
-      // Rollback on network error - revert cache
-      const revertedTickets = revertTicketStage(
-        updatedTickets,
-        ticket.id,
-        originalStage,
-        originalVersion
-      );
-      queryClient.setQueryData(
-        queryKeys.projects.tickets(projectId),
-        revertedTickets
-      );
-
-      toast({
-        variant: 'destructive',
+    await performTransition(ticket, targetStage, {
+      successToast: {
+        title: 'Quick implementation started',
+        description: `Workflow dispatched for ticket ${ticket.ticketKey}`,
+      },
+      networkErrorToast: {
         title: 'Network error',
         description: 'Could not start workflow. Please check your connection.',
-      });
-    }
-  }, [pendingTransition, allTickets, toast, projectId, queryClient]);
+      },
+    });
+  }, [pendingTransition, performTransition]);
 
   // T038: Handle quick-impl cancellation
   const handleQuickImplCancel = useCallback(() => {
@@ -814,108 +703,31 @@ function BoardContent({
     const { ticket, targetStage } = pendingVerifyRollback;
     setPendingVerifyRollback(null);
 
-    // Store original state for rollback
-    const originalStage = ticket.stage;
-    const originalVersion = ticket.version;
-
-    // Optimistic update - update cache directly
-    const updatedTickets = updateTicketStageOptimistically(
-      allTickets,
-      ticket.id,
-      targetStage
-    );
-    queryClient.setQueryData(
-      queryKeys.projects.tickets(projectId),
-      updatedTickets
-    );
-
-    // Send update to server using transition endpoint
-    try {
-      const response = await fetch(
-        `/api/projects/${projectId}/tickets/${ticket.id}/transition`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetStage,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-
-        // Rollback optimistic update - revert cache
-        const revertedTickets = revertTicketStage(
-          updatedTickets,
-          ticket.id,
-          originalStage,
-          originalVersion
-        );
-        queryClient.setQueryData(
-          queryKeys.projects.tickets(projectId),
-          revertedTickets
-        );
-
-        // Show error message
+    await performTransition(ticket, targetStage, {
+      mergeServerData: (serverData, current) => ({
+        ...current,
+        stage: serverData.stage || current.stage,
+        version: serverData.version || current.version,
+        previewUrl: serverData.previewUrl,
+        updatedAt: serverData.updatedAt || current.updatedAt,
+      }),
+      onApiError: (error) => {
         toast({
           variant: 'destructive',
           title: 'Failed to rollback to PLAN',
-          description:
-            error.error || 'An error occurred while rolling back the ticket.',
+          description: error.error || 'An error occurred while rolling back the ticket.',
         });
-      } else {
-        // Success - merge server response with optimistic update
-        const serverData = await response.json();
-
-        const finalTickets = updatedTickets.map((t) =>
-          t.id === ticket.id
-            ? {
-                ...t,
-                stage: serverData.stage || t.stage,
-                version: serverData.version || t.version,
-                previewUrl: serverData.previewUrl,
-                updatedAt: serverData.updatedAt || t.updatedAt,
-              }
-            : t
-        );
-        queryClient.setQueryData(
-          queryKeys.projects.tickets(projectId),
-          finalTickets
-        );
-
-        // Invalidate jobs status to update job list (job was deleted)
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.projects.jobsStatus(projectId),
-        });
-
-        toast({
-          title: 'Ticket rolled back to PLAN',
-          description: `${ticket.ticketKey} has been moved to PLAN stage. Preview URL cleared.`,
-        });
-      }
-    } catch (error) {
-      console.error('Error rolling back to PLAN:', error);
-
-      // Rollback on network error - revert cache
-      const revertedTickets = revertTicketStage(
-        updatedTickets,
-        ticket.id,
-        originalStage,
-        originalVersion
-      );
-      queryClient.setQueryData(
-        queryKeys.projects.tickets(projectId),
-        revertedTickets
-      );
-
-      toast({
-        variant: 'destructive',
+      },
+      successToast: {
+        title: 'Ticket rolled back to PLAN',
+        description: `${ticket.ticketKey} has been moved to PLAN stage. Preview URL cleared.`,
+      },
+      networkErrorToast: {
         title: 'Network error',
         description: 'Could not rollback ticket. Please check your connection.',
-      });
-    }
-  }, [pendingVerifyRollback, allTickets, toast, projectId, queryClient]);
+      },
+    });
+  }, [pendingVerifyRollback, performTransition, toast]);
 
   // AIB-75: Handle VERIFY to PLAN rollback cancellation
   const handleVerifyRollbackCancel = useCallback(() => {
@@ -946,13 +758,6 @@ function BoardContent({
     });
   }, [ticketToDelete, deleteTicketMutation, toast]);
 
-  // Used indirectly via setDeleteModalOpen in DeleteConfirmationModal
-  const handleDeleteCancel = useCallback(() => {
-    setDeleteModalOpen(false);
-    setTicketToDelete(null);
-  }, []);
-  // Silence unused warning - function is used via state setter
-  void handleDeleteCancel;
 
   // AIB-148: Handle close confirmation
   const handleCloseConfirm = useCallback(async () => {
@@ -1133,24 +938,22 @@ function BoardContent({
   // AIB-148: Filter out CLOSED stage from board display - CLOSED tickets are not shown on the board
   const stages = getAllStages().filter(s => s !== Stage.CLOSED);
 
+  // Merge initial and polled jobs for a ticket (polled takes precedence for status)
+  const getMergedTicketJobs = useCallback((ticketId: number) => {
+    const initial = initialJobs.get(ticketId) || [];
+    const polled = polledJobs.filter(job => job.ticketId === ticketId);
+    const jobMap = new Map(initial.map(j => [j.id, j]));
+    polled.forEach(pj => { jobMap.set(pj.id, pj as any); });
+    return Array.from(jobMap.values());
+  }, [initialJobs, polledJobs]);
+
   // T024: Trash zone visibility and disabled state
   const trashZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
     if (!activeTicket || !isDragging) {
       return { isVisible: false, isDisabled: false };
     }
 
-    // Get all jobs for the active ticket (both initial and polled)
-    const initialTicketJobs = initialJobs.get(activeTicket.id) || [];
-    const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id);
-
-    // Merge jobs (polled takes precedence for status updates)
-    const jobMap = new Map(initialTicketJobs.map(j => [j.id, j]));
-    polledTicketJobs.forEach(pj => {
-      jobMap.set(pj.id, pj as any);  // Cast polled job to avoid type issues
-    });
-    const allTicketJobs = Array.from(jobMap.values());
-
-    // Create ticket with jobs for eligibility check (cast as Partial to avoid type issues)
+    const allTicketJobs = getMergedTicketJobs(activeTicket.id);
     const ticketWithJobs = {
       ...activeTicket,
       jobs: allTicketJobs.map(j => ({ status: j.status })),
@@ -1164,7 +967,7 @@ function BoardContent({
       isDisabled: !isDeletable,
       ...(reason && { disabledReason: reason }),
     };
-  }, [activeTicket, isDragging, initialJobs, polledJobs]);
+  }, [activeTicket, isDragging, getMergedTicketJobs]);
 
   // AIB-148: Close zone visibility and disabled state (only for VERIFY tickets)
   const closeZoneState = useMemo<{ isVisible: boolean; isDisabled: boolean; disabledReason?: string }>(() => {
@@ -1172,14 +975,7 @@ function BoardContent({
       return { isVisible: false, isDisabled: false };
     }
 
-    // Check for active jobs
-    const initialTicketJobs = initialJobs.get(activeTicket.id) || [];
-    const polledTicketJobs = polledJobs.filter(job => job.ticketId === activeTicket.id);
-    const jobMap = new Map(initialTicketJobs.map(j => [j.id, j]));
-    polledTicketJobs.forEach(pj => {
-      jobMap.set(pj.id, pj as any);
-    });
-    const allTicketJobs = Array.from(jobMap.values());
+    const allTicketJobs = getMergedTicketJobs(activeTicket.id);
     const hasActiveJob = allTicketJobs.some(j => ['PENDING', 'RUNNING'].includes(j.status));
 
     if (hasActiveJob) {
@@ -1202,7 +998,7 @@ function BoardContent({
       isVisible: true,
       isDisabled: false,
     };
-  }, [activeTicket, isDragging, initialJobs, polledJobs, isCleanupLockActive]);
+  }, [activeTicket, isDragging, getMergedTicketJobs, isCleanupLockActive]);
 
   // Check if any column is being hovered during drag
   const isAnyColumnOver = activeTicket !== null;
@@ -1341,11 +1137,3 @@ function BoardContent({
   );
 }
 
-/**
- * Board Component - Polling-Enabled Board
- *
- * Main board component with client-side polling for real-time updates.
- */
-export function Board(props: BoardProps) {
-  return <BoardContent {...props} />;
-}

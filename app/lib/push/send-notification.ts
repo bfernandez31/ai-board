@@ -33,13 +33,47 @@ async function sendNotification(
   }
 }
 
+async function sendToSubscriptions(
+  userId: string,
+  payload: PushPayload,
+  logPrefix: string
+): Promise<void> {
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { userId },
+  });
+
+  if (subscriptions.length === 0) return;
+
+  const results = await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      const webPushSub: WebPushSubscription = {
+        endpoint: sub.endpoint,
+        keys: { p256dh: sub.p256dh, auth: sub.auth },
+      };
+
+      const success = await sendNotification(webPushSub, payload);
+
+      if (!success) {
+        try {
+          await deletePushSubscriptionById(sub.id);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+
+      return success;
+    })
+  );
+
+  const sentCount = results.filter((r) => r.status === 'fulfilled' && r.value).length;
+  console.log(`[Push] ${logPrefix} sent to ${sentCount}/${subscriptions.length} subscriptions`);
+}
+
 export async function sendJobCompletionNotification(
   jobId: number,
   status: 'COMPLETED' | 'FAILED' | 'CANCELLED'
 ): Promise<void> {
-  if (!isPushConfigured) {
-    return;
-  }
+  if (!isPushConfigured) return;
 
   try {
     const job = await prisma.job.findUnique({
@@ -52,10 +86,7 @@ export async function sendJobCompletionNotification(
             ticketKey: true,
             title: true,
             project: {
-              select: {
-                id: true,
-                userId: true,
-              },
+              select: { id: true, userId: true },
             },
           },
         },
@@ -67,57 +98,20 @@ export async function sendJobCompletionNotification(
       return;
     }
 
-    const projectOwnerId = job.ticket.project.userId;
-    const subscriptions = await prisma.pushSubscription.findMany({
-      where: { userId: projectOwnerId },
-    });
-
-    if (subscriptions.length === 0) {
-      return;
-    }
-
     const statusText = status === 'COMPLETED' ? 'completed' : status === 'FAILED' ? 'failed' : 'cancelled';
     const icon = status === 'COMPLETED' ? '/icon-success.png' : status === 'FAILED' ? '/icon-error.png' : '/icon-warning.png';
 
-    const payload: PushPayload = {
-      title: `Job ${statusText}: ${job.ticket.ticketKey}`,
-      body: `${job.command} ${statusText} for "${job.ticket.title}"`,
-      icon,
-      url: `/projects/${job.ticket.project.id}/board?ticket=${job.ticket.ticketKey}&modal=open`,
-      type: 'job_completion',
-      ticketKey: job.ticket.ticketKey,
-    };
-
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const webPushSub: WebPushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-
-        const success = await sendNotification(webPushSub, payload);
-
-        if (!success) {
-          try {
-            await deletePushSubscriptionById(sub.id);
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-
-        return success;
-      })
-    );
-
-    const sentCount = results.filter(
-      (r) => r.status === 'fulfilled' && r.value
-    ).length;
-
-    console.log(
-      `[Push] Job completion notification sent to ${sentCount}/${subscriptions.length} subscriptions`
+    await sendToSubscriptions(
+      job.ticket.project.userId,
+      {
+        title: `Job ${statusText}: ${job.ticket.ticketKey}`,
+        body: `${job.command} ${statusText} for "${job.ticket.title}"`,
+        icon,
+        url: `/projects/${job.ticket.project.id}/board?ticket=${job.ticket.ticketKey}&modal=open`,
+        type: 'job_completion',
+        ticketKey: job.ticket.ticketKey,
+      },
+      'Job completion notification'
     );
   } catch (error) {
     console.error('[Push] Error sending job completion notification:', error);
@@ -130,58 +124,20 @@ export async function sendMentionNotification(
   ticketKey: string,
   projectId: number
 ): Promise<void> {
-  if (!isPushConfigured) {
-    return;
-  }
+  if (!isPushConfigured) return;
 
   try {
-    const subscriptions = await prisma.pushSubscription.findMany({
-      where: { userId: recipientId },
-    });
-
-    if (subscriptions.length === 0) {
-      return;
-    }
-
-    const payload: PushPayload = {
-      title: `Mentioned in ${ticketKey}`,
-      body: `${actorName} mentioned you in a comment`,
-      icon: '/icon-mention.png',
-      url: `/projects/${projectId}/board?ticket=${ticketKey}&modal=open`,
-      type: 'mention',
-      ticketKey,
-    };
-
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const webPushSub: WebPushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-
-        const success = await sendNotification(webPushSub, payload);
-
-        if (!success) {
-          try {
-            await deletePushSubscriptionById(sub.id);
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-
-        return success;
-      })
-    );
-
-    const sentCount = results.filter(
-      (r) => r.status === 'fulfilled' && r.value
-    ).length;
-
-    console.log(
-      `[Push] Mention notification sent to ${sentCount}/${subscriptions.length} subscriptions`
+    await sendToSubscriptions(
+      recipientId,
+      {
+        title: `Mentioned in ${ticketKey}`,
+        body: `${actorName} mentioned you in a comment`,
+        icon: '/icon-mention.png',
+        url: `/projects/${projectId}/board?ticket=${ticketKey}&modal=open`,
+        type: 'mention',
+        ticketKey,
+      },
+      'Mention notification'
     );
   } catch (error) {
     console.error('[Push] Error sending mention notification:', error);

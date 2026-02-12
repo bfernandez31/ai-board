@@ -5,11 +5,34 @@ import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import type { Ticket, Job } from '@prisma/client';
 
+function createEmptyStageMap<T>(): Record<Stage, T[]> {
+  return getAllStages().reduce(
+    (acc, stage) => {
+      acc[stage] = [];
+      return acc;
+    },
+    {} as Record<Stage, T[]>
+  );
+}
+
+function sortByStage<T extends { ticketNumber: number; updatedAt: string | Date }>(
+  grouped: Record<Stage, T[]>
+): void {
+  for (const stage of getAllStages()) {
+    if (stage === 'INBOX') {
+      grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
+    } else {
+      grouped[stage].sort((a, b) => {
+        const timeA = typeof a.updatedAt === 'string' ? new Date(a.updatedAt).getTime() : a.updatedAt.getTime();
+        const timeB = typeof b.updatedAt === 'string' ? new Date(b.updatedAt).getTime() : b.updatedAt.getTime();
+        return timeB - timeA;
+      });
+    }
+  }
+}
+
 /**
- * Fetch all tickets for a specific project, grouped by stage
- * Sorted by most recently updated first
- * Returns tickets with version field for optimistic concurrency control
- * @param projectId - The project ID to filter tickets by
+ * Fetch all tickets for a project, grouped by stage with optimistic concurrency version
  */
 export async function getTicketsByStage(
   projectId: number
@@ -44,13 +67,7 @@ export async function getTicketsByStage(
     // No orderBy here - we'll sort per-stage after grouping
   });
 
-  const grouped = getAllStages().reduce(
-    (acc, stage) => {
-      acc[stage] = [];
-      return acc;
-    },
-    {} as Record<Stage, TicketWithVersion[]>
-  );
+  const grouped = createEmptyStageMap<TicketWithVersion>();
 
   for (const ticket of tickets) {
     const stage = ticket.stage as Stage;
@@ -73,31 +90,17 @@ export async function getTicketsByStage(
       attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: ticket.updatedAt.toISOString(),
-      project: {
-        clarificationPolicy: ticket.project.clarificationPolicy,
-        githubOwner: ticket.project.githubOwner,
-        githubRepo: ticket.project.githubRepo,
-      },
+      project: ticket.project,
     });
   }
 
-  for (const stage of getAllStages()) {
-    if (stage === 'INBOX') {
-      grouped[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
-    } else {
-      grouped[stage].sort((a, b) => {
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
-    }
-  }
+  sortByStage(grouped);
 
   return grouped;
 }
 
 /**
- * Create a new ticket in the INBOX stage for a specific project
- * @param projectId - The project ID to create the ticket in
- * @param input - The ticket data (title, description, attachments)
+ * Create a new ticket in INBOX stage
  */
 export async function createTicket(
   projectId: number,
@@ -145,11 +148,7 @@ export async function createTicket(
 }
 
 /**
- * Fetch all tickets for a specific project with their jobs (optimized)
- * Single query with jobs included - no N+1 problem
- * Sorted by most recently updated first
- * @param projectId - The project ID to filter tickets by
- * @returns Tickets grouped by stage with jobs included
+ * Fetch all tickets for a project with jobs included (single query, no N+1)
  */
 export async function getTicketsWithJobs(projectId: number) {
   const tickets = await prisma.ticket.findMany({
@@ -185,21 +184,8 @@ export async function getTicketsWithJobs(projectId: number) {
     // No orderBy here - we'll sort per-stage after grouping
   });
 
-  const rawByStage = getAllStages().reduce(
-    (acc, stage) => {
-      acc[stage] = [];
-      return acc;
-    },
-    {} as Record<Stage, typeof tickets>
-  );
-
-  const ticketsByStage = getAllStages().reduce(
-    (acc, stage) => {
-      acc[stage] = [];
-      return acc;
-    },
-    {} as Record<Stage, TicketWithVersion[]>
-  );
+  const rawByStage = createEmptyStageMap<(typeof tickets)[number]>();
+  const ticketsByStage = createEmptyStageMap<TicketWithVersion>();
 
   for (const ticket of tickets) {
     const stage = ticket.stage as Stage;
@@ -232,29 +218,14 @@ export async function getTicketsWithJobs(projectId: number) {
     rawByStage[stage].push(ticket);
   }
 
-  for (const stage of getAllStages()) {
-    if (stage === 'INBOX') {
-      ticketsByStage[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
-      rawByStage[stage].sort((a, b) => a.ticketNumber - b.ticketNumber);
-    } else {
-      ticketsByStage[stage].sort((a, b) => {
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
-      rawByStage[stage].sort((a, b) => {
-        return b.updatedAt.getTime() - a.updatedAt.getTime();
-      });
-    }
-  }
+  sortByStage(ticketsByStage);
+  sortByStage(rawByStage);
 
   return { ticketsByStage, ticketsWithJobs: rawByStage };
 }
 
 /**
- * Duplicate a ticket within the same project
- * Creates a new ticket in INBOX stage with "Copy of " prefix and copied fields
- * @param projectId - The project ID containing the source ticket
- * @param sourceTicketId - The ID of the ticket to duplicate
- * @returns The newly created duplicate ticket
+ * Duplicate a ticket in INBOX with "Copy of " prefix
  */
 export async function duplicateTicket(
   projectId: number,
@@ -313,14 +284,7 @@ export async function duplicateTicket(
 }
 
 /**
- * Full clone a ticket within the same project
- * Creates a new ticket preserving stage, copying all jobs with telemetry,
- * and using the provided branch name
- * @param projectId - The project ID containing the source ticket
- * @param sourceTicketId - The ID of the ticket to clone
- * @param newBranch - The new branch name created for the cloned ticket
- * @param ticketNumber - The pre-generated ticket number (to avoid double increment)
- * @returns The newly created ticket with all copied jobs
+ * Full clone a ticket preserving stage, jobs, and telemetry
  */
 export async function fullCloneTicket(
   projectId: number,

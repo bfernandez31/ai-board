@@ -113,9 +113,7 @@ export function ImageGallery({
       setPendingImages([]);
 
       // Notify parent to refresh ticket data
-      if (onAttachmentsUpdated) {
-        onAttachmentsUpdated();
-      }
+      onAttachmentsUpdated?.();
     } catch (error) {
       // Error is already handled by mutation (toast notification)
       console.error('Failed to upload images:', error);
@@ -144,9 +142,7 @@ export function ImageGallery({
       });
 
       // Notify parent to refresh ticket data
-      if (onAttachmentsUpdated) {
-        onAttachmentsUpdated();
-      }
+      onAttachmentsUpdated?.();
     } catch (error) {
       // Error is already handled by mutation (toast notification)
       console.error('Failed to delete image:', error);
@@ -181,9 +177,7 @@ export function ImageGallery({
       });
 
       // Notify parent to refresh ticket data
-      if (onAttachmentsUpdated) {
-        onAttachmentsUpdated();
-      }
+      onAttachmentsUpdated?.();
 
       // Reset file input
       event.target.value = '';

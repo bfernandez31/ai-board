@@ -9,40 +9,17 @@ import { handleTicketTransition, cleanupOrphanedJob } from '@/lib/workflows/tran
 import { resolveTicketWithRelations } from '@/app/lib/utils/ticket-resolver';
 import { dispatchRollbackResetWorkflow } from '@/app/lib/workflows/dispatch-rollback-reset';
 
-// Zod schema for request validation
 const TransitionRequestSchema = z.object({
   targetStage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP']),
 });
 
-/**
- * POST /api/projects/[projectId]/tickets/[id]/transition
- *
- * Handles ticket stage transitions including rollback from BUILD to INBOX.
- *
- * Rollback (BUILD → INBOX):
- * - Validates job status is FAILED or CANCELLED
- * - Atomically resets: stage, workflowType, branch, version
- * - Deletes the failed/cancelled job
- *
- * Normal Transitions:
- * - Validates sequential stage progression
- * - Updates ticket stage
- *
- * Request Body:
- * {
- *   "targetStage": "INBOX" | "SPECIFY" | "PLAN" | "BUILD" | "VERIFY" | "SHIP"
- * }
- */
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
-    // Await params in Next.js 15
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdentifier } = params;
-
-    // Parse project ID
     const projectId = parseInt(projectIdString, 10);
 
     if (isNaN(projectId)) {
@@ -52,10 +29,7 @@ export async function POST(
       );
     }
 
-    // Check for workflow token first (used by GitHub Actions workflows)
     const isWorkflowAuth = await verifyWorkflowToken(request);
-
-    // If not workflow auth, verify project access (session or PAT)
     if (!isWorkflowAuth) {
       try {
         await verifyProjectAccess(projectId, request);
@@ -78,7 +52,6 @@ export async function POST(
       }
     }
 
-    // Parse and validate request body
     const body = await request.json();
     const parseResult = TransitionRequestSchema.safeParse(body);
 
@@ -94,11 +67,6 @@ export async function POST(
 
     const { targetStage } = parseResult.data;
 
-    // Note: Project access verification is handled by NextAuth middleware
-    // Workflow authentication uses Bearer token, not session
-    // Authorization is enforced by checking ticket.projectId matches requested projectId
-
-    // Fetch ticket with workflow jobs (supports both numeric ID and ticketKey)
     const ticket = await resolveTicketWithRelations(projectId, ticketIdentifier, {
       jobs: {
         where: {
@@ -119,7 +87,6 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    // T048-T051: Check for active cleanup job that locks transitions
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: { activeCleanupJobId: true },
@@ -131,7 +98,6 @@ export async function POST(
         select: { status: true, ticket: { select: { ticketKey: true } } },
       });
 
-      // T050: Return 423 Locked if cleanup job is PENDING or RUNNING
       if (cleanupJob && ['PENDING', 'RUNNING'].includes(cleanupJob.status)) {
         return NextResponse.json(
           {
@@ -148,7 +114,6 @@ export async function POST(
         );
       }
 
-      // T051: Self-healing logic - clear lock if job is in terminal state
       if (cleanupJob && ['COMPLETED', 'FAILED', 'CANCELLED'].includes(cleanupJob.status)) {
         await prisma.project.update({
           where: { id: projectId },
@@ -158,18 +123,13 @@ export async function POST(
       }
     }
 
-    // Detect rollback attempt (BUILD → INBOX)
     const isRollbackToInboxAttempt = ticket.stage === 'BUILD' && targetStage === 'INBOX';
-
-    // Detect rollback attempt (VERIFY → PLAN)
     const isRollbackToPlanAttempt = ticket.stage === 'VERIFY' && targetStage === 'PLAN';
 
     if (isRollbackToInboxAttempt) {
-      // Get most recent workflow job
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
       const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
 
-      // Validate rollback eligibility (only for quick-impl workflows)
       const validation = canRollbackToInbox(
         ticket.stage,
         targetStage as Stage,
@@ -181,20 +141,12 @@ export async function POST(
         return NextResponse.json({ error: validation.reason }, { status: 400 });
       }
 
-      // Execute rollback transaction
       const updatedTicket = await prisma.$transaction(async (tx) => {
-        // Reset ticket state
         const updated = await tx.ticket.update({
           where: { id: ticket.id },
-          data: {
-            stage: 'INBOX',
-            workflowType: 'FULL',
-            branch: null,
-            version: 1,
-          },
+          data: { stage: 'INBOX', workflowType: 'FULL', branch: null, version: 1 },
         });
 
-        // Delete failed/cancelled job
         if (mostRecentJob) {
           await tx.job.delete({
             where: { id: mostRecentJob.id },
@@ -215,11 +167,9 @@ export async function POST(
     }
 
     if (isRollbackToPlanAttempt) {
-      // Get most recent workflow job
       const ticketWithJobs = ticket as typeof ticket & { jobs: Job[] };
       const mostRecentJob = ticketWithJobs.jobs?.[0] || null;
 
-      // Validate rollback eligibility (only for FULL workflows)
       const validation = canRollbackToPlan(
         ticket.stage,
         targetStage as Stage,
@@ -231,7 +181,6 @@ export async function POST(
         return NextResponse.json({ error: validation.reason }, { status: 400 });
       }
 
-      // Fetch project relation for workflow dispatch
       const ticketWithProject = await prisma.ticket.findUnique({
         where: { id: ticket.id },
         include: { project: true },
@@ -241,9 +190,7 @@ export async function POST(
         return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
       }
 
-      // Execute rollback transaction
       const updatedTicket = await prisma.$transaction(async (tx) => {
-        // Reset ticket state - keep branch and workflowType, clear previewUrl, increment version
         const updated = await tx.ticket.update({
           where: { id: ticket.id },
           data: {
@@ -253,7 +200,6 @@ export async function POST(
           },
         });
 
-        // Delete the job (COMPLETED/FAILED/CANCELLED)
         if (mostRecentJob) {
           await tx.job.delete({
             where: { id: mostRecentJob.id },
@@ -263,8 +209,6 @@ export async function POST(
         return updated;
       });
 
-      // Dispatch rollback-reset workflow to reset git branch
-      // This runs after the transaction succeeds to ensure data consistency
       let resetJobId: number | undefined;
       if (updatedTicket.branch) {
         try {
@@ -278,7 +222,6 @@ export async function POST(
           });
           resetJobId = dispatchResult.jobId;
         } catch (dispatchError) {
-          // Log error but don't fail the rollback - database state is already correct
           console.error('[Transition] Failed to dispatch rollback-reset workflow:', dispatchError);
         }
       }
@@ -295,8 +238,6 @@ export async function POST(
       });
     }
 
-    // Handle normal transitions
-    // Fetch ticket with project relation for workflow dispatch
     const ticketWithProject = await prisma.ticket.findUnique({
       where: { id: ticket.id },
       include: { project: true },
@@ -306,11 +247,8 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    // Detect quick-impl mode (INBOX → BUILD)
     const isQuickImpl = ticket.stage === 'INBOX' && targetStage === 'BUILD';
 
-    // Execute transition workflow (creates job, dispatches GitHub workflow)
-    // For quick-impl: also updates workflowType to QUICK atomically with job creation
     const transitionResult = await handleTicketTransition(
       ticketWithProject,
       targetStage as Stage
@@ -328,8 +266,6 @@ export async function POST(
       );
     }
 
-    // For quick-impl, fetch the updated ticket to get the new version
-    // (handleTicketTransition increments version when setting workflowType=QUICK)
     let currentVersion = ticket.version;
     if (isQuickImpl) {
       const refreshedTicket = await prisma.ticket.findUnique({
@@ -339,9 +275,6 @@ export async function POST(
       currentVersion = refreshedTicket?.version || ticket.version;
     }
 
-    // Update ticket stage (optimistic concurrency control)
-    // Note: Branch is NOT set here - it will be created by GitHub workflow
-    // and updated via PATCH /api/projects/:projectId/tickets/:id/branch
     try {
       const updatedTicket = await prisma.ticket.update({
         where: {
@@ -364,9 +297,7 @@ export async function POST(
         jobId: transitionResult.jobId,
       });
     } catch (updateError: unknown) {
-      // Handle version conflict
       if (updateError && typeof updateError === 'object' && 'code' in updateError && updateError.code === 'P2025') {
-        // Clean up orphaned job on version conflict
         if (transitionResult.jobId) {
           await cleanupOrphanedJob(transitionResult.jobId);
         }
@@ -379,26 +310,11 @@ export async function POST(
     }
   } catch (error) {
     console.error('Error transitioning ticket:', error);
-
-    // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      if (error.message === 'Project not found') {
-        return NextResponse.json(
-          { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-      if (error.message === 'Ticket not found') {
-        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
-      }
+      if (error.message === 'Unauthorized') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (error.message === 'Project not found') return NextResponse.json({ error: 'Project not found', code: 'PROJECT_NOT_FOUND' }, { status: 404 });
+      if (error.message === 'Ticket not found') return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

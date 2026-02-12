@@ -1,15 +1,6 @@
-/**
- * Telemetry Extractor
- *
- * Extracts and aggregates job telemetry data from the database for ticket comparison.
- */
-
 import type { TicketTelemetry } from '@/lib/types/comparison';
 import type { Prisma, JobStatus } from '@prisma/client';
 
-/**
- * Job data subset needed for telemetry aggregation
- */
 interface JobTelemetryData {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -21,13 +12,6 @@ interface JobTelemetryData {
   toolsUsed: string[];
 }
 
-/**
- * Aggregate raw job data into TicketTelemetry
- *
- * @param ticketKey - Ticket identifier
- * @param jobs - Array of job data with telemetry fields
- * @returns Aggregated telemetry data
- */
 export function aggregateJobTelemetry(
   ticketKey: string,
   jobs: JobTelemetryData[]
@@ -36,7 +20,6 @@ export function aggregateJobTelemetry(
     return createEmptyTelemetry(ticketKey);
   }
 
-  // Aggregate numeric fields
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheReadTokens = 0;
@@ -44,7 +27,6 @@ export function aggregateJobTelemetry(
   let costUsd = 0;
   let durationMs = 0;
 
-  // Track unique tools and models
   const toolsSet = new Set<string>();
   const modelCounts = new Map<string, number>();
 
@@ -56,18 +38,15 @@ export function aggregateJobTelemetry(
     costUsd += job.costUsd ?? 0;
     durationMs += job.durationMs ?? 0;
 
-    // Collect unique tools
     for (const tool of job.toolsUsed) {
       toolsSet.add(tool);
     }
 
-    // Count model usage to find primary model
     if (job.model) {
       modelCounts.set(job.model, (modelCounts.get(job.model) ?? 0) + 1);
     }
   }
 
-  // Determine primary model (most frequently used)
   let primaryModel: string | null = null;
   let maxCount = 0;
   for (const [model, count] of modelCounts) {
@@ -77,7 +56,6 @@ export function aggregateJobTelemetry(
     }
   }
 
-  // Check if we have any meaningful data
   const hasData =
     inputTokens > 0 || outputTokens > 0 || costUsd > 0 || durationMs > 0;
 
@@ -96,9 +74,6 @@ export function aggregateJobTelemetry(
   };
 }
 
-/**
- * Create empty telemetry for tickets without data
- */
 export function createEmptyTelemetry(ticketKey: string): TicketTelemetry {
   return {
     ticketKey,
@@ -115,12 +90,6 @@ export function createEmptyTelemetry(ticketKey: string): TicketTelemetry {
   };
 }
 
-/**
- * Build Prisma query for fetching job telemetry
- *
- * @param ticketId - Ticket database ID
- * @returns Prisma query input for finding jobs
- */
 export function buildTelemetryQuery(
   ticketId: number
 ): Prisma.JobFindManyArgs {
@@ -142,12 +111,6 @@ export function buildTelemetryQuery(
   };
 }
 
-/**
- * Format telemetry for display
- *
- * @param telemetry - Telemetry data to format
- * @returns Formatted display strings
- */
 export function formatTelemetryDisplay(telemetry: TicketTelemetry): {
   tokens: string;
   cost: string;
@@ -176,9 +139,6 @@ export function formatTelemetryDisplay(telemetry: TicketTelemetry): {
   };
 }
 
-/**
- * Format duration in milliseconds to human-readable string
- */
 function formatDuration(ms: number): string {
   if (ms < 1000) {
     return `${ms}ms`;
@@ -203,9 +163,6 @@ function formatDuration(ms: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-/**
- * Calculate total cost across multiple telemetry records
- */
 export function calculateTotalCost(
   telemetry: Record<string, TicketTelemetry>
 ): number {
@@ -215,9 +172,6 @@ export function calculateTotalCost(
   );
 }
 
-/**
- * Calculate total tokens across multiple telemetry records
- */
 export function calculateTotalTokens(
   telemetry: Record<string, TicketTelemetry>
 ): { input: number; output: number; total: number } {
@@ -234,13 +188,6 @@ export function calculateTotalTokens(
   return { input, output, total: input + output };
 }
 
-/**
- * Compare telemetry between two tickets
- *
- * @param t1 - First ticket telemetry
- * @param t2 - Second ticket telemetry
- * @returns Comparison metrics
- */
 export function compareTelemetry(
   t1: TicketTelemetry,
   t2: TicketTelemetry
@@ -259,7 +206,6 @@ export function compareTelemetry(
   const tokensDiff = tokens2 - tokens1;
   const durationDiff = t2.durationMs - t1.durationMs;
 
-  // Calculate percentages (avoid division by zero)
   const costDiffPercent =
     t1.costUsd > 0 ? (costDiff / t1.costUsd) * 100 : tokensDiff !== 0 ? 100 : 0;
   const tokensDiffPercent =

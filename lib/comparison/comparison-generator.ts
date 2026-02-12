@@ -1,9 +1,3 @@
-/**
- * Comparison Report Generator
- *
- * Generates markdown comparison reports for ticket analysis.
- */
-
 import type {
   ComparisonReport,
   ComparisonReportMetadata,
@@ -17,28 +11,14 @@ import { format } from 'date-fns';
 import { getAlignmentLevel, generateAlignmentSummary } from './feature-alignment';
 import { calculateTestRatio } from './implementation-metrics';
 
-/**
- * Format date for report filename
- */
 function formatDateForFilename(date: Date): string {
   return format(date, 'yyyyMMdd-HHmmss');
 }
 
-/**
- * Format date for display
- */
 function formatDateForDisplay(date: Date): string {
   return format(date, 'yyyy-MM-dd HH:mm:ss');
 }
 
-/**
- * Generate comparison report filename
- *
- * @param sourceTicket - Source ticket key
- * @param comparedTickets - Array of compared ticket keys
- * @param date - Report generation date
- * @returns Filename in format: {timestamp}-vs-{keys}.md
- */
 export function generateReportFilename(
   _sourceTicket: string,
   comparedTickets: string[],
@@ -49,20 +29,10 @@ export function generateReportFilename(
   return `${timestamp}-vs-${keys}.md`;
 }
 
-/**
- * Generate comparison report file path
- *
- * @param branch - Git branch where report will be stored
- * @param filename - Report filename
- * @returns Full path to report file
- */
 export function generateReportPath(branch: string, filename: string): string {
   return `specs/${branch}/comparisons/${filename}`;
 }
 
-/**
- * Generate executive summary section
- */
 function generateExecutiveSummary(
   alignment: FeatureAlignmentScore,
   targets: ComparisonTarget[]
@@ -93,9 +63,6 @@ function generateExecutiveSummary(
   return summary;
 }
 
-/**
- * Generate feature alignment section
- */
 function generateAlignmentSection(alignment: FeatureAlignmentScore): string {
   let section = `## Feature Alignment Analysis\n\n`;
 
@@ -113,9 +80,6 @@ function generateAlignmentSection(alignment: FeatureAlignmentScore): string {
   return section;
 }
 
-/**
- * Generate implementation metrics section
- */
 function generateMetricsSection(
   metrics: Record<string, ImplementationMetrics>
 ): string {
@@ -140,7 +104,6 @@ function generateMetricsSection(
 
   section += '\n';
 
-  // Add changed files detail if available
   const withData = entries.filter((m) => m.hasData && m.changedFiles.length > 0);
   if (withData.length > 0) {
     section += `### Changed Files by Ticket\n\n`;
@@ -158,9 +121,6 @@ function generateMetricsSection(
   return section;
 }
 
-/**
- * Generate constitution compliance section
- */
 function generateComplianceSection(
   compliance: Record<string, ConstitutionComplianceScore>
 ): string {
@@ -181,7 +141,6 @@ function generateComplianceSection(
 
   section += '\n';
 
-  // Detailed breakdown for first entry
   if (entries.length > 0) {
     const [firstKey, firstScore] = entries[0]!;
     section += `### ${firstKey} - Detailed Breakdown\n\n`;
@@ -198,9 +157,6 @@ function generateComplianceSection(
   return section;
 }
 
-/**
- * Format duration in milliseconds to human-readable string
- */
 function formatDurationMs(ms: number): string {
   if (ms <= 0) return 'N/A';
   if (ms < 1000) return `${ms}ms`;
@@ -220,18 +176,12 @@ function formatDurationMs(ms: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-/**
- * Format cost value with proper handling
- */
 function formatCost(costUsd: number): string {
   if (costUsd <= 0) return 'N/A';
   if (costUsd < 0.01) return `$${costUsd.toFixed(6)}`;
   return `$${costUsd.toFixed(4)}`;
 }
 
-/**
- * Calculate percentage difference with proper handling
- */
 function calculatePercentDiff(base: number, current: number): string {
   if (base <= 0) return current > 0 ? '+∞%' : '0%';
   const diff = ((current - base) / base) * 100;
@@ -239,9 +189,6 @@ function calculatePercentDiff(base: number, current: number): string {
   return `${sign}${diff.toFixed(1)}%`;
 }
 
-/**
- * Generate telemetry/cost section with comparison table
- */
 function generateTelemetrySection(
   telemetry: Record<string, TicketTelemetry>
 ): string {
@@ -253,7 +200,6 @@ function generateTelemetrySection(
 
   let section = `## Cost & Telemetry\n\n`;
 
-  // Main comparison table
   section += `### Cost Overview\n\n`;
   section += `| Ticket | Total Tokens | Cost (USD) | Duration | Jobs | Model |\n`;
   section += `|--------|--------------|------------|----------|------|-------|\n`;
@@ -272,7 +218,6 @@ function generateTelemetrySection(
 
   section += '\n';
 
-  // Token breakdown for tickets with data
   const withData = entries.filter((t) => t.hasData);
   if (withData.length > 0) {
     section += `### Token Breakdown\n\n`;
@@ -285,11 +230,9 @@ function generateTelemetrySection(
     section += '\n';
   }
 
-  // Cost comparison table (only if 2+ tickets have data)
   if (withData.length >= 2) {
     section += `### Cost Comparison\n\n`;
 
-    // Use first ticket as baseline
     const baseline = withData[0]!;
     const baseTokens = baseline.inputTokens + baseline.outputTokens;
 
@@ -317,7 +260,6 @@ function generateTelemetrySection(
     section += '\n';
   }
 
-  // Tools used summary
   if (withData.length > 0) {
     const allTools = new Set<string>();
     for (const t of withData) {
@@ -339,7 +281,6 @@ function generateTelemetrySection(
     }
   }
 
-  // Summary totals
   if (withData.length > 1) {
     const totalTokens = withData.reduce((sum, t) => sum + t.inputTokens + t.outputTokens, 0);
     const totalCost = withData.reduce((sum, t) => sum + t.costUsd, 0);
@@ -356,9 +297,6 @@ function generateTelemetrySection(
   return section;
 }
 
-/**
- * Generate warnings section
- */
 function generateWarningsSection(warnings: string[]): string {
   if (warnings.length === 0) return '';
 
@@ -370,34 +308,23 @@ function generateWarningsSection(warnings: string[]): string {
   return section;
 }
 
-/**
- * Generate recommendation section
- */
 function generateRecommendationSection(recommendation: string): string {
   if (!recommendation) return '';
 
   return `## Recommendation\n\n${recommendation}\n\n`;
 }
 
-/**
- * Generate full comparison report markdown
- *
- * @param report - Comparison report data
- * @returns Markdown content
- */
 export function generateReportMarkdown(report: ComparisonReport): string {
   const { metadata, alignment, implementation, compliance, telemetry, recommendation, warnings } = report;
 
   let markdown = '';
 
-  // Header
   markdown += `# Comparison Report: ${metadata.comparedTickets.join(' vs ')}\n\n`;
   markdown += `**Generated**: ${formatDateForDisplay(metadata.generatedAt)}\n`;
   markdown += `**Source Ticket**: ${metadata.sourceTicket}\n`;
   markdown += `**Compared Tickets**: ${metadata.comparedTickets.join(', ')}\n\n`;
   markdown += `---\n\n`;
 
-  // Executive summary
   const dummyTargets: ComparisonTarget[] = metadata.comparedTickets.map((key) => ({
     ticket: {
       id: 0,
@@ -412,43 +339,33 @@ export function generateReportMarkdown(report: ComparisonReport): string {
   markdown += generateExecutiveSummary(alignment, dummyTargets);
   markdown += '\n---\n\n';
 
-  // Alignment
   markdown += generateAlignmentSection(alignment);
   markdown += '\n---\n\n';
 
-  // Implementation metrics
   markdown += generateMetricsSection(implementation);
   markdown += '\n---\n\n';
 
-  // Constitution compliance
   markdown += generateComplianceSection(compliance);
   markdown += '\n---\n\n';
 
-  // Telemetry
   markdown += generateTelemetrySection(telemetry);
 
-  // Warnings
   if (warnings.length > 0) {
     markdown += '\n---\n\n';
     markdown += generateWarningsSection(warnings);
   }
 
-  // Recommendation
   if (recommendation) {
     markdown += '\n---\n\n';
     markdown += generateRecommendationSection(recommendation);
   }
 
-  // Footer
   markdown += '\n---\n\n';
   markdown += `*Report generated by ai-board /compare command*\n`;
 
   return markdown;
 }
 
-/**
- * Create a comparison report object
- */
 export function createComparisonReport(
   sourceTicket: string,
   comparedTickets: string[],
@@ -469,7 +386,6 @@ export function createComparisonReport(
     filePath: filename,
   };
 
-  // Generate summary from alignment
   const summary = generateAlignmentSummary(alignment);
 
   return {
@@ -484,24 +400,16 @@ export function createComparisonReport(
   };
 }
 
-/**
- * Parse comparison report metadata from filename
- */
 export function parseReportFilename(filename: string): {
   timestamp: string;
   comparedTickets: string[];
 } | null {
-  // Pattern: YYYYMMDD-HHMMSS-vs-KEY1-KEY2.md (with time)
-  // or: YYYYMMDD-vs-KEY1-KEY2.md (date only, for backwards compatibility)
   const match = filename.match(/^(\d{8}(?:-\d{6})?)-vs-(.+)\.md$/);
   if (!match) return null;
 
   const timestamp = match[1]!;
   const keysStr = match[2]!;
 
-  // Split keys (they're separated by -)
-  // This is tricky because keys themselves contain -, e.g., AIB-123
-  // Pattern: Project key is 3-6 uppercase alphanumeric, followed by dash and number
   const keyPattern = /[A-Z0-9]{3,6}-\d+/g;
   const comparedTickets = keysStr.match(keyPattern) || [];
 

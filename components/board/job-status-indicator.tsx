@@ -238,13 +238,13 @@ export function JobStatusIndicator({
     ? 'text-purple-500'
     : 'text-blue-500'
 
-  // AI-BOARD compact mode: Icon-only with tooltip (US2)
-  if (jobType === JobType.AI_BOARD) {
-    const iconColor = getAIBoardColor(status)
-    const tooltipText = getAIBoardTooltip(status, completedAt)
-    const aiAriaLabel = getAIBoardAriaLabel(status)
-
-    // Apply bounce animation for PENDING/RUNNING states
+  // AI-BOARD and DEPLOY compact modes: Icon-only with tooltip
+  if (jobType === JobType.AI_BOARD || jobType === JobType.DEPLOY) {
+    const isAIBoard = jobType === JobType.AI_BOARD
+    const Icon = isAIBoard ? BotMessageSquare : Rocket
+    const iconColor = isAIBoard ? getAIBoardColor(status) : getDeployColor(status)
+    const tooltipText = isAIBoard ? getAIBoardTooltip(status, completedAt) : getDeployTooltip(status, completedAt)
+    const compactAriaLabel = isAIBoard ? getAIBoardAriaLabel(status) : getDeployAriaLabel(status)
     const shouldBounce = status === 'PENDING' || status === 'RUNNING'
 
     return (
@@ -255,45 +255,9 @@ export function JobStatusIndicator({
               data-testid="job-status-indicator"
               className={cn('cursor-help', className)}
               role="img"
-              aria-label={aiAriaLabel}
+              aria-label={compactAriaLabel}
             >
-              <BotMessageSquare
-                className={cn(
-                  'h-5 w-5',
-                  iconColor,
-                  shouldBounce && 'animate-bounce'
-                )}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{tooltipText}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  }
-
-  // DEPLOY compact mode: Icon-only with tooltip (same as AI-BOARD)
-  if (jobType === JobType.DEPLOY) {
-    const iconColor = getDeployColor(status)
-    const tooltipText = getDeployTooltip(status, completedAt)
-    const deployAriaLabel = getDeployAriaLabel(status)
-
-    // Apply bounce animation for PENDING/RUNNING states
-    const shouldBounce = status === 'PENDING' || status === 'RUNNING'
-
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              data-testid="job-status-indicator"
-              className={cn('cursor-help', className)}
-              role="img"
-              aria-label={deployAriaLabel}
-            >
-              <Rocket
+              <Icon
                 className={cn(
                   'h-5 w-5',
                   iconColor,

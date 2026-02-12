@@ -174,13 +174,6 @@ export function Header() {
             </div>
           )}
 
-          {/* Sign-in page: Show nothing (just logo) */}
-          {isSignInPage && (
-            <div className="hidden md:flex items-center gap-3">
-              {/* Empty - just show logo */}
-            </div>
-          )}
-
           {/* Application variant: Show Notification Bell + User Menu */}
           {!isMarketingVariant && !isSignInPage && (
             <>

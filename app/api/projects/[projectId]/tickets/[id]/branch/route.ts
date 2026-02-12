@@ -5,14 +5,6 @@ import { prisma } from '@/lib/db/client';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { resolveTicket } from '@/app/lib/utils/ticket-resolver';
 
-/**
- * GET /api/projects/[projectId]/tickets/[id]/branch
- * Returns 404 for non-existent tickets (common error case handling)
- *
- * Error Responses:
- * - 404: Project or ticket not found
- * - 500: Internal server error
- */
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
@@ -22,16 +14,9 @@ export async function GET(
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdentifier } = params;
 
-    // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
     if (!projectIdResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid project ID',
-          code: 'VALIDATION_ERROR',
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid project ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     const projectId = parseInt(projectIdString, 10);
@@ -117,16 +102,9 @@ export async function PATCH(
     const params = await context.params;
     const { projectId: projectIdString, id: ticketIdentifier } = params;
 
-    // Validate projectId format
     const projectIdResult = ProjectIdSchema.safeParse(projectIdString);
     if (!projectIdResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid project ID',
-          code: 'VALIDATION_ERROR',
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid project ID', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     const projectId = parseInt(projectIdString, 10);

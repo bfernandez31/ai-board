@@ -1,7 +1,5 @@
 'use client';
 
-// TanStack Query hooks for notification management
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,32 +27,19 @@ async function fetchNotifications(): Promise<NotificationsResponse> {
   return response.json();
 }
 
-/**
- * Hook to fetch and poll notifications
- * - Polls every 15s when there are unread notifications
- * - Polls every 30s when all notifications are read (for efficiency)
- * - Continues polling in background when tab is inactive
- */
 export function useNotifications() {
   return useQuery({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
     refetchInterval: (query) => {
       const data = query.state.data;
-      const hasUnread = data && data.unreadCount > 0;
-      return hasUnread ? 15000 : 30000; // 15s with unread, 30s when all read
+      return data && data.unreadCount > 0 ? 15000 : 30000;
     },
     refetchIntervalInBackground: true,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0,
   });
 }
 
-/**
- * Hook to mark a single notification as read
- * - Optimistic update: marks notification as read immediately in UI
- * - Automatic rollback on error
- * - Refetches after mutation completes to ensure sync
- */
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -68,17 +53,12 @@ export function useMarkNotificationRead() {
       return response.json();
     },
     onMutate: async (notificationId) => {
-      // Cancel outgoing queries to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ['notifications'] });
-
-      // Snapshot previous value for rollback
       const previousData = queryClient.getQueryData<NotificationsResponse>(['notifications']);
 
-      // Optimistically update UI
       queryClient.setQueryData<NotificationsResponse>(['notifications'], (old) => {
         if (!old) return old;
 
-        // Find if notification is currently unread
         const notification = old.notifications.find(n => n.id === notificationId);
         const wasUnread = notification && !notification.read;
 
@@ -91,15 +71,12 @@ export function useMarkNotificationRead() {
         };
       });
 
-      return { previousData }; // Context for rollback
+      return { previousData };
     },
     onError: (error, _variables, context) => {
-      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['notifications'], context.previousData);
       }
-
-      // Show error toast
       toast({
         title: 'Failed to mark notification as read',
         description: error instanceof Error ? error.message : 'Please try again later',
@@ -107,18 +84,11 @@ export function useMarkNotificationRead() {
       });
     },
     onSettled: () => {
-      // Always refetch to ensure server sync
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
 
-/**
- * Hook to mark all notifications as read
- * - Optimistic update: marks all notifications as read immediately in UI
- * - Automatic rollback on error
- * - Refetches after mutation completes to ensure sync
- */
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -132,13 +102,9 @@ export function useMarkAllNotificationsRead() {
       return response.json();
     },
     onMutate: async () => {
-      // Cancel outgoing queries to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: ['notifications'] });
-
-      // Snapshot previous value for rollback
       const previousData = queryClient.getQueryData<NotificationsResponse>(['notifications']);
 
-      // Optimistically update UI
       queryClient.setQueryData<NotificationsResponse>(['notifications'], (old) => {
         if (!old) return old;
         return {
@@ -148,15 +114,12 @@ export function useMarkAllNotificationsRead() {
         };
       });
 
-      return { previousData }; // Context for rollback
+      return { previousData };
     },
     onError: (error, _variables, context) => {
-      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['notifications'], context.previousData);
       }
-
-      // Show error toast
       toast({
         title: 'Failed to mark all notifications as read',
         description: error instanceof Error ? error.message : 'Please try again later',
@@ -164,7 +127,6 @@ export function useMarkAllNotificationsRead() {
       });
     },
     onSettled: () => {
-      // Always refetch to ensure server sync
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

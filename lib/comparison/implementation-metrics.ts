@@ -1,21 +1,8 @@
-/**
- * Implementation Metrics Extraction
- *
- * Extracts code change metrics from git diff for ticket comparison.
- */
-
 import type { ImplementationMetrics } from '@/lib/types/comparison';
 import { execSync } from 'child_process';
 
-/**
- * Git diff numstat line pattern
- * Matches: "10\t5\tpath/to/file.ts"
- */
 const NUMSTAT_LINE_REGEX = /^(\d+|-)\t(\d+|-)\t(.+)$/;
 
-/**
- * Test file patterns
- */
 const TEST_FILE_PATTERNS = [
   /\.test\.[jt]sx?$/,
   /\.spec\.[jt]sx?$/,
@@ -23,19 +10,10 @@ const TEST_FILE_PATTERNS = [
   /__tests__\//,
 ];
 
-/**
- * Check if a file path is a test file
- */
 function isTestFile(filePath: string): boolean {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 
-/**
- * Parse git diff --numstat output
- *
- * @param output - Raw numstat output
- * @returns Object with lines added/removed and file list
- */
 function parseNumstat(output: string): {
   linesAdded: number;
   linesRemoved: number;
@@ -70,13 +48,6 @@ function parseNumstat(output: string): {
   return { linesAdded, linesRemoved, files, testFiles };
 }
 
-/**
- * Execute git command and return output
- *
- * @param command - Git command to execute
- * @param cwd - Working directory
- * @returns Command output or null if error
- */
 function executeGitCommand(command: string, cwd?: string): string | null {
   try {
     const options = cwd ? { cwd, encoding: 'utf-8' as const } : { encoding: 'utf-8' as const };
@@ -86,70 +57,30 @@ function executeGitCommand(command: string, cwd?: string): string | null {
   }
 }
 
-/**
- * Get base branch name (usually 'main' or 'master')
- *
- * @param cwd - Working directory
- * @returns Base branch name
- */
 function getBaseBranch(cwd?: string): string {
-  // Try to get default branch from origin
   const output = executeGitCommand('git remote show origin 2>/dev/null | grep "HEAD branch" | cut -d: -f2', cwd);
-  if (output) {
-    const branch = output.trim();
-    if (branch) return branch;
-  }
+  if (output?.trim()) return output.trim();
 
-  // Fallback: check if main or master exists
   const branches = executeGitCommand('git branch -a', cwd);
   if (branches?.includes('main')) return 'main';
   if (branches?.includes('master')) return 'master';
 
-  return 'main'; // Default
+  return 'main';
 }
 
 /**
- * Extract implementation metrics from a git branch
- *
- * @param ticketKey - Ticket key for the branch
- * @param branch - Branch name (optional, will construct from ticketKey if not provided)
- * @param cwd - Working directory (defaults to current)
- * @returns Implementation metrics
+ * Extract implementation metrics from a git branch (async wrapper)
  */
 export async function extractImplementationMetrics(
   ticketKey: string,
   branch?: string,
   cwd?: string
 ): Promise<ImplementationMetrics> {
-  const baseBranch = getBaseBranch(cwd);
-  const targetBranch = branch || ticketKey;
-
-  // Get numstat for detailed metrics
-  const numstatOutput = executeGitCommand(
-    `git diff --numstat ${baseBranch}...${targetBranch}`,
-    cwd
-  );
-
-  if (!numstatOutput) {
-    return createEmptyMetrics(ticketKey);
-  }
-
-  const { linesAdded, linesRemoved, files, testFiles } = parseNumstat(numstatOutput);
-
-  return {
-    ticketKey,
-    linesAdded,
-    linesRemoved,
-    linesChanged: linesAdded + linesRemoved,
-    filesChanged: files.length,
-    changedFiles: files,
-    testFilesChanged: testFiles,
-    hasData: true,
-  };
+  return extractImplementationMetricsSync(ticketKey, branch, cwd);
 }
 
 /**
- * Extract metrics synchronously (for simpler use cases)
+ * Extract implementation metrics from a git branch (synchronous)
  */
 export function extractImplementationMetricsSync(
   ticketKey: string,
@@ -164,6 +95,16 @@ export function extractImplementationMetricsSync(
     cwd
   );
 
+  return buildMetricsFromNumstat(ticketKey, numstatOutput);
+}
+
+/**
+ * Build metrics from numstat output (shared by all extraction functions)
+ */
+function buildMetricsFromNumstat(
+  ticketKey: string,
+  numstatOutput: string | null
+): ImplementationMetrics {
   if (!numstatOutput) {
     return createEmptyMetrics(ticketKey);
   }
@@ -182,9 +123,6 @@ export function extractImplementationMetricsSync(
   };
 }
 
-/**
- * Create empty metrics for unavailable data
- */
 export function createEmptyMetrics(ticketKey: string): ImplementationMetrics {
   return {
     ticketKey,
@@ -200,47 +138,20 @@ export function createEmptyMetrics(ticketKey: string): ImplementationMetrics {
 
 /**
  * Extract metrics from a merge commit
- *
- * @param ticketKey - Ticket key
- * @param mergeCommitSha - SHA of the merge commit
- * @param cwd - Working directory
- * @returns Implementation metrics
  */
 export function extractMetricsFromMerge(
   ticketKey: string,
   mergeCommitSha: string,
   cwd?: string
 ): ImplementationMetrics {
-  // Get the diff between merge commit parents
   const numstatOutput = executeGitCommand(
     `git diff --numstat ${mergeCommitSha}^1...${mergeCommitSha}^2`,
     cwd
   );
 
-  if (!numstatOutput) {
-    return createEmptyMetrics(ticketKey);
-  }
-
-  const { linesAdded, linesRemoved, files, testFiles } = parseNumstat(numstatOutput);
-
-  return {
-    ticketKey,
-    linesAdded,
-    linesRemoved,
-    linesChanged: linesAdded + linesRemoved,
-    filesChanged: files.length,
-    changedFiles: files,
-    testFilesChanged: testFiles,
-    hasData: true,
-  };
+  return buildMetricsFromNumstat(ticketKey, numstatOutput);
 }
 
-/**
- * Compare metrics between multiple tickets
- *
- * @param metrics - Array of metrics to compare
- * @returns Comparison summary
- */
 export function compareMetrics(
   metrics: ImplementationMetrics[]
 ): {
@@ -283,23 +194,11 @@ export function compareMetrics(
   };
 }
 
-/**
- * Calculate test coverage ratio
- *
- * @param metrics - Implementation metrics
- * @returns Test file ratio (0-1)
- */
 export function calculateTestRatio(metrics: ImplementationMetrics): number {
   if (metrics.filesChanged === 0) return 0;
   return metrics.testFilesChanged / metrics.filesChanged;
 }
 
-/**
- * Generate metrics summary text
- *
- * @param metrics - Implementation metrics
- * @returns Human-readable summary
- */
 export function generateMetricsSummary(metrics: ImplementationMetrics): string {
   if (!metrics.hasData) {
     return `${metrics.ticketKey}: Metrics unavailable`;

@@ -5,10 +5,7 @@ import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transit
 
 const prisma = new PrismaClient();
 
-/**
- * Stage-to-command mapping for automated workflow stages
- * null indicates no automated workflow (manual stages like SHIP)
- */
+/** Stage-to-command mapping (null = manual/no workflow) */
 export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   INBOX: null,
   SPECIFY: 'specify',
@@ -19,9 +16,6 @@ export const STAGE_COMMAND_MAP: Record<Stage, string | null> = {
   CLOSED: null, // Terminal state - no workflow
 };
 
-/**
- * Result of a ticket transition operation
- */
 export interface TransitionResult {
   success: boolean;
   jobId?: number;
@@ -35,35 +29,16 @@ export interface TransitionResult {
   };
 }
 
-/**
- * Ticket with required project relation for transition
- */
 export type TicketWithProject = Ticket & {
   project: Project;
 };
 
-/**
- * Determines if job completion validation is required for a given stage.
- *
- * Rules:
- * - INBOX: No validation (no prior job exists)
- * - SPECIFY, PLAN, BUILD: Requires validation (automated stages with prior jobs)
- * - VERIFY, SHIP: No validation (manual stages)
- *
- * @param currentStage - Current stage of the ticket
- * @returns true if validation is required, false otherwise
- */
+/** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
 function shouldValidateJobCompletion(currentStage: Stage): boolean {
   const stagesRequiringValidation: Stage[] = [Stage.SPECIFY, Stage.PLAN, Stage.BUILD];
   return stagesRequiringValidation.includes(currentStage);
 }
 
-/**
- * Maps job status to user-friendly error message.
- *
- * @param status - Current status of the job
- * @returns User-friendly error message explaining why transition is blocked
- */
 function getJobValidationErrorMessage(status: JobStatus): string {
   switch (status) {
     case JobStatus.PENDING:
@@ -82,33 +57,18 @@ function getJobValidationErrorMessage(status: JobStatus): string {
 }
 
 /**
- * Validates that the workflow job for the current stage has completed successfully.
- *
- * This validation ensures workflow integrity by checking:
- * 1. If the current stage requires job validation
- * 2. Whether a workflow job exists for the current stage (data integrity check)
- * 3. Whether the workflow job has status COMPLETED
- *
- * IMPORTANT: This only validates WORKFLOW jobs (specify, plan, implement), not AI-BOARD jobs (comment-*).
- * AI-BOARD jobs run in parallel and do not block stage transitions.
- *
- * @param ticket - Ticket with project relation loaded
- * @param targetStage - Target stage for transition
- * @returns TransitionResult indicating validation success or error details
+ * Validates workflow job completion. Only validates workflow jobs (specify, plan, implement),
+ * not AI-BOARD jobs (comment-*) which run in parallel.
  */
 async function validateJobCompletion(
   ticket: TicketWithProject,
   targetStage: Stage
 ): Promise<TransitionResult> {
-  // 1. Check if validation is required for current stage
-  const requiresValidation = shouldValidateJobCompletion(ticket.stage);
-  if (!requiresValidation) {
+  if (!shouldValidateJobCompletion(ticket.stage)) {
     return { success: true };
   }
 
-  // 2. Fetch most recent job for ticket, excluding AI-BOARD jobs (comment-*)
-  // Workflow jobs: specify, plan, implement, quick-impl
-  // AI-BOARD jobs: comment-specify, comment-plan, comment-implement (excluded)
+  // Fetch most recent workflow job (exclude comment-* AI-BOARD jobs)
   const workflowJob = await prisma.job.findFirst({
     where: {
       ticketId: ticket.id,
@@ -127,7 +87,6 @@ async function validateJobCompletion(
     },
   });
 
-  // 4. Handle missing workflow job (data integrity issue)
   if (!workflowJob) {
     const expectedCommand = STAGE_COMMAND_MAP[ticket.stage];
     return {
@@ -137,7 +96,6 @@ async function validateJobCompletion(
     };
   }
 
-  // 5. Validate workflow job status is COMPLETED
   if (workflowJob.status !== JobStatus.COMPLETED) {
     const errorMessage = getJobValidationErrorMessage(workflowJob.status);
     return {
@@ -153,28 +111,12 @@ async function validateJobCompletion(
     };
   }
 
-  // 6. Validation passed
   return { success: true };
 }
 
 /**
- * Handle ticket stage transition with GitHub workflow dispatch
- *
- * Responsibilities:
- * 1. Validate stage transition is sequential
- * 2. Create Job record for automated stages (SPECIFY, PLAN, BUILD)
- * 3. Generate branch name for SPECIFY stage
- * 4. Dispatch GitHub Actions workflow (respects test mode)
- * 5. Return transition result (does NOT update ticket in database)
- *
- * The caller is responsible for:
- * - Updating the ticket stage and version in the database
- * - Handling optimistic concurrency control
- * - Cleaning up orphaned jobs on version conflicts
- *
- * @param ticket - Ticket with project relation loaded
- * @param targetStage - Target stage to transition to
- * @returns TransitionResult with jobId and branchName if successful, error otherwise
+ * Handle ticket stage transition with GitHub workflow dispatch.
+ * Does NOT update ticket in database - caller handles that.
  */
 export async function handleTicketTransition(
   ticket: TicketWithProject,
@@ -183,7 +125,6 @@ export async function handleTicketTransition(
   try {
     const currentStage = ticket.stage as Stage;
 
-    // 1. Validate stage transition (sequential only, with quick-impl special case)
     if (!isValidTransition(currentStage as unknown as ValidationStage, targetStage as unknown as ValidationStage)) {
       return {
         success: false,
@@ -192,10 +133,8 @@ export async function handleTicketTransition(
       };
     }
 
-    // 2. Detect quick-impl mode (INBOX → BUILD special case)
     const isQuickImpl = currentStage === Stage.INBOX && targetStage === Stage.BUILD;
 
-    // 3. Validate job completion before proceeding (skip for quick-impl)
     if (!isQuickImpl) {
       const jobValidation = await validateJobCompletion(ticket, targetStage);
       if (!jobValidation.success) {
@@ -203,30 +142,17 @@ export async function handleTicketTransition(
       }
     }
 
-    // 4. Determine command based on mode
-    let command: string | null;
-    if (isQuickImpl) {
-      command = 'quick-impl'; // Override for quick-impl mode
-    } else {
-      command = STAGE_COMMAND_MAP[targetStage]; // Normal mode
-    }
+    const command = isQuickImpl ? 'quick-impl' : STAGE_COMMAND_MAP[targetStage];
 
-    // Handle manual stages (VERIFY, SHIP) - no job/workflow needed
     if (!command) {
       return {
         success: true,
       };
     }
 
-    // Handle automated stages (SPECIFY, PLAN, BUILD)
-    // Note: Branch is NOT set here - it will be created by GitHub workflow
-    // and updated via PATCH /api/projects/:projectId/tickets/:id/branch
-
-    // Create job record (with atomic workflowType update for quick-impl)
     let job;
     if (isQuickImpl) {
-      // Atomic transaction: Job creation + workflowType update
-      const [createdJob, _updatedTicket] = await prisma.$transaction([
+      const [createdJob] = await prisma.$transaction([
         prisma.job.create({
           data: {
             ticketId: ticket.id,
@@ -244,7 +170,6 @@ export async function handleTicketTransition(
       ]);
       job = createdJob;
     } else {
-      // Normal workflow: workflowType remains FULL (default)
       job = await prisma.job.create({
         data: {
           ticketId: ticket.id,
@@ -257,11 +182,7 @@ export async function handleTicketTransition(
       });
     }
 
-    // Initialize Octokit with GitHub token
     const githubToken = process.env.GITHUB_TOKEN;
-
-    // Always dispatch workflows on ai-board repository
-    // The workflow will clone the target repository (githubRepository input)
     const aiboardOwner = process.env.GITHUB_OWNER;
     const aiboardRepo = process.env.GITHUB_REPO;
 
@@ -273,17 +194,12 @@ export async function handleTicketTransition(
       };
     }
 
-    // Skip GitHub API call in test mode
-    // Priority: TEST_MODE env var > NODE_ENV check > token inspection
-    // This ensures Playwright tests with TEST_MODE=true never make real API calls,
-    // even if .env.local contains a real GITHUB_TOKEN
     const isTestMode =
       process.env.TEST_MODE === 'true' ||
       process.env.NODE_ENV === 'test' ||
       (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
 
     if (!isTestMode) {
-      // Determine workflow file outside try block for error handling
       let workflowFile: string = '';
 
       try {
@@ -291,12 +207,9 @@ export async function handleTicketTransition(
           auth: githubToken,
         });
 
-        // Prepare workflow inputs based on mode
         let workflowInputs: Record<string, string>;
 
         if (isQuickImpl) {
-          // Quick-impl mode: Use quick-impl.yml input schema
-          // Construct JSON payload with separated fields (harmonized with specifyPayload)
           const quickImplPayload = {
             ticketKey: ticket.ticketKey,
             title: ticket.title,
@@ -304,48 +217,41 @@ export async function handleTicketTransition(
           };
 
           workflowInputs = {
-            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
+            ticket_id: ticket.ticketKey,
             quickImplPayload: JSON.stringify(quickImplPayload),
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
-          // Add attachments for image context (if present)
           if (ticket.attachments) {
             workflowInputs.attachments = JSON.stringify(ticket.attachments);
           }
 
           workflowFile = 'quick-impl.yml';
         } else if (command === 'verify') {
-          // Verify mode: Use verify.yml input schema
           workflowInputs = {
-            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
+            ticket_id: ticket.ticketKey,
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
-            branch: ticket.branch || '', // Branch must exist for VERIFY stage
-            workflowType: ticket.workflowType, // FULL or QUICK determines if tests should run
+            branch: ticket.branch || '',
+            workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
           workflowFile = 'verify.yml';
         } else {
-          // Normal mode: Use speckit.yml input schema
           workflowInputs = {
-            ticket_id: ticket.ticketKey, // Use ticketKey (ABC-123) for better workflow logs
+            ticket_id: ticket.ticketKey,
             command: command,
-            branch: ticket.branch || '', // Branch will be empty for SPECIFY (created by workflow)
+            branch: ticket.branch || '',
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           };
 
-          // Add SPECIFY-specific inputs
           if (targetStage === Stage.SPECIFY) {
-            // Resolve effective clarification policy (ticket ?? project)
             const effectivePolicy = ticket.clarificationPolicy ?? ticket.project.clarificationPolicy;
-
-            // Construct JSON payload with separated fields
             const specifyPayload = {
               ticketKey: ticket.ticketKey,
               title: ticket.title,
@@ -353,10 +259,8 @@ export async function handleTicketTransition(
               clarificationPolicy: effectivePolicy,
             };
 
-            // Pass as JSON string to workflow
             workflowInputs.specifyPayload = JSON.stringify(specifyPayload);
 
-            // Add attachments for image context (if present)
             if (ticket.attachments) {
               workflowInputs.attachments = JSON.stringify(ticket.attachments);
             }
@@ -365,8 +269,6 @@ export async function handleTicketTransition(
           workflowFile = 'speckit.yml';
         }
 
-        // Dispatch GitHub Actions workflow
-        // Always dispatch on ai-board repository (workflows clone the target repo)
         console.log('[Workflow Dispatch]', {
           aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
           targetRepo: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
@@ -383,7 +285,6 @@ export async function handleTicketTransition(
           inputs: workflowInputs,
         });
       } catch (githubError) {
-        // Handle GitHub API errors
         if (githubError instanceof RequestError) {
           console.error('GitHub workflow dispatch failed:', {
             ticketId: ticket.id,
@@ -392,10 +293,7 @@ export async function handleTicketTransition(
             message: githubError.message,
           });
 
-          // Clean up orphaned job
-          await prisma.job.delete({ where: { id: job.id } }).catch(() => {
-            // Ignore errors during cleanup
-          });
+          await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
 
           let errorMessage = 'GitHub workflow dispatch failed';
           if (githubError.status === 401) {
@@ -415,13 +313,10 @@ export async function handleTicketTransition(
           };
         }
 
-        // Re-throw non-GitHub errors
         throw githubError;
       }
     }
 
-    // Return success with job ID
-    // Note: Branch name is NOT returned - it will be set by GitHub workflow via /branch endpoint
     return {
       success: true,
       jobId: job.id,
@@ -435,16 +330,8 @@ export async function handleTicketTransition(
   }
 }
 
-/**
- * Clean up orphaned job created during failed transition
- *
- * @param jobId - Job ID to delete
- */
 export async function cleanupOrphanedJob(jobId: number): Promise<void> {
-  try {
-    await prisma.job.delete({ where: { id: jobId } });
-  } catch (error) {
-    // Ignore errors during cleanup
+  await prisma.job.delete({ where: { id: jobId } }).catch((error) => {
     console.error('Failed to cleanup orphaned job:', { jobId, error });
-  }
+  });
 }

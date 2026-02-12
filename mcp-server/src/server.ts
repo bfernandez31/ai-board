@@ -11,9 +11,6 @@ import { moveTicket } from "./tools/move-ticket.js";
 
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
 
-/**
- * Wrap a tool handler with standardized error handling and JSON formatting.
- */
 async function handleToolCall<T>(
   fn: () => Promise<T>,
   formatResult?: (result: T) => string
@@ -27,21 +24,11 @@ async function handleToolCall<T>(
   }
 }
 
-/**
- * Create and configure the MCP server with all tools registered.
- *
- * @param config - The validated configuration
- * @returns Configured MCP server instance
- */
 export function createServer(config: Config): McpServer {
   const server = new McpServer({
     name: "ai-board-mcp",
     version: "1.0.0",
   });
-
-  // =====================
-  // User Story 1: Projects
-  // =====================
 
   server.tool(
     "list_projects",
@@ -58,10 +45,6 @@ export function createServer(config: Config): McpServer {
     },
     ({ projectId }) => handleToolCall(() => getProject(config, projectId))
   );
-
-  // =====================
-  // User Story 2: Tickets
-  // =====================
 
   server.tool(
     "list_tickets",
@@ -89,10 +72,6 @@ export function createServer(config: Config): McpServer {
     ({ projectId, ticketKey }) => handleToolCall(() => getTicket(config, projectId, ticketKey))
   );
 
-  // =====================
-  // User Story 3: Create Ticket
-  // =====================
-
   server.tool(
     "create_ticket",
     "Create a new ticket in a project's INBOX stage. The ticket will be created with FULL workflow type.",
@@ -115,10 +94,6 @@ export function createServer(config: Config): McpServer {
         (ticket) => `Created ticket ${ticket.ticketKey}\n\n${JSON.stringify(ticket, null, 2)}`
       )
   );
-
-  // =====================
-  // User Story 4: Move Ticket
-  // =====================
 
   server.tool(
     "move_ticket",

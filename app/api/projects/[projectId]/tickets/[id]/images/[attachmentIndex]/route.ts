@@ -6,20 +6,6 @@ import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 import { imageOperationSchema, parseAttachmentIndex } from '@/lib/schemas/ticket-image';
 
-/**
- * DELETE /api/projects/[projectId]/tickets/[id]/images/[attachmentIndex]
- * Remove image from ticket attachments
- *
- * Accepts JSON body with:
- * - version: Ticket version for concurrency control (required)
- *
- * @returns 200: Updated attachments array and new version
- * @returns 400: Validation error (invalid index, version missing)
- * @returns 403: Forbidden - cannot edit images in current stage
- * @returns 404: Ticket or image not found
- * @returns 409: Conflict - version mismatch
- * @returns 500: Internal server error
- */
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string; attachmentIndex: string }> }
@@ -41,120 +27,67 @@ export async function DELETE(
       );
     }
 
-    // Parse and validate attachment index
     let attachmentIndex: number;
     try {
       attachmentIndex = parseAttachmentIndex(indexString);
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid attachment index', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    } catch {
+      return NextResponse.json({ error: 'Invalid attachment index', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    // Verify ticket access (owner OR member via project)
     const ticketAuth = await verifyTicketAccess(ticketId);
-
-    // Validate ticket belongs to correct project
     if (ticketAuth.projectId !== projectId) {
       return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Parse request body
     const body = await request.json();
     const validation = imageOperationSchema.safeParse(body);
-
     if (!validation.success) {
-      const errorMessage = validation.error.issues[0]?.message || 'Invalid request';
-      return NextResponse.json(
-        { error: errorMessage, code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: validation.error.issues[0]?.message || 'Invalid request', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     const { version } = validation.data;
 
-    // Fetch ticket with current attachments and stage
     const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId,
-      },
-      select: {
-        id: true,
-        stage: true,
-        version: true,
-        attachments: true,
-      },
+      where: { id: ticketId, projectId },
+      select: { id: true, stage: true, version: true, attachments: true },
     });
 
     if (!ticket) {
-      return NextResponse.json(
-        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' }, { status: 404 });
     }
 
-    // Check permission
     const { canEdit } = await import('@/components/ticket/edit-permission-guard');
     if (!canEdit(ticket.stage, 'images')) {
-      return NextResponse.json(
-        {
-          error: `Cannot edit images in ${ticket.stage} stage. Images can only be edited in SPECIFY and PLAN stages.`,
-          code: 'FORBIDDEN',
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: `Cannot edit images in ${ticket.stage} stage. Images can only be edited in SPECIFY and PLAN stages.`, code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Verify version (optimistic concurrency control)
     if (ticket.version !== version) {
-      return NextResponse.json(
-        {
-          error: 'Ticket was modified by another user. Please refresh and try again.',
-          code: 'CONFLICT',
-        },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Ticket was modified by another user. Please refresh and try again.', code: 'CONFLICT' }, { status: 409 });
     }
 
-    // Parse existing attachments
     const existingAttachments = ticket.attachments ?? [];
     if (!isTicketAttachmentArray(existingAttachments)) {
       console.error('Invalid attachments structure for ticket', ticketId, existingAttachments);
-      return NextResponse.json(
-        { error: 'Invalid attachments data', code: 'DATA_ERROR' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid attachments data', code: 'DATA_ERROR' }, { status: 500 });
     }
 
-    // Validate attachment index exists
     if (attachmentIndex >= existingAttachments.length) {
-      return NextResponse.json(
-        { error: 'Image not found at index', code: 'NOT_FOUND' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Image not found at index', code: 'NOT_FOUND' }, { status: 404 });
     }
 
-    // Get attachment to delete
     const attachmentToDelete = existingAttachments[attachmentIndex];
 
-    // Delete from Cloudinary if it has a publicId
     if (attachmentToDelete?.cloudinaryPublicId) {
       const { deleteImageFromCloudinary } = await import('@/app/lib/cloudinary/client');
       try {
         await deleteImageFromCloudinary(attachmentToDelete.cloudinaryPublicId);
       } catch (error) {
         console.error('Failed to delete image from Cloudinary:', error);
-        // Continue with database update even if Cloudinary deletion fails
-        // This prevents orphaned database records
       }
     }
 
-    // Remove attachment at index
     const updatedAttachments = existingAttachments.filter((_, idx) => idx !== attachmentIndex);
 
-    // Update ticket in database
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: {
@@ -198,21 +131,6 @@ export async function DELETE(
   }
 }
 
-/**
- * PUT /api/projects/[projectId]/tickets/[id]/images/[attachmentIndex]
- * Replace image at index with new image
- *
- * Accepts multipart/form-data with:
- * - file: New image file (required)
- * - version: Ticket version for concurrency control (required)
- *
- * @returns 200: Updated attachments array and new version
- * @returns 400: Validation error (file type, size, version missing, invalid index)
- * @returns 403: Forbidden - cannot edit images in current stage
- * @returns 404: Ticket or image not found
- * @returns 409: Conflict - version mismatch
- * @returns 500: Internal server error
- */
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string; attachmentIndex: string }> }
@@ -234,194 +152,113 @@ export async function PUT(
       );
     }
 
-    // Parse and validate attachment index
     let attachmentIndex: number;
     try {
       attachmentIndex = parseAttachmentIndex(indexString);
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid attachment index', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    } catch {
+      return NextResponse.json({ error: 'Invalid attachment index', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    // Verify ticket access (owner OR member via project)
     const ticketAuth = await verifyTicketAccess(ticketId);
-
-    // Validate ticket belongs to correct project
     if (ticketAuth.projectId !== projectId) {
       return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Check content type
     const contentType = request.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
-      return NextResponse.json(
-        { error: 'Content-Type must be multipart/form-data', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Content-Type must be multipart/form-data', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const versionString = formData.get('version') as string | null;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'Missing required field: file', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required field: file', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-
     if (!versionString) {
-      return NextResponse.json(
-        { error: 'Missing required field: version', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required field: version', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     const version = parseInt(versionString, 10);
     if (isNaN(version) || version < 1) {
-      return NextResponse.json(
-        { error: 'Invalid version number', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid version number', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    // Validate file using Zod schema
     const { imageFileSchema } = await import('@/lib/schemas/ticket-image');
     const fileValidation = imageFileSchema.safeParse({ file, version });
     if (!fileValidation.success) {
-      const errorMessage = fileValidation.error.issues[0]?.message || 'Invalid file';
-      return NextResponse.json(
-        { error: errorMessage, code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: fileValidation.error.issues[0]?.message || 'Invalid file', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
-    // Fetch ticket with current attachments and stage
     const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: ticketId,
-        projectId,
-      },
+      where: { id: ticketId, projectId },
       select: {
-        id: true,
-        stage: true,
-        version: true,
-        attachments: true,
-        project: {
-          select: {
-            githubOwner: true,
-            githubRepo: true,
-          },
-        },
+        id: true, stage: true, version: true, attachments: true,
+        project: { select: { githubOwner: true, githubRepo: true } },
       },
     });
 
     if (!ticket) {
-      return NextResponse.json(
-        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' }, { status: 404 });
     }
 
-    // Check permission
     const { canEdit } = await import('@/components/ticket/edit-permission-guard');
     if (!canEdit(ticket.stage, 'images')) {
-      return NextResponse.json(
-        {
-          error: `Cannot edit images in ${ticket.stage} stage. Images can only be edited in SPECIFY and PLAN stages.`,
-          code: 'FORBIDDEN',
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: `Cannot edit images in ${ticket.stage} stage. Images can only be edited in SPECIFY and PLAN stages.`, code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Verify version (optimistic concurrency control)
     if (ticket.version !== version) {
-      return NextResponse.json(
-        {
-          error: 'Ticket was modified by another user. Please refresh and try again.',
-          code: 'CONFLICT',
-        },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Ticket was modified by another user. Please refresh and try again.', code: 'CONFLICT' }, { status: 409 });
     }
 
-    // Parse existing attachments
     const existingAttachments = ticket.attachments ?? [];
     if (!isTicketAttachmentArray(existingAttachments)) {
       console.error('Invalid attachments structure for ticket', ticketId, existingAttachments);
-      return NextResponse.json(
-        { error: 'Invalid attachments data', code: 'DATA_ERROR' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid attachments data', code: 'DATA_ERROR' }, { status: 500 });
     }
 
-    // Validate attachment index exists
     if (attachmentIndex >= existingAttachments.length) {
-      return NextResponse.json(
-        { error: 'Image not found at index', code: 'NOT_FOUND' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Image not found at index', code: 'NOT_FOUND' }, { status: 404 });
     }
 
-    // Get old attachment to delete from Cloudinary
     const oldAttachment = existingAttachments[attachmentIndex];
 
-    // Convert File to Buffer for Cloudinary upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Cloudinary
     const { uploadImageToCloudinary, deleteImageFromCloudinary, isCloudinaryConfigured } = await import('@/app/lib/cloudinary/client');
-
     if (!isCloudinaryConfigured()) {
-      return NextResponse.json(
-        { error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', code: 'CONFIG_ERROR' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', code: 'CONFIG_ERROR' }, { status: 500 });
     }
 
-    // Upload new image to Cloudinary with folder structure: ai-board/tickets/{ticketId}/
     const cloudinaryResult = await uploadImageToCloudinary(buffer, {
       folder: `ai-board/tickets/${ticketId}`,
-      filename: file.name.replace(/\.[^/.]+$/, ''), // Remove extension (Cloudinary adds it)
+      filename: file.name.replace(/\.[^/.]+$/, ''),
       resourceType: 'image',
     });
 
-    // Delete old image from Cloudinary if it has a publicId
     if (oldAttachment?.cloudinaryPublicId) {
       try {
         await deleteImageFromCloudinary(oldAttachment.cloudinaryPublicId);
       } catch (error) {
         console.error('Failed to delete old image from Cloudinary:', error);
-        // Continue with database update even if deletion fails
-        // This prevents blocking the replace operation
       }
     }
 
-    // Cloudinary URL is publicly accessible
-    const downloadUrl = cloudinaryResult.url;
-
-    // Create new attachment object
     const newAttachment: TicketAttachment = {
       type: 'uploaded',
-      url: downloadUrl,
+      url: cloudinaryResult.url,
       filename: file.name,
       mimeType: file.type,
       sizeBytes: file.size,
       uploadedAt: new Date().toISOString(),
-      cloudinaryPublicId: cloudinaryResult.publicId, // Store for deletion
+      cloudinaryPublicId: cloudinaryResult.publicId,
     };
 
-    // Replace attachment at index (preserve array position)
     const updatedAttachments = [...existingAttachments];
     updatedAttachments[attachmentIndex] = newAttachment;
 
-    // Update ticket in database
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: {

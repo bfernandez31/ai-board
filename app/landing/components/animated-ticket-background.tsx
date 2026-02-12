@@ -13,12 +13,8 @@ interface TicketCardProps {
   rotation: number; // degrees
 }
 
-/**
- * Generates deterministic animation properties based on ticket index
- * Uses seeded pseudo-random values to ensure consistent rendering across server/client
- */
+/** Deterministic animation properties seeded by index for consistent SSR/client rendering */
 function getTicketProps(index: number): TicketCardProps {
-  // Use simple deterministic randomization based on index
   const seed = index + 1;
   const pseudoRandom = (multiplier: number) => ((seed * multiplier) % 97) / 97;
 
@@ -32,9 +28,6 @@ function getTicketProps(index: number): TicketCardProps {
   };
 }
 
-/**
- * Individual animated ticket card component
- */
 function TicketCard({ color, duration, delay, verticalPosition, rotation }: TicketCardProps) {
   const style: CSSProperties = {
     animationDuration: `${duration}s`,
@@ -44,33 +37,13 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
     willChange: 'left, transform',
   };
 
-  // Map colors to explicit Tailwind classes (required for JIT compiler)
-  const colorClasses = {
-    mauve: {
-      border: 'border-ctp-mauve/40',
-      bg1: 'bg-ctp-mauve/30',
-      bg2: 'bg-ctp-mauve/30',
-    },
-    blue: {
-      border: 'border-ctp-blue/40',
-      bg1: 'bg-ctp-blue/30',
-      bg2: 'bg-ctp-blue/30',
-    },
-    sapphire: {
-      border: 'border-ctp-sapphire/40',
-      bg1: 'bg-ctp-sapphire/30',
-      bg2: 'bg-ctp-sapphire/30',
-    },
-    green: {
-      border: 'border-ctp-green/40',
-      bg1: 'bg-ctp-green/30',
-      bg2: 'bg-ctp-green/30',
-    },
-    yellow: {
-      border: 'border-ctp-yellow/40',
-      bg1: 'bg-ctp-yellow/30',
-      bg2: 'bg-ctp-yellow/30',
-    },
+  // Explicit Tailwind classes required for JIT compiler
+  const colorClasses: Record<TicketColor, { border: string; bg: string }> = {
+    mauve: { border: 'border-ctp-mauve/40', bg: 'bg-ctp-mauve/30' },
+    blue: { border: 'border-ctp-blue/40', bg: 'bg-ctp-blue/30' },
+    sapphire: { border: 'border-ctp-sapphire/40', bg: 'bg-ctp-sapphire/30' },
+    green: { border: 'border-ctp-green/40', bg: 'bg-ctp-green/30' },
+    yellow: { border: 'border-ctp-yellow/40', bg: 'bg-ctp-yellow/30' },
   };
 
   const classes = colorClasses[color];
@@ -86,19 +59,14 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
       style={style}
       aria-hidden="true"
     >
-      {/* Decorative content (simulated ticket text lines) */}
       <div className="p-3 space-y-2">
-        <div className={`h-1.5 w-12 rounded ${classes.bg1}`} />
-        <div className={`h-1.5 w-8 rounded ${classes.bg2}`} />
+        <div className={`h-1.5 w-12 rounded ${classes.bg}`} />
+        <div className={`h-1.5 w-8 rounded ${classes.bg}`} />
       </div>
     </div>
   );
 }
 
-/**
- * Animated ticket background component for landing page hero section
- * Renders 18 floating ticket cards with responsive visibility
- */
 export default function AnimatedTicketBackground({ className = '' }: { className?: string }) {
   const tickets = Array.from({ length: 18 }, (_, i) => getTicketProps(i));
 

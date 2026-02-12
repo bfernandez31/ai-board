@@ -1,18 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
 
-/**
- * Response from image mutation endpoints (POST, DELETE, PUT)
- */
 interface ImageMutationResponse {
   attachments: TicketAttachment[];
   version: number;
 }
 
-/**
- * Variables for upload image mutation
- */
 interface UploadImageVariables {
   projectId: number;
   ticketId: number;
@@ -20,9 +14,6 @@ interface UploadImageVariables {
   version: number;
 }
 
-/**
- * Variables for delete image mutation
- */
 interface DeleteImageVariables {
   projectId: number;
   ticketId: number;
@@ -30,9 +21,6 @@ interface DeleteImageVariables {
   version: number;
 }
 
-/**
- * Variables for replace image mutation
- */
 interface ReplaceImageVariables {
   projectId: number;
   ticketId: number;
@@ -41,19 +29,19 @@ interface ReplaceImageVariables {
   version: number;
 }
 
-/**
- * Hook for uploading images to an existing ticket
- *
- * Features:
- * - Optimistic UI update (shows image immediately)
- * - Automatic rollback on error
- * - Toast notifications for success/error
- * - Invalidates ticket images query on success
- *
- * @example
- * const uploadMutation = useImageUpload();
- * uploadMutation.mutate({ projectId, ticketId, file, version });
- */
+function invalidateTicketImageQueries(
+  queryClient: QueryClient,
+  projectId: number,
+  ticketId: number
+): void {
+  queryClient.invalidateQueries({
+    queryKey: ['ticket', projectId, ticketId, 'images'],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ['ticket', projectId, ticketId],
+  });
+}
+
 export function useImageUpload() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -82,44 +70,15 @@ export function useImageUpload() {
       return response.json();
     },
     onSuccess: (_data, variables) => {
-      // Invalidate ticket images query to refetch with new image
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
-      });
-
-      // Also invalidate main ticket query to update attachment count
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId],
-      });
-
-      toast({
-        title: 'Image uploaded',
-        description: 'Image has been added to the ticket',
-      });
+      invalidateTicketImageQueries(queryClient, variables.projectId, variables.ticketId);
+      toast({ title: 'Image uploaded', description: 'Image has been added to the ticket' });
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Upload failed',
-        description: error.message,
-      });
+      toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
     },
   });
 }
 
-/**
- * Hook for deleting images from a ticket
- *
- * Features:
- * - Optimistic UI update (removes image immediately)
- * - Automatic rollback on error
- * - Toast notifications
- * - Invalidates queries on success
- *
- * @example
- * const deleteMutation = useImageDelete();
- * deleteMutation.mutate({ projectId, ticketId, attachmentIndex, version });
- */
 export function useImageDelete() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -148,44 +107,15 @@ export function useImageDelete() {
       return response.json();
     },
     onSuccess: (_data, variables) => {
-      // Invalidate ticket images query
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
-      });
-
-      // Also invalidate main ticket query to update attachment count
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId],
-      });
-
-      toast({
-        title: 'Image deleted',
-        description: 'Image has been removed from the ticket',
-      });
+      invalidateTicketImageQueries(queryClient, variables.projectId, variables.ticketId);
+      toast({ title: 'Image deleted', description: 'Image has been removed from the ticket' });
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Delete failed',
-        description: error.message,
-      });
+      toast({ variant: 'destructive', title: 'Delete failed', description: error.message });
     },
   });
 }
 
-/**
- * Hook for replacing images in a ticket
- *
- * Features:
- * - Optimistic UI update (shows new image immediately)
- * - Automatic rollback on error
- * - Toast notifications
- * - Invalidates queries on success
- *
- * @example
- * const replaceMutation = useImageReplace();
- * replaceMutation.mutate({ projectId, ticketId, attachmentIndex, file, version });
- */
 export function useImageReplace() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -218,27 +148,11 @@ export function useImageReplace() {
       return response.json();
     },
     onSuccess: (_data, variables) => {
-      // Invalidate ticket images query
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId, 'images'],
-      });
-
-      // Also invalidate main ticket query to update attachment count
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', variables.projectId, variables.ticketId],
-      });
-
-      toast({
-        title: 'Image replaced',
-        description: 'Image has been updated successfully',
-      });
+      invalidateTicketImageQueries(queryClient, variables.projectId, variables.ticketId);
+      toast({ title: 'Image replaced', description: 'Image has been updated successfully' });
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Replace failed',
-        description: error.message,
-      });
+      toast({ variant: 'destructive', title: 'Replace failed', description: error.message });
     },
   });
 }

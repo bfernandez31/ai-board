@@ -1,29 +1,12 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-/**
- * Cloudinary client configuration
- *
- * Environment variables required:
- * - CLOUDINARY_CLOUD_NAME: Your Cloudinary cloud name
- * - CLOUDINARY_API_KEY: Your Cloudinary API key
- * - CLOUDINARY_API_SECRET: Your Cloudinary API secret
- */
-
-// Configure Cloudinary with environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
   api_key: process.env.CLOUDINARY_API_KEY || '',
   api_secret: process.env.CLOUDINARY_API_SECRET || '',
-  secure: true, // Use HTTPS for all URLs
+  secure: true,
 });
 
-/**
- * Upload image to Cloudinary
- *
- * @param buffer - Image file buffer
- * @param options - Upload options
- * @returns Cloudinary upload result with URL
- */
 export async function uploadImageToCloudinary(
   buffer: Buffer,
   options: {
@@ -45,8 +28,8 @@ export async function uploadImageToCloudinary(
         folder: options.folder,
         public_id: options.filename,
         resource_type: options.resourceType || 'image',
-        overwrite: false, // Don't overwrite existing files
-        unique_filename: true, // Auto-generate unique filename if conflict
+        overwrite: false,
+        unique_filename: true,
       },
       (error, result) => {
         if (error) {
@@ -60,7 +43,7 @@ export async function uploadImageToCloudinary(
         }
 
         resolve({
-          url: result.secure_url, // HTTPS URL
+          url: result.secure_url,
           publicId: result.public_id,
           width: result.width,
           height: result.height,
@@ -70,35 +53,21 @@ export async function uploadImageToCloudinary(
       }
     );
 
-    // Write buffer to upload stream
     uploadStream.end(buffer);
   });
 }
 
-/**
- * Delete image from Cloudinary
- *
- * @param publicId - Cloudinary public ID
- * @returns Deletion result
- */
 export async function deleteImageFromCloudinary(
   publicId: string
 ): Promise<{ result: string }> {
   try {
-    const result = await cloudinary.uploader.destroy(publicId);
-    return result;
+    return await cloudinary.uploader.destroy(publicId);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete image from Cloudinary: ${errorMessage}`);
   }
 }
 
-/**
- * Delete all images in a Cloudinary folder recursively
- *
- * @param folderPrefix - Folder prefix to delete (e.g., 'ai-board/tickets')
- * @returns Deletion result
- */
 export async function deleteCloudinaryFolder(
   folderPrefix: string
 ): Promise<{ deleted: number; errors: string[] }> {
@@ -106,7 +75,6 @@ export async function deleteCloudinaryFolder(
     const errors: string[] = [];
     let deleted = 0;
 
-    // Step 1: Delete all resources (images) in the folder and subfolders
     let hasMore = true;
     let nextCursor: string | undefined;
 
@@ -114,11 +82,10 @@ export async function deleteCloudinaryFolder(
       const result = await cloudinary.api.resources({
         type: 'upload',
         prefix: folderPrefix,
-        max_results: 500, // Cloudinary API limit
+        max_results: 500,
         next_cursor: nextCursor,
       });
 
-      // Delete each resource
       for (const resource of result.resources || []) {
         try {
           await cloudinary.uploader.destroy(resource.public_id);
@@ -129,15 +96,12 @@ export async function deleteCloudinaryFolder(
         }
       }
 
-      // Check if there are more results
       hasMore = !!result.next_cursor;
       nextCursor = result.next_cursor;
     }
 
-    // Step 2: Delete all subfolders recursively
     try {
       const subfolders = await cloudinary.api.sub_folders(folderPrefix);
-
       for (const subfolder of subfolders.folders || []) {
         const subfolderPath = `${folderPrefix}/${subfolder.name}`;
         try {
@@ -147,15 +111,14 @@ export async function deleteCloudinaryFolder(
           errors.push(`Failed to delete subfolder ${subfolderPath}: ${errorMessage}`);
         }
       }
-    } catch (error) {
+    } catch {
       // Ignore if no subfolders exist
     }
 
-    // Step 3: Delete the root folder itself
     try {
       await cloudinary.api.delete_folder(folderPrefix);
-    } catch (error) {
-      // Ignore folder deletion errors (folder might not be empty or might not exist)
+    } catch {
+      // Ignore folder deletion errors
     }
 
     return { deleted, errors };
@@ -167,9 +130,6 @@ export async function deleteCloudinaryFolder(
   }
 }
 
-/**
- * Check if Cloudinary is configured
- */
 export function isCloudinaryConfigured(): boolean {
   return !!(
     process.env.CLOUDINARY_CLOUD_NAME &&

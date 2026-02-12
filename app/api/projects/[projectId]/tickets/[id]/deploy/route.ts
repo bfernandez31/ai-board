@@ -4,55 +4,12 @@ import { prisma } from '@/lib/db/client';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { dispatchDeployPreviewWorkflow } from '@/app/lib/workflows/dispatch-deploy-preview';
 
-/**
- * POST /api/projects/[projectId]/tickets/[id]/deploy
- * Triggers a Vercel preview deployment for a ticket
- *
- * **Authentication**: NextAuth session (cookie-based)
- * **Authorization**: User must be project owner or member
- *
- * Eligibility Requirements:
- * 1. Ticket must be in VERIFY stage
- * 2. Ticket must have a branch
- * 3. Latest job must have COMPLETED status
- *
- * Single-Preview Enforcement:
- * - Clears all existing preview URLs in project before creating new job
- * - Transaction ensures atomicity (clear + create)
- *
- * Success Response (201):
- * {
- *   "job": {
- *     "id": 123,
- *     "ticketId": 42,
- *     "projectId": 1,
- *     "command": "deploy-preview",
- *     "status": "PENDING",
- *     "branch": "080-feature",
- *     "completedAt": null,
- *     "createdAt": "2025-11-03T14:30:00Z",
- *     "updatedAt": "2025-11-03T14:30:00Z"
- *   },
- *   "message": "Deployment job created and workflow dispatched"
- * }
- *
- * Error Responses:
- * - 400: Ticket not deployable (validation errors)
- * - 401: Unauthorized (no session)
- * - 403: Forbidden (user not project owner/member)
- * - 404: Ticket not found
- * - 500: Internal server error (workflow dispatch failed)
- */
 export async function POST(
   _request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
 ): Promise<NextResponse> {
   try {
-    // Await params in Next.js 15
-    const params = await context.params;
-    const { projectId: projectIdString, id: ticketIdString } = params;
-
-    // Parse and validate IDs
+    const { projectId: projectIdString, id: ticketIdString } = await context.params;
     const ticketId = parseInt(ticketIdString, 10);
     const projectId = parseInt(projectIdString, 10);
 
@@ -63,7 +20,6 @@ export async function POST(
       );
     }
 
-    // Verify ticket access (checks authentication + project ownership/membership)
     const ticket = await verifyTicketAccess(ticketId);
 
     if (!ticket) {
@@ -73,7 +29,6 @@ export async function POST(
       );
     }
 
-    // Validate ticket belongs to correct project
     if (ticket.projectId !== projectId) {
       return NextResponse.json(
         { error: 'Forbidden: Ticket does not belong to this project' },
@@ -81,7 +36,6 @@ export async function POST(
       );
     }
 
-    // Fetch ticket with jobs and project for eligibility check and workflow dispatch
     const ticketWithJobs = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -111,9 +65,7 @@ export async function POST(
       );
     }
 
-    // Check deployment eligibility
     if (!isTicketDeployable(ticketWithJobs)) {
-      // Provide specific error message based on failure reason
       if (ticketWithJobs.stage !== 'VERIFY') {
         return NextResponse.json(
           { error: 'Ticket must be in VERIFY stage to deploy' },
@@ -136,14 +88,12 @@ export async function POST(
         );
       }
 
-      // Fallback error (should not reach here)
       return NextResponse.json(
         { error: 'Ticket is not eligible for deployment' },
         { status: 400 }
       );
     }
 
-    // Create deployment job (preview URL clearing happens when new URL is set)
     const job = await prisma.job.create({
       data: {
         ticketId,
@@ -155,13 +105,6 @@ export async function POST(
       },
     });
 
-    console.log('[Deploy] Job created:', {
-      jobId: job.id,
-      ticketId,
-      branch: job.branch,
-    });
-
-    // Dispatch GitHub workflow (async, don't await in transaction)
     try {
       await dispatchDeployPreviewWorkflow({
         ticket_id: ticketId.toString(),
@@ -171,14 +114,8 @@ export async function POST(
         githubRepository: `${ticketWithJobs.project.githubOwner}/${ticketWithJobs.project.githubRepo}`,
       });
 
-      console.log('[Deploy] Workflow dispatched successfully:', {
-        jobId: job.id,
-        branch: job.branch,
-      });
     } catch (dispatchError) {
       console.error('[Deploy] Workflow dispatch failed:', dispatchError);
-
-      // Mark job as FAILED if workflow dispatch fails
       await prisma.job.update({
         where: { id: job.id },
         data: { status: 'FAILED' },

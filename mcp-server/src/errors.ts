@@ -1,6 +1,3 @@
-/**
- * Error codes for the MCP server
- */
 export enum ErrorCode {
   CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND",
   CONFIG_INVALID = "CONFIG_INVALID",
@@ -15,9 +12,6 @@ export enum ErrorCode {
   CLEANUP_IN_PROGRESS = "CLEANUP_IN_PROGRESS",
 }
 
-/**
- * Base class for MCP server errors
- */
 export class McpError extends Error {
   constructor(
     public readonly code: ErrorCode,
@@ -28,9 +22,6 @@ export class McpError extends Error {
   }
 }
 
-/**
- * Error thrown when API request fails
- */
 export class ApiError extends McpError {
   constructor(
     public readonly status: number,
@@ -41,9 +32,6 @@ export class ApiError extends McpError {
     this.name = "ApiError";
   }
 
-  /**
-   * Create an ApiError from an HTTP status code
-   */
   static fromStatus(status: number, body: string): ApiError {
     switch (status) {
       case 401:
@@ -65,7 +53,6 @@ export class ApiError extends McpError {
           ErrorCode.NOT_FOUND
         );
       case 422: {
-        // Try to parse validation error from body
         try {
           const parsed = JSON.parse(body) as { error?: string };
           if (parsed.error) {
@@ -81,7 +68,6 @@ export class ApiError extends McpError {
         );
       }
       case 429: {
-        // Try to extract retry-after from body
         try {
           const parsed = JSON.parse(body) as { retryAfter?: number };
           const retryAfter = parsed.retryAfter;
@@ -102,7 +88,6 @@ export class ApiError extends McpError {
         );
       }
       default: {
-        // Try to parse error message from body
         try {
           const parsed = JSON.parse(body) as { error?: string };
           if (parsed.error) {
@@ -117,16 +102,12 @@ export class ApiError extends McpError {
   }
 }
 
-/**
- * Format an error for MCP tool response.
- * Ensures no sensitive information is leaked.
- */
+/** Format an error for MCP tool response, filtering sensitive data. */
 export function formatError(error: unknown): string {
   if (error instanceof McpError) {
     return error.message;
   }
   if (error instanceof Error) {
-    // Ensure token values are not exposed in error messages
     if (error.message.includes("pat_")) {
       return "An error occurred. Please check your configuration.";
     }
