@@ -73,7 +73,6 @@ export async function requireAuth(request?: NextRequest): Promise<string> {
 export async function getCurrentUserOrToken(
   request: NextRequest
 ) {
-  // Check for Bearer token
   const authHeader = request.headers.get("authorization")
   const token = extractBearerToken(authHeader)
 
@@ -86,7 +85,6 @@ export async function getCurrentUserOrToken(
     const result = await validateToken(token, ip)
 
     if (result.valid && result.userId) {
-      // Fetch user details
       const user = await prisma.user.findUnique({
         where: { id: result.userId },
         select: { id: true, email: true, name: true }
@@ -105,6 +103,5 @@ export async function getCurrentUserOrToken(
     throw new Error(result.error || "Unauthorized")
   }
 
-  // Fall back to session auth
   return getCurrentUser()
 }

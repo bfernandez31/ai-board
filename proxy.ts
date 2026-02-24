@@ -8,7 +8,7 @@ function preAuthCheck(req: NextRequest): NextResponse | null {
     return NextResponse.next()
   }
   // process.env.NODE_ENV is inlined at build time by Next.js, safe in Edge Runtime
-  if (process.env.NODE_ENV === 'test' && req.headers.get('x-test-user-id') !== null) {
+  if (process.env.NODE_ENV === 'test' && req.headers.has('x-test-user-id')) {
     return NextResponse.next()
   }
   return null

@@ -25,9 +25,6 @@ import { getCurrentUser } from '@/lib/db/users'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 
-// =============================================================================
-// US1: Production Users Protected from Auth Bypass (Priority: P1)
-// =============================================================================
 describe('US1: Production users protected from auth bypass', () => {
   const originalNodeEnv = process.env.NODE_ENV
 
@@ -99,9 +96,6 @@ describe('US1: Production users protected from auth bypass', () => {
   })
 })
 
-// =============================================================================
-// US2: Test Environment Retains Test User Impersonation (Priority: P2)
-// =============================================================================
 describe('US2: Test environment retains test user impersonation', () => {
   let ctx: TestContext
 
@@ -135,9 +129,6 @@ describe('US2: Test environment retains test user impersonation', () => {
   })
 })
 
-// =============================================================================
-// US3: Existing Authentication Flows Unaffected (Priority: P3)
-// =============================================================================
 describe('US3: Existing authentication flows unaffected', () => {
   let ctx: TestContext
 
