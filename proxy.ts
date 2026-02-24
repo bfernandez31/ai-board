@@ -61,8 +61,9 @@ export default async function proxy(
   const response = await authProxy(req, ctx)
 
   // Defense in depth: strip x-test-user-id header in non-test environments
-  // so downstream handlers (getCurrentUser) cannot access it
-  if (!process.env.NEXT_TEST_MODE && req.headers.has('x-test-user-id')) {
+  // so downstream handlers (getCurrentUser) cannot access it.
+  // Only for pass-through responses — preserve auth redirects.
+  if (!process.env.NEXT_TEST_MODE && req.headers.has('x-test-user-id') && response?.ok) {
     const cleanHeaders = new Headers(req.headers)
     cleanHeaders.delete('x-test-user-id')
     return NextResponse.next({ request: { headers: cleanHeaders } })
