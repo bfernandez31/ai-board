@@ -65,7 +65,7 @@ bun run type-check         # TypeScript check
 
 - Every project has an owner (`userId` foreign key)
 - Members can access projects alongside owners
-- Test mode: Auto-login as `test@e2e.local` when `NODE_ENV !== 'production'`
+- Test mode: `x-test-user-id` header bypass enabled only when `NODE_ENV === 'test'` (defense-in-depth: guarded independently at middleware and server layers)
 
 ### Test Environment
 

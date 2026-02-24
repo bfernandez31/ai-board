@@ -46,27 +46,56 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 ```
 
-## Mock Authentication (Development/Test)
+## Test User Header Authentication
 
-**Test Mode**: Enabled when `NODE_ENV !== 'production'`
+**Test Mode**: Enabled only when `NODE_ENV === 'test'`
+
+The `x-test-user-id` request header allows automated tests to impersonate specific users without requiring a full authentication flow. This mechanism is guarded by **defense-in-depth**: both the Edge Runtime middleware and the server-side user lookup independently verify the environment before honoring the header.
+
+### Defense-in-Depth Guards
+
+**Middleware layer** (`proxy.ts` — Edge Runtime):
 
 ```typescript
-// Simplified example - actual implementation in authOptions
-if (process.env.NODE_ENV !== 'production') {
-  return {
-    user: {
-      id: 'test-user-id',
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-    },
-  };
+// process.env.NODE_ENV is inlined at build time by Next.js, safe in Edge Runtime
+if (process.env.NODE_ENV === 'test' && req.headers.has('x-test-user-id')) {
+  return NextResponse.next()
 }
 ```
 
-**Benefits**:
-- No manual login in development
-- Automated E2E tests without auth complexity
-- Same security model (ownership validation still enforced)
+**Server-side layer** (`lib/db/users.ts` — Node.js):
+
+```typescript
+export async function getCurrentUser() {
+  const headersList = await headers()
+  const testUserId = process.env.NODE_ENV === 'test'
+    ? headersList.get('x-test-user-id')
+    : null
+
+  if (testUserId) {
+    const user = await prisma.user.findUnique({ where: { id: testUserId } })
+    if (user) return { id: user.id, email: user.email, name: user.name }
+  }
+
+  const session = await auth()
+  if (!session?.user?.id) throw new Error('Unauthorized')
+  return session.user
+}
+```
+
+### Environment Detection
+
+| Layer | Mechanism | Reason |
+|-------|-----------|--------|
+| Middleware (Edge Runtime) | Build-time constant (`NODE_ENV` inlined by Next.js) | Edge Runtime cannot read `process.env` at runtime |
+| Server-side (Node.js) | Runtime `process.env.NODE_ENV` | Standard Node.js environment access |
+
+### Security Properties
+
+- In non-test environments, the header is **ignored at both checkpoints independently** — a failure in one layer is caught by the other
+- The system **defaults to rejecting** the header when the environment cannot be determined (fail-secure)
+- If `x-test-user-id` references a non-existent user, the lookup returns nothing and authentication falls through to standard session auth
+- **Benefits**: Automated E2E/integration tests work without full OAuth flows; ownership/authorization validation still enforced
 
 ## Personal Access Token (PAT) Authentication
 
@@ -499,23 +528,40 @@ export default function SignInPage() {
 
 ## Middleware Protection
 
-**File**: `middleware.ts`
+**File**: `proxy.ts` (Next.js middleware)
+
+The middleware runs in the **Edge Runtime** and performs a pre-authentication check before delegating to NextAuth:
 
 ```typescript
-export { default } from 'next-auth/middleware';
+function preAuthCheck(req: NextRequest): NextResponse | null {
+  // PAT auth must be checked before NextAuth to avoid redirect
+  const authHeader = req.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer pat_')) {
+    return NextResponse.next()
+  }
+  // process.env.NODE_ENV is inlined at build time by Next.js, safe in Edge Runtime
+  if (process.env.NODE_ENV === 'test' && req.headers.has('x-test-user-id')) {
+    return NextResponse.next()
+  }
+  return null
+}
 
-export const config = {
-  matcher: [
-    '/projects/:path*',
-    '/api/projects/:path*',
-  ],
-};
+export default async function proxy(req: NextRequest, ctx) {
+  const preAuthResult = preAuthCheck(req)
+  if (preAuthResult) return preAuthResult
+  return authProxy(req, ctx)  // NextAuth session check
+}
 ```
 
+**Public routes** (no auth required):
+- `/auth/*`, `/api/auth/*` — sign-in flow
+- `/api/push/*` — push notification subscription
+- `/api/telemetry/*` — telemetry
+- Workflow callback patterns: `/api/jobs/:id/status`, `/api/projects/:id/jobs`, etc.
+
 **Effect**:
-- Redirects unauthenticated users to `/auth/signin`
-- Preserves original URL in `callbackUrl` parameter
-- Protected routes: `/projects/*` and `/api/projects/*`
+- Redirects unauthenticated users to `/auth/signin` with `callbackUrl`
+- PAT requests and test-mode requests bypass the session check in `preAuthCheck`
 
 ## Security Considerations
 
@@ -536,6 +582,43 @@ export const config = {
 - PKCE flow for additional security (GitHub default)
 - Refresh tokens handled by NextAuth
 - Token expiration managed automatically
+
+### Test Header Security (x-test-user-id)
+- Header is **only honored in `NODE_ENV === 'test'`** environments
+- Defense-in-depth: middleware and server-side layers independently verify the environment
+- Middleware uses a **build-time constant** (Edge Runtime cannot read `process.env` at runtime; Next.js inlines the value at build time)
+- Server-side uses a **runtime check** (`process.env.NODE_ENV`)
+- Fail-secure: any environment configuration ambiguity results in the header being rejected
+- Non-existent user IDs in the header fall through to standard session auth (no phantom users)
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as Middleware (Edge)
+    participant H as Server Handler
+    participant DB as Database
+
+    C->>M: Request + x-test-user-id header
+    M->>M: Check NODE_ENV === 'test' (build-time constant)
+    alt production build
+        M-->>C: Redirect to sign-in (401/302)
+    else test build
+        M->>H: Pass through
+        H->>H: Check NODE_ENV === 'test' (runtime)
+        alt production runtime
+            H-->>C: 401 Unauthorized
+        else test runtime
+            H->>DB: Lookup user by x-test-user-id
+            alt user found
+                DB-->>H: User record
+                H-->>C: Authenticated response
+            else user not found
+                H->>H: Fall through to session auth
+                H-->>C: 401 Unauthorized (no session)
+            end
+        end
+    end
+```
 
 ## AI-BOARD System User
 
