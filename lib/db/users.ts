@@ -9,11 +9,11 @@ import type { NextRequest } from "next/server"
  * @throws Error if user is not authenticated
  */
 export async function getCurrentUser() {
-  // Check for test user header (bypasses NextAuth in test mode)
+  // Check for test user header (bypasses NextAuth in non-production environments only)
   const headersList = await headers()
   const testUserId = headersList.get('x-test-user-id')
 
-  if (testUserId) {
+  if (process.env.NODE_ENV !== 'production' && testUserId) {
     const user = await prisma.user.findUnique({
       where: { id: testUserId }
     })

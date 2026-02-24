@@ -7,8 +7,8 @@ function preAuthCheck(req: NextRequest): NextResponse | null {
   if (authHeader?.startsWith('Bearer pat_')) {
     return NextResponse.next()
   }
-  // Edge Runtime can't read process.env.NODE_ENV at runtime
-  if (req.headers.get('x-test-user-id') !== null) {
+  // NEXT_TEST_MODE is inlined at build time via next.config.ts env
+  if (process.env.NEXT_TEST_MODE && req.headers.get('x-test-user-id') !== null) {
     return NextResponse.next()
   }
   return null
@@ -57,7 +57,18 @@ export default async function proxy(
   if (preAuthResult) {
     return preAuthResult
   }
-  return authProxy(req, ctx)
+
+  const response = await authProxy(req, ctx)
+
+  // Defense in depth: strip x-test-user-id header in non-test environments
+  // so downstream handlers (getCurrentUser) cannot access it
+  if (!process.env.NEXT_TEST_MODE && req.headers.has('x-test-user-id')) {
+    const cleanHeaders = new Headers(req.headers)
+    cleanHeaders.delete('x-test-user-id')
+    return NextResponse.next({ request: { headers: cleanHeaders } })
+  }
+
+  return response
 }
 
 export const config = {
