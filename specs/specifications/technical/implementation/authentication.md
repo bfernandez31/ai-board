@@ -50,16 +50,48 @@ export { handler as GET, handler as POST };
 
 **Test Mode**: Enabled when `NODE_ENV !== 'production'`
 
+Tests and development tooling authenticate via the `x-test-user-id` HTTP header. This header is only accepted in non-production environments — guarded at two layers:
+
+**Layer 1 — `lib/db/users.ts` (`getCurrentUser`)**:
+
 ```typescript
-// Simplified example - actual implementation in authOptions
-if (process.env.NODE_ENV !== 'production') {
-  return {
-    user: {
-      id: 'test-user-id',
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-    },
-  };
+const testUserId = headersList.get('x-test-user-id')
+
+if (process.env.NODE_ENV !== 'production' && testUserId) {
+  const user = await prisma.user.findUnique({ where: { id: testUserId } })
+  if (user) return user
+}
+// Fall through to NextAuth session
+```
+
+**Layer 2 — `proxy.ts` (`preAuthCheck`)**:
+
+```typescript
+// NEXT_TEST_MODE is inlined at build time via next.config.ts env
+if (process.env.NEXT_TEST_MODE && req.headers.get('x-test-user-id') !== null) {
+  return NextResponse.next()
+}
+```
+
+`NEXT_TEST_MODE` is a build-time constant set in `next.config.ts`:
+
+```typescript
+env: {
+  NEXT_TEST_MODE: process.env.NODE_ENV !== 'production' ? 'true' : '',
+},
+```
+
+This is necessary because the Edge Runtime (`proxy.ts` runs as middleware) cannot reliably read `process.env.NODE_ENV` at runtime — the value must be inlined at build time.
+
+**Defense-in-depth — header stripping**:
+
+In non-test environments, `proxy.ts` strips the `x-test-user-id` header from pass-through responses so downstream handlers cannot access it even if it slips past the pre-auth check:
+
+```typescript
+if (!process.env.NEXT_TEST_MODE && req.headers.has('x-test-user-id') && response?.ok) {
+  const cleanHeaders = new Headers(req.headers)
+  cleanHeaders.delete('x-test-user-id')
+  return NextResponse.next({ request: { headers: cleanHeaders } })
 }
 ```
 
@@ -67,6 +99,7 @@ if (process.env.NODE_ENV !== 'production') {
 - No manual login in development
 - Automated E2E tests without auth complexity
 - Same security model (ownership validation still enforced)
+- Production is fully isolated — header is ignored and stripped
 
 ## Personal Access Token (PAT) Authentication
 
@@ -450,6 +483,10 @@ GITHUB_SECRET=
 DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 ```
 
+### Build-time Constants
+
+`NEXT_TEST_MODE` is injected by `next.config.ts` — it is NOT set manually. It evaluates to `'true'` in non-production builds and `''` (falsy) in production builds. It exists solely to allow the Edge Runtime middleware (`proxy.ts`) to gate test-header bypass at build time.
+
 ## Sign-In Page
 
 **File**: `app/auth/signin/page.tsx`
@@ -499,23 +536,24 @@ export default function SignInPage() {
 
 ## Middleware Protection
 
-**File**: `middleware.ts`
+**File**: `proxy.ts`
+
+The app uses a custom proxy middleware (not the default NextAuth middleware) to handle authentication at the Edge layer. It supports three auth paths:
+
+1. **PAT (Bearer token)** — passes through for API token requests
+2. **Test header** — allows `x-test-user-id` bypass in non-production builds only (see Mock Authentication above)
+3. **NextAuth session** — delegates to `authProxy` for all other requests
 
 ```typescript
-export { default } from 'next-auth/middleware';
-
 export const config = {
-  matcher: [
-    '/projects/:path*',
-    '/api/projects/:path*',
-  ],
-};
+  matcher: ['/projects/:path*', '/api/:path*'],
+}
 ```
 
 **Effect**:
-- Redirects unauthenticated users to `/auth/signin`
+- Unauthenticated requests to `/projects/*` and `/api/*` are redirected to `/auth/signin`
 - Preserves original URL in `callbackUrl` parameter
-- Protected routes: `/projects/*` and `/api/projects/*`
+- `x-test-user-id` header is stripped in production builds (defense-in-depth)
 
 ## Security Considerations
 
@@ -530,6 +568,11 @@ export const config = {
 - User ID extracted from session (not client)
 - Project ownership verified before operations
 - No client-side authorization logic
+
+### Test Header Security
+- `x-test-user-id` is **only** accepted when `NODE_ENV !== 'production'`
+- Gated at both the middleware layer (`NEXT_TEST_MODE` build-time constant) and the handler layer (`NODE_ENV` runtime check)
+- Header is actively stripped by `proxy.ts` in production builds (defense-in-depth) so downstream handlers cannot access it even if a check is missed
 
 ### OAuth Security
 - State parameter prevents CSRF attacks
