@@ -18,7 +18,7 @@
 
 **Purpose**: Create test infrastructure for auth security tests
 
-- [ ] T001 Create test directory structure at tests/integration/auth/
+- [x] T001 Create test directory structure at tests/integration/auth/
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 [P] Add build-time NODE_ENV guard to preAuthCheck() in proxy.ts — wrap the x-test-user-id bypass with `process.env.NODE_ENV === 'test'` check (see quickstart.md Checkpoint 1 and contracts/auth-guards.ts PreAuthCheckContract)
-- [ ] T003 [P] Add runtime NODE_ENV guard to getCurrentUser() in lib/db/users.ts — conditionally read x-test-user-id header only when `process.env.NODE_ENV === 'test'` (see quickstart.md Checkpoint 2 and contracts/auth-guards.ts GetCurrentUserContract)
+- [x] T002 [P] Add build-time NODE_ENV guard to preAuthCheck() in proxy.ts — wrap the x-test-user-id bypass with `process.env.NODE_ENV === 'test'` check (see quickstart.md Checkpoint 1 and contracts/auth-guards.ts PreAuthCheckContract)
+- [x] T003 [P] Add runtime NODE_ENV guard to getCurrentUser() in lib/db/users.ts — conditionally read x-test-user-id header only when `process.env.NODE_ENV === 'test'` (see quickstart.md Checkpoint 2 and contracts/auth-guards.ts GetCurrentUserContract)
 
 **Checkpoint**: Both authentication checkpoints now independently reject the test header in non-test environments. Fail-secure behavior is in place.
 
@@ -43,14 +43,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Write integration test: unauthenticated request with x-test-user-id header is rejected (returns 401) when NODE_ENV is not 'test' — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T005 [P] [US1] Write integration test: x-test-user-id header with valid user ID is ignored in production mode, requiring standard authentication — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T006 [P] [US1] Write integration test: x-test-user-id header alongside valid session uses session identity, not header value — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T004 [P] [US1] Write integration test: unauthenticated request with x-test-user-id header is rejected (returns 401) when NODE_ENV is not 'test' — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T005 [P] [US1] Write integration test: x-test-user-id header with valid user ID is ignored in production mode, requiring standard authentication — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T006 [P] [US1] Write integration test: x-test-user-id header alongside valid session uses session identity, not header value — in tests/integration/auth/test-header-bypass.test.ts
 
 ### Edge Case Tests for User Story 1
 
-- [ ] T007 [P] [US1] Write integration test: empty x-test-user-id header is ignored in production — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T008 [P] [US1] Write integration test: x-test-user-id header alongside valid PAT token uses token identity, not header value — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T007 [P] [US1] Write integration test: empty x-test-user-id header is ignored in production — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T008 [P] [US1] Write integration test: x-test-user-id header alongside valid PAT token uses token identity, not header value — in tests/integration/auth/test-header-bypass.test.ts
 
 **Checkpoint**: US1 security tests verify the production bypass is fully closed.
 
@@ -64,9 +64,9 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Write integration test: request with x-test-user-id header authenticates as that user in test mode — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T010 [P] [US2] Write integration test: middleware allows request through when x-test-user-id header is present in test mode — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T011 [P] [US2] Write integration test: request with x-test-user-id for non-existent user falls back to standard auth in test mode — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T009 [P] [US2] Write integration test: request with x-test-user-id header authenticates as that user in test mode — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T010 [P] [US2] Write integration test: middleware allows request through when x-test-user-id header is present in test mode — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T011 [P] [US2] Write integration test: request with x-test-user-id for non-existent user falls back to standard auth in test mode — in tests/integration/auth/test-header-bypass.test.ts
 
 **Checkpoint**: US2 tests verify test mode functionality is fully preserved.
 
@@ -80,9 +80,9 @@
 
 ### Tests for User Story 3
 
-- [ ] T012 [P] [US3] Write integration test: authenticated session access to protected resources succeeds as before — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T013 [P] [US3] Write integration test: valid Bearer PAT token access succeeds as before — in tests/integration/auth/test-header-bypass.test.ts
-- [ ] T014 [P] [US3] Write integration test: unauthenticated request without any headers returns 401 as before — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T012 [P] [US3] Write integration test: authenticated session access to protected resources succeeds as before — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T013 [P] [US3] Write integration test: valid Bearer PAT token access succeeds as before — in tests/integration/auth/test-header-bypass.test.ts
+- [x] T014 [P] [US3] Write integration test: unauthenticated request without any headers returns 401 as before — in tests/integration/auth/test-header-bypass.test.ts
 
 **Checkpoint**: US3 tests verify zero regressions in existing auth flows.
 
@@ -92,9 +92,9 @@
 
 **Purpose**: Final validation and fail-secure verification
 
-- [ ] T015 Run existing test suite (bun run test:unit && bun run test:integration) to confirm no regressions
-- [ ] T016 Run type-check and lint (bun run type-check && bun run lint) to confirm code quality
-- [ ] T017 Run quickstart.md validation scenarios to confirm manual verification steps match expected behavior
+- [x] T015 Run existing test suite (bun run test:unit && bun run test:integration) to confirm no regressions
+- [x] T016 Run type-check and lint (bun run type-check && bun run lint) to confirm code quality
+- [x] T017 Run quickstart.md validation scenarios to confirm manual verification steps match expected behavior
 
 ---
 

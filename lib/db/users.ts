@@ -11,7 +11,9 @@ import type { NextRequest } from "next/server"
 export async function getCurrentUser() {
   // Check for test user header (bypasses NextAuth in test mode)
   const headersList = await headers()
-  const testUserId = headersList.get('x-test-user-id')
+  const testUserId = process.env.NODE_ENV === 'test'
+    ? headersList.get('x-test-user-id')
+    : null
 
   if (testUserId) {
     const user = await prisma.user.findUnique({

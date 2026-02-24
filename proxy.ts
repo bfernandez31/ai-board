@@ -7,8 +7,8 @@ function preAuthCheck(req: NextRequest): NextResponse | null {
   if (authHeader?.startsWith('Bearer pat_')) {
     return NextResponse.next()
   }
-  // Edge Runtime can't read process.env.NODE_ENV at runtime
-  if (req.headers.get('x-test-user-id') !== null) {
+  // process.env.NODE_ENV is inlined at build time by Next.js, safe in Edge Runtime
+  if (process.env.NODE_ENV === 'test' && req.headers.get('x-test-user-id') !== null) {
     return NextResponse.next()
   }
   return null
