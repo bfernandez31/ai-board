@@ -18,8 +18,8 @@
 
 **Purpose**: Add Agent enum and fields to Prisma schema, generate migration
 
-- [ ] T001 Add `Agent` enum (CLAUDE, CODEX) and `defaultAgent` field to Project model and `agent` field to Ticket model in prisma/schema.prisma
-- [ ] T002 Run Prisma migration and regenerate client (`bunx prisma migrate dev --name add-agent-field && bunx prisma generate`)
+- [x] T001 Add `Agent` enum (CLAUDE, CODEX) and `defaultAgent` field to Project model and `agent` field to Ticket model in prisma/schema.prisma
+- [x] T002 Run Prisma migration and regenerate client (`bunx prisma migrate dev --name add-agent-field && bunx prisma generate`)
 
 ---
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Create Zod validation schemas (`projectAgentSchema`, `ticketAgentSchema`) in app/lib/schemas/agent.ts mirroring the clarification-policy pattern
-- [ ] T004 [P] Create `resolveEffectiveAgent()` utility in app/lib/utils/agent-resolution.ts following the policy-resolution pattern
-- [ ] T005 Extend `CreateTicketSchema` and `patchTicketSchema` with optional `agent` field in lib/validations/ticket.ts
+- [x] T003 [P] Create Zod validation schemas (`projectAgentSchema`, `ticketAgentSchema`) in app/lib/schemas/agent.ts mirroring the clarification-policy pattern
+- [x] T004 [P] Create `resolveEffectiveAgent()` utility in app/lib/utils/agent-resolution.ts following the policy-resolution pattern
+- [x] T005 Extend `CreateTicketSchema` and `patchTicketSchema` with optional `agent` field in lib/validations/ticket.ts
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -45,13 +45,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Write unit tests for `projectAgentSchema` validation (valid values, invalid values) in tests/unit/agent-schema.test.ts
+- [x] T006 [P] [US1] Write unit tests for `projectAgentSchema` validation (valid values, invalid values) in tests/unit/agent-schema.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Extend `updateProject()` to accept and persist `defaultAgent` in lib/db/projects.ts
-- [ ] T008 [US1] Extend PATCH handler to validate and pass `defaultAgent` to `updateProject()` in app/api/projects/[projectId]/route.ts
-- [ ] T009 [US1] Write integration tests for project PATCH with `defaultAgent` (set CODEX, verify persistence, invalid value rejection, non-owner rejection) by extending tests in tests/integration/projects/
+- [x] T007 [US1] Extend `updateProject()` to accept and persist `defaultAgent` in lib/db/projects.ts
+- [x] T008 [US1] Extend PATCH handler to validate and pass `defaultAgent` to `updateProject()` in app/api/projects/[projectId]/route.ts
+- [x] T009 [US1] Write integration tests for project PATCH with `defaultAgent` (set CODEX, verify persistence, invalid value rejection, non-owner rejection) by extending tests in tests/integration/projects/
 
 **Checkpoint**: Project-level agent configuration is fully functional and testable
 
@@ -65,13 +65,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Write unit tests for `resolveEffectiveAgent()` (null ticket agent → project default, explicit ticket agent → override, various combinations) in tests/unit/agent-resolution.test.ts
+- [x] T010 [P] [US2] Write unit tests for `resolveEffectiveAgent()` (null ticket agent → project default, explicit ticket agent → override, various combinations) in tests/unit/agent-resolution.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Extend `createTicket()` to accept optional `agent` field in lib/db/tickets.ts
-- [ ] T012 [US2] Extend POST handler to validate and pass optional `agent` to `createTicket()` in app/api/projects/[projectId]/tickets/route.ts
-- [ ] T013 [US2] Write integration tests for ticket creation with and without `agent` (inherits project default, agent null in response) by extending tests in tests/integration/tickets/
+- [x] T011 [US2] Extend `createTicket()` to accept optional `agent` field in lib/db/tickets.ts
+- [x] T012 [US2] Extend POST handler to validate and pass optional `agent` to `createTicket()` in app/api/projects/[projectId]/tickets/route.ts
+- [x] T013 [US2] Write integration tests for ticket creation with and without `agent` (inherits project default, agent null in response) by extending tests in tests/integration/tickets/
 
 **Checkpoint**: Ticket creation with inheritance is fully functional and testable
 
@@ -85,14 +85,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Write unit tests for `ticketAgentSchema` validation (valid values, null, invalid values) in tests/unit/agent-schema.test.ts (extend existing file from T006)
+- [x] T014 [P] [US3] Write unit tests for `ticketAgentSchema` validation (valid values, null, invalid values) in tests/unit/agent-schema.test.ts (extend existing file from T006)
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Extend ticket update logic to handle `agent` field (set, clear to null) in lib/db/tickets.ts
-- [ ] T016 [US3] Extend PATCH handler to validate and pass `agent` with INBOX stage restriction in app/api/projects/[projectId]/tickets/[id]/route.ts
-- [ ] T017 [US3] Verify `agent` field follows same INBOX-only editability rule as `clarificationPolicy` in lib/utils/field-edit-permissions.ts (extend if needed)
-- [ ] T018 [US3] Write integration tests for ticket PATCH with `agent` (set override, clear override, stage restriction, invalid values) by extending tests in tests/integration/tickets/
+- [x] T015 [US3] Extend ticket update logic to handle `agent` field (set, clear to null) in lib/db/tickets.ts
+- [x] T016 [US3] Extend PATCH handler to validate and pass `agent` with INBOX stage restriction in app/api/projects/[projectId]/tickets/[id]/route.ts
+- [x] T017 [US3] Verify `agent` field follows same INBOX-only editability rule as `clarificationPolicy` in lib/utils/field-edit-permissions.ts (extend if needed)
+- [x] T018 [US3] Write integration tests for ticket PATCH with `agent` (set override, clear override, stage restriction, invalid values) by extending tests in tests/integration/tickets/
 
 **Checkpoint**: All user stories are independently functional
 
@@ -102,10 +102,10 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T019 Run `bun run type-check` and fix any TypeScript errors
-- [ ] T020 Run `bun run lint` and fix any linting errors
-- [ ] T021 Run full test suite (`bun run test:unit` and `bun run test:integration`) and verify zero regressions
-- [ ] T022 Run quickstart.md validation — verify all steps from specs/AIB-228-add-ai-agent/quickstart.md are satisfied
+- [x] T019 Run `bun run type-check` and fix any TypeScript errors
+- [x] T020 Run `bun run lint` and fix any linting errors
+- [x] T021 Run full test suite (`bun run test:unit` and `bun run test:integration`) and verify zero regressions
+- [x] T022 Run quickstart.md validation — verify all steps from specs/AIB-228-add-ai-agent/quickstart.md are satisfied
 
 ---
 

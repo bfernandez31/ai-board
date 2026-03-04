@@ -45,6 +45,7 @@ interface FormErrors {
   title?: string;
   description?: string;
   clarificationPolicy?: string;
+  agent?: string;
   attachments?: string;
   submit?: string;
 }
@@ -67,6 +68,7 @@ export function NewTicketModal({
     title: '',
     description: '',
     clarificationPolicy: undefined, // undefined = use project default
+    agent: undefined, // undefined = use project default
     attachments: undefined,
   });
   const [images, setImages] = React.useState<ImageFile[]>([]);
@@ -80,6 +82,7 @@ export function NewTicketModal({
         title: '',
         description: '',
         clarificationPolicy: undefined,
+        agent: undefined,
         attachments: undefined,
       });
       setImages([]);

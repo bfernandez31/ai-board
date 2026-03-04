@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Agent } from '@prisma/client';
 
 /**
  * Zod schema for project clarification policy validation
@@ -12,6 +12,7 @@ export const projectClarificationPolicySchema = z.nativeEnum(ClarificationPolicy
  */
 export const projectUpdateSchema = z.object({
   clarificationPolicy: projectClarificationPolicySchema.or(z.undefined()).optional(),
+  defaultAgent: z.nativeEnum(Agent).or(z.undefined()).optional(),
   deploymentUrl: z.string().url().max(500).nullable().optional(),
 }).partial();
 

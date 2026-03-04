@@ -34,6 +34,7 @@ export async function GET(
       id: true,
       name: true,
       clarificationPolicy: true,
+      defaultAgent: true,
       githubOwner: true,
       githubRepo: true,
     };
@@ -78,6 +79,7 @@ export async function GET(
       branch: ticket.branch,
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
+      agent: ticket.agent,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
@@ -86,6 +88,7 @@ export async function GET(
         id: ticket.project.id,
         name: ticket.project.name,
         clarificationPolicy: ticket.project.clarificationPolicy,
+        defaultAgent: ticket.project.defaultAgent,
         githubOwner: ticket.project.githubOwner,
         githubRepo: ticket.project.githubRepo,
       },
@@ -140,7 +143,7 @@ export async function PATCH(
     const body = await request.json();
 
     const isStageUpdate = 'stage' in body && !('title' in body || 'description' in body || 'branch' in body || 'autoMode' in body);
-    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body;
+    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body || 'agent' in body;
 
     if (isInlineEdit) {
       const parseResult = patchTicketSchema.safeParse(body);
@@ -161,6 +164,7 @@ export async function PATCH(
         branch,
         autoMode,
         clarificationPolicy,
+        agent,
         version: requestVersion,
       } = parseResult.data;
 
@@ -190,13 +194,13 @@ export async function PATCH(
       }
 
       if (
-        (description !== undefined || clarificationPolicy !== undefined) &&
+        (description !== undefined || clarificationPolicy !== undefined || agent !== undefined) &&
         !canEditDescriptionAndPolicy(currentTicket.stage)
       ) {
         return NextResponse.json(
           {
             error:
-              'Description and clarification policy can only be updated in INBOX stage',
+              'Description, clarification policy, and agent can only be updated in INBOX stage',
             code: 'INVALID_STAGE_FOR_EDIT',
           },
           { status: 400 }
@@ -217,6 +221,7 @@ export async function PATCH(
             ...(branch !== undefined && { branch }),
             ...(autoMode !== undefined && { autoMode }),
             ...(clarificationPolicy !== undefined && { clarificationPolicy }),
+            ...(agent !== undefined && { agent }),
             version: { increment: 1 },
             updatedAt: new Date(),
           },
@@ -235,6 +240,7 @@ export async function PATCH(
             branch: updatedTicket.branch,
             autoMode: updatedTicket.autoMode,
             clarificationPolicy: updatedTicket.clarificationPolicy,
+            agent: updatedTicket.agent,
             workflowType: updatedTicket.workflowType,
             createdAt: updatedTicket.createdAt.toISOString(),
             updatedAt: updatedTicket.updatedAt.toISOString(),
@@ -263,7 +269,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: 'Invalid request',
-        message: 'Must provide fields to update (title, description, branch, autoMode, or clarificationPolicy)',
+        message: 'Must provide fields to update (title, description, branch, autoMode, clarificationPolicy, or agent)',
       },
       { status: 400 }
     );

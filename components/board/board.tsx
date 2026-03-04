@@ -611,6 +611,7 @@ export function Board({
     branch: string | null;
     autoMode: boolean;
     clarificationPolicy: ClarificationPolicy | null;
+    agent?: import('@prisma/client').Agent | null;
     workflowType: 'FULL' | 'QUICK' | 'CLEAN';
     attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
     createdAt: string | Date;
@@ -639,6 +640,7 @@ export function Board({
         branch: updatedTicket.branch,
         autoMode: updatedTicket.autoMode,
         clarificationPolicy: updatedTicket.clarificationPolicy,
+        agent: updatedTicket.agent ?? existingTicket?.agent ?? null,
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',
         // Preserve attachments from existing ticket or use empty array

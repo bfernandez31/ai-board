@@ -52,6 +52,7 @@ export async function getTicketsByStage(
       previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
+      agent: true,
       workflowType: true,
       attachments: true,
       createdAt: true,
@@ -59,6 +60,7 @@ export async function getTicketsByStage(
       project: {
         select: {
           clarificationPolicy: true,
+          defaultAgent: true,
           githubOwner: true,
           githubRepo: true,
         },
@@ -86,6 +88,7 @@ export async function getTicketsByStage(
       previewUrl: ticket.previewUrl,
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
+      agent: ticket.agent,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
@@ -137,6 +140,9 @@ export async function createTicket(
     ...(input.clarificationPolicy !== undefined && {
       clarificationPolicy: input.clarificationPolicy,
     }),
+    ...(input.agent !== undefined && {
+      agent: input.agent,
+    }),
     ...(input.attachments !== undefined && {
       attachments: input.attachments as unknown as import('@prisma/client').Prisma.InputJsonValue,
     }),
@@ -166,6 +172,7 @@ export async function getTicketsWithJobs(projectId: number) {
       previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
+      agent: true,
       workflowType: true,
       attachments: true,
       createdAt: true,
@@ -173,6 +180,7 @@ export async function getTicketsWithJobs(projectId: number) {
       project: {
         select: {
           clarificationPolicy: true,
+          defaultAgent: true,
           githubOwner: true,
           githubRepo: true,
         },
@@ -204,6 +212,7 @@ export async function getTicketsWithJobs(projectId: number) {
       previewUrl: ticket.previewUrl,
       autoMode: ticket.autoMode,
       clarificationPolicy: ticket.clarificationPolicy,
+      agent: ticket.agent,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
       createdAt: ticket.createdAt.toISOString(),
@@ -276,6 +285,7 @@ export async function duplicateTicket(
     workflowType: 'FULL' as const,
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
+    agent: sourceTicket.agent,
   };
 
   return await prisma.ticket.create({
@@ -340,6 +350,7 @@ export async function fullCloneTicket(
         workflowType: sourceTicket.workflowType, // Preserve workflow type
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
+        agent: sourceTicket.agent,
       },
     });
 

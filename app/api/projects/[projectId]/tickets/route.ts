@@ -121,7 +121,7 @@ export async function POST(
     await verifyProjectAccess(projectId, request);
 
     const contentType = request.headers.get('content-type') || '';
-    let ticketData: { title: string; description: string; clarificationPolicy?: string };
+    let ticketData: { title: string; description: string; clarificationPolicy?: string; agent?: string };
     let uploadedFiles: formidable.File[] = [];
 
     if (contentType.includes('multipart/form-data')) {
@@ -157,6 +157,9 @@ export async function POST(
       const clarificationPolicy = Array.isArray(fields.clarificationPolicy)
         ? fields.clarificationPolicy[0]
         : fields.clarificationPolicy;
+      const agent = Array.isArray(fields.agent)
+        ? fields.agent[0]
+        : fields.agent;
 
       if (!title || !description) {
         return NextResponse.json(
@@ -172,6 +175,7 @@ export async function POST(
         title,
         description,
         ...(clarificationPolicy && { clarificationPolicy }),
+        ...(agent && { agent }),
       };
 
       if (files.images) {
@@ -377,6 +381,7 @@ export async function POST(
         projectId: finalTicket.projectId,
         branch: finalTicket.branch,
         autoMode: finalTicket.autoMode,
+        agent: finalTicket.agent,
         attachments: finalTicket.attachments,
         createdAt: finalTicket.createdAt.toISOString(),
         updatedAt: finalTicket.updatedAt.toISOString(),

@@ -7,9 +7,12 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { Agent } from '@prisma/client';
 
 describe('Tickets CRUD', () => {
   let ctx: TestContext;
+  const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
@@ -376,6 +379,77 @@ describe('Tickets CRUD', () => {
     });
   });
 
+  describe('POST /api/projects/:projectId/tickets - agent field', () => {
+    it('should create ticket without agent (null by default)', async () => {
+      const response = await ctx.api.post<{ id: number; agent: string | null }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket without agent',
+          description: 'Agent should be null',
+        }
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.data.agent).toBeNull();
+    });
+
+    it('should create ticket with explicit agent CODEX', async () => {
+      const response = await ctx.api.post<{ id: number; agent: string | null }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket with CODEX',
+          description: 'Agent should be CODEX',
+          agent: 'CODEX',
+        }
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.data.agent).toBe('CODEX');
+    });
+
+    it('should create ticket with explicit agent CLAUDE', async () => {
+      const response = await ctx.api.post<{ id: number; agent: string | null }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket with CLAUDE',
+          description: 'Agent should be CLAUDE',
+          agent: 'CLAUDE',
+        }
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.data.agent).toBe('CLAUDE');
+    });
+
+    it('should create ticket with null agent explicitly', async () => {
+      const response = await ctx.api.post<{ id: number; agent: string | null }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket with null agent',
+          description: 'Agent should be null',
+          agent: null,
+        }
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.data.agent).toBeNull();
+    });
+
+    it('should return 400 for invalid agent value', async () => {
+      const response = await ctx.api.post<{ error: string; code: string }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket with invalid agent',
+          description: 'Should fail validation',
+          agent: 'INVALID_AGENT',
+        }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
   describe('DELETE /api/projects/:projectId/tickets/:id', () => {
     it('should delete ticket', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
@@ -426,6 +500,89 @@ describe('Tickets CRUD', () => {
       // Verify deletion
       const getResponse = await ctx.api.get(`/api/projects/${ctx.projectId}/tickets/${ticketId}`);
       expect(getResponse.status).toBe(404);
+    });
+  });
+
+  describe('PATCH /api/projects/:projectId/tickets/:id - agent field', () => {
+    it('should set agent to CODEX on ticket in INBOX', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for agent update',
+          description: 'Test agent update',
+        }
+      );
+
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ agent: string | null; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { agent: 'CODEX', version }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.agent).toBe('CODEX');
+    });
+
+    it('should clear agent to null (revert to project default)', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for agent clear',
+          description: 'Test agent clear',
+          agent: 'CODEX',
+        }
+      );
+
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ agent: string | null; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { agent: null, version }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.agent).toBeNull();
+    });
+
+    it('should reject agent update outside INBOX stage', async () => {
+      const { id: ticketId } = await ctx.createTicket({
+        title: '[e2e] Ticket in SPECIFY',
+        description: 'Should reject agent update',
+        stage: 'SPECIFY',
+      });
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+
+      const response = await ctx.api.patch<{ error: string; code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { agent: 'CODEX', version: ticket!.version }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.code).toBe('INVALID_STAGE_FOR_EDIT');
+    });
+
+    it('should return 400 for invalid agent value', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Ticket for invalid agent',
+          description: 'Test invalid agent',
+        }
+      );
+
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { agent: 'INVALID', version }
+      );
+
+      expect(response.status).toBe(400);
     });
   });
 });
