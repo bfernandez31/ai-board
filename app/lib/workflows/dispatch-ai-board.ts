@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import { isWorkflowTestMode } from './test-mode';
 
 export interface AIBoardWorkflowInputs {
   ticket_id: string;
@@ -17,12 +18,7 @@ export async function dispatchAIBoardWorkflow(
 ): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN;
 
-  const isTestMode =
-    process.env.TEST_MODE === 'true' ||
-    process.env.NODE_ENV === 'test' ||
-    (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
-
-  if (isTestMode) {
+  if (isWorkflowTestMode(githubToken)) {
     console.log('[dispatch-ai-board] Skipping workflow dispatch in test mode:', {
       ticket_id: inputs.ticket_id,
       stage: inputs.stage,

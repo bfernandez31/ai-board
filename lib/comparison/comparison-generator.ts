@@ -10,6 +10,7 @@ import type {
 import { format } from 'date-fns';
 import { getAlignmentLevel, generateAlignmentSummary } from './feature-alignment';
 import { calculateTestRatio } from './implementation-metrics';
+import { formatDurationMs } from './format-duration';
 
 function formatDateForFilename(date: Date): string {
   return format(date, 'yyyyMMdd-HHmmss');
@@ -155,25 +156,6 @@ function generateComplianceSection(
   }
 
   return section;
-}
-
-function formatDurationMs(ms: number): string {
-  if (ms <= 0) return 'N/A';
-  if (ms < 1000) return `${ms}ms`;
-
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (minutes < 60) {
-    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m`;
 }
 
 function formatCost(costUsd: number): string {

@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { prisma } from '@/lib/db/client';
+import { isWorkflowTestMode } from './test-mode';
 
 export interface RollbackResetWorkflowInputs {
   ticketId: number;
@@ -31,12 +32,7 @@ export async function dispatchRollbackResetWorkflow(
     },
   });
 
-  const isTestMode =
-    process.env.TEST_MODE === 'true' ||
-    process.env.NODE_ENV === 'test' ||
-    (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
-
-  if (isTestMode) {
+  if (isWorkflowTestMode(githubToken)) {
     console.log('[dispatch-rollback-reset] Skipping workflow dispatch in test mode:', {
       ticketKey: inputs.ticketKey,
       branch: inputs.branch,

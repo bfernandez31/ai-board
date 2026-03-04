@@ -2,6 +2,7 @@ import { PrismaClient, Stage, JobStatus, Ticket, Project } from '@prisma/client'
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
+import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 
 const prisma = new PrismaClient();
 
@@ -194,12 +195,7 @@ export async function handleTicketTransition(
       };
     }
 
-    const isTestMode =
-      process.env.TEST_MODE === 'true' ||
-      process.env.NODE_ENV === 'test' ||
-      (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
-
-    if (!isTestMode) {
+    if (!isWorkflowTestMode(githubToken)) {
       let workflowFile: string = '';
 
       try {

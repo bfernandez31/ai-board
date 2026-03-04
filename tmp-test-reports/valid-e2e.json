@@ -1,0 +1,28 @@
+{
+  "suites": [
+    {
+      "title": "API Tests",
+      "file": "tests/api/tickets.spec.ts",
+      "specs": [
+        {
+          "title": "should return all tickets",
+          "file": "tests/api/tickets.spec.ts",
+          "tests": [
+            {
+              "status": "unexpected",
+              "results": [
+                {
+                  "error": {
+                    "message": "Expected 5 tickets but got 3",
+                    "stack": "at tickets.spec.ts:42:5"
+                  },
+                  "duration": 1234
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
