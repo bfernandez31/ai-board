@@ -66,7 +66,6 @@ export const TicketCard = React.memo(
       return activeDeploymentTicket !== null && activeDeploymentTicket !== ticket.id;
     }, [activeDeploymentTicket, ticket.id]);
 
-
     const { attributes, listeners, setNodeRef, transform, isDragging } =
       useDraggable({
         id: `ticket-${ticket.id}`,
@@ -166,7 +165,7 @@ export const TicketCard = React.memo(
               setShowDeployModal(false);
             }}
             ticketKey={ticket.ticketKey}
-            hasExistingPreview={activePreviewTicket ? true : false}
+            hasExistingPreview={!!activePreviewTicket}
             existingPreviewTicket={activePreviewTicket?.ticketKey || undefined}
             isRetry={deployJob?.status === 'FAILED' || deployJob?.status === 'CANCELLED'}
           />
@@ -206,35 +205,26 @@ export const TicketCard = React.memo(
                   )}
 
                   {/* Deploy Icon: Show job status OR deploy button when deployable */}
-                  {deployJob ? (
-                    (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING') ? (
-                      // Show deploy job status indicator for pending/running
-                      <JobStatusIndicator
-                        status={deployJob.status}
-                        command={deployJob.command}
-                        jobType={classifyJobType(deployJob.command)}
-                        stage={ticket.stage}
-                        animated={true}
-                        completedAt={deployJob.completedAt}
-                      />
-                    ) : ticket.stage === 'VERIFY' ? (
-                      // Show retry button for failed/cancelled/completed deploys (only in VERIFY stage)
-                      <TicketCardDeployIcon
-                        onDeploy={() => setShowDeployModal(true)}
-                        ticketKey={ticket.ticketKey}
-                        isDeploying={false}
-                        isDisabled={isDeployDisabled}
-                      />
-                    ) : null
-                  ) : isDeployable ? (
-                    // Show deploy button when deployable but no job running
+                  {deployJob && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING') && (
+                    <JobStatusIndicator
+                      status={deployJob.status}
+                      command={deployJob.command}
+                      jobType={classifyJobType(deployJob.command)}
+                      stage={ticket.stage}
+                      animated={true}
+                      completedAt={deployJob.completedAt}
+                    />
+                  )}
+                  {/* Show deploy/retry button: deployable with no active job, or completed/failed deploy in VERIFY */}
+                  {!(deployJob && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING')) &&
+                    (isDeployable || (deployJob && ticket.stage === 'VERIFY')) && (
                     <TicketCardDeployIcon
                       onDeploy={() => setShowDeployModal(true)}
                       ticketKey={ticket.ticketKey}
                       isDeploying={false}
                       isDisabled={isDeployDisabled}
                     />
-                  ) : null}
+                  )}
 
                   {/* AI-BOARD Job Indicator (compact icon-only) */}
                   {aiBoardJob && (
