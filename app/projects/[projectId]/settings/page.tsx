@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
+import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 
@@ -66,6 +67,13 @@ export default async function ProjectSettingsPage({
             project={{
               id: project.id,
               clarificationPolicy: project.clarificationPolicy,
+            }}
+          />
+
+          <DefaultAgentCard
+            project={{
+              id: project.id,
+              defaultAgent: project.defaultAgent,
             }}
           />
 

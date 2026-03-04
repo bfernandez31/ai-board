@@ -18,8 +18,8 @@
 
 **Purpose**: Create the agent utility module that all UI components depend on
 
-- [ ] T001 [P] Create agent utility functions (getAgentIcon, getAgentLabel, getAgentDescription) in app/lib/utils/agent-icons.ts mirroring app/lib/utils/policy-icons.ts
-- [ ] T002 [P] Create unit tests for agent utility functions in tests/unit/agent-icons.test.ts
+- [x] T001 [P] Create agent utility functions (getAgentIcon, getAgentLabel, getAgentDescription) in app/lib/utils/agent-icons.ts mirroring app/lib/utils/policy-icons.ts
+- [x] T002 [P] Create unit tests for agent utility functions in tests/unit/agent-icons.test.ts
 
 **Checkpoint**: Agent utility functions available for all components
 
@@ -33,12 +33,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T003 [P] [US1] Create component test for DefaultAgentCard in tests/unit/components/default-agent-card.test.tsx — test rendering current agent, dropdown change triggers PATCH, read-only for non-owners
+- [x] T003 [P] [US1] Create component test for DefaultAgentCard in tests/unit/components/default-agent-card.test.tsx — test rendering current agent, dropdown change triggers PATCH, read-only for non-owners
 
 ### Implementation for User Story 1
 
-- [ ] T004 [P] [US1] Create DefaultAgentCard component in components/settings/default-agent-card.tsx mirroring components/settings/clarification-policy-card.tsx — card with Select dropdown, PATCH /api/projects/:id on change, router.refresh()
-- [ ] T005 [US1] Add DefaultAgentCard to project settings page in app/projects/[projectId]/settings/page.tsx alongside existing ClarificationPolicyCard
+- [x] T004 [P] [US1] Create DefaultAgentCard component in components/settings/default-agent-card.tsx mirroring components/settings/clarification-policy-card.tsx — card with Select dropdown, PATCH /api/projects/:id on change, router.refresh()
+- [x] T005 [US1] Add DefaultAgentCard to project settings page in app/projects/[projectId]/settings/page.tsx alongside existing ClarificationPolicyCard
 
 **Checkpoint**: Project settings shows agent selector card; owners can change default agent
 
@@ -52,7 +52,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Add agent Select field to new ticket modal in components/board/new-ticket-modal.tsx — mirror the clarification policy select pattern (lines 289-335), use "project-default" sentinel value, pass agent to POST body
+- [x] T006 [US2] Add agent Select field to new ticket modal in components/board/new-ticket-modal.tsx — mirror the clarification policy select pattern (lines 289-335), use "project-default" sentinel value, pass agent to POST body
 
 **Checkpoint**: New ticket creation includes agent selection
 
@@ -66,12 +66,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T007 [P] [US3] Create component test for AgentEditDialog in tests/unit/components/agent-edit-dialog.test.tsx — test rendering current selection, save triggers callback, cancel closes dialog
+- [x] T007 [P] [US3] Create component test for AgentEditDialog in tests/unit/components/agent-edit-dialog.test.tsx — test rendering current selection, save triggers callback, cancel closes dialog
 
 ### Implementation for User Story 3
 
-- [ ] T008 [P] [US3] Create AgentEditDialog component in components/tickets/agent-edit-dialog.tsx mirroring PolicyEditDialog — Select with agent options, save/cancel buttons, loading state
-- [ ] T009 [US3] Add AgentBadge display + "Edit Agent" button (INBOX only) + AgentEditDialog to components/board/ticket-detail-modal.tsx — mirror PolicyBadge + PolicyEditDialog pattern, show effective agent with inherited indicator
+- [x] T008 [P] [US3] Create AgentEditDialog component in components/tickets/agent-edit-dialog.tsx mirroring PolicyEditDialog — Select with agent options, save/cancel buttons, loading state
+- [x] T009 [US3] Add AgentBadge display + "Edit Agent" button (INBOX only) + AgentEditDialog to components/board/ticket-detail-modal.tsx — mirror PolicyBadge + PolicyEditDialog pattern, show effective agent with inherited indicator
 
 **Checkpoint**: Ticket detail modal shows agent and allows editing in INBOX stage
 
@@ -85,7 +85,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T010 [US4] Add agent badge to ticket card header row in components/board/ticket-card.tsx — show effective agent (ticket.agent ?? project.defaultAgent), use muted styling + "(default)" for inherited, normal styling for explicit
+- [x] T010 [US4] Add agent badge to ticket card header row in components/board/ticket-card.tsx — show effective agent (ticket.agent ?? project.defaultAgent), use muted styling + "(default)" for inherited, normal styling for explicit
 
 **Checkpoint**: Kanban board shows agent badges on all ticket cards
 
@@ -99,8 +99,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T011 [US5] Extend QuickImplModal in components/board/quick-impl-modal.tsx — add defaultAgent prop, agent Select between content sections and warning box, pass selected agent via onConfirm callback
-- [ ] T012 [US5] Update parent components that trigger QuickImplModal to pass defaultAgent prop and handle returned agent in transition API call
+- [x] T011 [US5] Extend QuickImplModal in components/board/quick-impl-modal.tsx — add defaultAgent prop, agent Select between content sections and warning box, pass selected agent via onConfirm callback
+- [x] T012 [US5] Update parent components that trigger QuickImplModal to pass defaultAgent prop and handle returned agent in transition API call
 
 **Checkpoint**: Quick-impl flow includes agent selection
 
@@ -110,10 +110,10 @@
 
 **Purpose**: Validation and cross-cutting improvements
 
-- [ ] T013 Run type-check (bun run type-check) and fix any TypeScript errors across all new and modified files
-- [ ] T014 Run linter (bun run lint) and fix any lint errors across all new and modified files
-- [ ] T015 Run unit tests (bun run test:unit) and verify all new and existing tests pass
-- [ ] T016 Run quickstart.md validation checklist — verify all items pass
+- [x] T013 Run type-check (bun run type-check) and fix any TypeScript errors across all new and modified files
+- [x] T014 Run linter (bun run lint) and fix any lint errors across all new and modified files
+- [x] T015 Run unit tests (bun run test:unit) and verify all new and existing tests pass
+- [x] T016 Run quickstart.md validation checklist — verify all items pass
 
 ---
 

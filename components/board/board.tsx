@@ -36,7 +36,7 @@ import { useJobPolling } from '@/app/lib/hooks/useJobPolling';
 import { useTicketsByStage, useTicketByKey } from '@/app/lib/hooks/queries/useTickets';
 import { useTicketJobs } from '@/app/lib/hooks/queries/useTicketJobs';
 import { queryKeys } from '@/app/lib/query-keys';
-import { Job, ClarificationPolicy } from '@prisma/client';
+import { Job, ClarificationPolicy, Agent } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
 import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
@@ -675,11 +675,27 @@ export function Board({
   );
 
   // T037: Handle quick-impl confirmation
-  const handleQuickImplConfirm = useCallback(async () => {
+  const handleQuickImplConfirm = useCallback(async (agent?: Agent) => {
     if (!pendingTransition) return;
 
     const { ticket, targetStage } = pendingTransition;
     setPendingTransition(null);
+
+    // If agent was explicitly selected, update ticket agent before transition
+    if (agent !== undefined) {
+      try {
+        await fetch(
+          `/api/projects/${projectId}/tickets/${ticket.id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent, version: ticket.version }),
+          }
+        );
+      } catch {
+        // Continue with transition even if agent update fails
+      }
+    }
 
     await performTransition(ticket, targetStage, {
       successToast: {
@@ -691,7 +707,7 @@ export function Board({
         description: 'Could not start workflow. Please check your connection.',
       },
     });
-  }, [pendingTransition, performTransition]);
+  }, [pendingTransition, performTransition, projectId]);
 
   // T038: Handle quick-impl cancellation
   const handleQuickImplCancel = useCallback(() => {
@@ -1107,6 +1123,7 @@ export function Board({
       {/* Quick Implementation Modal (T039) */}
       <QuickImplModal
         open={!!pendingTransition}
+        defaultAgent={pendingTransition?.ticket.project?.defaultAgent ?? Agent.CLAUDE}
         onConfirm={handleQuickImplConfirm}
         onCancel={handleQuickImplCancel}
       />

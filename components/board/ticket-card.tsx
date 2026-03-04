@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { JobStatusIndicator } from './job-status-indicator';
-import { Job } from '@prisma/client';
+import { Job, Agent } from '@prisma/client';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
 import { TicketCardDeployIcon } from './ticket-card-deploy-icon';
 import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
@@ -139,6 +140,20 @@ export const TicketCard = React.memo(
                   Clean
                 </Badge>
               )}
+              <Badge
+                variant="outline"
+                className={`text-xs shrink-0 px-1.5 py-0.5 ${
+                  ticket.agent !== null
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+                data-testid="agent-badge"
+              >
+                {getAgentLabel(ticket.agent ?? ticket.project?.defaultAgent ?? Agent.CLAUDE)}
+                {ticket.agent === null && (
+                  <span className="ml-0.5 opacity-70">(default)</span>
+                )}
+              </Badge>
             </div>
           </div>
 
