@@ -703,6 +703,9 @@ export function TicketDetailModal({
   // AIB-148: Check if ticket is closed (read-only mode)
   const isClosedTicket = ticket.stage === 'CLOSED';
 
+  const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
+  const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -781,23 +784,19 @@ export function TicketDetailModal({
               />
             )}
             {/* Agent Badge */}
-            {localTicket?.project?.defaultAgent && (() => {
-              const effectiveAgent = localTicket.agent ?? localTicket.project!.defaultAgent!;
-              const isOverride = localTicket.agent !== null && localTicket.agent !== undefined;
-              return (
-                <Badge
-                  variant={isOverride ? 'default' : 'secondary'}
-                  className="gap-1"
-                  data-testid="agent-badge"
-                >
-                  <span>{getAgentIcon(effectiveAgent)}</span>
-                  <span className="text-xs">{getAgentLabel(effectiveAgent)}</span>
-                  {!isOverride && (
-                    <span className="text-xs text-muted-foreground">(default)</span>
-                  )}
-                </Badge>
-              );
-            })()}
+            {localTicket?.project?.defaultAgent && effectiveAgent && (
+              <Badge
+                variant={isAgentOverride ? 'default' : 'secondary'}
+                className="gap-1"
+                data-testid="agent-badge"
+              >
+                <span>{getAgentIcon(effectiveAgent)}</span>
+                <span className="text-xs">{getAgentLabel(effectiveAgent)}</span>
+                {!isAgentOverride && (
+                  <span className="text-xs text-muted-foreground">(default)</span>
+                )}
+              </Badge>
+            )}
             {/* Branch link - compact icon button */}
             {localTicket?.branch &&
               localTicket.branch.length > 0 &&
