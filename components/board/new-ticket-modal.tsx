@@ -45,6 +45,7 @@ interface FormErrors {
   title?: string;
   description?: string;
   clarificationPolicy?: string;
+  agent?: string;
   attachments?: string;
   submit?: string;
 }
@@ -67,6 +68,7 @@ export function NewTicketModal({
     title: '',
     description: '',
     clarificationPolicy: undefined, // undefined = use project default
+    agent: undefined, // undefined = use project default
     attachments: undefined,
   });
   const [images, setImages] = React.useState<ImageFile[]>([]);
@@ -80,6 +82,7 @@ export function NewTicketModal({
         title: '',
         description: '',
         clarificationPolicy: undefined,
+        agent: undefined,
         attachments: undefined,
       });
       setImages([]);
@@ -148,6 +151,10 @@ export function NewTicketModal({
           formDataObj.append('clarificationPolicy', String(formData.clarificationPolicy));
         }
 
+        if (formData.agent !== undefined && formData.agent !== null) {
+          formDataObj.append('agent', String(formData.agent));
+        }
+
         // Append each image file
         images.forEach((img) => {
           formDataObj.append('images', img.file);
@@ -166,6 +173,10 @@ export function NewTicketModal({
 
         if (formData.clarificationPolicy !== undefined) {
           requestBody.clarificationPolicy = formData.clarificationPolicy;
+        }
+
+        if (formData.agent !== undefined) {
+          requestBody.agent = formData.agent;
         }
 
         response = await fetch(`/api/projects/${projectId}/tickets`, {

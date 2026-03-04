@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Agent } from '@prisma/client';
 import { TicketAttachment } from '@/app/lib/types/ticket';
 
 /**
@@ -56,12 +56,14 @@ export const CreateTicketSchema = z
     title: z.string().optional().default(''),
     description: z.string().optional().default(''),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
+    agent: z.nativeEnum(Agent).nullable().optional(),
     attachments: z.array(z.custom<TicketAttachment>()).optional(),
   })
   .transform((data) => ({
     title: data.title.trim(),
     description: data.description.trim(),
     clarificationPolicy: data.clarificationPolicy,
+    agent: data.agent,
     attachments: data.attachments,
   }))
   .refine((data) => data.title.length > 0, {
@@ -118,6 +120,7 @@ export const patchTicketSchema = z
     branch: z.string().max(200).nullable().optional(),
     autoMode: z.boolean().optional(),
     clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
+    agent: z.nativeEnum(Agent).nullable().optional(),
     version: versionSchema,
   })
   .refine(
@@ -127,7 +130,8 @@ export const patchTicketSchema = z
       data.stage !== undefined ||
       data.branch !== undefined ||
       data.autoMode !== undefined ||
-      data.clarificationPolicy !== undefined,
+      data.clarificationPolicy !== undefined ||
+      data.agent !== undefined,
     { message: 'At least one field must be provided' }
   );
 

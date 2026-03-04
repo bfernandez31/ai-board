@@ -5,6 +5,60 @@ import type { CreateTicketInput } from '../validations/ticket';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import type { Ticket, Job } from '@prisma/client';
 
+type TicketRow = {
+  id: number;
+  ticketNumber: number;
+  ticketKey: string;
+  title: string;
+  description: string | null;
+  stage: string;
+  version: number;
+  projectId: number;
+  branch: string | null;
+  previewUrl: string | null;
+  autoMode: boolean;
+  clarificationPolicy: import('@prisma/client').ClarificationPolicy | null;
+  agent: import('@prisma/client').Agent | null;
+  workflowType: import('@prisma/client').WorkflowType;
+  attachments: import('@prisma/client').Prisma.JsonValue;
+  createdAt: Date;
+  updatedAt: Date;
+  project: {
+    clarificationPolicy: import('@prisma/client').ClarificationPolicy;
+    defaultAgent: import('@prisma/client').Agent;
+    githubOwner: string | null;
+    githubRepo: string | null;
+  };
+};
+
+function toTicketWithVersion(ticket: TicketRow): TicketWithVersion {
+  return {
+    id: ticket.id,
+    ticketNumber: ticket.ticketNumber,
+    ticketKey: ticket.ticketKey,
+    title: ticket.title,
+    description: ticket.description,
+    stage: ticket.stage as Stage,
+    version: ticket.version,
+    projectId: ticket.projectId,
+    branch: ticket.branch,
+    previewUrl: ticket.previewUrl,
+    autoMode: ticket.autoMode,
+    clarificationPolicy: ticket.clarificationPolicy,
+    agent: ticket.agent,
+    workflowType: ticket.workflowType,
+    attachments: ticket.attachments,
+    createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
+    project: {
+      clarificationPolicy: ticket.project.clarificationPolicy,
+      ...(ticket.project.defaultAgent != null && { defaultAgent: ticket.project.defaultAgent }),
+      ...(ticket.project.githubOwner != null && { githubOwner: ticket.project.githubOwner }),
+      ...(ticket.project.githubRepo != null && { githubRepo: ticket.project.githubRepo }),
+    },
+  };
+}
+
 function createEmptyStageMap<T>(): Record<Stage, T[]> {
   return getAllStages().reduce(
     (acc, stage) => {
@@ -52,6 +106,7 @@ export async function getTicketsByStage(
       previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
+      agent: true,
       workflowType: true,
       attachments: true,
       createdAt: true,
@@ -59,6 +114,7 @@ export async function getTicketsByStage(
       project: {
         select: {
           clarificationPolicy: true,
+          defaultAgent: true,
           githubOwner: true,
           githubRepo: true,
         },
@@ -73,25 +129,7 @@ export async function getTicketsByStage(
     const stage = ticket.stage as Stage;
     if (!(stage in grouped)) continue;
 
-    grouped[stage].push({
-      id: ticket.id,
-      ticketNumber: ticket.ticketNumber,
-      ticketKey: ticket.ticketKey,
-      title: ticket.title,
-      description: ticket.description,
-      stage,
-      version: ticket.version,
-      projectId: ticket.projectId,
-      branch: ticket.branch,
-      previewUrl: ticket.previewUrl,
-      autoMode: ticket.autoMode,
-      clarificationPolicy: ticket.clarificationPolicy,
-      workflowType: ticket.workflowType,
-      attachments: ticket.attachments,
-      createdAt: ticket.createdAt.toISOString(),
-      updatedAt: ticket.updatedAt.toISOString(),
-      project: ticket.project,
-    });
+    grouped[stage].push(toTicketWithVersion(ticket));
   }
 
   sortByStage(grouped);
@@ -137,6 +175,9 @@ export async function createTicket(
     ...(input.clarificationPolicy !== undefined && {
       clarificationPolicy: input.clarificationPolicy,
     }),
+    ...(input.agent !== undefined && {
+      agent: input.agent,
+    }),
     ...(input.attachments !== undefined && {
       attachments: input.attachments as unknown as import('@prisma/client').Prisma.InputJsonValue,
     }),
@@ -166,6 +207,7 @@ export async function getTicketsWithJobs(projectId: number) {
       previewUrl: true,
       autoMode: true,
       clarificationPolicy: true,
+      agent: true,
       workflowType: true,
       attachments: true,
       createdAt: true,
@@ -173,6 +215,7 @@ export async function getTicketsWithJobs(projectId: number) {
       project: {
         select: {
           clarificationPolicy: true,
+          defaultAgent: true,
           githubOwner: true,
           githubRepo: true,
         },
@@ -191,30 +234,13 @@ export async function getTicketsWithJobs(projectId: number) {
     const stage = ticket.stage as Stage;
     if (!(stage in ticketsByStage)) continue;
 
-    ticketsByStage[stage].push({
-      id: ticket.id,
-      ticketNumber: ticket.ticketNumber,
-      ticketKey: ticket.ticketKey,
-      title: ticket.title,
-      description: ticket.description,
-      stage,
-      version: ticket.version,
-      projectId: ticket.projectId,
-      branch: ticket.branch,
-      previewUrl: ticket.previewUrl,
-      autoMode: ticket.autoMode,
-      clarificationPolicy: ticket.clarificationPolicy,
-      workflowType: ticket.workflowType,
-      attachments: ticket.attachments,
-      createdAt: ticket.createdAt.toISOString(),
-      updatedAt: ticket.updatedAt.toISOString(),
-      project: ticket.project,
-      jobs: ticket.jobs.map((job) => ({
-        status: job.status,
-        command: job.command,
-        createdAt: job.createdAt,
-      })),
-    });
+    const mapped = toTicketWithVersion(ticket);
+    mapped.jobs = ticket.jobs.map((job) => ({
+      status: job.status,
+      command: job.command,
+      createdAt: job.createdAt,
+    }));
+    ticketsByStage[stage].push(mapped);
     rawByStage[stage].push(ticket);
   }
 
@@ -276,6 +302,7 @@ export async function duplicateTicket(
     workflowType: 'FULL' as const,
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
     clarificationPolicy: sourceTicket.clarificationPolicy,
+    agent: sourceTicket.agent,
   };
 
   return await prisma.ticket.create({
@@ -340,6 +367,7 @@ export async function fullCloneTicket(
         workflowType: sourceTicket.workflowType, // Preserve workflow type
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
         clarificationPolicy: sourceTicket.clarificationPolicy,
+        agent: sourceTicket.agent,
       },
     });
 

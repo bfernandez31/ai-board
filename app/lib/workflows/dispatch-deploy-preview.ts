@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import { isWorkflowTestMode } from './test-mode';
 
 /**
  * GitHub workflow dispatch inputs for deploy preview workflow
@@ -38,13 +39,7 @@ export async function dispatchDeployPreviewWorkflow(
 ): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN;
 
-  // Skip GitHub API call in test mode (same logic as other dispatchers)
-  const isTestMode =
-    process.env.TEST_MODE === 'true' ||
-    process.env.NODE_ENV === 'test' ||
-    (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
-
-  if (isTestMode) {
+  if (isWorkflowTestMode(githubToken)) {
     console.log('[dispatch-deploy-preview] Skipping workflow dispatch in test mode:', {
       ticket_id: inputs.ticket_id,
       branch: inputs.branch,

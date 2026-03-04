@@ -130,6 +130,7 @@ async function main() {
       title: ticketData.title,
       description: ticketData.description,
       clarificationPolicy: undefined,
+      agent: undefined,
       attachments: undefined,
     });
 

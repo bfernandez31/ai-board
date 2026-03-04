@@ -27,6 +27,8 @@ export const createTicketSchema = z.object({
   description: z.string()
     .min(1, 'Description is required')
     .max(10000, 'Description must be 10000 characters or less'),
+
+  agent: z.nativeEnum(Agent).nullable().optional(),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
@@ -35,6 +37,7 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 **Validation Rules**:
 - **title**: Required, 1-100 characters, alphanumeric + basic punctuation only
 - **description**: Required, 1-10000 characters, all UTF-8 characters allowed
+- **agent**: Optional, nullable — `CLAUDE`, `CODEX`, or omitted/`null` to inherit project default
 
 **Rejected Characters (title)**:
 - Emojis (🚀, 😀, etc.)
@@ -64,6 +67,8 @@ export const updateTicketSchema = z.object({
     .nullable()
     .optional(),
 
+  agent: z.nativeEnum(Agent).nullable().optional(),
+
   version: z.number().int().positive(),
 });
 
@@ -73,6 +78,7 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 **Stage-Based Validation**:
 - **description**: Editable ONLY in INBOX stage (API enforced)
 - **clarificationPolicy**: Editable ONLY in INBOX stage (API enforced)
+- **agent**: Editable ONLY in INBOX stage (API enforced; follows same rules as clarificationPolicy)
 - **version**: Always required for optimistic concurrency control
 
 ### TransitionTicketSchema
@@ -347,6 +353,8 @@ export const updateProjectSchema = z.object({
   description: z.string().nullable().optional(),
 
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE']).optional(),
+
+  defaultAgent: z.nativeEnum(Agent).optional(),
 });
 
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
@@ -354,6 +362,7 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 
 **Validation**:
 - **clarificationPolicy**: NOT NULL at database level, default: AUTO
+- **defaultAgent**: NOT NULL at database level, default: CLAUDE; must be a valid `Agent` enum value when provided
 - Updates are partial (all fields optional)
 
 ## Image Attachment Schemas
@@ -395,6 +404,32 @@ interface TicketAttachment {
 **Storage**:
 - JSON array in Ticket.attachments column (PostgreSQL JSONB)
 - Max 5 attachments per ticket
+
+## Agent Schemas
+
+### AgentSchema
+
+```typescript
+// app/lib/schemas/agent.ts
+import { z } from 'zod';
+import { Agent } from '@prisma/client';
+
+export const projectAgentSchema = z.nativeEnum(Agent);
+export const ticketAgentSchema = z.nativeEnum(Agent).nullable();
+```
+
+**Validation Rules**:
+- **projectAgentSchema**: Required, must be `CLAUDE` or `CODEX`
+- **ticketAgentSchema**: Optional (nullable), must be `CLAUDE`, `CODEX`, or `null`
+- `null` on a ticket means inherit the project's `defaultAgent` at workflow dispatch time
+
+**Agent Values**:
+- `CLAUDE` — Anthropic Claude (default for all projects)
+- `CODEX` — OpenAI Codex
+
+**Usage**:
+- `projectAgentSchema` used in `UpdateProjectSchema` for `defaultAgent` field
+- `ticketAgentSchema` used in `CreateTicketSchema` and `UpdateTicketSchema` for `agent` field
 
 ## Clarification Policy Schemas
 
@@ -775,6 +810,7 @@ app/lib/schemas/
 ├── job.ts              # Job status schemas
 ├── project.ts          # Project schemas
 ├── image.ts            # Image attachment schemas
+├── agent.ts            # Agent enum schemas (projectAgentSchema, ticketAgentSchema)
 └── index.ts            # Re-exports all schemas
 ```
 

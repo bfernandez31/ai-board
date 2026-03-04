@@ -1,5 +1,6 @@
 import type { TicketTelemetry } from '@/lib/types/comparison';
 import type { Prisma, JobStatus } from '@prisma/client';
+import { formatDurationMs } from './format-duration';
 
 interface JobTelemetryData {
   inputTokens: number | null;
@@ -131,36 +132,9 @@ export function formatTelemetryDisplay(telemetry: TicketTelemetry): {
   return {
     tokens: totalTokens.toLocaleString(),
     cost: telemetry.costUsd > 0 ? `$${telemetry.costUsd.toFixed(4)}` : 'N/A',
-    duration:
-      telemetry.durationMs > 0
-        ? formatDuration(telemetry.durationMs)
-        : 'N/A',
+    duration: formatDurationMs(telemetry.durationMs),
     model: telemetry.model ?? 'N/A',
   };
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${ms}ms`;
-  }
-
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (minutes < 60) {
-    return remainingSeconds > 0
-      ? `${minutes}m ${remainingSeconds}s`
-      : `${minutes}m`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m`;
 }
 
 export function calculateTotalCost(

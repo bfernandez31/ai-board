@@ -1,5 +1,5 @@
 import { prisma } from './client';
-import type { Project, ClarificationPolicy } from '@prisma/client';
+import type { Project, ClarificationPolicy, Agent } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 import { requireAuth } from './users';
 import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
@@ -46,6 +46,7 @@ export async function getUserProjects(request?: NextRequest) {
       createdAt: true,
       userId: true,
       clarificationPolicy: true,
+      defaultAgent: true,
       _count: {
         select: { tickets: true },
       },
@@ -152,6 +153,7 @@ export async function updateProject(
     githubOwner?: string | undefined;
     githubRepo?: string | undefined;
     clarificationPolicy?: ClarificationPolicy | undefined;
+    defaultAgent?: Agent | undefined;
     deploymentUrl?: string | null | undefined;
   }
 ) {
@@ -173,6 +175,7 @@ export async function updateProject(
   if (data.githubOwner !== undefined) updateData.githubOwner = data.githubOwner;
   if (data.githubRepo !== undefined) updateData.githubRepo = data.githubRepo;
   if (data.clarificationPolicy !== undefined) updateData.clarificationPolicy = data.clarificationPolicy;
+  if (data.defaultAgent !== undefined) updateData.defaultAgent = data.defaultAgent;
   if (data.deploymentUrl !== undefined) updateData.deploymentUrl = data.deploymentUrl;
 
   return prisma.project.update({

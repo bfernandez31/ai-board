@@ -71,6 +71,7 @@ export function useCreateTicket() {
         autoMode: variables.autoMode || false,
         workflowType: 'FULL',
         clarificationPolicy: variables.clarificationPolicy || null,
+        agent: null,
         attachments: [],
       };
 

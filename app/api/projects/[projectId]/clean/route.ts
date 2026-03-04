@@ -7,6 +7,7 @@ import {
 } from '@/lib/db/cleanup-analysis';
 import { getNextTicketNumber } from '@/app/lib/db/ticket-sequence';
 import { Octokit } from '@octokit/rest';
+import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
 
 /**
  * POST /api/projects/[projectId]/clean
@@ -130,13 +131,7 @@ export async function POST(
     const aiboardRepo = process.env.GITHUB_REPO;
     const targetRepository = `${project.githubOwner}/${project.githubRepo}`;
 
-    // Skip GitHub API call in test mode (same logic as other dispatchers)
-    const isTestMode =
-      process.env.TEST_MODE === 'true' ||
-      process.env.NODE_ENV === 'test' ||
-      (!githubToken || githubToken.includes('test') || githubToken.includes('placeholder'));
-
-    if (isTestMode) {
+    if (isWorkflowTestMode(githubToken)) {
       console.log('[Cleanup Workflow Dispatch] Skipping in test mode:', {
         ticketKey: result.ticket.ticketKey,
       });

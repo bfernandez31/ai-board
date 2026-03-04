@@ -1,34 +1,8 @@
-import type { WorkflowType, ClarificationPolicy, JobStatus, Prisma } from '@prisma/client';
+import type { ClarificationPolicy } from '@prisma/client';
 import type { Stage } from '@/lib/stage-transitions';
+import type { TicketWithVersion } from '@/lib/types';
 
-export interface TicketWithVersion {
-  id: number;
-  ticketNumber: number;
-  ticketKey: string;
-  title: string;
-  description: string | null;
-  stage: Stage;
-  projectId: number;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-  branch: string | null;
-  previewUrl?: string | null;
-  autoMode: boolean;
-  workflowType: WorkflowType;
-  clarificationPolicy: ClarificationPolicy | null;
-  attachments: Prisma.JsonValue;
-  project?: {
-    clarificationPolicy: ClarificationPolicy;
-    githubOwner?: string;
-    githubRepo?: string;
-  };
-  jobs?: Array<{
-    status: JobStatus;
-    command: string;
-    createdAt: Date;
-  }>;
-}
+export type { TicketWithVersion };
 
 export type TicketsByStage = Record<Stage, TicketWithVersion[]>;
 

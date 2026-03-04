@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Agent } from '@prisma/client';
 
 describe('Project Settings - clarificationPolicy', () => {
   let ctx: TestContext;
@@ -184,6 +184,86 @@ describe('Project Settings - clarificationPolicy', () => {
       // Verify database
       const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
       expect(dbProject?.clarificationPolicy).toBe('AUTO');
+    });
+  });
+
+  describe('PATCH /api/projects/:id - defaultAgent updates', () => {
+    it('should return defaultAgent with default CLAUDE', async () => {
+      // Reset to default CLAUDE (may have been modified by other tests)
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { defaultAgent: Agent.CLAUDE },
+      });
+
+      const response = await ctx.api.get<{ defaultAgent: string }>(
+        `/api/projects/${ctx.projectId}`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.defaultAgent).toBe('CLAUDE');
+    });
+
+    it('should update defaultAgent to CODEX', async () => {
+      const response = await ctx.api.patch<{ defaultAgent: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { defaultAgent: 'CODEX' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.defaultAgent).toBe('CODEX');
+
+      const dbProject = await prisma.project.findUnique({ where: { id: ctx.projectId } });
+      expect(dbProject?.defaultAgent).toBe('CODEX');
+    });
+
+    it('should update defaultAgent back to CLAUDE', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { defaultAgent: Agent.CODEX },
+      });
+
+      const response = await ctx.api.patch<{ defaultAgent: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { defaultAgent: 'CLAUDE' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.defaultAgent).toBe('CLAUDE');
+    });
+
+    it('should return 400 for invalid agent value', async () => {
+      const response = await ctx.api.patch<{ error: string; issues: unknown[] }>(
+        `/api/projects/${ctx.projectId}`,
+        { defaultAgent: 'INVALID_AGENT' }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toBe('Validation failed');
+    });
+
+    it('should return 400 for null defaultAgent', async () => {
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { defaultAgent: null }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toBe('Validation failed');
+    });
+
+    it('should not affect defaultAgent when updating other fields', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { defaultAgent: Agent.CODEX },
+      });
+
+      const response = await ctx.api.patch<{ defaultAgent: string }>(
+        `/api/projects/${ctx.projectId}`,
+        { name: '[e2e] Updated Project Name' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.defaultAgent).toBe('CODEX');
     });
   });
 
