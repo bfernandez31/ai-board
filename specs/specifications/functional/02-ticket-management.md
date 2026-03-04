@@ -719,6 +719,12 @@ Timestamps display in user-friendly formats:
 
 ### Optional Configuration
 
+- **AI Agent**: Which AI agent executes the ticket's workflows
+  - Can inherit from project default agent
+  - Can be overridden for specific tickets
+  - Values: CLAUDE (Claude Code), CODEX (OpenAI Codex)
+  - Null value means inherit from project's `defaultAgent` (CLAUDE by default)
+
 - **Clarification Policy**: How ambiguities are resolved during specification
   - Can inherit from project default
   - Can be overridden for specific tickets

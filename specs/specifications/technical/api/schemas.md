@@ -27,6 +27,10 @@ export const createTicketSchema = z.object({
   description: z.string()
     .min(1, 'Description is required')
     .max(10000, 'Description must be 10000 characters or less'),
+
+  agent: z.nativeEnum(Agent).nullable().optional(),
+
+  clarificationPolicy: z.nativeEnum(ClarificationPolicy).nullable().optional(),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
@@ -59,6 +63,8 @@ export const updateTicketSchema = z.object({
     .min(1)
     .max(10000)
     .optional(),
+
+  agent: z.nativeEnum(Agent).nullable().optional(),
 
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE'])
     .nullable()
@@ -347,6 +353,8 @@ export const updateProjectSchema = z.object({
   description: z.string().nullable().optional(),
 
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE']).optional(),
+
+  defaultAgent: z.enum(['CLAUDE', 'CODEX']).optional(),
 });
 
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;

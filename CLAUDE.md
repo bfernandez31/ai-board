@@ -79,12 +79,14 @@ bun run type-check         # TypeScript check
 - `key`: 3-char unique identifier (e.g., "ABC")
 - `githubOwner`, `githubRepo`: External repository
 - `clarificationPolicy`: AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE
+- `defaultAgent`: CLAUDE|CODEX (default: CLAUDE) — inherited by tickets when ticket.agent is null
 
 ### Ticket
 - `ticketKey`: Format `{PROJECT_KEY}-{NUMBER}` (e.g., "ABC-123")
 - `branch`: Git branch (created by workflow, not transition)
 - `workflowType`: FULL|QUICK|CLEAN (tracks which path was used)
 - `previewUrl`: Vercel deployment URL (VERIFY stage)
+- `agent`: CLAUDE|CODEX|null — overrides project defaultAgent when set
 
 ### Job
 - Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED

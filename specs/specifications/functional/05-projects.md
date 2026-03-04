@@ -23,6 +23,10 @@ Each project contains:
   - **GitHub Repo**: Repository name (e.g., "ai-board", "my-project")
   - Used for workflow automation and code management
   - Workflows execute on external project repositories
+- **Default AI Agent**: Which AI agent executes workflows for tickets by default
+  - Values: CLAUDE (Claude Code), CODEX (OpenAI Codex)
+  - Default: CLAUDE
+  - Tickets can override this per-ticket with their own `agent` field
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets

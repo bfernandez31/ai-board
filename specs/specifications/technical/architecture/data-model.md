@@ -65,6 +65,7 @@ model Project {
   githubRepo           String
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
+  defaultAgent         Agent                @default(CLAUDE)
   activeCleanupJobId   Int?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -98,6 +99,9 @@ model Project {
 - `githubRepo`: GitHub repository name
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
+- `defaultAgent`: Default AI agent for ticket workflow execution (enum, default: CLAUDE)
+  - Inherited by tickets when ticket-level `agent` is null
+  - Configurable per-project to allow Codex-based projects
 - `activeCleanupJobId`: Reference to currently active cleanup job (nullable)
   - Used for project-level transition locking during cleanup
   - Set when cleanup workflow triggered
@@ -143,6 +147,7 @@ model Ticket {
   projectId            Int
   branch               String?              @db.VarChar(200)
   workflowType         WorkflowType         @default(FULL)
+  agent                Agent?
   clarificationPolicy  ClarificationPolicy?
   attachments          Json?
   version              Int                  @default(1)
@@ -181,6 +186,9 @@ model Ticket {
 - `projectId`: Parent project (required foreign key)
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
 - `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
+- `agent`: AI agent override for this ticket (nullable, inherits from `project.defaultAgent` when null)
+  - When set, overrides the project-level `defaultAgent` for this ticket's workflows
+  - Supported values: CLAUDE, CODEX
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
@@ -640,6 +648,27 @@ enum WorkflowType {
 - Determines visual badge (⚡ Quick, ✨ Clean with sparkles icon)
 - CLEAN type created via project menu "Clean Project" action
 - CLEAN tickets bypass INBOX, SPECIFY, PLAN stages
+
+### Agent
+
+AI agent selection for workflow execution.
+
+```prisma
+enum Agent {
+  CLAUDE  // Claude Code (Anthropic)
+  CODEX   // OpenAI Codex
+}
+```
+
+**Usage**:
+- `Project.defaultAgent`: Project-level default (required, default: CLAUDE)
+- `Ticket.agent`: Per-ticket override (optional, null = inherit from project)
+- Effective agent: `ticket.agent ?? project.defaultAgent`
+
+**Resolution**:
+- Ticket agent overrides project default when set
+- Null ticket agent means inherit from project
+- CLAUDE is the system-wide default if project default not explicitly set
 
 ### ClarificationPolicy
 
