@@ -151,6 +151,10 @@ export function NewTicketModal({
           formDataObj.append('clarificationPolicy', String(formData.clarificationPolicy));
         }
 
+        if (formData.agent !== undefined && formData.agent !== null) {
+          formDataObj.append('agent', String(formData.agent));
+        }
+
         // Append each image file
         images.forEach((img) => {
           formDataObj.append('images', img.file);
@@ -169,6 +173,10 @@ export function NewTicketModal({
 
         if (formData.clarificationPolicy !== undefined) {
           requestBody.clarificationPolicy = formData.clarificationPolicy;
+        }
+
+        if (formData.agent !== undefined) {
+          requestBody.agent = formData.agent;
         }
 
         response = await fetch(`/api/projects/${projectId}/tickets`, {
