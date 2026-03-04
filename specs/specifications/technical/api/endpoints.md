@@ -117,6 +117,7 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
+  "defaultAgent": "CLAUDE",
   "activeCleanupJobId": null,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
@@ -124,6 +125,7 @@ Fetch project details including clarification policy.
 ```
 
 **Fields**:
+- `defaultAgent`: Default AI agent for all tickets in this project (CLAUDE|CODEX)
 - `activeCleanupJobId`: ID of active cleanup job (null if no cleanup in progress)
   - Used by frontend to show cleanup lock banner
   - Lock automatically cleared when cleanup job reaches terminal state
@@ -150,7 +152,8 @@ Update project details including clarification policy.
   "key": "UPD",
   "description": "Updated description",
   "deploymentUrl": "https://my-app.vercel.app",
-  "clarificationPolicy": "CONSERVATIVE"
+  "clarificationPolicy": "CONSERVATIVE",
+  "defaultAgent": "CODEX"
 }
 ```
 
@@ -160,6 +163,7 @@ Update project details including clarification policy.
 - `description`: Optional, string or null
 - `deploymentUrl`: Optional, string or null (valid URL format)
 - `clarificationPolicy`: Optional, enum (AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE)
+- `defaultAgent`: Optional, enum (CLAUDE|CODEX) — only project owners can modify
 
 **Response** (200 OK):
 ```json
@@ -211,6 +215,7 @@ Fetch all tickets for a project, grouped by stage.
       "branch": "042-add-login-feature",
       "workflowType": "FULL",
       "clarificationPolicy": null,
+      "agent": null,
       "attachments": [],
       "version": 3,
       "closedAt": null,
@@ -249,13 +254,15 @@ Create a new ticket.
 ```json
 {
   "title": "Fix login bug",
-  "description": "Login button doesn't work on mobile devices"
+  "description": "Login button doesn't work on mobile devices",
+  "agent": "CODEX"
 }
 ```
 
 **Validation**:
 - `title`: Required, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Required, 1-10000 characters, all UTF-8 characters allowed
+- `agent`: Optional, enum (CLAUDE|CODEX) or null — null means inherit from project `defaultAgent`
 
 **Response** (201 Created):
 ```json
@@ -270,6 +277,7 @@ Create a new ticket.
   "branch": null,
   "workflowType": "FULL",
   "clarificationPolicy": null,
+  "agent": "CODEX",
   "attachments": [],
   "version": 1,
   "createdAt": "2025-01-20T09:00:00.000Z",
@@ -307,13 +315,15 @@ Fetch ticket by human-readable key (primary user-facing endpoint).
   "branch": "042-add-login-feature",
   "workflowType": "FULL",
   "clarificationPolicy": null,
+  "agent": null,
   "attachments": [],
   "version": 3,
   "project": {
     "id": 1,
     "name": "AI Board Development",
     "key": "ABC",
-    "clarificationPolicy": "AUTO"
+    "clarificationPolicy": "AUTO",
+    "defaultAgent": "CLAUDE"
   },
   "createdAt": "2025-01-10T14:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
@@ -401,6 +411,7 @@ Update ticket fields with optimistic concurrency control.
   "title": "Updated title",
   "description": "Updated description",
   "clarificationPolicy": "CONSERVATIVE",
+  "agent": "CLAUDE",
   "version": 3
 }
 ```
@@ -409,6 +420,7 @@ Update ticket fields with optimistic concurrency control.
 - `title`: Optional, 1-100 characters, alphanumeric + basic punctuation
 - `description`: Optional, 1-10000 characters (editable only in INBOX stage)
 - `clarificationPolicy`: Optional, enum or null (editable only in INBOX stage)
+- `agent`: Optional, enum (CLAUDE|CODEX) or null (editable only in INBOX stage)
 - `version`: Required for concurrency control
 
 **Response** (200 OK):

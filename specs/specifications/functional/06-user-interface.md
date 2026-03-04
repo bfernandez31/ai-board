@@ -89,6 +89,13 @@ The user interface provides an intuitive, modern experience for managing tickets
 - CLEAN: ✨ Clean badge with sparkles icon and purple background (purple-100/purple-900 dark)
 - FULL: No workflow type badge displayed
 
+**Agent Badge**:
+- Every ticket card displays a small agent label in the header row
+- **Explicit agent** (ticket.agent is set): Normal badge styling with agent label (e.g., "Claude" or "Codex")
+- **Inherited agent** (ticket.agent is null): Muted styling with "(default)" suffix (e.g., "Claude (default)")
+- Badge positioned alongside workflow type badges
+- Labels derived from `getAgentLabel()` utility in `app/lib/utils/agent-icons.ts`
+
 ## Interactive Elements
 
 ### Buttons
@@ -169,6 +176,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Warning that stage transitions will be blocked during cleanup
 - Cancel and "Start Cleanup" buttons
 - Loading state while cleanup job is being created
+
+**Agent Selector**:
+- Dropdown select field using shadcn/ui `<Select>` component
+- Appears in: new ticket modal, ticket detail modal (INBOX stage only), quick-impl modal
+- Pre-populated with project's `defaultAgent` value
+- Sentinel value `"project-default"` represents "no override" in form state (saves as null)
+- Explicitly choosing an agent saves that value to `ticket.agent`
+- In ticket detail modal: visible for all stages, editable only in INBOX stage; read-only display in other stages
+- In quick-impl modal: positioned between the trade-offs section and the warning box
 
 ## Drag-and-Drop
 
