@@ -10,7 +10,6 @@ import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('Ticket Agent Field', () => {
   let ctx: TestContext;
-  const prisma = getPrismaClient();
 
   beforeEach(async () => {
     ctx = await getTestContext();
