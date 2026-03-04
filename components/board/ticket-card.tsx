@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
+import { getAgentIcon, getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
@@ -139,6 +140,26 @@ export const TicketCard = React.memo(
                   Clean
                 </Badge>
               )}
+              {/* Agent Badge */}
+              {(() => {
+                const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
+                if (!effectiveAgent) return null;
+                const isInherited = ticket.agent === null || ticket.agent === undefined;
+                return (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs shrink-0 px-1.5 py-0.5 font-semibold ${
+                      isInherited
+                        ? 'bg-muted text-muted-foreground'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }`}
+                    data-testid="agent-badge"
+                  >
+                    {getAgentIcon(effectiveAgent)} {getAgentLabel(effectiveAgent)}
+                    {isInherited && ' (default)'}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
 

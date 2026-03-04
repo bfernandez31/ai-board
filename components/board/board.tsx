@@ -675,11 +675,33 @@ export function Board({
   );
 
   // T037: Handle quick-impl confirmation
-  const handleQuickImplConfirm = useCallback(async () => {
+  const handleQuickImplConfirm = useCallback(async (agent?: import('@prisma/client').Agent) => {
     if (!pendingTransition) return;
 
     const { ticket, targetStage } = pendingTransition;
     setPendingTransition(null);
+
+    // If agent was explicitly selected, PATCH it before transition
+    if (agent) {
+      try {
+        const patchResponse = await fetch(
+          `/api/projects/${projectId}/tickets/${ticket.id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent, version: ticket.version }),
+          }
+        );
+        if (patchResponse.ok) {
+          const updated = await patchResponse.json();
+          // Update ticket version for the transition
+          ticket.version = updated.version;
+          ticket.agent = agent;
+        }
+      } catch {
+        // Continue with transition even if agent patch fails
+      }
+    }
 
     await performTransition(ticket, targetStage, {
       successToast: {
@@ -691,7 +713,7 @@ export function Board({
         description: 'Could not start workflow. Please check your connection.',
       },
     });
-  }, [pendingTransition, performTransition]);
+  }, [pendingTransition, performTransition, projectId]);
 
   // T038: Handle quick-impl cancellation
   const handleQuickImplCancel = useCallback(() => {
@@ -1109,6 +1131,7 @@ export function Board({
         open={!!pendingTransition}
         onConfirm={handleQuickImplConfirm}
         onCancel={handleQuickImplCancel}
+        defaultAgent={pendingTransition?.ticket.project?.defaultAgent}
       />
 
       {/* Verify to Plan Rollback Modal (AIB-75) */}
