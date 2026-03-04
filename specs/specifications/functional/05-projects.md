@@ -24,6 +24,7 @@ Each project contains:
   - Used for workflow automation and code management
   - Workflows execute on external project repositories
 - **Default Clarification Policy**: How AI resolves ambiguities during specification
+- **Default Agent**: Which AI agent executes workflow automation (CLAUDE or CODEX; default: CLAUDE)
 - **Creation Timestamp**: When project was created
 - **Last Updated**: Most recent activity across all tickets
 
@@ -183,6 +184,37 @@ Projects include a constitution document that defines development guidelines, te
 - Clear message when constitution file doesn't exist
 - User-friendly errors for network or API issues
 - Preserves unsaved edits on save failure for retry
+
+### Default Agent Configuration
+
+Projects have a configurable default AI agent that determines which AI executes workflow automation for all tickets:
+
+**Purpose**:
+- Sets which AI agent handles all new tickets by default
+- Individual tickets can override the project default
+- Ensures consistent agent assignment without per-ticket configuration
+
+**Available Agents**:
+
+1. **CLAUDE (Anthropic Claude)**:
+   - Default for all new and existing projects
+   - Current production agent for all workflow automation
+   - Backward-compatible with all existing workflows
+
+2. **CODEX (OpenAI Codex)**:
+   - Alternative agent for projects requiring OpenAI's offering
+   - Must be explicitly selected; not the default
+
+**Configuration**:
+- Accessible from project settings page
+- Dropdown select with agent options
+- Changes apply to future tickets only (existing ticket overrides unaffected)
+- Only owners can modify (authorization: `verifyProjectOwnership`)
+
+**Inheritance**:
+- New tickets inherit the project's `defaultAgent` when no ticket-level override is set
+- Ticket `agent` field is `null` by default (means: use project default)
+- Effective agent resolved at workflow dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 
 ### Clarification Policy Configuration
 

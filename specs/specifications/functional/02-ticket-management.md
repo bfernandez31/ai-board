@@ -724,6 +724,13 @@ Timestamps display in user-friendly formats:
   - Can be overridden for specific tickets
   - Values: AUTO, CONSERVATIVE, PRAGMATIC, INTERACTIVE
 
+- **Agent**: Which AI agent executes workflow automation for this ticket
+  - Nullable field — `null` means inherit from the project's `defaultAgent`
+  - Can be overridden per ticket during creation or while in INBOX stage
+  - Values: `CLAUDE` (Anthropic), `CODEX` (OpenAI)
+  - Effective agent resolved at workflow dispatch time
+  - Follows the same inheritance and editability rules as `clarificationPolicy`
+
 - **Preview URL**: Vercel deployment URL for testing
   - Set when manual deployment is triggered from VERIFY stage
   - Accessible via clickable icon on ticket card

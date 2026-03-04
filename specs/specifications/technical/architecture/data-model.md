@@ -65,6 +65,7 @@ model Project {
   githubRepo           String
   userId               String
   clarificationPolicy  ClarificationPolicy  @default(AUTO)
+  defaultAgent         Agent                @default(CLAUDE)
   activeCleanupJobId   Int?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -98,6 +99,7 @@ model Project {
 - `githubRepo`: GitHub repository name
 - `userId`: Owner of the project (required foreign key)
 - `clarificationPolicy`: Default policy for spec generation (enum, default: AUTO)
+- `defaultAgent`: Default AI agent for all tickets in the project (enum, default: CLAUDE)
 - `activeCleanupJobId`: Reference to currently active cleanup job (nullable)
   - Used for project-level transition locking during cleanup
   - Set when cleanup workflow triggered
@@ -124,6 +126,7 @@ model Project {
 - Deleting project deletes all tickets and jobs (cascade)
 - User can only access their own projects
 - Default clarification policy AUTO (context-aware)
+- Default agent CLAUDE (backward-compatible; existing projects automatically get CLAUDE)
 - Deployment URL displayed on project cards when configured (hidden when null)
 - Project description stored but not displayed on list view cards
 - Project key generation: derived from first 3 characters of name (uppercase), padded/disambiguated if needed
@@ -144,6 +147,7 @@ model Ticket {
   branch               String?              @db.VarChar(200)
   workflowType         WorkflowType         @default(FULL)
   clarificationPolicy  ClarificationPolicy?
+  agent                Agent?
   attachments          Json?
   version              Int                  @default(1)
   closedAt             DateTime?
@@ -182,6 +186,7 @@ model Ticket {
 - `branch`: Git branch name (max 200 chars, nullable, set by workflow)
 - `workflowType`: Workflow path used (enum: FULL, QUICK, default: FULL)
 - `clarificationPolicy`: Optional policy override (nullable, inherits from project when null)
+- `agent`: Optional AI agent override (nullable, inherits from project `defaultAgent` when null)
 - `attachments`: Image attachments (JSON array of TicketAttachment objects)
 - `previewUrl`: Vercel preview deployment URL (max 500 chars, nullable, HTTPS-only, Vercel domain pattern)
   - Set when manual deployment triggered from VERIFY stage
@@ -223,6 +228,8 @@ model Ticket {
 - workflowType set during first BUILD transition (immutable thereafter)
 - Description editable only in INBOX stage (frozen after SPECIFY)
 - Clarification policy overrides project default when set
+- Agent overrides project default when set; null means inherit from project `defaultAgent`
+- Effective agent resolved at dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 - Ticket lookup supports both internal ID (backward compatibility) and ticket key (user-facing)
 - **Deletion**:
   - Tickets can be deleted from INBOX, SPECIFY, PLAN, BUILD, VERIFY stages (not SHIP or CLOSED)
@@ -658,6 +665,35 @@ enum ClarificationPolicy {
 - Ticket policy overrides project policy
 - Project policy overrides system default (AUTO)
 - Null ticket policy means inherit from project
+
+### Agent
+
+AI agent that executes workflow automation for a ticket or project.
+
+```prisma
+enum Agent {
+  CLAUDE  // Anthropic Claude (default)
+  CODEX   // OpenAI Codex
+}
+```
+
+**Hierarchy**:
+- Ticket `agent` overrides project `defaultAgent`
+- Null ticket `agent` means inherit from project `defaultAgent`
+- New projects default to `CLAUDE`
+
+**Resolution**:
+```typescript
+// app/lib/utils/agent-resolution.ts
+import type { Agent } from '@prisma/client';
+
+export function resolveEffectiveAgent(
+  ticketAgent: Agent | null,
+  projectDefaultAgent: Agent
+): Agent {
+  return ticketAgent ?? projectDefaultAgent;
+}
+```
 
 ## Relationships Diagram
 
