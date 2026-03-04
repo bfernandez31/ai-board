@@ -26,12 +26,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Agent } from '@prisma/client';
 import {
   getPolicyIcon,
   getPolicyLabel,
   getPolicyDescription,
 } from '@/app/lib/utils/policy-icons';
+import {
+  getAgentIcon,
+  getAgentLabel,
+  getAgentDescription,
+} from '@/app/lib/utils/agent-icons';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 
 interface NewTicketModalProps {
@@ -331,6 +336,48 @@ export function NewTicketModal({
             <p className="text-xs text-muted-foreground">
               Leave as default to inherit from project settings. Override for
               specific requirements.
+            </p>
+          </div>
+
+          {/* Agent Field (Optional) */}
+          <div className="space-y-2">
+            <Label htmlFor="agent">
+              AI Agent (Optional)
+            </Label>
+            <Select
+              value={formData.agent ?? 'project-default'}
+              onValueChange={(value) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  agent:
+                    value === 'project-default'
+                      ? undefined
+                      : (value as Agent),
+                }));
+              }}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger id="agent">
+                <SelectValue placeholder="Use project default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="project-default">
+                  Use project default
+                </SelectItem>
+                <SelectItem value={Agent.CLAUDE}>
+                  {getAgentIcon(Agent.CLAUDE)}{' '}
+                  {getAgentLabel(Agent.CLAUDE)} -{' '}
+                  {getAgentDescription(Agent.CLAUDE)}
+                </SelectItem>
+                <SelectItem value={Agent.CODEX}>
+                  {getAgentIcon(Agent.CODEX)}{' '}
+                  {getAgentLabel(Agent.CODEX)} -{' '}
+                  {getAgentDescription(Agent.CODEX)}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Leave as default to inherit from project settings. Override to use a specific AI agent.
             </p>
           </div>
 

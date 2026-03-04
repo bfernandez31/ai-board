@@ -1,0 +1,188 @@
+'use client';
+
+import * as React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Agent } from '@prisma/client';
+import {
+  getAgentIcon,
+  getAgentLabel,
+  getAgentDescription,
+} from '@/app/lib/utils/agent-icons';
+import { Loader2 } from 'lucide-react';
+
+interface AgentEditDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currentAgent: Agent | null;
+  projectDefaultAgent: Agent;
+  onSave: (agent: Agent | null) => Promise<void>;
+}
+
+export function AgentEditDialog({
+  open,
+  onOpenChange,
+  currentAgent,
+  projectDefaultAgent,
+  onSave,
+}: AgentEditDialogProps) {
+  const [selectedAgent, setSelectedAgent] = React.useState<string>(
+    currentAgent ?? 'project-default'
+  );
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (open) {
+      setSelectedAgent(currentAgent ?? 'project-default');
+      setError(null);
+    }
+  }, [open, currentAgent]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const agentValue =
+        selectedAgent === 'project-default'
+          ? null
+          : (selectedAgent as Agent);
+
+      await onSave(agentValue);
+      onOpenChange(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to update agent'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hasChanges = selectedAgent !== (currentAgent ?? 'project-default');
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit AI Agent</DialogTitle>
+          <DialogDescription>
+            Choose which AI agent handles this ticket or use the project default.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="rounded-md bg-muted p-3 space-y-1">
+            <p className="text-sm font-medium">Current Agent</p>
+            <p className="text-sm text-muted-foreground">
+              {currentAgent ? (
+                <>
+                  {getAgentIcon(currentAgent)}{' '}
+                  {getAgentLabel(currentAgent)} (override)
+                </>
+              ) : (
+                <>
+                  {getAgentIcon(projectDefaultAgent)}{' '}
+                  {getAgentLabel(projectDefaultAgent)} (project default)
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="agent-select">New Agent</Label>
+            <Select
+              value={selectedAgent}
+              onValueChange={setSelectedAgent}
+              disabled={isSaving}
+            >
+              <SelectTrigger id="agent-select">
+                <SelectValue placeholder="Select agent" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="project-default">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="font-medium">Use project default</span>
+                    <span className="text-xs text-muted-foreground">
+                      {getAgentIcon(projectDefaultAgent)}{' '}
+                      {getAgentLabel(projectDefaultAgent)} -{' '}
+                      {getAgentDescription(projectDefaultAgent)}
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value={Agent.CLAUDE}>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="font-medium">
+                      {getAgentIcon(Agent.CLAUDE)}{' '}
+                      {getAgentLabel(Agent.CLAUDE)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {getAgentDescription(Agent.CLAUDE)}
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value={Agent.CODEX}>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="font-medium">
+                      {getAgentIcon(Agent.CODEX)}{' '}
+                      {getAgentLabel(Agent.CODEX)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {getAgentDescription(Agent.CODEX)}
+                    </span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Agent overrides apply only to this ticket and take precedence
+              over project defaults.
+            </p>
+          </div>
+
+          {error && (
+            <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+            className="flex items-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
