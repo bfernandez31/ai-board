@@ -1,4 +1,4 @@
-import { Ticket as PrismaTicket, ClarificationPolicy, WorkflowType, Prisma, JobStatus } from '@prisma/client';
+import { Ticket as PrismaTicket, ClarificationPolicy, WorkflowType, Agent, Prisma, JobStatus } from '@prisma/client';
 import { Stage } from './stage-transitions';
 
 /**
@@ -26,6 +26,7 @@ export interface TicketWithVersion {
   branch: string | null;
   previewUrl?: string | null;
   autoMode: boolean;
+  agent: Agent | null;
   clarificationPolicy: ClarificationPolicy | null;
   workflowType: WorkflowType;
   attachments: Prisma.JsonValue;

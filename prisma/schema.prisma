@@ -70,6 +70,7 @@ model Project {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
+  defaultAgent        Agent               @default(CLAUDE)
   activeCleanupJobId  Int?
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
@@ -122,6 +123,7 @@ model Ticket {
   attachments         Json?                @default("[]")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @default(now()) @updatedAt
+  agent               Agent?
   clarificationPolicy ClarificationPolicy?
   closedAt            DateTime?
   comments            Comment[]
@@ -276,4 +278,9 @@ enum WorkflowType {
   FULL
   QUICK
   CLEAN
+}
+
+enum Agent {
+  CLAUDE
+  CODEX
 }

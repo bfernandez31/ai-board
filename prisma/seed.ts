@@ -129,6 +129,7 @@ async function main() {
     const ticket = await createTicket(project.id, {
       title: ticketData.title,
       description: ticketData.description,
+      agent: undefined,
       clarificationPolicy: undefined,
       attachments: undefined,
     });

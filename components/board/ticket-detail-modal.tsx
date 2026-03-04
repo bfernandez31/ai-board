@@ -65,6 +65,7 @@ interface TicketData {
   projectId: number;
   branch: string | null;
   autoMode: boolean;
+  agent?: import('@prisma/client').Agent | null;
   clarificationPolicy: ClarificationPolicy | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
@@ -298,6 +299,7 @@ export function TicketDetailModal({
       updatedAt: now,
       branch: mode === 'full' ? 'creating...' : null,
       autoMode: false,
+      agent: localTicket.agent || null,
       workflowType: localTicket.workflowType || 'FULL',
       clarificationPolicy: localTicket.clarificationPolicy || null,
       attachments: (localTicket.attachments || []) as unknown as TicketWithVersion['attachments'],

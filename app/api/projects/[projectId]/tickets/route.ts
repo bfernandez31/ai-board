@@ -377,6 +377,7 @@ export async function POST(
         projectId: finalTicket.projectId,
         branch: finalTicket.branch,
         autoMode: finalTicket.autoMode,
+        agent: finalTicket.agent,
         attachments: finalTicket.attachments,
         createdAt: finalTicket.createdAt.toISOString(),
         updatedAt: finalTicket.updatedAt.toISOString(),

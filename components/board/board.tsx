@@ -610,6 +610,7 @@ export function Board({
     projectId: number;
     branch: string | null;
     autoMode: boolean;
+    agent?: import('@prisma/client').Agent | null;
     clarificationPolicy: ClarificationPolicy | null;
     workflowType: 'FULL' | 'QUICK' | 'CLEAN';
     attachments?: import('@/app/lib/types/ticket').TicketAttachment[] | null;
@@ -638,6 +639,7 @@ export function Board({
         projectId: updatedTicket.projectId,
         branch: updatedTicket.branch,
         autoMode: updatedTicket.autoMode,
+        agent: updatedTicket.agent ?? existingTicket?.agent ?? null,
         clarificationPolicy: updatedTicket.clarificationPolicy,
         // Preserve workflowType from existing ticket if not in update (defensive)
         workflowType: updatedTicket.workflowType || existingTicket?.workflowType || 'FULL',

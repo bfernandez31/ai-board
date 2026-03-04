@@ -77,6 +77,7 @@ export async function GET(
       projectId: ticket.projectId,
       branch: ticket.branch,
       autoMode: ticket.autoMode,
+      agent: ticket.agent,
       clarificationPolicy: ticket.clarificationPolicy,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
@@ -140,7 +141,7 @@ export async function PATCH(
     const body = await request.json();
 
     const isStageUpdate = 'stage' in body && !('title' in body || 'description' in body || 'branch' in body || 'autoMode' in body);
-    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'clarificationPolicy' in body;
+    const isInlineEdit = 'title' in body || 'description' in body || 'branch' in body || 'autoMode' in body || 'agent' in body || 'clarificationPolicy' in body;
 
     if (isInlineEdit) {
       const parseResult = patchTicketSchema.safeParse(body);
@@ -160,6 +161,7 @@ export async function PATCH(
         description,
         branch,
         autoMode,
+        agent,
         clarificationPolicy,
         version: requestVersion,
       } = parseResult.data;
@@ -216,6 +218,7 @@ export async function PATCH(
             }),
             ...(branch !== undefined && { branch }),
             ...(autoMode !== undefined && { autoMode }),
+            ...(agent !== undefined && { agent }),
             ...(clarificationPolicy !== undefined && { clarificationPolicy }),
             version: { increment: 1 },
             updatedAt: new Date(),
@@ -234,6 +237,7 @@ export async function PATCH(
             projectId: updatedTicket.projectId,
             branch: updatedTicket.branch,
             autoMode: updatedTicket.autoMode,
+            agent: updatedTicket.agent,
             clarificationPolicy: updatedTicket.clarificationPolicy,
             workflowType: updatedTicket.workflowType,
             createdAt: updatedTicket.createdAt.toISOString(),
@@ -263,7 +267,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: 'Invalid request',
-        message: 'Must provide fields to update (title, description, branch, autoMode, or clarificationPolicy)',
+        message: 'Must provide fields to update (title, description, branch, autoMode, agent, or clarificationPolicy)',
       },
       { status: 400 }
     );

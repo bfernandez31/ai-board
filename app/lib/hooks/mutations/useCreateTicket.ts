@@ -69,6 +69,7 @@ export function useCreateTicket() {
         updatedAt: now,
         branch: null,
         autoMode: variables.autoMode || false,
+        agent: variables.agent || null,
         workflowType: 'FULL',
         clarificationPolicy: variables.clarificationPolicy || null,
         attachments: [],

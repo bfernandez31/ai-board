@@ -111,6 +111,7 @@ export async function createTestTicket(
   const ticket = await createTicket(projectId, {
     title: data?.title ?? 'Test Ticket',
     description: data?.description ?? 'Test ticket description',
+    agent: undefined,
     clarificationPolicy: undefined,
     attachments: undefined,
   });
@@ -173,6 +174,7 @@ export async function setupTestData(projectId?: number): Promise<{ project: Test
   const ticket = await createTicket(project.id, {
     title: '[e2e] Test Ticket for Transition',
     description: 'Test ticket for transition API E2E tests',
+    agent: undefined,
     clarificationPolicy: undefined,
     attachments: undefined,
   });
@@ -229,6 +231,7 @@ export async function createTicketWithJob(
   const ticket = await createTicket(project.id, {
     title: data.title ?? `[e2e] Test Ticket in ${data.stage}`,
     description: data.description ?? 'Test ticket for job validation',
+    agent: undefined,
     clarificationPolicy: undefined,
     attachments: undefined,
   });

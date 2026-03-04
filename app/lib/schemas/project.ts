@@ -29,6 +29,7 @@ export const projectCreateSchema = z.object({
   deploymentUrl: z.string().url('Deployment URL must be a valid URL').max(500, 'Deployment URL must be less than 500 characters').nullable().optional(),
   key: projectKeySchema.optional(), // Optional: auto-generate if not provided
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE']).optional(),
+  defaultAgent: z.enum(['CLAUDE', 'CODEX']).optional(),
 });
 
 /**
@@ -45,6 +46,7 @@ export const projectResponseSchema = z.object({
   deploymentUrl: z.string().nullable(),
   key: projectKeySchema,
   clarificationPolicy: z.enum(['AUTO', 'CONSERVATIVE', 'PRAGMATIC', 'INTERACTIVE']),
+  defaultAgent: z.enum(['CLAUDE', 'CODEX']),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

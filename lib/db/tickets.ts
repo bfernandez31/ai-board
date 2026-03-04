@@ -51,6 +51,7 @@ export async function getTicketsByStage(
       branch: true,
       previewUrl: true,
       autoMode: true,
+      agent: true,
       clarificationPolicy: true,
       workflowType: true,
       attachments: true,
@@ -85,6 +86,7 @@ export async function getTicketsByStage(
       branch: ticket.branch,
       previewUrl: ticket.previewUrl,
       autoMode: ticket.autoMode,
+      agent: ticket.agent,
       clarificationPolicy: ticket.clarificationPolicy,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
@@ -134,6 +136,9 @@ export async function createTicket(
   // Add optional fields only if they are defined
   const dataWithOptionals = {
     ...baseData,
+    ...(input.agent !== undefined && {
+      agent: input.agent,
+    }),
     ...(input.clarificationPolicy !== undefined && {
       clarificationPolicy: input.clarificationPolicy,
     }),
@@ -165,6 +170,7 @@ export async function getTicketsWithJobs(projectId: number) {
       branch: true,
       previewUrl: true,
       autoMode: true,
+      agent: true,
       clarificationPolicy: true,
       workflowType: true,
       attachments: true,
@@ -203,6 +209,7 @@ export async function getTicketsWithJobs(projectId: number) {
       branch: ticket.branch,
       previewUrl: ticket.previewUrl,
       autoMode: ticket.autoMode,
+      agent: ticket.agent,
       clarificationPolicy: ticket.clarificationPolicy,
       workflowType: ticket.workflowType,
       attachments: ticket.attachments,
@@ -275,6 +282,7 @@ export async function duplicateTicket(
     autoMode: false,
     workflowType: 'FULL' as const,
     attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
+    agent: sourceTicket.agent,
     clarificationPolicy: sourceTicket.clarificationPolicy,
   };
 
@@ -339,6 +347,7 @@ export async function fullCloneTicket(
         autoMode: sourceTicket.autoMode,
         workflowType: sourceTicket.workflowType, // Preserve workflow type
         attachments: sourceTicket.attachments as import('@prisma/client').Prisma.InputJsonValue,
+        agent: sourceTicket.agent,
         clarificationPolicy: sourceTicket.clarificationPolicy,
       },
     });

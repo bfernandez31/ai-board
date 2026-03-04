@@ -44,6 +44,7 @@ interface NewTicketModalProps {
 interface FormErrors {
   title?: string;
   description?: string;
+  agent?: string;
   clarificationPolicy?: string;
   attachments?: string;
   submit?: string;
@@ -66,6 +67,7 @@ export function NewTicketModal({
   const [formData, setFormData] = React.useState<CreateTicketInput>({
     title: '',
     description: '',
+    agent: undefined,
     clarificationPolicy: undefined, // undefined = use project default
     attachments: undefined,
   });
@@ -79,6 +81,7 @@ export function NewTicketModal({
       setFormData({
         title: '',
         description: '',
+        agent: undefined,
         clarificationPolicy: undefined,
         attachments: undefined,
       });
