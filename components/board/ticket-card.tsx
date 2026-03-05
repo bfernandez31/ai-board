@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
-import { getAgentIcon, getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
@@ -89,7 +90,7 @@ export const TicketCard = React.memo(
       : undefined;
 
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
-    const isAgentInherited = ticket.agent === null || ticket.agent === undefined;
+    const isAgentInherited = ticket.agent == null;
 
     // Click handler that respects drag state
     const handleClick = () => {
@@ -154,7 +155,7 @@ export const TicketCard = React.memo(
                   }`}
                   data-testid="agent-badge"
                 >
-                  {getAgentIcon(effectiveAgent)} {getAgentLabel(effectiveAgent)}
+                  <AgentIcon agent={effectiveAgent} size={14} /> {getAgentLabel(effectiveAgent)}
                   {isAgentInherited && ' (default)'}
                 </Badge>
               )}

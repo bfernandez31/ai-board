@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { Agent } from '@prisma/client';
-import { getAgentIcon, getAgentLabel, getAgentDescription } from '@/app/lib/utils/agent-icons';
+import { getAgentIconPath, getAgentLabel, getAgentDescription } from '@/app/lib/utils/agent-icons';
 
 describe('agent-icons utility', () => {
-  describe('getAgentIcon', () => {
-    it('should return correct icon for CLAUDE', () => {
-      expect(getAgentIcon(Agent.CLAUDE)).toBe('🤖');
+  describe('getAgentIconPath', () => {
+    it('should return correct icon path for CLAUDE', () => {
+      expect(getAgentIconPath(Agent.CLAUDE)).toBe('/agents/claude.svg');
     });
 
-    it('should return correct icon for CODEX', () => {
-      expect(getAgentIcon(Agent.CODEX)).toBe('⚡');
+    it('should return correct icon path for CODEX', () => {
+      expect(getAgentIconPath(Agent.CODEX)).toBe('/agents/codex.svg');
     });
   });
 
@@ -37,7 +37,7 @@ describe('agent-icons utility', () => {
     it('should have mappings for all Agent enum values', () => {
       const agents = Object.values(Agent);
       for (const agent of agents) {
-        expect(getAgentIcon(agent)).toBeDefined();
+        expect(getAgentIconPath(agent)).toBeDefined();
         expect(getAgentLabel(agent)).toBeDefined();
         expect(getAgentDescription(agent)).toBeDefined();
       }

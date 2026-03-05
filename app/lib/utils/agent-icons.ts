@@ -1,11 +1,11 @@
 import { Agent } from '@prisma/client';
 
-export function getAgentIcon(agent: Agent): string {
-  const icons: Record<Agent, string> = {
-    [Agent.CLAUDE]: '🤖',
-    [Agent.CODEX]: '⚡',
+export function getAgentIconPath(agent: Agent): string {
+  const paths: Record<Agent, string> = {
+    [Agent.CLAUDE]: '/agents/claude.svg',
+    [Agent.CODEX]: '/agents/codex.svg',
   };
-  return icons[agent];
+  return paths[agent];
 }
 
 export function getAgentLabel(agent: Agent): string {

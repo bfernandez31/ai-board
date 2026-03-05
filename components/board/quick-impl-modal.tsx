@@ -21,10 +21,10 @@ import {
 import { AlertCircle } from 'lucide-react';
 import { Agent } from '@prisma/client';
 import {
-  getAgentIcon,
   getAgentLabel,
   getAgentDescription,
 } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
 
 interface QuickImplModalProps {
   open: boolean;
@@ -115,9 +115,11 @@ export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: Quic
                 </SelectItem>
                 {Object.values(Agent).map((agentValue) => (
                   <SelectItem key={agentValue} value={agentValue}>
-                    {getAgentIcon(agentValue)}{' '}
-                    {getAgentLabel(agentValue)} -{' '}
-                    {getAgentDescription(agentValue)}
+                    <span className="inline-flex items-center gap-1">
+                      <AgentIcon agent={agentValue} size={14} />
+                      {getAgentLabel(agentValue)} -{' '}
+                      {getAgentDescription(agentValue)}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

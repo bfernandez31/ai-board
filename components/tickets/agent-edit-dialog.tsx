@@ -20,10 +20,10 @@ import {
 } from '@/components/ui/select';
 import { Agent } from '@prisma/client';
 import {
-  getAgentIcon,
   getAgentLabel,
   getAgentDescription,
 } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
 import { Loader2 } from 'lucide-react';
 
 interface AgentEditDialogProps {
@@ -104,15 +104,15 @@ export function AgentEditDialog({
             <p className="text-sm font-medium">Current Agent</p>
             <p className="text-sm text-muted-foreground">
               {currentAgent ? (
-                <>
-                  {getAgentIcon(currentAgent)}{' '}
+                <span className="inline-flex items-center gap-1">
+                  <AgentIcon agent={currentAgent} size={14} />
                   {getAgentLabel(currentAgent)} (override)
-                </>
+                </span>
               ) : (
-                <>
-                  {getAgentIcon(projectDefaultAgent)}{' '}
+                <span className="inline-flex items-center gap-1">
+                  <AgentIcon agent={projectDefaultAgent} size={14} />
                   {getAgentLabel(projectDefaultAgent)} (project default)
-                </>
+                </span>
               )}
             </p>
           </div>
@@ -132,8 +132,8 @@ export function AgentEditDialog({
                 <SelectItem value="project-default">
                   <div className="flex flex-col items-start gap-1">
                     <span className="font-medium">Use project default</span>
-                    <span className="text-xs text-muted-foreground">
-                      {getAgentIcon(projectDefaultAgent)}{' '}
+                    <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                      <AgentIcon agent={projectDefaultAgent} size={12} />
                       {getAgentLabel(projectDefaultAgent)} -{' '}
                       {getAgentDescription(projectDefaultAgent)}
                     </span>
@@ -142,8 +142,8 @@ export function AgentEditDialog({
                 {Object.values(Agent).map((agentValue) => (
                   <SelectItem key={agentValue} value={agentValue}>
                     <div className="flex flex-col items-start gap-1">
-                      <span className="font-medium">
-                        {getAgentIcon(agentValue)}{' '}
+                      <span className="font-medium inline-flex items-center gap-1">
+                        <AgentIcon agent={agentValue} size={14} />
                         {getAgentLabel(agentValue)}
                       </span>
                       <span className="text-xs text-muted-foreground">
