@@ -6,22 +6,24 @@ Shared utility functions and helpers used across the application.
 
 ### Purpose
 
-Maps Agent enum values to display icons, labels, and descriptions for UI presentation. Mirrors the pattern of `policy-icons.ts` for consistent utility design.
+Maps Agent enum values to SVG favicon image paths, labels, and descriptions for UI presentation. Provides a shared `AgentIcon` component for rendering agent images consistently across the application.
 
-### File Location
+### File Locations
 
-`app/lib/utils/agent-icons.ts`
+- Utility functions: `app/lib/utils/agent-icons.ts`
+- React component: `components/ui/agent-icon.tsx`
+- SVG assets: `public/agents/claude.svg`, `public/agents/codex.svg`
 
 ### API Reference
 
-**Function**: `getAgentIcon(agent: Agent): string`
+**Function**: `getAgentIconPath(agent: Agent): string`
 
-Returns emoji icon for the given agent.
+Returns the public URL path to the agent's SVG favicon image.
 
-| Agent | Icon |
+| Agent | Path |
 |-------|------|
-| CLAUDE | 🤖 |
-| CODEX | ⚡ |
+| CLAUDE | `/agents/claude.svg` |
+| CODEX | `/agents/codex.svg` |
 
 ---
 
@@ -45,29 +47,50 @@ Returns full description for agent selection UI.
 | CLAUDE | "Anthropic Claude Code" |
 | CODEX | "OpenAI Codex" |
 
+### AgentIcon Component
+
+**File**: `components/ui/agent-icon.tsx`
+
+Renders the agent's favicon image using Next.js `Image` for optimized delivery.
+
+```typescript
+interface AgentIconProps {
+  agent: Agent;
+  size?: number;    // defaults to 16
+  className?: string;
+}
+
+<AgentIcon agent={Agent.CLAUDE} size={16} />
+```
+
+**Props**:
+- `agent`: Prisma `Agent` enum value
+- `size`: Width and height in pixels (default: 16)
+- `className`: Additional CSS classes
+
 ### Usage Locations
 
 **DefaultAgentCard** (`components/settings/default-agent-card.tsx`):
-- Renders agent options with icon + label + description in the project settings dropdown
+- Renders agent options with favicon image + label + description in the project settings dropdown
 
 **Ticket Card** (`components/board/ticket-card.tsx`):
-- Uses `getAgentIcon` and `getAgentLabel` to render agent badge inline
+- Uses `AgentIcon` and `getAgentLabel` to render agent badge inline
 
 **Agent Edit Dialog** (`components/tickets/agent-edit-dialog.tsx`):
-- Uses all three functions to populate agent selection options in the edit dialog
+- Uses all three utility functions and `AgentIcon` to populate agent selection options
 
 ### Design Considerations
 
-**Enum-Driven**: Uses `Object.values(Agent)` for iteration to automatically include future agents without code changes.
+**Favicon Images Over Emojis**: Agent badges use official SVG favicons rather than emoji characters, providing consistent brand-accurate rendering across all operating systems and browsers.
 
-**Type Safety**: Returns typed strings derived from Prisma's `Agent` enum — compile-time safety for all agent lookups.
+**Type Safety**: Functions return typed strings derived from Prisma's `Agent` enum — compile-time safety for all agent lookups.
 
 ### Testing
 
 **Unit Tests**: `tests/unit/agent-icons.test.ts`
 
-Test coverage (7 test cases):
-- `getAgentIcon` for CLAUDE and CODEX
+Test coverage:
+- `getAgentIconPath` for CLAUDE and CODEX
 - `getAgentLabel` for CLAUDE and CODEX
 - `getAgentDescription` for CLAUDE and CODEX
 - Exhaustive enum coverage (no missing agents)
