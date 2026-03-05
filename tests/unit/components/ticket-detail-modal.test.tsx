@@ -452,9 +452,11 @@ describe('TicketDetailModal', () => {
       }];
       queryClient.setQueryData(queryKey, initialTickets);
 
-      // Click the duplicate button
+      // Open the duplicate dropdown then click "Simple copy"
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+      const simpleCopyOption = await screen.findByText('Simple copy');
+      await user.click(simpleCopyOption);
 
       // Wait for the API call to complete
       await waitFor(() => {
@@ -539,16 +541,18 @@ describe('TicketDetailModal', () => {
       }];
       queryClient.setQueryData(queryKey, initialTickets);
 
-      // Click the duplicate button
+      // Open the duplicate dropdown then click "Simple copy"
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+      const simpleCopyOption = await screen.findByText('Simple copy');
+      await user.click(simpleCopyOption);
 
       // Wait for the API call and error handling
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(
           expect.objectContaining({
             variant: 'destructive',
-            title: 'Error',
+            title: 'Copy failed',
             description: 'Ticket not found',
           })
         );
@@ -623,16 +627,18 @@ describe('TicketDetailModal', () => {
       const cacheBeforeClick = queryClient.getQueryData<TicketWithVersion[]>(queryKey);
       expect(cacheBeforeClick).toHaveLength(1);
 
-      // Click the duplicate button
+      // Open the duplicate dropdown then click "Simple copy"
       const duplicateButton = screen.getByTestId('duplicate-ticket-button');
       await user.click(duplicateButton);
+      const simpleCopyOption = await screen.findByText('Simple copy');
+      await user.click(simpleCopyOption);
 
       // Wait for error handling
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(
           expect.objectContaining({
             variant: 'destructive',
-            title: 'Error',
+            title: 'Copy failed',
             description: 'Network error',
           })
         );

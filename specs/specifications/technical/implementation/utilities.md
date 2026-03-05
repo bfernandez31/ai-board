@@ -74,7 +74,7 @@ interface AgentIconProps {
 - Renders agent options with favicon image + label + description in the project settings dropdown
 
 **Ticket Card** (`components/board/ticket-card.tsx`):
-- Uses `AgentIcon` and `getAgentLabel` to render agent badge inline
+- Uses `AgentIcon` alone (favicon only) with a `Tooltip` showing `getAgentLabel` on hover
 
 **Agent Edit Dialog** (`components/tickets/agent-edit-dialog.tsx`):
 - Uses all three utility functions and `AgentIcon` to populate agent selection options

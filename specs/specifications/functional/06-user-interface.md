@@ -90,12 +90,11 @@ The user interface provides an intuitive, modern experience for managing tickets
 - FULL: No workflow type badge displayed
 
 **Agent Badge**:
-- All tickets display an agent badge in the ticket card header row
-- Explicitly set agent: standard badge styling showing agent label ("Claude" or "Codex")
-- Inherited agent (ticket.agent is null, using project default): muted badge styling with "(default)" suffix (e.g., "Claude (default)")
-- Badge uses the agent's favicon image alongside a text label for immediate recognition
-- CLAUDE agent: Claude favicon image (`/agents/claude.svg`) with "Claude" label
-- CODEX agent: Codex favicon image (`/agents/codex.svg`) with "Codex" label
+- All tickets display the agent's favicon icon (without text) in the ticket card header row
+- Hovering the favicon shows a tooltip with the agent name (e.g., "Claude" or "Codex")
+- Inherited agent (ticket.agent is null, using project default): tooltip includes "(default)" suffix (e.g., "Claude (default)")
+- CLAUDE agent: Claude favicon image (`/agents/claude.svg`)
+- CODEX agent: Codex favicon image (`/agents/codex.svg`)
 
 ## Interactive Elements
 

@@ -32,14 +32,14 @@ describe('/review Command Workflow Configuration', () => {
     });
 
     it('should route /review to code-review with --force flag', () => {
-      expect(workflowContent).toContain('/code-review $PR_NUMBER --force');
+      expect(workflowContent).toContain('/ai-board.code-review $PR_NUMBER --force');
     });
 
     it('should detect /review pattern before general ai-board-assist', () => {
       const compareIndex = workflowContent.indexOf('grep -qE "/compare\\b"');
       const reviewIndex = workflowContent.indexOf('grep -qE "/review\\b"');
       const generalIndex = workflowContent.indexOf(
-        'Using ai-board-assist for general request'
+        'Using ai-board.assist for general request'
       );
 
       // /review routing should be after /compare but before general handler
@@ -60,7 +60,7 @@ describe('/review Command Workflow Configuration', () => {
     });
 
     it('should include current stage in error message', () => {
-      expect(workflowContent).toContain('Current stage: $STAGE');
+      expect(workflowContent).toContain('Current stage: %s');
     });
   });
 
@@ -82,8 +82,8 @@ describe('/review Command Workflow Configuration', () => {
 
   describe('Error Response Format', () => {
     it('should format wrong stage error with user mention', () => {
-      // Check the error message template includes user mention pattern
-      expect(workflowContent).toContain('@[$USER_ID:$USER] ❌ **Review Failed**');
+      // Check the error message template includes user mention pattern (printf format)
+      expect(workflowContent).toContain('@[%s:%s] ❌ **Review Failed**');
     });
 
     it('should include actionable guidance in no-PR error', () => {
@@ -95,15 +95,15 @@ describe('/review Command Workflow Configuration', () => {
 
   describe('Success Response Format', () => {
     it('should wrap response with user mention if not already present', () => {
-      expect(workflowContent).toContain('@[$USER_ID:$USER] ✅ **Code Review Complete**');
+      expect(workflowContent).toContain('@[%s:%s] ✅ **Code Review Complete**');
     });
 
     it('should include PR number in success message', () => {
-      expect(workflowContent).toContain('Reviewed PR #$PR_NUMBER');
+      expect(workflowContent).toContain('Reviewed PR #%s');
     });
 
     it('should include branch name in success message', () => {
-      expect(workflowContent).toContain('for branch \\`$BRANCH\\`');
+      expect(workflowContent).toContain('for branch `%s`');
     });
   });
 });
@@ -114,7 +114,7 @@ describe('/review Command Code-Review Integration', () => {
   beforeAll(() => {
     const codeReviewPath = join(
       process.cwd(),
-      '.claude/commands/code-review.md'
+      '.claude/commands/ai-board.code-review.md'
     );
     codeReviewContent = readFileSync(codeReviewPath, 'utf-8');
   });
@@ -138,7 +138,7 @@ describe('/review Command Code-Review Integration', () => {
       // The original checks should still be present
       expect(codeReviewContent).toContain('(a) is closed');
       expect(codeReviewContent).toContain('(b) is a draft');
-      expect(codeReviewContent).toContain('(c) does not need a code review');
+      expect(codeReviewContent).toContain('(c) is very simple and obviously ok');
     });
 
     it('should conditionally skip check (d) based on --force flag', () => {

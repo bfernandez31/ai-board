@@ -8,6 +8,7 @@ import { Sparkles } from 'lucide-react';
 import { TicketWithVersion } from '@/lib/types';
 import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { JobStatusIndicator } from './job-status-indicator';
 import { Job } from '@prisma/client';
 import { classifyJobType } from '@/lib/utils/job-type-classifier';
@@ -146,18 +147,16 @@ export const TicketCard = React.memo(
               )}
               {/* Agent Badge */}
               {effectiveAgent && (
-                <Badge
-                  variant="outline"
-                  className={`text-xs shrink-0 px-1.5 py-0.5 font-semibold ${
-                    isAgentInherited
-                      ? 'bg-muted text-muted-foreground'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  }`}
-                  data-testid="agent-badge"
-                >
-                  <AgentIcon agent={effectiveAgent} size={14} /> {getAgentLabel(effectiveAgent)}
-                  {isAgentInherited && ' (default)'}
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span data-testid="agent-badge" className="shrink-0">
+                      <AgentIcon agent={effectiveAgent} size={16} />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {getAgentLabel(effectiveAgent)}{isAgentInherited ? ' (default)' : ''}
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
