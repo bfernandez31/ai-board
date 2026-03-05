@@ -31,7 +31,8 @@ import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
 import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
-import { getAgentIcon, getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
 import { ClarificationPolicy, Agent } from '@prisma/client';
@@ -790,7 +791,7 @@ export function TicketDetailModal({
                 className="gap-1"
                 data-testid="agent-badge"
               >
-                <span>{getAgentIcon(effectiveAgent)}</span>
+                <AgentIcon agent={effectiveAgent} size={14} />
                 <span className="text-xs">{getAgentLabel(effectiveAgent)}</span>
                 {!isAgentOverride && (
                   <span className="text-xs text-muted-foreground">(default)</span>

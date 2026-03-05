@@ -33,10 +33,10 @@ import {
   getPolicyDescription,
 } from '@/app/lib/utils/policy-icons';
 import {
-  getAgentIcon,
   getAgentLabel,
   getAgentDescription,
 } from '@/app/lib/utils/agent-icons';
+import { AgentIcon } from '@/components/ui/agent-icon';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 
 interface NewTicketModalProps {
@@ -366,9 +366,11 @@ export function NewTicketModal({
                 </SelectItem>
                 {Object.values(Agent).map((agentValue) => (
                   <SelectItem key={agentValue} value={agentValue}>
-                    {getAgentIcon(agentValue)}{' '}
-                    {getAgentLabel(agentValue)} -{' '}
-                    {getAgentDescription(agentValue)}
+                    <span className="inline-flex items-center gap-1">
+                      <AgentIcon agent={agentValue} size={14} />
+                      {getAgentLabel(agentValue)} -{' '}
+                      {getAgentDescription(agentValue)}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
