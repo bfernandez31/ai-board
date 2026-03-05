@@ -34,6 +34,11 @@ on:
         required: true
         type: string
 
+      agent:
+        description: 'Agent CLI to use (CLAUDE or CODEX)'
+        required: true
+        type: string
+
 jobs:
   iterate:
     runs-on: ubuntu-latest

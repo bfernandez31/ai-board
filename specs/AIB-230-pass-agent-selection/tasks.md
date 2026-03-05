@@ -18,7 +18,7 @@
 
 **Purpose**: Create the foundational utility function that all dispatch modifications depend on
 
-- [ ] T001 Add `resolveEffectiveAgent()` utility function in lib/workflows/transition.ts
+- [x] T001 Add `resolveEffectiveAgent()` utility function in lib/workflows/transition.ts
 
 ---
 
@@ -30,9 +30,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Add `agent` field to `specifyPayload` JSON construction in lib/workflows/transition.ts (SPECIFY command dispatch)
-- [ ] T003 [US1] Add `agent` field to speckit generic workflow inputs for PLAN and BUILD commands in lib/workflows/transition.ts
-- [ ] T004 [US1] Add `agent` field to verify workflow dispatch inputs in lib/workflows/transition.ts
+- [x] T002 [US1] Add `agent` field to `specifyPayload` JSON construction in lib/workflows/transition.ts (SPECIFY command dispatch)
+- [x] T003 [US1] Add `agent` field to speckit generic workflow inputs for PLAN and BUILD commands in lib/workflows/transition.ts
+- [x] T004 [US1] Add `agent` field to verify workflow dispatch inputs in lib/workflows/transition.ts
 
 **Checkpoint**: Full workflow path (SPECIFY, PLAN, BUILD, VERIFY dispatch from transition) now passes the resolved agent value.
 
@@ -46,7 +46,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Add `agent` field to `quickImplPayload` JSON construction in lib/workflows/transition.ts
+- [x] T005 [US2] Add `agent` field to `quickImplPayload` JSON construction in lib/workflows/transition.ts
 
 **Checkpoint**: Quick-impl dispatch now includes the resolved agent value.
 
@@ -60,13 +60,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T006 [P] [US3] Add `agent` to `AIBoardWorkflowInputs` interface and dispatch inputs in app/lib/workflows/dispatch-ai-board.ts
-- [ ] T007 [P] [US3] Add `agent` to cleanup dispatch inputs in app/api/projects/[projectId]/clean/route.ts
-- [ ] T008 [P] [US3] Add `agent` input declaration to .github/workflows/verify.yml
-- [ ] T009 [P] [US3] Add `agent` input declaration to .github/workflows/cleanup.yml
-- [ ] T010 [P] [US3] Add `agent` input declaration to .github/workflows/ai-board-assist.yml
-- [ ] T011 [P] [US3] Add `agent` input declaration to .github/workflows/iterate.yml
-- [ ] T012 [US3] Forward `agent` input from verify.yml to iterate.yml in the `gh workflow run` command in .github/workflows/verify.yml
+- [x] T006 [P] [US3] Add `agent` to `AIBoardWorkflowInputs` interface and dispatch inputs in app/lib/workflows/dispatch-ai-board.ts
+- [x] T007 [P] [US3] Add `agent` to cleanup dispatch inputs in app/api/projects/[projectId]/clean/route.ts
+- [x] T008 [P] [US3] Add `agent` input declaration to .github/workflows/verify.yml
+- [x] T009 [P] [US3] Add `agent` input declaration to .github/workflows/cleanup.yml
+- [x] T010 [P] [US3] Add `agent` input declaration to .github/workflows/ai-board-assist.yml
+- [x] T011 [P] [US3] Add `agent` input declaration to .github/workflows/iterate.yml
+- [x] T012 [US3] Forward `agent` input from ai-board-assist.yml to iterate.yml in the `gh workflow run` command
 
 **Checkpoint**: All supporting workflows (verify, cleanup, ai-board-assist, iterate) now receive and can use the agent value.
 
@@ -76,9 +76,9 @@
 
 **Purpose**: Validate end-to-end correctness and run quickstart validation
 
-- [ ] T013 Run type-check (`bun run type-check`) and fix any type errors
-- [ ] T014 Run linter (`bun run lint`) and fix any lint errors
-- [ ] T015 Run quickstart.md validation steps to confirm all dispatch paths include the agent value
+- [x] T013 Run type-check (`bun run type-check`) and fix any type errors
+- [x] T014 Run linter (`bun run lint`) and fix any lint errors
+- [x] T015 Run quickstart.md validation steps to confirm all dispatch paths include the agent value
 
 ---
 

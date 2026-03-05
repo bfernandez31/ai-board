@@ -35,7 +35,7 @@ export async function POST(
     // Check if there's already an active cleanup job (409 Conflict)
     const existingProject = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { activeCleanupJobId: true, key: true },
+      select: { activeCleanupJobId: true, key: true, defaultAgent: true },
     });
 
     if (existingProject?.activeCleanupJobId) {
@@ -157,6 +157,7 @@ export async function POST(
             project_id: projectId.toString(),
             job_id: result.job.id.toString(),
             githubRepository: targetRepository,
+            agent: existingProject!.defaultAgent ?? 'CLAUDE',
           },
         });
       } catch (dispatchError) {

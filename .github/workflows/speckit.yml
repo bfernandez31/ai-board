@@ -61,6 +61,12 @@ on:
         required: true
         type: string
 
+      agent:
+        description: 'Agent CLI to use (CLAUDE or CODEX)'
+        required: false
+        type: string
+        default: 'CLAUDE'
+
 jobs:
   run-speckit:
     runs-on: ubuntu-latest

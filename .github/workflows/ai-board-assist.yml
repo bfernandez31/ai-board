@@ -49,6 +49,11 @@ on:
         required: true
         type: string
 
+      agent:
+        description: 'Agent CLI to use (CLAUDE or CODEX)'
+        required: true
+        type: string
+
 jobs:
   ai-board-assist:
     runs-on: ubuntu-latest
@@ -574,7 +579,8 @@ jobs:
                 \"project_id\": \"${PROJECT_ID}\",
                 \"branch\": \"${BRANCH}\",
                 \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c 'tojson'),
-                \"githubRepository\": \"${GITHUB_REPOSITORY_INPUT}\"
+                \"githubRepository\": \"${GITHUB_REPOSITORY_INPUT}\",
+                \"agent\": \"${{ inputs.agent }}\"
               }
             }")
 

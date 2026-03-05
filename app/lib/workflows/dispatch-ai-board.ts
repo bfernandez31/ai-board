@@ -11,6 +11,7 @@ export interface AIBoardWorkflowInputs {
   job_id: string;
   project_id: string;
   githubRepository: string;
+  agent: string;
 }
 
 export async function dispatchAIBoardWorkflow(
@@ -54,6 +55,7 @@ export async function dispatchAIBoardWorkflow(
         job_id: inputs.job_id,
         project_id: inputs.project_id,
         githubRepository: inputs.githubRepository,
+        agent: inputs.agent,
       },
     });
   } catch (error) {
