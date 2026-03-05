@@ -84,12 +84,15 @@ export async function dispatchWorkflow(params: {
 - **Inputs**:
   - `ticket_id`, `ticketTitle`, `ticketDescription`, `branch`, `command`, `job_id`, `project_id`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
+  - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
 - **Repository Checkout**: Checks out external project repository using `repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}`
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
 - **Services**: PostgreSQL for implement command
 - **Dependencies**: Playwright with browser binaries (cached)
 - **Timeout**: 120 minutes maximum
+- **Note**: At the 10-input GitHub Actions limit. Agent is embedded in `specifyPayload` JSON for the SPECIFY command and passed as a discrete `agent` input for PLAN/BUILD commands.
 
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -102,25 +105,28 @@ export async function dispatchWorkflow(params: {
 - **Timeout**: 120 minutes maximum (matches full spec-kit workflow)
 - **Differences**: Skips full spec generation, creates minimal spec.md
 - **Same**: Test execution, branch management, job status updates
+- **Note**: Agent is embedded in `quickImplPayload` JSON (e.g., `{ ticketKey, title, description, agent }`).
 
 **Verify Workflow** (`.github/workflows/verify.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`
+  - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`, `agent`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Actions**: Runs tests and creates pull request
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **Agent Forwarding**: Forwards `agent` input to iterate.yml when dispatching iterate workflow
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `stage`, `comment_content`, `job_id`, `project_id`
+  - `ticket_id`, `stage`, `comment_content`, `job_id`, `project_id`, `agent`
   - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository
 - **Telemetry Pre-Fetch**: Executes `fetch-telemetry.sh` for `/compare` commands
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
+- **Note**: At exactly the 10-input GitHub Actions limit. Forwards `agent` when dispatching iterate.yml for minor VERIFY fixes.
 
 **Deploy Preview** (`.github/workflows/deploy-preview.yml`):
 - **Trigger**: `workflow_dispatch`
@@ -135,7 +141,7 @@ export async function dispatchWorkflow(params: {
 **Cleanup Workflow** (`.github/workflows/cleanup.yml`):
 - **Trigger**: `workflow_dispatch`
 - **Inputs**:
-  - `ticket_id`, `project_id`, `job_id`
+  - `ticket_id`, `project_id`, `job_id`, `agent`
   - `githubRepository` (required) - Target repository in format owner/repo
 - **Repository Checkout**: Checks out external project repository at main branch with full history (`fetch-depth: 0`)
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, Bun 1.3.1, PostgreSQL 14
@@ -145,11 +151,51 @@ export async function dispatchWorkflow(params: {
 - **Actions**: Diff-based technical debt analysis, creates cleanup branch, transitions to VERIFY
 - **Timeout**: 45 minutes maximum
 
+**Iterate Workflow** (`.github/workflows/iterate.yml`):
+- **Trigger**: `workflow_dispatch`
+- **Inputs**:
+  - `ticket_id`, `job_id`, `project_id`, `branch`, `issues_to_fix`, `agent`
+  - `githubRepository` (required) - Target repository in format owner/repo
+- **Repository Checkout**: Checks out external project repository at specified branch
+- **Dispatch Source**: Triggered by ai-board-assist.yml for minor VERIFY fixes (<30% divergence)
+- **Command**: Executes targeted code fixes and syncs documentation
+- **Actions**: Fix issues, update branch specs, synchronize global docs, commit and push
+
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event
 - **Conditions**: Vercel production deployment success
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
+
+### Agent Resolution
+
+Before dispatching any workflow, the system resolves the effective agent using a priority chain:
+
+```typescript
+// lib/workflows/transition.ts
+export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
+  return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
+}
+```
+
+**Resolution Priority**:
+1. `ticket.agent` — Per-ticket override (optional, `Agent?`)
+2. `ticket.project.defaultAgent` — Project-level default (required, `@default(CLAUDE)`)
+3. `Agent.CLAUDE` — Defensive system-wide fallback
+
+**Dispatch Strategy**:
+
+| Workflow | Agent Transport |
+|----------|----------------|
+| `speckit.yml` (SPECIFY) | Embedded in `specifyPayload` JSON: `{ ticketKey, title, description, clarificationPolicy, agent }` |
+| `speckit.yml` (PLAN/BUILD) | Discrete `agent` input |
+| `quick-impl.yml` | Embedded in `quickImplPayload` JSON: `{ ticketKey, title, description, agent }` |
+| `verify.yml` | Discrete `agent` input |
+| `cleanup.yml` | Discrete `agent` input |
+| `ai-board-assist.yml` | Discrete `agent` input |
+| `iterate.yml` | Discrete `agent` input |
+
+The mixed strategy (embed in JSON payloads vs. discrete input) respects the GitHub Actions 10-input limit — `speckit.yml` remains at 10 inputs and `ai-board-assist.yml` is at exactly 10 inputs.
 
 ### Claude Commands
 
