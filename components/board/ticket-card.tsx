@@ -90,7 +90,7 @@ export const TicketCard = React.memo(
       : undefined;
 
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
-    const isAgentInherited = ticket.agent === null || ticket.agent === undefined;
+    const isAgentInherited = ticket.agent == null;
 
     // Click handler that respects drag state
     const handleClick = () => {
