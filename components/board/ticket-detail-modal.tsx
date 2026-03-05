@@ -784,7 +784,7 @@ export function TicketDetailModal({
               />
             )}
             {/* Agent Badge */}
-            {localTicket?.project?.defaultAgent && effectiveAgent && (
+            {effectiveAgent && (
               <Badge
                 variant={isAgentOverride ? 'default' : 'secondary'}
                 className="gap-1"

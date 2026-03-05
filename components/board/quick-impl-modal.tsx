@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -44,12 +44,16 @@ interface QuickImplModalProps {
 export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: QuickImplModalProps) {
   const [selectedAgent, setSelectedAgent] = useState<string>('project-default');
 
-  // Reset agent selection when modal opens
+  // Reset agent selection when modal opens (useEffect pattern matches NewTicketModal)
+  useEffect(() => {
+    if (open) {
+      setSelectedAgent('project-default');
+    }
+  }, [open]);
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       onCancel();
-    } else {
-      setSelectedAgent('project-default');
     }
   };
 
@@ -95,32 +99,30 @@ export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: Quic
             </ul>
           </div>
 
-          {/* Agent Selection */}
-          {defaultAgent && (
-            <div className="space-y-2">
-              <Label htmlFor="quick-impl-agent">AI Agent</Label>
-              <Select
-                value={selectedAgent}
-                onValueChange={setSelectedAgent}
-              >
-                <SelectTrigger id="quick-impl-agent">
-                  <SelectValue placeholder="Use project default" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="project-default">
-                    Use project default ({getAgentLabel(defaultAgent)})
+          {/* Agent Selection - always shown per FR-011 */}
+          <div className="space-y-2">
+            <Label htmlFor="quick-impl-agent">AI Agent</Label>
+            <Select
+              value={selectedAgent}
+              onValueChange={setSelectedAgent}
+            >
+              <SelectTrigger id="quick-impl-agent">
+                <SelectValue placeholder="Use project default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="project-default">
+                  Use project default{defaultAgent ? ` (${getAgentLabel(defaultAgent)})` : ''}
+                </SelectItem>
+                {Object.values(Agent).map((agentValue) => (
+                  <SelectItem key={agentValue} value={agentValue}>
+                    {getAgentIcon(agentValue)}{' '}
+                    {getAgentLabel(agentValue)} -{' '}
+                    {getAgentDescription(agentValue)}
                   </SelectItem>
-                  {Object.values(Agent).map((agentValue) => (
-                    <SelectItem key={agentValue} value={agentValue}>
-                      {getAgentIcon(agentValue)}{' '}
-                      {getAgentLabel(agentValue)} -{' '}
-                      {getAgentDescription(agentValue)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3">
             <p className="text-sm text-amber-800 dark:text-amber-200">
