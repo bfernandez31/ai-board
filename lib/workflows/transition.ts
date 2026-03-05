@@ -1,4 +1,4 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project } from '@prisma/client';
+import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
@@ -33,6 +33,11 @@ export interface TransitionResult {
 export type TicketWithProject = Ticket & {
   project: Project;
 };
+
+/** Resolve the effective agent: ticket override > project default > CLAUDE fallback */
+export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
+  return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
+}
 
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
 function shouldValidateJobCompletion(currentStage: Stage): boolean {
@@ -205,11 +210,14 @@ export async function handleTicketTransition(
 
         let workflowInputs: Record<string, string>;
 
+        const effectiveAgent = resolveEffectiveAgent(ticket);
+
         if (isQuickImpl) {
           const quickImplPayload = {
             ticketKey: ticket.ticketKey,
             title: ticket.title,
             description: ticket.description || '',
+            agent: effectiveAgent,
           };
 
           workflowInputs = {
@@ -233,6 +241,7 @@ export async function handleTicketTransition(
             branch: ticket.branch || '',
             workflowType: ticket.workflowType,
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+            agent: effectiveAgent,
           };
 
           workflowFile = 'verify.yml';
@@ -244,6 +253,7 @@ export async function handleTicketTransition(
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+            agent: effectiveAgent,
           };
 
           if (targetStage === Stage.SPECIFY) {
@@ -253,6 +263,7 @@ export async function handleTicketTransition(
               title: ticket.title,
               description: ticket.description || '',
               clarificationPolicy: effectivePolicy,
+              agent: effectiveAgent,
             };
 
             workflowInputs.specifyPayload = JSON.stringify(specifyPayload);

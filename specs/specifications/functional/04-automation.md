@@ -589,6 +589,7 @@ Workflows execute on GitHub Actions infrastructure:
 - Job ID for status tracking
 - Branch name (empty for new branches)
 - WorkflowType (FULL or QUICK) - controls verify.yml test execution
+- Agent selection - resolved from ticket override or project default (see Agent Selection below)
 - User information (for AI-BOARD mentions)
 - Comment content (for AI-BOARD requests)
 
@@ -993,6 +994,27 @@ Automated GitHub Actions workflow handles deployment:
 - Workflow uses VERCEL_TOKEN for Vercel API
 - Workflow uses WORKFLOW_API_TOKEN for updating ticket
 - All credentials stored securely in GitHub secrets
+
+## Agent Selection
+
+### Per-Workflow Agent Routing
+
+Every workflow dispatch includes the resolved agent value so each workflow invokes the correct AI CLI tool.
+
+**Agent Resolution**:
+
+The effective agent is determined by a priority chain:
+1. **Ticket override** — `ticket.agent` (optional, per-ticket setting)
+2. **Project default** — `project.defaultAgent` (required, defaults to CLAUDE)
+3. **System fallback** — `CLAUDE` (defensive, only if project default is somehow unset)
+
+**Supported Agents**:
+- `CLAUDE` — Anthropic Claude CLI (default)
+- `CODEX` — OpenAI Codex CLI
+
+**Scope**:
+- All workflow types receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, CLEAN, AI-BOARD assist, iterate
+- Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
 
 ## Cleanup Workflow
 

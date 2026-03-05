@@ -248,10 +248,12 @@ export async function POST(
           title: true,
           stage: true,
           branch: true,
+          agent: true,
           project: {
             select: {
               githubOwner: true,
               githubRepo: true,
+              defaultAgent: true,
             },
           },
         },
@@ -302,6 +304,7 @@ export async function POST(
           job_id: job.id.toString(),
           project_id: projectId.toString(),
           githubRepository: `${fullTicket.project.githubOwner}/${fullTicket.project.githubRepo}`,
+          agent: fullTicket.agent ?? fullTicket.project.defaultAgent ?? 'CLAUDE',
         });
       } catch (workflowError) {
         console.error('[comments] Failed to dispatch AI-BOARD workflow:', workflowError);

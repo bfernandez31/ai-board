@@ -26,6 +26,11 @@ on:
         required: true
         type: string
 
+      agent:
+        description: 'Agent CLI to use (CLAUDE or CODEX)'
+        required: true
+        type: string
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
