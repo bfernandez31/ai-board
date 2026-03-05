@@ -2,6 +2,78 @@
 
 Shared utility functions and helpers used across the application.
 
+## Agent Icons
+
+### Purpose
+
+Maps Agent enum values to display icons, labels, and descriptions for UI presentation. Mirrors the pattern of `policy-icons.ts` for consistent utility design.
+
+### File Location
+
+`app/lib/utils/agent-icons.ts`
+
+### API Reference
+
+**Function**: `getAgentIcon(agent: Agent): string`
+
+Returns emoji icon for the given agent.
+
+| Agent | Icon |
+|-------|------|
+| CLAUDE | 🤖 |
+| CODEX | ⚡ |
+
+---
+
+**Function**: `getAgentLabel(agent: Agent): string`
+
+Returns short human-readable label for the given agent.
+
+| Agent | Label |
+|-------|-------|
+| CLAUDE | "Claude" |
+| CODEX | "Codex" |
+
+---
+
+**Function**: `getAgentDescription(agent: Agent): string`
+
+Returns full description for agent selection UI.
+
+| Agent | Description |
+|-------|-------------|
+| CLAUDE | "Anthropic Claude Code" |
+| CODEX | "OpenAI Codex" |
+
+### Usage Locations
+
+**DefaultAgentCard** (`components/settings/default-agent-card.tsx`):
+- Renders agent options with icon + label + description in the project settings dropdown
+
+**Ticket Card** (`components/board/ticket-card.tsx`):
+- Uses `getAgentIcon` and `getAgentLabel` to render agent badge inline
+
+**Agent Edit Dialog** (`components/tickets/agent-edit-dialog.tsx`):
+- Uses all three functions to populate agent selection options in the edit dialog
+
+### Design Considerations
+
+**Enum-Driven**: Uses `Object.values(Agent)` for iteration to automatically include future agents without code changes.
+
+**Type Safety**: Returns typed strings derived from Prisma's `Agent` enum — compile-time safety for all agent lookups.
+
+### Testing
+
+**Unit Tests**: `tests/unit/agent-icons.test.ts`
+
+Test coverage (7 test cases):
+- `getAgentIcon` for CLAUDE and CODEX
+- `getAgentLabel` for CLAUDE and CODEX
+- `getAgentDescription` for CLAUDE and CODEX
+- Exhaustive enum coverage (no missing agents)
+
+---
+
 ## Job Display Names
 
 ### Purpose

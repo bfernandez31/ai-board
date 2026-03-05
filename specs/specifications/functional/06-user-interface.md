@@ -89,6 +89,14 @@ The user interface provides an intuitive, modern experience for managing tickets
 - CLEAN: ✨ Clean badge with sparkles icon and purple background (purple-100/purple-900 dark)
 - FULL: No workflow type badge displayed
 
+**Agent Badge**:
+- All tickets display an agent badge in the ticket card header row
+- Explicitly set agent: standard badge styling showing agent label ("Claude" or "Codex")
+- Inherited agent (ticket.agent is null, using project default): muted badge styling with "(default)" suffix (e.g., "Claude (default)")
+- Badge uses text labels (not icons) for immediate readability without a legend
+- CLAUDE agent: 🤖 icon with "Claude" label
+- CODEX agent: ⚡ icon with "Codex" label
+
 ## Interactive Elements
 
 ### Buttons
@@ -160,6 +168,12 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Warning message for destructive operations
 - Cancel and Proceed/Confirm buttons
 - Mandatory for quick implementation workflow
+
+**Quick-Impl Confirmation Modal**:
+- Includes an agent dropdown selector (in addition to existing benefits/trade-offs text)
+- Agent dropdown defaults to the project's default agent
+- Agent selection determines which AI executes the quick implementation
+- Dropdown positioned between the explanation text and the warning box
 
 **Cleanup Confirmation Dialog**:
 - Triggered when "Clean Project" menu option selected

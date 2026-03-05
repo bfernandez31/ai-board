@@ -30,9 +30,11 @@ import { useTicketEdit } from '@/lib/hooks/use-ticket-edit';
 import { CharacterCounter } from '@/components/ui/character-counter';
 import { PolicyBadge } from '@/components/ui/policy-badge';
 import { PolicyEditDialog } from '@/components/tickets/policy-edit-dialog';
+import { AgentEditDialog } from '@/components/tickets/agent-edit-dialog';
+import { getAgentIcon, getAgentLabel } from '@/app/lib/utils/agent-icons';
 import DocumentationViewer from './documentation-viewer';
 import type { DocumentType } from '@/lib/validations/documentation';
-import { ClarificationPolicy } from '@prisma/client';
+import { ClarificationPolicy, Agent } from '@prisma/client';
 import { Stage } from '@/lib/stage-transitions';
 import { CommentForm } from '@/components/comments/comment-form';
 import { ConversationTimeline } from '@/components/ticket/conversation-timeline';
@@ -66,13 +68,14 @@ interface TicketData {
   branch: string | null;
   autoMode: boolean;
   clarificationPolicy: ClarificationPolicy | null;
-  agent?: import('@prisma/client').Agent | null;
+  agent?: Agent | null;
   workflowType: 'FULL' | 'QUICK' | 'CLEAN';
   attachments?: TicketAttachment[] | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   project?: {
     clarificationPolicy: ClarificationPolicy;
+    defaultAgent?: Agent;
     githubOwner?: string;
     githubRepo?: string;
   };
@@ -180,6 +183,7 @@ export function TicketDetailModal({
   const queryClient = useQueryClient();
   const [localTicket, setLocalTicket] = useState<TicketData | null>(ticket);
   const [policyEditOpen, setPolicyEditOpen] = useState(false);
+  const [agentEditOpen, setAgentEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
@@ -577,6 +581,94 @@ export function TicketDetailModal({
     }
   };
 
+  // Save handler for agent
+  const handleSaveAgent = async (
+    newAgent: Agent | null
+  ): Promise<void> => {
+    if (!localTicket) return;
+
+    const originalTicket = { ...localTicket };
+
+    // Optimistic update
+    setLocalTicket({ ...localTicket, agent: newAgent });
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/tickets/${localTicket.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agent: newAgent,
+            version: localTicket.version,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          setLocalTicket(originalTicket);
+          toast({
+            variant: 'destructive',
+            title: 'Conflict',
+            description:
+              'Ticket was modified by another user. Please refresh to see the latest changes.',
+          });
+          refreshTicketFromServer();
+          throw new Error('Conflict');
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: error.issues?.[0]?.message || 'Failed to update agent',
+          });
+          setTimeout(() => {
+            setLocalTicket(originalTicket);
+          }, 500);
+          throw new Error('Update error');
+        }
+      }
+
+      const updatedTicket = await response.json();
+
+      const normalizedTicket: TicketData = {
+        ...updatedTicket,
+        createdAt: new Date(updatedTicket.createdAt),
+        updatedAt: new Date(updatedTicket.updatedAt),
+        project: localTicket.project,
+        attachments: localTicket.attachments,
+        ticketNumber: updatedTicket.ticketNumber ?? localTicket.ticketNumber,
+        ticketKey: updatedTicket.ticketKey ?? localTicket.ticketKey,
+      };
+
+      setLocalTicket(normalizedTicket);
+
+      toast({
+        title: 'Success',
+        description: 'AI agent updated',
+      });
+
+      if (onUpdate) {
+        onUpdate(normalizedTicket);
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        !['Conflict', 'Update error'].includes(error.message)
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save changes. Changes reverted.',
+        });
+        setLocalTicket(originalTicket);
+      }
+      throw error;
+    }
+  };
+
   const handleSaveDescription = (newDescription: string) => saveTicketField('description', newDescription, 'Ticket updated');
 
   // Initialize inline edit hooks
@@ -610,6 +702,9 @@ export function TicketDetailModal({
 
   // AIB-148: Check if ticket is closed (read-only mode)
   const isClosedTicket = ticket.stage === 'CLOSED';
+
+  const effectiveAgent = localTicket?.agent ?? localTicket?.project?.defaultAgent;
+  const isAgentOverride = localTicket?.agent !== null && localTicket?.agent !== undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -688,6 +783,20 @@ export function TicketDetailModal({
                 }
               />
             )}
+            {/* Agent Badge */}
+            {effectiveAgent && (
+              <Badge
+                variant={isAgentOverride ? 'default' : 'secondary'}
+                className="gap-1"
+                data-testid="agent-badge"
+              >
+                <span>{getAgentIcon(effectiveAgent)}</span>
+                <span className="text-xs">{getAgentLabel(effectiveAgent)}</span>
+                {!isAgentOverride && (
+                  <span className="text-xs text-muted-foreground">(default)</span>
+                )}
+              </Badge>
+            )}
             {/* Branch link - compact icon button */}
             {localTicket?.branch &&
               localTicket.branch.length > 0 &&
@@ -732,6 +841,20 @@ export function TicketDetailModal({
               >
                 <Settings2 className="w-3 h-3 mr-1" />
                 Edit Policy
+              </Button>
+            )}
+            {/* Edit Agent button - compact (only visible in INBOX stage) */}
+            {localTicket?.project?.defaultAgent && isInboxStage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAgentEditOpen(true)}
+                className="h-6 px-2 text-xs"
+                data-testid="edit-agent-button"
+                title="Edit AI agent"
+              >
+                <Settings2 className="w-3 h-3 mr-1" />
+                Edit Agent
               </Button>
             )}
             {/* Duplicate dropdown menu - always visible */}
@@ -1170,6 +1293,17 @@ export function TicketDetailModal({
           currentPolicy={localTicket.clarificationPolicy}
           projectDefaultPolicy={localTicket.project.clarificationPolicy}
           onSave={handleSavePolicy}
+        />
+      )}
+
+      {/* AgentEditDialog - only render when parent dialog is open */}
+      {localTicket?.project?.defaultAgent && open && (
+        <AgentEditDialog
+          open={agentEditOpen}
+          onOpenChange={setAgentEditOpen}
+          currentAgent={localTicket.agent ?? null}
+          projectDefaultAgent={localTicket.project.defaultAgent}
+          onSave={handleSaveAgent}
         />
       )}
 
