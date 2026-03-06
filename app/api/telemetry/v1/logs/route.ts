@@ -5,8 +5,8 @@ import {
   findAttribute,
   parseIntAttribute,
   parseFloatAttribute,
-  API_REQUEST_EVENTS,
-  TOOL_EVENTS,
+  API_REQUEST_EVENT_SET,
+  TOOL_EVENT_SET,
 } from '@/lib/schemas/otlp';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventName = logRecord.body?.stringValue;
           const attrs = logRecord.attributes;
 
-          if (eventName && (API_REQUEST_EVENTS as ReadonlyArray<string>).includes(eventName)) {
+          if (eventName && API_REQUEST_EVENT_SET.has(eventName)) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
             metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             if (model) metrics.model = String(model);
           }
 
-          if (eventName && (TOOL_EVENTS as ReadonlyArray<string>).includes(eventName)) {
+          if (eventName && TOOL_EVENT_SET.has(eventName)) {
             const toolName = findAttribute(attrs, 'tool_name');
             if (toolName) metrics.toolsUsed.add(String(toolName));
           }
@@ -160,6 +160,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         cacheCreationTokens: true,
         costUsd: true,
         durationMs: true,
+        toolsUsed: true,
       },
     });
 
@@ -172,54 +173,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Aggregate with existing metrics (OTLP may send multiple batches)
-    const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
-      inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
-      outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
-      cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
-      cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
-      costUsd: (job.costUsd || 0) + metrics.costUsd,
-      durationMs: (job.durationMs || 0) + metrics.durationMs,
-      // Merge tools - get existing and add new ones
-      toolsUsed: {
-        push: Array.from(metrics.toolsUsed),
-      },
-    };
-
-    // Only update model if we have one
-    if (metrics.model) {
-      updateData.model = metrics.model;
-    }
-
-    // Store agent type from service.name (first batch wins)
-    if (metrics.agentType) {
-      updateData.agentType = metrics.agentType;
-    }
+    // Deduplicate tools before writing to avoid a second update
+    const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
 
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
-      data: updateData,
+      data: {
+        inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
+        outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
+        cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
+        cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
+        costUsd: (job.costUsd || 0) + metrics.costUsd,
+        durationMs: (job.durationMs || 0) + metrics.durationMs,
+        toolsUsed: mergedTools,
+        ...(metrics.model && { model: metrics.model }),
+        ...(metrics.agentType && { agentType: metrics.agentType }),
+      },
       select: {
         id: true,
         inputTokens: true,
         outputTokens: true,
-        cacheReadTokens: true,
-        cacheCreationTokens: true,
         costUsd: true,
-        durationMs: true,
-        model: true,
-        agentType: true,
-        toolsUsed: true,
       },
     });
-
-    // Deduplicate toolsUsed array
-    const uniqueTools = [...new Set(updatedJob.toolsUsed)].sort();
-    if (uniqueTools.length !== updatedJob.toolsUsed.length) {
-      await prisma.job.update({
-        where: { id: jobId },
-        data: { toolsUsed: uniqueTools },
-      });
-    }
 
     const elapsedTime = Date.now() - startTime;
     console.log('[OTLP Telemetry] Success:', {

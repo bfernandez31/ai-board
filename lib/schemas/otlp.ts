@@ -71,9 +71,11 @@ export type OTLPLogs = z.infer<typeof otlpLogsSchema>;
 
 /** Event names for API request metrics (tokens, cost, model) */
 export const API_REQUEST_EVENTS = ['claude_code.api_request', 'codex.api_request'] as const;
+export const API_REQUEST_EVENT_SET = new Set<string>(API_REQUEST_EVENTS);
 
 /** Event names for tool usage tracking */
 export const TOOL_EVENTS = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call'] as const;
+export const TOOL_EVENT_SET = new Set<string>(TOOL_EVENTS);
 
 /**
  * Extract value from OTLP attribute
