@@ -17,6 +17,90 @@ GitHub Actions workflows, deployment strategy, and environment configuration.
 | `auto-ship.yml` | deployment_status | Auto-transition VERIFY → SHIP | 5 min |
 | `test.yml` | push, pull_request | CI testing (future) | 30 min |
 
+### Unified Agent Runner
+
+**File**: `.github/scripts/run-agent.sh`
+
+All workflows delegate agent invocation to this single script, which transparently supports both CLAUDE and CODEX agents without changes to workflow logic.
+
+```mermaid
+sequenceDiagram
+    participant WF as GitHub Workflow
+    participant R as run-agent.sh
+    participant CL as Claude CLI
+    participant CX as Codex CLI
+    participant FS as Command .md file
+
+    WF->>R: install (AGENT=CLAUDE|CODEX)
+    alt CLAUDE
+        R->>CL: bun add -g @anthropic-ai/claude-code
+    else CODEX
+        R->>CX: bun add -g @openai/codex
+    end
+
+    WF->>R: setup
+    alt CODEX
+        R->>FS: cp CLAUDE.md AGENTS.md
+        Note over R,FS: Codex reads AGENTS.md for project context
+    end
+
+    WF->>R: exec "/ai-board.specify" "$payload"
+    alt CLAUDE
+        R->>CL: claude --dangerously-skip-permissions "/ai-board.specify $payload"
+    else CODEX
+        R->>FS: read .claude/commands/ai-board.specify.md
+        FS-->>R: command content
+        R->>CX: codex exec "<content>\n$payload" --model o3 --full-auto
+    end
+```
+
+**Sub-commands**:
+
+| Sub-command | Purpose |
+|-------------|---------|
+| `install` | Install the agent CLI (`claude-code` or `@openai/codex`) |
+| `setup` | Configure telemetry; create `AGENTS.md` from `CLAUDE.md` for Codex |
+| `exec <cmd> [args] [-- images]` | Execute a slash command via the configured agent |
+
+**Environment Variables**:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `AGENT` | Agent type: `CLAUDE` or `CODEX` | `CLAUDE` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude CLI authentication | — |
+| `OPENAI_API_KEY` | OpenAI API key for Codex | — |
+| `CODEX_MODEL` | Codex model to use | `o3` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry endpoint (optional) | — |
+
+**CLAUDE execution**:
+```bash
+claude --dangerously-skip-permissions "$command $args" [$image_paths]
+```
+
+**CODEX execution** (slash commands not supported natively — script injects `.md` file content):
+```bash
+# Reads .claude/commands/<cmd-name>.md, appends args as prompt
+codex exec "$prompt" --model "$CODEX_MODEL" --full-auto
+```
+
+**Usage in workflows**:
+```yaml
+- name: Install Agent CLI
+  run: ../ai-board/.github/scripts/run-agent.sh install
+
+- name: Setup Agent Environment
+  working-directory: target
+  run: ../ai-board/.github/scripts/run-agent.sh setup
+
+- name: Run Command
+  run: ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.specify" "$PAYLOAD"
+```
+
+**Image support**: Pass image file paths after `--` delimiter (CLAUDE only; Codex ignores images):
+```bash
+run-agent.sh exec "/ai-board.quick-impl" "$payload" -- screenshot1.png screenshot2.png
+```
+
 ### AI-Board Workflow
 
 **File**: `.github/workflows/speckit.yml`
@@ -95,8 +179,12 @@ steps:
     working-directory: target
     run: bun install --frozen-lockfile
 
-  - name: Install Claude Code CLI
-    run: bun add -g @anthropic-ai/claude-code
+  - name: Install Agent CLI
+    run: ../ai-board/.github/scripts/run-agent.sh install
+
+  - name: Setup Agent Environment
+    working-directory: target
+    run: ../ai-board/.github/scripts/run-agent.sh setup
 
   - name: Configure Git
     run: |
@@ -128,10 +216,14 @@ steps:
 
 **Command Execution**:
 
+All commands are dispatched via the unified agent runner script (`run-agent.sh exec`), which transparently routes to the correct CLI based on the `AGENT` environment variable.
+
 ```yaml
-  - name: Run Claude Command
+  - name: Run Agent Command
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AGENT: ${{ inputs.agent || 'CLAUDE' }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SKIP_SPECKIT_EXECUTION: ${{ startsWith(inputs.ticketTitle, '[e2e]') && 'true' || 'false' }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
     run: |
@@ -143,13 +235,13 @@ steps:
           --arg policy "$EFFECTIVE_POLICY" \
           '{ticketKey: $tk, title: $title, description: $desc, clarificationPolicy: $policy}')
 
-        claude --dangerously-skip-permissions "/ai-board.specify '${JSON_PAYLOAD}'"
+        ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.specify" "$JSON_PAYLOAD"
 
       elif [[ "${{ inputs.command }}" == "plan" ]]; then
-        claude --dangerously-skip-permissions "/ai-board.plan"
+        ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.plan"
 
       elif [[ "${{ inputs.command }}" == "implement" ]]; then
-        claude --dangerously-skip-permissions "/ai-board.implement IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+        ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.implement" "IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
 
       else
         echo "Unknown command: ${{ inputs.command }}"
@@ -471,7 +563,8 @@ Required secrets in repository settings:
 
 | Secret | Purpose | Example |
 |--------|---------|---------|
-| `ANTHROPIC_API_KEY` | Claude Code API key | `sk-ant-api03-...` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude CLI authentication (CLAUDE agent) | `oauth_token_...` |
+| `OPENAI_API_KEY` | OpenAI API key (CODEX agent) | `sk-...` |
 | `WORKFLOW_API_TOKEN` | Workflow authentication | Random 32-char string |
 | `VERCEL_TOKEN` | Vercel API authentication | `vercel_api_token_...` |
 | `VERCEL_ORG_ID` | Vercel organization ID | `team_abc123...` |

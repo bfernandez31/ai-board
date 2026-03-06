@@ -589,7 +589,7 @@ Workflows execute on GitHub Actions infrastructure:
 - Job ID for status tracking
 - Branch name (empty for new branches)
 - WorkflowType (FULL or QUICK) - controls verify.yml test execution
-- Agent selection - resolved from ticket override or project default (see Agent Selection below)
+- Agent selection (`CLAUDE` or `CODEX`) - resolved from ticket override or project default (see Agent Selection below)
 - User information (for AI-BOARD mentions)
 - Comment content (for AI-BOARD requests)
 
@@ -999,7 +999,7 @@ Automated GitHub Actions workflow handles deployment:
 
 ### Per-Workflow Agent Routing
 
-Every workflow dispatch includes the resolved agent value so each workflow invokes the correct AI CLI tool.
+Every workflow dispatch includes the resolved agent value so each workflow invokes the correct AI CLI tool via the unified agent runner script (`.github/scripts/run-agent.sh`).
 
 **Agent Resolution**:
 
@@ -1009,12 +1009,22 @@ The effective agent is determined by a priority chain:
 3. **System fallback** — `CLAUDE` (defensive, only if project default is somehow unset)
 
 **Supported Agents**:
-- `CLAUDE` — Anthropic Claude CLI (default)
-- `CODEX` — OpenAI Codex CLI
+- `CLAUDE` — Anthropic Claude CLI (default); uses `CLAUDE_CODE_OAUTH_TOKEN`
+- `CODEX` — OpenAI Codex CLI; uses `OPENAI_API_KEY`
 
 **Scope**:
 - All workflow types receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, CLEAN, AI-BOARD assist, iterate
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
+
+### Unified Agent Runner
+
+Workflows do not call agent CLIs directly. Instead they delegate to `.github/scripts/run-agent.sh`, which provides a consistent interface regardless of which agent is configured:
+
+- **`install`**: Installs the appropriate CLI package (`@anthropic-ai/claude-code` or `@openai/codex`)
+- **`setup`**: Configures telemetry; for CODEX, creates `AGENTS.md` by copying `CLAUDE.md` (Codex reads `AGENTS.md` automatically for project context)
+- **`exec <cmd> [args] [-- images]`**: Executes a slash command — CLAUDE calls the CLI directly; CODEX reads the command's `.md` file and injects its content as the prompt
+
+This abstraction means switching agents for a ticket requires no workflow changes — only the `AGENT` env var differs.
 
 ## Cleanup Workflow
 
