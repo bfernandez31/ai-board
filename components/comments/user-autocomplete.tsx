@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -49,13 +48,12 @@ export function UserAutocomplete({
   }
 
   return (
-    <TooltipProvider>
-      <div
-        data-testid="mention-autocomplete"
-        className="bg-popover border border-border rounded-md shadow-md max-h-[280px] overflow-y-auto"
-        role="listbox"
-        aria-label="User autocomplete"
-      >
+    <div
+      data-testid="mention-autocomplete"
+      className="bg-popover border border-border rounded-md shadow-md max-h-[280px] overflow-y-auto"
+      role="listbox"
+      aria-label="User autocomplete"
+    >
         {users.map((user, index) => {
           const isAIBoard = aiBoardUserId && user.id === aiBoardUserId;
           const isUnavailable = isAIBoard && !aiBoardAvailable;
@@ -113,7 +111,6 @@ export function UserAutocomplete({
 
           return userButton;
         })}
-      </div>
-    </TooltipProvider>
+    </div>
   );
 }

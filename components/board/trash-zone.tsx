@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -107,14 +106,12 @@ export const TrashZone = React.memo(function TrashZone({ isVisible, isDisabled, 
   // Wrap in tooltip if disabled and reason is provided
   if (isDisabled && disabledReason) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{trashZoneContent}</TooltipTrigger>
-          <TooltipContent>
-            <p>{disabledReason}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{trashZoneContent}</TooltipTrigger>
+        <TooltipContent>
+          <p>{disabledReason}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 

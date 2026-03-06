@@ -10,7 +10,6 @@ import { formatTimestamp } from '@/lib/utils/format-timestamp'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
@@ -250,29 +249,27 @@ export function JobStatusIndicator({
     const shouldBounce = status === 'PENDING' || status === 'RUNNING'
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              data-testid="job-status-indicator"
-              className={cn('cursor-help', className)}
-              role="img"
-              aria-label={compactAriaLabel}
-            >
-              <Icon
-                className={cn(
-                  'h-5 w-5',
-                  iconColor,
-                  shouldBounce && 'animate-bounce'
-                )}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{tooltipText}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            data-testid="job-status-indicator"
+            className={cn('cursor-help', className)}
+            role="img"
+            aria-label={compactAriaLabel}
+          >
+            <Icon
+              className={cn(
+                'h-5 w-5',
+                iconColor,
+                shouldBounce && 'animate-bounce'
+              )}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
     )
   }
 

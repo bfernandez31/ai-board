@@ -7,6 +7,7 @@ import { QueryProvider } from '@/app/providers/query-provider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { PushOptInPrompt } from '@/app/components/push-notifications/push-opt-in-prompt';
 import { NotificationListener } from '@/app/components/push-notifications/notification-listener';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const metadata: Metadata = {
   title: 'AI Board',
@@ -27,11 +28,13 @@ export default function RootLayout({
       <body className="bg-[#1e1e2e] text-foreground antialiased">
         <QueryProvider>
           <SessionProvider>
-            <Header />
-            {children}
-            <Toaster />
-            <PushOptInPrompt />
-            <NotificationListener />
+            <TooltipProvider>
+              <Header />
+              {children}
+              <Toaster />
+              <PushOptInPrompt />
+              <NotificationListener />
+            </TooltipProvider>
           </SessionProvider>
         </QueryProvider>
         <SpeedInsights />
