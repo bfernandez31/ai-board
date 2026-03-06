@@ -48,11 +48,12 @@ export const TicketCardDeployIcon = React.memo(
       }
     };
 
-    const tooltipText = isDeploying
-      ? 'Deployment in progress...'
-      : isDisabled
-      ? 'Another deployment is in progress'
-      : 'Deploy preview to Vercel';
+    let tooltipText = 'Deploy preview to Vercel';
+    if (isDeploying) {
+      tooltipText = 'Deployment in progress...';
+    } else if (isDisabled) {
+      tooltipText = 'Another deployment is in progress';
+    }
 
     return (
       <Tooltip>
