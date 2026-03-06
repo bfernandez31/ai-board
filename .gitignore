@@ -75,3 +75,6 @@ mcp-server/node_modules/
 
 # local Claude Code settings and symlinks
 .claude/
+
+# AGENTS.md (generated at runtime for Codex from CLAUDE.md)
+AGENTS.md

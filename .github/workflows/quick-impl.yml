@@ -36,6 +36,12 @@ on:
         required: true
         type: string
 
+      agent:
+        description: 'Agent CLI to use (CLAUDE or CODEX)'
+        required: false
+        type: string
+        default: 'CLAUDE'
+
 jobs:
   quick-impl:
     runs-on: ubuntu-latest
@@ -63,7 +69,9 @@ jobs:
           --health-retries 5
 
     env:
+      AGENT: ${{ inputs.agent || 'CLAUDE' }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
@@ -185,9 +193,14 @@ jobs:
             echo "HAS_PLAYWRIGHT=false" >> $GITHUB_ENV
           fi
 
-      - name: Install Claude Code CLI
+      - name: Install Agent CLI
         if: ${{ env.SKIP_EXECUTION != 'true' }}
-        run: bun add -g @anthropic-ai/claude-code
+        run: ../ai-board/.github/scripts/run-agent.sh install
+
+      - name: Setup Agent Environment
+        if: ${{ env.SKIP_EXECUTION != 'true' }}
+        working-directory: target
+        run: ../ai-board/.github/scripts/run-agent.sh setup
 
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -278,9 +291,9 @@ jobs:
           # Add image paths if available
           if [ -n "$IMAGE_PATHS" ] && [ "$IMAGE_COUNT" -gt 0 ]; then
             echo "🖼️  Passing $IMAGE_COUNT images to Claude for visual context"
-            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" $IMAGE_PATHS
+            ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.quick-impl" "$payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests" -- $IMAGE_PATHS
           else
-            claude --dangerously-skip-permissions "/ai-board.quick-impl $payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
+            ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.quick-impl" "$payload IMPORTANT: never prompt me; you must do the full implementation, never run the full test suite, only impacted tests"
           fi
 
       - name: Capture Branch Name

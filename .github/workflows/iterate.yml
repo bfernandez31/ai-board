@@ -48,7 +48,9 @@ jobs:
       contents: write
 
     env:
+      AGENT: ${{ inputs.agent }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
@@ -94,6 +96,7 @@ jobs:
           path: ai-board
           sparse-checkout: |
             .claude-plugin
+            .github/scripts
           sparse-checkout-cone-mode: true
 
       - name: Checkout target repository
@@ -129,8 +132,12 @@ jobs:
         with:
           node-version: '22.20.0'
 
-      - name: Install Claude CLI
-        run: bun add -g @anthropic-ai/claude-code
+      - name: Install Agent CLI
+        run: ../ai-board/.github/scripts/run-agent.sh install
+
+      - name: Setup Agent Environment
+        working-directory: target
+        run: ../ai-board/.github/scripts/run-agent.sh setup
 
       - name: Configure Git
         run: |
@@ -150,7 +157,7 @@ jobs:
           echo "Issues to fix: $ISSUES"
 
           # Execute Claude iterate command
-          claude --dangerously-skip-permissions "/ai-board.iterate" > output.log || true
+          ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.iterate" > output.log || true
 
           # Check if changes were made
           if git diff --quiet; then
@@ -167,7 +174,7 @@ jobs:
         run: |
           echo "📚 Updating global specifications..."
 
-          claude --dangerously-skip-permissions /ai-board.sync-specifications
+          ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.sync-specifications"
 
       - name: Commit and Push Changes
         if: steps.iterate.outputs.no_changes != 'true'

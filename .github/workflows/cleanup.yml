@@ -56,7 +56,9 @@ jobs:
           --health-retries 5
 
     env:
+      AGENT: ${{ inputs.agent }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       # Use Opus model for Claude Code
@@ -153,8 +155,12 @@ jobs:
             bunx playwright install --with-deps chromium
           fi
 
-      - name: Install Claude Code CLI
-        run: bun add -g @anthropic-ai/claude-code
+      - name: Install Agent CLI
+        run: ../ai-board/.github/scripts/run-agent.sh install
+
+      - name: Setup Agent Environment
+        working-directory: target
+        run: ../ai-board/.github/scripts/run-agent.sh setup
 
       - name: Configure Git
         run: |
@@ -199,7 +205,7 @@ jobs:
 
           # Claude will create the branch, read CLAUDE.md and constitution for project context
           # Claude will use cleanup-tasks.md to track progress
-          claude --dangerously-skip-permissions "/ai-board.cleanup $CLEANUP_PAYLOAD" || {
+          ../ai-board/.github/scripts/run-agent.sh exec "/ai-board.cleanup" "$CLEANUP_PAYLOAD" || {
             echo "❌ Cleanup execution failed"
             exit 1
           }
