@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Unified agent runner script for GitHub workflows
+# Abstracts CLI installation, authentication, telemetry, and command invocation
+# across Claude Code and Codex CLI agents.
+
+AGENT_TYPE="${1:?ERROR: AGENT_TYPE is required (CLAUDE or CODEX)}"
+COMMAND="${2:?ERROR: COMMAND is required (e.g., ai-board.specify)}"
+shift 2
+ARGS="$*"
+
+# --- Logging helpers ---
+
+log_info() {
+  echo "ℹ️  [run-agent] $*"
+}
+
+log_error() {
+  echo "❌ [run-agent] ERROR: $*" >&2
+}
+
+# --- Validation ---
+
+validate_auth() {
+  case "$AGENT_TYPE" in
+    CLAUDE)
+      if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+        log_error "CLAUDE_CODE_OAUTH_TOKEN is required for agent type CLAUDE"
+        exit 1
+      fi
+      ;;
+    CODEX)
+      if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+        log_error "OPENAI_API_KEY is required for agent type CODEX"
+        exit 1
+      fi
+      ;;
+  esac
+}
+
+# --- Claude functions ---
+
+install_claude() {
+  log_info "Installing Claude Code CLI..."
+  if ! bun add -g @anthropic-ai/claude-code; then
+    log_error "Failed to install @anthropic-ai/claude-code"
+    exit 1
+  fi
+  if ! command -v claude &>/dev/null; then
+    log_error "Failed to install @anthropic-ai/claude-code — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "Claude Code CLI installed successfully"
+}
+
+invoke_claude() {
+  log_info "Invoking Claude: /$COMMAND $ARGS"
+  claude --dangerously-skip-permissions "/$COMMAND $ARGS"
+}
+
+# --- Codex functions ---
+
+install_codex() {
+  log_info "Installing Codex CLI..."
+  if ! bun add -g @openai/codex; then
+    log_error "Failed to install @openai/codex"
+    exit 1
+  fi
+  if ! command -v codex &>/dev/null; then
+    log_error "Failed to install @openai/codex — CLI binary not found after install"
+    exit 1
+  fi
+  log_info "Codex CLI installed successfully"
+
+  log_info "Authenticating Codex CLI..."
+  codex login --api-key "$OPENAI_API_KEY"
+}
+
+setup_codex_telemetry() {
+  if [[ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]]; then
+    log_info "No OTEL_EXPORTER_OTLP_ENDPOINT set — skipping Codex telemetry config"
+    return 0
+  fi
+
+  log_info "Writing Codex telemetry config to ~/.codex/config.toml..."
+  mkdir -p ~/.codex
+
+  # Parse Authorization header from OTEL_EXPORTER_OTLP_HEADERS
+  local auth_header=""
+  if [[ -n "${OTEL_EXPORTER_OTLP_HEADERS:-}" ]]; then
+    auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
+  fi
+
+  cat > ~/.codex/config.toml <<TOML
+[otel]
+log_user_prompt = true
+environment = "ci"
+
+[otel.exporter."otlp-http"]
+endpoint = "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+protocol = "binary"
+headers = { "Authorization" = "${auth_header}" }
+TOML
+
+  log_info "Codex telemetry config written"
+}
+
+generate_agents_md() {
+  if [[ ! -f "CLAUDE.md" ]]; then
+    log_info "No CLAUDE.md found — skipping AGENTS.md generation"
+    return 0
+  fi
+
+  log_info "Generating AGENTS.md from CLAUDE.md..."
+  cp CLAUDE.md AGENTS.md
+
+  local file_size
+  file_size=$(wc -c < AGENTS.md)
+  local max_size=32768  # 32KB
+
+  if (( file_size > max_size )); then
+    log_info "AGENTS.md is ${file_size} bytes (> 32KB) — truncating..."
+    head -c "$max_size" AGENTS.md > AGENTS.md.tmp
+
+    # Append truncation notice
+    printf '\n\n<!-- TRUNCATED: Original file exceeded 32KB Codex limit -->\n' >> AGENTS.md.tmp
+    mv AGENTS.md.tmp AGENTS.md
+  fi
+
+  log_info "AGENTS.md generated ($(wc -c < AGENTS.md) bytes)"
+}
+
+invoke_codex() {
+  local command_file=".claude/commands/${COMMAND}.md"
+
+  if [[ ! -f "$command_file" ]]; then
+    log_error "Command file not found: $command_file"
+    exit 1
+  fi
+
+  log_info "Invoking Codex with command file: $command_file"
+
+  local model="${CODEX_MODEL:-o3}"
+  local prompt
+  prompt="$(cat "$command_file")"
+
+  if [[ -n "$ARGS" ]]; then
+    prompt="${prompt}
+
+${ARGS}"
+  fi
+
+  echo "$prompt" | codex exec --full-auto -m "$model" -
+}
+
+# --- Main dispatch ---
+
+case "$AGENT_TYPE" in
+  CLAUDE)
+    validate_auth
+    install_claude
+    invoke_claude
+    ;;
+  CODEX)
+    validate_auth
+    install_codex
+    setup_codex_telemetry
+    generate_agents_md
+    invoke_codex
+    ;;
+  *)
+    log_error "Unsupported agent type '$AGENT_TYPE'. Supported: CLAUDE, CODEX"
+    exit 1
+    ;;
+esac

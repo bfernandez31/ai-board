@@ -18,8 +18,8 @@
 
 **Purpose**: Create the script file and establish the basic structure
 
-- [ ] T001 Create `.github/scripts/run-agent.sh` with shebang, `set -euo pipefail`, positional arg parsing (`AGENT_TYPE=$1`, `COMMAND=$2`, `shift 2; ARGS="$*"`), and main `case` dispatch skeleton for CLAUDE/CODEX with unsupported agent error fallback
-- [ ] T002 Make `.github/scripts/run-agent.sh` executable (`chmod +x`)
+- [x] T001 Create `.github/scripts/run-agent.sh` with shebang, `set -euo pipefail`, positional arg parsing (`AGENT_TYPE=$1`, `COMMAND=$2`, `shift 2; ARGS="$*"`), and main `case` dispatch skeleton for CLAUDE/CODEX with unsupported agent error fallback
+- [x] T002 Make `.github/scripts/run-agent.sh` executable (`chmod +x`)
 
 ---
 
@@ -29,8 +29,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement `validate_auth()` function in `.github/scripts/run-agent.sh` that checks `CLAUDE_CODE_OAUTH_TOKEN` for CLAUDE agent and `OPENAI_API_KEY` for CODEX agent, exiting with descriptive error messages per contracts/run-agent-interface.md
-- [ ] T004 Implement `log_info()` and `log_error()` helper functions in `.github/scripts/run-agent.sh` for consistent script output formatting
+- [x] T003 Implement `validate_auth()` function in `.github/scripts/run-agent.sh` that checks `CLAUDE_CODE_OAUTH_TOKEN` for CLAUDE agent and `OPENAI_API_KEY` for CODEX agent, exiting with descriptive error messages per contracts/run-agent-interface.md
+- [x] T004 Implement `log_info()` and `log_error()` helper functions in `.github/scripts/run-agent.sh` for consistent script output formatting
 
 **Checkpoint**: Foundation ready — agent-specific implementation can now begin
 
@@ -44,9 +44,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Implement `install_claude()` function in `.github/scripts/run-agent.sh` that runs `bun add -g @anthropic-ai/claude-code` with error handling on install failure
-- [ ] T006 [US1] Implement `invoke_claude()` function in `.github/scripts/run-agent.sh` that executes `claude --dangerously-skip-permissions "/$COMMAND $ARGS"` and propagates exit code
-- [ ] T007 [US1] Wire `install_claude` and `invoke_claude` into the CLAUDE case of the main dispatch in `.github/scripts/run-agent.sh`, calling `validate_auth` → `install_claude` → `invoke_claude`
+- [x] T005 [US1] Implement `install_claude()` function in `.github/scripts/run-agent.sh` that runs `bun add -g @anthropic-ai/claude-code` with error handling on install failure
+- [x] T006 [US1] Implement `invoke_claude()` function in `.github/scripts/run-agent.sh` that executes `claude --dangerously-skip-permissions "/$COMMAND $ARGS"` and propagates exit code
+- [x] T007 [US1] Wire `install_claude` and `invoke_claude` into the CLAUDE case of the main dispatch in `.github/scripts/run-agent.sh`, calling `validate_auth` → `install_claude` → `invoke_claude`
 
 **Checkpoint**: Claude path in run-agent.sh is fully functional — calling `run-agent.sh CLAUDE ai-board.specify "payload"` should behave identically to the current `claude --dangerously-skip-permissions "/ai-board.specify payload"`
 
@@ -60,12 +60,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T008 [US4] Update `.github/workflows/iterate.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `.github/scripts/run-agent.sh "${{ inputs.agent }}" "command" "$args"` calls, passing the existing `agent` input
-- [ ] T009 [US4] Update `.github/workflows/cleanup.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
-- [ ] T010 [US4] Update `.github/workflows/quick-impl.yml` — add missing `agent` input parameter (default `'CLAUDE'`), remove hardcoded Claude CLI install step, and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls per contracts/workflow-input.md
-- [ ] T011 [US4] Update `.github/workflows/ai-board-assist.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
-- [ ] T012 [US4] Update `.github/workflows/verify.yml` — remove hardcoded Claude CLI install step and replace all `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
-- [ ] T013 [US4] Update `.github/workflows/speckit.yml` — remove hardcoded Claude CLI install step and replace all `claude --dangerously-skip-permissions` invocations (including conditional/looped ones) with `run-agent.sh` calls, passing the existing `agent` input
+- [x] T008 [US4] Update `.github/workflows/iterate.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `.github/scripts/run-agent.sh "${{ inputs.agent }}" "command" "$args"` calls, passing the existing `agent` input
+- [x] T009 [US4] Update `.github/workflows/cleanup.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
+- [x] T010 [US4] Update `.github/workflows/quick-impl.yml` — add missing `agent` input parameter (default `'CLAUDE'`), remove hardcoded Claude CLI install step, and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls per contracts/workflow-input.md
+- [x] T011 [US4] Update `.github/workflows/ai-board-assist.yml` — remove hardcoded Claude CLI install step and replace `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
+- [x] T012 [US4] Update `.github/workflows/verify.yml` — remove hardcoded Claude CLI install step and replace all `claude --dangerously-skip-permissions` invocations with `run-agent.sh` calls, passing the existing `agent` input
+- [x] T013 [US4] Update `.github/workflows/speckit.yml` — remove hardcoded Claude CLI install step and replace all `claude --dangerously-skip-permissions` invocations (including conditional/looped ones) with `run-agent.sh` calls, passing the existing `agent` input
 
 **Checkpoint**: All 6 workflows use `run-agent.sh` exclusively. Dispatching any workflow with default `agent=CLAUDE` should produce identical behavior to pre-change workflows.
 
@@ -79,10 +79,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement `install_codex()` function in `.github/scripts/run-agent.sh` that runs `bun add -g @openai/codex` with error handling, then authenticates via `codex login --api-key "$OPENAI_API_KEY"`
-- [ ] T015 [US2] Implement `setup_codex_telemetry()` function in `.github/scripts/run-agent.sh` that writes `~/.codex/config.toml` with `[otel]` and `[otel.exporter."otlp-http"]` sections, mapping `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, and protocol per research.md R-002 telemetry mapping
-- [ ] T016 [US2] Implement `invoke_codex()` function in `.github/scripts/run-agent.sh` that reads `.claude/commands/${COMMAND}.md`, concatenates with `$ARGS`, and pipes combined prompt to `codex exec --full-auto -m "${CODEX_MODEL:-o3}" -` via stdin, propagating exit code
-- [ ] T017 [US2] Wire `install_codex`, `setup_codex_telemetry`, and `invoke_codex` into the CODEX case of the main dispatch in `.github/scripts/run-agent.sh`, calling `validate_auth` → `install_codex` → `setup_codex_env` → `invoke_codex`
+- [x] T014 [US2] Implement `install_codex()` function in `.github/scripts/run-agent.sh` that runs `bun add -g @openai/codex` with error handling, then authenticates via `codex login --api-key "$OPENAI_API_KEY"`
+- [x] T015 [US2] Implement `setup_codex_telemetry()` function in `.github/scripts/run-agent.sh` that writes `~/.codex/config.toml` with `[otel]` and `[otel.exporter."otlp-http"]` sections, mapping `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, and protocol per research.md R-002 telemetry mapping
+- [x] T016 [US2] Implement `invoke_codex()` function in `.github/scripts/run-agent.sh` that reads `.claude/commands/${COMMAND}.md`, concatenates with `$ARGS`, and pipes combined prompt to `codex exec --full-auto -m "${CODEX_MODEL:-o3}" -` via stdin, propagating exit code
+- [x] T017 [US2] Wire `install_codex`, `setup_codex_telemetry`, and `invoke_codex` into the CODEX case of the main dispatch in `.github/scripts/run-agent.sh`, calling `validate_auth` → `install_codex` → `setup_codex_env` → `invoke_codex`
 
 **Checkpoint**: Codex path in run-agent.sh is fully functional — `run-agent.sh CODEX ai-board.specify "payload"` installs Codex, authenticates, reads the .md file, configures telemetry, and invokes the command
 
@@ -96,8 +96,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Implement `generate_agents_md()` function in `.github/scripts/run-agent.sh` that copies `CLAUDE.md` content to `AGENTS.md` in the working directory, checks file size, and truncates at 32KB boundary with a truncation notice if needed
-- [ ] T019 [US3] Integrate `generate_agents_md()` call into the CODEX setup path in `.github/scripts/run-agent.sh` (called between `install_codex` and `invoke_codex`), skipping generation if `CLAUDE.md` does not exist
+- [x] T018 [US3] Implement `generate_agents_md()` function in `.github/scripts/run-agent.sh` that copies `CLAUDE.md` content to `AGENTS.md` in the working directory, checks file size, and truncates at 32KB boundary with a truncation notice if needed
+- [x] T019 [US3] Integrate `generate_agents_md()` call into the CODEX setup path in `.github/scripts/run-agent.sh` (called between `install_codex` and `invoke_codex`), skipping generation if `CLAUDE.md` does not exist
 
 **Checkpoint**: AGENTS.md is correctly generated for Codex workflows and stays under 32KB
 
@@ -111,8 +111,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T020 [US5] Add missing command .md file validation to `invoke_codex()` in `.github/scripts/run-agent.sh` — check that `.claude/commands/${COMMAND}.md` exists before reading, exit with descriptive error per contracts/run-agent-interface.md if not found
-- [ ] T021 [US5] Add CLI installation failure detection to both `install_claude()` and `install_codex()` in `.github/scripts/run-agent.sh` — verify the CLI binary is available after `bun add -g`, exit with descriptive error if not
+- [x] T020 [US5] Add missing command .md file validation to `invoke_codex()` in `.github/scripts/run-agent.sh` — check that `.claude/commands/${COMMAND}.md` exists before reading, exit with descriptive error per contracts/run-agent-interface.md if not found
+- [x] T021 [US5] Add CLI installation failure detection to both `install_claude()` and `install_codex()` in `.github/scripts/run-agent.sh` — verify the CLI binary is available after `bun add -g`, exit with descriptive error if not
 
 **Checkpoint**: All error paths produce clear, actionable messages and fail before expensive operations
 
@@ -122,9 +122,9 @@
 
 **Purpose**: Linting, validation, and final quality checks
 
-- [ ] T022 [P] Run ShellCheck on `.github/scripts/run-agent.sh` and fix all reported issues
-- [ ] T023 Verify all 6 workflow YAML files have valid syntax (no broken `${{ }}` expressions, correct indentation)
-- [ ] T024 Run `bun run type-check` and `bun run lint` to ensure no regressions in the broader project
+- [x] T022 [P] Run ShellCheck on `.github/scripts/run-agent.sh` and fix all reported issues
+- [x] T023 Verify all 6 workflow YAML files have valid syntax (no broken `${{ }}` expressions, correct indentation)
+- [x] T024 Run `bun run type-check` and `bun run lint` to ensure no regressions in the broader project
 
 ---
 

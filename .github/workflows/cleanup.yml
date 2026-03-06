@@ -153,9 +153,6 @@ jobs:
             bunx playwright install --with-deps chromium
           fi
 
-      - name: Install Claude Code CLI
-        run: bun add -g @anthropic-ai/claude-code
-
       - name: Configure Git
         run: |
           git config --global user.name "ai-board[bot]"
@@ -199,7 +196,7 @@ jobs:
 
           # Claude will create the branch, read CLAUDE.md and constitution for project context
           # Claude will use cleanup-tasks.md to track progress
-          claude --dangerously-skip-permissions "/ai-board.cleanup $CLEANUP_PAYLOAD" || {
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.cleanup" "$CLEANUP_PAYLOAD" || {
             echo "❌ Cleanup execution failed"
             exit 1
           }

@@ -164,10 +164,6 @@ jobs:
         working-directory: target
         run: bun install --frozen-lockfile
 
-      - name: Install Claude Code CLI
-        if: ${{ env.SKIP_EXECUTION != 'true' }}
-        run: bun add -g @anthropic-ai/claude-code
-
       - name: Configure Git
         if: ${{ env.SKIP_EXECUTION != 'true' }}
         run: |
@@ -383,7 +379,7 @@ jobs:
           echo "  3. Fix implementation if it violates spec (bugs)"
           echo "  4. Update test if spec documents new behavior (intentional changes)"
           echo ""
-          claude --dangerously-skip-permissions "/ai-board.verify IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.verify" "IMPORTANT: Read test-failures.json for structured failure report. CONTEXT: Tests were passing on main (baseline). Determine if failures are BUGS (fix implementation) or INTENTIONAL behavior changes (update tests). ALWAYS read specification (specs/*/spec.md) FIRST to understand intended behavior. Compare with git diff main...HEAD. If spec says X and implementation does Y, fix implementation. If spec requires new behavior and test expects old behavior, update test. Fix systematically. Run affected tests after each fix. Only mark complete when ALL tests pass."
 
       - name: Commit Test Fixes
         if: ${{ env.SKIP_EXECUTION != 'true' }}
@@ -413,7 +409,7 @@ jobs:
         run: |
           echo "🧹 Running code simplifier on recently modified code..."
 
-          claude --dangerously-skip-permissions /ai-board.code-simplifier
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-simplifier"
 
           git add .
           if ! git diff --staged --quiet; then
@@ -439,7 +435,7 @@ jobs:
           echo "   Feature specs: $(ls specs/$(git branch --show-current)/ 2>/dev/null | head -5 || echo 'None found')"
           echo "   Global specs: $(ls specs/specifications/ 2>/dev/null | head -5 || echo 'None found')"
 
-          claude --dangerously-skip-permissions /ai-board.sync-specifications
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
 
           git add specs/specifications/ CLAUDE.md 2>/dev/null || echo "   Warning: specs/specifications/ or CLAUDE.md not found"
           if ! git diff --staged --quiet; then
@@ -493,7 +489,7 @@ jobs:
 
           echo "   Found PR #$PR_NUMBER"
 
-          claude --dangerously-skip-permissions "/ai-board.code-review $PR_NUMBER"
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-review" "$PR_NUMBER"
 
           echo "✅ Code review completed"
 

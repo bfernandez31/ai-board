@@ -88,12 +88,13 @@ jobs:
           echo "ℹ️ Skipping iteration for [e2e] test ticket"
           exit 0
 
-      - name: Checkout ai-board (sparse - plugin only)
+      - name: Checkout ai-board (sparse - plugin and scripts)
         uses: actions/checkout@v4
         with:
           path: ai-board
           sparse-checkout: |
             .claude-plugin
+            .github/scripts
           sparse-checkout-cone-mode: true
 
       - name: Checkout target repository
@@ -129,9 +130,6 @@ jobs:
         with:
           node-version: '22.20.0'
 
-      - name: Install Claude CLI
-        run: bun add -g @anthropic-ai/claude-code
-
       - name: Configure Git
         run: |
           git config --global user.name "ai-board[bot]"
@@ -149,8 +147,8 @@ jobs:
           echo "🔧 Executing iteration fixes..."
           echo "Issues to fix: $ISSUES"
 
-          # Execute Claude iterate command
-          claude --dangerously-skip-permissions "/ai-board.iterate" > output.log || true
+          # Execute iterate command via unified agent runner
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.iterate" > output.log || true
 
           # Check if changes were made
           if git diff --quiet; then
@@ -167,7 +165,7 @@ jobs:
         run: |
           echo "📚 Updating global specifications..."
 
-          claude --dangerously-skip-permissions /ai-board.sync-specifications
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
 
       - name: Commit and Push Changes
         if: steps.iterate.outputs.no_changes != 'true'
