@@ -596,7 +596,7 @@ Workflows execute on GitHub Actions infrastructure:
 **Authentication**:
 - GitHub token for repository access
 - API token for status updates
-- Anthropic API key for Claude access
+- `CLAUDE_CODE_OAUTH_TOKEN` for Claude CLI access, or `OPENAI_API_KEY` for Codex CLI access (resolved by agent type)
 
 ### Workflow Timeouts
 

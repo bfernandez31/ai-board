@@ -70,6 +70,10 @@ ai-board/
 │   ├── auto-ship.yml             # Auto-deployment workflow
 │   ├── deploy-preview.yml        # Vercel preview deployment
 │   └── rollback-reset.yml        # VERIFY→PLAN rollback
+├── .github/scripts/              # Shared shell utilities for workflows
+│   ├── run-agent.sh              # Unified agent runner (Claude/Codex)
+│   ├── fetch-telemetry.sh        # Pre-fetch job telemetry for /compare
+│   └── setup-test-env.sh         # Prepare test environment
 ├── .claude-plugin/               # Claude Code plugin (full content)
 │   ├── plugin.json               # Plugin manifest
 │   ├── commands/                 # Slash commands (ai-board.*)

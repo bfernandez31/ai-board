@@ -358,6 +358,98 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 **Repository Variables**:
 - `APP_URL`: Application URL for API calls (e.g., `https://ai-board.vercel.app`)
 
+### Agent Runner Script
+
+**Script**: `.github/scripts/run-agent.sh`
+
+**Purpose**: Unified entry point for all AI CLI invocations across GitHub workflows. Abstracts CLI installation, authentication, telemetry configuration, and command invocation for Claude Code and Codex CLI.
+
+**Interface**:
+```bash
+.github/scripts/run-agent.sh <AGENT_TYPE> <COMMAND> [ARGS...]
+
+# Examples
+.github/scripts/run-agent.sh CLAUDE ai-board.specify "$PAYLOAD"
+.github/scripts/run-agent.sh CODEX  ai-board.implement "$TICKET_KEY $TITLE"
+```
+
+**Agent Execution Flow**:
+
+```mermaid
+sequenceDiagram
+    participant WF as Workflow Step
+    participant RS as run-agent.sh
+    participant CLI as Agent CLI
+
+    WF->>RS: run-agent.sh AGENT_TYPE COMMAND [ARGS]
+    RS->>RS: validate_auth (check secret present)
+    alt AGENT_TYPE = CLAUDE
+        RS->>CLI: bun add -g @anthropic-ai/claude-code
+        RS->>CLI: claude --dangerously-skip-permissions "/COMMAND ARGS"
+    else AGENT_TYPE = CODEX
+        RS->>CLI: bun add -g @openai/codex
+        RS->>CLI: codex login --api-key $OPENAI_API_KEY
+        RS->>RS: write ~/.codex/config.toml (OTEL telemetry)
+        RS->>RS: cp CLAUDE.md AGENTS.md (≤32KB)
+        RS->>RS: read .claude/commands/COMMAND.md
+        RS->>CLI: echo prompt | codex exec --full-auto -m $CODEX_MODEL -
+    end
+    CLI-->>RS: exit code
+    RS-->>WF: propagated exit code
+```
+
+**Agent-Specific Behavior**:
+
+| Concern | CLAUDE | CODEX |
+|---------|--------|-------|
+| Package | `@anthropic-ai/claude-code` | `@openai/codex` |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` |
+| Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` |
+| Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
+| Project context | `CLAUDE.md` (native) | `AGENTS.md` (generated from `CLAUDE.md`, ≤32KB) |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `o3`) |
+
+**AGENTS.md Generation** (Codex only):
+- Copies `CLAUDE.md` to `AGENTS.md` in the working directory
+- Enforces 32KB limit (Codex documented maximum)
+- If over limit: truncates at byte boundary and appends `<!-- TRUNCATED -->` notice
+- Ephemeral: not committed; regenerated on each workflow run
+- Skipped if `CLAUDE.md` does not exist
+
+**Codex Telemetry Mapping**:
+
+| Workflow env var | `~/.codex/config.toml` field |
+|-----------------|------------------------------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `[otel.exporter.otlp-http] endpoint` |
+| `OTEL_EXPORTER_OTLP_HEADERS` (Authorization value) | `[otel.exporter.otlp-http] headers.Authorization` |
+
+**Error Handling**:
+- Missing auth secret → exits before any CLI installation with descriptive message
+- CLI binary not found after install → fails with clear install error
+- Command `.md` file not found (Codex) → exits with file path shown
+- Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`
+- Exit code from underlying CLI is always propagated to calling workflow step
+
+**Environment Variables**:
+- `CLAUDE_CODE_OAUTH_TOKEN`: Required when `AGENT_TYPE=CLAUDE`
+- `OPENAI_API_KEY`: Required when `AGENT_TYPE=CODEX`
+- `CODEX_MODEL`: Optional Codex model override (default: `o3`)
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set
+- `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config
+
+**Usage in Workflows**:
+
+All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `ai-board-assist.yml`, `iterate.yml`) invoke commands through this script, replacing previous hardcoded `bun add -g @anthropic-ai/claude-code` and direct `claude` invocations:
+
+```yaml
+- name: Run agent command
+  env:
+    CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  run: |
+    .github/scripts/run-agent.sh "${{ inputs.agent }}" ai-board.specify "$PAYLOAD"
+```
+
 ### Telemetry Context Script
 
 **Script**: `.github/scripts/fetch-telemetry.sh`
