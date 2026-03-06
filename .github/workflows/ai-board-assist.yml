@@ -174,10 +174,6 @@ jobs:
         with:
           node-version: '22.20.0'
 
-      - name: Install Claude CLI
-        if: ${{ env.SKIP_CLAUDE != 'true' }}
-        run: bun add -g @anthropic-ai/claude-code
-
       - name: Configure Git
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         run: |
@@ -265,7 +261,7 @@ jobs:
             echo "📌 Detected /compare command - routing to ai-board.compare"
             # Extract arguments after /compare (e.g., "#AIB-133 #AIB-134")
             ARGS=$(echo "$COMMENT" | sed -n 's/.*\/compare[[:space:]]*\(.*\)/\1/p')
-            OUTPUT=$(claude --dangerously-skip-permissions "/ai-board.compare \"$ARGS\"" || true)
+            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.compare" "\"$ARGS\"" || true)
           elif echo "$COMMENT" | grep -qE "/review\b"; then
             echo "📌 Detected /review command - routing to code-review with --force"
 
@@ -283,7 +279,7 @@ jobs:
               else
                 echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
                 # Invoke code-review with --force flag to allow re-reviews
-                OUTPUT=$(claude --dangerously-skip-permissions "/ai-board.code-review $PR_NUMBER --force" || true)
+                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-review" "$PR_NUMBER --force" || true)
 
                 # Add user mention and summary wrapper if code-review succeeded
                 if [ -n "$OUTPUT" ]; then
@@ -296,7 +292,7 @@ jobs:
             fi
           else
             echo "📌 Using ai-board.assist for general request"
-            OUTPUT=$(claude --dangerously-skip-permissions "/ai-board.assist \"$COMMENT\"" || true)
+            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.assist" "\"$COMMENT\"" || true)
           fi
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
