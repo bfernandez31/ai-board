@@ -69,6 +69,12 @@ export type OTLPScopeLogs = z.infer<typeof otlpScopeLogsSchema>;
 export type OTLPResourceLogs = z.infer<typeof otlpResourceLogsSchema>;
 export type OTLPLogs = z.infer<typeof otlpLogsSchema>;
 
+/** Event names for API request metrics (tokens, cost, model) */
+export const API_REQUEST_EVENTS = ['claude_code.api_request', 'codex.api_request'] as const;
+
+/** Event names for tool usage tracking */
+export const TOOL_EVENTS = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call'] as const;
+
 /**
  * Extract value from OTLP attribute
  */

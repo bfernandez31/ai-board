@@ -41,7 +41,7 @@ model Job {
   projectId   Int
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  // Claude telemetry metrics (aggregated from all API calls in the job)
+  // Telemetry metrics (aggregated from all API calls in the job)
   inputTokens        Int?     // Total input tokens consumed
   outputTokens       Int?     // Total output tokens generated
   cacheReadTokens    Int?     // Total cache read tokens
@@ -49,6 +49,7 @@ model Job {
   costUsd            Float?   // Total cost in USD
   durationMs         Int?     // Total Claude API duration in milliseconds
   model              String?  @db.VarChar(50) // Primary model used
+  agentType          String?  @db.VarChar(20) // Agent type derived from OTLP service.name (e.g. claude-code, codex)
   toolsUsed          String[] @default([])    // List of tools used (Edit, Write, Bash, etc.)
 
   @@index([projectId])

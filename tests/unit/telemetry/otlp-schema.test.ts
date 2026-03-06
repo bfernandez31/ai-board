@@ -3,6 +3,8 @@ import {
   otlpAttributeSchema,
   otlpLogRecordSchema,
   otlpLogsSchema,
+  API_REQUEST_EVENTS,
+  TOOL_EVENTS,
 } from '@/lib/schemas/otlp';
 
 /**
@@ -14,6 +16,25 @@ import {
  * @see https://opentelemetry.io/docs/specs/otlp/
  * @see https://protobuf.dev/programming-guides/json/
  */
+
+describe('OTLP Event Constants', () => {
+  it('should include Claude Code API request event', () => {
+    expect(API_REQUEST_EVENTS).toContain('claude_code.api_request');
+  });
+
+  it('should include Codex API request event', () => {
+    expect(API_REQUEST_EVENTS).toContain('codex.api_request');
+  });
+
+  it('should include Claude Code tool events', () => {
+    expect(TOOL_EVENTS).toContain('claude_code.tool_result');
+    expect(TOOL_EVENTS).toContain('claude_code.tool_decision');
+  });
+
+  it('should include Codex tool call event', () => {
+    expect(TOOL_EVENTS).toContain('codex.tool.call');
+  });
+});
 
 describe('OTLP Schema Validation', () => {
   describe('intValue field', () => {
@@ -193,6 +214,57 @@ describe('OTLP Schema Validation', () => {
       };
 
       const result = otlpAttributeSchema.safeParse(attribute);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept Codex telemetry with codex.api_request event', () => {
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: '456' } },
+              { key: 'service.name', value: { stringValue: 'codex' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [{
+              body: { stringValue: 'codex.api_request' },
+              attributes: [
+                { key: 'input_tokens', value: { intValue: '2000' } },
+                { key: 'output_tokens', value: { intValue: '800' } },
+                { key: 'cost_usd', value: { stringValue: '0.03' } },
+                { key: 'model', value: { stringValue: 'o3' } },
+              ],
+            }],
+          }],
+        }],
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept Codex tool call events', () => {
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: '456' } },
+              { key: 'service.name', value: { stringValue: 'codex' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [{
+              body: { stringValue: 'codex.tool.call' },
+              attributes: [
+                { key: 'tool_name', value: { stringValue: 'shell' } },
+              ],
+            }],
+          }],
+        }],
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
       expect(result.success).toBe(true);
     });
   });
