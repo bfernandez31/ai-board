@@ -81,6 +81,7 @@
   - Tooltip
   - Input/Textarea
 - **Customization**: Tailwind variants in `components/ui/`
+- **TooltipProvider Pattern**: A single global `TooltipProvider` is mounted in `app/layout.tsx` inside `SessionProvider`, providing tooltip context to all descendant components. Individual components use `Tooltip`, `TooltipTrigger`, and `TooltipContent` directly — no local `TooltipProvider` wrappers. Per-tooltip delay overrides use the `delayDuration` prop on `<Tooltip>` (not on a provider).
 
 ### Radix UI
 - **Version**: Latest stable
