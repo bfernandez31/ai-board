@@ -81,6 +81,7 @@
   - Tooltip
   - Input/Textarea
 - **Customization**: Tailwind variants in `components/ui/`
+- **Global Provider Pattern**: `TooltipProvider` is mounted once in `app/layout.tsx` at the application root. Individual components use `Tooltip`, `TooltipTrigger`, and `TooltipContent` directly without wrapping in their own `TooltipProvider`. Tests mirror this by including `TooltipProvider` in `renderWithProviders` (`tests/utils/component-test-utils.tsx`).
 
 ### Radix UI
 - **Version**: Latest stable
