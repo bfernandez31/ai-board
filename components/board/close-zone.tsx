@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -111,14 +110,12 @@ export const CloseZone = React.memo(function CloseZone({ isVisible, isDisabled, 
   // Wrap in tooltip if disabled and reason is provided
   if (isDisabled && disabledReason) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{closeZoneContent}</TooltipTrigger>
-          <TooltipContent>
-            <p>{disabledReason}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{closeZoneContent}</TooltipTrigger>
+        <TooltipContent>
+          <p>{disabledReason}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 

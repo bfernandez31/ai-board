@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Header } from '@/components/layout/header';
 import { SessionProvider } from '@/components/auth/session-provider';
 import { QueryProvider } from '@/app/providers/query-provider';
@@ -27,11 +28,13 @@ export default function RootLayout({
       <body className="bg-[#1e1e2e] text-foreground antialiased">
         <QueryProvider>
           <SessionProvider>
-            <Header />
-            {children}
-            <Toaster />
-            <PushOptInPrompt />
-            <NotificationListener />
+            <TooltipProvider>
+              <Header />
+              {children}
+              <Toaster />
+              <PushOptInPrompt />
+              <NotificationListener />
+            </TooltipProvider>
           </SessionProvider>
         </QueryProvider>
         <SpeedInsights />

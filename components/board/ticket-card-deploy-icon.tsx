@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -56,26 +55,24 @@ export const TicketCardDeployIcon = React.memo(
       : 'Deploy preview to Vercel';
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4] disabled:opacity-50"
-              onClick={handleClick}
-              disabled={isDeploying || isDisabled}
-              aria-label={`Deploy preview for ${ticketKey}`}
-              data-testid="deploy-icon"
-            >
-              <Rocket className={`h-4 w-4 ${isDeploying ? 'animate-pulse' : ''}`} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{tooltipText}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4] disabled:opacity-50"
+            onClick={handleClick}
+            disabled={isDeploying || isDisabled}
+            aria-label={`Deploy preview for ${ticketKey}`}
+            data-testid="deploy-icon"
+          >
+            <Rocket className={`h-4 w-4 ${isDeploying ? 'animate-pulse' : ''}`} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 );
