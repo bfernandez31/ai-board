@@ -2180,7 +2180,7 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-OTLP HTTP/JSON endpoint for receiving Claude Code telemetry.
+OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code, Codex).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
@@ -2223,9 +2223,10 @@ env:
 
 **Processing**:
 - Extracts `job_id` from resource attributes
-- Aggregates metrics from `claude_code.api_request` events (tokens, cost, duration, model)
-- Collects tool names from `claude_code.tool_result` events
-- Updates corresponding Job record with aggregated metrics
+- Extracts `service.name` from resource attributes and stores as `agentType` (e.g. `claude-code`, `codex`)
+- Aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model)
+- Collects tool names from `claude_code.tool_result`, `claude_code.tool_decision`, and `codex.tool.call` events
+- Updates corresponding Job record with aggregated metrics and agent type
 
 **Response** (200 OK):
 ```json
