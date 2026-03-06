@@ -11,7 +11,7 @@ import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 /**
  * POST /api/telemetry/v1/logs
  *
- * OTLP HTTP JSON endpoint for receiving Claude Code telemetry.
+ * OTLP HTTP JSON endpoint for receiving agent telemetry (Claude Code and Codex).
  * Aggregates metrics from log records and updates the corresponding Job.
  *
  * The job_id must be passed via OTEL_RESOURCE_ATTRIBUTES="job_id=123"
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventName = logRecord.body?.stringValue;
           const attrs = logRecord.attributes;
 
-          if (eventName === 'claude_code.api_request') {
+          if (eventName === 'claude_code.api_request' || eventName === 'codex.api_request') {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
             metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             if (model) metrics.model = String(model);
           }
 
-          if (eventName === 'claude_code.tool_result' || eventName === 'claude_code.tool_decision') {
+          if (eventName === 'claude_code.tool_result' || eventName === 'claude_code.tool_decision' || eventName === 'codex.tool.call') {
             // Collect tool names
             const toolName = findAttribute(attrs, 'tool_name');
             if (toolName) metrics.toolsUsed.add(String(toolName));

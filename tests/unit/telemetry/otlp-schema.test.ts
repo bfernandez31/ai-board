@@ -195,5 +195,85 @@ describe('OTLP Schema Validation', () => {
       const result = otlpAttributeSchema.safeParse(attribute);
       expect(result.success).toBe(true);
     });
+
+    it('T012: OTLP payload with Codex event names validates successfully', () => {
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: '456' } },
+              { key: 'service.name', value: { stringValue: 'codex' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [
+              {
+                body: { stringValue: 'codex.api_request' },
+                attributes: [
+                  { key: 'input_tokens', value: { stringValue: '500' } },
+                  { key: 'output_tokens', value: { stringValue: '200' } },
+                  { key: 'cost_usd', value: { stringValue: '0.03' } },
+                  { key: 'model', value: { stringValue: 'codex-mini-latest' } },
+                ],
+              },
+              {
+                body: { stringValue: 'codex.tool.call' },
+                attributes: [
+                  { key: 'tool_name', value: { stringValue: 'shell' } },
+                ],
+              },
+            ],
+          }],
+        }],
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+
+    it('T013: OTLP payload with mixed Claude + Codex events validates', () => {
+      const payload = {
+        resourceLogs: [{
+          resource: {
+            attributes: [
+              { key: 'job_id', value: { stringValue: '789' } },
+            ],
+          },
+          scopeLogs: [{
+            logRecords: [
+              {
+                body: { stringValue: 'claude_code.api_request' },
+                attributes: [
+                  { key: 'input_tokens', value: { intValue: 1000 } },
+                  { key: 'output_tokens', value: { intValue: 500 } },
+                ],
+              },
+              {
+                body: { stringValue: 'codex.api_request' },
+                attributes: [
+                  { key: 'input_tokens', value: { stringValue: '300' } },
+                  { key: 'output_tokens', value: { stringValue: '100' } },
+                ],
+              },
+              {
+                body: { stringValue: 'claude_code.tool_result' },
+                attributes: [
+                  { key: 'tool_name', value: { stringValue: 'Read' } },
+                ],
+              },
+              {
+                body: { stringValue: 'codex.tool.call' },
+                attributes: [
+                  { key: 'tool_name', value: { stringValue: 'shell' } },
+                ],
+              },
+            ],
+          }],
+        }],
+      };
+
+      const result = otlpLogsSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
   });
 });

@@ -28,9 +28,9 @@
 
 **CRITICAL**: This phase modifies the route handler that all user stories depend on.
 
-- [ ] T001 Extend event matching to add `codex.api_request` to the api_request condition in `app/api/telemetry/v1/logs/route.ts`
-- [ ] T002 Extend event matching to add `codex.tool.call` to the tool event condition in `app/api/telemetry/v1/logs/route.ts`
-- [ ] T003 Update JSDoc comment in `app/api/telemetry/v1/logs/route.ts` to reflect agent-agnostic support
+- [x] T001 Extend event matching to add `codex.api_request` to the api_request condition in `app/api/telemetry/v1/logs/route.ts`
+- [x] T002 Extend event matching to add `codex.tool.call` to the tool event condition in `app/api/telemetry/v1/logs/route.ts`
+- [x] T003 Update JSDoc comment in `app/api/telemetry/v1/logs/route.ts` to reflect agent-agnostic support
 
 **Checkpoint**: Route handler now accepts both Claude and Codex event names. All user story tests can begin.
 
@@ -44,10 +44,10 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Create integration test file and test: Codex `api_request` event updates Job with correct token/cost metrics in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T005 [P] [US1] Add integration test: Codex `tool.call` event adds tool names to Job's toolsUsed in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T006 [P] [US1] Add integration test: multiple Codex batches accumulate metrics correctly (tokens sum, tools merge without duplicates) in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T007 [P] [US1] Add integration test: missing attributes in Codex events default to zero in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T004 [P] [US1] Create integration test file and test: Codex `api_request` event updates Job with correct token/cost metrics in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T005 [P] [US1] Add integration test: Codex `tool.call` event adds tool names to Job's toolsUsed in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T006 [P] [US1] Add integration test: multiple Codex batches accumulate metrics correctly (tokens sum, tools merge without duplicates) in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T007 [P] [US1] Add integration test: missing attributes in Codex events default to zero in `tests/integration/telemetry/agent-agnostic.test.ts`
 
 **Checkpoint**: User Story 1 fully tested - Codex telemetry ingestion works correctly.
 
@@ -61,8 +61,8 @@
 
 ### Tests for User Story 2
 
-- [ ] T008 [P] [US2] Add integration test: Claude `api_request` events still update Job with token counts, cost, duration, and model identically in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T009 [P] [US2] Add integration test: Claude `tool_result` and `tool_decision` events still track tool usage identically in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T008 [P] [US2] Add integration test: Claude `api_request` events still update Job with token counts, cost, duration, and model identically in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T009 [P] [US2] Add integration test: Claude `tool_result` and `tool_decision` events still track tool usage identically in `tests/integration/telemetry/agent-agnostic.test.ts`
 
 **Checkpoint**: User Story 2 verified - zero regressions in existing Claude telemetry.
 
@@ -76,8 +76,8 @@
 
 ### Tests for User Story 3
 
-- [ ] T010 [P] [US3] Add integration test: mixed Claude + Codex events in same payload accumulate correctly in `tests/integration/telemetry/agent-agnostic.test.ts`
-- [ ] T011 [P] [US3] Add integration test: Codex `api_request` event populates model field with Codex model name in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T010 [P] [US3] Add integration test: mixed Claude + Codex events in same payload accumulate correctly in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T011 [P] [US3] Add integration test: Codex `api_request` event populates model field with Codex model name in `tests/integration/telemetry/agent-agnostic.test.ts`
 
 **Checkpoint**: User Story 3 verified - agent type is distinguishable through Job's associated Ticket.
 
@@ -87,9 +87,9 @@
 
 **Purpose**: Extend OTLP schema unit tests and cover edge cases.
 
-- [ ] T012 [P] Add unit test: OTLP payload with Codex event names validates successfully in `tests/unit/telemetry/otlp-schema.test.ts`
-- [ ] T013 [P] Add unit test: OTLP payload with mixed Claude + Codex events validates in `tests/unit/telemetry/otlp-schema.test.ts`
-- [ ] T014 [P] Add integration test: unrecognized event names are silently skipped without error in `tests/integration/telemetry/agent-agnostic.test.ts`
+- [x] T012 [P] Add unit test: OTLP payload with Codex event names validates successfully in `tests/unit/telemetry/otlp-schema.test.ts`
+- [x] T013 [P] Add unit test: OTLP payload with mixed Claude + Codex events validates in `tests/unit/telemetry/otlp-schema.test.ts`
+- [x] T014 [P] Add integration test: unrecognized event names are silently skipped without error in `tests/integration/telemetry/agent-agnostic.test.ts`
 
 **Checkpoint**: All edge cases covered - schema validation and silent skip behavior verified.
 
@@ -99,9 +99,9 @@
 
 **Purpose**: Final verification across all changes.
 
-- [ ] T015 Run `bun run type-check` to verify no TypeScript regressions
-- [ ] T016 Run `bun run lint` to verify no lint violations
-- [ ] T017 Run full test suite to verify all tests pass (unit + integration)
+- [x] T015 Run `bun run type-check` to verify no TypeScript regressions
+- [x] T016 Run `bun run lint` to verify no lint violations
+- [x] T017 Run full test suite to verify all tests pass (unit + integration)
 
 ---
 
