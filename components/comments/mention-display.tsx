@@ -17,7 +17,6 @@ import { User } from '@/app/lib/types/mention';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -212,8 +211,7 @@ function MentionChip({ displayName, email, isDeleted }: MentionChipProps) {
   }
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
+    <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
           <span
             data-testid="mention-chip"
@@ -234,6 +232,5 @@ function MentionChip({ displayName, email, isDeleted }: MentionChipProps) {
           </div>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>
   );
 }

@@ -16,7 +16,7 @@
 
 **Purpose**: Add the global TooltipProvider to the root layout before removing local instances
 
-- [ ] T001 [US1] Add `TooltipProvider` import and wrapper inside `SessionProvider` in `app/layout.tsx`
+- [x] T001 [US1] Add `TooltipProvider` import and wrapper inside `SessionProvider` in `app/layout.tsx`
 
 **Checkpoint**: Global TooltipProvider is now available to all descendant components
 
@@ -30,14 +30,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/job-status-indicator.tsx`
-- [ ] T003 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card.tsx`
-- [ ] T004 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card-preview-icon.tsx`
-- [ ] T005 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card-deploy-icon.tsx`
-- [ ] T006 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/close-zone.tsx`
-- [ ] T007 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/trash-zone.tsx`
-- [ ] T008 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/comments/user-autocomplete.tsx`
-- [ ] T009 [US1] Remove `TooltipProvider` import and wrapper from `components/comments/mention-display.tsx`, move `delayDuration={300}` to `<Tooltip delayDuration={300}>`
+- [x] T002 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/job-status-indicator.tsx`
+- [x] T003 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card.tsx`
+- [x] T004 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card-preview-icon.tsx`
+- [x] T005 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/ticket-card-deploy-icon.tsx`
+- [x] T006 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/close-zone.tsx`
+- [x] T007 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/board/trash-zone.tsx`
+- [x] T008 [P] [US1] Remove `TooltipProvider` import and wrapper from `components/comments/user-autocomplete.tsx`
+- [x] T009 [US1] Remove `TooltipProvider` import and wrapper from `components/comments/mention-display.tsx`, move `delayDuration={300}` to `<Tooltip delayDuration={300}>`
 
 **Checkpoint**: All 8 components no longer use local TooltipProvider; all tooltips still function via the global provider
 
@@ -51,7 +51,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Verify no remaining `TooltipProvider` imports exist in component files (only in `components/ui/tooltip.tsx` and `app/layout.tsx`)
+- [x] T010 [US2] Verify no remaining `TooltipProvider` imports exist in component files (only in `components/ui/tooltip.tsx` and `app/layout.tsx`)
 
 **Checkpoint**: Codebase is clean with a single global TooltipProvider pattern
 
@@ -61,9 +61,9 @@
 
 **Purpose**: Final validation that refactoring introduces no regressions
 
-- [ ] T011 Run `bun run type-check` to verify no TypeScript errors
-- [ ] T012 Run `bun run lint` to verify no lint errors
-- [ ] T013 Run `bun run test:unit` to verify existing tests pass
+- [x] T011 Run `bun run type-check` to verify no TypeScript errors
+- [x] T012 Run `bun run lint` to verify no lint errors
+- [x] T013 Run `bun run test:unit` to verify existing tests pass
 
 ---
 
