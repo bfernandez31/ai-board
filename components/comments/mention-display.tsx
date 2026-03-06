@@ -212,25 +212,25 @@ function MentionChip({ displayName, email, isDeleted }: MentionChipProps) {
 
   return (
     <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <span
-            data-testid="mention-chip"
-            className={cn(
-              'inline-block px-1.5 py-0.5 mx-0.5 rounded text-sm font-medium cursor-default',
-              'bg-primary/10 text-primary hover:bg-primary/20 transition-colors'
-            )}
-          >
-            @{displayName}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="flex flex-col">
-            <span className="font-medium">{displayName}</span>
-            {email && (
-              <span className="text-xs text-muted-foreground">{email}</span>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          data-testid="mention-chip"
+          className={cn(
+            'inline-block px-1.5 py-0.5 mx-0.5 rounded text-sm font-medium cursor-default',
+            'bg-primary/10 text-primary hover:bg-primary/20 transition-colors'
+          )}
+        >
+          @{displayName}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="flex flex-col">
+          <span className="font-medium">{displayName}</span>
+          {email && (
+            <span className="text-xs text-muted-foreground">{email}</span>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
