@@ -139,22 +139,17 @@ export function ComparisonViewer({
               Ticket Comparison
             </DialogTitle>
 
-            {/* Action buttons */}
-            {reportData && !showHistory && (
-              <div className="flex items-center gap-2 shrink-0">
-                {/* History button */}
-                {checkData && checkData.count > 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowHistory(true)}
-                    className="shrink-0"
-                  >
-                    <History className="h-4 w-4 mr-2" />
-                    History ({checkData.count})
-                  </Button>
-                )}
-              </div>
+            {/* History button */}
+            {reportData && !showHistory && checkData && checkData.count > 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHistory(true)}
+                className="shrink-0"
+              >
+                <History className="h-4 w-4 mr-2" />
+                History ({checkData.count})
+              </Button>
             )}
 
             {/* Back button when viewing history */}
@@ -364,13 +359,11 @@ export function ComparisonViewer({
                             : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <GitCompare className="h-4 w-4 text-zinc-400" />
-                            <span className="text-zinc-200 font-medium">
-                              vs {comparison.comparedTickets.join(', ')}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <GitCompare className="h-4 w-4 text-zinc-400" />
+                          <span className="text-zinc-200 font-medium">
+                            vs {comparison.comparedTickets.join(', ')}
+                          </span>
                         </div>
                         <div className="text-sm text-zinc-500">
                           {formatDate(comparison.generatedAt)}
