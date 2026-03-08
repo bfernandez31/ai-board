@@ -503,7 +503,7 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 **Comparison Viewer**:
 - Opens in modal dialog when Compare button clicked
 - Lists all comparison reports sorted by date (newest first)
-- Shows compared tickets, alignment score, and generation timestamp
+- Shows compared tickets and generation timestamp
 - Click report to view full markdown content
 - Uses existing DocumentationViewer component pattern
 
