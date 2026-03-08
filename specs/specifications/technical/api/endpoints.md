@@ -2180,12 +2180,14 @@ Invalid transitions return 400 error
 
 ### POST /api/telemetry/v1/logs
 
-OTLP HTTP/JSON endpoint for receiving Claude Code telemetry.
+OTLP HTTP/JSON endpoint for receiving agent telemetry (Claude Code and Codex).
 
 **Authentication**: Bearer token (WORKFLOW_API_TOKEN) via `OTEL_EXPORTER_OTLP_HEADERS`
 **Authorization**: Workflow token validation
 
-**Request Body** (OTLP JSON format):
+**Supported Agents**: Claude Code (`claude_code.*` events) and Codex (`codex.*` events). The endpoint detects the agent from the event name prefix and processes metrics identically for both.
+
+**Request Body** (OTLP JSON format — Claude Code example):
 ```json
 {
   "resourceLogs": [{
@@ -2210,7 +2212,43 @@ OTLP HTTP/JSON endpoint for receiving Claude Code telemetry.
 }
 ```
 
-**Workflow Configuration**:
+**Request Body** (OTLP JSON format — Codex example):
+```json
+{
+  "resourceLogs": [{
+    "resource": {
+      "attributes": [
+        { "key": "job_id", "value": { "stringValue": "123" } },
+        { "key": "service.name", "value": { "stringValue": "codex" } }
+      ]
+    },
+    "scopeLogs": [{
+      "logRecords": [{
+        "body": { "stringValue": "codex.api_request" },
+        "attributes": [
+          { "key": "input_tokens", "value": { "stringValue": "800" } },
+          { "key": "output_tokens", "value": { "stringValue": "400" } },
+          { "key": "cost_usd", "value": { "stringValue": "0.03" } },
+          { "key": "model", "value": { "stringValue": "codex-mini-latest" } }
+        ]
+      }]
+    }]
+  }]
+}
+```
+
+**Supported Event Names**:
+
+| Event Name | Agent | Processing |
+|------------|-------|------------|
+| `claude_code.api_request` | Claude | Token/cost/duration/model metrics |
+| `claude_code.tool_result` | Claude | Tool usage tracking |
+| `claude_code.tool_decision` | Claude | Tool usage tracking |
+| `codex.api_request` | Codex | Token/cost/duration/model metrics |
+| `codex.tool.call` | Codex | Tool usage tracking |
+| All others | Any | Silently skipped |
+
+**Workflow Configuration** (Claude Code):
 ```yaml
 env:
   CLAUDE_CODE_ENABLE_TELEMETRY: "1"
@@ -2221,11 +2259,22 @@ env:
   OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
 ```
 
+**Workflow Configuration** (Codex):
+```yaml
+env:
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
+  OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
+  OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+```
+
 **Processing**:
 - Extracts `job_id` from resource attributes
-- Aggregates metrics from `claude_code.api_request` events (tokens, cost, duration, model)
-- Collects tool names from `claude_code.tool_result` events
+- Aggregates metrics from `claude_code.api_request` and `codex.api_request` events (tokens, cost, duration, model)
+- Collects tool names from `claude_code.tool_result`, `claude_code.tool_decision`, and `codex.tool.call` events
 - Updates corresponding Job record with aggregated metrics
+- Missing or null metric attributes default to zero (no errors)
 
 **Response** (200 OK):
 ```json
@@ -2246,9 +2295,30 @@ env:
 - `404`: Job not found (if job_id provided)
 
 **Notes**:
-- Telemetry is sent automatically by Claude Code during execution
-- Multiple batches may be received for a single job (metrics are aggregated)
+- Telemetry is sent automatically by the agent CLI during execution
+- Multiple batches may be received for a single job (metrics are aggregated across all batches)
 - If no job_id in attributes, telemetry is accepted but not stored
+- Agent type (Claude vs Codex) is not stored on the telemetry payload — it is determined via the Job's parent Ticket `agent` field
+- Mixed-agent event names in a single payload are supported; all recognized events accumulate to the same Job
+
+```mermaid
+sequenceDiagram
+    participant AG as Agent CLI (Claude/Codex)
+    participant OT as OTEL SDK
+    participant EP as POST /api/telemetry/v1/logs
+    participant DB as Database (Job)
+
+    AG->>OT: Emit api_request / tool event
+    OT->>EP: OTLP JSON batch (Bearer token)
+    EP->>EP: Validate token + Zod schema
+    EP->>EP: Extract job_id from resource attrs
+    EP->>EP: Match event names (claude_code.* / codex.*)
+    EP->>DB: SELECT job by id
+    DB-->>EP: Current accumulated metrics
+    EP->>EP: Add new metrics + merge tools
+    EP->>DB: UPDATE job (tokens, cost, tools, model)
+    EP-->>OT: 200 { status: "accepted", metrics }
+```
 
 ## Analytics Endpoints
 

@@ -11,7 +11,7 @@ import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 /**
  * POST /api/telemetry/v1/logs
  *
- * OTLP HTTP JSON endpoint for receiving Claude Code telemetry.
+ * OTLP HTTP JSON endpoint for receiving agent telemetry (Claude Code and Codex).
  * Aggregates metrics from log records and updates the corresponding Job.
  *
  * The job_id must be passed via OTEL_RESOURCE_ATTRIBUTES="job_id=123"
@@ -112,7 +112,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventName = logRecord.body?.stringValue;
           const attrs = logRecord.attributes;
 
-          if (eventName === 'claude_code.api_request') {
+          const isApiRequest = ['claude_code.api_request', 'codex.api_request'].includes(eventName ?? '');
+          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call'].includes(eventName ?? '');
+
+          if (isApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
             metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
@@ -123,8 +126,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             if (model) metrics.model = String(model);
           }
 
-          if (eventName === 'claude_code.tool_result' || eventName === 'claude_code.tool_decision') {
-            // Collect tool names
+          if (isToolEvent) {
             const toolName = findAttribute(attrs, 'tool_name');
             if (toolName) metrics.toolsUsed.add(String(toolName));
           }
@@ -152,6 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         cacheCreationTokens: true,
         costUsd: true,
         durationMs: true,
+        toolsUsed: true,
       },
     });
 
@@ -163,6 +166,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Merge and deduplicate tools in memory to avoid a second DB call
+    const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
+
     // Aggregate with existing metrics (OTLP may send multiple batches)
     const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
       inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
@@ -171,13 +177,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
       costUsd: (job.costUsd || 0) + metrics.costUsd,
       durationMs: (job.durationMs || 0) + metrics.durationMs,
-      // Merge tools - get existing and add new ones
-      toolsUsed: {
-        push: Array.from(metrics.toolsUsed),
-      },
+      toolsUsed: mergedTools,
     };
 
-    // Only update model if we have one
     if (metrics.model) {
       updateData.model = metrics.model;
     }
@@ -189,23 +191,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: true,
         inputTokens: true,
         outputTokens: true,
-        cacheReadTokens: true,
-        cacheCreationTokens: true,
         costUsd: true,
-        durationMs: true,
-        model: true,
-        toolsUsed: true,
       },
     });
-
-    // Deduplicate toolsUsed array
-    const uniqueTools = [...new Set(updatedJob.toolsUsed)].sort();
-    if (uniqueTools.length !== updatedJob.toolsUsed.length) {
-      await prisma.job.update({
-        where: { id: jobId },
-        data: { toolsUsed: uniqueTools },
-      });
-    }
 
     const elapsedTime = Date.now() - startTime;
     console.log('[OTLP Telemetry] Success:', {
