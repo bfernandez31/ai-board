@@ -7,7 +7,7 @@
  * - Renders markdown comparison reports with syntax highlighting
  * - Loading and error states
  * - Scrollable content for large reports
- * - Alignment score badge and metadata display
+ * - Metadata display
  */
 
 'use client';
@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
   useComparisonCheck,
@@ -34,15 +33,6 @@ import {
   useComparisonReport,
 } from '@/hooks/use-comparisons';
 import type { ComparisonViewerProps } from './types';
-
-/**
- * Get alignment badge variant based on score
- */
-function getAlignmentVariant(score: number): 'default' | 'secondary' | 'destructive' {
-  if (score >= 70) return 'default';
-  if (score >= 30) return 'secondary';
-  return 'destructive';
-}
 
 /**
  * Format date for display
@@ -152,11 +142,6 @@ export function ComparisonViewer({
             {/* Action buttons */}
             {reportData && !showHistory && (
               <div className="flex items-center gap-2 shrink-0">
-                {/* Best score badge */}
-                <Badge variant={getAlignmentVariant(reportData.metadata.alignmentScore)}>
-                  {reportData.metadata.alignmentScore}% Best
-                </Badge>
-
                 {/* History button */}
                 {checkData && checkData.count > 1 && (
                   <Button
@@ -386,9 +371,6 @@ export function ComparisonViewer({
                               vs {comparison.comparedTickets.join(', ')}
                             </span>
                           </div>
-                          <Badge variant={getAlignmentVariant(comparison.alignmentScore)}>
-                            {comparison.alignmentScore}%
-                          </Badge>
                         </div>
                         <div className="text-sm text-zinc-500">
                           {formatDate(comparison.generatedAt)}
