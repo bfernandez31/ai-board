@@ -27,6 +27,8 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 
+**Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.specify/memory/constitution.md` (Section II) for full standards.
+
 ## Commands
 
 ```bash
@@ -37,9 +39,37 @@ bun run test:integration   # Integration tests (auto-starts server)
 bun run test:e2e           # Playwright browser tests
 bun run test:ci            # CI mode (requires running server)
 bun run type-check         # TypeScript check
+bun run lint               # ESLint check
 ```
 
 **Note**: `test` and `test:integration` automatically start/stop the dev server. For manual server control, use `test:integration:manual` with `TEST_MODE=true bun run dev` running.
+
+## Data Models
+
+For all models, fields, enums, and relationships, read `prisma/schema.prisma` (source of truth).
+
+**Key conventions** (not discoverable from schema alone):
+- `ticketKey` format: `{PROJECT_KEY}-{NUMBER}` (e.g., "AIB-123")
+- `project.key`: 3-char unique identifier (e.g., "AIB")
+- `branch`: Created by workflow, NOT during stage transition
+- `workflowType`: FULL|QUICK|CLEAN — set once, never changes
+- `previewUrl`: Single per project (auto-replaces on deploy)
+- Job commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
+- Notifications: 15s polling, soft delete with 30-day retention
+- PushSubscriptions: Multiple per user, auto-cleanup on 410/404
+
+## API Patterns
+
+**Authorization helpers** (in `lib/auth.ts`):
+- `verifyProjectAccess(projectId)` — Owner OR member
+- `verifyTicketAccess(ticketId)` — Via parent project
+- `verifyProjectOwnership(projectId)` — Owner only
+
+**Workflow dispatch**: All workflows use `githubRepository: owner/repo` format.
+
+**Job status**: PATCH `/api/jobs/:id/status` (workflow token auth), GET `/api/projects/:projectId/jobs/status` (polling).
+
+For full endpoint catalog, read `specs/specifications/endpoints.md`.
 
 ## Key Architecture Decisions
 
@@ -47,7 +77,7 @@ bun run type-check         # TypeScript check
 
 - **Centralized Workflow Execution**: All workflows execute on ai-board repository
 - Workflows clone target repository via `githubRepository` input (format: `owner/repo`)
-- **No workflow files required in external projects** - only `.claude/commands/` and `.specify/scripts/bash/`
+- **No workflow files required in external projects** — only `.claude/commands/` and `.specify/scripts/bash/`
 - Target repos need `GH_PAT` secret for cross-repo access
 - Supports both self-management (ai-board managing itself) and external projects
 
@@ -73,120 +103,38 @@ bun run type-check         # TypeScript check
 - **Project 3+**: Development and production
 - **Test prefix**: All test data must use `[e2e]` prefix
 
-## Data Models
-
-### Project
-- `key`: 3-char unique identifier (e.g., "ABC")
-- `githubOwner`, `githubRepo`: External repository
-- `clarificationPolicy`: AUTO|CONSERVATIVE|PRAGMATIC|INTERACTIVE
-
-### Ticket
-- `ticketKey`: Format `{PROJECT_KEY}-{NUMBER}` (e.g., "ABC-123")
-- `branch`: Git branch (created by workflow, not transition)
-- `workflowType`: FULL|QUICK|CLEAN (tracks which path was used)
-- `previewUrl`: Vercel deployment URL (VERIFY stage)
-
-### Job
-- Tracks workflow execution: PENDING → RUNNING → COMPLETED|FAILED|CANCELLED
-- Commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
-
-### Notification
-- `recipientId`, `actorId`: User who received/created the mention
-- `commentId`, `ticketId`: Source comment and ticket
-- `read`, `readAt`: Read status tracking
-- `deletedAt`: Soft delete for 30-day retention
-- Polling: 15-second interval for real-time updates
-
-### PushSubscription
-- `userId`: Owner of subscription (foreign key)
-- `endpoint`: Web Push endpoint URL (unique)
-- `p256dh`, `auth`: Encryption keys (Web Push spec)
-- Multiple subscriptions per user (different browsers/devices)
-- Auto-cleanup of invalid subscriptions (410/404 responses)
-
-## API Patterns
-
-### Authorization Helpers
-```typescript
-verifyProjectAccess(projectId)  // Owner OR member
-verifyTicketAccess(ticketId)    // Via parent project
-verifyProjectOwnership(projectId) // Owner only
-```
-
-### Workflow Dispatch
-```typescript
-// All workflows use combined format
-workflowInputs = {
-  githubRepository: `${owner}/${repo}`,
-  // ... other inputs
-}
-```
-
-### Job Status Updates
-- PATCH `/api/jobs/:id/status` (workflow token auth)
-- GET `/api/projects/:projectId/jobs/status` (polling endpoint)
-
 ## GitHub Workflows
 
+See `.github/workflows/` for implementation. Key workflows:
 1. **speckit.yml**: SPECIFY/PLAN/BUILD stages
 2. **quick-impl.yml**: Direct INBOX→BUILD
-3. **cleanup.yml**: Automated technical debt cleanup (CLEAN workflow)
+3. **cleanup.yml**: Automated technical debt (CLEAN workflow)
 4. **verify.yml**: Test execution and PR creation
-5. **deploy-preview.yml**: Vercel deployment
+5. **deploy-preview.yml**: Vercel deployment (single preview per project)
 6. **rollback-reset.yml**: Git reset for VERIFY→PLAN rollback (preserves spec files)
-7. **ai-board-assist.yml**: AI-powered assistance (@ai-board mentions)
-8. **iterate.yml**: Minor fixes during VERIFY stage (triggered by AI-BOARD)
+7. **ai-board-assist.yml**: `@ai-board` mention triggers AI assistance (SPECIFY/PLAN/BUILD/VERIFY)
+8. **iterate.yml**: Minor fixes during VERIFY stage
 
-## Deploy Preview System
+## Testing
 
-- Manual trigger from VERIFY stage tickets
-- Single preview per project (auto-replaces)
-- Requires: branch exists, latest job COMPLETED
-- Updates `ticket.previewUrl` on success
+**MANDATORY**: Invoke `/ai-board:testing` skill before writing, planning, or modifying tests. Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
 
-## AI-BOARD Assistant
-
-- Triggered by `@ai-board` mention in comments
-- Available in SPECIFY/PLAN/BUILD/VERIFY stages
-- Creates `comment-{stage}` jobs
-- Dispatches to Claude for assistance
-
-## Testing Guidelines
-
-**MANDATORY**: Invoke `/ai-board:testing` skill before writing, planning, or modifying tests.
-Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
-
-### Testing Trophy (Quick Reference)
-
-| Test Type | Location | Use For |
-|-----------|----------|---------|
-| Unit | `tests/unit/` | Pure functions, utilities |
-| Component | `tests/unit/components/` | UI interactions (forms, modals, buttons) |
-| Integration | `tests/integration/` | API endpoints, database operations |
-| E2E | `tests/e2e/` | Browser-only (drag-drop, OAuth, viewport) |
-
-**Decision tree & patterns**: `/ai-board:testing` skill
-
-### Critical Rules
-- E2E is expensive (~5s each) - default to integration tests when unsure
-- Search existing tests first - extend, don't duplicate
+**Critical rules** (always apply):
+- E2E is expensive (~5s each) — default to integration tests when unsure
+- Search existing tests FIRST — extend, don't duplicate
 - `[e2e]` prefix required for all test data
+- API tests use Vitest, NOT Playwright
 
-## Development Workflow
+**Test locations**: `tests/unit/`, `tests/unit/components/`, `tests/integration/`, `tests/e2e/`
 
-1. **Create ticket** in INBOX
-2. **Choose path**:
-   - Normal: Drag to SPECIFY (blue border) → auto workflow
-   - Quick: Drag to BUILD (green border) → confirm modal → quick-impl
-3. **Workflow creates branch**: `{num}-{description}`
-4. **Stage transitions** update ticket, create jobs
-5. **VERIFY stage**: Manual deploy preview option
-6. **SHIP**: Manual completion
+For Testing Trophy strategy, decision trees, and RTL patterns, see `.specify/memory/constitution.md` (Section III) and the `/ai-board:testing` skill.
 
-## Important Notes
+## Deep Reference
 
-- Branch creation happens IN workflow, not during transition
-- Jobs track workflow status (polling updates UI)
-- Quick-impl sets `workflowType=QUICK` permanently
-- Preview URLs are single per project
-- All test data must use `[e2e]` prefix for cleanup
+For topics beyond this file, read these sources before implementing:
+
+| Topic | Read This |
+|-------|-----------|
+| Full tech standards, SOLID principles, forbidden deps | `.specify/memory/constitution.md` |
+| Consolidated feature specifications | `specs/specifications/` directory |
+| API request/response schemas | `specs/specifications/schemas.md` |
