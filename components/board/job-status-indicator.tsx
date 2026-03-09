@@ -223,16 +223,14 @@ export function JobStatusIndicator({
   // Apply animation only for RUNNING status and if animated is true
   const shouldAnimate = status === 'RUNNING' && animated
 
-  // Icon component mapping
-  function resolveJobTypeIcon() {
-    if (!jobTypeConfig) return null
-    switch (jobTypeConfig.iconName) {
-      case 'Cog': return Cog
-      case 'Rocket': return Rocket
-      default: return MessageSquare
-    }
+  // Icon component mapping - resolved outside render to avoid react-hooks/no-nested-components
+  const jobTypeIconMap: Record<string, typeof Cog> = {
+    Cog,
+    Rocket,
   }
-  const JobTypeIcon = resolveJobTypeIcon()
+  const JobTypeIcon = jobTypeConfig
+    ? (jobTypeIconMap[jobTypeConfig.iconName] ?? MessageSquare)
+    : null
 
   // Color for icon + prefix (blue for workflow, purple for AI-BOARD)
   const prefixColor = jobType === JobType.AI_BOARD
