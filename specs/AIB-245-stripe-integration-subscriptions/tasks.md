@@ -133,8 +133,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T030 [US5] Enhance subscription-status component to display trial end date, trial badge, and "billing begins after trial" messaging in components/billing/subscription-status.tsx
-- [ ] T031 [US5] Ensure checkout session creation includes trial_period_days: 14 and webhook handler correctly sets trialStart/trialEnd fields (verify in app/api/billing/checkout/route.ts and app/api/webhooks/stripe/route.ts)
+- [x] T030 [US5] Enhance subscription-status component to display trial end date, trial badge, and "billing begins after trial" messaging in components/billing/subscription-status.tsx
+- [x] T031 [US5] Ensure checkout session creation includes trial_period_days: 14 and webhook handler correctly sets trialStart/trialEnd fields (verify in app/api/billing/checkout/route.ts and app/api/webhooks/stripe/route.ts)
 
 **Checkpoint**: Trial experience is clearly communicated and auto-converts seamlessly
 
@@ -144,10 +144,10 @@
 
 **Purpose**: Account cleanup, edge cases, and final hardening
 
-- [ ] T032 Add Stripe subscription cancellation to user deletion flow in lib/db/users.ts (cancel via stripe.subscriptions.cancel before account deletion, block deletion on failure)
-- [ ] T033 Add Team-to-Pro/Free downgrade protection in webhook handler: check for active project members on plan downgrade in customer.subscription.updated handler in app/api/webhooks/stripe/route.ts
-- [ ] T034 Validate all environment variables (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRO_PRICE_ID, STRIPE_TEAM_PRICE_ID, NEXT_PUBLIC_APP_URL) are checked at startup in lib/billing/stripe.ts
-- [ ] T035 Run type-check and lint to verify no regressions via `bun run type-check && bun run lint`
+- [x] T032 Add Stripe subscription cancellation to user deletion flow in lib/db/users.ts (cancel via stripe.subscriptions.cancel before account deletion, block deletion on failure)
+- [x] T033 Add Team-to-Pro/Free downgrade protection in webhook handler: check for active project members on plan downgrade in customer.subscription.updated handler in app/api/webhooks/stripe/route.ts
+- [x] T034 Validate all environment variables (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRO_PRICE_ID, STRIPE_TEAM_PRICE_ID, NEXT_PUBLIC_APP_URL) are checked at startup in lib/billing/stripe.ts
+- [x] T035 Run type-check and lint to verify no regressions via `bun run type-check && bun run lint`
 
 ---
 
