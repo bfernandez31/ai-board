@@ -1,25 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Bell, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from './use-push-notifications';
+import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 
 const DISMISSED_KEY = 'push-notifications-dismissed';
 
 export function PushOptInPrompt() {
   const { data: session, status } = useSession();
-  const [isDismissed, setIsDismissed] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(DISMISSED_KEY) === 'true';
+  });
   const { isSupported, isEnabled, isLoading, permission, subscribe, error } = usePushNotifications();
-
-  useEffect(() => {
-    setMounted(true);
-    const dismissed = localStorage.getItem(DISMISSED_KEY);
-    setIsDismissed(dismissed === 'true');
-  }, []);
 
   const handleDismiss = () => {
     localStorage.setItem(DISMISSED_KEY, 'true');

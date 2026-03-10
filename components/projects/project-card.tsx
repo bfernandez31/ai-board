@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 import {
   Card,
   CardContent,
@@ -22,12 +22,7 @@ interface ProjectCardProps {
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
   const { copy, isCopied } = useCopyToClipboard();
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch by only rendering timestamp after mount
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHasMounted();
 
   const handleClick = () => {
     router.push(`/projects/${project.id}/board`);

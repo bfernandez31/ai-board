@@ -60,7 +60,7 @@ export function ComparisonViewer({
   onClose,
   isOpen,
 }: ComparisonViewerProps) {
-  const [currentReport, setCurrentReport] = useState<string | undefined>(selectedReport);
+  const [reportOverride, setReportOverride] = useState<string | undefined>();
   const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
 
@@ -77,8 +77,8 @@ export function ComparisonViewer({
     isLoading: listLoading,
   } = useComparisonList(projectId, ticketId, 10, isOpen && showHistory);
 
-  // Determine which report to fetch
-  const reportToFetch = currentReport || checkData?.latestReport || undefined;
+  // Derive current report from override, prop, or API data (no effects needed)
+  const currentReport = reportOverride ?? selectedReport ?? checkData?.latestReport;
 
   // Fetch the comparison report content
   const {
@@ -88,23 +88,9 @@ export function ComparisonViewer({
   } = useComparisonReport(
     projectId,
     ticketId,
-    reportToFetch || '',
-    isOpen && !!reportToFetch
+    currentReport || '',
+    isOpen && !!currentReport
   );
-
-  // Update current report when selectedReport prop changes
-  useEffect(() => {
-    if (selectedReport) {
-      setCurrentReport(selectedReport);
-    }
-  }, [selectedReport]);
-
-  // Set current report to latest when check data arrives
-  useEffect(() => {
-    if (checkData?.latestReport && !currentReport) {
-      setCurrentReport(checkData.latestReport);
-    }
-  }, [checkData, currentReport]);
 
   // Show error toast
   useEffect(() => {
@@ -121,7 +107,7 @@ export function ComparisonViewer({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setShowHistory(false);
-      setCurrentReport(undefined);
+      setReportOverride(undefined);
       onClose?.();
     }
   };
@@ -350,7 +336,7 @@ export function ComparisonViewer({
                       <button
                         key={comparison.filename}
                         onClick={() => {
-                          setCurrentReport(comparison.filename);
+                          setReportOverride(comparison.filename);
                           setShowHistory(false);
                         }}
                         className={`w-full text-left p-4 rounded-lg border transition-colors ${

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,13 +43,14 @@ interface QuickImplModalProps {
  */
 export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: QuickImplModalProps) {
   const [selectedAgent, setSelectedAgent] = useState<string>('project-default');
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  // Reset agent selection when modal opens (useEffect pattern matches NewTicketModal)
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setSelectedAgent('project-default');
     }
-  }, [open]);
+  }
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {

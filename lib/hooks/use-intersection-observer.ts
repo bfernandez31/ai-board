@@ -29,12 +29,8 @@ export function useIntersectionObserver(
     const element = ref.current;
     if (!element) return;
 
-    // Check if Intersection Observer is available
-    if (typeof IntersectionObserver === 'undefined') {
-      // Fallback: assume visible if API not available
-      setIsVisible(true);
-      return;
-    }
+    // Skip if IntersectionObserver unavailable (fallback handled in return)
+    if (typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
@@ -49,6 +45,11 @@ export function useIntersectionObserver(
       observer.disconnect();
     };
   }, [ref, options]);
+
+  // Fallback: always visible if IntersectionObserver unavailable
+  if (typeof window !== 'undefined' && typeof IntersectionObserver === 'undefined') {
+    return true;
+  }
 
   return isVisible;
 }

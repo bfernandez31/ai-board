@@ -54,6 +54,16 @@ type ZoomLevel = 'fit' | 100 | 200;
 export function ImageLightbox({ images, initialIndex, open, onOpenChange }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('fit');
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  // Reset zoom level and index when opening lightbox (derived state from props)
+  if (open && !prevOpen) {
+    setZoomLevel('fit');
+    setCurrentIndex(initialIndex);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   // Navigation functions (stable references via useCallback)
   const handlePrevious = useCallback(() => {
@@ -65,14 +75,6 @@ export function ImageLightbox({ images, initialIndex, open, onOpenChange }: Imag
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
     setZoomLevel('fit'); // Reset zoom on navigation
   }, [images.length]);
-
-  // Reset zoom level when opening lightbox
-  useEffect(() => {
-    if (open) {
-      setZoomLevel('fit');
-      setCurrentIndex(initialIndex);
-    }
-  }, [open, initialIndex]);
 
   // Keyboard navigation (arrow keys)
   useEffect(() => {

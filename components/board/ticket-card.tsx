@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { TicketCardPreviewIcon } from './ticket-card-preview-icon';
 import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
+import { useHasMounted } from '@/lib/hooks/use-has-mounted';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
@@ -45,7 +46,7 @@ export const TicketCard = React.memo(
     activePreviewTicket,
     activeDeploymentTicket
   }: DraggableTicketCardProps) => {
-    const [isMounted, setIsMounted] = useState(false);
+    const isMounted = useHasMounted();
     const [showDeployModal, setShowDeployModal] = useState(false);
 
     // Deploy preview mutation
@@ -78,11 +79,6 @@ export const TicketCard = React.memo(
         },
         disabled: !isDraggable,
       });
-
-    // Only apply drag attributes after client-side hydration to prevent SSR mismatch
-    useEffect(() => {
-      setIsMounted(true);
-    }, []);
 
     const style = transform
       ? {
