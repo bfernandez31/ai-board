@@ -69,12 +69,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
 
-    // Check plan limits for project creation
+    // Check plan limits for project creation (atomic to prevent TOCTOU race)
     const userId = await requireAuth();
     const subscription = await getUserSubscription(userId);
     if (subscription.limits.maxProjects !== null) {
-      const projectCount = await prisma.project.count({ where: { userId } });
-      if (projectCount >= subscription.limits.maxProjects) {
+      const allowed = await prisma.$transaction(async (tx) => {
+        const projectCount = await tx.project.count({ where: { userId } });
+        return projectCount < subscription.limits.maxProjects!;
+      });
+      if (!allowed) {
         return NextResponse.json(
           { error: `Project limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxProjects} project(s). Upgrade to create more.`, code: 'PLAN_LIMIT' },
           { status: 403 }

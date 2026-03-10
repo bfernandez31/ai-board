@@ -123,7 +123,7 @@ export async function POST(
     await verifyProjectAccess(projectId, request);
 
     // Check plan limits for ticket creation
-    const userId = await requireAuth();
+    const userId = await requireAuth(request);
     const subscription = await getUserSubscription(userId);
     if (subscription.limits.maxTicketsPerMonth !== null) {
       const startOfMonth = new Date();

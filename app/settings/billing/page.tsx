@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PricingCards } from '@/components/billing/pricing-cards';
 import { SubscriptionStatus } from '@/components/billing/subscription-status';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useQuery } from '@tanstack/react-query';
 import type { SubscriptionPlan } from '@prisma/client';
 
 interface PlanInfo {
@@ -19,18 +20,18 @@ interface PlanInfo {
 export default function BillingSettingsPage() {
   const searchParams = useSearchParams();
   const { data: subscription, isLoading } = useSubscription();
-  const [plans, setPlans] = useState<PlanInfo[]>([]);
+  const { data: plans = [] } = useQuery<PlanInfo[]>({
+    queryKey: ['billing-plans'],
+    queryFn: async () => {
+      const res = await fetch('/api/billing/plans');
+      const data = await res.json();
+      return data.plans;
+    },
+  });
   const [managingPortal, setManagingPortal] = useState(false);
 
   const success = searchParams.get('success');
   const canceled = searchParams.get('canceled');
-
-  useEffect(() => {
-    fetch('/api/billing/plans')
-      .then((res) => res.json())
-      .then((data) => setPlans(data.plans))
-      .catch(console.error);
-  }, []);
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     const res = await fetch('/api/billing/checkout', {

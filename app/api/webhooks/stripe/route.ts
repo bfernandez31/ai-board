@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
       default:
-        return NextResponse.json({ error: 'Unhandled event type' }, { status: 400 });
+        return NextResponse.json({ received: true }, { status: 200 });
     }
 
     await createStripeEvent(event.id, event.type);
@@ -199,10 +199,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const memberCount = await prisma.projectMember.count({
       where: {
         project: { userId: sub.userId },
+        user: { email: { not: 'ai-board@system.local' } },
       },
     });
     if (memberCount > 0) {
-      console.warn(`Blocked downgrade from TEAM for user ${sub.userId}: ${memberCount} active members`);
+      // Revert the subscription in Stripe to keep DB and Stripe in sync
+      await stripe.subscriptions.update(subscription.id, {
+        items: [{ id: subscription.items.data[0]!.id, price: sub.stripePriceId }],
+      });
+      console.warn(`Blocked downgrade from TEAM for user ${sub.userId}: ${memberCount} active members — reverted in Stripe`);
       return;
     }
   }
