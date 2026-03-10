@@ -2835,6 +2835,154 @@ Currently no rate limiting implemented. Future enhancement may add:
 - Per-IP request limits
 - Workflow endpoint protection
 
+## Billing Endpoints
+
+### GET /api/billing/plans
+
+Returns all available subscription plans with pricing and feature details.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+[
+  {
+    "name": "Free",
+    "plan": "FREE",
+    "priceMonthly": 0,
+    "features": ["1 project", "5 tickets per month", "BYOK API key required"],
+    "limits": { "maxProjects": 1, "maxTicketsPerMonth": 5, "membersEnabled": false, "advancedAnalytics": false },
+    "trial": { "enabled": false, "days": 0 }
+  },
+  {
+    "name": "Pro",
+    "plan": "PRO",
+    "priceMonthly": 1500,
+    "features": ["Unlimited projects", "Unlimited tickets", "14-day free trial"],
+    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": false, "advancedAnalytics": false },
+    "trial": { "enabled": true, "days": 14 }
+  },
+  {
+    "name": "Team",
+    "plan": "TEAM",
+    "priceMonthly": 3000,
+    "features": ["Everything in Pro", "Project members", "Advanced analytics", "14-day free trial"],
+    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": true, "advancedAnalytics": true },
+    "trial": { "enabled": true, "days": 14 }
+  }
+]
+```
+
+**Notes**: `priceMonthly` is in cents (USD). `null` limits mean no limit enforced.
+
+---
+
+### GET /api/billing/subscription
+
+Returns the authenticated user's current subscription state and enforced limits.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "plan": "PRO",
+  "status": "trialing",
+  "currentPeriodEnd": "2026-04-10T00:00:00.000Z",
+  "trialEnd": "2026-03-24T00:00:00.000Z",
+  "cancelAt": null,
+  "gracePeriodEndsAt": null,
+  "limits": {
+    "maxProjects": null,
+    "maxTicketsPerMonth": null,
+    "membersEnabled": false,
+    "advancedAnalytics": false
+  }
+}
+```
+
+**Status values**: `active`, `trialing`, `past_due`, `canceled`, `none`
+
+**Notes**: `limits` reflects the *effective* plan (Free limits apply during grace period expiry or after cancellation, regardless of `plan` field value).
+
+---
+
+### POST /api/billing/checkout
+
+Creates a Stripe Checkout session for subscribing to a paid plan.
+
+**Authentication**: Required (session)
+
+**Request**:
+```json
+{ "plan": "PRO" }
+```
+`plan` must be `"PRO"` or `"TEAM"`.
+
+**Response** (200 OK):
+```json
+{ "url": "https://checkout.stripe.com/pay/cs_..." }
+```
+
+**Behavior**:
+- Creates a Stripe Customer for the user if one does not exist yet (persisted as `User.stripeCustomerId`).
+- Includes 14-day trial via `subscription_data.trial_period_days`.
+- Redirects on success to `/settings/billing?success=true`, on cancel to `/settings/billing?canceled=true`.
+
+**Errors**:
+- `400`: Invalid plan or already subscribed to same plan with active status
+- `401`: Not authenticated
+- `500`: Stripe API error
+
+---
+
+### POST /api/billing/portal
+
+Creates a Stripe Customer Portal session for managing an existing subscription.
+
+**Authentication**: Required (session)
+
+**Request**: No body required.
+
+**Response** (200 OK):
+```json
+{ "url": "https://billing.stripe.com/p/session/..." }
+```
+
+**Behavior**: Returns to `/settings/billing` after portal actions.
+
+**Errors**:
+- `400`: User has no Stripe Customer ID (never subscribed)
+- `401`: Not authenticated
+- `500`: Stripe API error
+
+---
+
+### POST /api/webhooks/stripe
+
+Stripe webhook handler. Receives and processes subscription lifecycle events.
+
+**Authentication**: Stripe signature verification (HMAC, `STRIPE_WEBHOOK_SECRET`). No session cookie required.
+
+**Request**: Raw request body with `Stripe-Signature` header.
+
+**Handled Events**:
+- `checkout.session.completed` → Create/update Subscription
+- `invoice.payment_succeeded` → Update billing period, set ACTIVE
+- `invoice.payment_failed` → Set PAST_DUE, set `gracePeriodEndsAt` (+7 days)
+- `customer.subscription.updated` → Sync plan, status, period dates
+- `customer.subscription.deleted` → Set CANCELED
+
+**Response** (200 OK): `{ "received": true }`
+
+**Idempotency**: Events already in the `StripeEvent` table are silently skipped.
+
+**Errors**:
+- `400`: Invalid signature or malformed event
+- `500`: Database error during processing
+
+---
+
 ## Pagination
 
 Currently not implemented. All endpoints return complete result sets.

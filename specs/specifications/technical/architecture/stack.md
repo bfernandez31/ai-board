@@ -98,6 +98,23 @@
 - **Icons Used**: 50+ icons across application
 - **Format**: React components with SVG
 
+## Payment Processing
+
+### Stripe Node.js SDK
+- **Package**: `stripe` (official Node.js SDK)
+- **Purpose**: Subscription billing, Checkout sessions, Customer Portal, webhook processing
+- **Usage**: Server-side only — never imported in client components or browser bundles
+- **Features Used**:
+  - `stripe.checkout.sessions.create()` — Initiate subscription checkout with trial
+  - `stripe.billingPortal.sessions.create()` — Self-service subscription management
+  - `stripe.customers.create()` — Create Stripe Customer on first checkout
+  - `stripe.webhooks.constructEvent()` — Verify and parse incoming webhook events
+  - `stripe.subscriptions.cancel()` — Cancel subscription on user account deletion
+- **Module**: `lib/billing/stripe.ts` (singleton client)
+- **Plan config**: `lib/billing/plans.ts` (price IDs loaded from env vars)
+- **Subscription logic**: `lib/billing/subscription.ts` (effective plan, limit helpers)
+- **DB layer**: `lib/db/subscriptions.ts` (CRUD + StripeEvent idempotency)
+
 ## Browser APIs
 
 ### Web Push API

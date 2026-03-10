@@ -12,18 +12,20 @@ User accounts with authentication and project ownership.
 
 ```prisma
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  emailVerified     DateTime?
+  stripeCustomerId  String?   @unique @db.VarChar(255)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  projects      Project[]
-  comments      Comment[]
-  accounts      Account[]
-  sessions      Session[]
-  projectMembers ProjectMember[]
+  projects          Project[]
+  comments          Comment[]
+  accounts          Account[]
+  sessions          Session[]
+  projectMembers    ProjectMember[]
+  subscription      Subscription?
 }
 ```
 
@@ -49,6 +51,8 @@ model User {
 - Email uniquely identifies users across system
 - Mock authentication uses `test@e2e.local` in development
 - Users can have multiple push subscriptions (different browsers/devices)
+- `stripeCustomerId` is set on first subscription checkout and is immutable thereafter
+- Each user has at most one Subscription record (one-to-one)
 
 ### Project
 
@@ -584,6 +588,85 @@ model ProjectMember {
 - Role field exists but not currently used for authorization (all members have equal access)
 - Authorization pattern: Check ownership first (performance), then membership (database join)
 
+### Subscription
+
+Tracks a user's active Stripe subscription and billing state.
+
+```prisma
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique @db.VarChar(255)
+  stripePriceId        String             @db.VarChar(255)
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  gracePeriodEndsAt    DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+  @@index([gracePeriodEndsAt])
+}
+```
+
+**Purpose**: Persist subscription plan, status, and billing period for plan-based feature gating.
+
+**Fields**:
+- `userId`: One-to-one relationship with User (unique constraint)
+- `stripeSubscriptionId`: Stripe subscription object ID (unique)
+- `stripePriceId`: Stripe Price ID for the active plan
+- `plan`: Current subscribed plan (`FREE`, `PRO`, `TEAM`)
+- `status`: Stripe subscription status (`ACTIVE`, `TRIALING`, `PAST_DUE`, `CANCELED`)
+- `currentPeriodStart/End`: Active billing period dates
+- `trialStart/End`: Trial period dates (nullable)
+- `cancelAt`: Scheduled cancellation date from Stripe (nullable)
+- `canceledAt`: Actual cancellation timestamp (nullable)
+- `gracePeriodEndsAt`: 7 days after first payment failure; Free limits apply after this date
+
+**Business Rules**:
+- Created/updated by webhook handler (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`)
+- Effective plan resolved at feature-gate time (see `getEffectivePlan` in `lib/billing/subscription.ts`)
+- No subscription record → user treated as FREE plan
+- PAST_DUE within grace period → subscribed plan limits remain active
+- PAST_DUE after grace period expiry → FREE plan limits enforced
+- Cascade delete when user account deleted
+
+### StripeEvent
+
+Idempotency log for processed Stripe webhook events.
+
+```prisma
+model StripeEvent {
+  id          String   @id @db.VarChar(255)
+  type        String   @db.VarChar(100)
+  processedAt DateTime @default(now())
+
+  @@index([type])
+  @@index([processedAt])
+}
+```
+
+**Purpose**: Prevent duplicate processing of retried or out-of-order webhook events.
+
+**Fields**:
+- `id`: Stripe event ID (e.g., `evt_...`) — used as primary key for O(1) lookup
+- `type`: Stripe event type (e.g., `checkout.session.completed`)
+- `processedAt`: When the event was first processed
+
+**Business Rules**:
+- Webhook handler checks for existing record before processing; duplicate events are silently ignored
+- Records are never deleted (permanent audit log of processed events)
+
 ## Enums
 
 ### Stage
@@ -695,6 +778,27 @@ export function resolveEffectiveAgent(
 }
 ```
 
+### SubscriptionPlan
+
+```prisma
+enum SubscriptionPlan {
+  FREE  // No payment required; limited to 1 project, 5 tickets/month
+  PRO   // $15/month; unlimited projects and tickets
+  TEAM  // $30/month; Pro features + members + advanced analytics
+}
+```
+
+### SubscriptionStatus
+
+```prisma
+enum SubscriptionStatus {
+  ACTIVE    // Paid and current
+  TRIALING  // Within free trial period
+  PAST_DUE  // Payment failed; grace period active
+  CANCELED  // Subscription ended
+}
+```
+
 ## Relationships Diagram
 
 ```
@@ -711,6 +815,7 @@ User
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)
 ├── createdNotifications (one-to-many) → Notification (as actor)
+├── subscription (one-to-one) → Subscription
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
