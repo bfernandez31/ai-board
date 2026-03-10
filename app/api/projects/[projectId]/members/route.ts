@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyProjectOwnership } from '@/lib/db/auth-helpers';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/db/users';
+import { getUserSubscription } from '@/lib/billing/subscription';
 
 /**
  * Zod schema for project member response
@@ -59,10 +61,11 @@ export async function GET(
     // 2. Authorization: Verify project ownership (also validates authentication)
     await verifyProjectOwnership(projectIdNumber);
 
-    // 3. Fetch project members from ProjectMember join table
+    // 3. Fetch project members from ProjectMember join table (exclude system user)
     const projectMembers = await prisma.projectMember.findMany({
       where: {
         projectId: projectIdNumber,
+        user: { email: { not: 'ai-board@system.local' } },
       },
       include: {
         user: {
@@ -110,6 +113,107 @@ export async function GET(
 
     return NextResponse.json(
       { error: 'Failed to fetch project members' },
+      { status: 500 }
+    );
+  }
+}
+
+const addMemberSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
+ * POST /api/projects/:projectId/members
+ *
+ * Add a member to a project. Requires Team plan.
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await params;
+    const projectIdNumber = parseInt(projectId, 10);
+
+    if (isNaN(projectIdNumber)) {
+      return NextResponse.json(
+        { error: 'Invalid project ID' },
+        { status: 400 }
+      );
+    }
+
+    await verifyProjectOwnership(projectIdNumber);
+
+    // Check plan allows members
+    const userId = await requireAuth();
+    const subscription = await getUserSubscription(userId);
+    if (!subscription.limits.membersEnabled) {
+      return NextResponse.json(
+        { error: 'Project members require the Team plan. Upgrade to add members.', code: 'PLAN_LIMIT' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { email } = addMemberSchema.parse(body);
+
+    const userToAdd = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!userToAdd) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const existingMember = await prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: {
+          projectId: projectIdNumber,
+          userId: userToAdd.id,
+        },
+      },
+    });
+
+    if (existingMember) {
+      return NextResponse.json(
+        { error: 'User is already a member' },
+        { status: 409 }
+      );
+    }
+
+    await prisma.projectMember.create({
+      data: {
+        projectId: projectIdNumber,
+        userId: userToAdd.id,
+      },
+    });
+
+    return NextResponse.json(
+      { id: userToAdd.id, email: userToAdd.email, name: userToAdd.name },
+      { status: 201 }
+    );
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      }
+    }
+    console.error('[POST /api/projects/:projectId/members] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to add member' },
       { status: 500 }
     );
   }

@@ -12,6 +12,8 @@ import formidable, { Fields, Files } from 'formidable';
 import { promises as fs } from 'fs';
 import { Readable } from 'stream';
 import { prisma } from '@/lib/db/client';
+import { requireAuth } from '@/lib/db/users';
+import { getUserSubscription } from '@/lib/billing/subscription';
 
 export async function GET(
   request: NextRequest,
@@ -119,6 +121,27 @@ export async function POST(
 
     const projectId = parseInt(projectIdString, 10);
     await verifyProjectAccess(projectId, request);
+
+    // Check plan limits for ticket creation
+    const userId = await requireAuth(request);
+    const subscription = await getUserSubscription(userId);
+    if (subscription.limits.maxTicketsPerMonth !== null) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const ticketCount = await prisma.ticket.count({
+        where: {
+          project: { userId },
+          createdAt: { gte: startOfMonth },
+        },
+      });
+      if (ticketCount >= subscription.limits.maxTicketsPerMonth) {
+        return NextResponse.json(
+          { error: `Monthly ticket limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxTicketsPerMonth} tickets per month. Upgrade for unlimited tickets.`, code: 'PLAN_LIMIT' },
+          { status: 403 }
+        );
+      }
+    }
 
     const contentType = request.headers.get('content-type') || '';
     let ticketData: { title: string; description: string; clarificationPolicy?: string; agent?: string };

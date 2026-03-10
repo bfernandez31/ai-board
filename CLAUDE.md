@@ -26,6 +26,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
+- **Billing**: stripe (server-side only), Stripe Checkout + Customer Portal, webhook handler at `/api/webhooks/stripe`
 
 **Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.specify/memory/constitution.md` (Section II) for full standards.
 
@@ -57,6 +58,8 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Job commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
+- Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic
+- StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
 
 ## API Patterns
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/client"
 import { headers } from "next/headers"
 import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
 import type { NextRequest } from "next/server"
+import { stripe } from "@/lib/billing/stripe"
 
 /**
  * Get the current authenticated user
@@ -105,4 +106,33 @@ export async function getCurrentUserOrToken(
 
   // Fall back to session auth
   return getCurrentUser()
+}
+
+/**
+ * Delete a user account, canceling any active Stripe subscription first.
+ * @param userId - The user ID to delete
+ * @throws Error if Stripe cancellation fails (blocks account deletion)
+ */
+export async function deleteUserAccount(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { stripeCustomerId: true, subscription: true },
+  })
+
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  // Cancel Stripe subscription before deleting account
+  if (user.subscription?.stripeSubscriptionId) {
+    try {
+      await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
+    } catch (error) {
+      console.error('Failed to cancel Stripe subscription:', error)
+      throw new Error('Failed to cancel subscription. Account deletion blocked.')
+    }
+  }
+
+  // Prisma cascade will handle Subscription record deletion
+  await prisma.user.delete({ where: { id: userId } })
 }

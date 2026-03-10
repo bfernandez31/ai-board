@@ -106,6 +106,21 @@ Details visual design, interactive elements, responsive behavior, and accessibil
 
 ---
 
+### [07-billing.md](07-billing.md)
+**Billing & Subscriptions**
+
+Covers the three-tier subscription model (Free/Pro/Team), Stripe-based payment flows, plan-based feature gating, and subscription lifecycle management.
+
+**Key Topics**:
+- Plan tiers and limits (projects, tickets/month, members, analytics)
+- Subscription checkout via Stripe Checkout (14-day trial)
+- Self-service management via Stripe Customer Portal
+- Payment failure handling and 7-day grace period
+- Feature gating enforcement across the application
+- Subscription states (active, trialing, past_due, canceled)
+
+---
+
 ## What's NOT in These Documents
 
 These functional specifications intentionally **exclude**:
