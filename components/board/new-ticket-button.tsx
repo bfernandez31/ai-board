@@ -25,7 +25,7 @@ export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
 
   const ticketLimit = usage?.ticketsThisMonth.limit;
   const ticketCurrent = usage?.ticketsThisMonth.current ?? 0;
-  const isAtLimit = ticketLimit !== null && ticketLimit !== undefined && ticketCurrent >= ticketLimit;
+  const isAtLimit = ticketLimit != null && ticketCurrent >= ticketLimit;
 
   const handleClick = () => {
     setIsModalOpen(true);
@@ -44,7 +44,7 @@ export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
       >
         <Plus className="w-4 h-4" />
         <span className="text-sm">New Ticket</span>
-        {ticketLimit !== null && ticketLimit !== undefined && (
+        {ticketLimit != null && (
           <span className={`text-xs ${isAtLimit ? 'text-red-400' : 'text-zinc-500'}`}>
             ({ticketCurrent}/{ticketLimit})
           </span>
