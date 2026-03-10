@@ -30,11 +30,11 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Create Stripe client singleton in lib/billing/stripe.ts (server-only, uses STRIPE_SECRET_KEY env var)
-- [ ] T005 [P] Create plan configuration constants and types (PlanConfig, PLANS map, helper functions) in lib/billing/plans.ts
-- [ ] T006 [P] Create subscription DB operations (findByUserId, upsert, delete, createStripeEvent, isEventProcessed) in lib/db/subscriptions.ts
-- [ ] T007 Create subscription utility functions (getUserSubscription, getPlanLimits, getEffectivePlan with grace period logic) in lib/billing/subscription.ts (depends on T005, T006)
-- [ ] T008 [P] Create useSubscription TanStack Query hook with polling in hooks/use-subscription.ts
+- [x] T004 [P] Create Stripe client singleton in lib/billing/stripe.ts (server-only, uses STRIPE_SECRET_KEY env var)
+- [x] T005 [P] Create plan configuration constants and types (PlanConfig, PLANS map, helper functions) in lib/billing/plans.ts
+- [x] T006 [P] Create subscription DB operations (findByUserId, upsert, delete, createStripeEvent, isEventProcessed) in lib/db/subscriptions.ts
+- [x] T007 Create subscription utility functions (getUserSubscription, getPlanLimits, getEffectivePlan with grace period logic) in lib/billing/subscription.ts (depends on T005, T006)
+- [x] T008 [P] Create useSubscription TanStack Query hook with polling in hooks/use-subscription.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
