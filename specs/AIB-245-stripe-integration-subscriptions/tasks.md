@@ -74,11 +74,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Integration tests for webhook handler (all 5 event types, signature verification, idempotency, invalid signature) in tests/integration/billing/webhook.test.ts
+- [x] T019 [P] [US2] Integration tests for webhook handler (all 5 event types, signature verification, idempotency, invalid signature) in tests/integration/billing/webhook.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement POST /api/webhooks/stripe route with raw body signature verification, idempotency check via StripeEvent, and handlers for checkout.session.completed, invoice.payment_succeeded, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted in app/api/webhooks/stripe/route.ts
+- [x] T020 [US2] Implement POST /api/webhooks/stripe route with raw body signature verification, idempotency check via StripeEvent, and handlers for checkout.session.completed, invoice.payment_succeeded, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted in app/api/webhooks/stripe/route.ts
 
 **Checkpoint**: Subscription state stays in sync with Stripe automatically
 
@@ -92,12 +92,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T021 [P] [US3] Integration test for POST /api/billing/portal endpoint (valid customer, no customer, unauthenticated) in tests/integration/billing/portal.test.ts
+- [x] T021 [P] [US3] Integration test for POST /api/billing/portal endpoint (valid customer, no customer, unauthenticated) in tests/integration/billing/portal.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Implement POST /api/billing/portal route (verify stripeCustomerId exists, create Portal Session with return URL) in app/api/billing/portal/route.ts
-- [ ] T023 [US3] Add "Manage Subscription" button to billing page that calls portal endpoint and redirects in app/settings/billing/page.tsx
+- [x] T022 [US3] Implement POST /api/billing/portal route (verify stripeCustomerId exists, create Portal Session with return URL) in app/api/billing/portal/route.ts
+- [x] T023 [US3] Add "Manage Subscription" button to billing page that calls portal endpoint and redirects in app/settings/billing/page.tsx
 
 **Checkpoint**: Users can self-manage their subscription without support
 
