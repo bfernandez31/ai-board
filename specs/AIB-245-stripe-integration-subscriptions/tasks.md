@@ -18,9 +18,9 @@
 
 **Purpose**: Install dependency, add schema changes, run migration
 
-- [ ] T001 Install stripe dependency via `bun add stripe`
-- [ ] T002 Add SubscriptionPlan and SubscriptionStatus enums, Subscription model, StripeEvent model, and stripeCustomerId field on User to prisma/schema.prisma
-- [ ] T003 Generate Prisma client and create migration via `bunx prisma migrate dev --name add-stripe-subscriptions`
+- [x] T001 Install stripe dependency via `bun add stripe`
+- [x] T002 Add SubscriptionPlan and SubscriptionStatus enums, Subscription model, StripeEvent model, and stripeCustomerId field on User to prisma/schema.prisma
+- [x] T003 Generate Prisma client and create migration via `bunx prisma migrate dev --name add-stripe-subscriptions`
 
 ---
 

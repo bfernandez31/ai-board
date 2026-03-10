@@ -145,6 +145,7 @@ model User {
   email                 String                @unique
   emailVerified         DateTime?
   image                 String?
+  stripeCustomerId      String?               @unique @db.VarChar(255)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime
   accounts              Account[]
@@ -156,6 +157,7 @@ model User {
   notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
+  subscription          Subscription?
 
   @@index([email])
 }
@@ -283,4 +285,52 @@ enum WorkflowType {
 enum Agent {
   CLAUDE
   CODEX
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique @db.VarChar(255)
+  stripePriceId        String             @db.VarChar(255)
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  gracePeriodEndsAt    DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+  @@index([gracePeriodEndsAt])
+}
+
+model StripeEvent {
+  id          String   @id @db.VarChar(255)
+  type        String   @db.VarChar(100)
+  processedAt DateTime @default(now())
+
+  @@index([type])
+  @@index([processedAt])
 }
