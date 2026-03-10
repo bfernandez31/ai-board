@@ -48,19 +48,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Unit tests for plan configuration (PLANS constant, price IDs, limits) in tests/unit/billing/plans.test.ts
-- [ ] T010 [P] [US1] Integration test for GET /api/billing/plans endpoint in tests/integration/billing/plans.test.ts
-- [ ] T011 [P] [US1] Integration test for POST /api/billing/checkout endpoint (valid plan, already subscribed, unauthenticated) in tests/integration/billing/checkout.test.ts
-- [ ] T012 [P] [US1] Integration test for GET /api/billing/subscription endpoint (free user, subscribed user, unauthenticated) in tests/integration/billing/subscription.test.ts
+- [x] T009 [P] [US1] Unit tests for plan configuration (PLANS constant, price IDs, limits) in tests/unit/billing/plans.test.ts
+- [x] T010 [P] [US1] Integration test for GET /api/billing/plans endpoint in tests/integration/billing/plans.test.ts
+- [x] T011 [P] [US1] Integration test for POST /api/billing/checkout endpoint (valid plan, already subscribed, unauthenticated) in tests/integration/billing/checkout.test.ts
+- [x] T012 [P] [US1] Integration test for GET /api/billing/subscription endpoint (free user, subscribed user, unauthenticated) in tests/integration/billing/subscription.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement GET /api/billing/plans route returning all plans with features and limits in app/api/billing/plans/route.ts
-- [ ] T014 [P] [US1] Implement GET /api/billing/subscription route returning current user plan, status, limits in app/api/billing/subscription/route.ts
-- [ ] T015 [US1] Implement POST /api/billing/checkout route (Zod validation, create/retrieve Stripe Customer, create Checkout Session with trial, return URL) in app/api/billing/checkout/route.ts
-- [ ] T016 [P] [US1] Create pricing-cards component (Free/Pro/Team comparison cards with shadcn/ui Card, subscribe buttons) in components/billing/pricing-cards.tsx
-- [ ] T017 [P] [US1] Create subscription-status component (current plan badge, period dates, basic status display) in components/billing/subscription-status.tsx
-- [ ] T018 [US1] Create billing settings page composing pricing-cards and subscription-status with checkout redirect handling in app/settings/billing/page.tsx
+- [x] T013 [P] [US1] Implement GET /api/billing/plans route returning all plans with features and limits in app/api/billing/plans/route.ts
+- [x] T014 [P] [US1] Implement GET /api/billing/subscription route returning current user plan, status, limits in app/api/billing/subscription/route.ts
+- [x] T015 [US1] Implement POST /api/billing/checkout route (Zod validation, create/retrieve Stripe Customer, create Checkout Session with trial, return URL) in app/api/billing/checkout/route.ts
+- [x] T016 [P] [US1] Create pricing-cards component (Free/Pro/Team comparison cards with shadcn/ui Card, subscribe buttons) in components/billing/pricing-cards.tsx
+- [x] T017 [P] [US1] Create subscription-status component (current plan badge, period dates, basic status display) in components/billing/subscription-status.tsx
+- [x] T018 [US1] Create billing settings page composing pricing-cards and subscription-status with checkout redirect handling in app/settings/billing/page.tsx
 
 **Checkpoint**: Users can view plans, subscribe via Checkout, and see their active subscription
 
