@@ -4,6 +4,9 @@ import { getUserProjects, createProject } from '@/lib/db/projects';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/db/users';
+import { getUserSubscription } from '@/lib/billing/subscription';
+import { prisma } from '@/lib/db/client';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -65,6 +68,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
+
+    // Check plan limits for project creation
+    const userId = await requireAuth();
+    const subscription = await getUserSubscription(userId);
+    if (subscription.limits.maxProjects !== null) {
+      const projectCount = await prisma.project.count({ where: { userId } });
+      if (projectCount >= subscription.limits.maxProjects) {
+        return NextResponse.json(
+          { error: `Project limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxProjects} project(s). Upgrade to create more.`, code: 'PLAN_LIMIT' },
+          { status: 403 }
+        );
+      }
+    }
 
     // Determine project key (custom or auto-generated)
     let projectKey: string;

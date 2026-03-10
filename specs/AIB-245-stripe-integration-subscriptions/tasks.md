@@ -111,15 +111,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T024 [P] [US4] Unit tests for getPlanLimits and getEffectivePlan (all plans, grace period logic, expired grace period) in tests/unit/billing/subscription.test.ts
-- [ ] T025 [P] [US4] Integration tests for feature gating on project creation (Free limit = 1), ticket creation (Free limit = 5/month), member invitation (Team only) in tests/integration/billing/feature-gating.test.ts
+- [x] T024 [P] [US4] Unit tests for getPlanLimits and getEffectivePlan (all plans, grace period logic, expired grace period) in tests/unit/billing/subscription.test.ts
+- [x] T025 [P] [US4] Integration tests for feature gating on project creation (Free limit = 1), ticket creation (Free limit = 5/month), member invitation (Team only) in tests/integration/billing/feature-gating.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Add maxProjects limit check to POST handler in app/api/projects/route.ts (query user plan limits, count existing projects, return 403 with upgrade prompt if exceeded)
-- [ ] T027 [US4] Add maxTicketsPerMonth limit check to ticket creation endpoint in app/api/tickets/route.ts (count current month tickets, return 403 if exceeded)
-- [ ] T028 [US4] Add membersEnabled check to POST handler in app/api/projects/[projectId]/members/route.ts (return 403 if not Team plan)
-- [ ] T029 [P] [US4] Create upgrade-prompt component (limit-reached message with CTA linking to billing page) in components/billing/upgrade-prompt.tsx
+- [x] T026 [US4] Add maxProjects limit check to POST handler in app/api/projects/route.ts (query user plan limits, count existing projects, return 403 with upgrade prompt if exceeded)
+- [x] T027 [US4] Add maxTicketsPerMonth limit check to ticket creation endpoint in app/api/tickets/route.ts (count current month tickets, return 403 if exceeded)
+- [x] T028 [US4] Add membersEnabled check to POST handler in app/api/projects/[projectId]/members/route.ts (return 403 if not Team plan)
+- [x] T029 [P] [US4] Create upgrade-prompt component (limit-reached message with CTA linking to billing page) in components/billing/upgrade-prompt.tsx
 
 **Checkpoint**: All plan limits are server-side enforced with clear upgrade prompts
 
