@@ -130,6 +130,21 @@
   - Chart titles styled with `text-white` Tailwind class for optimal contrast
   - Overview card titles styled with `text-white` for accessibility compliance
 
+## Billing & Payments
+
+### Stripe
+- **Package**: `stripe` ^17.x
+- **Purpose**: Subscription billing (Checkout, Customer Portal, webhooks)
+- **Plans**: FREE (no Stripe), PRO ($15/mo, 14-day trial), TEAM ($30/mo, 14-day trial)
+- **Integration**:
+  - Checkout Sessions for new subscriptions (`POST /api/stripe/checkout`)
+  - Customer Portal for plan management (`POST /api/stripe/portal`)
+  - Webhooks for subscription lifecycle events (`POST /api/stripe/webhook`)
+- **Client**: `lib/stripe/client.ts` (singleton Stripe instance)
+- **Helpers**: `lib/stripe/subscription.ts` (plan enforcement, customer creation)
+- **Plan Config**: `lib/stripe/plans.ts` (limits, pricing, feature flags)
+- **Environment**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_TEAM_PRICE_ID`
+
 ## State Management
 
 ### TanStack Query v5.90.5
@@ -424,6 +439,7 @@
 | date-fns | Latest | Date utilities |
 | @vercel/speed-insights | ^1.2.0 | Performance monitoring |
 | web-push | ^3.6.x | Web Push protocol (VAPID) |
+| stripe | ^17.x | Billing and subscriptions |
 
 ## Browser Support
 

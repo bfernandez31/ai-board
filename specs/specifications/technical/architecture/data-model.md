@@ -12,18 +12,20 @@ User accounts with authentication and project ownership.
 
 ```prisma
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  emailVerified     DateTime?
+  stripeCustomerId  String?   @unique @db.VarChar(255)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  projects      Project[]
-  comments      Comment[]
-  accounts      Account[]
-  sessions      Session[]
-  projectMembers ProjectMember[]
+  projects          Project[]
+  comments          Comment[]
+  accounts          Account[]
+  sessions          Session[]
+  projectMembers    ProjectMember[]
+  subscription      Subscription?
 }
 ```
 
@@ -34,14 +36,17 @@ model User {
 - `email`: Unique email address (authentication identifier)
 - `name`: Display name (nullable, from OAuth provider)
 - `emailVerified`: Email verification timestamp (from OAuth)
+- `stripeCustomerId`: Stripe customer ID (nullable, lazily created on first checkout)
 - `createdAt`: Account creation timestamp
 - `updatedAt`: Last modification timestamp
 
 **Relationships**:
 - One-to-many: Projects, Comments, Accounts, Sessions, ProjectMembers, Notifications (as recipient and actor), PushSubscriptions
+- One-to-one: Subscription
 
 **Constraints**:
 - Unique email address
+- Unique stripeCustomerId (when set)
 - Cascade delete: Comments, ProjectMembers, Notifications
 
 **Business Rules**:
@@ -49,6 +54,7 @@ model User {
 - Email uniquely identifies users across system
 - Mock authentication uses `test@e2e.local` in development
 - Users can have multiple push subscriptions (different browsers/devices)
+- `stripeCustomerId` is created lazily when user first initiates a checkout
 
 ### Project
 
@@ -675,6 +681,20 @@ enum Agent {
   CLAUDE  // Anthropic Claude (default)
   CODEX   // OpenAI Codex
 }
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  TRIALING
+}
 ```
 
 **Hierarchy**:
@@ -711,6 +731,7 @@ User
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)
 ├── createdNotifications (one-to-many) → Notification (as actor)
+├── subscription (one-to-one) → Subscription
 └── accounts/sessions (one-to-many) → NextAuth tables
 ```
 
@@ -842,6 +863,63 @@ type Attachments = TicketAttachment[];  // Max 5 items
 **Comment.content**:
 - Allowed: All printable UTF-8 characters
 - Markdown formatting supported
+
+### Subscription
+
+Stores Stripe subscription data for billing and plan enforcement.
+
+```prisma
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique @db.VarChar(255)
+  stripePriceId        String             @db.VarChar(255)
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+**Purpose**: Track Stripe billing plan and subscription status per user
+
+**Fields**:
+- `userId`: One-to-one relationship with User (unique)
+- `stripeSubscriptionId`: Stripe subscription ID (unique)
+- `stripePriceId`: Stripe price ID (determines plan)
+- `plan`: Resolved plan enum (FREE | PRO | TEAM)
+- `status`: Subscription lifecycle status
+- `currentPeriodStart` / `currentPeriodEnd`: Current billing period
+- `cancelAtPeriodEnd`: True if subscription will cancel at period end
+- `trialStart` / `trialEnd`: Trial period timestamps (nullable)
+
+**Plan Limits**:
+
+| Plan | Projects | Tickets/Month | Members | Analytics | Price |
+|------|----------|---------------|---------|-----------|-------|
+| FREE | 1 | 5 | No | No | $0 |
+| PRO | Unlimited | Unlimited | No | No | $15/mo |
+| TEAM | Unlimited | Unlimited | Yes | Yes | $30/mo |
+
+**Status Values**:
+- `ACTIVE`: Subscription is active and paid
+- `TRIALING`: Subscription is in trial period (PRO/TEAM: 14 days)
+- `PAST_DUE`: Payment failed, grace period
+- `CANCELED`: Subscription canceled
+- `INCOMPLETE`: Checkout started but not completed
+
+**Business Rules**:
+- Users without a subscription record default to FREE plan
+- Only ACTIVE or TRIALING subscriptions grant paid plan access
+- Subscription records are upserted via Stripe webhook events
+- All three plans require BYOK (Bring Your Own API Key)
 
 ## Migration Strategy
 

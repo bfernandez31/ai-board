@@ -2828,6 +2828,142 @@ When a project has an active cleanup job, all ticket transition requests return 
 - POST /api/projects/:projectId/tickets/:id/comments (add comments)
 - All GET endpoints
 
+## Billing Endpoints (Stripe)
+
+All Stripe billing endpoints require session authentication and operate on the authenticated user's subscription.
+
+### GET /api/stripe/subscription
+
+Get the current user's subscription plan and details.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "plan": "PRO",
+  "planConfig": {
+    "name": "Pro",
+    "price": 15,
+    "features": ["Unlimited projects", "Unlimited tickets", "Bring your own API key"],
+    "limits": {
+      "maxProjects": null,
+      "maxTicketsPerMonth": null,
+      "membersAllowed": false,
+      "advancedAnalytics": false,
+      "byokRequired": true
+    }
+  },
+  "subscription": {
+    "status": "ACTIVE",
+    "currentPeriodEnd": "2026-04-10T00:00:00.000Z",
+    "cancelAtPeriodEnd": false,
+    "trialEnd": null
+  }
+}
+```
+
+**Notes**:
+- `subscription` is `null` for FREE plan users with no Stripe subscription record
+- `plan` defaults to `FREE` when no active/trialing subscription exists
+
+### POST /api/stripe/checkout
+
+Create a Stripe Checkout session to subscribe to a paid plan.
+
+**Authentication**: Required (session)
+
+**Request Body**:
+```json
+{ "plan": "PRO" }
+```
+
+**Validation**:
+- `plan`: Required, one of `PRO` | `TEAM`
+
+**Response** (200 OK):
+```json
+{ "url": "https://checkout.stripe.com/pay/cs_..." }
+```
+
+**Behavior**:
+- Creates or reuses a Stripe customer (lazily via `stripeCustomerId` on User)
+- Applies 14-day free trial for PRO and TEAM plans (first subscription only)
+- Redirects to `success_url` (`/settings/billing?success=true`) or `cancel_url` (`/settings/billing?canceled=true`) after checkout
+
+**Errors**:
+- `400`: Invalid plan or Stripe price not configured
+- `401`: Unauthenticated
+
+### POST /api/stripe/portal
+
+Create a Stripe Customer Portal session for managing an existing subscription.
+
+**Authentication**: Required (session)
+
+**Request Body**: None
+
+**Response** (200 OK):
+```json
+{ "url": "https://billing.stripe.com/session/..." }
+```
+
+**Behavior**:
+- Opens Stripe's hosted billing portal (upgrade, downgrade, cancel, update payment method)
+- Returns to `/settings/billing` after portal interaction
+
+**Errors**:
+- `401`: Unauthenticated
+- `500`: Stripe API error
+
+### POST /api/stripe/webhook
+
+Stripe webhook handler for subscription lifecycle events.
+
+**Authentication**: Stripe signature verification (`stripe-signature` header + `STRIPE_WEBHOOK_SECRET`)
+
+**Handled Events**:
+- `customer.subscription.created` — Upsert subscription record
+- `customer.subscription.updated` — Upsert subscription record (plan changes, renewals)
+- `customer.subscription.resumed` — Upsert subscription record
+- `customer.subscription.deleted` — Mark subscription as `CANCELED`
+- `customer.subscription.trial_will_end` — Logged (no action currently)
+
+**Response** (200 OK):
+```json
+{ "received": true }
+```
+
+**Security**:
+- Must use raw request body for signature verification (not parsed JSON)
+- Returns `400` if `stripe-signature` header is missing or verification fails
+- Returns `500` if `STRIPE_WEBHOOK_SECRET` is not configured
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Billing Page
+    participant API as API Routes
+    participant S as Stripe
+    participant WH as Webhook Handler
+    participant DB as Database
+
+    U->>UI: Click "Subscribe"
+    UI->>API: POST /api/stripe/checkout { plan }
+    API->>S: Create Stripe customer (if needed)
+    API->>S: Create Checkout Session
+    API-->>UI: { url }
+    UI->>U: Redirect to Stripe Checkout
+    U->>S: Complete payment
+    S-->>UI: Redirect to /settings/billing?success=true
+    S->>WH: POST /api/stripe/webhook (subscription.created)
+    WH->>WH: Verify stripe-signature
+    WH->>DB: Upsert Subscription record
+    WH-->>S: 200 { received: true }
+    UI->>API: GET /api/stripe/subscription
+    API-->>UI: { plan: "PRO", subscription: {...} }
+```
+
 ## Rate Limiting
 
 Currently no rate limiting implemented. Future enhancement may add:

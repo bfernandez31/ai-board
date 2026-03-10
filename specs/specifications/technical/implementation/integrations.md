@@ -649,6 +649,87 @@ try {
 }
 ```
 
+## Stripe Billing Integration
+
+### Overview
+
+Stripe handles subscription billing with three plans: FREE (no Stripe), PRO ($15/mo), and TEAM ($30/mo). The integration uses Stripe Checkout for new subscriptions, the Customer Portal for management, and webhooks to keep subscription state synchronized.
+
+### SDK Setup
+
+**Package**: `stripe` ^17.x
+
+**Client** (`lib/stripe/client.ts`):
+
+```typescript
+import Stripe from 'stripe';
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  typescript: true,
+});
+```
+
+### Plan Configuration
+
+**Plans** (`lib/stripe/plans.ts`):
+
+```typescript
+export const PLANS: Record<SubscriptionPlan, PlanConfig> = {
+  FREE:  { price: 0,  priceId: null,                         trialDays: 0,  limits: { maxProjects: 1, maxTicketsPerMonth: 5, membersAllowed: false, ... } },
+  PRO:   { price: 15, priceId: process.env.STRIPE_PRO_PRICE_ID,  trialDays: 14, limits: { maxProjects: Infinity, maxTicketsPerMonth: Infinity, membersAllowed: false, ... } },
+  TEAM:  { price: 30, priceId: process.env.STRIPE_TEAM_PRICE_ID, trialDays: 14, limits: { maxProjects: Infinity, maxTicketsPerMonth: Infinity, membersAllowed: true, advancedAnalytics: true, ... } },
+};
+```
+
+### Subscription Helpers
+
+**File**: `lib/stripe/subscription.ts`
+
+| Function | Description |
+|----------|-------------|
+| `getUserPlan(userId)` | Returns active plan (FREE if no active/trialing sub) |
+| `getUserSubscription(userId)` | Returns raw subscription record or null |
+| `canCreateProject(userId)` | Checks project count against plan limit |
+| `canCreateTicket(userId)` | Checks monthly ticket count against plan limit |
+| `canAddMembers(userId)` | Returns true only on TEAM plan |
+| `getOrCreateStripeCustomerId(userId)` | Lazily creates Stripe customer, stores on User |
+
+### Webhook Processing
+
+**Endpoint**: `POST /api/stripe/webhook`
+
+Webhook events drive subscription state. The handler verifies the `stripe-signature` header with `STRIPE_WEBHOOK_SECRET` using `stripe.webhooks.constructEvent()` before processing.
+
+**Event → Action mapping**:
+
+| Event | Action |
+|-------|--------|
+| `customer.subscription.created` | Upsert Subscription record |
+| `customer.subscription.updated` | Upsert Subscription record |
+| `customer.subscription.resumed` | Upsert Subscription record |
+| `customer.subscription.deleted` | Set status = CANCELED |
+| `customer.subscription.trial_will_end` | Log only |
+
+**Subscription upsert** uses `stripeSubscriptionId` as the unique key and maps Stripe status → `SubscriptionStatus` enum.
+
+### Frontend
+
+**Page**: `app/settings/billing/page.tsx` — Client component with plan cards grid.
+
+**Hooks** (`lib/hooks/mutations/useSubscription.ts`):
+- `useSubscription()` — TanStack Query, fetches from `GET /api/stripe/subscription`
+- `useCheckout()` — Mutation, POSTs to `/api/stripe/checkout`, redirects to Stripe URL on success
+- `useCustomerPortal()` — Mutation, POSTs to `/api/stripe/portal`, redirects to portal URL on success
+
+### Environment Variables
+
+```env
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_TEAM_PRICE_ID=price_...
+```
+
 ## Cloudinary CDN Integration
 
 ### SDK Setup
