@@ -56,21 +56,9 @@ export async function upsertSubscription(data: UpsertSubscriptionData) {
   });
 }
 
-export async function deleteSubscription(userId: string) {
-  return prisma.subscription.deleteMany({
-    where: { userId },
-  });
-}
-
 export async function createStripeEvent(eventId: string, type: string) {
   return prisma.stripeEvent.create({
     data: { id: eventId, type },
   });
 }
 
-export async function isEventProcessed(eventId: string): Promise<boolean> {
-  const event = await prisma.stripeEvent.findUnique({
-    where: { id: eventId },
-  });
-  return !!event;
-}

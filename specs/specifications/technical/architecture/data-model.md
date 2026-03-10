@@ -639,7 +639,8 @@ model Subscription {
 - No subscription record → user treated as FREE plan
 - PAST_DUE within grace period → subscribed plan limits remain active
 - PAST_DUE after grace period expiry → FREE plan limits enforced
-- Cascade delete when user account deleted
+- CANCELED records are preserved (not deleted) for audit; `getEffectivePlan` returns `FREE`
+- Cascade delete when user account deleted (only via account deletion, not subscription cancellation)
 
 ### StripeEvent
 

@@ -94,7 +94,8 @@ If a Team user has active project members and attempts to downgrade, the system 
 
 - User cancels via Customer Portal.
 - Subscription remains active until current billing period ends (`cancelAt` date).
-- At period end, Stripe sends `customer.subscription.deleted`; user reverts to Free plan.
+- At period end, Stripe sends `customer.subscription.deleted`; subscription status is set to `CANCELED` and user reverts to Free plan limits.
+- The Subscription record is preserved (not deleted) for audit and support purposes. `getEffectivePlan` returns `FREE` for any `CANCELED` subscription.
 
 ### Account Deletion
 

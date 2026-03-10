@@ -196,7 +196,7 @@ Processes Stripe webhook events. Authenticated via Stripe webhook signature.
 | `invoice.payment_succeeded` | Update period dates, set status to ACTIVE |
 | `invoice.payment_failed` | Set status to PAST_DUE, set gracePeriodEndsAt |
 | `customer.subscription.updated` | Sync plan, status, period dates |
-| `customer.subscription.deleted` | Remove Subscription record (user reverts to Free) |
+| `customer.subscription.deleted` | Set status CANCELED (record preserved for audit; user reverts to Free limits) |
 
 **Idempotency**: Each event is checked against the `StripeEvent` table. Duplicate event IDs return 200 with `skipped: "duplicate"`.
 

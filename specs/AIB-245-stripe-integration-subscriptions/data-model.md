@@ -190,5 +190,5 @@ ACTIVE            --> PAST_DUE     [invoice.payment_failed]
 ACTIVE            --> CANCELED     [customer.subscription.deleted]
 PAST_DUE          --> ACTIVE       [invoice.payment_succeeded - retry success]
 PAST_DUE          --> CANCELED     [customer.subscription.deleted OR grace period expired]
-CANCELED          --> (deleted)    [record removed, user reverts to Free]
+CANCELED          --> (retained)   [record preserved for audit; user reverts to Free limits via getEffectivePlan]
 ```

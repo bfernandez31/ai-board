@@ -2971,7 +2971,7 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 - `invoice.payment_succeeded` → Update billing period, set ACTIVE
 - `invoice.payment_failed` → Set PAST_DUE, set `gracePeriodEndsAt` (+7 days)
 - `customer.subscription.updated` → Sync plan, status, period dates
-- `customer.subscription.deleted` → Set CANCELED
+- `customer.subscription.deleted` → Set status CANCELED (record preserved for audit; user reverts to FREE limits)
 
 **Response** (200 OK): `{ "received": true }`
 

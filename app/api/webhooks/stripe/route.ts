@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db/client';
 import { getPlanByPriceId } from '@/lib/billing/plans';
 import {
   upsertSubscription,
-  deleteSubscription,
   createStripeEvent,
 } from '@/lib/db/subscriptions';
 
@@ -261,9 +260,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const existingSub = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscription.id },
-    select: { userId: true },
   });
-  if (existingSub) {
-    await deleteSubscription(existingSub.userId);
-  }
+  if (!existingSub) return;
+
+  await prisma.subscription.update({
+    where: { stripeSubscriptionId: subscription.id },
+    data: {
+      status: 'CANCELED',
+      canceledAt: subscription.canceled_at
+        ? new Date(subscription.canceled_at * 1000)
+        : new Date(),
+    },
+  });
 }
