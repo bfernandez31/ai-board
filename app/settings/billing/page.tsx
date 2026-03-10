@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ interface PlanInfo {
   features: string[];
 }
 
-export default function BillingSettingsPage() {
+function BillingContent() {
   const searchParams = useSearchParams();
   const { data: subscription, isLoading } = useSubscription();
   const { data: plans = [] } = useQuery<PlanInfo[]>({
@@ -118,5 +118,19 @@ export default function BillingSettingsPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function BillingSettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto py-10 max-w-4xl text-muted-foreground">
+          Loading billing...
+        </div>
+      }
+    >
+      <BillingContent />
+    </Suspense>
   );
 }
