@@ -26,6 +26,47 @@ interface PricingCardsProps {
   onSubscribe: (plan: SubscriptionPlan) => Promise<void>;
 }
 
+function PlanButton({
+  plan,
+  isCurrent,
+  isPopular,
+  loading,
+  onSubscribe,
+}: {
+  plan: SubscriptionPlan;
+  isCurrent: boolean;
+  isPopular: boolean;
+  loading: SubscriptionPlan | null;
+  onSubscribe: (plan: SubscriptionPlan) => void;
+}) {
+  if (isCurrent) {
+    return (
+      <Button variant="outline" className="w-full" disabled>
+        Current Plan
+      </Button>
+    );
+  }
+
+  if (plan === 'FREE') {
+    return (
+      <Button variant="outline" className="w-full" disabled>
+        Free
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      className="w-full"
+      variant={isPopular ? 'default' : 'outline'}
+      disabled={loading !== null}
+      onClick={() => onSubscribe(plan)}
+    >
+      {loading === plan ? 'Loading...' : 'Subscribe'}
+    </Button>
+  );
+}
+
 export function PricingCards({
   plans,
   currentPlan,
@@ -84,24 +125,13 @@ export function PricingCards({
               </ul>
             </CardContent>
             <CardFooter>
-              {isCurrent ? (
-                <Button variant="outline" className="w-full" disabled>
-                  Current Plan
-                </Button>
-              ) : plan.plan === 'FREE' ? (
-                <Button variant="outline" className="w-full" disabled>
-                  Free
-                </Button>
-              ) : (
-                <Button
-                  className="w-full"
-                  variant={isPopular ? 'default' : 'outline'}
-                  disabled={loading !== null}
-                  onClick={() => handleSubscribe(plan.plan)}
-                >
-                  {loading === plan.plan ? 'Loading...' : 'Subscribe'}
-                </Button>
-              )}
+              <PlanButton
+                plan={plan.plan}
+                isCurrent={isCurrent}
+                isPopular={isPopular}
+                loading={loading}
+                onSubscribe={handleSubscribe}
+              />
             </CardFooter>
           </Card>
         );
