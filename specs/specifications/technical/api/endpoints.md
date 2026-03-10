@@ -2489,6 +2489,40 @@ Fetch project members for mentions autocomplete.
 - `403`: Not project owner or member
 - `404`: Project not found
 
+### POST /api/projects/:projectId/members
+
+Add a member to a project. Requires Team plan.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request**:
+```json
+{ "email": "alice@example.com" }
+```
+
+**Response** (201 Created):
+```json
+{ "id": "user-abc123", "email": "alice@example.com", "name": "Alice Smith" }
+```
+
+**Errors**:
+- `400`: Invalid email address
+- `401`: Not authenticated
+- `403`: Not project owner; or plan does not allow members (`code: "PLAN_LIMIT"`)
+- `404`: Project or user not found
+- `409`: User is already a member
+- `500`: Internal server error
+
+**Plan Enforcement**:
+- Returns `403` with `code: "PLAN_LIMIT"` if the user's effective plan does not have `membersEnabled` (Free or Pro plan).
+- Returns `403` with `code: "PLAN_LIMIT"` if the project already has `maxMembersPerProject` members (Team plan cap: 10).
+
+---
+
 ## Error Response Format
 
 All error responses follow a consistent structure:
@@ -2518,6 +2552,7 @@ All error responses follow a consistent structure:
 | `CLEANUP_IN_PROGRESS` | Transitions blocked during cleanup (423) |
 | `CLEANUP_ALREADY_RUNNING` | Cleanup workflow already in progress (409) |
 | `NO_CHANGES` | No shipped tickets to clean up (400) |
+| `PLAN_LIMIT` | Operation blocked by plan quota (members on Free/Pro, ticket/project caps) |
 
 ### HTTP Status Codes
 
@@ -2904,6 +2939,31 @@ Returns the authenticated user's current subscription state and enforced limits.
 **Status values**: `active`, `trialing`, `past_due`, `canceled`, `none`
 
 **Notes**: `limits` reflects the *effective* plan (Free limits apply during grace period expiry or after cancellation, regardless of `plan` field value).
+
+---
+
+### GET /api/billing/usage
+
+Returns the authenticated user's current resource usage against their plan limits.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "projects": { "current": 1, "limit": 1 },
+  "ticketsThisMonth": { "current": 3, "limit": 5 }
+}
+```
+
+**Notes**:
+- `limit: null` means no limit enforced (Pro/Team plan).
+- `ticketsThisMonth.current` counts tickets created since the start of the current calendar month (UTC midnight on the 1st).
+- Used by the billing page usage display and the New Ticket button inline counter.
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
 
 ---
 

@@ -47,6 +47,12 @@ Users access billing at `/settings/billing`.
 ### Display Elements
 
 - **Current plan card**: Shows active plan name, status (active, trialing, past due, canceled), and relevant dates (trial end, billing period end, grace period end).
+  - **Live usage counters**: Within the plan card, displays real-time resource usage fetched from `GET /api/billing/usage`:
+    - *Projects*: Current count vs. limit (e.g., "1/1"). Shows "Unlimited" when no limit applies.
+    - *Tickets/month*: Tickets created this calendar month vs. limit (e.g., "3/5"). Shows "Unlimited" when no limit applies.
+    - *Members*: "Up to N/project" when enabled; "Not available" for Free/Pro.
+    - *Analytics*: "Advanced" (Team) or "Basic" (Free/Pro).
+  - Usage values that are at or over the limit are highlighted in red.
 - **Pricing cards**: Three plan cards showing features, monthly price, and subscription action button.
 - **Trial indicator**: When trialing, displays trial end date and a notice that billing begins after the trial.
 - **Grace period indicator**: When past due and within grace period, displays a warning with the date access will be restricted.
@@ -101,8 +107,16 @@ If a Team user has active project members and attempts to downgrade, the system 
 
 When a user deletes their account, any active Stripe subscription is cancelled via the API before the account is removed, preventing orphaned billing records.
 
+## Usage Display
+
+Usage data is surfaced in two places:
+
+1. **Billing page** (`/settings/billing`): Live project and ticket counts vs. plan limits, shown in the current plan card. Fetched from `GET /api/billing/usage` on page load and cached for 10 seconds.
+
+2. **New Ticket button** (kanban board): Displays an inline counter next to the button (e.g., `(3/5)`) when a ticket limit applies. The counter turns red when the limit is reached. The modal still opens so the server-side 402 error is visible; creation is blocked server-side, not in the UI.
+
 ## Access Control
 
 - Billing endpoints require authenticated session (same as all other API endpoints).
 - Plan-based gating is enforced server-side in API route handlers.
-- Client-side UI reflects current limits (e.g., hides "Invite Member" on Free/Pro plans) but server-side enforcement is authoritative.
+- Client-side UI reflects current limits (e.g., hides "Invite Member" on Free/Pro plans, shows ticket counter) but server-side enforcement is authoritative.
