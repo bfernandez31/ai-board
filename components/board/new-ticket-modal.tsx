@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
 import { ClarificationPolicy, Agent } from '@prisma/client';
 import {
   getPolicyIcon,
@@ -79,6 +80,7 @@ export function NewTicketModal({
   const [images, setImages] = React.useState<ImageFile[]>([]);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [planLimitReached, setPlanLimitReached] = React.useState(false);
 
   // Reset form when modal closes
   React.useEffect(() => {
@@ -93,6 +95,7 @@ export function NewTicketModal({
       setImages([]);
       setErrors({});
       setIsSubmitting(false);
+      setPlanLimitReached(false);
     }
   }, [open]);
 
@@ -192,8 +195,13 @@ export function NewTicketModal({
       }
 
       if (!response.ok) {
-        if (response.status === 400) {
-          const errorData = await response.json();
+        const errorData = await response.json();
+        if (response.status === 403 && errorData.code === 'PLAN_LIMIT') {
+          setErrors({
+            submit: errorData.error,
+          });
+          setPlanLimitReached(true);
+        } else if (response.status === 400) {
           const fieldErrors: FormErrors = {};
           if (errorData.details?.fieldErrors) {
             Object.entries(errorData.details.fieldErrors).forEach(
@@ -395,10 +403,19 @@ export function NewTicketModal({
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
-              <p className="text-sm text-red-600 dark:text-red-400">
+            <div className={`rounded-md p-3 ${planLimitReached ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+              <p className={`text-sm ${planLimitReached ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                 {errors.submit}
               </p>
+              {planLimitReached && (
+                <Link
+                  href="/settings/billing"
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                  Upgrade Plan
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
           )}
 

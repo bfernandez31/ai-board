@@ -25,16 +25,16 @@ describe('Feature Gating', () => {
 
     it('should enforce maxProjects limit for Free plan users', async () => {
       // Free plan users already have their test project
-      // Creating a second should be blocked
-      const response = await ctx.api.post<{ error: string }>('/api/projects', {
+      // Creating a second should be blocked with 403
+      const response = await ctx.api.post<{ error: string; code?: string }>('/api/projects', {
         name: '[e2e] Second Project',
         description: 'Should be blocked',
         githubOwner: 'test-owner',
         githubRepo: 'test-repo-second',
       });
 
-      // Should be 403 after feature gating is implemented
-      expect([201, 403]).toContain(response.status);
+      expect(response.status).toBe(403);
+      expect(response.data.error).toContain('Project limit reached');
     });
   });
 
@@ -45,7 +45,37 @@ describe('Feature Gating', () => {
         description: 'Testing ticket creation within limits',
       });
 
-      expect([201, 403]).toContain(response.status);
+      expect(response.status).toBe(201);
+    });
+
+    it('should enforce maxTicketsPerMonth limit for Free plan users', async () => {
+      // Create 5 tickets to hit the limit
+      for (let i = 0; i < 5; i++) {
+        await ctx.createTicket({ title: `[e2e] Gating Ticket ${i + 1}` });
+      }
+
+      // 6th ticket should be blocked
+      const response = await ctx.api.post<{ error: string; code?: string }>(`/api/projects/${ctx.projectId}/tickets`, {
+        title: '[e2e] Over Limit Ticket',
+        description: 'Should be blocked',
+      });
+
+      expect(response.status).toBe(403);
+      expect(response.data.error).toContain('Monthly ticket limit reached');
+      expect(response.data.code).toBe('PLAN_LIMIT');
+    });
+  });
+
+  describe('Member addition gating', () => {
+    it('should block adding members on Free plan', async () => {
+      const response = await ctx.api.post<{ error: string; code?: string }>(
+        `/api/projects/${ctx.projectId}/members`,
+        { email: 'member@e2e.local' }
+      );
+
+      expect(response.status).toBe(403);
+      expect(response.data.error).toContain('Team plan');
+      expect(response.data.code).toBe('PLAN_LIMIT');
     });
   });
 });

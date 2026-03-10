@@ -9,9 +9,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import type { SubscriptionData } from '@/hooks/use-subscription';
+import { useUsage, type UsageData } from '@/hooks/use-usage';
 
 interface SubscriptionStatusProps {
   subscription: SubscriptionData;
+}
+
+function formatUsage(current: number, limit: number | null): string {
+  if (limit === null) return 'Unlimited';
+  return `${current}/${limit}`;
 }
 
 function getStatusVariant(
@@ -56,6 +62,7 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
   const periodEndDate = subscription.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd)
     : null;
+  const { data: usage } = useUsage();
 
   return (
     <Card>
@@ -97,22 +104,26 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
           </p>
         )}
         <div className="mt-4 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Projects</p>
-            <p className="font-medium">
-              {subscription.limits.maxProjects ?? 'Unlimited'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Tickets/month</p>
-            <p className="font-medium">
-              {subscription.limits.maxTicketsPerMonth ?? 'Unlimited'}
-            </p>
-          </div>
+          <UsageItem
+            label="Projects"
+            usage={usage}
+            getValue={(u) => formatUsage(u.projects.current, u.projects.limit)}
+            fallback={subscription.limits.maxProjects ?? 'Unlimited'}
+            isAtLimit={usage ? isAtLimit(usage.projects) : false}
+          />
+          <UsageItem
+            label="Tickets/month"
+            usage={usage}
+            getValue={(u) => formatUsage(u.ticketsThisMonth.current, u.ticketsThisMonth.limit)}
+            fallback={subscription.limits.maxTicketsPerMonth ?? 'Unlimited'}
+            isAtLimit={usage ? isAtLimit(usage.ticketsThisMonth) : false}
+          />
           <div>
             <p className="text-xs text-muted-foreground">Members</p>
             <p className="font-medium">
-              {subscription.limits.membersEnabled ? 'Enabled' : 'Not available'}
+              {subscription.limits.membersEnabled
+                ? `Up to ${subscription.limits.maxMembersPerProject ?? 'Unlimited'}/project`
+                : 'Not available'}
             </p>
           </div>
           <div>
@@ -124,5 +135,32 @@ export function SubscriptionStatus({ subscription }: SubscriptionStatusProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function isAtLimit(resource: { current: number; limit: number | null }): boolean {
+  return resource.limit !== null && resource.current >= resource.limit;
+}
+
+function UsageItem({
+  label,
+  usage,
+  getValue,
+  fallback,
+  isAtLimit: atLimit,
+}: {
+  label: string;
+  usage: UsageData | undefined;
+  getValue: (u: UsageData) => string;
+  fallback: string | number;
+  isAtLimit: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`font-medium ${atLimit ? 'text-destructive' : ''}`}>
+        {usage ? getValue(usage) : fallback}
+      </p>
+    </div>
   );
 }

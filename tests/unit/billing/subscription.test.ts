@@ -37,6 +37,7 @@ describe('getPlanLimits', () => {
     expect(limits.maxProjects).toBe(1);
     expect(limits.maxTicketsPerMonth).toBe(5);
     expect(limits.membersEnabled).toBe(false);
+    expect(limits.maxMembersPerProject).toBeNull();
     expect(limits.advancedAnalytics).toBe(false);
   });
 
@@ -45,6 +46,7 @@ describe('getPlanLimits', () => {
     expect(limits.maxProjects).toBeNull();
     expect(limits.maxTicketsPerMonth).toBeNull();
     expect(limits.membersEnabled).toBe(false);
+    expect(limits.maxMembersPerProject).toBeNull();
   });
 
   it('should return correct limits for TEAM plan', () => {
@@ -52,6 +54,7 @@ describe('getPlanLimits', () => {
     expect(limits.maxProjects).toBeNull();
     expect(limits.maxTicketsPerMonth).toBeNull();
     expect(limits.membersEnabled).toBe(true);
+    expect(limits.maxMembersPerProject).toBe(10);
     expect(limits.advancedAnalytics).toBe(true);
   });
 });

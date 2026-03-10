@@ -7,6 +7,7 @@ interface PlanLimits {
   maxProjects: number | null;
   maxTicketsPerMonth: number | null;
   membersEnabled: boolean;
+  maxMembersPerProject: number | null;
   advancedAnalytics: boolean;
 }
 

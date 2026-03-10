@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { Stage } from '@prisma/client';
 import { NewTicketModal } from './new-ticket-modal';
+import { useUsage } from '@/hooks/use-usage';
 
 interface NewTicketButtonProps {
   stage: Stage;
@@ -20,6 +21,11 @@ interface NewTicketButtonProps {
 export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const router = useRouter();
+  const { data: usage } = useUsage();
+
+  const ticketLimit = usage?.ticketsThisMonth.limit;
+  const ticketCurrent = usage?.ticketsThisMonth.current ?? 0;
+  const isAtLimit = ticketLimit !== null && ticketLimit !== undefined && ticketCurrent >= ticketLimit;
 
   const handleClick = () => {
     setIsModalOpen(true);
@@ -38,6 +44,11 @@ export function NewTicketButton({ stage: _, projectId }: NewTicketButtonProps) {
       >
         <Plus className="w-4 h-4" />
         <span className="text-sm">New Ticket</span>
+        {ticketLimit !== null && ticketLimit !== undefined && (
+          <span className={`text-xs ${isAtLimit ? 'text-red-400' : 'text-zinc-500'}`}>
+            ({ticketCurrent}/{ticketLimit})
+          </span>
+        )}
       </button>
 
       <NewTicketModal
