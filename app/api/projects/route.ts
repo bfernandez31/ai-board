@@ -4,6 +4,8 @@ import { getUserProjects, createProject } from '@/lib/db/projects';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
 import { generateProjectKey, isValidProjectKey, isProjectKeyAvailable } from '@/app/lib/utils/generate-project-key';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/db/users';
+import { canCreateProject } from '@/lib/stripe/subscription';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -63,6 +65,17 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const userId = await requireAuth(request);
+
+    // Check plan limits before creating project
+    const allowed = await canCreateProject(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Project limit reached for your plan. Please upgrade to create more projects.', code: 'PLAN_LIMIT' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
 

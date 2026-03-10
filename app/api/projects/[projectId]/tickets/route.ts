@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getTicketsByStage, createTicket } from '@/lib/db/tickets';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { requireAuth } from '@/lib/db/users';
+import { canCreateTicket } from '@/lib/stripe/subscription';
 import { CreateTicketSchema, ProjectIdSchema } from '@/lib/validations/ticket';
 import { TicketAttachmentsArraySchema } from '@/app/lib/schemas/ticket';
 import { validateImageFile } from '@/app/lib/validations/image';
@@ -119,6 +121,16 @@ export async function POST(
 
     const projectId = parseInt(projectIdString, 10);
     await verifyProjectAccess(projectId, request);
+
+    // Check plan limits before creating ticket
+    const userId = await requireAuth(request);
+    const allowed = await canCreateTicket(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Monthly ticket limit reached for your plan. Please upgrade to create more tickets.', code: 'PLAN_LIMIT' },
+        { status: 403 }
+      );
+    }
 
     const contentType = request.headers.get('content-type') || '';
     let ticketData: { title: string; description: string; clarificationPolicy?: string; agent?: string };

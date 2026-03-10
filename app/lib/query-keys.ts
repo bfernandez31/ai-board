@@ -54,6 +54,10 @@ export const queryKeys = {
   tokens: {
     all: ['tokens'] as const,
   },
+
+  subscription: {
+    current: ['subscription'] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

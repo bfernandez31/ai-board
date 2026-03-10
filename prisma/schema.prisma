@@ -147,6 +147,7 @@ model User {
   image                 String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime
+  stripeCustomerId      String?               @unique @db.VarChar(255)
   accounts              Account[]
   comments              Comment[]
   projects              Project[]
@@ -156,8 +157,32 @@ model User {
   notificationsCreated  Notification[]        @relation("NotificationActor")
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
+  subscription          Subscription?
 
   @@index([email])
+  @@index([stripeCustomerId])
+}
+
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique @db.VarChar(255)
+  stripePriceId        String             @db.VarChar(255)
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubscriptionId])
+  @@index([userId])
+  @@index([status])
 }
 
 model Comment {
@@ -283,4 +308,18 @@ enum WorkflowType {
 enum Agent {
   CLAUDE
   CODEX
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  TRIALING
 }
