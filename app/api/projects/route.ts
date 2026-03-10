@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/db/users';
 import { getUserSubscription } from '@/lib/billing/subscription';
 import { prisma } from '@/lib/db/client';
+import { getAIBoardUserId } from '@/app/lib/db/ai-board-user';
 
 // Validation schema for project creation
 const createProjectSchema = z.object({
@@ -69,21 +70,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
 
-    // Check plan limits for project creation (atomic to prevent TOCTOU race)
     const userId = await requireAuth();
     const subscription = await getUserSubscription(userId);
-    if (subscription.limits.maxProjects !== null) {
-      const allowed = await prisma.$transaction(async (tx) => {
-        const projectCount = await tx.project.count({ where: { userId } });
-        return projectCount < subscription.limits.maxProjects!;
-      });
-      if (!allowed) {
-        return NextResponse.json(
-          { error: `Project limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxProjects} project(s). Upgrade to create more.`, code: 'PLAN_LIMIT' },
-          { status: 403 }
-        );
-      }
-    }
 
     // Determine project key (custom or auto-generated)
     let projectKey: string;
@@ -112,7 +100,45 @@ export async function POST(request: NextRequest) {
       projectKey = await generateProjectKey(validated.name);
     }
 
-    // Create project with generated/validated key
+    // Atomic limit check + project creation in a serializable transaction
+    const maxProjects = subscription.limits.maxProjects;
+    if (maxProjects !== null) {
+      const aiBoardUserId = await getAIBoardUserId();
+      try {
+        const newProject = await prisma.$transaction(async (tx) => {
+          const projectCount = await tx.project.count({ where: { userId } });
+          if (projectCount >= maxProjects) {
+            throw new Error('PLAN_LIMIT');
+          }
+          const project = await tx.project.create({
+            data: {
+              name: validated.name,
+              description: validated.description,
+              githubOwner: validated.githubOwner,
+              githubRepo: validated.githubRepo,
+              key: projectKey,
+              userId,
+              updatedAt: new Date(),
+            },
+          });
+          await tx.projectMember.create({
+            data: { projectId: project.id, userId: aiBoardUserId, role: 'member' },
+          });
+          return project;
+        }, { isolationLevel: 'Serializable' });
+        return NextResponse.json(newProject, { status: 201 });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'PLAN_LIMIT') {
+          return NextResponse.json(
+            { error: `Project limit reached. Your ${subscription.plan} plan allows ${maxProjects} project(s). Upgrade to create more.`, code: 'PLAN_LIMIT' },
+            { status: 403 }
+          );
+        }
+        throw error;
+      }
+    }
+
+    // No limit — use standard createProject
     const newProject = await createProject({
       name: validated.name,
       description: validated.description,

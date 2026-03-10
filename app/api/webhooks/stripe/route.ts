@@ -7,7 +7,6 @@ import {
   upsertSubscription,
   deleteSubscription,
   createStripeEvent,
-  isEventProcessed,
 } from '@/lib/db/subscriptions';
 
 // Helper to extract subscription ID from invoice's parent in Stripe v20
@@ -66,9 +65,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
-  const alreadyProcessed = await isEventProcessed(event.id);
-  if (alreadyProcessed) {
-    return NextResponse.json({ received: true, skipped: 'duplicate' }, { status: 200 });
+  // Atomic idempotency: insert event record first to claim processing.
+  // If a concurrent request already inserted it, the unique constraint
+  // violation tells us this is a duplicate — skip without double-processing.
+  try {
+    await createStripeEvent(event.id, event.type);
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string };
+    if (prismaError.code === 'P2002') {
+      return NextResponse.json({ received: true, skipped: 'duplicate' }, { status: 200 });
+    }
+    throw error;
   }
 
   try {
@@ -92,7 +99,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    await createStripeEvent(event.id, event.type);
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error(`Webhook handler error for ${event.type}:`, error);
