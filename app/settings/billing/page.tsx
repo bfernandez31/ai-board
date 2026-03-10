@@ -16,6 +16,60 @@ export default function BillingSettingsPage() {
 
   const currentPlan = data?.plan || "FREE";
 
+  function renderPlanButton(planKey: SubscriptionPlan, isCurrent: boolean, isPaid: boolean) {
+    if (isCurrent) {
+      return (
+        <button
+          disabled
+          className="w-full rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+        >
+          Current plan
+        </button>
+      );
+    }
+
+    if (!isPaid) {
+      return (
+        <button
+          disabled
+          className="w-full rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+        >
+          Free
+        </button>
+      );
+    }
+
+    if (data?.subscription) {
+      return (
+        <button
+          onClick={() => portal.mutate()}
+          disabled={portal.isPending}
+          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {portal.isPending ? (
+            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+          ) : (
+            currentPlan === "FREE" ? "Subscribe" : "Change plan"
+          )}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => checkout.mutate({ plan: planKey as "PRO" | "TEAM" })}
+        disabled={checkout.isPending}
+        className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        {checkout.isPending ? (
+          <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+        ) : (
+          "Subscribe"
+        )}
+      </button>
+    );
+  }
+
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
@@ -135,47 +189,7 @@ export default function BillingSettingsPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    {isCurrent ? (
-                      <button
-                        disabled
-                        className="w-full rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
-                      >
-                        Current plan
-                      </button>
-                    ) : isPaid ? (
-                      data?.subscription ? (
-                        <button
-                          onClick={() => portal.mutate()}
-                          disabled={portal.isPending}
-                          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          {portal.isPending ? (
-                            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                          ) : (
-                            currentPlan === "FREE" ? "Subscribe" : "Change plan"
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => checkout.mutate({ plan: planKey as "PRO" | "TEAM" })}
-                          disabled={checkout.isPending}
-                          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          {checkout.isPending ? (
-                            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                          ) : (
-                            "Subscribe"
-                          )}
-                        </button>
-                      )
-                    ) : (
-                      <button
-                        disabled
-                        className="w-full rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
-                      >
-                        Free
-                      </button>
-                    )}
+                    {renderPlanButton(planKey, isCurrent, isPaid)}
                   </CardFooter>
                 </Card>
               );

@@ -82,7 +82,7 @@ export const PLANS: Record<SubscriptionPlan, PlanConfig> = {
 export function getPlanFromPriceId(priceId: string): SubscriptionPlan {
   if (!priceId) return 'FREE';
   for (const [plan, config] of Object.entries(PLANS)) {
-    if (config.priceId && config.priceId === priceId) {
+    if (config.priceId === priceId) {
       return plan as SubscriptionPlan;
     }
   }

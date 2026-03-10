@@ -90,16 +90,11 @@ export async function getOrCreateStripeCustomerId(userId: string): Promise<strin
   // Lazy import to avoid loading Stripe in contexts where it's not needed
   const { stripe } = await import('./client');
 
-  const customerParams: Record<string, unknown> = {
-    email: user.email,
+  const customer = await stripe.customers.create({
+    email: user.email ?? undefined,
     metadata: { userId },
-  };
-  if (user.name) {
-    customerParams.name = user.name;
-  }
-  const customer = await stripe.customers.create(
-    customerParams as Parameters<typeof stripe.customers.create>[0]
-  );
+    ...(user.name && { name: user.name }),
+  });
 
   await prisma.user.update({
     where: { id: userId },

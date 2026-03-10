@@ -5,7 +5,6 @@ import { requireAuth } from '@/lib/db/users';
 import { stripe } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomerId } from '@/lib/stripe/subscription';
 import { PLANS } from '@/lib/stripe/plans';
-import type { SubscriptionPlan } from '@prisma/client';
 
 const checkoutSchema = z.object({
   plan: z.enum(['PRO', 'TEAM']),
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { plan } = checkoutSchema.parse(body);
 
-    const planConfig = PLANS[plan as SubscriptionPlan];
+    const planConfig = PLANS[plan];
     if (!planConfig.priceId) {
       return NextResponse.json(
         { error: 'Invalid plan configuration' },

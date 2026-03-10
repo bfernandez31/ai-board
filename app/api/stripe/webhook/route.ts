@@ -51,41 +51,29 @@ async function upsertSubscription(stripeSubscription: Stripe.Subscription) {
   const status = mapStripeStatus(stripeSubscription.status);
 
   // In Stripe v20, current_period dates are on the subscription item
-  const periodStart = new Date(firstItem.current_period_start * 1000);
-  const periodEnd = new Date(firstItem.current_period_end * 1000);
+  const sharedFields = {
+    stripePriceId: priceId,
+    plan,
+    status,
+    currentPeriodStart: new Date(firstItem.current_period_start * 1000),
+    currentPeriodEnd: new Date(firstItem.current_period_end * 1000),
+    cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+    trialStart: stripeSubscription.trial_start
+      ? new Date(stripeSubscription.trial_start * 1000)
+      : null,
+    trialEnd: stripeSubscription.trial_end
+      ? new Date(stripeSubscription.trial_end * 1000)
+      : null,
+  };
 
   await prisma.subscription.upsert({
     where: { stripeSubscriptionId: stripeSubscription.id },
     create: {
       userId,
       stripeSubscriptionId: stripeSubscription.id,
-      stripePriceId: priceId,
-      plan,
-      status,
-      currentPeriodStart: periodStart,
-      currentPeriodEnd: periodEnd,
-      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-      trialStart: stripeSubscription.trial_start
-        ? new Date(stripeSubscription.trial_start * 1000)
-        : null,
-      trialEnd: stripeSubscription.trial_end
-        ? new Date(stripeSubscription.trial_end * 1000)
-        : null,
+      ...sharedFields,
     },
-    update: {
-      stripePriceId: priceId,
-      plan,
-      status,
-      currentPeriodStart: periodStart,
-      currentPeriodEnd: periodEnd,
-      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-      trialStart: stripeSubscription.trial_start
-        ? new Date(stripeSubscription.trial_start * 1000)
-        : null,
-      trialEnd: stripeSubscription.trial_end
-        ? new Date(stripeSubscription.trial_end * 1000)
-        : null,
-    },
+    update: sharedFields,
   });
 }
 
