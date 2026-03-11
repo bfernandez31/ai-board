@@ -1,21 +1,25 @@
 import type { Metadata } from 'next';
 
+const containerClass = 'mx-auto max-w-3xl px-4 py-12';
+const mutedTextClass = 'text-[hsl(var(--ctp-subtext-0))]';
+const sectionHeadingClass = 'mb-3 text-xl font-semibold text-white';
+
 export const metadata: Metadata = {
   title: 'Privacy Policy - AI Board',
   description: 'Privacy Policy for AI Board',
 };
 
-export default function PrivacyPolicyPage() {
+export default function PrivacyPolicyPage(): JSX.Element {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className={containerClass}>
       <h1 className="mb-8 text-3xl font-bold text-white">Privacy Policy</h1>
-      <p className="mb-6 text-sm text-[hsl(var(--ctp-subtext-0))]">
+      <p className={`mb-6 text-sm ${mutedTextClass}`}>
         Last updated: March 11, 2026
       </p>
 
-      <div className="space-y-8 text-[hsl(var(--ctp-subtext-0))]">
+      <div className={`space-y-8 ${mutedTextClass}`}>
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">1. Data We Collect</h2>
+          <h2 className={sectionHeadingClass}>1. Data We Collect</h2>
           <p>When you use AI Board, we collect the following information:</p>
           <ul className="ml-6 mt-2 list-disc space-y-1">
             <li>
@@ -35,7 +39,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">2. How We Use Your Data</h2>
+          <h2 className={sectionHeadingClass}>2. How We Use Your Data</h2>
           <p>Your data is used to:</p>
           <ul className="ml-6 mt-2 list-disc space-y-1">
             <li>Authenticate you and manage your account</li>
@@ -46,7 +50,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">3. Data Sharing</h2>
+          <h2 className={sectionHeadingClass}>3. Data Sharing</h2>
           <p>
             We do not sell, rent, or share your personal data with third parties for marketing
             purposes. Your data may be shared only in the following cases:
@@ -59,7 +63,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">4. Cookies</h2>
+          <h2 className={sectionHeadingClass}>4. Cookies</h2>
           <p>
             AI Board uses only essential cookies required for authentication (NextAuth.js session
             cookies). We do not use tracking cookies, advertising cookies, or third-party analytics
@@ -68,7 +72,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">5. Data Security</h2>
+          <h2 className={sectionHeadingClass}>5. Data Security</h2>
           <p>
             We implement reasonable technical and organizational measures to protect your data.
             However, no method of transmission over the internet is 100% secure, and we cannot
@@ -77,9 +81,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">
-            6. Your Rights (GDPR)
-          </h2>
+          <h2 className={sectionHeadingClass}>6. Your Rights (GDPR)</h2>
           <p>If you are located in the European Economic Area, you have the right to:</p>
           <ul className="ml-6 mt-2 list-disc space-y-1">
             <li>
@@ -110,7 +112,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">7. Data Retention</h2>
+          <h2 className={sectionHeadingClass}>7. Data Retention</h2>
           <p>
             We retain your data for as long as your account is active. If you request account
             deletion, we will remove your personal data within 30 days, except where retention is
@@ -119,7 +121,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">8. Children&apos;s Privacy</h2>
+          <h2 className={sectionHeadingClass}>8. Children&apos;s Privacy</h2>
           <p>
             The Service is not intended for users under the age of 16. We do not knowingly collect
             personal data from children.
@@ -127,7 +129,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">9. Changes to This Policy</h2>
+          <h2 className={sectionHeadingClass}>9. Changes to This Policy</h2>
           <p>
             We may update this Privacy Policy from time to time. We will notify you of significant
             changes by posting a notice on the Service.
@@ -135,7 +137,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-white">10. Contact</h2>
+          <h2 className={sectionHeadingClass}>10. Contact</h2>
           <p>
             For privacy-related questions or to exercise your data rights, please open an issue on
             our GitHub repository.
