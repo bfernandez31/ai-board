@@ -36,18 +36,21 @@ export const otlpLogRecordSchema = z.object({
   severityText: z.string().optional(),
   body: z.object({
     stringValue: z.string().optional(),
-  }).optional(),
+  }).nullable().optional(),
   attributes: z.array(otlpAttributeSchema).optional(),
   droppedAttributesCount: z.number().optional(),
   flags: z.number().optional(),
   traceId: z.string().optional(),
   spanId: z.string().optional(),
+  eventName: z.string().optional(),
 });
 
 export const otlpScopeLogsSchema = z.object({
   scope: z.object({
     name: z.string().optional(),
     version: z.string().optional(),
+    attributes: z.array(otlpAttributeSchema).optional(),
+    droppedAttributesCount: z.number().optional(),
   }).optional(),
   logRecords: z.array(otlpLogRecordSchema).optional(),
 });
@@ -55,6 +58,8 @@ export const otlpScopeLogsSchema = z.object({
 export const otlpResourceLogsSchema = z.object({
   resource: z.object({
     attributes: z.array(otlpAttributeSchema).optional(),
+    droppedAttributesCount: z.number().optional(),
+    entityRefs: z.array(z.unknown()).optional(),
   }).optional(),
   scopeLogs: z.array(otlpScopeLogsSchema).optional(),
 });

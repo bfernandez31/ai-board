@@ -128,11 +128,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Process scope logs
       for (const scopeLog of resourceLog.scopeLogs || []) {
         for (const logRecord of scopeLog.logRecords || []) {
-          const eventName = logRecord.body?.stringValue;
           const attrs = logRecord.attributes;
+          // Claude uses body.stringValue for event name, Codex uses event.name attribute
+          const eventName = logRecord.body?.stringValue
+            || String(findAttribute(attrs, 'event.name') ?? '');
 
-          const isApiRequest = ['claude_code.api_request', 'codex.api_request'].includes(eventName ?? '');
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call'].includes(eventName ?? '');
+          const isApiRequest = ['claude_code.api_request', 'codex.api_request', 'codex.api_call'].includes(eventName);
+          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call', 'codex.tool_result'].includes(eventName);
 
           if (isApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
