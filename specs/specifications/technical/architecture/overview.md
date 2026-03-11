@@ -316,6 +316,12 @@ if (!project) {
 - **Workflow Timeout**: 120 minutes maximum
 - **Database Query Performance**: <50ms for indexed queries
 
+#### OTLP Telemetry Collection
+- **Protocol**: Claude Code and Codex agents export telemetry via OTLP HTTP JSON to `/api/telemetry/v1/logs`
+- **Metrics per Job**: Input/output/cached tokens, cost, duration, model, tools used
+- **Cost Tracking**: Real cost reported by Claude agent; estimated from OpenAI API pricing for Codex
+- **Configuration**: Agent runner script (`run-agent.sh`) configures OTLP endpoints and env vars per agent type
+
 ### Testing Strategy
 
 #### Test Pyramid

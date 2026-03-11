@@ -388,7 +388,11 @@ sequenceDiagram
         RS->>CLI: claude --dangerously-skip-permissions "/COMMAND ARGS"
     else AGENT_TYPE = CODEX
         RS->>CLI: bun add -g @openai/codex
-        RS->>CLI: codex login --api-key $OPENAI_API_KEY
+        alt CODEX_AUTH_JSON set
+            RS->>RS: decode base64 → write ~/.codex/auth.json (OAuth)
+        else OPENAI_API_KEY set
+            RS->>CLI: codex login --api-key $OPENAI_API_KEY
+        end
         RS->>RS: write ~/.codex/config.toml (OTEL telemetry)
         RS->>RS: cp CLAUDE.md AGENTS.md (≤32KB)
         RS->>RS: read .claude/commands/COMMAND.md
@@ -403,11 +407,11 @@ sequenceDiagram
 | Concern | CLAUDE | CODEX |
 |---------|--------|-------|
 | Package | `@anthropic-ai/claude-code` | `@openai/codex` |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` |
+| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) |
 | Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` |
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` (generated from `CLAUDE.md`, ≤32KB) |
-| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `o3`) |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5-codex`), `CODEX_REASONING` env var (default: `high`) |
 
 **AGENTS.md Generation** (Codex only):
 - Copies `CLAUDE.md` to `AGENTS.md` in the working directory
@@ -420,8 +424,15 @@ sequenceDiagram
 
 | Workflow env var | `~/.codex/config.toml` field |
 |-----------------|------------------------------|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `[otel.exporter.otlp-http] endpoint` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `[otel.exporter.otlp-http] endpoint` (must include full path `/v1/logs` — Rust OTLP client does not auto-append) |
 | `OTEL_EXPORTER_OTLP_HEADERS` (Authorization value) | `[otel.exporter.otlp-http] headers.Authorization` |
+
+**Codex OTLP Config Notes**:
+- Traces and metrics are disabled: `trace_exporter = "none"` in config (only logs are exported)
+- Codex sends `body: null` in log records (not `body.stringValue` like standard OTLP)
+- Event name is found in `attributes[event.name]` instead of the log body
+- Token data comes from `codex.sse_event` logs where `event.kind = response.completed`, with attributes: `input_token_count`, `output_token_count`, `cached_token_count`
+- Codex does not report `cost_usd`; the telemetry endpoint estimates cost from OpenAI API pricing based on token counts and the resolved model name
 
 **Error Handling**:
 - Missing auth secret → exits before any CLI installation with descriptive message
@@ -432,8 +443,10 @@ sequenceDiagram
 
 **Environment Variables**:
 - `CLAUDE_CODE_OAUTH_TOKEN`: Required when `AGENT_TYPE=CLAUDE`
-- `OPENAI_API_KEY`: Required when `AGENT_TYPE=CODEX`
-- `CODEX_MODEL`: Optional Codex model override (default: `o3`)
+- `OPENAI_API_KEY`: Required when `AGENT_TYPE=CODEX` (API key auth mode)
+- `CODEX_AUTH_JSON`: Alternative to `OPENAI_API_KEY` for Codex (base64-encoded OAuth `auth.json` from `codex login`; decoded and written to `~/.codex/auth.json`)
+- `CODEX_MODEL`: Optional Codex model override (default: `gpt-5-codex`)
+- `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set
 - `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config
 

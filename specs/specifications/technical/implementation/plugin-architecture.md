@@ -244,8 +244,9 @@ The `run-agent.sh` script abstracts CLI differences:
 |--------|------------|-----------|
 | **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads `.claude/commands/COMMAND.md`, pipes content via stdin to `codex exec` |
 | **Project context** | Reads `CLAUDE.md` natively | Generates `AGENTS.md` from `CLAUDE.md` (max 32KB) |
-| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `o3`) |
-| **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` |
+| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5-codex`) |
+| **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) |
+| **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64-encoded OAuth token from `codex login`) |
 
 ### Command Compatibility
 
@@ -255,6 +256,15 @@ All 17 commands are designed to work with both agents. Key differences:
 - **Codex**: Command `.md` file content is read and injected as a prompt via stdin, with arguments appended
 
 Both agents work in the same `target/` directory with the same symlinked commands, templates, and scripts.
+
+### Telemetry Differences
+
+Claude and Codex agents emit different telemetry data:
+
+- **Claude**: Reports token usage (input/output), tool calls, and cache statistics natively via structured output
+- **Codex**: Does not emit per-request token breakdowns; telemetry is limited to command exit codes and elapsed time. Token usage must be tracked externally via OpenAI API usage endpoints if needed
+
+The job runner normalizes both into a common `agentMetrics` shape, falling back to `null` for fields the agent does not provide.
 
 ## Templates
 
