@@ -17,7 +17,7 @@ interface ConstitutionCardProps {
  * ConstitutionCard Component
  *
  * Settings card that provides access to view and edit the project constitution.
- * The constitution is stored at `.specify/memory/constitution.md` in the repository.
+ * The constitution is stored at `.ai-board/memory/constitution.md` in the repository.
  *
  * Features:
  * - Opens modal viewer for constitution content

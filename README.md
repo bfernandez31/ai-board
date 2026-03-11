@@ -78,7 +78,7 @@ ai-board/
 
 ## Constitution
 
-This project follows the [AI Board Constitution](.specify/memory/constitution.md) which defines 5 core principles:
+This project follows the [AI Board Constitution](.ai-board/memory/constitution.md) which defines 5 core principles:
 
 1. **TypeScript-First Development** - Strict mode, explicit types
 2. **Component-Driven Architecture** - shadcn/ui, feature-based folders

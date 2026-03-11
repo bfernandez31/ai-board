@@ -12,12 +12,12 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-0. **First-run constitution check**: Before proceeding, check if `.specify/memory/constitution.md` exists. If missing, copy the template:
+0. **First-run constitution check**: Before proceeding, check if `.ai-board/memory/constitution.md` exists. If missing, copy the template:
    ```bash
-   if [ ! -f ".specify/memory/constitution.md" ]; then
-     mkdir -p .specify/memory
-     cp "${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md" ".specify/memory/constitution.md"
-     echo "Copied constitution template to .specify/memory/constitution.md"
+   if [ ! -f ".ai-board/memory/constitution.md" ]; then
+     mkdir -p .ai-board/memory
+     cp "${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md" ".ai-board/memory/constitution.md"
+     echo "Copied constitution template to .ai-board/memory/constitution.md"
    fi
    ```
 

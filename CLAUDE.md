@@ -28,7 +28,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 - **Billing**: stripe (server-side only), Stripe Checkout + Customer Portal, webhook handler at `/api/webhooks/stripe`
 
-**Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.specify/memory/constitution.md` (Section II) for full standards.
+**Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.ai-board/memory/constitution.md` (Section II) for full standards.
 
 ## Commands
 
@@ -131,7 +131,7 @@ See `.github/workflows/` for implementation. Key workflows:
 
 **Test locations**: `tests/unit/`, `tests/unit/components/`, `tests/integration/`, `tests/e2e/`
 
-For Testing Trophy strategy, decision trees, and RTL patterns, see `.specify/memory/constitution.md` (Section III) and the `/ai-board:testing` skill.
+For Testing Trophy strategy, decision trees, and RTL patterns, see `.ai-board/memory/constitution.md` (Section III) and the `/ai-board:testing` skill.
 
 ## Deep Reference
 
@@ -139,6 +139,6 @@ For topics beyond this file, read these sources before implementing:
 
 | Topic | Read This |
 |-------|-----------|
-| Full tech standards, SOLID principles, forbidden deps | `.specify/memory/constitution.md` |
+| Full tech standards, SOLID principles, forbidden deps | `.ai-board/memory/constitution.md` |
 | Consolidated feature specifications | `specs/specifications/` directory |
 | API request/response schemas | `specs/specifications/schemas.md` |

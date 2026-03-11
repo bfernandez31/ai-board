@@ -114,7 +114,7 @@ cleanup → verify → code-simplifier → sync-specifications → code-review
 Some commands are designed for local interactive use and are not triggered by workflows:
 
 - **`ai-board.analyze`**: Run after task generation to check consistency between spec.md, plan.md, and tasks.md
-- **`ai-board.constitution`**: Create or update the project constitution (`.specify/memory/constitution.md`)
+- **`ai-board.constitution`**: Create or update the project constitution (`.ai-board/memory/constitution.md`)
 - **`ai-board.compare`**: Can also be used locally to compare ticket implementations
 
 ## Plugin Installation
@@ -325,7 +325,7 @@ For an external project to work with ai-board workflows:
 
 **Optional but recommended**:
 - `CLAUDE.md` at project root (project context for the AI agent)
-- `.specify/memory/constitution.md` (project standards and conventions)
+- `.ai-board/memory/constitution.md` (project standards and conventions)
 - Test infrastructure (for VERIFY stage)
 
 **Not required**:
