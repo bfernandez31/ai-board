@@ -1,8 +1,9 @@
 import { signIn } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github } from "lucide-react"
 import { SiGitlab, SiBitbucket } from "react-icons/si"
+import Link from "next/link"
 
 export default async function SignInPage({
   searchParams,
@@ -67,6 +68,19 @@ export default async function SignInPage({
             </p>
           </div>
         </CardContent>
+        <CardFooter>
+          <p className="w-full text-center text-xs text-[hsl(var(--ctp-subtext-0))]">
+            By signing in, you agree to our{' '}
+            <Link href="/legal/terms" className="underline hover:text-white transition-colors">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/legal/privacy" className="underline hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </CardFooter>
       </Card>
     </div>
   )

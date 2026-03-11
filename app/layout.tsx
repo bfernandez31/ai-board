@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header';
 import { SessionProvider } from '@/components/auth/session-provider';
 import { QueryProvider } from '@/app/providers/query-provider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Footer } from '@/components/layout/footer';
 import { PushOptInPrompt } from '@/app/components/push-notifications/push-opt-in-prompt';
 import { NotificationListener } from '@/app/components/push-notifications/notification-listener';
 
@@ -30,7 +31,10 @@ export default function RootLayout({
           <SessionProvider>
             <TooltipProvider>
               <Header />
-              {children}
+              <div className="min-h-[calc(100vh-7rem)]">
+                {children}
+              </div>
+              <Footer />
               <Toaster />
               <PushOptInPrompt />
               <NotificationListener />
