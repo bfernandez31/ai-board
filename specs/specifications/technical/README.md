@@ -92,6 +92,14 @@ Core implementation patterns and code organization.
 - AI-BOARD system user
 - Security considerations
 
+**[plugin-architecture.md](implementation/plugin-architecture.md)**
+- Plugin structure (commands, templates, scripts, skills)
+- Complete command catalog with stage mapping
+- Workflow loading mechanism (sparse double checkout + symlinks)
+- Multi-agent command execution (Claude Code vs Codex)
+- Plugin installation (local, self-management, CI/CD)
+- External project requirements
+
 **[integrations.md](implementation/integrations.md)**
 - GitHub Actions integration (Octokit)
 - Workflow dispatch patterns

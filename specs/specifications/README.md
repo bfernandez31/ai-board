@@ -88,6 +88,7 @@ This gives you access to all `/ai-board.*` commands locally.
 - **No Setup Required**: External projects don't need any ai-board files - everything is provided by the workflow
 
 **Learn More**:
+- [Technical: Plugin Architecture](./technical/implementation/plugin-architecture.md) - Complete plugin system documentation
 - [Functional: External Repository Support](./functional/05-projects.md#external-repository-support)
 - [Technical: Multi-Repository Architecture](./technical/implementation/integrations.md#multi-repository-workflow-architecture)
 
@@ -101,6 +102,7 @@ This gives you access to all `/ai-board.*` commands locally.
 | Tickets | [Ticket Management](./functional/02-ticket-management.md) | [Data Model](./technical/architecture/data-model.md#ticket-model) |
 | Comments | [Collaboration](./functional/03-collaboration.md) | [API Endpoints](./technical/api/endpoints.md#comments) |
 | Automation | [Workflows](./functional/04-automation.md) | [GitHub Actions](./technical/quality/deployment.md) |
+| Plugin System | [Workflows](./functional/04-automation.md) | [Plugin Architecture](./technical/implementation/plugin-architecture.md) |
 | Projects | [Multi-Project](./functional/05-projects.md) | [Authentication](./technical/implementation/authentication.md) |
 | UI/UX | [Interface](./functional/06-user-interface.md) | [State Management](./technical/implementation/state-management.md) |
 | Billing | [Billing & Subscriptions](./functional/07-billing.md) | [Stripe Integration](./technical/implementation/integrations.md#stripe-billing-integration) |
@@ -115,6 +117,7 @@ This gives you access to all `/ai-board.*` commands locally.
 | Modify the database | [Data Model](./technical/architecture/data-model.md) |
 | Write tests | [Testing Guide](./technical/quality/testing.md) |
 | Deploy changes | [Deployment](./technical/quality/deployment.md) |
+| Understand the plugin system | [Plugin Architecture](./technical/implementation/plugin-architecture.md) |
 | Debug an issue | [Architecture Overview](./technical/architecture/overview.md) |
 
 ## 📦 Archive
