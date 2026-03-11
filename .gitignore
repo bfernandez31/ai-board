@@ -73,5 +73,8 @@ specs/**/.telemetry-context.json
 mcp-server/dist/
 mcp-server/node_modules/
 
+# Codex AGENTS.md (generated at runtime from CLAUDE.md by run-agent.sh)
+AGENTS.md
+
 # local Claude Code settings and symlinks
 .claude/
