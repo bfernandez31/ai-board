@@ -151,7 +151,7 @@ invoke_codex() {
 
   log_info "Invoking Codex with command file: $command_file"
 
-  local model="${CODEX_MODEL:-o3}"
+  local model="${CODEX_MODEL:-codex-mini-latest}"
   local prompt
   prompt="$(cat "$command_file")"
 
