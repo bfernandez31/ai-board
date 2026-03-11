@@ -159,12 +159,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
           if (isCodexTokenEvent) {
             // Codex uses different attribute names for token counts
-            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_token_count'));
-            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_token_count'));
-            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cached_token_count'));
+            const inputTokens = parseIntAttribute(findAttribute(attrs, 'input_token_count'));
+            const outputTokens = parseIntAttribute(findAttribute(attrs, 'output_token_count'));
+            const cachedTokens = parseIntAttribute(findAttribute(attrs, 'cached_token_count'));
+            metrics.inputTokens += inputTokens;
+            metrics.outputTokens += outputTokens;
+            metrics.cacheReadTokens += cachedTokens;
             metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
+
+            // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
+            // Non-cached input tokens = total input - cached
+            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5-codex'), inputTokens - cachedTokens, outputTokens, cachedTokens);
           }
 
           if (isToolEvent) {
@@ -271,6 +278,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Estimate OpenAI API cost from token counts.
+ * Used for Codex telemetry which doesn't include cost_usd.
+ * Prices are per-million tokens (source: openai.com/api/pricing).
+ */
+const OPENAI_PRICING: Record<string, { input: number; output: number; cached: number }> = {
+  'gpt-5-codex':   { input: 1.25, output: 10.00, cached: 0.625 },
+  'gpt-5.3-codex': { input: 1.75, output: 14.00, cached: 0.875 },
+  'gpt-5':         { input: 2.00, output: 8.00,  cached: 1.00 },
+  'o3':            { input: 2.00, output: 8.00,  cached: 1.00 },
+  'o4-mini':       { input: 0.40, output: 1.60,  cached: 0.20 },
+};
+
+function estimateOpenAICost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
+  const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5-codex']!;
+  return (
+    (inputTokens / 1_000_000) * pricing.input +
+    (outputTokens / 1_000_000) * pricing.output +
+    (cachedTokens / 1_000_000) * pricing.cached
+  );
 }
 
 /**
