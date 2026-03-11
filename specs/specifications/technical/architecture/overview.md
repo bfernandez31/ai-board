@@ -89,6 +89,48 @@ ai-board/
         └── constitution.md       # Project conventions
 ```
 
+### Landing Page Composition
+
+**Entry File**: `app/landing/page.tsx`
+- Server Component that stitches together the public marketing experience: `HeroSection`, `FeaturesGrid`, `WorkflowSection`, new `PricingSection`, then `CTASection`
+- Keeps layout-only concerns in the page file while pushing actual UI logic into `components/landing/*`
+
+**PricingSection Component**: `components/landing/pricing-section.tsx`
+- Defines strongly typed config objects for both plan cards and FAQs:
+
+```typescript
+interface PricingPlan {
+  name: string;
+  price: string;           // "$0", "$29", "$79"
+  description: string;
+  features: readonly string[];
+  cta: string;             // "Get Started" | "Start 14-day trial"
+  href: string;            // `/auth/signin`
+  popular: boolean;        // elevates styling on the Pro card
+}
+
+const plans: ReadonlyArray<PricingPlan> = [/* Free, Pro, Team */];
+```
+
+- Renders cards with shadcn `Card`, `Badge`, and `Button` primitives plus lucide-react `Check` indicators via helper components (`PlanCard`, `FaqItem`)
+- Applies semantic markup:
+  - `section` tagged with `aria-labelledby="pricing-section-heading"` and `data-testid="pricing-section"`
+  - Each plan uses `article aria-label="{Plan} plan"` with level-3 headings for the plan name
+  - FAQ items use `h3` headings for screen-reader discoverability
+- `cn()` utility toggles Pro plan highlight class list (raised layout, purple glow) based on the `popular` flag
+- CTA buttons render as `<Link href="/auth/signin">` inside `Button` components to reuse authentication entry flow
+
+**FAQ Blocks**:
+- Configured via `PricingFaq` interface (question/answer pair)
+- Rendered in a responsive `lg:grid-cols-2` layout with translucent panels, ensuring marketing copy stays in sync with constants in the component
+
+**Testing**: `tests/unit/components/pricing-section.test.tsx`
+- RTL test ensures the Free/Pro/Team cards render with the correct CTA labels and accessible headings
+- Verifies FAQ headings include BYOK + supported agents copy, preventing regressions when marketing content changes
+
+**Footer Updates**: `components/layout/footer.tsx`
+- Adds a GitHub link (target `_blank`, `rel="noopener noreferrer"`) alongside existing legal links to keep marketing and repository navigation in sync
+
 ### Data Flow Patterns
 
 #### Request Flow (API)

@@ -11,6 +11,7 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
 - Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- External repository link: "GitHub" → `https://github.com/ai-board/ai-board` (opens in new tab with `rel="noopener noreferrer"` for security)
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
@@ -97,6 +98,41 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - GPU-accelerated transforms for smooth animation
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
+
+### Pricing Section
+
+**Placement**:
+- Renders after the workflow explanation section and before the final call-to-action on `/`
+- Section identified by `aria-labelledby="pricing-section-heading"` and `data-testid="pricing-section"` for testing hooks
+
+**Plan Cards**:
+- Three cards surface the current Free, Pro, and Team plans with the following copy and CTAs:
+  - **Free** — `$0/month`, description "Perfect for solo builders evaluating AI Board with BYOK", CTA button "Get Started" linking to `/auth/signin`
+  - **Pro** (flagged "Most popular") — `$29/month`, description "For lean teams that want automated workflows with guardrails", CTA "Start 14-day trial" linking to `/auth/signin`
+  - **Team** — `$79/month`, description "Scale to entire orgs with collaboration and compliance controls", CTA "Start 14-day trial" linking to `/auth/signin`
+- Each card lists plan benefits with checkmark bullets:
+  - Free: BYOK requirement, unlimited quick-impl tickets, community support
+  - Pro: Two concurrent AI agents, priority Slack support, workflow automations + analytics
+  - Team: Unlimited projects/seats, custom plan limits, dedicated success engineer
+- Pro card is visually raised on desktop (offset margins, purple border glow) to emphasize "Most popular"
+- Buttons inherit shadcn `Button` styles (`default` variant for Pro, `outline` for Free/Team) to keep hierarchy clear
+
+**Layout & Styling**:
+- `container mx-auto px-4` wrapper with `py-20` vertical rhythm
+- Grid switches from stacked cards on mobile to three columns (`md:grid-cols-3`) on desktop
+- Cards use Catppuccin dark palette with translucent backgrounds and blurred panels for depth
+- Accessibility: each plan uses `article` with `aria-label="{Plan} plan"` plus semantic headings for screen readers
+
+### Pricing FAQ
+
+**Content**:
+- Two FAQ callouts render beneath the pricing grid:
+  - "How does Bring Your Own Key (BYOK) work?" → explains supported providers (OpenAI, Anthropic, Azure OpenAI) and billing responsibility
+  - "Which agents are supported today?" → lists OpenAI o1/o3, Claude 3.x, Gemini 2.0 Flash, and local adapters with promise of monthly additions
+
+**Presentation**:
+- Displayed in a responsive two-column grid on large screens, stacked on mobile
+- Each FAQ card has `rounded-xl` border, translucent backdrop, `h3` headings, and muted body copy for readability on the dark background
 
 ## Visual Design
 
