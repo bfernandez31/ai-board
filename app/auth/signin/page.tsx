@@ -66,6 +66,17 @@ export default async function SignInPage({
               Coming soon
             </p>
           </div>
+          <p className="text-sm text-center text-[hsl(var(--ctp-subtext-0))]">
+            By signing in, you agree to our{' '}
+            <a href="/legal/terms" className="text-[#8B5CF6] hover:underline">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="/legal/privacy" className="text-[#8B5CF6] hover:underline">
+              Privacy Policy
+            </a>
+            .
+          </p>
         </CardContent>
       </Card>
     </div>

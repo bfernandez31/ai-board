@@ -18,7 +18,7 @@
 
 **Purpose**: Create directory structure for legal pages
 
-- [ ] T001 Create legal page directories at app/legal/terms/ and app/legal/privacy/
+- [x] T001 Create legal page directories at app/legal/terms/ and app/legal/privacy/
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: US1, US2, and US4 acceptance scenarios depend on the footer being present
 
-- [ ] T002 Create Footer component with legal links (Terms of Service → /legal/terms, Privacy Policy → /legal/privacy) and copyright notice in components/layout/footer.tsx
-- [ ] T003 Add Footer to root layout after {children} and before Toaster in app/layout.tsx
+- [x] T002 Create Footer component with legal links (Terms of Service → /legal/terms, Privacy Policy → /legal/privacy) and copyright notice in components/layout/footer.tsx
+- [x] T003 Add Footer to root layout after {children} and before Toaster in app/layout.tsx
 
 **Checkpoint**: Footer visible on all pages — US4 core functionality delivered
 
@@ -43,7 +43,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Create Terms of Service page as Server Component with metadata export and all FR-003 sections (Conditions of Use, Limitation of Liability, BYOK API Cost Responsibility, AI-Generated Code Responsibility) plus effective date (FR-008) in app/legal/terms/page.tsx
+- [x] T004 [US1] Create Terms of Service page as Server Component with metadata export and all FR-003 sections (Conditions of Use, Limitation of Liability, BYOK API Cost Responsibility, AI-Generated Code Responsibility) plus effective date (FR-008) in app/legal/terms/page.tsx
 
 **Checkpoint**: Terms of Service page accessible at /legal/terms, footer links navigate to it
 
@@ -57,7 +57,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T005 [P] [US2] Create Privacy Policy page as Server Component with metadata export and all FR-004 sections (Data Collected, Cookies Used, No Data Resale, GDPR Rights) plus effective date (FR-008) in app/legal/privacy/page.tsx
+- [x] T005 [P] [US2] Create Privacy Policy page as Server Component with metadata export and all FR-004 sections (Data Collected, Cookies Used, No Data Resale, GDPR Rights) plus effective date (FR-008) in app/legal/privacy/page.tsx
 
 **Checkpoint**: Privacy Policy page accessible at /legal/privacy, footer links navigate to it
 
@@ -71,7 +71,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] Add consent notice with Terms of Service and Privacy Policy links below OAuth buttons in app/auth/signin/page.tsx
+- [x] T006 [US3] Add consent notice with Terms of Service and Privacy Policy links below OAuth buttons in app/auth/signin/page.tsx
 
 **Checkpoint**: Sign-in page shows consent links, both navigate to correct legal pages
 
@@ -85,7 +85,7 @@
 
 *Note: Core footer implementation completed in Phase 2 (Foundational). This phase covers responsive verification and cross-page consistency.*
 
-- [ ] T007 [US4] Verify Footer responsive behavior (vertical stack on mobile, horizontal on desktop) and adjust Tailwind breakpoints if needed in components/layout/footer.tsx
+- [x] T007 [US4] Verify Footer responsive behavior (vertical stack on mobile, horizontal on desktop) and adjust Tailwind breakpoints if needed in components/layout/footer.tsx
 
 **Checkpoint**: Footer visible and responsive on all pages across device sizes
 
@@ -97,9 +97,9 @@
 
 ### Tests
 
-- [ ] T008 [P] Create Footer component test verifying both legal links render with correct hrefs in tests/unit/components/footer.test.tsx
-- [ ] T009 [P] Create legal page integration tests verifying /legal/terms and /legal/privacy return 200 with all required content sections in tests/integration/legal/pages.test.ts
-- [ ] T010 Run type-check and lint to verify no TypeScript or ESLint errors across all new and modified files
+- [x] T008 [P] Create Footer component test verifying both legal links render with correct hrefs in tests/unit/components/footer.test.tsx
+- [x] T009 [P] Create legal page integration tests verifying /legal/terms and /legal/privacy return 200 with all required content sections in tests/integration/legal/pages.test.ts
+- [x] T010 Run type-check and lint to verify no TypeScript or ESLint errors across all new and modified files
 
 ---
 
