@@ -226,6 +226,7 @@ export async function handleTicketTransition(
             job_id: job.id.toString(),
             project_id: ticket.projectId.toString(),
             githubRepository: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
+            agent: effectiveAgent,
           };
 
           if (ticket.attachments) {
