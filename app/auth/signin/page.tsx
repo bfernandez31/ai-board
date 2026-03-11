@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github } from "lucide-react"
 import { SiGitlab, SiBitbucket } from "react-icons/si"
+import Link from "next/link"
 
 export default async function SignInPage({
   searchParams,
@@ -68,14 +69,13 @@ export default async function SignInPage({
           </div>
           <p className="text-sm text-center text-[hsl(var(--ctp-subtext-0))]">
             By signing in, you agree to our{' '}
-            <a href="/legal/terms" className="text-[#8B5CF6] hover:underline">
+            <Link href="/legal/terms" className="text-[#8B5CF6] hover:underline">
               Terms of Service
-            </a>{' '}
+            </Link>{' '}
             and{' '}
-            <a href="/legal/privacy" className="text-[#8B5CF6] hover:underline">
+            <Link href="/legal/privacy" className="text-[#8B5CF6] hover:underline">
               Privacy Policy
-            </a>
-            .
+            </Link>.
           </p>
         </CardContent>
       </Card>
