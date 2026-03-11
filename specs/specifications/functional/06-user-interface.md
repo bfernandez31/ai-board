@@ -4,6 +4,57 @@
 
 The user interface provides an intuitive, modern experience for managing tickets and projects. Visual feedback, responsive design, and keyboard accessibility ensure efficient workflows across devices.
 
+## Global Footer
+
+A global footer is rendered on all pages (public and authenticated) via the root layout.
+
+**Content**:
+- Copyright notice: "© {current year} AI Board. All rights reserved."
+- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+
+**Layout**:
+- Mobile: Copyright and links stack vertically, centered
+- Desktop (≥768px): Copyright on left, links on right (horizontal nav)
+- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Separated from content by a top border
+
+**Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
+
+---
+
+## Legal Pages
+
+Two public static pages accessible without authentication:
+
+| Page | URL | Title |
+|------|-----|-------|
+| Terms of Service | `/legal/terms` | Terms of Service - AI Board |
+| Privacy Policy | `/legal/privacy` | Privacy Policy - AI Board |
+
+**Terms of Service sections**:
+1. Conditions of Use — account responsibility, platform purpose
+2. Limitation of Liability — "as is" warranty disclaimer
+3. BYOK API Cost Responsibility — user bears third-party API costs
+4. AI-Generated Code Responsibility — user responsible for reviewing generated code
+
+**Privacy Policy sections**:
+1. Data Collected — GitHub display name, email, avatar via OAuth
+2. Cookies Used — NextAuth.js session cookies only (no tracking cookies)
+3. No Data Resale — data used exclusively for service delivery
+4. GDPR Rights — right to access, correct, delete data; 30-day processing commitment
+
+**Design**: `max-w-3xl mx-auto` container, semantic headings, effective date displayed at top. Server Components with no client-side state.
+
+## Sign-In Page Consent Notice
+
+The sign-in page displays a consent notice below the OAuth buttons:
+
+> "By signing in, you agree to our Terms of Service and Privacy Policy"
+
+Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
+
+---
+
 ## Landing Page
 
 ### Hero Section Background Animation

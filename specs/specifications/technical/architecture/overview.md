@@ -46,9 +46,13 @@ ai-board/
 │   │   └── utils/                # Helper functions
 │   ├── projects/[projectId]/     # Project-scoped pages
 │   │   └── board/                # Kanban board
+│   ├── legal/                    # Legal pages (public)
+│   │   ├── terms/                # Terms of Service
+│   │   └── privacy/              # Privacy Policy
 │   └── auth/                     # Authentication pages
 ├── components/                   # React components
 │   ├── board/                    # Board components
+│   ├── layout/                   # Layout components (Header, Footer)
 │   ├── ui/                       # shadcn/ui components
 │   └── ...                       # Feature components
 ├── prisma/                       # Database layer
@@ -144,6 +148,8 @@ Stage Transition
 ```
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
+/legal/terms                         # Terms of Service (public, no auth required)
+/legal/privacy                       # Privacy Policy (public, no auth required)
 ```
 
 **API Routes**:
