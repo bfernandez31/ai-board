@@ -15,6 +15,8 @@ import { CacheEfficiencyChart } from './cache-efficiency-chart';
 import { TopToolsChart } from './top-tools-chart';
 import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
+import { useSubscription } from '@/hooks/use-subscription';
+import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 
 interface AnalyticsDashboardProps {
   projectId: number;
@@ -43,6 +45,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
     staleTime: 10000,
   });
 
+  const { data: subscription } = useSubscription();
   const analytics = data ?? initialData;
 
   const handleRangeChange = (newRange: TimeRange) => {
@@ -109,6 +112,14 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
           <VelocityChart data={analytics.velocity} />
         </div>
       </div>
+
+      {/* Advanced Analytics Section */}
+      {subscription && !subscription.limits.advancedAnalytics && (
+        <UpgradePrompt
+          title="Advanced Analytics"
+          description="Unlock advanced analytics including custom reports, trend analysis, and team performance metrics. Available on the Team plan."
+        />
+      )}
     </div>
   );
 }

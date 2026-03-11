@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { ProjectsContainer } from '@/components/projects/projects-container';
+import { ProjectQuotaGate } from '@/components/projects/project-quota-gate';
+import { UsageBanner } from '@/components/billing/usage-banner';
 import { Button } from '@/components/ui/button';
 import { Upload, Plus } from 'lucide-react';
 import type { ProjectsListResponse } from '@/app/lib/types/project';
@@ -62,6 +64,10 @@ export default async function ProjectsPage() {
           </div>
         )}
       </div>
+
+      <UsageBanner />
+
+      <ProjectQuotaGate />
 
       <ProjectsContainer projects={projects} />
     </div>

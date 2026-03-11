@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
+import { usageKeys } from '@/hooks/use-usage';
 import type {
   TicketWithVersion,
   TicketCreateVariables,
@@ -100,6 +101,9 @@ export function useCreateTicket() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.tickets(variables.projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: usageKeys.all,
       });
     },
   });

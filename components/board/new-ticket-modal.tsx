@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CreateTicketSchema,
   type CreateTicketInput,
@@ -25,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowUpRight } from 'lucide-react';
 import { ClarificationPolicy, Agent } from '@prisma/client';
 import {
   getPolicyIcon,
@@ -38,6 +39,9 @@ import {
 } from '@/app/lib/utils/agent-icons';
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
+import Link from 'next/link';
+import { useUsage, usageKeys } from '@/hooks/use-usage';
+import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 
 interface NewTicketModalProps {
   open: boolean;
@@ -79,6 +83,11 @@ export function NewTicketModal({
   const [images, setImages] = React.useState<ImageFile[]>([]);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { data: usage } = useUsage();
+  const queryClient = useQueryClient();
+
+  const ticketLimitReached = usage?.ticketsThisMonth.max != null &&
+    (usage?.ticketsThisMonth.current ?? 0) >= usage.ticketsThisMonth.max;
 
   // Reset form when modal closes
   React.useEffect(() => {
@@ -208,6 +217,17 @@ export function NewTicketModal({
             );
           }
           setErrors(fieldErrors);
+        } else if (response.status === 403) {
+          const errorData = await response.json();
+          if (errorData.code === 'PLAN_LIMIT') {
+            setErrors({
+              submit: errorData.error,
+            });
+          } else {
+            setErrors({
+              submit: 'Unable to create ticket. Please try again.',
+            });
+          }
         } else {
           setErrors({
             submit: 'Unable to create ticket. Please try again.',
@@ -217,6 +237,7 @@ export function NewTicketModal({
       }
 
       // Success - close modal and notify parent
+      queryClient.invalidateQueries({ queryKey: usageKeys.all });
       onOpenChange(false);
       onTicketCreated?.();
     } catch (error) {
@@ -248,6 +269,18 @@ export function NewTicketModal({
           </DialogDescription>
         </DialogHeader>
 
+        {usage?.ticketsThisMonth.max != null && (
+          <p className="text-sm text-muted-foreground">
+            {usage.ticketsThisMonth.current}/{usage.ticketsThisMonth.max} tickets used this month
+          </p>
+        )}
+
+        {ticketLimitReached ? (
+          <UpgradePrompt
+            title="Ticket limit reached"
+            description={`Your ${usage?.planName ?? 'Free'} plan allows ${usage?.ticketsThisMonth.max} tickets per month. Upgrade for unlimited tickets.`}
+          />
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title Field */}
           <div className="space-y-2">
@@ -399,6 +432,15 @@ export function NewTicketModal({
               <p className="text-sm text-red-600 dark:text-red-400">
                 {errors.submit}
               </p>
+              {errors.submit.includes('Upgrade') && (
+                <Link
+                  href="/settings/billing"
+                  className="inline-flex items-center text-sm text-primary hover:underline mt-1"
+                >
+                  Upgrade Plan
+                  <ArrowUpRight className="ml-1 h-3 w-3" />
+                </Link>
+              )}
             </div>
           )}
 
@@ -421,6 +463,7 @@ export function NewTicketModal({
             </button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

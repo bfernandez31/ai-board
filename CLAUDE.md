@@ -22,7 +22,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **Database**: PostgreSQL 14+, Prisma 6.x
 - **Styling**: TailwindCSS 3.4, shadcn/ui, lucide-react
 - **Charts**: Recharts 2.x (analytics dashboard)
-- **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics)
+- **State**: TanStack Query v5.90.5, client-side polling (2s jobs, 10s comments, 15s notifications, 15s analytics, 15s usage)
 - **Testing**: Vitest (unit + integration), Playwright (E2E browser tests)
 - **Auth**: NextAuth.js (session-based)
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
@@ -58,7 +58,8 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Job commands: `specify`, `plan`, `implement`, `verify`, `quick-impl`, `clean`, `deploy-preview`, `rollback-reset`, `comment-specify`, `comment-plan`, `comment-build`, `comment-verify`
 - Notifications: 15s polling, soft delete with 30-day retention
 - PushSubscriptions: Multiple per user, auto-cleanup on 410/404
-- Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic
+- Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)
+- Usage: `GET /api/billing/usage` returns current counts vs limits; `useUsage` hook (15s polling) powers dashboard `UsageBanner` and ticket/project creation quota gates
 - StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
 
 ## API Patterns
