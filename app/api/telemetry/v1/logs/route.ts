@@ -147,8 +147,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           // Codex: token data in codex.sse_event with event.kind = "response.completed"
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
+          const isCodexEvent = eventName.startsWith('codex.');
 
           const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+
+          // Track timestamps across ALL Codex events for duration estimation
+          // (Codex doesn't report duration_ms; we compute span from first to last event)
+          if (isCodexEvent) {
+            const tsNano = logRecord.observedTimeUnixNano || logRecord.timeUnixNano;
+            if (tsNano) {
+              const ns = typeof tsNano === 'string' ? Number(tsNano) : tsNano;
+              if (!isNaN(ns) && ns > 0) {
+                if (ns < minCodexTimestampNs) minCodexTimestampNs = ns;
+                if (ns > maxCodexTimestampNs) maxCodexTimestampNs = ns;
+              }
+            }
+          }
 
           if (isClaudeApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
@@ -175,22 +189,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
             // Non-cached input tokens = total input - cached
             metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5-codex'), inputTokens - cachedTokens, outputTokens, cachedTokens);
-
-            // Track timestamps for duration estimation (Codex doesn't report duration_ms)
-            const tsNano = logRecord.observedTimeUnixNano || logRecord.timeUnixNano;
-            console.log('[OTLP Telemetry] Codex token event timestamps:', {
-              observedTimeUnixNano: logRecord.observedTimeUnixNano,
-              timeUnixNano: logRecord.timeUnixNano,
-              tsNano,
-              allKeys: Object.keys(logRecord),
-            });
-            if (tsNano) {
-              const ns = typeof tsNano === 'string' ? Number(tsNano) : tsNano;
-              if (!isNaN(ns) && ns > 0) {
-                if (ns < minCodexTimestampNs) minCodexTimestampNs = ns;
-                if (ns > maxCodexTimestampNs) maxCodexTimestampNs = ns;
-              }
-            }
           }
 
           if (isToolEvent) {
