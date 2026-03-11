@@ -43,12 +43,15 @@ ai-board/
 │   │   │   └── mutations/        # Mutation hooks
 │   │   ├── schemas/              # Zod validation schemas
 │   │   ├── workflows/            # Workflow orchestration
+│   │   ├── marketing/            # Marketing content config (pricing, FAQ, footer)
 │   │   └── utils/                # Helper functions
 │   ├── projects/[projectId]/     # Project-scoped pages
 │   │   └── board/                # Kanban board
-│   ├── legal/                    # Legal pages (public)
-│   │   ├── terms/                # Terms of Service
-│   │   └── privacy/              # Privacy Policy
+│   ├── (marketing)/              # Public marketing routes + layout
+│   │   ├── layout.tsx            # Marketing wrapper with footer
+│   │   ├── landing/page.tsx      # Landing page
+│   │   ├── terms/page.tsx        # Terms of Service
+│   │   └── privacy/page.tsx      # Privacy Policy
 │   └── auth/                     # Authentication pages
 ├── components/                   # React components
 │   ├── board/                    # Board components
@@ -88,6 +91,10 @@ ai-board/
     └── memory/                   # Constitution and memory
         └── constitution.md       # Project conventions
 ```
+
+**Marketing route group**: All public marketing pages share `app/(marketing)/layout.tsx`, which wraps sections in a dark background, renders `<main>{children}</main>`, and appends the marketing footer. Authenticated dashboards continue using `app/layout.tsx` without the marketing footer.
+
+**Marketing content source**: `lib/marketing/pricing-content.ts` centralizes plan metadata, FAQ entries, and footer links. Components (pricing cards, FAQ accordion, footer) consume this config so marketing updates require no structural changes.
 
 ### Data Flow Patterns
 
@@ -148,8 +155,9 @@ Stage Transition
 ```
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
-/legal/terms                         # Terms of Service (public, no auth required)
-/legal/privacy                       # Privacy Policy (public, no auth required)
+/landing                             # Marketing landing (public, marketing layout)
+/terms                               # Terms of Service (public, marketing layout + footer)
+/privacy                             # Privacy Policy (public, marketing layout + footer)
 ```
 
 **API Routes**:

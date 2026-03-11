@@ -87,6 +87,15 @@ Users access billing at `/settings/billing`.
 - **Trial indicator**: When trialing, displays trial end date and a notice that billing begins after the trial.
 - **Grace period indicator**: When past due and within grace period, displays a warning with the date access will be restricted.
 
+### Plan Highlighting from Marketing CTA
+
+- Pricing CTAs on `/landing` append `?plan=PRO` or `?plan=TEAM` to the callback URL before redirecting through the sign-in flow.
+- After authentication, the billing page reads the `plan` query parameter and highlights the matching card inside `components/billing/pricing-cards.tsx`.
+- Highlighting effects:
+  - Selected card receives a purple ring and a “Selected for your trial” label.
+  - An inline warning alert reminds the user they are about to start a 14-day trial for that plan and prompts them to review details before subscribing.
+- The highlight is informational only; users still click Subscribe/Manage actions manually. Missing or unsupported `plan` values (including `FREE`) are ignored.
+
 ### Subscription Actions
 
 **Subscribe (Free → Pro or Team)**:

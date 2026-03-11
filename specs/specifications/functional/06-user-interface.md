@@ -4,21 +4,22 @@
 
 The user interface provides an intuitive, modern experience for managing tickets and projects. Visual feedback, responsive design, and keyboard accessibility ensure efficient workflows across devices.
 
-## Global Footer
+## Marketing Layout & Footer
 
-A global footer is rendered on all pages (public and authenticated) via the root layout.
+Public marketing routes live inside the `(marketing)` route group (`app/(marketing)/`). The layout wraps every marketing page in a full-height dark background shell, delegates header rendering to the root layout, and terminates with the marketing footer so authenticated product views stay footer-free.
 
-**Content**:
-- Copyright notice: "© {current year} AI Board. All rights reserved."
-- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+**Routes covered**:
+- `/landing` — marketing overview
+- `/terms` — Terms of Service
+- `/privacy` — Privacy Policy
 
-**Layout**:
-- Mobile: Copyright and links stack vertically, centered
-- Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
-- Separated from content by a top border
-
-**Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
+**Footer behavior** (`components/layout/footer.tsx`):
+- Renders only on marketing surfaces via `app/(marketing)/layout.tsx`
+- Copyright: `© {currentYear} ai-board, Inc.`
+- Link set sourced from `lib/marketing/pricing-content.ts`: Terms of Service, Privacy Policy, GitHub repository
+- Internal links (`/terms`, `/privacy`) still open in new tabs for compliance parity with external GitHub link; all links include `rel="noopener noreferrer"`
+- Each anchor exposes a `data-analytics-id` so marketing dashboards can track usage without altering markup
+- Layout matches Catppuccin palette (bordered top edge, centered stack on mobile, split layout on desktop)
 
 ---
 
@@ -28,8 +29,10 @@ Two public static pages accessible without authentication:
 
 | Page | URL | Title |
 |------|-----|-------|
-| Terms of Service | `/legal/terms` | Terms of Service - AI Board |
-| Privacy Policy | `/legal/privacy` | Privacy Policy - AI Board |
+| Terms of Service | `/terms` | Terms of Service - AI Board |
+| Privacy Policy | `/privacy` | Privacy Policy - AI Board |
+
+Both routes inherit the marketing layout, so visitors always see the shared footer and dark marketing background without affecting authenticated product pages.
 
 **Terms of Service sections**:
 1. Conditions of Use — account responsibility, platform purpose
@@ -56,6 +59,31 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+### Section Order
+
+Visitors experience sections in this order: Hero → Features Grid → Workflow Overview → Pricing Section → CTA Section → Marketing Footer. This keeps pricing context directly above the primary signup CTA while ensuring every public page shares the same footer.
+
+### Pricing Section
+
+- Positioned immediately after `WorkflowSection` and before `CTASection`.
+- Renders three plan cards (Free, Pro, Team) sourced from `lib/marketing/pricing-content.ts`.
+- Each card shows name, badge (Pro = "Most popular", Team = "Best value"), price display (`Free`, `$49/mo`, `$149/mo`), limits summary, and a bulleted capability list that highlights BYOK availability.
+- CTA behavior:
+  - **Free**: `Get Started` button links to `/auth/signin` in the same tab.
+  - **Pro/Team**: `Start 14-day trial` deep-links to `/auth/signin?callbackUrl=/settings/billing?plan=PRO|TEAM`, ensuring the billing page highlights the selected plan after authentication.
+- CTA buttons and card containers expose `data-analytics-id` attributes so marketing tracks impressions vs. clicks per plan without DOM changes.
+- Responsive layout: single-column stack on mobile (<768px), three-column grid on large screens with the Pro card accented via a glow ring.
+- A right-rail callout invites users to email `support@ai-board.dev` for enterprise trials and repeats the “Pricing in USD — regional taxes shown at checkout” disclaimer.
+
+### FAQ & Contact Panel
+
+- FAQ block appears directly beneath the pricing cards and is introduced with “Answers for BYOK & supported agents”.
+- Two accordion items ship with defined defaults:
+  - **BYOK availability** (expanded by default) explaining that Pro unlocks one connector while Team enables full coverage via workspace settings.
+  - **Supported agents** (collapsed by default) listing Claude, GPT-4 class, and Gemini Advanced with quarterly update cadence.
+- Accordion triggers are keyboard-accessible, indicate state via chevron rotation, and emit analytics IDs per question.
+- Adjacent contact card reiterates the support email and the USD pricing disclaimer so visitors can escalate questions without leaving the page.
 
 ### Hero Section Background Animation
 

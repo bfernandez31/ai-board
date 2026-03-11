@@ -518,10 +518,11 @@ export const config = {
 - Protected routes: `/projects/*` and `/api/projects/*`
 
 **Public Routes** (no authentication required):
-- `/` — Landing page
+- `/` — Landing page (redirects into `/landing`)
+- `/landing` — Marketing landing page
 - `/auth/signin` — Sign-in page
-- `/legal/terms` — Terms of Service
-- `/legal/privacy` — Privacy Policy
+- `/terms` — Terms of Service
+- `/privacy` — Privacy Policy
 
 ## Security Considerations
 

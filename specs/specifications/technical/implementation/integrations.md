@@ -760,6 +760,30 @@ sequenceDiagram
     Portal->>WH: Webhook event (subscription updated/deleted)
 ```
 
+### Marketing CTA Deep-Link Flow
+
+```mermaid
+sequenceDiagram
+    participant Visitor
+    participant Landing as /landing
+    participant Auth as /auth/signin
+    participant Billing as /settings/billing
+    participant API as POST /api/billing/checkout
+
+    Visitor->>Landing: Click "Start 14-day trial" (Pro/Team)
+    Landing->>Auth: Redirect with callbackUrl=/settings/billing?plan=PRO|TEAM
+    Auth-->>Visitor: Complete OAuth + redirect
+    Auth->>Billing: Redirect to /settings/billing?plan=PRO|TEAM
+    Billing->>Billing: Highlight plan + show trial alert
+    Visitor->>Billing: Click Subscribe
+    Billing->>API: POST { plan }
+```
+
+**Key behaviors**:
+- Landing CTA buttons append the `plan` query param to ensure the billing UI preselects the intended plan without duplicating pricing logic.
+- Billing page treats unsupported values (e.g., `FREE` or random text) as no-ops, so direct visits remain safe.
+- Highlighting is purely visual; checkout flow still requires the user to click Subscribe, which triggers the existing `/api/billing/checkout` path documented above.
+
 ### Plan Configuration (`lib/billing/plans.ts`)
 
 ```typescript
