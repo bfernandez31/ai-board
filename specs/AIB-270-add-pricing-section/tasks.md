@@ -15,8 +15,8 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 **Purpose**: Confirm environment + design context before modifying source
 
-- [ ] T001 Run `./.claude-plugin/scripts/bash/check-prerequisites.sh --json` to capture FEATURE_DIR and AVAILABLE_DOCS for traceability before editing.
-- [ ] T002 Review `specs/AIB-270-add-pricing-section/{plan.md,spec.md,research.md,quickstart.md}` and log any blocking questions or open dependencies in `specs/AIB-270-add-pricing-section/checklists/requirements.md`.
+- [x] T001 Run `./.claude-plugin/scripts/bash/check-prerequisites.sh --json` to capture FEATURE_DIR and AVAILABLE_DOCS for traceability before editing. ✅ DONE
+- [x] T002 Review `specs/AIB-270-add-pricing-section/{plan.md,spec.md,research.md,quickstart.md}` and log any blocking questions or open dependencies in `specs/AIB-270-add-pricing-section/checklists/requirements.md`. ✅ DONE
 
 ---
 
@@ -24,11 +24,11 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 **Purpose**: Create the shared marketing scaffolding and content sources every story depends on
 
-- [ ] T003 Create `app/(marketing)/layout.tsx` route-group scaffold that accepts `children`, wraps them in `<div className="bg-[#1e1e2e] text-foreground min-h-screen">`, and prepares slots for `Header`/`Footer`.
-- [ ] T004 Move `app/landing/page.tsx` to `app/(marketing)/landing/page.tsx` and relocate `app/legal/{terms,privacy}/page.tsx` into `app/(marketing)/{terms,privacy}/page.tsx`, removing the legacy `app/legal/` directory.
-- [ ] T005 Update `app/layout.tsx` to stop rendering `<Footer />`, keeping shared providers intact so only the marketing layout controls footer visibility.
-- [ ] T006 Create `lib/marketing/pricing-content.ts` exporting typed interfaces (`MarketingContent`, `PricingPlanContent`, `FAQEntry`, `FooterLink`) plus a stub `marketingContent` object wired for future plan/FAQ/footer data.
-- [ ] T007 Add `hooks/use-marketing-route.ts` that exposes `isMarketingRoute` (checks pathname prefixes like `/landing`, `/terms`, `/privacy`) for any components that must branch on marketing surfaces.
+- [x] T003 Create `app/(marketing)/layout.tsx` route-group scaffold that accepts `children`, wraps them in `<div className="bg-[#1e1e2e] text-foreground min-h-screen">`, and prepares slots for `Header`/`Footer`. ✅ DONE
+- [x] T004 Move `app/landing/page.tsx` to `app/(marketing)/landing/page.tsx` and relocate `app/legal/{terms,privacy}/page.tsx` into `app/(marketing)/{terms,privacy}/page.tsx`, removing the legacy `app/legal/` directory. ✅ DONE
+- [x] T005 Update `app/layout.tsx` to stop rendering `<Footer />`, keeping shared providers intact so only the marketing layout controls footer visibility. ✅ DONE
+- [x] T006 Create `lib/marketing/pricing-content.ts` exporting typed interfaces (`MarketingContent`, `PricingPlanContent`, `FAQEntry`, `FooterLink`) plus a stub `marketingContent` object wired for future plan/FAQ/footer data. ✅ DONE
+- [x] T007 Add `hooks/use-marketing-route.ts` that exposes `isMarketingRoute` (checks pathname prefixes like `/landing`, `/terms`, `/privacy`) for any components that must branch on marketing surfaces. ✅ DONE
 
 ---
 
@@ -40,16 +40,16 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 ### Tests for User Story 1 (write first)
 
-- [ ] T008 [P] [US1] Create `tests/unit/components/landing/pricing-section.test.tsx` with Vitest + RTL assertions for plan order, CTA hrefs, `data-analytics-id` hooks, disclaimer text, and fallback copy (start with failing cases).
-- [ ] T009 [P] [US1] Add Playwright smoke coverage in `tests/e2e/marketing/pricing-section.spec.ts` to verify the Workflow → Pricing → CTA order plus CTA navigation + trial params at a 360px viewport.
+- [x] T008 [P] [US1] Create `tests/unit/components/landing/pricing-section.test.tsx` with Vitest + RTL assertions for plan order, CTA hrefs, `data-analytics-id` hooks, disclaimer text, and fallback copy (start with failing cases). ✅ DONE
+- [x] T009 [P] [US1] Add Playwright smoke coverage in `tests/e2e/marketing/pricing-section.spec.ts` to verify the Workflow → Pricing → CTA order plus CTA navigation + trial params at a 360px viewport. ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Populate `marketingContent.plans`, `faqIntro`, and `disclaimer` inside `lib/marketing/pricing-content.ts` with Free/Pro/Team data (prices, feature bullets, CTA deep-link URLs, analytics IDs, and Catppuccin badge tones).
-- [ ] T011 [US1] Implement `components/landing/pricing-card.tsx` (Server Component) using shadcn `Card` + `Button` to render plan details, limits summary, CTA button with `data-analytics-id`, and optional badge markup.
-- [ ] T012 [US1] Implement `components/landing/pricing-section.tsx` to import `marketingContent`, render the section wrapper + cards grid, expose `data-testid="pricing-section"`, and pipe analytics IDs down to cards.
-- [ ] T013 [US1] Insert `<PricingSection />` between `<WorkflowSection />` and `<CTASection />` in `app/(marketing)/landing/page.tsx`, ensuring the container inherits existing Catppuccin spacing and responsive behavior.
-- [ ] T014 [US1] Enhance `app/settings/billing/page.tsx` to read the `plan` search param via `useSearchParams()`, highlight the matching `PricingCards` option, and display a 14-day trial banner before calling `handleSubscribe`.
+- [x] T010 [US1] Populate `marketingContent.plans`, `faqIntro`, and `disclaimer` inside `lib/marketing/pricing-content.ts` with Free/Pro/Team data (prices, feature bullets, CTA deep-link URLs, analytics IDs, and Catppuccin badge tones). ✅ DONE
+- [x] T011 [US1] Implement `components/landing/pricing-card.tsx` (Server Component) using shadcn `Card` + `Button` to render plan details, limits summary, CTA button with `data-analytics-id`, and optional badge markup. ✅ DONE
+- [x] T012 [US1] Implement `components/landing/pricing-section.tsx` to import `marketingContent`, render the section wrapper + cards grid, expose `data-testid="pricing-section"`, and pipe analytics IDs down to cards. ✅ DONE
+- [x] T013 [US1] Insert `<PricingSection />` between `<WorkflowSection />` and `<CTASection />` in `app/(marketing)/landing/page.tsx`, ensuring the container inherits existing Catppuccin spacing and responsive behavior. ✅ DONE
+- [x] T014 [US1] Enhance `app/settings/billing/page.tsx` to read the `plan` search param via `useSearchParams()`, highlight the matching `PricingCards` option, and display a 14-day trial banner before calling `handleSubscribe`. ✅ DONE
 
 ---
 
@@ -61,13 +61,13 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T015 [P] [US2] Extend `tests/unit/components/landing/pricing-section.test.tsx` with FAQ cases asserting BYOK defaults to expanded, supported agents stays collapsed initially, and each trigger exposes the configured `data-analytics-id`.
+- [x] T015 [P] [US2] Extend `tests/unit/components/landing/pricing-section.test.tsx` with FAQ cases asserting BYOK defaults to expanded, supported agents stays collapsed initially, and each trigger exposes the configured `data-analytics-id`. ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Fill `marketingContent.faq` in `lib/marketing/pricing-content.ts` with BYOK and supported agents entries (ids, copy, defaultExpanded flags, analytics IDs).
-- [ ] T017 [US2] Build `components/landing/faq.tsx` as a `"use client"` Radix Collapsible stack that renders each FAQEntry, applies `data-analytics-id` to triggers, and ensures keyboard accessibility.
-- [ ] T018 [US2] Integrate `<Faq />`, intro text, and disclaimer stack into `components/landing/pricing-section.tsx` beneath the card grid with responsive spacing and mobile-first ordering.
+- [x] T016 [US2] Fill `marketingContent.faq` in `lib/marketing/pricing-content.ts` with BYOK and supported agents entries (ids, copy, defaultExpanded flags, analytics IDs). ✅ DONE
+- [x] T017 [US2] Build `components/landing/faq.tsx` as a `"use client"` Radix Collapsible stack that renders each FAQEntry, applies `data-analytics-id` to triggers, and ensures keyboard accessibility. ✅ DONE
+- [x] T018 [US2] Integrate `<Faq />`, intro text, and disclaimer stack into `components/landing/pricing-section.tsx` beneath the card grid with responsive spacing and mobile-first ordering. ✅ DONE
 
 ---
 
@@ -79,14 +79,14 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T019 [P] [US3] Update `tests/unit/components/layout/footer.test.tsx` to read from `marketingContent.footerLinks`, assert Terms/Privacy/GitHub render with correct hrefs, `target="_blank"`/`rel="noopener noreferrer"`, analytics IDs, and copyright.
-- [ ] T020 [P] [US3] Extend `tests/e2e/marketing/pricing-section.spec.ts` with footer checks that ensure `/landing`, `/terms`, and `/privacy` share the component while authenticated routes (e.g., `/projects/1/board`) omit it.
+- [x] T019 [P] [US3] Update `tests/unit/components/layout/footer.test.tsx` to read from `marketingContent.footerLinks`, assert Terms/Privacy/GitHub render with correct hrefs, `target="_blank"`/`rel="noopener noreferrer"`, analytics IDs, and copyright. ✅ DONE
+- [x] T020 [P] [US3] Extend `tests/e2e/marketing/pricing-section.spec.ts` with footer checks that ensure `/landing`, `/terms`, and `/privacy` share the component while authenticated routes (e.g., `/projects/1/board`) omit it. ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Populate `marketingContent.footerLinks` inside `lib/marketing/pricing-content.ts` (Terms, Privacy, GitHub) with `opensInNewTab`, `kind`, and analytics identifiers.
-- [ ] T022 [US3] Refactor `components/layout/footer.tsx` to render links from `marketingContent.footerLinks`, add GitHub external link, enforce `target="_blank"` + `rel="noopener noreferrer"` when `opensInNewTab` is true, and emit `data-analytics-id` attributes.
-- [ ] T023 [US3] Finalize `app/(marketing)/layout.tsx` to wrap marketing routes with `<Header />`, `<main>`, and the updated `<Footer />`, ensuring non-marketing layouts remain unaffected now that `app/layout.tsx` no longer renders the footer.
+- [x] T021 [US3] Populate `marketingContent.footerLinks` inside `lib/marketing/pricing-content.ts` (Terms, Privacy, GitHub) with `opensInNewTab`, `kind`, and analytics identifiers. ✅ DONE
+- [x] T022 [US3] Refactor `components/layout/footer.tsx` to render links from `marketingContent.footerLinks`, add GitHub external link, enforce `target="_blank"` + `rel="noopener noreferrer"` when `opensInNewTab` is true, and emit `data-analytics-id` attributes. ✅ DONE
+- [x] T023 [US3] Finalize `app/(marketing)/layout.tsx` to wrap marketing routes with `<Header />`, `<main>`, and the updated `<Footer />`, ensuring non-marketing layouts remain unaffected now that `app/layout.tsx` no longer renders the footer. ✅ DONE
 
 ---
 
@@ -94,8 +94,8 @@ description: "Actionable, dependency-ordered tasks for AIB-270 Add pricing secti
 
 **Purpose**: Repository-wide validation, documentation, and cleanup
 
-- [ ] T024 Run `bun run type-check && bun run lint` at repo root to ensure newly added marketing files pass strict TypeScript + ESLint gates.
-- [ ] T025 Update `specs/AIB-270-add-pricing-section/quickstart.md` with any new dev/test entry points (e.g., marketing Playwright spec filters) discovered during implementation.
+- [x] T024 Run `bun run type-check && bun run lint` at repo root to ensure newly added marketing files pass strict TypeScript + ESLint gates. ✅ DONE
+- [x] T025 Update `specs/AIB-270-add-pricing-section/quickstart.md` with any new dev/test entry points (e.g., marketing Playwright spec filters) discovered during implementation. ✅ DONE
 
 ---
 

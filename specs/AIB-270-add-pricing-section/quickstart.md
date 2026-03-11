@@ -73,8 +73,8 @@
   - `tests/unit/components/landing/pricing-section.test.tsx`: asserts card order, CTA hrefs, analytics IDs, disclaimers.
   - `tests/unit/components/layout/footer.test.tsx`: ensures Terms/Privacy/GitHub links open in new tabs and analytics attributes exist.
 - **Playwright**:
-  - New spec `tests/e2e/marketing-pricing.spec.ts` (or extend existing marketing spec if found).
-  - Steps: open `/landing` at 360px width, ensure Workflow section is above Pricing, CTA buttons contain correct text, clicking Free CTA keeps user on `/auth/signin`, Paid CTA retains callback param.
+  - New spec `tests/e2e/marketing/pricing-section.spec.ts` (or extend existing marketing spec if found).
+  - Steps: open `/landing` at 360px width, ensure Workflow section is above Pricing, CTA buttons contain correct text, clicking Free CTA keeps user on `/auth/signin`, Paid CTA retains callback param, and confirm footer renders on `/landing`, `/terms`, `/privacy` while remaining hidden on authenticated routes.
 
 ## Implementation Order
 1. Create marketing content config (`lib/marketing/pricing-content.ts`).

@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+playwright-report/
+blob-report/
+*.min.js

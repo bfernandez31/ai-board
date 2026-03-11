@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import type { SubscriptionPlan } from '@prisma/client';
+import { cn } from '@/lib/utils';
 
 interface PlanInfo {
   plan: SubscriptionPlan;
@@ -24,6 +25,7 @@ interface PricingCardsProps {
   plans: PlanInfo[];
   currentPlan: SubscriptionPlan;
   onSubscribe: (plan: SubscriptionPlan) => Promise<void>;
+  highlightPlan?: SubscriptionPlan | null;
 }
 
 function PlanButton({
@@ -71,6 +73,7 @@ export function PricingCards({
   plans,
   currentPlan,
   onSubscribe,
+  highlightPlan,
 }: PricingCardsProps) {
   const [loading, setLoading] = useState<SubscriptionPlan | null>(null);
 
@@ -88,13 +91,24 @@ export function PricingCards({
       {plans.map((plan) => {
         const isCurrent = plan.plan === currentPlan;
         const isPopular = plan.plan === 'PRO';
+        const isHighlighted = highlightPlan === plan.plan;
 
         return (
           <Card
             key={plan.plan}
-            className={isPopular ? 'border-primary shadow-md' : ''}
+            data-plan={plan.plan}
+            data-plan-selected={isHighlighted ? 'true' : undefined}
+            className={cn(
+              isPopular ? 'border-primary shadow-md' : '',
+              isHighlighted ? 'ring-2 ring-[#8B5CF6]' : ''
+            )}
           >
             <CardHeader>
+              {isHighlighted && (
+                <p className="text-xs font-medium uppercase text-[#8B5CF6]">
+                  Selected for your trial
+                </p>
+              )}
               {isPopular && (
                 <p className="text-xs font-medium uppercase text-primary">
                   Most Popular

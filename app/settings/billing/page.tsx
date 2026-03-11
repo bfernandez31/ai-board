@@ -9,6 +9,7 @@ import { SubscriptionStatus } from '@/components/billing/subscription-status';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useQuery } from '@tanstack/react-query';
 import type { SubscriptionPlan } from '@prisma/client';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface PlanInfo {
   plan: SubscriptionPlan;
@@ -32,6 +33,9 @@ function BillingContent() {
 
   const success = searchParams.get('success');
   const canceled = searchParams.get('canceled');
+  const planQuery = searchParams.get('plan');
+  const highlightedPlan: SubscriptionPlan | null =
+    planQuery === 'PRO' || planQuery === 'TEAM' ? (planQuery as SubscriptionPlan) : null;
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     const res = await fetch('/api/billing/checkout', {
@@ -109,10 +113,20 @@ function BillingContent() {
         {plans.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Available Plans</h2>
+            {highlightedPlan && (
+              <Alert variant="warning">
+                <AlertTitle>Start your 14-day {highlightedPlan === 'TEAM' ? 'Team' : 'Pro'} trial</AlertTitle>
+                <AlertDescription>
+                  This page preselected the highlighted plan from the pricing CTA. Review the details, then click Subscribe to start your
+                  14-day trial without reconfiguring billing.
+                </AlertDescription>
+              </Alert>
+            )}
             <PricingCards
               plans={plans}
               currentPlan={subscription?.plan ?? 'FREE'}
               onSubscribe={handleSubscribe}
+              highlightPlan={highlightedPlan}
             />
           </div>
         )}

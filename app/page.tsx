@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUserOrNull } from '@/lib/db/users';
-import LandingPage from './landing/page';
+import LandingPage from '@/app/(marketing)/landing/page';
 
 /**
  * Root Page

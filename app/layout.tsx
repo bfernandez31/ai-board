@@ -2,13 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Header } from '@/components/layout/header';
 import { SessionProvider } from '@/components/auth/session-provider';
 import { QueryProvider } from '@/app/providers/query-provider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { PushOptInPrompt } from '@/app/components/push-notifications/push-opt-in-prompt';
 import { NotificationListener } from '@/app/components/push-notifications/notification-listener';
-import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/layout/header';
 
 export const metadata: Metadata = {
   title: 'AI Board',
@@ -32,7 +31,6 @@ export default function RootLayout({
             <TooltipProvider>
               <Header />
               {children}
-              <Footer />
               <Toaster />
               <PushOptInPrompt />
               <NotificationListener />

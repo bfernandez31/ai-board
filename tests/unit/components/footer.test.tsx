@@ -7,22 +7,29 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Footer } from '@/components/layout/footer';
+import { marketingContent } from '@/lib/marketing/pricing-content';
 
 describe('Footer', () => {
-  it('should render Terms of Service link with correct href', () => {
+  it('renders configured footer links with analytics + new-tab handling', () => {
     render(<Footer />);
 
-    const termsLink = screen.getByRole('link', { name: 'Terms of Service' });
-    expect(termsLink).toBeInTheDocument();
-    expect(termsLink).toHaveAttribute('href', '/legal/terms');
-  });
+    const requiredLinkIds = ['footer.terms', 'footer.privacy', 'footer.github'] as const;
+    requiredLinkIds.forEach((linkId) => {
+      const linkConfig = marketingContent.footerLinks.find((link) => link.id === linkId);
+      expect(linkConfig).toBeDefined();
 
-  it('should render Privacy Policy link with correct href', () => {
-    render(<Footer />);
+      const anchor = screen.getByRole('link', { name: linkConfig!.label });
+      expect(anchor).toBeInTheDocument();
+      expect(anchor).toHaveAttribute('href', linkConfig!.href);
+      expect(anchor).toHaveAttribute('data-analytics-id', linkConfig!.analyticsId);
 
-    const privacyLink = screen.getByRole('link', { name: 'Privacy Policy' });
-    expect(privacyLink).toBeInTheDocument();
-    expect(privacyLink).toHaveAttribute('href', '/legal/privacy');
+      if (linkConfig!.opensInNewTab) {
+        expect(anchor).toHaveAttribute('target', '_blank');
+        expect(anchor).toHaveAttribute('rel', 'noopener noreferrer');
+      } else {
+        expect(anchor).not.toHaveAttribute('target');
+      }
+    });
   });
 
   it('should render copyright notice', () => {
