@@ -3,14 +3,9 @@ import { FeaturesGrid } from '@/components/landing/features-grid';
 import { WorkflowSection } from '@/components/landing/workflow-section';
 import { CTASection } from '@/components/landing/cta-section';
 import { PricingSection } from '@/components/landing/pricing-section';
+import type { JSX } from 'react';
 
-/**
- * Landing Page
- * Server Component container for marketing sections
- * Shown to unauthenticated visitors only
- * Uses main Header component with marketing variant
- */
-export default function LandingPage() {
+export default function LandingPage(): JSX.Element {
   return (
     <div className="min-h-screen">
       <HeroSection />
