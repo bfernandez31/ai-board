@@ -178,6 +178,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
             // Track timestamps for duration estimation (Codex doesn't report duration_ms)
             const tsNano = logRecord.observedTimeUnixNano || logRecord.timeUnixNano;
+            console.log('[OTLP Telemetry] Codex token event timestamps:', {
+              observedTimeUnixNano: logRecord.observedTimeUnixNano,
+              timeUnixNano: logRecord.timeUnixNano,
+              tsNano,
+              allKeys: Object.keys(logRecord),
+            });
             if (tsNano) {
               const ns = typeof tsNano === 'string' ? Number(tsNano) : tsNano;
               if (!isNaN(ns) && ns > 0) {
