@@ -129,7 +129,7 @@ export function PricingSection() {
 
                 <Link href="/auth/signin">
                   <Button
-                    className={`w-full ${plan.highlighted ? '' : 'variant-outline'}`}
+                    className="w-full"
                     variant={plan.highlighted ? 'default' : 'outline'}
                     size="lg"
                   >
