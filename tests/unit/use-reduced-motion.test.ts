@@ -74,50 +74,50 @@ describe('useReducedMotion', () => {
   });
 
   it('updates when media query changes from false to true', () => {
-    let changeListener: ((event: MediaQueryListEvent) => void) | null = null;
+    let changeCallback: (() => void) | null = null;
+    const mediaQueryState = { matches: false };
 
-    matchMediaMock.mockReturnValue({
-      matches: false,
-      addEventListener: (event: string, listener: (event: MediaQueryListEvent) => void) => {
-        changeListener = listener;
+    matchMediaMock.mockImplementation(() => ({
+      get matches() { return mediaQueryState.matches; },
+      addEventListener: (event: string, listener: () => void) => {
+        changeCallback = listener;
         addEventListenerMock(event, listener);
       },
       removeEventListener: removeEventListenerMock,
-    });
+    }));
 
     const { result } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(false);
 
-    // Simulate media query change (wrap state update in act)
+    // Simulate media query change — update the snapshot value and notify useSyncExternalStore
     act(() => {
-      if (changeListener) {
-        changeListener({ matches: true } as MediaQueryListEvent);
-      }
+      mediaQueryState.matches = true;
+      changeCallback?.();
     });
 
     expect(result.current).toBe(true);
   });
 
   it('updates when media query changes from true to false', () => {
-    let changeListener: ((event: MediaQueryListEvent) => void) | null = null;
+    let changeCallback: (() => void) | null = null;
+    const mediaQueryState = { matches: true };
 
-    matchMediaMock.mockReturnValue({
-      matches: true,
-      addEventListener: (event: string, listener: (event: MediaQueryListEvent) => void) => {
-        changeListener = listener;
+    matchMediaMock.mockImplementation(() => ({
+      get matches() { return mediaQueryState.matches; },
+      addEventListener: (event: string, listener: () => void) => {
+        changeCallback = listener;
         addEventListenerMock(event, listener);
       },
       removeEventListener: removeEventListenerMock,
-    });
+    }));
 
     const { result } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(true);
 
-    // Simulate media query change (wrap state update in act)
+    // Simulate media query change — update the snapshot value and notify useSyncExternalStore
     act(() => {
-      if (changeListener) {
-        changeListener({ matches: false } as MediaQueryListEvent);
-      }
+      mediaQueryState.matches = false;
+      changeCallback?.();
     });
 
     expect(result.current).toBe(false);

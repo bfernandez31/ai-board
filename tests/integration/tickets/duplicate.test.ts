@@ -12,6 +12,7 @@ import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('Ticket Duplication', () => {
   let ctx: TestContext;
+  let ticketCounter = 1000;
 
   beforeEach(async () => {
     ctx = await getTestContext();
@@ -28,8 +29,8 @@ describe('Ticket Duplication', () => {
           description: 'Original description',
           stage: 'SPECIFY',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
         },
       });
@@ -59,8 +60,8 @@ describe('Ticket Duplication', () => {
           description: 'Test description',
           stage: 'PLAN',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
           branch: '100-simple-copy-test',
         },
@@ -87,8 +88,8 @@ describe('Ticket Duplication', () => {
           description: 'Has jobs',
           stage: 'PLAN',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
         },
       });
@@ -102,6 +103,7 @@ describe('Ticket Duplication', () => {
           status: 'COMPLETED',
           inputTokens: 1000,
           outputTokens: 2000,
+          updatedAt: new Date(),
         },
       });
 
@@ -129,8 +131,8 @@ describe('Ticket Duplication', () => {
           description: 'Clone description',
           stage: 'PLAN',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
           branch: '200-clone-source-feature',
         },
@@ -167,8 +169,8 @@ describe('Ticket Duplication', () => {
           description: 'Test jobs copy',
           stage: 'BUILD',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
           branch: '300-full-clone-jobs-test',
         },
@@ -187,6 +189,7 @@ describe('Ticket Duplication', () => {
           costUsd: 0.045,
           durationMs: 12000,
           model: 'claude-opus-4-5-20251101',
+          updatedAt: new Date(),
         },
       });
 
@@ -202,6 +205,7 @@ describe('Ticket Duplication', () => {
           costUsd: 0.075,
           durationMs: 18000,
           model: 'claude-opus-4-5-20251101',
+          updatedAt: new Date(),
         },
       });
 
@@ -254,8 +258,8 @@ describe('Ticket Duplication', () => {
           description: 'Missing branch',
           stage: 'INBOX', // INBOX tickets typically have no branch
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
           branch: null, // No branch
         },
@@ -303,8 +307,8 @@ describe('Ticket Duplication', () => {
           description: 'Test',
           stage: 'INBOX',
           projectId: ctx.projectId,
-          ticketNumber: Date.now(),
-          ticketKey: `T-${Date.now()}`,
+          ticketNumber: ++ticketCounter,
+          ticketKey: `T-${ticketCounter}`,
           workflowType: 'FULL',
         },
       });

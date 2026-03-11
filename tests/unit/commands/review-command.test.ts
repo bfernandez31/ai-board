@@ -32,7 +32,7 @@ describe('/review Command Workflow Configuration', () => {
     });
 
     it('should route /review to code-review with --force flag', () => {
-      expect(workflowContent).toContain('/ai-board.code-review $PR_NUMBER --force');
+      expect(workflowContent).toContain('"ai-board.code-review" "$PR_NUMBER --force"');
     });
 
     it('should detect /review pattern before general ai-board-assist', () => {
