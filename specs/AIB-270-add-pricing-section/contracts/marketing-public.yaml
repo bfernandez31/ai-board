@@ -1,0 +1,277 @@
+openapi: 3.1.0
+info:
+  title: Marketing Public Surfaces
+  version: 1.0.0
+  description: |
+    Contract for landing + legal routes and their linked flows (auth + billing).
+    All pages render Server Components that consume `lib/marketing/pricing-content.ts`.
+
+servers:
+  - url: /
+    description: Next.js App Router root
+
+paths:
+  /landing:
+    get:
+      summary: Marketing landing page
+      description: >
+        Renders hero, features, workflow, pricing section, FAQ, CTA, and shared footer.
+        Pricing + FAQ content must match `MarketingContent` schema and include analytics hooks.
+      operationId: getLanding
+      tags: [Marketing]
+      responses:
+        '200':
+          description: HTML markup for landing page
+          content:
+            text/html:
+              schema:
+                type: string
+          x-required-sections:
+            - HeroSection
+            - FeaturesGrid
+            - WorkflowSection
+            - PricingSection (PricingPlan[] + FAQ)
+            - CTASection
+            - Footer
+          x-analytics-hooks:
+            - data-analytics-id="pricing.plan.free"
+            - data-analytics-id="pricing.plan.pro"
+            - data-analytics-id="pricing.plan.team"
+            - data-analytics-id="pricing.cta.free"
+            - data-analytics-id="pricing.cta.pro"
+            - data-analytics-id="pricing.cta.team"
+            - data-analytics-id="faq.toggle.byok"
+            - data-analytics-id="faq.toggle.agents"
+
+  /terms:
+    get:
+      summary: Terms of Service page
+      description: Legal copy formerly under `/legal/terms`; now lives under marketing layout with footer.
+      operationId: getTerms
+      tags: [Marketing]
+      responses:
+        '200':
+          description: HTML page containing current Terms of Service
+          content:
+            text/html:
+              schema:
+                type: string
+          x-requirements:
+            - Shared footer rendered via `MarketingLayout`
+            - Links open in new tabs via `target="_blank"`
+
+  /privacy:
+    get:
+      summary: Privacy Policy page
+      description: Same legal content relocated from `/legal/privacy`.
+      operationId: getPrivacy
+      tags: [Marketing]
+      responses:
+        '200':
+          description: HTML page containing current Privacy Policy
+          content:
+            text/html:
+              schema:
+                type: string
+          x-requirements:
+            - Shared footer rendered via `MarketingLayout`
+            - Links open in new tabs via `target="_blank"`
+
+  /auth/signin:
+    get:
+      summary: OAuth gateway for marketing CTAs
+      description: Accepts optional `callbackUrl` query parameter so paid plan CTAs can redirect users into billing after auth.
+      operationId: getSignIn
+      tags: [Authentication]
+      parameters:
+        - name: callbackUrl
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri-reference
+          description: >
+            Absolute or relative URL to redirect to after successful sign-in.
+            Paid CTA convention: `/settings/billing?plan=PRO` or `/settings/billing?plan=TEAM`.
+      responses:
+        '200':
+          description: Sign-in form (GitHub OAuth plus disabled GitLab/Bitbucket)
+
+  /settings/billing:
+    get:
+      summary: Billing & subscription settings
+      description: >
+        Marketing CTAs deep-link here with `?plan=PRO|TEAM`.
+        Page must highlight the requested plan, show trial messaging, and keep upgrade flow behind existing CTA buttons.
+      operationId: getBilling
+      tags: [Billing]
+      parameters:
+        - name: plan
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PRO, TEAM]
+          description: >
+            Plan to pre-select/highlight when rendering pricing cards. When omitted, defaults to current subscription.
+      responses:
+        '200':
+          description: Billing dashboard HTML
+          content:
+            text/html:
+              schema:
+                type: string
+          x-behavior:
+            - Highlight requested plan card (add `data-plan-selected="true"`)
+            - Display trial banner before checkout button
+
+components:
+  schemas:
+    MarketingContent:
+      type: object
+      required: [plans, faq, footerLinks, faqIntro, disclaimer, lastUpdated]
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingPlan'
+          minItems: 3
+          maxItems: 3
+        faq:
+          type: array
+          items:
+            $ref: '#/components/schemas/FAQEntry'
+          minItems: 2
+          maxItems: 2
+        footerLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/FooterLink'
+          minItems: 3
+        faqIntro:
+          type: string
+          maxLength: 140
+        disclaimer:
+          type: string
+        lastUpdated:
+          type: string
+          format: date
+
+    PricingPlan:
+      type: object
+      required:
+        - id
+        - name
+        - pricePerMonth
+        - priceDisplay
+        - description
+        - featureBullets
+        - limitsSummary
+        - cta
+        - analyticsId
+      properties:
+        id:
+          type: string
+          enum: [free, pro, team]
+        name:
+          type: string
+        badge:
+          type: object
+          properties:
+            label:
+              type: string
+            tone:
+              type: string
+              enum: [primary, accent]
+        pricePerMonth:
+          type: number
+          example: 49
+        priceDisplay:
+          type: string
+          example: '$49/mo'
+        description:
+          type: string
+        featureBullets:
+          type: array
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/PlanFeature'
+        limitsSummary:
+          type: string
+        cta:
+          $ref: '#/components/schemas/PlanCTA'
+        analyticsId:
+          type: string
+          example: pricing.plan.pro
+
+    PlanFeature:
+      type: object
+      required: [label, availability]
+      properties:
+        label:
+          type: string
+        description:
+          type: string
+        availability:
+          type: string
+          enum: [included, limited, exclusive]
+
+    PlanCTA:
+      type: object
+      required: [label, href, style, analyticsId]
+      properties:
+        label:
+          type: string
+          example: Start 14-day trial
+        href:
+          type: string
+          example: /auth/signin?callbackUrl=/settings/billing?plan=PRO
+        style:
+          type: string
+          enum: [primary, secondary]
+        planKey:
+          type: string
+          enum: [PRO, TEAM]
+        trialLengthDays:
+          type: integer
+          minimum: 14
+        analyticsId:
+          type: string
+          example: pricing.cta.pro
+
+    FAQEntry:
+      type: object
+      required: [id, question, answer, defaultExpanded, analyticsId]
+      properties:
+        id:
+          type: string
+          example: faq-byok
+        question:
+          type: string
+        answer:
+          type: string
+        defaultExpanded:
+          type: boolean
+        analyticsId:
+          type: string
+          example: faq.toggle.byok
+
+    FooterLink:
+      type: object
+      required: [id, label, href, kind, opensInNewTab, analyticsId]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        href:
+          type: string
+        kind:
+          type: string
+          enum: [internal, external]
+        opensInNewTab:
+          type: boolean
+        analyticsId:
+          type: string
+        ariaLabel:
+          type: string
