@@ -116,6 +116,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       toolsUsed: new Set<string>(),
     };
 
+    // Track OTLP timestamps for Codex duration estimation (Codex doesn't report duration_ms)
+    let minCodexTimestampNs = Infinity;
+    let maxCodexTimestampNs = -Infinity;
+
     // Process each resourceLog
     for (const resourceLog of otlpData.resourceLogs) {
       // Extract job_id from resource attributes
@@ -165,13 +169,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             metrics.inputTokens += inputTokens;
             metrics.outputTokens += outputTokens;
             metrics.cacheReadTokens += cachedTokens;
-            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
             // Non-cached input tokens = total input - cached
             metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5-codex'), inputTokens - cachedTokens, outputTokens, cachedTokens);
+
+            // Track timestamps for duration estimation (Codex doesn't report duration_ms)
+            const tsNano = logRecord.observedTimeUnixNano || logRecord.timeUnixNano;
+            if (tsNano) {
+              const ns = typeof tsNano === 'string' ? Number(tsNano) : tsNano;
+              if (!isNaN(ns) && ns > 0) {
+                if (ns < minCodexTimestampNs) minCodexTimestampNs = ns;
+                if (ns > maxCodexTimestampNs) maxCodexTimestampNs = ns;
+              }
+            }
           }
 
           if (isToolEvent) {
@@ -180,6 +193,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           }
         }
       }
+    }
+
+    // Estimate Codex duration from OTLP timestamp span
+    if (minCodexTimestampNs < Infinity && maxCodexTimestampNs > -Infinity) {
+      metrics.durationMs += Math.round((maxCodexTimestampNs - minCodexTimestampNs) / 1_000_000);
     }
 
     // If no job_id found, return success but don't store (allows telemetry without job tracking)

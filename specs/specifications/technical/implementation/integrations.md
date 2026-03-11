@@ -433,6 +433,7 @@ sequenceDiagram
 - Event name is found in `attributes[event.name]` instead of the log body
 - Token data comes from `codex.sse_event` logs where `event.kind = response.completed`, with attributes: `input_token_count`, `output_token_count`, `cached_token_count`
 - Codex does not report `cost_usd`; the telemetry endpoint estimates cost from OpenAI API pricing based on token counts and the resolved model name
+- Codex does not report `duration_ms`; duration is estimated from the OTLP timestamp span (`max(observedTimeUnixNano) - min(observedTimeUnixNano)` across Codex token events in each batch, converted from nanoseconds to milliseconds)
 
 **Error Handling**:
 - Missing auth secret → exits before any CLI installation with descriptive message

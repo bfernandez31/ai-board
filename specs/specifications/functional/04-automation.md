@@ -131,7 +131,9 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 
 **Performance**:
 - Total duration of API calls in milliseconds
-- Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-6, codex-mini-latest)
+  - Claude reports `duration_ms` per API request; values are summed across all requests
+  - Codex does not report duration; duration is estimated from the OTLP timestamp span (`observedTimeUnixNano` min/max across token events in each batch)
+- Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-6, gpt-5-codex)
 
 **Tool Usage**:
 - List of tools used during execution (Edit, Write, Read, Bash, Glob, Grep, etc.)
