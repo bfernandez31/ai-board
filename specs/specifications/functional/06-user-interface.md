@@ -169,10 +169,9 @@ The user interface provides an intuitive, modern experience for managing tickets
 - Mandatory for quick implementation workflow
 
 **Quick-Impl Confirmation Modal**:
-- Includes an agent dropdown selector (in addition to existing benefits/trade-offs text)
-- Agent dropdown defaults to the project's default agent
-- Agent selection determines which AI executes the quick implementation
-- Dropdown positioned between the explanation text and the warning box
+- Displays benefits/trade-offs of skipping specification and planning phases
+- Agent is resolved automatically from the ticket's agent field (set in INBOX), falling back to project default, then CLAUDE
+- No agent selection in the modal — agent is configured on the ticket before transitioning
 
 **Cleanup Confirmation Dialog**:
 - Triggered when "Clean Project" menu option selected

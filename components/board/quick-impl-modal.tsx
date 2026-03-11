@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,27 +9,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
-import { Agent } from '@prisma/client';
-import {
-  getAgentLabel,
-  getAgentDescription,
-} from '@/app/lib/utils/agent-icons';
-import { AgentIcon } from '@/components/ui/agent-icon';
 
 interface QuickImplModalProps {
   open: boolean;
-  onConfirm: (agent?: Agent) => void;
+  onConfirm: () => void;
   onCancel: () => void;
-  defaultAgent?: Agent | undefined;
 }
 
 /**
@@ -39,30 +23,13 @@ interface QuickImplModalProps {
  *
  * Modal confirmation for INBOX → BUILD quick implementation workflow.
  * Warns user about trade-offs between speed and documentation.
- * Includes agent selection when defaultAgent is provided.
+ * Agent is resolved from ticket.agent → project.defaultAgent → CLAUDE at transition time.
  */
-export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: QuickImplModalProps) {
-  const [selectedAgent, setSelectedAgent] = useState<string>('project-default');
-  const [prevOpen, setPrevOpen] = useState(open);
-
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-    if (open) {
-      setSelectedAgent('project-default');
-    }
-  }
-
+export function QuickImplModal({ open, onConfirm, onCancel }: QuickImplModalProps) {
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       onCancel();
     }
-  };
-
-  const handleConfirm = () => {
-    const agent = selectedAgent === 'project-default'
-      ? undefined
-      : (selectedAgent as Agent);
-    onConfirm(agent);
   };
 
   return (
@@ -100,33 +67,6 @@ export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: Quic
             </ul>
           </div>
 
-          {/* Agent Selection - always shown per FR-011 */}
-          <div className="space-y-2">
-            <Label htmlFor="quick-impl-agent">AI Agent</Label>
-            <Select
-              value={selectedAgent}
-              onValueChange={setSelectedAgent}
-            >
-              <SelectTrigger id="quick-impl-agent">
-                <SelectValue placeholder="Use project default" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="project-default">
-                  Use project default{defaultAgent ? ` (${getAgentLabel(defaultAgent)})` : ''}
-                </SelectItem>
-                {Object.values(Agent).map((agentValue) => (
-                  <SelectItem key={agentValue} value={agentValue}>
-                    <span className="inline-flex items-center gap-1">
-                      <AgentIcon agent={agentValue} size={14} />
-                      {getAgentLabel(agentValue)} -{' '}
-                      {getAgentDescription(agentValue)}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3">
             <p className="text-sm text-amber-800 dark:text-amber-200">
               For complex features or architectural changes, use the full workflow (INBOX → SPECIFY → PLAN → BUILD).
@@ -143,7 +83,7 @@ export function QuickImplModal({ open, onConfirm, onCancel, defaultAgent }: Quic
             Cancel
           </Button>
           <Button
-            onClick={handleConfirm}
+            onClick={onConfirm}
             data-action="proceed"
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
