@@ -54,16 +54,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Log request metadata for debugging
+    const contentType = request.headers.get('content-type') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    console.log('[OTLP Telemetry] Request:', { contentType, userAgent });
+
     // Parse request body
     let body;
     try {
       body = await request.json();
     } catch (parseError) {
+      // If JSON parse fails, try reading as text for debugging
       console.error('[OTLP Telemetry] JSON parse error:', parseError);
       return NextResponse.json(
         { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
+    }
+
+    // Debug: log full body structure for non-Claude agents
+    if (userAgent.includes('Rust') || userAgent.includes('OTel')) {
+      console.log('[OTLP Telemetry] Codex body:', JSON.stringify(body).slice(0, 2000));
+    }
+
+    // OTLP protobuf JSON uses snake_case (resource_logs), but our schema expects camelCase (resourceLogs)
+    // Normalize snake_case keys to camelCase for compatibility
+    if (body && !body.resourceLogs && body.resource_logs) {
+      body = normalizeOtlpKeys(body);
     }
 
     // Validate OTLP schema
@@ -232,4 +249,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Normalize OTLP protobuf JSON snake_case keys to camelCase.
+ * The Rust OTLP exporter uses snake_case (resource_logs, scope_logs, log_records, etc.)
+ * while the JS OTLP exporter uses camelCase (resourceLogs, scopeLogs, logRecords, etc.)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeOtlpKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(normalizeOtlpKeys);
+  }
+  if (obj && typeof obj === 'object') {
+    const snakeToCamelMap: Record<string, string> = {
+      resource_logs: 'resourceLogs',
+      scope_logs: 'scopeLogs',
+      log_records: 'logRecords',
+      time_unix_nano: 'timeUnixNano',
+      observed_time_unix_nano: 'observedTimeUnixNano',
+      severity_number: 'severityNumber',
+      severity_text: 'severityText',
+      string_value: 'stringValue',
+      int_value: 'intValue',
+      double_value: 'doubleValue',
+      bool_value: 'boolValue',
+      array_value: 'arrayValue',
+      dropped_attributes_count: 'droppedAttributesCount',
+      trace_id: 'traceId',
+      span_id: 'spanId',
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const camelKey = snakeToCamelMap[key] || key;
+      result[camelKey] = normalizeOtlpKeys(value);
+    }
+    return result;
+  }
+  return obj;
 }
