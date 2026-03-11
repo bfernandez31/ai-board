@@ -71,6 +71,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!validationResult.success) {
       console.error('[OTLP Telemetry] Schema validation failed:', {
         errors: validationResult.error.issues,
+        receivedKeys: Object.keys(body || {}),
+        bodyPreview: JSON.stringify(body).slice(0, 500),
       });
       return NextResponse.json(
         { error: 'Invalid OTLP format' },
