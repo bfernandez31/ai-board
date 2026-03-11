@@ -31,4 +31,13 @@ describe('Footer', () => {
     const currentYear = new Date().getFullYear().toString();
     expect(screen.getByText(new RegExp(`${currentYear}.*AI Board`))).toBeInTheDocument();
   });
+
+  it('should render GitHub link with correct href', () => {
+    render(<Footer />);
+
+    const githubLink = screen.getByRole('link', { name: 'GitHub' });
+    expect(githubLink).toBeInTheDocument();
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/bfernandez31/ai-board');
+    expect(githubLink).toHaveAttribute('target', '_blank');
+  });
 });
