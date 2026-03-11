@@ -130,9 +130,9 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 | gpt-5.3-codex | $1.75 | $14.00 | $0.875 |
 
 **Performance**:
-- Total duration of API calls in milliseconds
-  - Claude reports `duration_ms` per API request; values are summed across all requests
-  - Codex does not report duration; duration is estimated from the OTLP timestamp span (`observedTimeUnixNano` min/max across token events in each batch)
+- Total duration in milliseconds
+  - Claude reports `duration_ms` per API request; values are summed across all telemetry batches
+  - Codex does not report duration; when the job reaches a terminal state (COMPLETED/FAILED/CANCELLED), duration is backfilled from the job wall clock (`completedAt - startedAt`)
 - Primary model used (e.g., claude-sonnet-4-5, claude-opus-4-6, gpt-5-codex)
 
 **Tool Usage**:
