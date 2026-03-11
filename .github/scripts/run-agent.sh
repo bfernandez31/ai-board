@@ -151,7 +151,8 @@ invoke_codex() {
 
   log_info "Invoking Codex with command file: $command_file"
 
-  local model="${CODEX_MODEL:-codex-mini-latest}"
+  local model="${CODEX_MODEL:-gpt-5-codex}"
+  local reasoning="${CODEX_REASONING:-high}"
   local prompt
   prompt="$(cat "$command_file")"
 
@@ -161,7 +162,8 @@ invoke_codex() {
 ${ARGS}"
   fi
 
-  echo "$prompt" | codex exec --full-auto -m "$model" -
+  log_info "Model: $model | Reasoning: $reasoning"
+  echo "$prompt" | codex exec --full-auto -m "$model" -c "reasoning_effort=\"$reasoning\"" -
 }
 
 # --- Main dispatch ---
