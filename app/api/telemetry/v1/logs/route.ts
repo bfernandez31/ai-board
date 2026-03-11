@@ -77,6 +77,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.log('[OTLP Telemetry] Codex body:', JSON.stringify(body).slice(0, 2000));
     }
 
+    // Ignore traces/metrics that arrive at the logs endpoint (Codex may send all signals here)
+    if (body && (body.resourceSpans || body.resource_spans || body.resourceMetrics || body.resource_metrics)) {
+      return NextResponse.json({ status: 'accepted', message: 'Traces/metrics ignored at logs endpoint' }, { status: 200 });
+    }
+
     // OTLP protobuf JSON uses snake_case (resource_logs), but our schema expects camelCase (resourceLogs)
     // Normalize snake_case keys to camelCase for compatibility
     if (body && !body.resourceLogs && body.resource_logs) {
@@ -133,15 +138,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const eventName = logRecord.body?.stringValue
             || String(findAttribute(attrs, 'event.name') ?? '');
 
-          const isApiRequest = ['claude_code.api_request', 'codex.api_request', 'codex.api_call'].includes(eventName);
-          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool.call', 'codex.tool_result'].includes(eventName);
+          // Claude: token data in claude_code.api_request
+          const isClaudeApiRequest = eventName === 'claude_code.api_request';
+          // Codex: token data in codex.sse_event with event.kind = "response.completed"
+          const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
+          const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
 
-          if (isApiRequest) {
+          const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
+
+          if (isClaudeApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
             metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_tokens'));
             metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cache_read_tokens'));
             metrics.cacheCreationTokens += parseIntAttribute(findAttribute(attrs, 'cache_creation_tokens'));
             metrics.costUsd += parseFloatAttribute(findAttribute(attrs, 'cost_usd'));
+            metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
+            const model = findAttribute(attrs, 'model');
+            if (model) metrics.model = String(model);
+          }
+
+          if (isCodexTokenEvent) {
+            // Codex uses different attribute names for token counts
+            metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_token_count'));
+            metrics.outputTokens += parseIntAttribute(findAttribute(attrs, 'output_token_count'));
+            metrics.cacheReadTokens += parseIntAttribute(findAttribute(attrs, 'cached_token_count'));
             metrics.durationMs += parseIntAttribute(findAttribute(attrs, 'duration_ms'));
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
