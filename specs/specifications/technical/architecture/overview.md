@@ -89,6 +89,35 @@ ai-board/
         └── constitution.md       # Project conventions
 ```
 
+### Public Landing Surface
+
+**Composition**:
+- `app/landing/page.tsx` stitches together `HeroSection`, `FeaturesGrid`, `WorkflowSection`, the new `PricingSection`, and `CTASection` so marketing content renders in a single scroll. The component intentionally remains server-side except for the pricing block to reduce client JS.
+- `components/landing/pricing-section.tsx` is a client component because it manages accordion state. It exports typed `Plan` and `Faq` arrays to keep copy centralized and to drive deterministic rendering + tests.
+- `components/layout/footer.tsx` is shared across public/authenticated routes and now imports `Github` from `lucide-react` to expose the repository link beside legal navigation.
+
+**Pricing Section Implementation**:
+- Plan data lives alongside the component and uses discriminated objects (`highlighted: boolean`) to control styling. CTAs always link to `/auth/signin` so trials route through the authentication funnel (no anonymous checkout paths).
+- Buttons reuse the shared shadcn `Button` with `variant` toggled per plan. Test IDs (`data-testid=\"pricing-card-{plan}\"` and `faq-toggle-{index}`) make unit tests deterministic without relying on copy changes.
+- FAQ accordion stores the open index in local state. Tapping an already open question collapses it, mirroring disclosure widget behavior:
+```typescript
+const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+function handleFaqToggle(index: number): void {
+  setOpenFaq((current) => (current === index ? null : index));
+}
+```
+- Icons: `Check` bullets mark included features while `ChevronDown`/`ChevronUp` signal accordion state. This keeps the component within the approved lucide-react icon set.
+- Layout relies on Tailwind utility classes only (`grid grid-cols-1 md:grid-cols-3`, `container mx-auto px-4`). Highlighted cards compose classes by merging `baseCardClasses` with either `highlightedCardClasses` or `standardCardClasses`, preserving consistent spacing across breakpoints.
+
+**Testing & QA**:
+- Unit coverage lives in `tests/unit/components/pricing-section.test.tsx`. Tests assert that all plan cards render, CTAs use the correct labels, the \"Most Popular\" chip appears only on the Pro plan, and FAQ answers toggle on click via `userEvent`.
+- Footer behavior is validated in `tests/unit/components/footer.test.tsx`, ensuring the GitHub link renders, points to `https://github.com/bfernandez31/ai-board`, and opens in a new tab for accessibility/security (`target=\"_blank\"`, `rel=\"noopener noreferrer\"`).
+
+**Footer Link Implementation**:
+- The footer now memoizes the current year (`const currentYear = new Date().getFullYear();`) before render to avoid repeated instantiations.
+- Navigation links share classnames (`legalLinkClass`, `iconLinkClass`) for consistent hover transitions. The GitHub icon is wrapped in an anchor with `aria-label=\"GitHub\"`, matching keyboard/screen reader expectations while reusing the muted palette defined elsewhere in the layout system.
+
 ### Data Flow Patterns
 
 #### Request Flow (API)

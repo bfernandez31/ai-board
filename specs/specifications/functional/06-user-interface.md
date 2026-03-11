@@ -11,12 +11,14 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
 - Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- Icon link: GitHub mark button opens `https://github.com/bfernandez31/ai-board` in a new tab (aria-label "GitHub")
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
 - Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
 - Separated from content by a top border
+- GitHub icon uses lucide-react `Github` glyph sized 16px, aligned with legal links
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
 
@@ -97,6 +99,38 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - GPU-accelerated transforms for smooth animation
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
+
+### Pricing Section
+
+**Placement**: Appears after the workflow explainer and before the CTA banner on `/landing` to keep pricing details close to the conversion button.
+
+**Structure**:
+- Three cards (Free, Pro, Team) rendered via `PricingSection` component with shared layout and per-plan copy.
+- Cards display plan name, monthly price, billing period suffix (`/month`), short description, feature list, and CTA button.
+- Pro plan shows a "Most Popular" pill positioned above the card and is visually highlighted with a purple-tinted surface.
+- Cards include data-test IDs (`pricing-card-{plan}`) to support unit tests and UI monitoring.
+
+**Plan Details**:
+
+| Plan | Price | CTA | Feature Highlights |
+|------|-------|-----|--------------------|
+| Free | $0/month | "Get Started" | 1 project, 5 tickets/month, BYOK AI key required, community support |
+| Pro | $15/month | "Start 14-day trial" | Unlimited projects/tickets, 14-day managed AI trial, priority support |
+| Team | $30/month | "Start 14-day trial" | Everything in Pro + up to 10 members/project + advanced analytics |
+
+- All CTA buttons navigate to `/auth/signin`, ensuring visitors authenticate before starting a trial or creating projects.
+- Button variants follow shadcn styles: outlined buttons for Free/Team, solid button for highlighted Pro card.
+
+**FAQ Accordion**:
+- Positioned under the pricing grid with heading "Frequently Asked Questions".
+- Contains two entries covering BYOK requirements and supported AI agents (Claude Code, Codex).
+- Each FAQ row toggles open/closed using chevron icons and preserves state in the browser session.
+- Closed answers remain hidden for screen readers until toggled; aria labels come from button text, no custom IDs needed.
+
+**Responsiveness & Accessibility**:
+- Section uses `container mx-auto` pattern with responsive vertical padding (16/24/32). Cards stack in one column on mobile and use a three-column grid from `md` breakpoint upward.
+- FAQ toggle buttons span the full width with 44px padding targets and respond to keyboard activation via native `<button>` semantics.
+- Color palette sticks to Catppuccin-derived CSS variables for consistency with the rest of the marketing site.
 
 ## Visual Design
 
