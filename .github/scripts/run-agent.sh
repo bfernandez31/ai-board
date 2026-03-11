@@ -109,7 +109,7 @@ setup_codex_telemetry() {
 [otel]
 log_user_prompt = true
 environment = "ci"
-exporter = { otlp-http = { endpoint = "${OTEL_EXPORTER_OTLP_ENDPOINT}", protocol = "json", headers = { "Authorization" = "${auth_header}" } } }
+exporter = { otlp-http = { endpoint = "${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs", protocol = "json", headers = { "Authorization" = "${auth_header}" } } }
 TOML
   )
 
