@@ -14,7 +14,7 @@ export default async function SignInPage({
   const callbackUrl = params.callbackUrl || "/projects"
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] items-center justify-center px-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] items-center justify-center px-4">
       <Card className="w-full max-w-md border-[#8B5CF6] border-2">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome to AI Board</CardTitle>
