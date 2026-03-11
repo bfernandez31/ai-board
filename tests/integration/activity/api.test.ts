@@ -348,7 +348,7 @@ describe('Activity Feed API', () => {
       );
 
       expect(ticketEvent).toBeDefined();
-      expect(ticketEvent?.ticket.ticketKey).toMatch(/^[A-Z]+-\d+$/);
+      expect(ticketEvent?.ticket.ticketKey).toMatch(/^[A-Z][A-Z0-9]+-\d+$/);
       expect(ticketEvent?.ticket.exists).toBe(true);
       expect(ticketEvent?.ticket.title).toBe('[e2e] Test Ticket for Activity');
     });

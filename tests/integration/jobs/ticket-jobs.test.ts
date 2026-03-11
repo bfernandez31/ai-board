@@ -134,23 +134,17 @@ describe('Ticket Jobs API', () => {
     });
 
     it('should return 403 for ticket in different project', async () => {
-      // Create a second project to test cross-project access
-      const project2Response = await ctx.api.post<{ id: number }>('/api/projects', {
-        name: '[e2e] Cross Project Test',
-        key: 'CPT',
-      });
-      const project2Id = project2Response.data.id;
+      // Use a different existing worker project to test cross-project access
+      // Pick a project ID that is different from the current worker's project
+      const otherProjectId = ctx.projectId === 1 ? 2 : 1;
 
-      // Try to access ticket from project 1 via project 2's endpoint
+      // Try to access ticket from project 1 via a different project's endpoint
       const response = await ctx.api.get<{ error: string }>(
-        `/api/projects/${project2Id}/tickets/${ticketId}/jobs`
+        `/api/projects/${otherProjectId}/tickets/${ticketId}/jobs`
       );
 
       expect(response.status).toBe(403);
       expect(response.data.error).toBe('Forbidden');
-
-      // Cleanup: delete the second project
-      await prisma.project.delete({ where: { id: project2Id } });
     });
 
     it('should return multiple jobs in order', async () => {

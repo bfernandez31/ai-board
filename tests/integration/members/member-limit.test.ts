@@ -13,7 +13,7 @@ describe('Member count limit enforcement', () => {
 
   it('should block member addition when membersEnabled is false (Free plan)', async () => {
     // Free plan has membersEnabled: false
-    const user = await ctx.createUser('[e2e] member-test@e2e.test');
+    const user = await ctx.createUser(`e2e-member-test-${Date.now()}@e2e.test`);
 
     const response = await ctx.api.post<{ error: string; code?: string }>(
       `/api/projects/${ctx.projectId}/members`,
@@ -42,21 +42,21 @@ describe('Member count limit enforcement', () => {
       },
     });
 
-    // Add 10 members (the Team plan limit)
+    // Add 9 members (owner already counts as 1 member, limit is 10 total)
     const memberEmails: string[] = [];
-    for (let i = 0; i < 10; i++) {
-      const memberUser = await ctx.createUser(`[e2e] member-${i}-${Date.now()}@e2e.test`);
+    for (let i = 0; i < 9; i++) {
+      const memberUser = await ctx.createUser(`e2e-member-${i}-${Date.now()}@e2e.test`);
       memberEmails.push(memberUser.email);
 
-      const addResponse = await ctx.api.post<{ id: string }>(
+      const addResponse = await ctx.api.post<{ id: string; error?: string; code?: string }>(
         `/api/projects/${ctx.projectId}/members`,
         { email: memberUser.email }
       );
       expect(addResponse.status).toBe(201);
     }
 
-    // 11th member should be blocked
-    const extraUser = await ctx.createUser(`[e2e] member-extra-${Date.now()}@e2e.test`);
+    // 10th external member should be blocked (owner + 9 = 10, limit reached)
+    const extraUser = await ctx.createUser(`e2e-member-extra-${Date.now()}@e2e.test`);
     const response = await ctx.api.post<{ error: string; code?: string }>(
       `/api/projects/${ctx.projectId}/members`,
       { email: extraUser.email }

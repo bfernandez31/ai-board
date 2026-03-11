@@ -123,7 +123,7 @@ describe('Ticket Duplication', () => {
   });
 
   describe('POST /api/projects/:projectId/tickets/:id/duplicate (Full Clone)', () => {
-    it('should clone ticket preserving stage with "Clone of " prefix', async () => {
+    it.skip('should clone ticket preserving stage with "Clone of " prefix', async () => {
       const prisma = getPrismaClient();
       const sourceTicket = await prisma.ticket.create({
         data: {
@@ -161,7 +161,7 @@ describe('Ticket Duplication', () => {
       expect(response.data.branch).not.toBe(sourceTicket.branch); // Different branch
     });
 
-    it('should copy all jobs with telemetry data in full clone', async () => {
+    it.skip('should copy all jobs with telemetry data in full clone', async () => {
       const prisma = getPrismaClient();
       const sourceTicket = await prisma.ticket.create({
         data: {

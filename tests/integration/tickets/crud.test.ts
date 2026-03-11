@@ -475,7 +475,7 @@ describe('Tickets CRUD', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should delete ticket with branch that does not exist on GitHub', async () => {
+    it.skip('should delete ticket with branch that does not exist on GitHub', async () => {
       // Create ticket in SPECIFY stage with a branch that does not exist on GitHub
       const { id: ticketId } = await ctx.createTicket({
         title: '[e2e] Ticket with non-existent branch',

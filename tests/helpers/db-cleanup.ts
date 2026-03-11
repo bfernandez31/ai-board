@@ -331,6 +331,11 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
       },
     });
 
+    // Delete test user subscriptions to prevent plan pollution between tests
+    await client.subscription.deleteMany({
+      where: { userId: 'test-user-id' },
+    });
+
     // Reset test project policies to AUTO for test isolation
     await client.project.updateMany({
       where: projectId
