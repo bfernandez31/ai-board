@@ -11,11 +11,12 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
 - Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- GitHub repository icon link (opens in new tab, `aria-label="GitHub repository"`)
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Links and GitHub icon use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -56,6 +57,44 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+The landing page is composed of sequential marketing sections rendered as a Server Component:
+
+1. **Hero Section** — headline, CTA, animated background
+2. **Features Grid** — product feature highlights
+3. **Workflow Section** — kanban stage explanation
+4. **Pricing Section** — plan comparison cards and FAQ
+5. **CTA Section** — final conversion prompt
+
+**Component**: `app/landing/page.tsx`
+
+---
+
+### Pricing Section
+
+Displays subscription plan options to unauthenticated visitors on the landing page (`#pricing` anchor).
+
+**Plans displayed**:
+
+| Plan | Price | Highlights |
+|------|-------|------------|
+| Free | $0/mo | 1 project, 5 tickets/month, BYOK required |
+| Pro | $15/mo | Unlimited projects & tickets, BYOK required, 14-day trial — **Most Popular** |
+| Team | $30/mo | Everything in Pro, up to 10 project members, advanced analytics, 14-day trial |
+
+**Layout**:
+- Three-column card grid (`md:grid-cols-3`), stacked on mobile
+- Pro plan card is visually highlighted with purple border/glow and a "Most Popular" badge
+- Each card: plan name, price, description, feature checklist, CTA button linking to `/auth/signin`
+
+**FAQ**:
+- Two questions below the pricing grid:
+  - "What is BYOK (Bring Your Own Key)?" — explains users provide their own AI provider keys
+  - "Which AI agents are supported?" — Claude (Anthropic) supported; more planned
+
+**Component**: `components/landing/pricing-section.tsx`
+
+---
 
 ### Hero Section Background Animation
 
