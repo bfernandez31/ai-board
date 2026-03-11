@@ -66,6 +66,7 @@ jobs:
 
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
       SKIP_TESTS: ${{ inputs.workflowType == 'QUICK' || true}}
       APP_URL: ${{ vars.APP_URL }}

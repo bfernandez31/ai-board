@@ -31,8 +31,8 @@ validate_auth() {
       fi
       ;;
     CODEX)
-      if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-        log_error "OPENAI_API_KEY is required for agent type CODEX"
+      if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${CODEX_AUTH_JSON:-}" ]]; then
+        log_error "OPENAI_API_KEY or CODEX_AUTH_JSON is required for agent type CODEX"
         exit 1
       fi
       ;;
@@ -74,7 +74,17 @@ install_codex() {
   log_info "Codex CLI installed successfully"
 
   log_info "Authenticating Codex CLI..."
-  codex login --api-key "$OPENAI_API_KEY"
+  if [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
+    # OAuth token flow: restore auth.json from base64-encoded secret
+    mkdir -p ~/.codex
+    echo "$CODEX_AUTH_JSON" | base64 -d > ~/.codex/auth.json
+    chmod 600 ~/.codex/auth.json
+    log_info "Codex authenticated via OAuth token (auth.json)"
+  else
+    # API key flow
+    codex login --api-key "$OPENAI_API_KEY"
+    log_info "Codex authenticated via API key"
+  fi
 }
 
 setup_codex_telemetry() {
