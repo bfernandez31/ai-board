@@ -517,6 +517,12 @@ export const config = {
 - Preserves original URL in `callbackUrl` parameter
 - Protected routes: `/projects/*` and `/api/projects/*`
 
+**Public Routes** (no authentication required):
+- `/` — Landing page
+- `/auth/signin` — Sign-in page
+- `/legal/terms` — Terms of Service
+- `/legal/privacy` — Privacy Policy
+
 ## Security Considerations
 
 ### Session Security
