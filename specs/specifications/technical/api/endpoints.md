@@ -2518,6 +2518,7 @@ All error responses follow a consistent structure:
 | `CLEANUP_IN_PROGRESS` | Transitions blocked during cleanup (423) |
 | `CLEANUP_ALREADY_RUNNING` | Cleanup workflow already in progress (409) |
 | `NO_CHANGES` | No shipped tickets to clean up (400) |
+| `PLAN_LIMIT` | Action blocked because user has reached their plan quota (403) |
 
 ### HTTP Status Codes
 
@@ -2851,7 +2852,7 @@ Returns all available subscription plans with pricing and feature details.
     "plan": "FREE",
     "priceMonthly": 0,
     "features": ["1 project", "5 tickets per month", "BYOK API key required"],
-    "limits": { "maxProjects": 1, "maxTicketsPerMonth": 5, "membersEnabled": false, "advancedAnalytics": false },
+    "limits": { "maxProjects": 1, "maxTicketsPerMonth": 5, "membersEnabled": false, "maxMembersPerProject": 0, "advancedAnalytics": false },
     "trial": { "enabled": false, "days": 0 }
   },
   {
@@ -2859,7 +2860,7 @@ Returns all available subscription plans with pricing and feature details.
     "plan": "PRO",
     "priceMonthly": 1500,
     "features": ["Unlimited projects", "Unlimited tickets", "14-day free trial"],
-    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": false, "advancedAnalytics": false },
+    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": false, "maxMembersPerProject": 0, "advancedAnalytics": false },
     "trial": { "enabled": true, "days": 14 }
   },
   {
@@ -2867,13 +2868,13 @@ Returns all available subscription plans with pricing and feature details.
     "plan": "TEAM",
     "priceMonthly": 3000,
     "features": ["Everything in Pro", "Project members", "Advanced analytics", "14-day free trial"],
-    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": true, "advancedAnalytics": true },
+    "limits": { "maxProjects": null, "maxTicketsPerMonth": null, "membersEnabled": true, "maxMembersPerProject": 10, "advancedAnalytics": true },
     "trial": { "enabled": true, "days": 14 }
   }
 ]
 ```
 
-**Notes**: `priceMonthly` is in cents (USD). `null` limits mean no limit enforced.
+**Notes**: `priceMonthly` is in cents (USD). `null` limits mean no limit enforced. `maxMembersPerProject: 0` means members are not allowed (membersEnabled is false).
 
 ---
 
@@ -2896,6 +2897,7 @@ Returns the authenticated user's current subscription state and enforced limits.
     "maxProjects": null,
     "maxTicketsPerMonth": null,
     "membersEnabled": false,
+    "maxMembersPerProject": 0,
     "advancedAnalytics": false
   }
 }
@@ -2903,7 +2905,51 @@ Returns the authenticated user's current subscription state and enforced limits.
 
 **Status values**: `active`, `trialing`, `past_due`, `canceled`, `none`
 
-**Notes**: `limits` reflects the *effective* plan (Free limits apply during grace period expiry or after cancellation, regardless of `plan` field value).
+**Notes**: `limits` reflects the *effective* plan (Free limits apply during grace period expiry or after cancellation, regardless of `plan` field value). `maxMembersPerProject: 0` means members are not allowed.
+
+---
+
+### GET /api/billing/usage
+
+Returns the authenticated user's current plan usage against their plan limits.
+
+**Authentication**: Required (session)
+
+**Response** (200 OK):
+```json
+{
+  "plan": "FREE",
+  "planName": "Free",
+  "projects": {
+    "current": 1,
+    "max": 1
+  },
+  "ticketsThisMonth": {
+    "current": 3,
+    "max": 5,
+    "resetDate": "2026-04-01T00:00:00.000Z"
+  },
+  "status": "none",
+  "gracePeriodEndsAt": null
+}
+```
+
+**Fields**:
+- `plan`: Current effective plan (`FREE`, `PRO`, `TEAM`)
+- `planName`: Human-readable plan name
+- `projects.current`: Number of projects owned by the user
+- `projects.max`: Maximum allowed projects (`null` = unlimited)
+- `ticketsThisMonth.current`: Tickets created since the 1st of the current calendar month (UTC)
+- `ticketsThisMonth.max`: Monthly ticket limit (`null` = unlimited)
+- `ticketsThisMonth.resetDate`: ISO timestamp of next monthly counter reset (1st of next month, UTC)
+- `status`: Subscription status (`active`, `trialing`, `past_due`, `canceled`, `none`)
+- `gracePeriodEndsAt`: ISO timestamp of grace period end (nullable)
+
+**Notes**: `max: null` means no limit enforced (Pro and Team plans). Used by `useUsage` hook to power dashboard usage banner and ticket creation form indicators.
+
+**Errors**:
+- `401`: Not authenticated
+- `500`: Database error
 
 ---
 

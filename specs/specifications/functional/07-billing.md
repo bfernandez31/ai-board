@@ -24,11 +24,12 @@ AI-Board provides three subscription tiers (Free, Pro, Team) with Stripe-based b
 
 The system enforces limits at the API layer before any create operation:
 
-- **Free plan - project limit**: Attempting to create a second project returns an upgrade prompt error.
-- **Free plan - ticket limit**: Attempting to create more than 5 tickets in the current calendar month returns a limit-reached error with an upgrade prompt.
+- **Free plan - project limit**: Attempting to create a second project returns a `PLAN_LIMIT` (403) error with an upgrade prompt.
+- **Free plan - ticket limit**: Attempting to create more than 5 tickets in the current calendar month returns a `PLAN_LIMIT` (403) error with an upgrade prompt. The counter resets on the 1st of each calendar month at midnight UTC.
 - **Pro/Team plan**: No project or ticket limits enforced.
-- **Member invitations**: Only available on Team plan. Free and Pro users cannot invite project members.
-- **Advanced analytics**: Only available on Team plan.
+- **Member invitations**: Only available on Team plan. Free and Pro users cannot invite project members (`PLAN_LIMIT` 403).
+- **Team plan - member count**: Maximum 10 members per project. Attempting to add an 11th member returns a `PLAN_LIMIT` (403) error.
+- **Advanced analytics**: Only available on Team plan. Non-Team users see an upgrade prompt gate.
 
 ### Effective Plan
 
@@ -39,6 +40,41 @@ The limits applied to a user depend on the *effective plan*, not just the subscr
 - **Past Due (grace period expired)**: Free plan limits apply.
 - **Canceled**: Free plan limits apply.
 - **No subscription**: Free plan limits apply.
+
+## Usage Visibility
+
+Users see their current plan consumption at contextual touchpoints without navigating to a dedicated usage page.
+
+### Dashboard Usage Banner
+
+A usage banner appears on the projects list page (`/projects`) for all users:
+
+- **Free plan**: Shows quota counters — e.g., `1/1 projects | 3/5 tickets this month | Free Plan`
+- **Pro plan**: Shows plan name only — `Pro Plan` (no numeric quotas, limits are unlimited)
+- **Team plan**: Shows plan name only — `Team Plan`
+
+### Ticket Creation Form
+
+When a Free-plan user opens the new ticket modal:
+- Their current monthly ticket usage is shown — e.g., `3/5 tickets used this month`
+- When the limit is reached, the form submit button is disabled and an upgrade prompt replaces the form
+
+### Project Creation Gate
+
+When a Free-plan user is at their project limit:
+- The "New Project" button is disabled
+- An upgrade prompt explains the limit and links to `/settings/billing`
+
+### Grace Period Warning
+
+When a user's subscription is `past_due` and within the 7-day grace period, the usage banner displays a warning:
+> "Payment failed. Your plan limits will be reduced to Free on [date]. Update payment method."
+
+The warning links to `/settings/billing` (Stripe customer portal).
+
+### Data Source
+
+Usage data is fetched from `GET /api/billing/usage` via the `useUsage` hook (TanStack Query, 15-second polling interval). Usage counts are invalidated on project and ticket creation mutations to reflect changes immediately.
 
 ## Billing Page
 
@@ -101,8 +137,16 @@ If a Team user has active project members and attempts to downgrade, the system 
 
 When a user deletes their account, any active Stripe subscription is cancelled via the API before the account is removed, preventing orphaned billing records.
 
+## Downgrade Behavior
+
+When a user downgrades (or reverts to Free plan after grace period expiry), existing resources are preserved but new creation is blocked:
+
+- **Excess projects**: Existing projects remain accessible; new project creation is blocked until the user is under the limit.
+- **Excess tickets**: Tickets already created that month remain; new ticket creation is blocked until the monthly counter resets.
+- **Existing members**: Members retain access; no new members can be added.
+
 ## Access Control
 
 - Billing endpoints require authenticated session (same as all other API endpoints).
 - Plan-based gating is enforced server-side in API route handlers.
-- Client-side UI reflects current limits (e.g., hides "Invite Member" on Free/Pro plans) but server-side enforcement is authoritative.
+- Client-side UI reflects current limits (e.g., hides "Invite Member" on Free/Pro plans, disables creation buttons when quota is reached) but server-side enforcement is authoritative.
