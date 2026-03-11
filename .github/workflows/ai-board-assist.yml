@@ -279,8 +279,8 @@ jobs:
                 OUTPUT=$(printf '@[%s:%s] ❌ **Review Failed**\n\nNo PR found for branch `%s`.\n\nPlease ensure a PR has been created before requesting a review.' "$USER_ID" "$USER" "$BRANCH")
               else
                 echo "✅ Found PR #$PR_NUMBER for branch $BRANCH"
-                # Invoke code-review with --force flag to allow re-reviews
-                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-review" "$PR_NUMBER --force" || true)
+                # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents
+                OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER --force" || true)
 
                 # Add user mention and summary wrapper if code-review succeeded
                 if [ -n "$OUTPUT" ]; then

@@ -61,11 +61,10 @@ export async function GET(
     // 2. Authorization: Verify project ownership (also validates authentication)
     await verifyProjectOwnership(projectIdNumber);
 
-    // 3. Fetch project members from ProjectMember join table (exclude system user)
+    // 3. Fetch project members from ProjectMember join table (includes AI-BOARD for mentions)
     const projectMembers = await prisma.projectMember.findMany({
       where: {
         projectId: projectIdNumber,
-        user: { email: { not: 'ai-board@system.local' } },
       },
       include: {
         user: {

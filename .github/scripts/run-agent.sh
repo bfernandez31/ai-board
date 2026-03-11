@@ -42,6 +42,10 @@ validate_auth() {
 # --- Claude functions ---
 
 install_claude() {
+  if command -v claude &>/dev/null; then
+    log_info "Claude Code CLI already installed — skipping"
+    return 0
+  fi
   log_info "Installing Claude Code CLI..."
   if ! bun add -g @anthropic-ai/claude-code; then
     log_error "Failed to install @anthropic-ai/claude-code"
@@ -62,6 +66,10 @@ invoke_claude() {
 # --- Codex functions ---
 
 install_codex() {
+  if command -v codex &>/dev/null; then
+    log_info "Codex CLI already installed — skipping"
+    return 0
+  fi
   log_info "Installing Codex CLI..."
   if ! bun add -g @openai/codex; then
     log_error "Failed to install @openai/codex"

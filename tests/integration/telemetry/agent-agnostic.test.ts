@@ -76,16 +76,14 @@ describe('Agent-Agnostic Telemetry', () => {
   });
 
   describe('US1: Codex Telemetry Ingestion', () => {
-    it('T004: Codex api_request event updates Job with correct token/cost metrics', async () => {
+    it('T004: Codex sse_event (response.completed) updates Job with correct token metrics', async () => {
       const payload = buildOtlpPayload(jobId, [{
-        body: { stringValue: 'codex.api_request' },
+        body: { stringValue: 'codex.sse_event' },
         attributes: [
-          { key: 'input_tokens', value: { stringValue: '500' } },
-          { key: 'output_tokens', value: { stringValue: '200' } },
-          { key: 'cache_read_tokens', value: { stringValue: '100' } },
-          { key: 'cache_creation_tokens', value: { stringValue: '50' } },
-          { key: 'cost_usd', value: { stringValue: '0.03' } },
-          { key: 'duration_ms', value: { stringValue: '1500' } },
+          { key: 'event.kind', value: { stringValue: 'response.completed' } },
+          { key: 'input_token_count', value: { stringValue: '500' } },
+          { key: 'output_token_count', value: { stringValue: '200' } },
+          { key: 'cached_token_count', value: { stringValue: '100' } },
           { key: 'model', value: { stringValue: 'codex-mini-latest' } },
         ],
       }]);
@@ -98,22 +96,21 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.inputTokens).toBe(500);
       expect(job!.outputTokens).toBe(200);
       expect(job!.cacheReadTokens).toBe(100);
-      expect(job!.cacheCreationTokens).toBe(50);
-      expect(job!.costUsd).toBeCloseTo(0.03);
-      expect(job!.durationMs).toBe(1500);
+      // Cost is estimated from OpenAI pricing, not reported directly
+      expect(job!.costUsd).toBeGreaterThan(0);
       expect(job!.model).toBe('codex-mini-latest');
     });
 
-    it('T005: Codex tool.call event adds tool names to Job toolsUsed', async () => {
+    it('T005: Codex tool_result event adds tool names to Job toolsUsed', async () => {
       const payload = buildOtlpPayload(jobId, [
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_result' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'shell' } },
           ],
         },
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_decision' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'file_read' } },
           ],
@@ -132,15 +129,16 @@ describe('Agent-Agnostic Telemetry', () => {
       // First batch
       const payload1 = buildOtlpPayload(jobId, [
         {
-          body: { stringValue: 'codex.api_request' },
+          body: { stringValue: 'codex.sse_event' },
           attributes: [
-            { key: 'input_tokens', value: { stringValue: '300' } },
-            { key: 'output_tokens', value: { stringValue: '100' } },
-            { key: 'cost_usd', value: { stringValue: '0.02' } },
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '300' } },
+            { key: 'output_token_count', value: { stringValue: '100' } },
+            { key: 'cached_token_count', value: { stringValue: '0' } },
           ],
         },
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_result' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'shell' } },
           ],
@@ -152,21 +150,22 @@ describe('Agent-Agnostic Telemetry', () => {
       // Second batch
       const payload2 = buildOtlpPayload(jobId, [
         {
-          body: { stringValue: 'codex.api_request' },
+          body: { stringValue: 'codex.sse_event' },
           attributes: [
-            { key: 'input_tokens', value: { stringValue: '200' } },
-            { key: 'output_tokens', value: { stringValue: '150' } },
-            { key: 'cost_usd', value: { stringValue: '0.01' } },
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '200' } },
+            { key: 'output_token_count', value: { stringValue: '150' } },
+            { key: 'cached_token_count', value: { stringValue: '0' } },
           ],
         },
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_result' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'shell' } },  // duplicate - should be deduped
           ],
         },
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_decision' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'file_write' } },
           ],
@@ -178,7 +177,8 @@ describe('Agent-Agnostic Telemetry', () => {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.inputTokens).toBe(500);  // 300 + 200
       expect(job!.outputTokens).toBe(250); // 100 + 150
-      expect(job!.costUsd).toBeCloseTo(0.03); // 0.02 + 0.01
+      // Cost is estimated, just verify it accumulated
+      expect(job!.costUsd).toBeGreaterThan(0);
       // Tools should be deduplicated
       const uniqueTools = [...new Set(job!.toolsUsed)];
       expect(uniqueTools).toHaveLength(job!.toolsUsed.length);
@@ -188,10 +188,11 @@ describe('Agent-Agnostic Telemetry', () => {
 
     it('T007: missing attributes in Codex events default to zero', async () => {
       const payload = buildOtlpPayload(jobId, [{
-        body: { stringValue: 'codex.api_request' },
+        body: { stringValue: 'codex.sse_event' },
         attributes: [
-          // Only input_tokens provided, others missing
-          { key: 'input_tokens', value: { stringValue: '100' } },
+          { key: 'event.kind', value: { stringValue: 'response.completed' } },
+          // Only input_token_count provided, others missing
+          { key: 'input_token_count', value: { stringValue: '100' } },
         ],
       }]);
 
@@ -202,9 +203,6 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(job!.inputTokens).toBe(100);
       expect(job!.outputTokens).toBe(0);
       expect(job!.cacheReadTokens).toBe(0);
-      expect(job!.cacheCreationTokens).toBe(0);
-      expect(job!.costUsd).toBeCloseTo(0);
-      expect(job!.durationMs).toBe(0);
     });
   });
 
@@ -280,11 +278,12 @@ describe('Agent-Agnostic Telemetry', () => {
           ],
         },
         {
-          body: { stringValue: 'codex.api_request' },
+          body: { stringValue: 'codex.sse_event' },
           attributes: [
-            { key: 'input_tokens', value: { stringValue: '300' } },
-            { key: 'output_tokens', value: { stringValue: '100' } },
-            { key: 'cost_usd', value: { stringValue: '0.01' } },
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '300' } },
+            { key: 'output_token_count', value: { stringValue: '100' } },
+            { key: 'cached_token_count', value: { stringValue: '0' } },
           ],
         },
         {
@@ -294,7 +293,7 @@ describe('Agent-Agnostic Telemetry', () => {
           ],
         },
         {
-          body: { stringValue: 'codex.tool.call' },
+          body: { stringValue: 'codex.tool_result' },
           attributes: [
             { key: 'tool_name', value: { stringValue: 'shell' } },
           ],
@@ -307,17 +306,20 @@ describe('Agent-Agnostic Telemetry', () => {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       expect(job!.inputTokens).toBe(800);  // 500 + 300
       expect(job!.outputTokens).toBe(300); // 200 + 100
-      expect(job!.costUsd).toBeCloseTo(0.03); // 0.02 + 0.01
+      // Cost includes Claude's exact cost + Codex's estimated cost
+      expect(job!.costUsd).toBeGreaterThan(0.02);
       expect(job!.toolsUsed).toContain('Read');
       expect(job!.toolsUsed).toContain('shell');
     });
 
-    it('T011: Codex api_request event populates model field with Codex model name', async () => {
+    it('T011: Codex sse_event populates model field with Codex model name', async () => {
       const payload = buildOtlpPayload(jobId, [{
-        body: { stringValue: 'codex.api_request' },
+        body: { stringValue: 'codex.sse_event' },
         attributes: [
-          { key: 'input_tokens', value: { stringValue: '100' } },
-          { key: 'output_tokens', value: { stringValue: '50' } },
+          { key: 'event.kind', value: { stringValue: 'response.completed' } },
+          { key: 'input_token_count', value: { stringValue: '100' } },
+          { key: 'output_token_count', value: { stringValue: '50' } },
+          { key: 'cached_token_count', value: { stringValue: '0' } },
           { key: 'model', value: { stringValue: 'codex-mini-latest' } },
         ],
       }]);
@@ -342,14 +344,17 @@ describe('Agent-Agnostic Telemetry', () => {
         {
           body: { stringValue: 'codex.sse_event' },
           attributes: [
+            // sse_event without event.kind = response.completed should be ignored
             { key: 'some_attr', value: { stringValue: 'value' } },
           ],
         },
         {
-          body: { stringValue: 'codex.api_request' },
+          body: { stringValue: 'codex.sse_event' },
           attributes: [
-            { key: 'input_tokens', value: { stringValue: '100' } },
-            { key: 'output_tokens', value: { stringValue: '50' } },
+            { key: 'event.kind', value: { stringValue: 'response.completed' } },
+            { key: 'input_token_count', value: { stringValue: '100' } },
+            { key: 'output_token_count', value: { stringValue: '50' } },
+            { key: 'cached_token_count', value: { stringValue: '0' } },
           ],
         },
       ]);
@@ -358,7 +363,7 @@ describe('Agent-Agnostic Telemetry', () => {
       expect(response.status).toBe(200);
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
-      // Only the codex.api_request should have been processed
+      // Only the codex.sse_event with response.completed should have been processed
       expect(job!.inputTokens).toBe(100);
       expect(job!.outputTokens).toBe(50);
     });

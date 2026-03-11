@@ -490,7 +490,9 @@ jobs:
 
           echo "   Found PR #$PR_NUMBER"
 
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-review" "$PR_NUMBER"
+          # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents
+          # and benefits from a different agent reviewing the implementation
+          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER"
 
           echo "✅ Code review completed"
 
