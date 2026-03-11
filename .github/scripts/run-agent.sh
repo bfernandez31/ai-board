@@ -93,7 +93,7 @@ setup_codex_telemetry() {
     return 0
   fi
 
-  log_info "Writing Codex telemetry config to ~/.codex/config.toml..."
+  log_info "Configuring Codex telemetry in ~/.codex/config.toml..."
   mkdir -p ~/.codex
 
   # Parse Authorization header from OTEL_EXPORTER_OTLP_HEADERS
@@ -102,18 +102,29 @@ setup_codex_telemetry() {
     auth_header="${OTEL_EXPORTER_OTLP_HEADERS#Authorization=}"
   fi
 
-  cat > ~/.codex/config.toml <<TOML
+  # Build OTEL exporter config (matching Codex schema: exporter = { otlp-http = { ... } })
+  local otel_config
+  otel_config=$(cat <<TOML
+
 [otel]
 log_user_prompt = true
 environment = "ci"
-
-[otel.exporter."otlp-http"]
-endpoint = "${OTEL_EXPORTER_OTLP_ENDPOINT}"
-protocol = "binary"
-headers = { "Authorization" = "${auth_header}" }
+exporter = { otlp-http = { endpoint = "${OTEL_EXPORTER_OTLP_ENDPOINT}", protocol = "json", headers = { "Authorization" = "${auth_header}" } } }
 TOML
+  )
 
-  log_info "Codex telemetry config written"
+  # Append to existing config.toml (preserves model, auth, trust_level, etc.)
+  if [[ -f ~/.codex/config.toml ]]; then
+    # Remove any existing [otel] section before appending
+    sed -i '/^\[otel\]/,/^\[/{ /^\[otel\]/d; /^\[/!d; }' ~/.codex/config.toml
+    echo "$otel_config" >> ~/.codex/config.toml
+  else
+    echo "$otel_config" > ~/.codex/config.toml
+  fi
+
+  log_info "Codex telemetry config appended"
+  log_info "Config contents:"
+  cat ~/.codex/config.toml
 }
 
 generate_agents_md() {
