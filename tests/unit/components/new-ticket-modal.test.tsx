@@ -12,6 +12,12 @@ import { NewTicketModal } from '@/components/board/new-ticket-modal';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// Mock useUsage hook
+const mockUseUsage = vi.fn();
+vi.mock('@/hooks/use-usage', () => ({
+  useUsage: () => mockUseUsage(),
+}));
+
 describe('NewTicketModal', () => {
   const defaultProps = {
     open: true,
@@ -23,6 +29,8 @@ describe('NewTicketModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockReset();
+    // Default: no usage data (no quota display)
+    mockUseUsage.mockReturnValue({ data: undefined });
   });
 
   describe('Rendering', () => {
@@ -199,6 +207,61 @@ describe('NewTicketModal', () => {
       renderWithProviders(<NewTicketModal {...defaultProps} />);
 
       expect(screen.getByLabelText(/title/i)).toHaveFocus();
+    });
+  });
+
+  describe('Ticket Quota Display', () => {
+    it('should show ticket count for Free plan user', () => {
+      mockUseUsage.mockReturnValue({
+        data: {
+          plan: 'FREE',
+          planName: 'Free',
+          projects: { current: 1, max: 1 },
+          ticketsThisMonth: { current: 3, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
+          status: 'none',
+          gracePeriodEndsAt: null,
+        },
+      });
+
+      renderWithProviders(<NewTicketModal {...defaultProps} />);
+      expect(screen.getByText(/3\/5 tickets used this month/)).toBeInTheDocument();
+    });
+
+    it('should show upgrade prompt when ticket limit is reached', () => {
+      mockUseUsage.mockReturnValue({
+        data: {
+          plan: 'FREE',
+          planName: 'Free',
+          projects: { current: 1, max: 1 },
+          ticketsThisMonth: { current: 5, max: 5, resetDate: '2026-04-01T00:00:00.000Z' },
+          status: 'none',
+          gracePeriodEndsAt: null,
+        },
+      });
+
+      renderWithProviders(<NewTicketModal {...defaultProps} />);
+      expect(screen.getByText(/Ticket limit reached/)).toBeInTheDocument();
+      expect(screen.getByText(/Upgrade Plan/)).toBeInTheDocument();
+      // Form should not be shown
+      expect(screen.queryByLabelText(/title/i)).not.toBeInTheDocument();
+    });
+
+    it('should not show ticket count for Pro plan user', () => {
+      mockUseUsage.mockReturnValue({
+        data: {
+          plan: 'PRO',
+          planName: 'Pro',
+          projects: { current: 2, max: null },
+          ticketsThisMonth: { current: 10, max: null, resetDate: '2026-04-01T00:00:00.000Z' },
+          status: 'active',
+          gracePeriodEndsAt: null,
+        },
+      });
+
+      renderWithProviders(<NewTicketModal {...defaultProps} />);
+      expect(screen.queryByText(/tickets used this month/)).not.toBeInTheDocument();
+      // Form should still be shown
+      expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
     });
   });
 });

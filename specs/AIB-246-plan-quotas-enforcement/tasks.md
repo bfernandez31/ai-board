@@ -18,7 +18,7 @@
 
 **Purpose**: Update plan configuration to support all downstream enforcement and visibility features.
 
-- [ ] T001 Add `maxMembersPerProject` field to `PlanLimits` interface and update FREE/PRO/TEAM plan configs in `lib/billing/plans.ts`
+- [x] T001 Add `maxMembersPerProject` field to `PlanLimits` interface and update FREE/PRO/TEAM plan configs in `lib/billing/plans.ts`
 
 ---
 
@@ -28,8 +28,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Create usage API endpoint returning plan, project count, monthly ticket count, status, and grace period in `app/api/billing/usage/route.ts`
-- [ ] T003 Create `useUsage` TanStack Query hook with 15s polling for `/api/billing/usage` in `hooks/use-usage.ts`
+- [x] T002 Create usage API endpoint returning plan, project count, monthly ticket count, status, and grace period in `app/api/billing/usage/route.ts`
+- [x] T003 Create `useUsage` TanStack Query hook with 15s polling for `/api/billing/usage` in `hooks/use-usage.ts`
 
 **Checkpoint**: Foundation ready — usage data infrastructure available for all UI stories.
 
@@ -43,7 +43,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Add project creation quota gate using `useUsage()` to disable "New Project" button and show `UpgradePrompt` when `projects.current >= projects.max` in the project creation area of `app/projects/page.tsx`
+- [x] T004 [US1] Add project creation quota gate using `useUsage()` to disable "New Project" button and show `UpgradePrompt` when `projects.current >= projects.max` in the project creation area of `app/projects/page.tsx`
 
 **Checkpoint**: Free users are blocked from creating projects beyond their limit with a clear upgrade CTA.
 
@@ -57,8 +57,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Add ticket usage indicator ("X/Y tickets used this month") and upgrade gate (disable submit + show `UpgradePrompt` when at limit) using `useUsage()` in `components/board/new-ticket-modal.tsx`
-- [ ] T006 [US2] Verify PLAN_LIMIT error handling in ticket and project creation flows displays API error message prominently with upgrade link in `components/board/new-ticket-modal.tsx`
+- [x] T005 [US2] Add ticket usage indicator ("X/Y tickets used this month") and upgrade gate (disable submit + show `UpgradePrompt` when at limit) using `useUsage()` in `components/board/new-ticket-modal.tsx`
+- [x] T006 [US2] Verify PLAN_LIMIT error handling in ticket and project creation flows displays API error message prominently with upgrade link in `components/board/new-ticket-modal.tsx`
 
 **Checkpoint**: Free users see ticket consumption and are blocked at limit with upgrade prompt.
 
@@ -72,7 +72,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T007 [US3] Add per-project member count enforcement after existing `membersEnabled` check — count `ProjectMember` records, compare against `maxMembersPerProject`, return 403 with `code: 'PLAN_LIMIT'` in `app/api/projects/[projectId]/members/route.ts`
+- [x] T007 [US3] Add per-project member count enforcement after existing `membersEnabled` check — count `ProjectMember` records, compare against `maxMembersPerProject`, return 403 with `code: 'PLAN_LIMIT'` in `app/api/projects/[projectId]/members/route.ts`
 
 **Checkpoint**: Team users limited to 10 members per project; Free/Pro users still fully blocked.
 
@@ -86,8 +86,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T008 [US4] Create `UsageBanner` component showing plan name and quota indicators (numeric for Free, name-only for paid) in `components/billing/usage-banner.tsx`
-- [ ] T009 [US4] Integrate `UsageBanner` component into projects list page in `app/projects/page.tsx`
+- [x] T008 [US4] Create `UsageBanner` component showing plan name and quota indicators (numeric for Free, name-only for paid) in `components/billing/usage-banner.tsx`
+- [x] T009 [US4] Integrate `UsageBanner` component into projects list page in `app/projects/page.tsx`
 
 **Checkpoint**: All users see their plan status on the dashboard; Free users see consumption metrics.
 
@@ -101,7 +101,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T010 [US5] Add advanced analytics gate section that shows `UpgradePrompt` for non-Team users using `useSubscription()` to check `advancedAnalytics` flag in `components/analytics/analytics-dashboard.tsx`
+- [x] T010 [US5] Add advanced analytics gate section that shows `UpgradePrompt` for non-Team users using `useSubscription()` to check `advancedAnalytics` flag in `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: Advanced analytics gated to Team plan with upgrade CTA for others.
 
@@ -115,7 +115,7 @@
 
 ### Implementation for User Story 6
 
-- [ ] T011 [US6] Add grace period warning banner to `UsageBanner` — when `status === 'past_due'` and `gracePeriodEndsAt` is set, show warning with expiry date and link to `/settings/billing` in `components/billing/usage-banner.tsx`
+- [x] T011 [US6] Add grace period warning banner to `UsageBanner` — when `status === 'past_due'` and `gracePeriodEndsAt` is set, show warning with expiry date and link to `/settings/billing` in `components/billing/usage-banner.tsx`
 
 **Checkpoint**: Users with payment failures see clear warning about impending downgrade.
 
@@ -127,13 +127,13 @@
 
 ### Integration Tests
 
-- [ ] T012 [P] Integration test for GET `/api/billing/usage` — verify correct counts for Free/Pro/Team users and monthly ticket count reset logic in `tests/integration/billing/usage.test.ts`
-- [ ] T013 [P] Integration test for member count limit — verify Team user can add up to 10 members, 11th returns 403 PLAN_LIMIT, Free/Pro still blocked in `tests/integration/members/` (extend existing)
+- [x] T012 [P] Integration test for GET `/api/billing/usage` — verify correct counts for Free/Pro/Team users and monthly ticket count reset logic in `tests/integration/billing/usage.test.ts`
+- [x] T013 [P] Integration test for member count limit — verify Team user can add up to 10 members, 11th returns 403 PLAN_LIMIT, Free/Pro still blocked in `tests/integration/members/` (extend existing)
 
 ### Component Tests
 
-- [ ] T014 [P] Component test for `UsageBanner` — Free user sees quota numbers, Pro/Team sees plan name only, grace period warning appears when `status === 'past_due'` in `tests/unit/components/usage-banner.test.tsx`
-- [ ] T015 [P] Component test for ticket modal quota — Free user sees ticket count, limit reached shows upgrade prompt in `tests/unit/components/new-ticket-modal.test.tsx` (extend existing if present)
+- [x] T014 [P] Component test for `UsageBanner` — Free user sees quota numbers, Pro/Team sees plan name only, grace period warning appears when `status === 'past_due'` in `tests/unit/components/usage-banner.test.tsx`
+- [x] T015 [P] Component test for ticket modal quota — Free user sees ticket count, limit reached shows upgrade prompt in `tests/unit/components/new-ticket-modal.test.tsx` (extend existing if present)
 
 **Checkpoint**: All enforcement logic and UI indicators verified by tests.
 
@@ -143,9 +143,9 @@
 
 **Purpose**: Final validation and cleanup across all user stories.
 
-- [ ] T016 Run `bun run type-check` and `bun run lint` to ensure no regressions
-- [ ] T017 Verify `maxMembersPerProject` is included in subscription API response from `app/api/billing/subscription/route.ts`
-- [ ] T018 Invalidate `useUsage` query cache on project/ticket creation mutations to ensure immediate UI updates
+- [x] T016 Run `bun run type-check` and `bun run lint` to ensure no regressions
+- [x] T017 Verify `maxMembersPerProject` is included in subscription API response from `app/api/billing/subscription/route.ts`
+- [x] T018 Invalidate `useUsage` query cache on project/ticket creation mutations to ensure immediate UI updates
 
 ---
 

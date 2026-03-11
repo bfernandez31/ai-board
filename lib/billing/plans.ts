@@ -4,6 +4,7 @@ export interface PlanLimits {
   maxProjects: number | null;
   maxTicketsPerMonth: number | null;
   membersEnabled: boolean;
+  maxMembersPerProject: number | null;
   advancedAnalytics: boolean;
 }
 
@@ -30,6 +31,7 @@ export const PLANS: Record<SubscriptionPlan, PlanConfig> = {
       maxProjects: 1,
       maxTicketsPerMonth: 5,
       membersEnabled: false,
+      maxMembersPerProject: 0,
       advancedAnalytics: false,
     },
     trial: { enabled: false, days: 0 },
@@ -44,6 +46,7 @@ export const PLANS: Record<SubscriptionPlan, PlanConfig> = {
       maxProjects: null,
       maxTicketsPerMonth: null,
       membersEnabled: false,
+      maxMembersPerProject: 0,
       advancedAnalytics: false,
     },
     trial: { enabled: true, days: 14 },
@@ -58,6 +61,7 @@ export const PLANS: Record<SubscriptionPlan, PlanConfig> = {
       maxProjects: null,
       maxTicketsPerMonth: null,
       membersEnabled: true,
+      maxMembersPerProject: 10,
       advancedAnalytics: true,
     },
     trial: { enabled: true, days: 14 },

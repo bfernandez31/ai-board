@@ -154,6 +154,19 @@ export async function POST(
       );
     }
 
+    // Check per-project member count limit
+    if (subscription.limits.maxMembersPerProject !== null) {
+      const memberCount = await prisma.projectMember.count({
+        where: { projectId: projectIdNumber },
+      });
+      if (memberCount >= subscription.limits.maxMembersPerProject) {
+        return NextResponse.json(
+          { error: `Member limit reached. Your ${subscription.plan} plan allows ${subscription.limits.maxMembersPerProject} members per project.`, code: 'PLAN_LIMIT' },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await request.json();
     const { email } = addMemberSchema.parse(body);
 
