@@ -454,6 +454,12 @@ DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 
 **File**: `app/auth/signin/page.tsx`
 
+The sign-in page includes a legal consent notice below the auth buttons:
+
+> "By signing in, you agree to our [Terms of Service](/terms-of-service) and [Privacy Policy](/privacy-policy)."
+
+This notice is rendered as a centered `<p>` element with links to the legal pages.
+
 ```typescript
 'use client';
 

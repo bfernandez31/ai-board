@@ -4,6 +4,30 @@
 
 The user interface provides an intuitive, modern experience for managing tickets and projects. Visual feedback, responsive design, and keyboard accessibility ensure efficient workflows across devices.
 
+## Legal Pages
+
+### Terms of Service (`/terms-of-service`)
+
+- Static page with full Terms of Service content
+- Sections: Acceptance, License, User Accounts, Prohibited Uses, Intellectual Property, Disclaimer, Limitation of Liability, Governing Law, Changes, Contact
+- Linked from the landing page footer
+
+### Privacy Policy (`/privacy-policy`)
+
+- Static page with full Privacy Policy content
+- Sections: Information We Collect, How We Use Your Information, Data We Do Not Sell, Cookies and Session Data, API Keys, Data Retention, Security, Third-Party Services, Children's Privacy, Changes, Contact
+- Emphasizes that no personal data is sold and only session/CSRF cookies are used
+- Linked from the landing page footer
+
+## Footer
+
+A persistent footer is rendered on all pages (via root layout):
+
+- Copyright notice: "© {year} AI Board. All rights reserved."
+- Links: **Terms of Service** (`/terms-of-service`) and **Privacy Policy** (`/privacy-policy`)
+- Responsive: stacks vertically on small screens, horizontal row on `sm+`
+- Styled with Catppuccin surface border and consistent subtext color with hover transitions
+
 ## Landing Page
 
 ### Hero Section Background Animation
