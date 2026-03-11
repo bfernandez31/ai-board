@@ -10,7 +10,7 @@ A global footer is rendered on all pages (public and authenticated) via the root
 
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
-- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`, "GitHub" → project repository (opens in new tab)
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
@@ -19,6 +19,8 @@ A global footer is rendered on all pages (public and authenticated) via the root
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
+
+**GitHub link**: Opens in a new tab (`target="_blank" rel="noopener noreferrer"`)
 
 ---
 
@@ -56,6 +58,40 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+### Pricing Section
+
+A public-facing pricing section is displayed on the landing page, positioned after the workflow section and before the final call-to-action.
+
+**Plan Cards** (three, displayed in a responsive grid):
+
+| Plan | Price | Key Features | CTA |
+|------|-------|--------------|-----|
+| Free | $0/month | 1 project, 5 tickets/month, BYOK API key required, Community support | "Get Started" → `/auth/signin` |
+| Pro | $15/month | Unlimited projects, Unlimited tickets, 14-day free trial, Priority support | "Start 14-day trial" → `/auth/signin` |
+| Team | $30/month | Everything in Pro, Up to 10 project members, Advanced analytics, 14-day free trial | "Start 14-day trial" → `/auth/signin` |
+
+- Pro plan card is visually highlighted as "Most Popular" with a purple border (`border-[#8B5CF6]`) and a badge
+- Pricing data matches the billing system plan definitions (source of truth: `lib/billing/plans.ts`)
+- All CTA buttons navigate to `/auth/signin`
+
+**Layout**:
+- Mobile (<768px): Cards stacked vertically in a single column
+- Desktop (≥768px): Three-column grid
+
+**Component**: `components/landing/pricing-section.tsx`
+
+### FAQ Section
+
+A collapsible FAQ subsection appears below the pricing cards within the pricing section.
+
+**Questions**:
+1. "What does BYOK (Bring Your Own Key) mean?" — explains BYOK requirement for the Free plan vs managed access on paid plans
+2. "Which AI agents and models are supported?" — lists Claude by Anthropic (Claude Code) as the supported agent
+
+**Behavior**: Single-open accordion — clicking a question expands its answer; clicking another question collapses the previous one. Uses shadcn/ui `Collapsible` component.
+
+**Component**: `components/landing/faq-section.tsx` (client component)
 
 ### Hero Section Background Animation
 

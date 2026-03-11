@@ -41,6 +41,10 @@ The limits applied to a user depend on the *effective plan*, not just the subscr
 - **Canceled**: Free plan limits apply.
 - **No subscription**: Free plan limits apply.
 
+## Public Pricing Display
+
+Plan details are also surfaced on the public landing page at the pricing section (`#pricing`), allowing unauthenticated visitors to compare plans before signing up. The landing page pricing section is static and must remain consistent with the plan definitions above. Any pricing change must be reflected in both `lib/billing/plans.ts` (the authoritative source) and the static data in `components/landing/pricing-section.tsx`.
+
 ## Usage Visibility
 
 Users see their current plan consumption at contextual touchpoints without navigating to a dedicated usage page.
