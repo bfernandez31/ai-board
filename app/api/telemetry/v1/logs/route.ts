@@ -116,10 +116,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       toolsUsed: new Set<string>(),
     };
 
-    // Track OTLP timestamps for Codex duration estimation (Codex doesn't report duration_ms)
-    let minCodexTimestampNs = Infinity;
-    let maxCodexTimestampNs = -Infinity;
-
     // Process each resourceLog
     for (const resourceLog of otlpData.resourceLogs) {
       // Extract job_id from resource attributes
@@ -147,22 +143,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           // Codex: token data in codex.sse_event with event.kind = "response.completed"
           const eventKind = String(findAttribute(attrs, 'event.kind') ?? '');
           const isCodexTokenEvent = eventName === 'codex.sse_event' && eventKind === 'response.completed';
-          const isCodexEvent = eventName.startsWith('codex.');
 
           const isToolEvent = ['claude_code.tool_result', 'claude_code.tool_decision', 'codex.tool_result', 'codex.tool_decision'].includes(eventName);
-
-          // Track timestamps across ALL Codex events for duration estimation
-          // (Codex doesn't report duration_ms; we compute span from first to last event)
-          if (isCodexEvent) {
-            const tsNano = logRecord.observedTimeUnixNano || logRecord.timeUnixNano;
-            if (tsNano) {
-              const ns = typeof tsNano === 'string' ? Number(tsNano) : tsNano;
-              if (!isNaN(ns) && ns > 0) {
-                if (ns < minCodexTimestampNs) minCodexTimestampNs = ns;
-                if (ns > maxCodexTimestampNs) maxCodexTimestampNs = ns;
-              }
-            }
-          }
 
           if (isClaudeApiRequest) {
             metrics.inputTokens += parseIntAttribute(findAttribute(attrs, 'input_tokens'));
@@ -199,8 +181,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Codex duration is computed after job lookup (needs job.startedAt)
-
     // If no job_id found, return success but don't store (allows telemetry without job tracking)
     if (!jobId) {
       console.warn('[OTLP Telemetry] No job_id in resource attributes, metrics not stored');
@@ -215,7 +195,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       where: { id: jobId },
       select: {
         id: true,
-        startedAt: true,
         inputTokens: true,
         outputTokens: true,
         cacheReadTokens: true,
@@ -237,29 +216,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Merge and deduplicate tools in memory to avoid a second DB call
     const mergedTools = [...new Set([...job.toolsUsed, ...metrics.toolsUsed])].sort();
 
-    // For Codex: estimate duration as max(event timestamp) - job.startedAt
-    // Each batch only covers seconds; we need total time since job started
-    if (maxCodexTimestampNs > -Infinity && job.startedAt) {
-      const maxEventMs = Math.round(maxCodexTimestampNs / 1_000_000);
-      const jobStartMs = job.startedAt.getTime();
-      const codexDurationMs = maxEventMs - jobStartMs;
-      if (codexDurationMs > 0) {
-        // Use max() — later batches always have higher timestamps, so duration grows monotonically
-        metrics.durationMs = Math.max(metrics.durationMs, codexDurationMs);
-      }
-    }
-
     // Aggregate with existing metrics (OTLP may send multiple batches)
+    // Duration: Claude reports per-request duration_ms (accumulated here);
+    // Codex doesn't — duration is backfilled from job wall clock on completion
     const updateData: Parameters<typeof prisma.job.update>[0]['data'] = {
       inputTokens: (job.inputTokens || 0) + metrics.inputTokens,
       outputTokens: (job.outputTokens || 0) + metrics.outputTokens,
       cacheReadTokens: (job.cacheReadTokens || 0) + metrics.cacheReadTokens,
       cacheCreationTokens: (job.cacheCreationTokens || 0) + metrics.cacheCreationTokens,
       costUsd: (job.costUsd || 0) + metrics.costUsd,
-      // For Codex duration: use max (monotonically increasing); for Claude: accumulate per-request durations
-      durationMs: maxCodexTimestampNs > -Infinity
-        ? Math.max(job.durationMs || 0, metrics.durationMs)
-        : (job.durationMs || 0) + metrics.durationMs,
+      durationMs: (job.durationMs || 0) + metrics.durationMs,
       toolsUsed: mergedTools,
     };
 
