@@ -2,14 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { SubscriptionPlan } from '@prisma/client';
-
-interface PlanLimits {
-  maxProjects: number | null;
-  maxTicketsPerMonth: number | null;
-  membersEnabled: boolean;
-  maxMembersPerProject: number | null;
-  advancedAnalytics: boolean;
-}
+import type { PlanLimits } from '@/lib/billing/plans';
 
 export interface SubscriptionData {
   plan: SubscriptionPlan;

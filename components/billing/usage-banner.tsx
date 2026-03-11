@@ -29,20 +29,13 @@ export function UsageBanner() {
       )}
 
       <div className="text-sm text-muted-foreground">
-        {usage.projects.max !== null || usage.ticketsThisMonth.max !== null ? (
-          <span>
-            {usage.projects.max !== null && (
-              <>{usage.projects.current}/{usage.projects.max} projects</>
-            )}
-            {usage.projects.max !== null && usage.ticketsThisMonth.max !== null && ' | '}
-            {usage.ticketsThisMonth.max !== null && (
-              <>{usage.ticketsThisMonth.current}/{usage.ticketsThisMonth.max} tickets this month</>
-            )}
-            {' | '}{usage.planName} Plan
-          </span>
-        ) : (
-          <span>{usage.planName} Plan</span>
-        )}
+        <span>
+          {[
+            usage.projects.max !== null && `${usage.projects.current}/${usage.projects.max} projects`,
+            usage.ticketsThisMonth.max !== null && `${usage.ticketsThisMonth.current}/${usage.ticketsThisMonth.max} tickets this month`,
+            `${usage.planName} Plan`,
+          ].filter(Boolean).join(' | ')}
+        </span>
       </div>
     </div>
   );

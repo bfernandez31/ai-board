@@ -84,8 +84,7 @@ export function NewTicketModal({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { data: usage } = useUsage();
 
-  const ticketLimitReached = usage?.ticketsThisMonth.max !== null &&
-    usage?.ticketsThisMonth.max !== undefined &&
+  const ticketLimitReached = usage?.ticketsThisMonth.max != null &&
     (usage?.ticketsThisMonth.current ?? 0) >= usage.ticketsThisMonth.max;
 
   // Reset form when modal closes
@@ -267,7 +266,7 @@ export function NewTicketModal({
           </DialogDescription>
         </DialogHeader>
 
-        {usage?.ticketsThisMonth.max !== null && usage?.ticketsThisMonth.max !== undefined && (
+        {usage?.ticketsThisMonth.max != null && (
           <p className="text-sm text-muted-foreground">
             {usage.ticketsThisMonth.current}/{usage.ticketsThisMonth.max} tickets used this month
           </p>
