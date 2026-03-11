@@ -166,6 +166,9 @@ export function Header() {
               <Link href="#workflow" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
                 Workflow
               </Link>
+              <Link href="#pricing" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
+                Pricing
+              </Link>
               <Link href="/auth/signin">
                 <Button variant="default">
                   Sign In

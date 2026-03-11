@@ -125,12 +125,35 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
               </Button>
             </>
           ) : (
-            // Unauthenticated menu
-            <Link href="/auth/signin" onClick={() => setOpen(false)}>
-              <Button variant="default" className="w-full justify-center">
-                Sign In
-              </Button>
-            </Link>
+            // Unauthenticated menu (marketing links + sign in)
+            <>
+              <Link
+                href="#features"
+                className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors px-2 py-1"
+                onClick={() => setOpen(false)}
+              >
+                Features
+              </Link>
+              <Link
+                href="#workflow"
+                className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors px-2 py-1"
+                onClick={() => setOpen(false)}
+              >
+                Workflow
+              </Link>
+              <Link
+                href="#pricing"
+                className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors px-2 py-1"
+                onClick={() => setOpen(false)}
+              >
+                Pricing
+              </Link>
+              <Link href="/auth/signin" onClick={() => setOpen(false)}>
+                <Button variant="default" className="w-full justify-center">
+                  Sign In
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </SheetContent>

@@ -25,6 +25,16 @@ describe('Footer', () => {
     expect(privacyLink).toHaveAttribute('href', '/legal/privacy');
   });
 
+  it('should render GitHub link with correct attributes', () => {
+    render(<Footer />);
+
+    const githubLink = screen.getByRole('link', { name: 'GitHub' });
+    expect(githubLink).toBeInTheDocument();
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/bfernandez31/ai-board');
+    expect(githubLink).toHaveAttribute('target', '_blank');
+    expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
   it('should render copyright notice', () => {
     render(<Footer />);
 

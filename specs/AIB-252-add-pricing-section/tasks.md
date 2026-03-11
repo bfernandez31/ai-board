@@ -28,8 +28,8 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 **⚠️ CRITICAL**: Header nav must be in place before pricing section is added to ensure `#pricing` anchor works
 
-- [ ] T001 Add "Pricing" anchor link (`#pricing`) to marketing navigation in `components/layout/header.tsx`, following existing "Features" and "Workflow" link pattern
-- [ ] T002 Add "Pricing" anchor link to mobile menu in `components/layout/mobile-menu.tsx` if marketing links are duplicated there
+- [x] T001 Add "Pricing" anchor link (`#pricing`) to marketing navigation in `components/layout/header.tsx`, following existing "Features" and "Workflow" link pattern
+- [x] T002 Add "Pricing" anchor link to mobile menu in `components/layout/mobile-menu.tsx` if marketing links are duplicated there
 
 **Checkpoint**: Header navigation updated — pricing section can now be linked to from nav
 
@@ -43,8 +43,8 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Create `components/landing/pricing-section.tsx` as Server Component with `id="pricing"`, section title "Simple, Transparent Pricing", subtitle "Choose the plan that fits your team", static plan data array (Free/$0, Pro/$15, Team/$30) with feature lists from data-model.md, responsive grid (`grid-cols-1 md:grid-cols-3`), plan cards using shadcn/ui Card with plan name, price, Check icon feature list, Pro card "Most Popular" badge with `border-[#8B5CF6]` highlight, dark theme Catppuccin Mocha styling (card bg `#181825`, border `#313244`)
-- [ ] T004 [US1] Import and render `PricingSection` in `app/landing/page.tsx` between `WorkflowSection` and `CTASection`
+- [x] T003 [US1] Create `components/landing/pricing-section.tsx` as Server Component with `id="pricing"`, section title "Simple, Transparent Pricing", subtitle "Choose the plan that fits your team", static plan data array (Free/$0, Pro/$15, Team/$30) with feature lists from data-model.md, responsive grid (`grid-cols-1 md:grid-cols-3`), plan cards using shadcn/ui Card with plan name, price, Check icon feature list, Pro card "Most Popular" badge with `border-[#8B5CF6]` highlight, dark theme Catppuccin Mocha styling (card bg `#181825`, border `#313244`)
+- [x] T004 [US1] Import and render `PricingSection` in `app/landing/page.tsx` between `WorkflowSection` and `CTASection`
 
 **Checkpoint**: Pricing section visible on landing page with 3 plan cards — US1 independently testable
 
@@ -58,7 +58,7 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Verify and refine CTA buttons in `components/landing/pricing-section.tsx`: Free plan CTA text "Get Started", Pro/Team CTA text "Start 14-day trial", all buttons link to `/auth/signin` via Next.js Link or anchor, shadcn/ui Button styling consistent with landing page
+- [x] T005 [US2] Verify and refine CTA buttons in `components/landing/pricing-section.tsx`: Free plan CTA text "Get Started", Pro/Team CTA text "Start 14-day trial", all buttons link to `/auth/signin` via Next.js Link or anchor, shadcn/ui Button styling consistent with landing page
 
 **Checkpoint**: All CTA buttons navigate to sign-up page — US2 independently testable
 
@@ -72,8 +72,8 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] Create FAQ subsection as Client Component (`'use client'`) either within `components/landing/pricing-section.tsx` or as separate `components/landing/faq-section.tsx`, using existing `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from `components/ui/collapsible.tsx`, with 2 FAQ items: (1) "What does BYOK (Bring Your Own Key) mean?" with answer about Free plan requiring own API key, (2) "Which AI agents and models are supported?" with answer about Claude/Anthropic, ChevronDown icon with rotation animation on expand, heading "Frequently Asked Questions"
-- [ ] T007 [US3] Integrate FAQ subsection into pricing section render in `components/landing/pricing-section.tsx` (if created as separate component, import and render below plan cards grid)
+- [x] T006 [US3] Create FAQ subsection as Client Component (`'use client'`) either within `components/landing/pricing-section.tsx` or as separate `components/landing/faq-section.tsx`, using existing `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from `components/ui/collapsible.tsx`, with 2 FAQ items: (1) "What does BYOK (Bring Your Own Key) mean?" with answer about Free plan requiring own API key, (2) "Which AI agents and models are supported?" with answer about Claude/Anthropic, ChevronDown icon with rotation animation on expand, heading "Frequently Asked Questions"
+- [x] T007 [US3] Integrate FAQ subsection into pricing section render in `components/landing/pricing-section.tsx` (if created as separate component, import and render below plan cards grid)
 
 **Checkpoint**: FAQ section renders below pricing cards with expand/collapse — US3 independently testable
 
@@ -87,7 +87,7 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Implementation for User Story 4
 
-- [ ] T008 [P] [US4] Add GitHub repository link (`https://github.com/bfernandez31/ai-board`) to existing `<nav>` in `components/layout/footer.tsx` with `target="_blank"`, `rel="noopener noreferrer"`, same styling as existing links (`text-sm text-[hsl(var(--ctp-subtext-0))] hover:text-[#8B5CF6] transition-colors`)
+- [x] T008 [P] [US4] Add GitHub repository link (`https://github.com/bfernandez31/ai-board`) to existing `<nav>` in `components/layout/footer.tsx` with `target="_blank"`, `rel="noopener noreferrer"`, same styling as existing links (`text-sm text-[hsl(var(--ctp-subtext-0))] hover:text-[#8B5CF6] transition-colors`)
 
 **Checkpoint**: Footer shows GitHub link on all public pages — US4 independently testable
 
@@ -101,7 +101,7 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Implementation for User Story 5
 
-- [ ] T009 [US5] Review and verify responsive layout in `components/landing/pricing-section.tsx`: confirm `grid-cols-1 md:grid-cols-3` grid, FAQ section width constraints, ensure all text/buttons are fully visible at 320px viewport, verify footer link wrapping in `components/layout/footer.tsx` at mobile widths — fix any responsive issues found
+- [x] T009 [US5] Review and verify responsive layout in `components/landing/pricing-section.tsx`: confirm `grid-cols-1 md:grid-cols-3` grid, FAQ section width constraints, ensure all text/buttons are fully visible at 320px viewport, verify footer link wrapping in `components/layout/footer.tsx` at mobile widths — fix any responsive issues found
 
 **Checkpoint**: All components display correctly across viewport sizes — US5 independently testable
 
@@ -113,13 +113,13 @@ _No tasks required — all dependencies (shadcn/ui Card/Button, Collapsible, luc
 
 ### Tests
 
-- [ ] T010 [P] Create component test for PricingSection in `tests/unit/components/pricing-section.test.tsx`: renders 3 plan cards with correct names (Free, Pro, Team) and prices ($0, $15, $30), Pro card displays "Most Popular" badge, CTA buttons show correct text ("Get Started" vs "Start 14-day trial"), CTA buttons link to `/auth/signin`, FAQ items render with questions visible, FAQ expand/collapse on click
-- [ ] T011 [P] Add GitHub link test to `tests/unit/components/footer.test.tsx`: verify GitHub link rendered with correct href, `target="_blank"`, and `rel="noopener noreferrer"` attributes
+- [x] T010 [P] Create component test for PricingSection in `tests/unit/components/pricing-section.test.tsx`: renders 3 plan cards with correct names (Free, Pro, Team) and prices ($0, $15, $30), Pro card displays "Most Popular" badge, CTA buttons show correct text ("Get Started" vs "Start 14-day trial"), CTA buttons link to `/auth/signin`, FAQ items render with questions visible, FAQ expand/collapse on click
+- [x] T011 [P] Add GitHub link test to `tests/unit/components/footer.test.tsx`: verify GitHub link rendered with correct href, `target="_blank"`, and `rel="noopener noreferrer"` attributes
 
 ### Final Validation
 
-- [ ] T012 Run `bun run type-check` and `bun run lint` to verify no TypeScript or ESLint errors across all changed files
-- [ ] T013 Run quickstart.md validation — verify implementation order matches quickstart.md and all key files are created/modified as specified
+- [x] T012 Run `bun run type-check` and `bun run lint` to verify no TypeScript or ESLint errors across all changed files
+- [x] T013 Run quickstart.md validation — verify implementation order matches quickstart.md and all key files are created/modified as specified
 
 ---
 

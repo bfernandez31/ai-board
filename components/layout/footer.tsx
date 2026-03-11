@@ -21,6 +21,14 @@ export function Footer() {
             >
               Privacy Policy
             </Link>
+            <a
+              href="https://github.com/bfernandez31/ai-board"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[hsl(var(--ctp-subtext-0))] hover:text-[#8B5CF6] transition-colors"
+            >
+              GitHub
+            </a>
           </nav>
         </div>
       </div>
