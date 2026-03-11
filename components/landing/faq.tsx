@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSX } from 'react';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -10,7 +11,7 @@ interface FaqProps {
   items: FAQEntry[];
 }
 
-export function Faq({ items }: FaqProps) {
+export function Faq({ items }: FaqProps): JSX.Element {
   return (
     <div className="space-y-4">
       {items.map((item) => (
@@ -20,7 +21,7 @@ export function Faq({ items }: FaqProps) {
   );
 }
 
-function FaqItem({ entry }: { entry: FAQEntry }) {
+function FaqItem({ entry }: { entry: FAQEntry }): JSX.Element {
   const [open, setOpen] = useState(entry.defaultExpanded);
 
   return (

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ const AVAILABILITY_STYLES: Record<
   exclusive: 'text-sky-300',
 };
 
-export function PricingCard({ plan }: PricingCardProps) {
+export function PricingCard({ plan }: PricingCardProps): JSX.Element {
   return (
     <Card
       data-testid="plan-card"

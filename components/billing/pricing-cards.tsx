@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSX } from 'react';
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,32 +40,27 @@ function PlanButton({
   isCurrent: boolean;
   isPopular: boolean;
   loading: SubscriptionPlan | null;
-  onSubscribe: (plan: SubscriptionPlan) => void;
-}) {
-  if (isCurrent) {
+  onSubscribe: (plan: SubscriptionPlan) => Promise<void>;
+}): JSX.Element {
+  if (isCurrent || plan === 'FREE') {
+    const label = isCurrent ? 'Current Plan' : 'Free';
     return (
       <Button variant="outline" className="w-full" disabled>
-        Current Plan
+        {label}
       </Button>
     );
   }
 
-  if (plan === 'FREE') {
-    return (
-      <Button variant="outline" className="w-full" disabled>
-        Free
-      </Button>
-    );
-  }
+  const isDisabled = loading !== null;
+  const label = loading === plan ? 'Loading...' : 'Subscribe';
+  const variant = isPopular ? 'default' : 'outline';
+  const handleClick = (): void => {
+    void onSubscribe(plan);
+  };
 
   return (
-    <Button
-      className="w-full"
-      variant={isPopular ? 'default' : 'outline'}
-      disabled={loading !== null}
-      onClick={() => onSubscribe(plan)}
-    >
-      {loading === plan ? 'Loading...' : 'Subscribe'}
+    <Button className="w-full" variant={variant} disabled={isDisabled} onClick={handleClick}>
+      {label}
     </Button>
   );
 }
@@ -74,10 +70,10 @@ export function PricingCards({
   currentPlan,
   onSubscribe,
   highlightPlan,
-}: PricingCardsProps) {
+}: PricingCardsProps): JSX.Element {
   const [loading, setLoading] = useState<SubscriptionPlan | null>(null);
 
-  const handleSubscribe = async (plan: SubscriptionPlan) => {
+  const handleSubscribe = async (plan: SubscriptionPlan): Promise<void> => {
     setLoading(plan);
     try {
       await onSubscribe(plan);

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { HeroSection } from '@/components/landing/hero-section';
 import { FeaturesGrid } from '@/components/landing/features-grid';
 import { WorkflowSection } from '@/components/landing/workflow-section';
@@ -10,7 +11,7 @@ import { CTASection } from '@/components/landing/cta-section';
  * Shown to unauthenticated visitors only
  * Uses main Header component with marketing variant
  */
-export default function LandingPage() {
+export default function LandingPage(): JSX.Element {
   return (
     <div className="min-h-screen">
       <HeroSection />

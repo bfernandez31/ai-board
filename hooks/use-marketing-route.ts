@@ -1,22 +1,19 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
 
-const MARKETING_PREFIXES = ['/landing', '/terms', '/privacy'];
+const MARKETING_PREFIXES: readonly string[] = ['/landing', '/terms', '/privacy'];
 
-export function useMarketingRoute() {
+interface MarketingRouteResult {
+  isMarketingRoute: boolean;
+}
+
+export function useMarketingRoute(): MarketingRouteResult {
   const pathname = usePathname() ?? '';
 
-  const isMarketingRoute = useMemo(() => {
-    return MARKETING_PREFIXES.some((prefix) => {
-      if (pathname === prefix) {
-        return true;
-      }
-
-      return pathname.startsWith(`${prefix}/`);
-    });
-  }, [pathname]);
+  const isMarketingRoute = MARKETING_PREFIXES.some((prefix) => {
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  });
 
   return {
     isMarketingRoute,

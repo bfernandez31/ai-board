@@ -1,8 +1,9 @@
+import type { JSX } from 'react';
 import { PricingCard } from '@/components/landing/pricing-card';
 import { Faq } from '@/components/landing/faq';
 import { marketingContent } from '@/lib/marketing/pricing-content';
 
-export function PricingSection() {
+export function PricingSection(): JSX.Element {
   return (
     <section
       data-testid="pricing-section"

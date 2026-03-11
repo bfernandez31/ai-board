@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUserOrNull } from '@/lib/db/users';
 import LandingPage from '@/app/(marketing)/landing/page';
@@ -7,7 +8,7 @@ import LandingPage from '@/app/(marketing)/landing/page';
  * - Authenticated users: redirected to /projects
  * - Unauthenticated users: shown marketing landing page
  */
-export default async function Home() {
+export default async function Home(): Promise<JSX.Element> {
   const user = await getCurrentUserOrNull();
 
   if (user) {

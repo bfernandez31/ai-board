@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard } from 'lucide-react';
@@ -18,7 +19,7 @@ interface PlanInfo {
   features: string[];
 }
 
-function BillingContent() {
+function BillingContent(): JSX.Element {
   const searchParams = useSearchParams();
   const { data: subscription, isLoading } = useSubscription();
   const { data: plans = [] } = useQuery<PlanInfo[]>({
@@ -37,7 +38,7 @@ function BillingContent() {
   const highlightedPlan: SubscriptionPlan | null =
     planQuery === 'PRO' || planQuery === 'TEAM' ? (planQuery as SubscriptionPlan) : null;
 
-  const handleSubscribe = async (plan: SubscriptionPlan) => {
+  const handleSubscribe = async (plan: SubscriptionPlan): Promise<void> => {
     const res = await fetch('/api/billing/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,7 +50,7 @@ function BillingContent() {
     }
   };
 
-  const handleManageSubscription = async () => {
+  const handleManageSubscription = async (): Promise<void> => {
     setManagingPortal(true);
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' });
@@ -135,7 +136,7 @@ function BillingContent() {
   );
 }
 
-export default function BillingSettingsPage() {
+export default function BillingSettingsPage(): JSX.Element {
   return (
     <Suspense
       fallback={
