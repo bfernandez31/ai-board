@@ -16,6 +16,7 @@ global.fetch = mockFetch;
 const mockUseUsage = vi.fn();
 vi.mock('@/hooks/use-usage', () => ({
   useUsage: () => mockUseUsage(),
+  usageKeys: { all: ['usage'] as const, current: () => ['usage', 'current'] as const },
 }));
 
 describe('NewTicketModal', () => {

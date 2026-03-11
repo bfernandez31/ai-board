@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CreateTicketSchema,
   type CreateTicketInput,
@@ -39,7 +40,7 @@ import {
 import { AgentIcon } from '@/components/ui/agent-icon';
 import { ImageUpload, type ImageFile } from '@/components/ui/image-upload';
 import Link from 'next/link';
-import { useUsage } from '@/hooks/use-usage';
+import { useUsage, usageKeys } from '@/hooks/use-usage';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 
 interface NewTicketModalProps {
@@ -83,6 +84,7 @@ export function NewTicketModal({
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { data: usage } = useUsage();
+  const queryClient = useQueryClient();
 
   const ticketLimitReached = usage?.ticketsThisMonth.max != null &&
     (usage?.ticketsThisMonth.current ?? 0) >= usage.ticketsThisMonth.max;
@@ -235,6 +237,7 @@ export function NewTicketModal({
       }
 
       // Success - close modal and notify parent
+      queryClient.invalidateQueries({ queryKey: usageKeys.all });
       onOpenChange(false);
       onTicketCreated?.();
     } catch (error) {

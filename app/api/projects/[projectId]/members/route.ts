@@ -157,7 +157,10 @@ export async function POST(
     // Check per-project member count limit
     if (subscription.limits.maxMembersPerProject !== null) {
       const memberCount = await prisma.projectMember.count({
-        where: { projectId: projectIdNumber },
+        where: {
+          projectId: projectIdNumber,
+          user: { email: { not: 'ai-board@system.local' } },
+        },
       });
       if (memberCount >= subscription.limits.maxMembersPerProject) {
         return NextResponse.json(
