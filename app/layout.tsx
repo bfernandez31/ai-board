@@ -26,12 +26,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#1e1e2e] text-foreground antialiased">
+      <body className="flex min-h-screen flex-col bg-[#1e1e2e] text-foreground antialiased">
         <QueryProvider>
           <SessionProvider>
             <TooltipProvider>
               <Header />
-              {children}
+              <main className="flex-1">{children}</main>
               <Footer />
               <Toaster />
               <PushOptInPrompt />
