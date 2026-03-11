@@ -398,6 +398,27 @@ The notification bell provides access to mention notifications:
 - Tab list dynamically adjusts from 3 to 4 columns when Stats tab is present
 - Grid layout: `grid-cols-3` (without Stats) or `grid-cols-4` (with Stats)
 
+## Legal & Compliance Surfaces
+
+### Public Legal Pages
+
+- `/legal/terms` and `/legal/privacy` are public Next.js routes that render without authentication so prospective users can review policies before signing in.
+- Each page displays its own hero heading, English copy, and a "Last updated: March 11, 2026" timestamp near the top.
+- **Terms of Service** spells out key responsibilities: you supply API keys (BYOK) and accept all usage costs, AI-generated code is provided "as is" and must be validated by the user, unacceptable behaviors (malicious code, unauthorized access) are blocked, and AI Board limits liability for any indirect or consequential loss.
+- **Privacy Policy** documents the exact data the service stores (GitHub profile metadata, in-product project/ticket content, lightweight usage analytics), clarifies that only essential NextAuth session cookies are used, and reiterates that data is never sold or shared outside required integrations (GitHub auth, user-provided AI providers, or legal requests).
+- Privacy rights follow GDPR expectations: users can request access, correction, deletion, portability, or objection at any time, and personal data is removed within 30 days after an account deletion request unless law requires longer retention.
+
+### Global Footer Links
+
+- A persistent footer appears below all application content, including logged-out screens, because the root layout wraps every page with a `min-h` content container followed by the footer.
+- The footer lists a live copyright line (`© {currentYear} AI Board`) plus inline links to the Terms of Service and Privacy Policy so users can open the policies from any screen.
+- Links use the same `/legal/*` routes as above and inherit the dark theme styling with hover states for clarity.
+
+### Sign-In Consent Copy
+
+- The authentication card now includes a consent statement inside its footer: "By signing in, you agree to our Terms of Service and Privacy Policy."
+- Terms and Privacy links open in-place without breaking the OAuth flow, ensuring users see the policies prior to their first GitHub sign-in as required for compliance.
+
 **URL-Based Tab Selection**:
 - URL parameter `tab=comments` opens conversation tab directly
 - Used by notification navigation to link to specific comments

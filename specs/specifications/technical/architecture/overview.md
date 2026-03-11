@@ -144,6 +144,8 @@ Stage Transition
 ```
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
+/legal/terms                         # Public Terms of Service page
+/legal/privacy                       # Public Privacy Policy page
 ```
 
 **API Routes**:
@@ -157,6 +159,36 @@ Stage Transition
 - Redirect format: `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
 - Board component detects `modal=open` parameter and automatically opens ticket modal
 - URL parameters cleaned up after modal opens to prevent re-opening on page refresh
+
+#### Public Legal Routes
+- Terms of Service (`app/legal/terms/page.tsx`) and Privacy Policy (`app/legal/privacy/page.tsx`) are server components that render without requiring a session, so anyone can review AI Board policies before authenticating.
+- Each route exports explicit `Metadata` objects for SEO, uses shared layout classes for consistent spacing, and surfaces a \"Last updated: March 11, 2026\" timestamp immediately under the page title.
+- Terms copy documents AI Board's responsibilities: AI-generated artifacts are provided \"as is,\" Bring Your Own Key (BYOK) users accept third-party API charges, acceptable-use boundaries forbid malicious activity, and liability for indirect losses is disclaimed.
+- Privacy copy enumerates the exact data the platform stores (GitHub OAuth profile details, in-product project/ticket content, light usage analytics), states that only essential NextAuth session cookies are set, and reiterates that data is never sold—data sharing only occurs for GitHub auth, user-triggered BYOK calls, or legal obligations.
+- GDPR rights are described inline (access, rectification, erasure, portability, objection) with a 30-day deletion SLA once a user requests account removal.
+
+```mermaid
+sequenceDiagram
+    participant V as Visitor
+    participant RL as Root Layout
+    participant F as Footer Links
+    participant L as Legal Route
+
+    V->>RL: Load any AI Board page
+    RL-->>V: Render header, content, footer
+    V->>F: Click Terms or Privacy link
+    F->>L: Route to /legal/{page}
+    L-->>V: Static policy content + last updated date
+```
+
+#### Global Layout Footer
+- `components/layout/footer.tsx` centralizes the legal links and injects a live copyright line.
+- `app/layout.tsx` now wraps `children` in a `min-h-[calc(100vh-7rem)]` container and places `<Footer />` directly beneath it, ensuring legal links appear on every authenticated or anonymous page without overlapping short pages.
+- Footer links use inline `next/link` components pointing to `/legal/terms` and `/legal/privacy`, so policy changes propagate automatically across the entire site.
+
+#### Sign-In Consent Copy
+- `app/auth/signin/page.tsx` adds a `CardFooter` that states \"By signing in, you agree to our Terms of Service and Privacy Policy\" with inline links to the public routes.
+- The consent copy renders before the GitHub OAuth button, fulfilling the requirement that new users acknowledge the policies before their first sign-in while keeping the disabled provider buttons intact for future expansion.
 
 #### Authorization Pattern
 ```typescript
