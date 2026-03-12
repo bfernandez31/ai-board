@@ -2,6 +2,111 @@
 
 Shared utility functions and helpers used across the application.
 
+## Public Site Configuration
+
+### Purpose
+
+Provides a typed source of truth for public marketing content that is reused by the landing page and the global footer.
+
+### File Location
+
+`lib/config/public-site.ts`
+
+### Exported Types
+
+**Interface**: `PublicPlanSummary`
+
+Represents one public pricing plan card.
+
+```typescript
+interface PublicPlanSummary {
+  readonly name: 'Free' | 'Pro' | 'Team';
+  readonly tagline: string;
+  readonly capabilities: readonly string[];
+  readonly ctaLabel: string;
+  ctaHref: '/auth/signin';
+  readonly highlighted?: boolean;
+}
+```
+
+**Interface**: `PublicPricingFaqItem`
+
+Represents one landing-page FAQ entry.
+
+```typescript
+interface PublicPricingFaqItem {
+  readonly question: string;
+  readonly answer: string;
+}
+```
+
+**Interface**: `PublicFooterLink`
+
+Represents one footer navigation link, including whether it should be treated as external.
+
+```typescript
+interface PublicFooterLink {
+  readonly label: string;
+  readonly href: string;
+  readonly external?: boolean;
+}
+```
+
+### Exported Constants
+
+**Constant**: `PUBLIC_SIGNIN_HREF`
+
+Shared sign-in destination for public marketing CTAs.
+
+**Constant**: `PUBLIC_PLAN_SUMMARIES`
+
+Defines the three landing-page pricing cards:
+- Free
+- Pro
+- Team
+
+Each object contains the plan name, marketing tagline, capability list, CTA label, and CTA href. The Pro plan is flagged with `highlighted: true` so the UI can emphasize it as the primary recommendation.
+
+**Constant**: `PUBLIC_PRICING_FAQ_ITEMS`
+
+Defines the landing-page pricing FAQ content for:
+- BYOK / model key expectations
+- Supported agents
+
+**Constant**: `PUBLIC_FOOTER_LINKS`
+
+Defines the global footer links:
+- Terms of Service
+- Privacy Policy
+- GitHub repository (`external: true`)
+
+### Usage Locations
+
+**Landing page pricing section** (`components/landing/pricing-section.tsx`):
+- Reads `PUBLIC_PLAN_SUMMARIES` to render plan cards
+- Reads `PUBLIC_PRICING_FAQ_ITEMS` to render the FAQ below the cards
+
+**Pricing card component** (`components/landing/pricing-card.tsx`):
+- Consumes `PublicPlanSummary`
+- Switches button variant and "Most Popular" badge based on `highlighted`
+
+**Global footer** (`components/layout/footer.tsx`):
+- Reads `PUBLIC_FOOTER_LINKS` to render internal and external navigation consistently
+- Applies `_blank` and `rel="noreferrer noopener"` when `external` is set
+
+### Design Considerations
+
+**Single Source of Truth**:
+- Public marketing copy stays synchronized across multiple components
+- Footer destinations can be changed in one place
+- Tests can assert against one stable content model instead of duplicated inline strings
+
+**Static Server-Safe Data**:
+- No database queries
+- No API routes
+- No client-side fetching
+- Compatible with server-rendered public pages
+
 ## Agent Icons
 
 ### Purpose

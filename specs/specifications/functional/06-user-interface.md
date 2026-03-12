@@ -6,16 +6,18 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 ## Global Footer
 
-A global footer is rendered on all pages (public and authenticated) via the root layout.
+A global footer is rendered on all pages via the root layout.
 
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
-- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- Internal navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- External repository link: "GitHub" → `https://github.com/bfernandez31/ai-board`
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
-- Desktop (≥768px): Copyright on left, links on right (horizontal nav)
+- Desktop (≥768px): Copyright on left, links on right (wrapping horizontal nav)
 - Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- The repository link includes an external-link icon and screen-reader text indicating it opens in a new tab
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -56,6 +58,46 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+### Pricing Section
+
+The landing page includes a dedicated pricing section between the workflow section and the final call-to-action.
+
+**Section Structure**:
+- Section headline: "Choose the rollout that fits your team"
+- Supporting copy positions the pricing comparison as part of the same sign-up flow
+- Three plan cards rendered side by side on large screens and stacked responsively on smaller screens
+- Minimal FAQ block rendered directly below the cards
+
+**Plan Cards**:
+- **Free**: For solo builders validating the workflow
+  - 1 project
+  - 5 tickets per month
+  - BYOK API key required
+  - CTA: `Get Started`
+- **Pro**: For individuals shipping AI-assisted work every week
+  - Unlimited projects
+  - Unlimited tickets
+  - 14-day free trial
+  - CTA: `Start 14-day trial`
+  - Marked visually as "Most Popular"
+- **Team**: For teams coordinating delivery across projects
+  - Everything in Pro
+  - Project members
+  - Advanced analytics
+  - 14-day free trial
+  - CTA: `Start 14-day trial`
+
+**Pricing FAQ**:
+- Question: "Do I bring my own model keys?"
+  - Answer explains that AI Board supports a BYOK setup using the user's provider credentials
+- Question: "Which agents are supported?"
+  - Answer explains support for Claude Code, Codex, and Gemini-based agents
+
+**Interaction Model**:
+- All plan CTAs route to `/auth/signin`
+- The section is fully readable without leaving the landing page
+- Cards and FAQ remain readable on mobile without horizontal scrolling
 
 ### Hero Section Background Animation
 

@@ -20,6 +20,44 @@ AI-Board provides three subscription tiers (Free, Pro, Team) with Stripe-based b
 
 **BYOK**: Free plan users must supply their own API key to use AI features. Paid plans are not affected by this requirement.
 
+## Public Pricing Preview
+
+The marketing landing page exposes the current subscription model before sign-in.
+
+### Landing Page Pricing Cards
+
+Visitors can compare all three plans directly on `/`:
+
+- **Free**: "For solo builders validating the workflow."
+  - 1 project
+  - 5 tickets per month
+  - BYOK API key required
+  - CTA: `Get Started`
+- **Pro**: "For individuals shipping AI-assisted work every week."
+  - Unlimited projects
+  - Unlimited tickets
+  - 14-day free trial
+  - CTA: `Start 14-day trial`
+- **Team**: "For teams coordinating delivery across projects."
+  - Everything in Pro
+  - Project members
+  - Advanced analytics
+  - 14-day free trial
+  - CTA: `Start 14-day trial`
+
+The Pro plan is visually emphasized as the primary recommendation.
+
+### Landing Page Pricing FAQ
+
+The pricing section includes a minimal FAQ that answers:
+
+- Whether users bring their own model keys: yes, AI Board supports BYOK
+- Which agents are supported: Claude Code, Codex, and Gemini-based agents
+
+### CTA Destination
+
+All landing-page pricing CTAs route visitors into the existing sign-in flow at `/auth/signin`.
+
 ### Plan Limits Enforcement
 
 The system enforces limits at the API layer before any create operation:

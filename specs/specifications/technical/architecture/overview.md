@@ -46,15 +46,19 @@ ai-board/
 │   │   └── utils/                # Helper functions
 │   ├── projects/[projectId]/     # Project-scoped pages
 │   │   └── board/                # Kanban board
+│   ├── landing/                  # Public marketing landing page
 │   ├── legal/                    # Legal pages (public)
 │   │   ├── terms/                # Terms of Service
 │   │   └── privacy/              # Privacy Policy
 │   └── auth/                     # Authentication pages
 ├── components/                   # React components
 │   ├── board/                    # Board components
+│   ├── landing/                  # Public marketing sections (hero, workflow, pricing, CTA)
 │   ├── layout/                   # Layout components (Header, Footer)
 │   ├── ui/                       # shadcn/ui components
 │   └── ...                       # Feature components
+├── lib/config/                   # Static typed configuration
+│   └── public-site.ts            # Shared marketing content for landing + footer
 ├── prisma/                       # Database layer
 │   ├── schema.prisma             # Database schema
 │   ├── migrations/               # Migration history
@@ -146,6 +150,7 @@ Stage Transition
 
 **Page Routes**:
 ```
+/                                 # Public marketing landing page
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
 /legal/terms                         # Terms of Service (public, no auth required)
@@ -183,6 +188,12 @@ if (!project) {
 ```
 
 ### External Integrations
+
+#### Shared Public Site Content
+- Static marketing copy is centralized in `lib/config/public-site.ts`
+- The landing page pricing cards, pricing FAQ, and footer links all read from that module
+- Shared config keeps public copy synchronized across the landing page and global footer without adding a CMS, database table, or runtime fetch
+- The GitHub footer destination is treated as external-link metadata (`external: true`), allowing the footer component to add new-tab attributes and accessible labeling consistently
 
 #### GitHub Actions Integration
 - **Workflow Dispatch**: Octokit REST API (`@octokit/rest`)
