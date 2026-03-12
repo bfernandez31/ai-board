@@ -68,7 +68,7 @@ const faqs = [
   {
     question: 'Which AI agents are supported?',
     answer:
-      'AI-Board currently supports Claude (Anthropic) for specification, planning, and implementation workflows. More agents are planned.',
+      'AI-Board currently supports Claude (Anthropic) and Codex (OpenAI) for specification, planning, and implementation workflows.',
   },
 ];
 
@@ -151,7 +151,7 @@ export function PricingSection() {
                   <h4 className="text-base font-semibold text-[hsl(var(--ctp-text))] mb-2">
                     {faq.question}
                   </h4>
-                  <p className="text-sm text-[hsl(var(--ctp-subtext-0))]">{faq.answer}</p>
+                  <p className="text-sm text-[hsl(var(--ctp-subtext-1))]">{faq.answer}</p>
                 </div>
               ))}
             </div>
