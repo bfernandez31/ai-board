@@ -6,7 +6,7 @@ import { getNotificationsForUser, getUnreadCount } from '@/app/lib/db/notificati
 
 export async function GET(_request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(_request);
     if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
@@ -38,6 +38,13 @@ export async function GET(_request: NextRequest) {
       hasMore: notifications.length === limit,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'AUTH_REQUIRED' },
+        { status: 401 }
+      );
+    }
+
     console.error('[API] Failed to fetch notifications:', error);
     return NextResponse.json(
       { error: 'Failed to fetch notifications', code: 'DATABASE_ERROR' },

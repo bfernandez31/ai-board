@@ -14,6 +14,10 @@ export interface AuthorizedProject {
   clarificationPolicy: string;
 }
 
+async function requireAuthorizedUserId(request?: NextRequest): Promise<string> {
+  return requireAuth(request);
+}
+
 /**
  * Verify that the current user has access to a project (owner OR member)
  * Supports both session auth and Bearer token (PAT) authentication.
@@ -23,7 +27,7 @@ export interface AuthorizedProject {
  * @returns The project if found and user has access
  */
 export async function verifyProjectAccess(projectId: number, request?: NextRequest): Promise<AuthorizedProject> {
-  const userId = await requireAuth(request);
+  const userId = await requireAuthorizedUserId(request);
 
   const project = await prisma.project.findFirst({
     where: {
@@ -58,7 +62,7 @@ export async function verifyProjectAccess(projectId: number, request?: NextReque
  * @returns The ticket if found and user has access
  */
 export async function verifyTicketAccess(ticketId: number, request?: NextRequest): Promise<Ticket> {
-  const userId = await requireAuth(request);
+  const userId = await requireAuthorizedUserId(request);
 
   const ticket = await prisma.ticket.findFirst({
     where: {
@@ -89,7 +93,7 @@ export async function verifyTicketAccess(ticketId: number, request?: NextRequest
  * @returns The project if found and owned by user
  */
 export async function verifyProjectOwnership(projectId: number, request?: NextRequest): Promise<AuthorizedProject> {
-  const userId = await requireAuth(request);
+  const userId = await requireAuthorizedUserId(request);
 
   const project = await prisma.project.findFirst({
     where: {

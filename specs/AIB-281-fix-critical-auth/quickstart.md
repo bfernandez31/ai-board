@@ -37,8 +37,10 @@ Use Playwright only for browser-required assertions such as protected-page redir
 ## Validation Commands
 
 ```bash
-bun run test:unit
-bun run test:integration
+VITEST_INTEGRATION=1 bun vitest run tests/integration/auth/test-user-header-guard.test.ts
+VITEST_INTEGRATION=1 bun vitest run tests/integration/tokens/api.test.ts
+VITEST_INTEGRATION=1 bun vitest run tests/integration/jobs/status.test.ts
+bunx playwright test tests/e2e/auth/test-user-header-redirect.spec.ts
 bun run lint
 bun run type-check
 ```
@@ -49,3 +51,4 @@ bun run type-check
 - Non-test protected pages do not treat `x-test-user-id` as authenticated identity
 - PAT and session auth continue to work unchanged
 - Vitest and Playwright harnesses continue to authenticate seeded test users when started with `TEST_MODE=true` or `NODE_ENV=test`
+- Blocked override attempts produce operator-visible `console.warn` entries from the auth helper or proxy with the route, requested user ID, and rejection reason

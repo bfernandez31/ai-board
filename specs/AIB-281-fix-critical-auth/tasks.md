@@ -16,9 +16,9 @@
 
 **Purpose**: Prepare the existing test harnesses so the auth fix can be implemented and verified without ad hoc test setup.
 
-- [ ] T001 Extend `/home/runner/work/ai-board/ai-board/target/tests/fixtures/vitest/api-client.ts` so integration tests can omit `x-test-user-id`, inject conflicting headers, and opt into explicit test-mode overrides per request
-- [ ] T002 [P] Create the shared auth regression suite in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts` for non-test rejection, explicit test-mode override, and blocked-attempt observability scenarios
-- [ ] T003 [P] Create the protected-page redirect regression spec in `/home/runner/work/ai-board/ai-board/target/tests/e2e/auth/test-user-header-redirect.spec.ts` for forbidden `x-test-user-id` requests outside test mode
+- [X] T001 Extend `/home/runner/work/ai-board/ai-board/target/tests/fixtures/vitest/api-client.ts` so integration tests can omit `x-test-user-id`, inject conflicting headers, and opt into explicit test-mode overrides per request
+- [X] T002 [P] Create the shared auth regression suite in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts` for non-test rejection, explicit test-mode override, and blocked-attempt observability scenarios
+- [X] T003 [P] Create the protected-page redirect regression spec in `/home/runner/work/ai-board/ai-board/target/tests/e2e/auth/test-user-header-redirect.spec.ts` for forbidden `x-test-user-id` requests outside test mode
 
 ---
 
@@ -28,9 +28,9 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Add explicit test-context detection, override rejection metadata, and shared auth-guard helper types in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts`
-- [ ] T005 [P] Refactor `/home/runner/work/ai-board/ai-board/target/lib/db/auth-helpers.ts` to accept the guarded identity-resolution path via `requireAuth(request)` for shared project and ticket authorization flows
-- [ ] T006 [P] Replace the unconditional `x-test-user-id` pass-through in `/home/runner/work/ai-board/ai-board/target/proxy.ts` with request classification that can block or redirect forbidden non-test requests
+- [X] T004 Add explicit test-context detection, override rejection metadata, and shared auth-guard helper types in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts`
+- [X] T005 [P] Refactor `/home/runner/work/ai-board/ai-board/target/lib/db/auth-helpers.ts` to accept the guarded identity-resolution path via `requireAuth(request)` for shared project and ticket authorization flows
+- [X] T006 [P] Replace the unconditional `x-test-user-id` pass-through in `/home/runner/work/ai-board/ai-board/target/proxy.ts` with request classification that can block or redirect forbidden non-test requests
 
 **Checkpoint**: Shared guard infrastructure is in place and user story implementation can proceed in priority order.
 
@@ -44,16 +44,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Add non-test header-only rejection and conflicting-session identity-preservation coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
-- [ ] T008 [P] [US1] Extend PAT precedence coverage for conflicting `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/tests/integration/tokens/api.test.ts`
-- [ ] T009 [P] [US1] Extend protected project polling coverage for conflicting `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`
+- [X] T007 [P] [US1] Add non-test header-only rejection and conflicting-session identity-preservation coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
+- [X] T008 [P] [US1] Extend PAT precedence coverage for conflicting `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/tests/integration/tokens/api.test.ts`
+- [X] T009 [P] [US1] Extend protected project polling coverage for conflicting `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Refactor `getCurrentUser()`, `getCurrentUserOrNull()`, and `requireAuth()` in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts` so non-test requests fail closed and never switch identity because of `x-test-user-id`
-- [ ] T011 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/tokens/route.ts` to return contract-compliant `401 Unauthorized` responses for forbidden header-only callers while preserving valid session identity
-- [ ] T012 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/status/route.ts` to use the guarded auth path and preserve the authenticated caller when a conflicting header is present
-- [ ] T013 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/notifications/route.ts` so session-only protected routes ignore forbidden header impersonation outside explicit test mode
+- [X] T010 [US1] Refactor `getCurrentUser()`, `getCurrentUserOrNull()`, and `requireAuth()` in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts` so non-test requests fail closed and never switch identity because of `x-test-user-id`
+- [X] T011 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/tokens/route.ts` to return contract-compliant `401 Unauthorized` responses for forbidden header-only callers while preserving valid session identity
+- [X] T012 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/status/route.ts` to use the guarded auth path and preserve the authenticated caller when a conflicting header is present
+- [X] T013 [US1] Update `/home/runner/work/ai-board/ai-board/target/app/api/notifications/route.ts` so session-only protected routes ignore forbidden header impersonation outside explicit test mode
 
 **Checkpoint**: User Story 1 is complete when protected routes reject header-only impersonation and valid session or PAT callers keep their original identity.
 
@@ -67,14 +67,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add explicit test-mode success and unknown-test-user failure coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
-- [ ] T015 [P] [US2] Add representative test-mode override coverage for `/api/tokens` and `/api/projects/[projectId]/jobs/status` in `/home/runner/work/ai-board/ai-board/target/tests/integration/tokens/api.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`
+- [X] T014 [P] [US2] Add explicit test-mode success and unknown-test-user failure coverage in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
+- [X] T015 [P] [US2] Add representative test-mode override coverage for `/api/tokens` and `/api/projects/[projectId]/jobs/status` in `/home/runner/work/ai-board/ai-board/target/tests/integration/tokens/api.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/integration/jobs/status.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Implement seeded-user-only `x-test-user-id` resolution in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts` so the override is allowed only when `TEST_MODE=true` or `NODE_ENV=test`
-- [ ] T017 [US2] Adjust `/home/runner/work/ai-board/ai-board/target/app/api/tokens/route.ts` to keep sanctioned test-mode override behavior compatible with the guarded auth contract
-- [ ] T018 [US2] Adjust `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/status/route.ts` to keep sanctioned test-mode override behavior compatible with the guarded auth contract
+- [X] T016 [US2] Implement seeded-user-only `x-test-user-id` resolution in `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts` so the override is allowed only when `TEST_MODE=true` or `NODE_ENV=test`
+- [X] T017 [US2] Adjust `/home/runner/work/ai-board/ai-board/target/app/api/tokens/route.ts` to keep sanctioned test-mode override behavior compatible with the guarded auth contract
+- [X] T018 [US2] Adjust `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/status/route.ts` to keep sanctioned test-mode override behavior compatible with the guarded auth contract
 
 **Checkpoint**: User Story 2 is complete when automated test-mode requests still resolve seeded test users and unknown override IDs fail safely.
 
@@ -88,13 +88,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Add blocked-header observability assertions in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
-- [ ] T020 [P] [US3] Add protected-page redirect and proxy defense-in-depth coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/auth/test-user-header-redirect.spec.ts`
+- [X] T019 [P] [US3] Add blocked-header observability assertions in `/home/runner/work/ai-board/ai-board/target/tests/integration/auth/test-user-header-guard.test.ts`
+- [X] T020 [P] [US3] Add protected-page redirect and proxy defense-in-depth coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/auth/test-user-header-redirect.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Emit consistent operator-visible blocked-header log entries with route and rejection reason from `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts`
-- [ ] T022 [US3] Finalize non-test boundary rejection and redirect behavior for forbidden `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/proxy.ts`
+- [X] T021 [US3] Emit consistent operator-visible blocked-header log entries with route and rejection reason from `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts`
+- [X] T022 [US3] Finalize non-test boundary rejection and redirect behavior for forbidden `x-test-user-id` requests in `/home/runner/work/ai-board/ai-board/target/proxy.ts`
 
 **Checkpoint**: User Story 3 is complete when blocked override attempts are visible in normal validation evidence and the proxy still blocks forbidden header use on protected pages.
 
@@ -104,7 +104,7 @@
 
 **Purpose**: Validate the full change set and keep the implementation artifacts aligned with the approved verification flow.
 
-- [ ] T023 [P] Reconcile `/home/runner/work/ai-board/ai-board/target/specs/AIB-281-fix-critical-auth/quickstart.md` with the final auth-guard validation steps and expected blocked-attempt evidence
+- [X] T023 [P] Reconcile `/home/runner/work/ai-board/ai-board/target/specs/AIB-281-fix-critical-auth/quickstart.md` with the final auth-guard validation steps and expected blocked-attempt evidence
 - [ ] T024 Run the validation commands documented in `/home/runner/work/ai-board/ai-board/target/specs/AIB-281-fix-critical-auth/quickstart.md` against `/home/runner/work/ai-board/ai-board/target/lib/db/users.ts` and `/home/runner/work/ai-board/ai-board/target/proxy.ts`
 
 ---

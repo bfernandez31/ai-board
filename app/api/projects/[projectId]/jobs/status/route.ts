@@ -22,14 +22,14 @@ import { JobStatusResponseSchema } from '@/app/lib/schemas/job-polling';
  * @returns JSON response with job statuses or error
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
     // 1. Validate authentication (supports test mode via x-test-user-id header)
     let userId: string;
     try {
-      userId = await requireAuth();
+      userId = await requireAuth(request);
     } catch (error) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'AUTH_REQUIRED' },

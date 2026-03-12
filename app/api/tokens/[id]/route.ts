@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/db/users";
+import { getCurrentUserOrToken } from "@/lib/db/users";
 import { deleteToken } from "@/lib/db/tokens";
 
 interface RouteParams {
@@ -14,7 +14,7 @@ interface RouteParams {
  */
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserOrToken(_request);
     const { id } = await params;
 
     // Validate ID format
@@ -39,7 +39,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ message: "Token deleted successfully" });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
     }
 
     console.error("Failed to delete token:", error);
