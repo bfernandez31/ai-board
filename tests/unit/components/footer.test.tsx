@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Footer } from '@/components/layout/footer';
+import { LANDING_PRICING_ANCHOR_HREF } from '@/lib/landing/pricing';
 
 describe('Footer', () => {
   it('should render Terms of Service link with correct href', () => {
@@ -33,7 +34,7 @@ describe('Footer', () => {
     const privacyLink = screen.getByRole('link', { name: 'Privacy Policy' });
 
     expect(pricingLink).toBeInTheDocument();
-    expect(pricingLink).toHaveAttribute('href', '#pricing');
+    expect(pricingLink).toHaveAttribute('href', LANDING_PRICING_ANCHOR_HREF);
     expect(termsLink).toBeInTheDocument();
     expect(privacyLink).toBeInTheDocument();
   });

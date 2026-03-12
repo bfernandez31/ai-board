@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   LANDING_PRICING_ANCHOR_HREF,
+  LANDING_PRICING_CTA_HREF,
   LANDING_PRICING_FAQS,
   LANDING_PRICING_PLANS,
+  LANDING_PRICING_SECTION_ID,
 } from '@/lib/landing/pricing';
 
 describe('landing pricing content', () => {
@@ -27,7 +29,9 @@ describe('landing pricing content', () => {
   });
 
   it('uses the shared pricing anchor metadata', () => {
-    expect(LANDING_PRICING_ANCHOR_HREF).toBe('#pricing');
-    expect(LANDING_PRICING_PLANS.every((plan) => plan.ctaHref === '/auth/signin')).toBe(true);
+    expect(LANDING_PRICING_ANCHOR_HREF).toBe(`#${LANDING_PRICING_SECTION_ID}`);
+    expect(LANDING_PRICING_PLANS.every((plan) => plan.ctaHref === LANDING_PRICING_CTA_HREF)).toBe(
+      true
+    );
   });
 });

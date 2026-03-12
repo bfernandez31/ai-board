@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LANDING_PRICING_ANCHOR_HREF } from '@/lib/landing/pricing';
 
 // Mock pathname - MUST be before component import
 let mockPathname = '/projects/1/board';
@@ -182,7 +183,10 @@ describe('Header', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute('href', '#pricing');
+      expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute(
+        'href',
+        LANDING_PRICING_ANCHOR_HREF
+      );
       expect(screen.getByRole('link', { name: 'Features' })).toHaveAttribute('href', '#features');
       expect(screen.getByRole('link', { name: 'Workflow' })).toHaveAttribute('href', '#workflow');
     });

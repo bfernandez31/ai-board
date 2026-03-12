@@ -14,7 +14,7 @@ interface PricingCardProps {
   plan: LandingPricingPlan;
 }
 
-function formatPrice(priceMonthly: number) {
+function formatPrice(priceMonthly: number): string {
   if (priceMonthly === 0) {
     return '$0';
   }
@@ -22,16 +22,16 @@ function formatPrice(priceMonthly: number) {
   return `$${Math.round(priceMonthly / 100)}`;
 }
 
-export function PricingCard({ plan }: PricingCardProps) {
+export function PricingCard({ plan }: PricingCardProps): JSX.Element {
   const isFeatured = plan.emphasis === 'featured';
+  const cardClassName = isFeatured
+    ? 'flex h-full flex-col border-border bg-card/80 border-primary shadow-lg shadow-primary/10 backdrop-blur-sm'
+    : 'flex h-full flex-col border-border bg-card/80 backdrop-blur-sm';
+  const buttonVariant = isFeatured ? 'default' : 'outline';
+  const priceLabel = formatPrice(plan.priceMonthly);
 
   return (
-    <Card
-      data-testid="pricing-card"
-      className={`flex h-full flex-col border-border bg-card/80 backdrop-blur-sm ${
-        isFeatured ? 'border-primary shadow-lg shadow-primary/10' : ''
-      }`}
-    >
+    <Card data-testid="pricing-card" className={cardClassName}>
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-2xl text-foreground">{plan.name}</CardTitle>
@@ -42,7 +42,7 @@ export function PricingCard({ plan }: PricingCardProps) {
           ) : null}
         </div>
         <div className="flex items-end gap-2">
-          <span className="text-4xl font-bold text-foreground">{formatPrice(plan.priceMonthly)}</span>
+          <span className="text-4xl font-bold text-foreground">{priceLabel}</span>
           <span className="pb-1 text-sm text-muted-foreground">/month</span>
         </div>
       </CardHeader>
@@ -57,7 +57,7 @@ export function PricingCard({ plan }: PricingCardProps) {
         </ul>
       </CardContent>
       <CardFooter>
-        <Button asChild className="w-full" size="lg" variant={isFeatured ? 'default' : 'outline'}>
+        <Button asChild className="w-full" size="lg" variant={buttonVariant}>
           <Link href={plan.ctaHref}>{plan.ctaLabel}</Link>
         </Button>
       </CardFooter>

@@ -1,6 +1,6 @@
 import { LANDING_PRICING_FAQS } from '@/lib/landing/pricing';
 
-export function PricingFaq() {
+export function PricingFaq(): JSX.Element {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {LANDING_PRICING_FAQS.map((entry) => (

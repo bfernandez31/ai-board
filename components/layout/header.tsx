@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
+import { LANDING_PRICING_ANCHOR_HREF } from '@/lib/landing/pricing';
 import { TicketSearch } from '@/components/search/ticket-search';
 
 interface ProjectInfo {
@@ -18,7 +19,7 @@ interface ProjectInfo {
   githubRepo: string;
 }
 
-export function Header() {
+export function Header(): JSX.Element | null {
   const pathname = usePathname();
   const { status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -166,7 +167,7 @@ export function Header() {
               <Link href="#workflow" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
                 Workflow
               </Link>
-              <Link href="#pricing" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
+              <Link href={LANDING_PRICING_ANCHOR_HREF} className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
                 Pricing
               </Link>
               <Link href="/auth/signin">

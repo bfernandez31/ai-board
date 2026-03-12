@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { LANDING_PRICING_ANCHOR_HREF } from '@/lib/landing/pricing';
 
-export function Footer() {
+export function Footer(): JSX.Element {
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6">
@@ -10,7 +11,7 @@ export function Footer() {
           </p>
           <nav className="flex gap-6">
             <Link
-              href="#pricing"
+              href={LANDING_PRICING_ANCHOR_HREF}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Pricing

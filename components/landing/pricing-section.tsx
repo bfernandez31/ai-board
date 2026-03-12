@@ -5,7 +5,7 @@ import {
   LANDING_PRICING_SECTION_ID,
 } from '@/lib/landing/pricing';
 
-export function PricingSection() {
+export function PricingSection(): JSX.Element {
   return (
     <section
       id={LANDING_PRICING_SECTION_ID}

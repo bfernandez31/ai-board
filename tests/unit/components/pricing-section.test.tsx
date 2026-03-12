@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { PricingSection } from '@/components/landing/pricing-section';
+import {
+  LANDING_PRICING_CTA_HREF,
+  LANDING_PRICING_SECTION_ID,
+} from '@/lib/landing/pricing';
 
 describe('PricingSection', () => {
   it('renders three pricing cards in Free, Pro, Team order', () => {
@@ -35,13 +39,15 @@ describe('PricingSection', () => {
       'Start 14-day trial',
       'Start 14-day trial',
     ]);
-    expect(ctaLinks.every((link) => link.getAttribute('href') === '/auth/signin')).toBe(true);
+    expect(ctaLinks.every((link) => link.getAttribute('href') === LANDING_PRICING_CTA_HREF)).toBe(
+      true
+    );
   });
 
   it('renders the pricing anchor and the two FAQ entries', () => {
     render(<PricingSection />);
 
-    expect(screen.getByTestId('pricing-section')).toHaveAttribute('id', 'pricing');
+    expect(screen.getByTestId('pricing-section')).toHaveAttribute('id', LANDING_PRICING_SECTION_ID);
     expect(
       screen.getByText('Do I need to bring my own model API key?')
     ).toBeInTheDocument();
