@@ -5,7 +5,7 @@ import {
   PUBLIC_PRICING_FAQ_ITEMS,
 } from '@/lib/config/public-site';
 
-export function PricingSection() {
+export function PricingSection(): JSX.Element {
   return (
     <section
       className="overflow-hidden bg-[radial-gradient(circle_at_top,#313244_0%,#1e1e2e_45%,#11111b_100%)] py-16 md:py-24 lg:py-32"
@@ -18,7 +18,8 @@ export function PricingSection() {
               Choose the rollout that fits your team
             </h2>
             <p className="mt-4 text-lg leading-8 text-[hsl(var(--ctp-subtext-0))] md:text-xl">
-              Compare the plans, keep sign-up simple, and move into AI-assisted delivery without leaving the page.
+              Compare the plans, keep sign-up simple, and move into AI-assisted delivery
+              without leaving the page.
             </p>
           </div>
 

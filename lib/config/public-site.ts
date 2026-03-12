@@ -1,21 +1,21 @@
 export interface PublicPlanSummary {
-  name: 'Free' | 'Pro' | 'Team';
-  tagline: string;
-  capabilities: string[];
-  ctaLabel: string;
+  readonly name: 'Free' | 'Pro' | 'Team';
+  readonly tagline: string;
+  readonly capabilities: readonly string[];
+  readonly ctaLabel: string;
   ctaHref: '/auth/signin';
-  highlighted?: boolean;
+  readonly highlighted?: boolean;
 }
 
 export interface PublicPricingFaqItem {
-  question: string;
-  answer: string;
+  readonly question: string;
+  readonly answer: string;
 }
 
 export interface PublicFooterLink {
-  label: string;
-  href: string;
-  external?: boolean;
+  readonly label: string;
+  readonly href: string;
+  readonly external?: boolean;
 }
 
 export const PUBLIC_SIGNIN_HREF = '/auth/signin' as const;

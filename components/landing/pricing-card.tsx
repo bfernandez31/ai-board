@@ -14,20 +14,21 @@ interface PricingCardProps {
   plan: PublicPlanSummary;
 }
 
-export function PricingCard({ plan }: PricingCardProps) {
+export function PricingCard({ plan }: PricingCardProps): JSX.Element {
+  const cardClassName = plan.highlighted
+    ? 'flex h-full flex-col border-white/10 bg-[#11111b]/80 text-[hsl(var(--ctp-text))] shadow-lg shadow-black/20 border-[#8B5CF6] shadow-[#8B5CF6]/20'
+    : 'flex h-full flex-col border-white/10 bg-[#11111b]/80 text-[hsl(var(--ctp-text))] shadow-lg shadow-black/20';
+
+  const buttonVariant = plan.highlighted ? 'default' : 'outline';
+
   return (
-    <Card
-      className={[
-        'flex h-full flex-col border-white/10 bg-[#11111b]/80 text-[hsl(var(--ctp-text))] shadow-lg shadow-black/20',
-        plan.highlighted ? 'border-[#8B5CF6] shadow-[#8B5CF6]/20' : '',
-      ].join(' ')}
-    >
+    <Card className={cardClassName}>
       <CardHeader className="space-y-3">
-        {plan.highlighted ? (
+        {plan.highlighted && (
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#cba6f7]">
             Most Popular
           </p>
-        ) : null}
+        )}
         <div className="space-y-2">
           <h3 className="text-2xl font-semibold leading-none tracking-tight">{plan.name}</h3>
           <CardDescription className="text-sm leading-6 text-[hsl(var(--ctp-subtext-0))]">
@@ -46,12 +47,7 @@ export function PricingCard({ plan }: PricingCardProps) {
         </ul>
       </CardContent>
       <CardFooter>
-        <Button
-          asChild
-          size="lg"
-          variant={plan.highlighted ? 'default' : 'outline'}
-          className="w-full"
-        >
+        <Button asChild size="lg" variant={buttonVariant} className="w-full">
           <Link href={plan.ctaHref}>{plan.ctaLabel}</Link>
         </Button>
       </CardFooter>

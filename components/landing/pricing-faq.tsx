@@ -4,7 +4,7 @@ interface PricingFaqProps {
   items: PublicPricingFaqItem[];
 }
 
-export function PricingFaq({ items }: PricingFaqProps) {
+export function PricingFaq({ items }: PricingFaqProps): JSX.Element {
   return (
     <div className="rounded-3xl border border-white/10 bg-[#11111b]/70 p-6 sm:p-8">
       <div className="max-w-2xl">
