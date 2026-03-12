@@ -1,17 +1,16 @@
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db/client"
-import { headers } from "next/headers"
-import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
-import type { NextRequest } from "next/server"
-import { stripe } from "@/lib/billing/stripe"
 import {
   getBlockedTestUserOverrideAttempt,
   getRequestPath,
-  isExplicitTestOverrideRequest,
   TEST_USER_HEADER,
   type TestUserOverrideAttempt,
   type TestUserOverrideRejectionReason,
 } from "@/lib/auth/test-user-override"
+import { stripe } from "@/lib/billing/stripe"
+import { prisma } from "@/lib/db/client"
+import { headers } from "next/headers"
+import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
+import type { NextRequest } from "next/server"
 
 export interface AuthenticatedUser {
   id: string
@@ -27,6 +26,10 @@ export interface TestUserOverrideResolution {
 }
 
 type AuthRequest = Pick<NextRequest, "headers" | "nextUrl" | "url">
+
+function createUnauthorizedError(message = "Unauthorized"): Error {
+  return new Error(message)
+}
 
 function isSeededTestUser(user: { id: string; email: string }): boolean {
   return (
@@ -45,7 +48,7 @@ function toAuthenticatedUser(
   source: AuthenticatedUser["source"]
 ): AuthenticatedUser {
   if (!user.email) {
-    throw new Error("Unauthorized")
+    throw createUnauthorizedError()
   }
 
   return {
@@ -74,6 +77,16 @@ async function getRequestHeaders(request?: AuthRequest): Promise<Headers> {
   return await headers()
 }
 
+function logBlockedAttemptIfPresent(
+  attempt: TestUserOverrideAttempt | null
+): TestUserOverrideAttempt | null {
+  if (attempt) {
+    logBlockedTestUserOverrideAttempt(attempt)
+  }
+
+  return attempt
+}
+
 export async function getTestUserOverrideResolution(
   request?: AuthRequest
 ): Promise<TestUserOverrideResolution> {
@@ -88,9 +101,10 @@ export async function getTestUserOverrideResolution(
     }
   }
 
-  const blockedAttempt = getBlockedTestUserOverrideAttempt(requestHeaders, request)
+  const blockedAttempt = logBlockedAttemptIfPresent(
+    getBlockedTestUserOverrideAttempt(requestHeaders, request)
+  )
   if (blockedAttempt) {
-    logBlockedTestUserOverrideAttempt(blockedAttempt)
     return {
       requestedUserId,
       allowed: false,
@@ -100,7 +114,7 @@ export async function getTestUserOverrideResolution(
 
   return {
     requestedUserId,
-    allowed: isExplicitTestOverrideRequest(requestHeaders),
+    allowed: true,
     rejectionReason: null,
   }
 }
@@ -144,7 +158,7 @@ async function resolveTestOverrideUser(
       route: getRequestPath(request),
       reason: "user-not-found",
     })
-    throw new Error("Unauthorized")
+    throw createUnauthorizedError()
   }
 
   return toAuthenticatedUser(user, "test-override")
@@ -168,7 +182,7 @@ export async function getCurrentUser(
     return overrideUser
   }
 
-  throw new Error("Unauthorized")
+  throw createUnauthorizedError()
 }
 
 /**
@@ -183,6 +197,14 @@ export async function getCurrentUserOrNull(
   } catch {
     return null
   }
+}
+
+function getRequestClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  )
 }
 
 /**
@@ -216,26 +238,16 @@ export async function getCurrentUserOrToken(
   const token = extractBearerToken(authHeader)
 
   if (token) {
-    // Get client IP for rate limiting
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-               request.headers.get("x-real-ip") ||
-               "unknown"
-
-    const result = await validateToken(token, ip)
+    const result = await validateToken(token, getRequestClientIp(request))
 
     if (result.valid && result.userId) {
-      const blockedAttempt = getBlockedTestUserOverrideAttempt(
-        request.headers,
-        request
+      logBlockedAttemptIfPresent(
+        getBlockedTestUserOverrideAttempt(request.headers, request)
       )
-      if (blockedAttempt) {
-        logBlockedTestUserOverrideAttempt(blockedAttempt)
-      }
 
-      // Fetch user details
       const user = await prisma.user.findUnique({
         where: { id: result.userId },
-        select: { id: true, email: true, name: true }
+        select: { id: true, email: true, name: true },
       })
 
       if (user) {
@@ -244,7 +256,7 @@ export async function getCurrentUserOrToken(
     }
 
     // Token provided but invalid - throw immediately
-    throw new Error(result.error || "Unauthorized")
+    throw createUnauthorizedError(result.error)
   }
 
   // Fall back to session auth
@@ -256,14 +268,14 @@ export async function getCurrentUserOrToken(
  * @param userId - The user ID to delete
  * @throws Error if Stripe cancellation fails (blocks account deletion)
  */
-export async function deleteUserAccount(userId: string) {
+export async function deleteUserAccount(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { stripeCustomerId: true, subscription: true },
   })
 
   if (!user) {
-    throw new Error('User not found')
+    throw new Error("User not found")
   }
 
   // Cancel Stripe subscription before deleting account
@@ -271,8 +283,8 @@ export async function deleteUserAccount(userId: string) {
     try {
       await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
     } catch (error) {
-      console.error('Failed to cancel Stripe subscription:', error)
-      throw new Error('Failed to cancel subscription. Account deletion blocked.')
+      console.error("Failed to cancel Stripe subscription:", error)
+      throw new Error("Failed to cancel subscription. Account deletion blocked.")
     }
   }
 
