@@ -9,6 +9,14 @@ import { render, screen } from '@testing-library/react';
 import { Footer } from '@/components/layout/footer';
 
 describe('Footer', () => {
+  it('should render Pricing link with correct href', () => {
+    render(<Footer />);
+
+    const pricingLink = screen.getByRole('link', { name: 'Pricing' });
+    expect(pricingLink).toBeInTheDocument();
+    expect(pricingLink).toHaveAttribute('href', '/#pricing');
+  });
+
   it('should render Terms of Service link with correct href', () => {
     render(<Footer />);
 
