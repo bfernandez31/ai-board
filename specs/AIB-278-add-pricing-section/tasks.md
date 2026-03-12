@@ -11,8 +11,8 @@
 
 **Purpose**: Confirm the implementation touchpoints and source-of-truth files before changing shared marketing components.
 
-- [ ] T001 Review the landing-page insertion point in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` to preserve the workflow-to-CTA section order
-- [ ] T002 Review canonical billing plan metadata in `/home/runner/work/ai-board/ai-board/target/lib/billing/plans.ts` before deriving landing-page pricing content
+- [X] T001 Review the landing-page insertion point in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` to preserve the workflow-to-CTA section order
+- [X] T002 Review canonical billing plan metadata in `/home/runner/work/ai-board/ai-board/target/lib/billing/plans.ts` before deriving landing-page pricing content
 
 ---
 
@@ -22,8 +22,8 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T003 Add failing shared pricing view-model tests in `/home/runner/work/ai-board/ai-board/target/tests/unit/landing/pricing.test.ts` for plan order, CTA labels, FAQ count, and `#pricing` anchor metadata
-- [ ] T004 Implement the shared pricing mapper and typed landing-page content in `/home/runner/work/ai-board/ai-board/target/lib/landing/pricing.ts`
+- [X] T003 Add failing shared pricing view-model tests in `/home/runner/work/ai-board/ai-board/target/tests/unit/landing/pricing.test.ts` for plan order, CTA labels, FAQ count, and `#pricing` anchor metadata
+- [X] T004 Implement the shared pricing mapper and typed landing-page content in `/home/runner/work/ai-board/ai-board/target/lib/landing/pricing.ts`
 
 **Checkpoint**: Shared pricing content is typed, testable, and ready for story-specific UI work.
 
@@ -37,14 +37,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Add a failing component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` for three-card rendering, plan order, and responsive-safe copy
-- [ ] T006 [P] [US1] Add a failing landing-page composition test in `/home/runner/work/ai-board/ai-board/target/tests/unit/app/landing-page.test.tsx` for placing pricing between the workflow and CTA sections
+- [X] T005 [P] [US1] Add a failing component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` for three-card rendering, plan order, and responsive-safe copy
+- [X] T006 [P] [US1] Add a failing landing-page composition test in `/home/runner/work/ai-board/ai-board/target/tests/unit/app/landing-page.test.tsx` for placing pricing between the workflow and CTA sections
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Create the reusable plan card component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`
-- [ ] T008 [P] [US1] Implement the pricing section shell and three-card grid in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
-- [ ] T009 [US1] Insert the pricing section into `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` after `WorkflowSection` and before `CTASection`
+- [X] T007 [P] [US1] Create the reusable plan card component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`
+- [X] T008 [P] [US1] Implement the pricing section shell and three-card grid in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
+- [X] T009 [US1] Insert the pricing section into `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` after `WorkflowSection` and before `CTASection`
 
 **Checkpoint**: User Story 1 is complete when the landing page shows the comparison section in the correct position and layout without relying on FAQ or navigation changes.
 
@@ -58,12 +58,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` with failing assertions for CTA labels and href targets on all three plan cards
+- [X] T010 [P] [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` with failing assertions for CTA labels and href targets on all three plan cards
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add plan-specific CTA label and href mapping in `/home/runner/work/ai-board/ai-board/target/lib/landing/pricing.ts`
-- [ ] T012 [US2] Wire the mapped CTA content into the card actions in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`
+- [X] T011 [US2] Add plan-specific CTA label and href mapping in `/home/runner/work/ai-board/ai-board/target/lib/landing/pricing.ts`
+- [X] T012 [US2] Wire the mapped CTA content into the card actions in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`
 
 **Checkpoint**: User Story 2 is complete when each rendered card leads to the correct next-step messaging without changing the billing backend or adding routes.
 
@@ -77,16 +77,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` with failing assertions for the two FAQ entries and the `id="pricing"` anchor target
-- [ ] T014 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx` with failing assertions for the marketing `Pricing` anchor link on `/`
-- [ ] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/footer.test.tsx` with failing assertions for the footer `Pricing` link coexisting with `Terms of Service` and `Privacy Policy`
+- [X] T013 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/pricing-section.test.tsx` with failing assertions for the two FAQ entries and the `id="pricing"` anchor target
+- [X] T014 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx` with failing assertions for the marketing `Pricing` anchor link on `/`
+- [X] T015 [P] [US3] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/footer.test.tsx` with failing assertions for the footer `Pricing` link coexisting with `Terms of Service` and `Privacy Policy`
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Create the two-entry FAQ component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx`
-- [ ] T017 [US3] Add the FAQ block and `id="pricing"` section anchor in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
-- [ ] T018 [P] [US3] Add the marketing `Pricing` fragment link in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx`
-- [ ] T019 [P] [US3] Add the footer `Pricing` fragment link in `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx`
+- [X] T016 [P] [US3] Create the two-entry FAQ component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx`
+- [X] T017 [US3] Add the FAQ block and `id="pricing"` section anchor in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
+- [X] T018 [P] [US3] Add the marketing `Pricing` fragment link in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx`
+- [X] T019 [P] [US3] Add the footer `Pricing` fragment link in `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx`
 
 **Checkpoint**: User Story 3 is complete when the landing page answers the two scoped pre-purchase questions and both navigation surfaces expose working pricing anchors.
 
@@ -96,8 +96,8 @@
 
 **Purpose**: Finish responsive/accessibility validation and run the prescribed feature checks across all touched stories.
 
-- [ ] T020 [P] Audit semantic Tailwind usage, heading hierarchy, and responsive spacing in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
-- [ ] T021 Run the feature validation checklist from `/home/runner/work/ai-board/ai-board/target/specs/AIB-278-add-pricing-section/quickstart.md`, including `bun run type-check`, `bun run lint`, and targeted unit tests
+- [X] T020 [P] Audit semantic Tailwind usage, heading hierarchy, and responsive spacing in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`
+- [X] T021 Run the feature validation checklist from `/home/runner/work/ai-board/ai-board/target/specs/AIB-278-add-pricing-section/quickstart.md`, including `bun run type-check`, `bun run lint`, and targeted unit tests
 
 ---
 

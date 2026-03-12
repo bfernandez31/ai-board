@@ -11,6 +11,7 @@ const eslintConfig = [
       "build/",
       "dist/",
       "coverage/",
+      "*.min.js",
       "test-results/",
       "playwright-report/",
       "blob-report/",

@@ -10,6 +10,12 @@ export function Footer() {
           </p>
           <nav className="flex gap-6">
             <Link
+              href="#pricing"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/legal/terms"
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >

@@ -25,6 +25,19 @@ describe('Footer', () => {
     expect(privacyLink).toHaveAttribute('href', '/legal/privacy');
   });
 
+  it('should render Pricing alongside legal links', () => {
+    render(<Footer />);
+
+    const pricingLink = screen.getByRole('link', { name: 'Pricing' });
+    const termsLink = screen.getByRole('link', { name: 'Terms of Service' });
+    const privacyLink = screen.getByRole('link', { name: 'Privacy Policy' });
+
+    expect(pricingLink).toBeInTheDocument();
+    expect(pricingLink).toHaveAttribute('href', '#pricing');
+    expect(termsLink).toBeInTheDocument();
+    expect(privacyLink).toBeInTheDocument();
+  });
+
   it('should render copyright notice', () => {
     render(<Footer />);
 
