@@ -40,14 +40,14 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T001 [P] [US1] Write component tests for PricingCard rendering (plan name, price formatting from cents, features list, CTA label/href, "Most Popular" badge for Pro) in tests/unit/components/pricing-section.test.tsx
-- [ ] T002 [P] [US1] Write component tests for PricingSection rendering (three cards present with correct data sourced from PLANS, correct section heading, all CTAs link to /auth/signin) in tests/unit/components/pricing-section.test.tsx
+- [x] T001 [P] [US1] Write component tests for PricingCard rendering (plan name, price formatting from cents, features list, CTA label/href, "Most Popular" badge for Pro) in tests/unit/components/pricing-section.test.tsx
+- [x] T002 [P] [US1] Write component tests for PricingSection rendering (three cards present with correct data sourced from PLANS, correct section heading, all CTAs link to /auth/signin) in tests/unit/components/pricing-section.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T003 [P] [US1] Create PricingCard server component in components/landing/pricing-card.tsx — accepts PricingCardProps (name, price in cents, features[], ctaLabel, ctaHref, isPopular?), renders shadcn Card with CardHeader/CardContent/CardFooter, Badge for "Most Popular", Button as Link to /auth/signin, Check icons for features, border-primary styling for Pro card
-- [ ] T004 [US1] Create PricingSection server component in components/landing/pricing-section.tsx — imports PLANS from lib/billing/plans, maps to PricingCard components in a 3-column responsive grid (grid-cols-1 md:grid-cols-3), follows existing section pattern (<section> > container > max-w-7xl), includes heading "Simple, transparent pricing" and subheading
-- [ ] T005 [US1] Add PricingSection to landing page in app/landing/page.tsx — import and insert between WorkflowSection and CTASection with id="pricing"
+- [x] T003 [P] [US1] Create PricingCard server component in components/landing/pricing-card.tsx — accepts PricingCardProps (name, price in cents, features[], ctaLabel, ctaHref, isPopular?), renders shadcn Card with CardHeader/CardContent/CardFooter, Badge for "Most Popular", Button as Link to /auth/signin, Check icons for features, border-primary styling for Pro card
+- [x] T004 [US1] Create PricingSection server component in components/landing/pricing-section.tsx — imports PLANS from lib/billing/plans, maps to PricingCard components in a 3-column responsive grid (grid-cols-1 md:grid-cols-3), follows existing section pattern (<section> > container > max-w-7xl), includes heading "Simple, transparent pricing" and subheading
+- [x] T005 [US1] Add PricingSection to landing page in app/landing/page.tsx — import and insert between WorkflowSection and CTASection with id="pricing"
 
 **Checkpoint**: Three pricing cards visible on landing page with correct data, all CTAs work. MVP complete.
 
@@ -63,12 +63,12 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [US2] Write component tests for PricingFAQ (renders 4 FAQ questions, expand/collapse interaction via userEvent, correct answer content for BYOK and AI agents questions) in tests/unit/components/pricing-section.test.tsx
+- [x] T006 [US2] Write component tests for PricingFAQ (renders 4 FAQ questions, expand/collapse interaction via userEvent, correct answer content for BYOK and AI agents questions) in tests/unit/components/pricing-section.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Create PricingFAQ client component in components/landing/pricing-faq.tsx — "use client" directive, static FAQItemData[] array with 4 items (BYOK explanation, supported AI agents Claude/Codex, 14-day trial details, plan switching), uses shadcn Collapsible/CollapsibleTrigger/CollapsibleContent, ChevronDown icon with rotation on expand
-- [ ] T008 [US2] Integrate PricingFAQ into PricingSection in components/landing/pricing-section.tsx — render PricingFAQ below the pricing cards grid with "Frequently Asked Questions" heading
+- [x] T007 [US2] Create PricingFAQ client component in components/landing/pricing-faq.tsx — "use client" directive, static FAQItemData[] array with 4 items (BYOK explanation, supported AI agents Claude/Codex, 14-day trial details, plan switching), uses shadcn Collapsible/CollapsibleTrigger/CollapsibleContent, ChevronDown icon with rotation on expand
+- [x] T008 [US2] Integrate PricingFAQ into PricingSection in components/landing/pricing-section.tsx — render PricingFAQ below the pricing cards grid with "Frequently Asked Questions" heading
 
 **Checkpoint**: FAQ visible and interactive below pricing cards. US1 + US2 both working.
 
@@ -82,7 +82,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Verify and refine responsive layout in components/landing/pricing-card.tsx and components/landing/pricing-section.tsx — ensure grid-cols-1 md:grid-cols-3 works correctly, cards have min-width that prevents overflow on 375px, FAQ stacks properly on mobile, no hardcoded widths that break narrow viewports
+- [x] T009 [US3] Verify and refine responsive layout in components/landing/pricing-card.tsx and components/landing/pricing-section.tsx — ensure grid-cols-1 md:grid-cols-3 works correctly, cards have min-width that prevents overflow on 375px, FAQ stacks properly on mobile, no hardcoded widths that break narrow viewports
 
 **Checkpoint**: All three user stories complete. Pricing section fully functional and responsive.
 
@@ -92,9 +92,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T010 Run all component tests to verify they pass in tests/unit/components/pricing-section.test.tsx
-- [ ] T011 Run type-check (bun run type-check) and lint (bun run lint) to ensure no errors
-- [ ] T012 Visual review: verify semantic color tokens only (no hardcoded hex/rgb), WCAG AA contrast, dark theme consistency with existing landing page sections
+- [x] T010 Run all component tests to verify they pass in tests/unit/components/pricing-section.test.tsx
+- [x] T011 Run type-check (bun run type-check) and lint (bun run lint) to ensure no errors
+- [x] T012 Visual review: verify semantic color tokens only (no hardcoded hex/rgb), WCAG AA contrast, dark theme consistency with existing landing page sections
 
 ---
 
