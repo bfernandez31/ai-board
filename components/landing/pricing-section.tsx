@@ -45,17 +45,16 @@ function formatPrice(cents: number): string {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="py-16 md:py-24 lg:py-32 bg-[hsl(var(--ctp-mantle))]" data-testid="pricing-section">
+    <section id="pricing" className="py-16 md:py-24 lg:py-32 bg-card" data-testid="pricing-section">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-4">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Start free and scale as your team grows. No hidden fees.
           </p>
 
-          {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
             {pricingPlans.map(({ config, highlight, cta, href }) => (
               <Card
@@ -104,7 +103,6 @@ export function PricingSection() {
             ))}
           </div>
 
-          {/* FAQ */}
           <div className="max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-center text-foreground mb-8">
               Frequently Asked Questions
