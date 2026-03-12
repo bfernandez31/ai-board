@@ -76,6 +76,16 @@ The warning links to `/settings/billing` (Stripe customer portal).
 
 Usage data is fetched from `GET /api/billing/usage` via the `useUsage` hook (TanStack Query, 15-second polling interval). Usage counts are invalidated on project and ticket creation mutations to reflect changes immediately.
 
+## Landing Page Pricing Display
+
+Plan pricing is also surfaced publicly on the landing page (`/landing`, section `#pricing`) for unauthenticated visitors. The data source is the same `PLANS` constant from `lib/billing/plans.ts` used throughout the application, ensuring the displayed prices and features are always consistent with actual plan limits.
+
+The landing page pricing display is read-only and static — it does not interact with Stripe or the subscription API. All CTAs on the landing page direct visitors to `/auth/signin` before any billing flow begins.
+
+See the [User Interface spec](./06-user-interface.md#pricing-section) for layout and component details.
+
+---
+
 ## Billing Page
 
 Users access billing at `/settings/billing`.

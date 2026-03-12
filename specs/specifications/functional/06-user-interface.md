@@ -98,6 +98,61 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
 
+### Landing Page Structure
+
+The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+
+1. **HeroSection** — animated hero with background ticket cards
+2. **FeaturesGrid** — product feature highlights
+3. **WorkflowSection** — workflow stage showcase
+4. **PricingSection** — pricing cards and FAQ (`#pricing`)
+5. **CTASection** — final call-to-action
+
+All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+
+### Pricing Section
+
+The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and a FAQ to unauthenticated visitors. It is positioned after `WorkflowSection` and before `CTASection` with `id="pricing"` for anchor linking.
+
+**Layout**:
+- Section heading: "Simple, transparent pricing" (centered)
+- Sub-heading: description text (centered, `max-w-2xl`)
+- Plan cards: `grid-cols-1 md:grid-cols-3` — single column on mobile, 3 columns on `md+`
+- FAQ: below the cards, `max-w-2xl mx-auto`
+
+**Plan Cards** (`components/landing/pricing-card.tsx`):
+
+Plan data is sourced from `lib/billing/plans.ts` (`PLANS` constant) — the same source of truth used by the billing settings page. This ensures pricing shown on the landing page always matches in-app billing.
+
+| Plan | Price | CTA Label | Highlighted |
+|------|-------|-----------|-------------|
+| Free | $0 | "Get Started" | No |
+| Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`) |
+| Team | $30/mo | "Start 14-day trial" | No |
+
+Each card shows: plan name, monthly price, feature list (checkmark icons), and a CTA button. All CTA buttons link to `/auth/signin`.
+
+**FAQ** (`components/landing/pricing-faq.tsx`):
+
+A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion items:
+
+1. "What does BYOK mean?" — explains Bring Your Own Key, required on Free plan
+2. "Which AI agents are supported?" — Claude (Anthropic) and Codex (OpenAI)
+3. "How does the 14-day trial work?" — Pro/Team trial, cancel anytime
+4. "Can I switch plans?" — upgrade/downgrade via billing settings
+
+**Responsive behavior**:
+- Mobile (< 768px): cards stack in single column
+- Tablet / Desktop (≥ 768px): 3-column card grid
+- Minimum supported viewport: 375px (no horizontal scroll)
+
+**Accessibility**:
+- `aria-hidden` is not needed (content is informational, not decorative)
+- Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
+- Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+
+---
+
 ## Visual Design
 
 ### Theme
