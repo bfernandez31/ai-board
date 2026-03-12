@@ -98,6 +98,32 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
 
+### Pricing Section
+
+The landing page includes a public-facing pricing section (`#pricing`) that presents plan information to unauthenticated visitors.
+
+**Plan Cards**:
+- Three cards displayed in a responsive grid (1 column mobile, 3 columns desktop): Free, Pro, Team
+- Each card shows: plan name, monthly price, list of features with checkmark icons, and a CTA button
+- Pro plan card is visually elevated ("Most Popular" badge, primary border, subtle shadow, 2% scale increase)
+- Free plan CTA: "Get Started" — links to `/auth/signin`
+- Pro and Team plan CTAs: "Start 14-day trial" — links to `/auth/signin`
+- Pricing data sourced from `PLANS` config (`lib/billing/plans`)
+
+**FAQ Section**:
+- Rendered below the plan cards
+- Two questions: "What is BYOK (Bring Your Own Key)?" and "Which AI agents are supported?"
+- Plain text answers; no interactive accordion (static display)
+
+**Layout**:
+- Section uses `bg-card` background to visually separate from adjacent sections
+- `container mx-auto` with `max-w-6xl` content constraint
+- `data-testid="pricing-section"` attribute for test targeting
+
+**Component**: `components/landing/pricing-section.tsx` — rendered as `<PricingSection />` in `app/landing/page.tsx`
+
+---
+
 ## Visual Design
 
 ### Theme
