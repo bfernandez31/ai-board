@@ -15,9 +15,14 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
+.idea/
+.vscode/
+*.swp
+*.tmp
 *.pem
 
 # debug

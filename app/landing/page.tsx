@@ -2,6 +2,7 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { FeaturesGrid } from '@/components/landing/features-grid';
 import { WorkflowSection } from '@/components/landing/workflow-section';
 import { CTASection } from '@/components/landing/cta-section';
+import { PricingSection } from '@/components/landing/pricing-section';
 
 /**
  * Landing Page
@@ -15,6 +16,7 @@ export default function LandingPage() {
       <HeroSection />
       <FeaturesGrid />
       <WorkflowSection />
+      <PricingSection />
       <CTASection />
     </div>
   );

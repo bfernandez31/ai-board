@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
+const SHARED_FOOTER_EXPECTATIONS = ['Terms of Service', 'Privacy Policy', 'https://github.com/bfernandez31/ai-board'];
 
 describe('Legal Pages', () => {
   describe('GET /legal/terms', () => {
@@ -28,6 +29,15 @@ describe('Legal Pages', () => {
       expect(html).toContain('BYOK API Cost Responsibility');
       expect(html).toContain('AI-Generated Code Responsibility');
     });
+
+    it('should render the shared public footer links', async () => {
+      const response = await fetch(`${BASE_URL}/legal/terms`);
+      const html = await response.text();
+
+      for (const expected of SHARED_FOOTER_EXPECTATIONS) {
+        expect(html).toContain(expected);
+      }
+    });
   });
 
   describe('GET /legal/privacy', () => {
@@ -48,6 +58,15 @@ describe('Legal Pages', () => {
       expect(html).toContain('Cookies Used');
       expect(html).toContain('No Data Resale');
       expect(html).toContain('GDPR Rights');
+    });
+
+    it('should render the shared public footer links', async () => {
+      const response = await fetch(`${BASE_URL}/legal/privacy`);
+      const html = await response.text();
+
+      for (const expected of SHARED_FOOTER_EXPECTATIONS) {
+        expect(html).toContain(expected);
+      }
     });
   });
 });

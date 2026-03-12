@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+import { PUBLIC_FOOTER_LINKS } from '@/lib/config/public-site';
 
 export function Footer() {
   return (
@@ -8,19 +10,24 @@ export function Footer() {
           <p className="text-sm text-[hsl(var(--ctp-subtext-0))]">
             &copy; {new Date().getFullYear()} AI Board. All rights reserved.
           </p>
-          <nav className="flex gap-6">
-            <Link
-              href="/legal/terms"
-              className="text-sm text-[hsl(var(--ctp-subtext-0))] hover:text-[#8B5CF6] transition-colors"
-            >
-              Terms of Service
-            </Link>
-            <Link
-              href="/legal/privacy"
-              className="text-sm text-[hsl(var(--ctp-subtext-0))] hover:text-[#8B5CF6] transition-colors"
-            >
-              Privacy Policy
-            </Link>
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            {PUBLIC_FOOTER_LINKS.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="inline-flex items-center gap-1.5 text-sm text-[hsl(var(--ctp-subtext-0))] transition-colors hover:text-[#8B5CF6]"
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noreferrer noopener' : undefined}
+              >
+                <span>{link.label}</span>
+                {link.external ? (
+                  <>
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="sr-only">(opens in a new tab)</span>
+                  </>
+                ) : null}
+              </Link>
+            ))}
           </nav>
         </div>
       </div>

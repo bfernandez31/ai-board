@@ -16,7 +16,7 @@
 
 **Purpose**: Establish the shared static content source that all public marketing updates will consume
 
-- [ ] T001 Create the typed public marketing content module in `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` with exported interfaces for plan summaries, FAQ items, and footer links
+- [X] T001 Create the typed public marketing content module in `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` with exported interfaces for plan summaries, FAQ items, and footer links
 
 ---
 
@@ -26,8 +26,8 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete
 
-- [ ] T002 Populate `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` with the three plan definitions, CTA labels and hrefs, BYOK and supported-agent FAQ entries, and footer link metadata from the spec
-- [ ] T003 [P] Add or confirm shared export shapes in `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` so landing components and the global footer can consume one source of truth without inline copy duplication
+- [X] T002 Populate `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` with the three plan definitions, CTA labels and hrefs, BYOK and supported-agent FAQ entries, and footer link metadata from the spec
+- [X] T003 [P] Add or confirm shared export shapes in `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` so landing components and the global footer can consume one source of truth without inline copy duplication
 
 **Checkpoint**: Shared public-site content is ready for landing and footer work
 
@@ -41,14 +41,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Create or extend the landing page component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx` to assert the three plan names, capability lists, CTA labels, and section ordering
-- [ ] T005 [P] [US1] Create the landing HTML integration test in `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/public-marketing.test.ts` to assert pricing content is rendered on `GET /` between workflow and final CTA content
+- [X] T004 [P] [US1] Create or extend the landing page component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx` to assert the three plan names, capability lists, CTA labels, and section ordering
+- [X] T005 [P] [US1] Create the landing HTML integration test in `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/public-marketing.test.ts` to assert pricing content is rendered on `GET /` between workflow and final CTA content
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Create the reusable public plan card component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx` using the shared plan-summary type from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
-- [ ] T007 [US1] Create the landing pricing section container in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` to render all three plans from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
-- [ ] T008 [US1] Insert `PricingSection` between `WorkflowSection` and `CTASection` in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx`
+- [X] T006 [P] [US1] Create the reusable public plan card component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx` using the shared plan-summary type from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
+- [X] T007 [US1] Create the landing pricing section container in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` to render all three plans from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
+- [X] T008 [US1] Insert `PricingSection` between `WorkflowSection` and `CTASection` in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx`
 
 **Checkpoint**: User Story 1 is independently functional on the landing page
 
@@ -62,13 +62,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx` to assert the FAQ heading, BYOK answer, and supported-agent answer render directly below the pricing cards
-- [ ] T010 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/public-marketing.test.ts` to assert the landing HTML includes the FAQ topics beneath the pricing section
+- [X] T009 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx` to assert the FAQ heading, BYOK answer, and supported-agent answer render directly below the pricing cards
+- [X] T010 [US2] Extend `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/public-marketing.test.ts` to assert the landing HTML includes the FAQ topics beneath the pricing section
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Create the pricing FAQ presentational component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx` using the shared FAQ item type from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
-- [ ] T012 [US2] Update `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` to render `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx` directly beneath the plan cards with mobile-safe spacing
+- [X] T011 [P] [US2] Create the pricing FAQ presentational component in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx` using the shared FAQ item type from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts`
+- [X] T012 [US2] Update `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` to render `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx` directly beneath the plan cards with mobile-safe spacing
 
 **Checkpoint**: User Stories 1 and 2 both work independently within the landing pricing area
 
@@ -82,12 +82,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Extend the footer component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/footer.test.tsx` to assert the GitHub repository link label, href, and external-link attributes alongside the legal links
-- [ ] T014 [P] [US3] Extend the legal-page integration test in `/home/runner/work/ai-board/ai-board/target/tests/integration/legal/pages.test.ts` to assert the shared footer links render on `GET /legal/terms` and `GET /legal/privacy`
+- [X] T013 [P] [US3] Extend the footer component test in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/footer.test.tsx` to assert the GitHub repository link label, href, and external-link attributes alongside the legal links
+- [X] T014 [P] [US3] Extend the legal-page integration test in `/home/runner/work/ai-board/ai-board/target/tests/integration/legal/pages.test.ts` to assert the shared footer links render on `GET /legal/terms` and `GET /legal/privacy`
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Update `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx` to render Terms, Privacy, and GitHub links from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` while preserving the existing dark marketing footer styling
+- [X] T015 [US3] Update `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx` to render Terms, Privacy, and GitHub links from `/home/runner/work/ai-board/ai-board/target/lib/config/public-site.ts` while preserving the existing dark marketing footer styling
 
 **Checkpoint**: User Story 3 is independently functional across all public pages
 
@@ -97,9 +97,9 @@
 
 **Purpose**: Final responsive, accessibility, and verification work that affects multiple stories
 
-- [ ] T016 Refine responsive card and FAQ spacing in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` so mobile and desktop layouts satisfy the no-horizontal-scroll requirement
-- [ ] T017 Verify external-link accessibility and visual consistency in `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx` for the GitHub link styling and attributes
-- [ ] T018 Run the validation checklist in `/home/runner/work/ai-board/ai-board/target/specs/AIB-276-add-pricing-section/quickstart.md` against the completed implementation and reconcile any missed coverage in `/home/runner/work/ai-board/ai-board/target/specs/AIB-276-add-pricing-section/tasks.md`
+- [X] T016 Refine responsive card and FAQ spacing in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx` so mobile and desktop layouts satisfy the no-horizontal-scroll requirement
+- [X] T017 Verify external-link accessibility and visual consistency in `/home/runner/work/ai-board/ai-board/target/components/layout/footer.tsx` for the GitHub link styling and attributes
+- [X] T018 Run the validation checklist in `/home/runner/work/ai-board/ai-board/target/specs/AIB-276-add-pricing-section/quickstart.md` against the completed implementation and reconcile any missed coverage in `/home/runner/work/ai-board/ai-board/target/specs/AIB-276-add-pricing-section/tasks.md`
 
 ---
 
