@@ -5,7 +5,7 @@
 
 ## Changes Summary
 
-Centralized `x-test-user-id` enforcement so non-explicit requests fail closed, PAT and session identity win over conflicting headers, seeded test-user override now requires an explicit test-only header, and proxy redirects/401s header-only protected requests. Added targeted auth regression coverage plus updated quickstart validation steps. Final server-backed validation is still blocked in this sandbox.
+Centralized `x-test-user-id` enforcement so non-test requests fail closed, PAT and session identity win over conflicting headers, explicit test mode keeps a seeded-user override path, and proxy rejects header-only protected requests. Added targeted auth regression coverage, updated quickstart validation steps, and aligned ignore files with detected repo tooling. Server-backed validation remains blocked in this sandbox.
 
 ## Key Decisions
 
@@ -13,7 +13,7 @@ Introduced a small shared test-override classifier used by both `lib/db/users.ts
 
 ## Files Modified
 
-`lib/auth/test-user-override.ts`, `lib/db/users.ts`, `proxy.ts`, `app/api/tokens/route.ts`, `app/api/tokens/[id]/route.ts`, `app/api/projects/[projectId]/jobs/status/route.ts`, `app/api/notifications/route.ts`, `tests/fixtures/vitest/api-client.ts`, `tests/integration/auth/test-user-header-guard.test.ts`, `tests/e2e/auth/test-user-header-redirect.spec.ts`, `specs/AIB-281-fix-critical-auth/quickstart.md`
+`lib/auth/test-user-override.ts`, `lib/db/users.ts`, `proxy.ts`, `app/api/tokens/route.ts`, `app/api/projects/[projectId]/jobs/status/route.ts`, `app/api/notifications/route.ts`, `tests/fixtures/vitest/api-client.ts`, `tests/integration/auth/test-user-header-guard.test.ts`, `tests/e2e/auth/test-user-header-redirect.spec.ts`, `specs/AIB-281-fix-critical-auth/quickstart.md`, `.gitignore`, `.prettierignore`
 
 ## ⚠️ Manual Requirements
 

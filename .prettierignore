@@ -3,5 +3,8 @@ node_modules
 out
 dist
 build
+coverage
 *.lock
 package-lock.json
+yarn.lock
+pnpm-lock.yaml
