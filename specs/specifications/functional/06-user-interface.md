@@ -9,13 +9,15 @@ The user interface provides an intuitive, modern experience for managing tickets
 A global footer is rendered on all pages (public and authenticated) via the root layout.
 
 **Content**:
+- Navigation link: "Pricing" → `#pricing`
 - Copyright notice: "© {current year} AI Board. All rights reserved."
 - Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Footer navigation keeps the Pricing, Terms of Service, and Privacy Policy links visible together on all supported viewports
+- Links use semantic foreground and primary hover tokens
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -56,6 +58,56 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+### Marketing Navigation
+
+Unauthenticated visitors on `/` see a marketing header variant instead of the in-app project header.
+
+**Header links**:
+- "Features" → `#features`
+- "Workflow" → `#workflow`
+- "Pricing" → `#pricing`
+- Primary action: "Sign In" → `/auth/signin`
+
+**Behavior**:
+- The marketing header is only shown on the landing page when the visitor is not authenticated
+- The Pricing link uses in-page fragment navigation rather than opening a separate pricing page
+- Authenticated users continue to see the application header with project context, notifications, and account controls
+
+### Landing Page Section Order
+
+The public landing page presents its major sections in this order:
+1. Hero
+2. Features
+3. Workflow
+4. Pricing
+5. Final call to action
+
+### Pricing Section
+
+The landing page includes a dedicated pricing section between the workflow content and the final call to action.
+
+**Content**:
+- Section label: "Pricing"
+- Headline: plan comparison messaging for Free, Pro, and Team
+- Three pricing cards in Free → Pro → Team order
+- A two-item FAQ directly beneath the pricing cards
+
+**Plan card behavior**:
+- Free displays a `$0/month` price and a "Get Started" CTA
+- Pro displays the paid monthly price and a "Start 14-day trial" CTA
+- Team displays the paid monthly price and a "Start 14-day trial" CTA
+- Pro is visually emphasized as the featured option
+- Each card lists plan benefits derived from the current product plan definitions
+
+**FAQ scope**:
+- One entry explains the BYOK requirement for the Free plan
+- One entry explains supported coding agents, currently Claude and Codex
+
+**Responsive behavior**:
+- Mobile: cards stack in a single column
+- Large screens: cards display in a three-column grid
+- Pricing cards, FAQ content, and CTA buttons remain readable without horizontal scrolling
 
 ### Hero Section Background Animation
 

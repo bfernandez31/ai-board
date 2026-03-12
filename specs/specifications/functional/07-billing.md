@@ -80,6 +80,39 @@ Usage data is fetched from `GET /api/billing/usage` via the `useUsage` hook (Tan
 
 Users access billing at `/settings/billing`.
 
+## Public Pricing Experience
+
+Visitors can review plan options directly on the public landing page before signing in.
+
+### Landing Page Pricing Section
+
+- The landing page includes a pricing section at `#pricing`
+- The section appears after the workflow explainer and before the final landing-page call to action
+- It presents the same three plans used by the billing system: Free, Pro, and Team
+- Visitors can compare plan prices, feature summaries, and next-step CTA labels without leaving the page
+
+### Plan Messaging
+
+The public pricing section reflects the current subscription model:
+
+| Plan | Public CTA | Pricing Message |
+|------|------------|-----------------|
+| Free | Get Started | Free tier with BYOK access |
+| Pro | Start 14-day trial | Paid monthly subscription with 14-day trial |
+| Team | Start 14-day trial | Paid monthly subscription with 14-day trial and team collaboration support |
+
+### FAQ and Navigation
+
+- The pricing section includes a minimal FAQ for pre-purchase questions
+- The FAQ answers whether users need to bring their own model API key and which coding agents are supported
+- The global header and footer both expose a `Pricing` link that scrolls to `#pricing` on the landing page
+
+### Conversion Path
+
+- Public pricing CTAs send visitors to `/auth/signin`
+- Subscription checkout still starts from the authenticated billing page at `/settings/billing`
+- The landing page does not create subscriptions directly and does not call Stripe APIs
+
 ### Display Elements
 
 - **Current plan card**: Shows active plan name, status (active, trialing, past due, canceled), and relevant dates (trial end, billing period end, grace period end).

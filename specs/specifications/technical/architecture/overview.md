@@ -146,6 +146,7 @@ Stage Transition
 
 **Page Routes**:
 ```
+/                                   # Public landing page with in-page marketing navigation
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
 /legal/terms                         # Terms of Service (public, no auth required)
@@ -163,6 +164,37 @@ Stage Transition
 - Redirect format: `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
 - Board component detects `modal=open` parameter and automatically opens ticket modal
 - URL parameters cleaned up after modal opens to prevent re-opening on page refresh
+
+**Landing Navigation Flow**:
+- Public marketing navigation on `/` uses fragment links (`#features`, `#workflow`, `#pricing`)
+- The landing pricing section is rendered server-side in `app/landing/page.tsx`
+- Header and footer reuse a shared pricing anchor constant from `lib/landing/pricing.ts`
+- Pricing CTA buttons link to `/auth/signin`; Stripe checkout remains confined to authenticated billing flows
+
+#### Marketing Pricing Flow
+
+```mermaid
+sequenceDiagram
+    participant V as Visitor
+    participant L as Landing Page
+    participant P as Pricing Section
+    participant A as Auth Page
+    participant B as Billing Page
+    participant S as Stripe
+
+    V->>L: Open /
+    L->>P: Server-render pricing from shared plan metadata
+    P-->>V: Show Free, Pro, Team cards and FAQ
+    V->>L: Click header/footer Pricing link
+    L-->>V: Scroll to #pricing
+    V->>P: Click plan CTA
+    P->>A: Navigate to /auth/signin
+    A-->>V: Complete sign-in
+    V->>B: Open /settings/billing
+    B->>S: Create Checkout or Portal session
+    S-->>B: Session URL
+    B-->>V: Redirect to Stripe-hosted flow
+```
 
 #### Authorization Pattern
 ```typescript
