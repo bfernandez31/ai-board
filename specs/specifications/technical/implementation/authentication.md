@@ -1,6 +1,6 @@
 # Authentication Implementation
 
-NextAuth.js setup, session management, Personal Access Tokens (PAT), and mock authentication for development/testing.
+NextAuth.js setup, session management, Personal Access Tokens (PAT), and the guarded test-only override path used by automated tests.
 
 ## NextAuth.js Configuration
 
@@ -46,27 +46,45 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 ```
 
-## Mock Authentication (Development/Test)
+## Test User Override Guard
 
-**Test Mode**: Enabled when `NODE_ENV !== 'production'`
+**Locations**: `lib/auth/test-user-override.ts`, `lib/db/users.ts`, `proxy.ts`
+
+Automated tests can impersonate a seeded test user only through an explicit opt-in override. The override uses:
+
+- `x-test-user-id`: requested test user ID
+- `x-ai-board-test-auth-override: true`: explicit opt-in signal
+
+The override is accepted only when the runtime is an explicit test context:
+
+- `TEST_MODE=true`, or
+- `NODE_ENV=test`
+
+Any other use of `x-test-user-id` is blocked and never authenticates a caller.
 
 ```typescript
-// Simplified example - actual implementation in authOptions
-if (process.env.NODE_ENV !== 'production') {
-  return {
-    user: {
-      id: 'test-user-id',
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-    },
-  };
+export const TEST_USER_HEADER = "x-test-user-id"
+export const TEST_AUTH_OVERRIDE_HEADER = "x-ai-board-test-auth-override"
+
+export function isRuntimeTestEnvironment(): boolean {
+  return process.env.TEST_MODE === "true" || process.env.NODE_ENV === "test"
+}
+
+export function isExplicitTestOverrideRequest(headers: Headers): boolean {
+  return (
+    isRuntimeTestEnvironment() &&
+    headers.get(TEST_AUTH_OVERRIDE_HEADER)?.toLowerCase() === "true"
+  )
 }
 ```
 
-**Benefits**:
-- No manual login in development
-- Automated E2E tests without auth complexity
-- Same security model (ownership validation still enforced)
+### Override Rules
+
+- Valid browser sessions stay authoritative even if `x-test-user-id` is present
+- Valid PATs stay authoritative even if `x-test-user-id` is present
+- Header-only requests fail closed outside explicit test runs
+- The requested override user must exist and be a seeded test user
+- Blocked attempts are logged with route, requested user ID, and rejection reason
 
 ## Personal Access Token (PAT) Authentication
 
@@ -108,7 +126,7 @@ export async function getCurrentUserOrToken(request: NextRequest) {
     throw new Error(result.error || 'Unauthorized');
   }
 
-  // Fall back to session auth
+  // Fall back to session auth or explicit test override
   return getCurrentUser();
 }
 ```
@@ -197,6 +215,51 @@ The MCP server uses PAT authentication to access AI-Board API:
 - Tokens can be revoked by user
 - No token expiration (user-managed lifecycle)
 - Tokens never logged or exposed in error messages
+- Conflicting `x-test-user-id` headers do not change PAT identity
+
+## Protected Request Enforcement
+
+### Request Sequence
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Proxy
+    participant A as Auth Helper
+    participant T as Token Validator
+    participant S as Session Auth
+    participant DB as Database
+
+    C->>P: Request protected page or API
+    alt Header-only x-test-user-id outside explicit test mode
+        P-->>C: 401 API response or sign-in redirect
+    else Bearer PAT
+        P->>A: Continue request
+        A->>T: Validate PAT
+        T->>DB: Resolve token owner
+        A-->>C: Authenticated as PAT owner
+    else Browser session
+        P->>A: Continue request
+        A->>S: Resolve session
+        A-->>C: Authenticated as session user
+    else Explicit test override
+        P->>A: Continue request
+        A->>DB: Resolve seeded test user
+        A-->>C: Authenticated as test user
+    end
+```
+
+### Proxy Behavior
+
+`proxy.ts` provides defense in depth before route handlers run:
+
+- Public routes bypass the guard
+- PAT requests continue to route handlers
+- Explicit test override requests continue only in explicit test context
+- Protected API requests with blocked `x-test-user-id` usage return `401` with `AUTH_REQUIRED`
+- Protected page requests with blocked `x-test-user-id` usage redirect to `/auth/signin`
+
+If a valid session cookie is already present, the request continues and the session identity remains authoritative.
 
 ## Session Management
 
@@ -345,6 +408,8 @@ await prisma.comment.delete({ where: { id: commentId } });
 ```
 
 ## Test User Management
+
+Seeded test users exist for automated validation, but they are not implicitly trusted by runtime auth. Tests must run in explicit test context and send the override opt-in header for `x-test-user-id` to take effect.
 
 ### Global Test Setup
 

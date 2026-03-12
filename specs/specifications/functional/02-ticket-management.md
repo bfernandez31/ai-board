@@ -548,6 +548,7 @@ Users can navigate directly to specific tickets using shareable URLs:
 - Example: `/ticket/ABC-123`
 - Works from any context (browser bookmark, email link, Slack message, notification)
 - Requires authentication (unauthenticated users redirected to sign in)
+- Test-only headers do not bypass this requirement outside explicit automated test runs
 
 ### Navigation Behavior
 
