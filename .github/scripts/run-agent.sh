@@ -172,7 +172,7 @@ invoke_codex() {
 
   log_info "Invoking Codex with command file: $command_file"
 
-  local model="${CODEX_MODEL:-gpt-5-codex}"
+  local model="${CODEX_MODEL:-gpt-5.3-codex}"
   local reasoning="${CODEX_REASONING:-high}"
   local prompt
   prompt="$(cat "$command_file")"
