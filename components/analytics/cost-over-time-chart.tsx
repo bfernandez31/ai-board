@@ -14,7 +14,7 @@ export function CostOverTimeChart({ data }: CostOverTimeChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-white">Cost Over Time</CardTitle>
+          <CardTitle className="text-base text-foreground">Cost Over Time</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
@@ -28,7 +28,7 @@ export function CostOverTimeChart({ data }: CostOverTimeChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base text-ctp-text">Cost Over Time</CardTitle>
+        <CardTitle className="text-base text-foreground">Cost Over Time</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">

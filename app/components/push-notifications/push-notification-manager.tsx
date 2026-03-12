@@ -101,7 +101,7 @@ export function PushNotificationManager() {
 
   if (!isSupported) {
     return (
-      <div className="p-4 text-sm text-[#a6adc8]">
+      <div className="p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2 mb-2">
           <BellOff className="h-4 w-4" />
           <span>Push notifications not supported</span>
@@ -115,9 +115,9 @@ export function PushNotificationManager() {
 
   if (permission === 'denied') {
     return (
-      <div className="p-4 text-sm text-[#a6adc8]">
+      <div className="p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2 mb-2">
-          <BellOff className="h-4 w-4 text-[#f38ba8]" />
+          <BellOff className="h-4 w-4 text-ctp-red" />
           <span>Notifications blocked</span>
         </div>
         <p className="text-xs">
@@ -132,11 +132,11 @@ export function PushNotificationManager() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isEnabled ? (
-            <Bell className="h-4 w-4 text-[#a6e3a1]" />
+            <Bell className="h-4 w-4 text-ctp-green" />
           ) : (
-            <BellOff className="h-4 w-4 text-[#a6adc8]" />
+            <BellOff className="h-4 w-4 text-muted-foreground" />
           )}
-          <span className="text-sm font-medium text-[#cdd6f4]">
+          <span className="text-sm font-medium text-foreground">
             Push Notifications
           </span>
         </div>
@@ -156,27 +156,27 @@ export function PushNotificationManager() {
       </div>
 
       {error && (
-        <p className="text-xs text-[#f38ba8]">{error}</p>
+        <p className="text-xs text-ctp-red">{error}</p>
       )}
 
       {isEnabled && subscriptions.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-[#a6adc8]">
+          <p className="text-xs text-muted-foreground">
             Active on {subscriptions.length} device{subscriptions.length > 1 ? 's' : ''}
           </p>
           <div className="space-y-2">
             {subscriptions.map((sub) => (
               <div
                 key={sub.id}
-                className="flex items-center justify-between bg-[#313244] rounded-md px-3 py-2"
+                className="flex items-center justify-between bg-secondary rounded-md px-3 py-2"
               >
                 <div className="flex items-center gap-2">
-                  <Monitor className="h-4 w-4 text-[#a6adc8]" />
+                  <Monitor className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-[#cdd6f4]">
+                    <p className="text-sm text-foreground">
                       {parseUserAgent(sub.userAgent)}
                     </p>
-                    <p className="text-xs text-[#a6adc8]">
+                    <p className="text-xs text-muted-foreground">
                       Added {formatDate(sub.createdAt)}
                     </p>
                   </div>
@@ -184,7 +184,7 @@ export function PushNotificationManager() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-[#a6adc8] hover:text-[#f38ba8]"
+                  className="h-8 w-8 text-muted-foreground hover:text-ctp-red"
                   onClick={() => handleRemove(sub)}
                   disabled={deletingId === sub.id}
                 >
@@ -200,7 +200,7 @@ export function PushNotificationManager() {
         </div>
       )}
 
-      <p className="text-xs text-[#a6adc8]">
+      <p className="text-xs text-muted-foreground">
         Get notified when jobs complete or you&apos;re mentioned.
       </p>
     </div>

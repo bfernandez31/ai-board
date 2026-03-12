@@ -124,19 +124,19 @@ export function WorkflowColumnCard({
 
         {/* Workflow Icons Footer */}
         {icons.length > 0 && (
-          <div className="px-4 pb-3 pt-2 border-t border-[#313244]/50">
+          <div className="px-4 pb-3 pt-2 border-t border-border/50">
             <div className="flex items-center justify-center gap-2">
               {icons.map((iconConfig, index) => {
                 const IconComponent = iconConfig.icon;
                 // Color based on icon type
                 const iconColor =
                   IconComponent === BotOff
-                    ? 'text-[#EF4444]' // Red for No AI
+                    ? 'text-ctp-red' // Red for No AI
                     : IconComponent === Eye
-                      ? 'text-[#3B82F6]' // Blue for Review
+                      ? 'text-ctp-blue' // Blue for Review
                       : IconComponent === BotMessageSquare
-                        ? 'text-[#8B5CF6]' // Purple for Chat
-                        : 'text-[#10B981]'; // Green for AI automation
+                        ? 'text-primary' // Purple for Chat
+                        : 'text-ctp-green'; // Green for AI automation
                 return (
                   <IconComponent
                     key={index}
@@ -156,10 +156,10 @@ export function WorkflowColumnCard({
         <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="relative">
             {/* Arrow pointing up */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[#8B5CF6]"></div>
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-primary"></div>
 
             {/* Tooltip content */}
-            <div className="bg-[#8B5CF6] text-white px-4 py-2.5 rounded-lg shadow-lg shadow-[#8B5CF6]/40 min-w-[200px] max-w-[280px]">
+            <div className="bg-primary text-white px-4 py-2.5 rounded-lg shadow-lg shadow-primary/40 min-w-[200px] max-w-[280px]">
               <p className="text-sm font-medium text-center leading-relaxed">
                 {STAGE_DESCRIPTIONS[stage.name]}
               </p>

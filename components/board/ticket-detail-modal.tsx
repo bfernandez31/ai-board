@@ -126,32 +126,32 @@ interface TicketDetailModalProps {
 const stageBadgeConfig: Record<string, { label: string; className: string }> = {
   INBOX: {
     label: 'Inbox',
-    className: 'bg-[#6c7086] text-zinc-50 border-[#6c7086]',
+    className: 'bg-ctp-overlay0 text-zinc-50 border-ctp-overlay0',
   },
   SPECIFY: {
     label: 'Specify',
-    className: 'bg-[#b4befe] text-zinc-900 border-[#b4befe]',
+    className: 'bg-ctp-lavender text-zinc-900 border-ctp-lavender',
   },
   PLAN: {
     label: 'Plan',
-    className: 'bg-[#89b4fa] text-zinc-900 border-[#89b4fa]',
+    className: 'bg-ctp-blue text-zinc-900 border-ctp-blue',
   },
   BUILD: {
     label: 'Build',
-    className: 'bg-[#f9cb98] text-zinc-900 border-[#f9cb98]',
+    className: 'bg-ctp-peach-light text-zinc-900 border-ctp-peach-light',
   },
   VERIFY: {
     label: 'Verify',
-    className: 'bg-[#f2cdcd] text-zinc-900 border-[#f2cdcd]',
+    className: 'bg-ctp-flamingo text-zinc-900 border-ctp-flamingo',
   },
   SHIP: {
     label: 'Ship',
-    className: 'bg-[#a6e3a1] text-zinc-900 border-[#a6e3a1]',
+    className: 'bg-ctp-green text-zinc-900 border-ctp-green',
   },
   // AIB-148: CLOSED stage styling
   CLOSED: {
     label: 'Closed',
-    className: 'bg-[#45475a] text-zinc-50 border-[#45475a]',
+    className: 'bg-accent text-zinc-50 border-accent',
   },
 };
 
@@ -743,7 +743,7 @@ export function TicketDetailModal({
           !top-0 !translate-y-0
           sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-10
           sm:!top-[50%] sm:!-translate-y-1/2
-          bg-[#181825] border-[#313244] text-[#cdd6f4]
+          bg-card border-border text-foreground
         "
       >
         {/* Header with editable title */}
@@ -815,11 +815,11 @@ export function TicketDetailModal({
                   className="
                     inline-flex items-center gap-1.5 px-2 py-0.5
                     text-xs font-medium
-                    bg-[#313244] hover:bg-[#45475a]
-                    text-[#89b4fa] hover:text-[#b4befe]
-                    rounded border border-[#45475a]
+                    bg-secondary hover:bg-accent
+                    text-ctp-blue hover:text-ctp-lavender
+                    rounded border border-accent
                     transition-colors duration-200
-                    focus:outline-none focus:ring-2 focus:ring-[#89b4fa] focus:ring-offset-2 focus:ring-offset-[#181825]
+                    focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:ring-offset-2 focus:ring-offset-card
                   "
                   data-testid="github-branch-link"
                   aria-label={`View branch ${localTicket.branch} in GitHub`}
@@ -909,7 +909,7 @@ export function TicketDetailModal({
                     }
                   }}
                   maxLength={100}
-                  className="text-2xl font-bold bg-[#313244] border-2 border-[#8B5CF6] px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 !text-white"
+                  className="text-2xl font-bold bg-secondary border-2 border-primary px-4 py-3 focus:ring-2 focus:ring-ring/50 !text-white"
                   disabled={titleEdit.isSaving}
                   data-testid="title-input"
                   name="title"
@@ -934,13 +934,13 @@ export function TicketDetailModal({
                 className="flex items-center gap-3 p-3 -ml-3 rounded-lg"
                 data-testid="ticket-title"
               >
-                <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
+                <DialogTitle className="text-2xl font-bold text-foreground flex-1">
                   {localTicket?.title || ticket.title}
                 </DialogTitle>
               </div>
             ) : (
               <div
-                className="flex items-center gap-3 cursor-pointer hover:bg-[#313244]/50 p-3 -ml-3 rounded-lg transition-all duration-200"
+                className="flex items-center gap-3 cursor-pointer hover:bg-secondary/50 p-3 -ml-3 rounded-lg transition-all duration-200"
                 onClick={titleEdit.startEdit}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -953,11 +953,11 @@ export function TicketDetailModal({
                 tabIndex={0}
                 aria-label="Edit ticket title"
               >
-                <DialogTitle className="text-2xl font-bold text-[#cdd6f4] flex-1">
+                <DialogTitle className="text-2xl font-bold text-foreground flex-1">
                   {localTicket?.title || ticket.title}
                 </DialogTitle>
                 <Pencil
-                  className="w-5 h-5 text-[#a6adc8] opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   data-testid="edit-icon-title"
                   aria-hidden="true"
                 />
@@ -1004,7 +1004,7 @@ export function TicketDetailModal({
             {/* Description section with inline editing - scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-2" data-testid="description-container">
               <div className="group">
-                <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-4 font-bold">
+                <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-4 font-bold">
                   Description
                 </h3>
                 {descriptionEdit.isEditing ? (
@@ -1023,7 +1023,7 @@ export function TicketDetailModal({
                         }
                       }}
                       maxLength={10000}
-                      className="bg-[#313244] border-2 border-[#8B5CF6] resize-y px-4 py-3 focus:ring-2 focus:ring-[#8B5CF6]/50 leading-relaxed min-h-[200px] !text-white"
+                      className="bg-secondary border-2 border-primary resize-y px-4 py-3 focus:ring-2 focus:ring-ring/50 leading-relaxed min-h-[200px] !text-white"
                       disabled={descriptionEdit.isSaving}
                       data-testid="description-textarea"
                       name="description"
@@ -1061,7 +1061,7 @@ export function TicketDetailModal({
                           descriptionEdit.value.trim() ===
                             (localTicket?.description || '')
                         }
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-6 shadow-sm"
+                        className="bg-primary hover:bg-primary-hover text-white font-medium px-6 shadow-sm"
                         aria-label="Save description changes"
                       >
                         {descriptionEdit.isSaving ? 'Saving...' : 'Save'}
@@ -1071,7 +1071,7 @@ export function TicketDetailModal({
                         onClick={descriptionEdit.cancelEdit}
                         variant="outline"
                         disabled={descriptionEdit.isSaving}
-                        className="border-2 border-[#45475a] bg-transparent hover:bg-[#313244] text-[#cdd6f4] font-medium px-6"
+                        className="border-2 border-accent bg-transparent hover:bg-secondary text-foreground font-medium px-6"
                         aria-label="Cancel editing"
                       >
                         Cancel
@@ -1083,7 +1083,7 @@ export function TicketDetailModal({
                     className={`
                       p-4 -ml-4 rounded-lg transition-all duration-200
                       relative
-                      ${isInboxStage ? 'cursor-pointer hover:bg-[#313244]/50' : 'cursor-default'}
+                      ${isInboxStage ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'}
                     `}
                     onClick={isInboxStage ? descriptionEdit.startEdit : undefined}
                     onKeyDown={isInboxStage ? (e) => {
@@ -1100,7 +1100,7 @@ export function TicketDetailModal({
                     {isInboxStage && (
                       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <Pencil
-                          className="w-5 h-5 text-[#a6adc8]"
+                          className="w-5 h-5 text-muted-foreground"
                           data-testid="edit-icon-description"
                           aria-hidden="true"
                         />
@@ -1113,7 +1113,7 @@ export function TicketDetailModal({
                           mentionedUsers={{}}
                         />
                       ) : (
-                        <span className="text-[#a6adc8]">No description provided</span>
+                        <span className="text-muted-foreground">No description provided</span>
                       )}
                     </div>
                   </div>
@@ -1122,11 +1122,11 @@ export function TicketDetailModal({
             </div>
 
             {/* Fixed footer section - always visible */}
-            <div className="flex-shrink-0 pt-4 space-y-4 bg-[#181825]">
+            <div className="flex-shrink-0 pt-4 space-y-4 bg-card">
               {/* Action buttons section - compact horizontal layout */}
               {/* Show section when any button should be visible (documents OR comparisons) */}
               {(completedJobs.specify || comparisonCheck?.hasComparisons) && (
-                <div className="border-t-2 border-[#313244]/50 pt-4">
+                <div className="border-t-2 border-border/50 pt-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Document buttons - only for FULL workflow with completed specify job */}
                     {completedJobs.specify && (
@@ -1136,7 +1136,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        className="bg-primary hover:bg-primary-hover text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                         title="View specification document"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -1150,7 +1150,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        className="bg-primary hover:bg-primary-hover text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                         title="View implementation plan"
                       >
                         <Settings2 className="w-3.5 h-3.5" />
@@ -1164,7 +1164,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        className="bg-primary hover:bg-primary-hover text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                         title="View task breakdown"
                       >
                         <CheckSquare className="w-3.5 h-3.5" />
@@ -1178,7 +1178,7 @@ export function TicketDetailModal({
                           setDocViewerOpen(true);
                         }}
                         size="sm"
-                        className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        className="bg-primary hover:bg-primary-hover text-white font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                         title="View implementation summary"
                       >
                         <FileOutput className="w-3.5 h-3.5" />
@@ -1190,7 +1190,7 @@ export function TicketDetailModal({
                       <Button
                         onClick={() => setComparisonViewerOpen(true)}
                         size="sm"
-                        className="bg-[#89b4fa] hover:bg-[#b4befe] text-zinc-900 font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
+                        className="bg-ctp-blue hover:bg-ctp-lavender text-zinc-900 font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
                         title={`View comparison reports (${comparisonCheck.count})`}
                         data-testid="compare-button"
                       >

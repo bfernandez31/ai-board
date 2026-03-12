@@ -65,12 +65,12 @@ export const DeployConfirmationModal = React.memo(
   }: DeployConfirmationModalProps) => {
     return (
       <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="bg-[#1e1e2e] border-[#313244]">
+        <AlertDialogContent className="bg-background border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#cdd6f4]">
+            <AlertDialogTitle className="text-foreground">
               {isRetry ? 'Retry' : 'Deploy'} Preview for {ticketKey}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[#a6adc8]">
+            <AlertDialogDescription className="text-muted-foreground">
               {isRetry ? (
                 <>
                   <span className="block mb-2">
@@ -107,7 +107,7 @@ export const DeployConfirmationModal = React.memo(
               )}
             </AlertDialogDescription>
             {hasExistingPreview && existingPreviewTicket && (
-              <ul className="list-disc list-inside mt-2 space-y-1 text-[#a6adc8] text-sm">
+              <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground text-sm">
                 <li>Clear the existing preview URL</li>
                 <li>Deploy the feature branch to Vercel</li>
                 <li>Update this ticket with the new preview URL</li>
@@ -117,7 +117,7 @@ export const DeployConfirmationModal = React.memo(
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#313244] text-[#cdd6f4] hover:bg-[#45475a]"
+              className="bg-secondary text-foreground hover:bg-accent"
             >
               Cancel
             </AlertDialogCancel>
@@ -126,7 +126,7 @@ export const DeployConfirmationModal = React.memo(
                 e.stopPropagation();
                 onConfirm();
               }}
-              className="bg-[#89b4fa] text-[#11111b] hover:bg-[#74c7ec]"
+              className="bg-ctp-blue text-ctp-crust hover:bg-ctp-sapphire"
             >
               {isRetry ? 'Retry Deploy' : 'Deploy Preview'}
             </AlertDialogAction>

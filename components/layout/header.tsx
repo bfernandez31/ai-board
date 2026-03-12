@@ -84,7 +84,7 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full bg-[#1e1e2e] text-[hsl(var(--ctp-text))] transition-all duration-200 ${
+      className={`sticky top-0 z-50 w-full bg-background text-foreground transition-all duration-200 ${
         isScrolled ? 'border-b shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : ''
       }`}
     >
@@ -160,10 +160,10 @@ export function Header() {
           {/* Marketing variant: Show navigation links + Sign In button */}
           {isMarketingVariant && (
             <div className="hidden md:flex items-center gap-3">
-              <Link href="#features" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
+              <Link href="#features" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
                 Features
               </Link>
-              <Link href="#workflow" className="text-[hsl(var(--ctp-text))] hover:text-[#8B5CF6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8B5CF6] focus-visible:ring-offset-2 rounded-sm px-1">
+              <Link href="#workflow" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
                 Workflow
               </Link>
               <Link href="/auth/signin">

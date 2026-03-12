@@ -5,12 +5,12 @@
 @layer base {
   :root {
     /* Catppuccin Mocha - Base Colors */
-    --ctp-base: 30 15% 9%;        /* #1e1e2e */
-    --ctp-mantle: 30 15% 7%;      /* #181825 */
-    --ctp-crust: 30 15% 5%;       /* #11111b */
-    --ctp-surface-0: 30 13% 18%;  /* #313244 */
-    --ctp-surface-1: 30 13% 28%;  /* #45475a */
-    --ctp-surface-2: 30 13% 39%;  /* #585b70 */
+    --ctp-base: 240 21% 15%;      /* #1e1e2e */
+    --ctp-mantle: 240 21% 12%;    /* #181825 */
+    --ctp-crust: 240 23% 9%;      /* #11111b */
+    --ctp-surface-0: 237 16% 23%; /* #313244 */
+    --ctp-surface-1: 234 13% 31%; /* #45475a */
+    --ctp-surface-2: 233 12% 39%; /* #585b70 */
 
     /* Catppuccin Mocha - Text Colors */
     --ctp-text: 226 64% 88%;      /* #cdd6f4 */
@@ -27,6 +27,7 @@
     --ctp-green: 115 54% 76%;     /* #a6e3a1 */
     --ctp-yellow: 41 88% 83%;     /* #f9e2af */
     --ctp-peach: 23 92% 75%;      /* #fab387 */
+    --ctp-peach-light: 32 89% 79%; /* #f9cb98 - BUILD stage color */
     --ctp-maroon: 350 65% 77%;    /* #eba0ac */
     --ctp-red: 343 81% 75%;       /* #f38ba8 */
     --ctp-mauve: 267 84% 81%;     /* #cba6f7 */
@@ -35,9 +36,9 @@
     --ctp-rosewater: 10 56% 91%;  /* #f5e0dc */
 
     /* AI Board Primary - Violet */
-    --primary-violet: 258 90% 66%; /* #8B5CF6 */
-    --primary-violet-hover: 258 90% 58%; /* #7C3AED */
-    --primary-violet-active: 258 86% 50%; /* #6D28D9 */
+    --primary-violet: 258 90% 66%;        /* ~#8B5CF6 */
+    --primary-violet-hover: 258 90% 58%;  /* ~#7C3AED */
+    --primary-violet-active: 258 86% 50%; /* ~#6D28D9 */
 
     /* Chart Colors - For Recharts dark mode support */
     --chart-1: 258 90% 66%;  /* Violet - primary */
@@ -54,6 +55,8 @@
     --popover: var(--ctp-mantle);
     --popover-foreground: var(--ctp-text);
     --primary: var(--primary-violet);
+    --primary-hover: var(--primary-violet-hover);
+    --primary-active: var(--primary-violet-active);
     --primary-foreground: 0 0% 100%;
     --secondary: var(--ctp-surface-0);
     --secondary-foreground: var(--ctp-text);

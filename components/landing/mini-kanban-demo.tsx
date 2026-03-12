@@ -85,22 +85,22 @@ export function MiniKanbanDemo({
       </div>
 
       {/* Icon Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-6 px-4 py-6 bg-[#181825]/50 border border-[#313244] rounded-lg">
+      <div className="flex flex-wrap items-center justify-center gap-6 px-4 py-6 bg-card/50 border border-border rounded-lg">
         <div className="flex items-center gap-2">
-          <BotOff className="w-5 h-5 text-[#EF4444]" strokeWidth={2} />
-          <span className="text-sm text-[#cdd6f4] font-medium">No AI</span>
+          <BotOff className="w-5 h-5 text-ctp-red" strokeWidth={2} />
+          <span className="text-sm text-foreground font-medium">No AI</span>
         </div>
         <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-[#3B82F6]" strokeWidth={2} />
-          <span className="text-sm text-[#cdd6f4] font-medium">Review option</span>
+          <Eye className="w-5 h-5 text-ctp-blue" strokeWidth={2} />
+          <span className="text-sm text-foreground font-medium">Review option</span>
         </div>
         <div className="flex items-center gap-2">
-          <BotMessageSquare className="w-5 h-5 text-[#8B5CF6]" strokeWidth={2} />
-          <span className="text-sm text-[#cdd6f4] font-medium">Chat assistance</span>
+          <BotMessageSquare className="w-5 h-5 text-primary" strokeWidth={2} />
+          <span className="text-sm text-foreground font-medium">Chat assistance</span>
         </div>
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-[#10B981]" strokeWidth={2} />
-          <span className="text-sm text-[#cdd6f4] font-medium">AI automation</span>
+          <Bot className="w-5 h-5 text-ctp-green" strokeWidth={2} />
+          <span className="text-sm text-foreground font-medium">AI automation</span>
         </div>
       </div>
     </div>

@@ -41,14 +41,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Card
-      className="bg-[#181825] border-[#313244] transition-all duration-200 hover:border-[#45475a] hover:shadow-lg cursor-pointer will-change-transform hover:brightness-110"
+      className="bg-card border-border transition-all duration-200 hover:border-accent hover:shadow-lg cursor-pointer will-change-transform hover:brightness-110"
       onClick={handleClick}
       data-testid="project-card"
       data-project-id={project.id}
     >
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-[#cdd6f4]" data-testid="project-name">
+          <CardTitle className="text-foreground" data-testid="project-name">
             {project.name}
           </CardTitle>
           <div onClick={(e) => e.stopPropagation()}>
@@ -62,7 +62,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleGitHubClick}
-          className="flex items-center gap-2 text-sm text-[#a6adc8] hover:text-[#cdd6f4] transition-colors w-fit"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
           data-testid="github-link"
         >
           <Github className="h-4 w-4" />
@@ -77,7 +77,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-sm text-[#89b4fa] hover:text-[#b4befe] transition-colors truncate"
+              className="text-sm text-ctp-blue hover:text-ctp-lavender transition-colors truncate"
               data-testid="deployment-url"
             >
               {new URL(project.deploymentUrl).hostname}
@@ -86,7 +86,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               size="icon"
               variant="ghost"
               onClick={handleCopyUrl}
-              className="h-8 w-8 text-[#a6adc8] hover:text-[#cdd6f4]"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
               data-testid="copy-deployment-url"
             >
               {isCopied ? (
@@ -104,9 +104,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {project.lastShippedTicket ? (
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm min-w-0">
-              <CheckCircle className="h-4 w-4 text-[#a6e3a1] flex-shrink-0" />
+              <CheckCircle className="h-4 w-4 text-ctp-green flex-shrink-0" />
               <span
-                className="text-[#cdd6f4] truncate min-w-0"
+                className="text-foreground truncate min-w-0"
                 data-testid="shipped-ticket-title"
                 title={`${project.lastShippedTicket.ticketKey} ${project.lastShippedTicket.title}`}
               >
@@ -119,17 +119,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm pl-6" data-testid="shipped-ticket-metadata">
               {mounted && (
-                <span className="text-[#6c7086] whitespace-nowrap" data-testid="shipped-ticket-time">
+                <span className="text-ctp-overlay0 whitespace-nowrap" data-testid="shipped-ticket-time">
                   Shipped {formatTimestamp(project.lastShippedTicket.updatedAt)}
                 </span>
               )}
-              <span className="text-[#6c7086] whitespace-nowrap" data-testid="ticket-count">
+              <span className="text-ctp-overlay0 whitespace-nowrap" data-testid="ticket-count">
                 · {project.ticketCount} total
               </span>
             </div>
           </div>
         ) : (
-          <span className="text-sm text-[#6c7086]" data-testid="no-shipped-tickets">
+          <span className="text-sm text-ctp-overlay0" data-testid="no-shipped-tickets">
             {project.ticketCount === 0
               ? 'No tickets yet'
               : `No tickets shipped yet · ${project.ticketCount} total`}

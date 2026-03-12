@@ -19,7 +19,7 @@ export function CacheEfficiencyChart({ data }: CacheEfficiencyChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-white">Cache Efficiency</CardTitle>
+          <CardTitle className="text-base text-foreground">Cache Efficiency</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
@@ -33,7 +33,7 @@ export function CacheEfficiencyChart({ data }: CacheEfficiencyChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base text-ctp-text">Cache Efficiency</CardTitle>
+        <CardTitle className="text-base text-foreground">Cache Efficiency</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">

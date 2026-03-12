@@ -42,12 +42,12 @@ export function PushOptInPrompt() {
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-[#45475a] bg-[#1e1e2e]">
+    <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-accent bg-background">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-[#8B5CF6]" />
-            <CardTitle className="text-sm text-[#cdd6f4]">Enable Notifications</CardTitle>
+            <Bell className="h-5 w-5 text-primary" />
+            <CardTitle className="text-sm text-foreground">Enable Notifications</CardTitle>
           </div>
           <Button
             variant="ghost"
@@ -59,13 +59,13 @@ export function PushOptInPrompt() {
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <CardDescription className="text-xs text-[#a6adc8]">
+        <CardDescription className="text-xs text-muted-foreground">
           Get notified when jobs complete or you&apos;re mentioned in comments.
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
         {error && (
-          <p className="text-xs text-[#f38ba8] mb-2">{error}</p>
+          <p className="text-xs text-ctp-red mb-2">{error}</p>
         )}
         <div className="flex gap-2">
           <Button

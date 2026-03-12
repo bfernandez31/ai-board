@@ -31,16 +31,16 @@ type StatusConfig = { icon: typeof CheckCircle2; color: string; label: string };
 /**
  * Default status configuration (for PENDING and unknown statuses)
  */
-const DEFAULT_STATUS: StatusConfig = { icon: Clock, color: 'text-[#a6adc8]', label: 'Pending' };
+const DEFAULT_STATUS: StatusConfig = { icon: Clock, color: 'text-muted-foreground', label: 'Pending' };
 
 /**
  * Status icon mapping
  */
 const STATUS_ICONS: Record<string, StatusConfig> = {
-  COMPLETED: { icon: CheckCircle2, color: 'text-[#a6e3a1]', label: 'Completed' },
-  FAILED: { icon: XCircle, color: 'text-[#f38ba8]', label: 'Failed' },
-  CANCELLED: { icon: Ban, color: 'text-[#fab387]', label: 'Cancelled' },
-  RUNNING: { icon: Loader2, color: 'text-[#89b4fa]', label: 'Running' },
+  COMPLETED: { icon: CheckCircle2, color: 'text-ctp-green', label: 'Completed' },
+  FAILED: { icon: XCircle, color: 'text-ctp-red', label: 'Failed' },
+  CANCELLED: { icon: Ban, color: 'text-ctp-peach', label: 'Cancelled' },
+  RUNNING: { icon: Loader2, color: 'text-ctp-blue', label: 'Running' },
   PENDING: DEFAULT_STATUS,
 };
 
@@ -77,7 +77,7 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
-        className="w-full flex items-center justify-between p-3 bg-[#1e1e2e] border border-[#313244] rounded-lg hover:bg-[#313244]/50 transition-colors"
+        className="w-full flex items-center justify-between p-3 bg-background border border-border rounded-lg hover:bg-secondary/50 transition-colors"
         data-testid={`job-row-${job.id}`}
         disabled={!hasTelemetry}
       >
@@ -89,13 +89,13 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
           />
 
           {/* Command Name */}
-          <span className="font-medium text-[#cdd6f4] truncate">
+          <span className="font-medium text-foreground truncate">
             {formatCommandName(job.command)}
           </span>
 
           {/* Model Badge */}
           {job.model && (
-            <span className="text-xs text-[#6c7086] bg-[#313244] px-2 py-0.5 rounded hidden sm:inline">
+            <span className="text-xs text-ctp-overlay0 bg-secondary px-2 py-0.5 rounded hidden sm:inline">
               {job.model}
             </span>
           )}
@@ -103,21 +103,21 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
 
         <div className="flex items-center gap-4 flex-shrink-0">
           {/* Duration */}
-          <span className="text-sm text-[#89b4fa]" data-testid={`job-duration-${job.id}`}>
+          <span className="text-sm text-ctp-blue" data-testid={`job-duration-${job.id}`}>
             {job.durationMs != null ? formatDuration(job.durationMs) : '-'}
           </span>
 
           {/* Cost */}
-          <span className="text-sm text-[#a6e3a1] w-16 text-right" data-testid={`job-cost-${job.id}`}>
+          <span className="text-sm text-ctp-green w-16 text-right" data-testid={`job-cost-${job.id}`}>
             {job.costUsd != null ? formatCost(job.costUsd) : '-'}
           </span>
 
           {/* Expand/Collapse Indicator */}
           {hasTelemetry && (
             isOpen ? (
-              <ChevronDown className="w-4 h-4 text-[#6c7086]" />
+              <ChevronDown className="w-4 h-4 text-ctp-overlay0" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-[#6c7086]" />
+              <ChevronRight className="w-4 h-4 text-ctp-overlay0" />
             )
           )}
         </div>
@@ -126,39 +126,39 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
       {hasTelemetry && (
         <CollapsibleContent className="pt-2">
           <div
-            className="bg-[#181825] border border-[#313244] rounded-lg p-4 ml-8 space-y-3"
+            className="bg-card border border-border rounded-lg p-4 ml-8 space-y-3"
             data-testid={`job-details-${job.id}`}
           >
             {/* Token Breakdown */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-[#6c7086]">Input Tokens:</span>
-                <span className="ml-2 text-[#cdd6f4] font-medium">
+                <span className="text-ctp-overlay0">Input Tokens:</span>
+                <span className="ml-2 text-foreground font-medium">
                   {job.inputTokens != null ? formatAbbreviatedNumber(job.inputTokens) : '-'}
                 </span>
               </div>
               <div>
-                <span className="text-[#6c7086]">Output Tokens:</span>
-                <span className="ml-2 text-[#cdd6f4] font-medium">
+                <span className="text-ctp-overlay0">Output Tokens:</span>
+                <span className="ml-2 text-foreground font-medium">
                   {job.outputTokens != null ? formatAbbreviatedNumber(job.outputTokens) : '-'}
                 </span>
               </div>
               <div>
-                <span className="text-[#6c7086]">Cache Read:</span>
-                <span className="ml-2 text-[#cdd6f4] font-medium">
+                <span className="text-ctp-overlay0">Cache Read:</span>
+                <span className="ml-2 text-foreground font-medium">
                   {job.cacheReadTokens != null ? formatAbbreviatedNumber(job.cacheReadTokens) : '-'}
                 </span>
               </div>
               <div>
-                <span className="text-[#6c7086]">Cache Creation:</span>
-                <span className="ml-2 text-[#cdd6f4] font-medium">
+                <span className="text-ctp-overlay0">Cache Creation:</span>
+                <span className="ml-2 text-foreground font-medium">
                   {job.cacheCreationTokens != null ? formatAbbreviatedNumber(job.cacheCreationTokens) : '-'}
                 </span>
               </div>
             </div>
 
             {/* Timestamp */}
-            <div className="text-xs text-[#6c7086] border-t border-[#313244] pt-3">
+            <div className="text-xs text-ctp-overlay0 border-t border-border pt-3">
               Started {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
               {job.completedAt && (
                 <> · Completed {formatDistanceToNow(new Date(job.completedAt), { addSuffix: true })}</>
@@ -184,7 +184,7 @@ interface JobsTimelineProps {
 export function JobsTimeline({ jobs }: JobsTimelineProps) {
   if (jobs.length === 0) {
     return (
-      <div className="text-sm text-[#6c7086]" data-testid="no-jobs-message">
+      <div className="text-sm text-ctp-overlay0" data-testid="no-jobs-message">
         No jobs recorded
       </div>
     );
@@ -192,7 +192,7 @@ export function JobsTimeline({ jobs }: JobsTimelineProps) {
 
   return (
     <div className="space-y-2" data-testid="jobs-timeline">
-      <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-3 font-bold">
+      <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3 font-bold">
         Jobs Timeline
       </h3>
       <div className="space-y-2">

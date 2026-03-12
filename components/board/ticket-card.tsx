@@ -114,13 +114,13 @@ export const TicketCard = React.memo(
         {...(isMounted ? listeners : {})}
       >
         <Card
-          className="bg-[#181825] border-[#313244] p-4 transition-all hover:border-[#45475a] hover:bg-[#1e1e2e] overflow-hidden shadow-sm"
+          className="bg-card border-border p-4 transition-all hover:border-accent hover:bg-background overflow-hidden shadow-sm"
           role="article"
           aria-label={`Ticket ${ticket.ticketKey}: ${ticket.title}`}
         >
           {/* Header: Ticket Key and Badges */}
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs text-[#a6adc8] font-mono font-semibold">
+            <span className="text-xs text-muted-foreground font-mono font-semibold">
               {ticket.ticketKey}
             </span>
             <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export const TicketCard = React.memo(
 
           {/* Title */}
           <h3
-            className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden mb-3"
+            className="font-semibold text-sm line-clamp-2 text-foreground break-words overflow-hidden mb-3"
             title={ticket.title}
           >
             {ticket.title}
@@ -181,7 +181,7 @@ export const TicketCard = React.memo(
 
           {/* Job Status Indicators (Single-line layout with right-aligned compact icons) */}
           {(workflowJob || aiBoardJob || deployJob || isDeployable || ticket.previewUrl) && (
-            <div className="border-t border-[#313244] pt-3">
+            <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Workflow Job Indicator (simplified display) */}
                 {workflowJob && (

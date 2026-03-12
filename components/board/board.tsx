@@ -1006,7 +1006,7 @@ export function Board({
   const isAnyColumnOver = activeTicket !== null;
 
   return (
-    <div className="w-full h-full bg-[#1e1e2e]">
+    <div className="w-full h-full bg-background">
       <OfflineIndicator />
 
       {/* T063: Render CleanupInProgressBanner component at top of board */}

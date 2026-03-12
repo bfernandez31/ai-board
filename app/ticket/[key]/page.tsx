@@ -25,10 +25,10 @@ export default async function TicketBrowsePage({
   const ticketKeyRegex = /^[A-Z0-9]{3,6}-\d+$/;
   if (!ticketKeyRegex.test(key)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#1e1e2e]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#cdd6f4] mb-4">Invalid Ticket Key</h1>
-          <p className="text-[#a6adc8]">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Invalid Ticket Key</h1>
+          <p className="text-muted-foreground">
             Ticket key must be in format KEY-NUM (e.g., ABC-123)
           </p>
         </div>
@@ -52,12 +52,12 @@ export default async function TicketBrowsePage({
         : 'Failed to load ticket';
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#1e1e2e]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#cdd6f4] mb-4">Error</h1>
-          <p className="text-[#a6adc8]">{errorMessage}</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Error</h1>
+          <p className="text-muted-foreground">{errorMessage}</p>
           {errorData.code && (
-            <p className="text-xs text-[#6c7086] mt-2">Error Code: {errorData.code}</p>
+            <p className="text-xs text-ctp-overlay0 mt-2">Error Code: {errorData.code}</p>
           )}
         </div>
       </div>

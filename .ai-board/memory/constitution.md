@@ -26,6 +26,7 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 
 **Rationale**: Shadcn/ui provides accessible, tested, customizable components reducing maintenance burden. Feature folders improve discoverability and reduce cognitive load. Server Components improve performance by default. Explicit Client Component boundaries make hydration intentional.
 
+
 ### III. Test-Driven Development (NON-NEGOTIABLE)
 Tests verify behavior from specs. Testing Trophy architecture prioritizes fast integration tests over slow E2E tests.
 

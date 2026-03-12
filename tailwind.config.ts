@@ -31,6 +31,8 @@ const config: Config = {
         foreground: 'hsl(var(--foreground))',
         primary: {
           DEFAULT: 'hsl(var(--primary))',
+          hover: 'hsl(var(--primary-hover))',
+          active: 'hsl(var(--primary-active))',
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
@@ -76,6 +78,7 @@ const config: Config = {
         'ctp-green': 'hsl(var(--ctp-green))',
         'ctp-yellow': 'hsl(var(--ctp-yellow))',
         'ctp-peach': 'hsl(var(--ctp-peach))',
+        'ctp-peach-light': 'hsl(var(--ctp-peach-light))',
         'ctp-maroon': 'hsl(var(--ctp-maroon))',
         'ctp-red': 'hsl(var(--ctp-red))',
         'ctp-mauve': 'hsl(var(--ctp-mauve))',

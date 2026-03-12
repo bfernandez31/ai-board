@@ -15,10 +15,10 @@ export default async function SignInPage({
 
   return (
     <div className="flex h-[calc(100vh-4rem)] items-center justify-center px-4">
-      <Card className="w-full max-w-md border-[#8B5CF6] border-2">
+      <Card className="w-full max-w-md border-primary border-2">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome to AI Board</CardTitle>
-          <CardDescription className="text-[hsl(var(--ctp-subtext-0))]">
+          <CardDescription className="text-muted-foreground">
             Sign in with your account to continue
           </CardDescription>
         </CardHeader>
@@ -47,7 +47,7 @@ export default async function SignInPage({
               <SiGitlab className="mr-2 h-5 w-5" />
               Continue with GitLab
             </Button>
-            <p className="text-xs text-[hsl(var(--ctp-subtext-0))] text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Coming soon
             </p>
           </div>
@@ -63,17 +63,17 @@ export default async function SignInPage({
               <SiBitbucket className="mr-2 h-5 w-5" />
               Continue with BitBucket
             </Button>
-            <p className="text-xs text-[hsl(var(--ctp-subtext-0))] text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Coming soon
             </p>
           </div>
-          <p className="text-sm text-center text-[hsl(var(--ctp-subtext-0))]">
+          <p className="text-sm text-center text-muted-foreground">
             By signing in, you agree to our{' '}
-            <Link href="/legal/terms" className="text-[#8B5CF6] hover:underline">
+            <Link href="/legal/terms" className="text-primary hover:underline">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/legal/privacy" className="text-[#8B5CF6] hover:underline">
+            <Link href="/legal/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>.
           </p>

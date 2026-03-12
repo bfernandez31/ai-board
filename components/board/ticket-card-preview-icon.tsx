@@ -46,7 +46,7 @@ export const TicketCardPreviewIcon = React.memo(
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 hover:bg-[#313244]"
+            className="h-6 w-6 p-0 hover:bg-secondary"
             onClick={handleClick}
             aria-label={`Open preview deployment for ${ticketKey}`}
             data-testid="preview-icon"

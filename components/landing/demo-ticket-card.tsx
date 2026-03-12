@@ -31,12 +31,12 @@ export function DemoTicketCard({
     <Card
       className={`
         demo-ticket
-        bg-[#181825]
-        border-[#313244]
+        bg-card
+        border-border
         p-4
         transition-all
-        hover:border-[#45475a]
-        hover:bg-[#1e1e2e]
+        hover:border-accent
+        hover:bg-background
         overflow-hidden
         shadow-sm
         cursor-grab
@@ -51,13 +51,13 @@ export function DemoTicketCard({
     >
       {/* Header: Ticket ID */}
       <div className="flex items-start justify-between mb-3">
-        <span className="text-xs text-[#a6adc8] font-mono font-semibold">
+        <span className="text-xs text-muted-foreground font-mono font-semibold">
           #{ticket.id}
         </span>
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-sm line-clamp-2 text-[#cdd6f4] break-words overflow-hidden">
+      <h3 className="font-semibold text-sm line-clamp-2 text-foreground break-words overflow-hidden">
         {ticket.title}
       </h3>
     </Card>

@@ -30,6 +30,8 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 
 **Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.ai-board/memory/constitution.md` (Section II) for full standards.
 
+**Colors**: NEVER hardcode hex/rgb colors (`text-[#...]`, `bg-[#...]`). Use Tailwind semantic tokens only (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.). All text must be readable (WCAG AA 4.5:1 contrast). See `globals.css` and `tailwind.config.ts` for available tokens.
+
 ## Commands
 
 ```bash

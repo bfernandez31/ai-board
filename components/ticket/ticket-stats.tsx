@@ -38,52 +38,52 @@ function StatsSummaryCards({ stats }: { stats: TicketStatsType }) {
   return (
     <div className="grid grid-cols-2 gap-3 mb-6" data-testid="stats-summary-cards">
       {/* Total Cost Card */}
-      <Card className="bg-[#1e1e2e] border-[#313244]">
+      <Card className="bg-background border-border">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-[#a6adc8] mb-1">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <DollarSign className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Total Cost</span>
           </div>
-          <p className="text-2xl font-bold text-[#a6e3a1]" data-testid="total-cost">
+          <p className="text-2xl font-bold text-ctp-green" data-testid="total-cost">
             {stats.hasData ? formatCost(stats.totalCost) : 'N/A'}
           </p>
         </CardContent>
       </Card>
 
       {/* Total Duration Card */}
-      <Card className="bg-[#1e1e2e] border-[#313244]">
+      <Card className="bg-background border-border">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-[#a6adc8] mb-1">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Clock className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Total Duration</span>
           </div>
-          <p className="text-2xl font-bold text-[#89b4fa]" data-testid="total-duration">
+          <p className="text-2xl font-bold text-ctp-blue" data-testid="total-duration">
             {stats.hasData ? formatDuration(stats.totalDuration) : 'N/A'}
           </p>
         </CardContent>
       </Card>
 
       {/* Total Tokens Card */}
-      <Card className="bg-[#1e1e2e] border-[#313244]">
+      <Card className="bg-background border-border">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-[#a6adc8] mb-1">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Coins className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Total Tokens</span>
           </div>
-          <p className="text-2xl font-bold text-[#f9e2af]" data-testid="total-tokens">
+          <p className="text-2xl font-bold text-ctp-yellow" data-testid="total-tokens">
             {stats.hasData ? formatAbbreviatedNumber(stats.totalTokens) : 'N/A'}
           </p>
         </CardContent>
       </Card>
 
       {/* Cache Efficiency Card */}
-      <Card className="bg-[#1e1e2e] border-[#313244]">
+      <Card className="bg-background border-border">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-[#a6adc8] mb-1">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Zap className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Cache Efficiency</span>
           </div>
-          <p className="text-2xl font-bold text-[#cba6f7]" data-testid="cache-efficiency">
+          <p className="text-2xl font-bold text-ctp-mauve" data-testid="cache-efficiency">
             {stats.hasData ? formatPercentage(stats.cacheEfficiency) : 'N/A'}
           </p>
         </CardContent>
@@ -101,18 +101,18 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
   if (toolsUsage.length === 0) {
     return (
       <div className="mt-6">
-        <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
+        <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
           <Wrench className="w-4 h-4" />
           Tools Used
         </h3>
-        <p className="text-sm text-[#6c7086]" data-testid="no-tools-message">No tools recorded</p>
+        <p className="text-sm text-ctp-overlay0" data-testid="no-tools-message">No tools recorded</p>
       </div>
     );
   }
 
   return (
     <div className="mt-6" data-testid="tools-usage-section">
-      <h3 className="text-sm text-[#a6adc8] uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
+      <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
         <Wrench className="w-4 h-4" />
         Tools Used
       </h3>
@@ -121,11 +121,11 @@ function ToolsUsageSection({ toolsUsage }: { toolsUsage: TicketStatsType['toolsU
           <Badge
             key={tool}
             variant="secondary"
-            className="bg-[#313244] text-[#cdd6f4] border-[#45475a] text-xs px-2 py-1"
+            className="bg-secondary text-foreground border-accent text-xs px-2 py-1"
             data-testid={`tool-badge-${tool}`}
           >
             {tool}
-            <span className="ml-1.5 text-[#a6adc8]">({count})</span>
+            <span className="ml-1.5 text-muted-foreground">({count})</span>
           </Badge>
         ))}
       </div>

@@ -60,7 +60,7 @@ export const TicketCardDeployIcon = React.memo(
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 hover:bg-[#313244] text-[#a6adc8] hover:text-[#cdd6f4] disabled:opacity-50"
+            className="h-6 w-6 p-0 hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
             onClick={handleClick}
             disabled={isDeploying || isDisabled}
             aria-label={`Deploy preview for ${ticketKey}`}

@@ -50,7 +50,7 @@ export default async function ProjectsPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-[#cdd6f4]">Projects</h1>
+        <h1 className="text-3xl font-bold text-foreground">Projects</h1>
         {projects.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button variant="outline" disabled>
