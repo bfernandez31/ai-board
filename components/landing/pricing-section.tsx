@@ -4,7 +4,32 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader } from '@/components/ui/card';
 
-const plans = [
+type PricingPlan = {
+  name: string;
+  price: string;
+  summary: string;
+  ctaLabel: string;
+  ctaVariant: 'default' | 'outline';
+  features: string[];
+  badge?: string;
+  billingPeriod?: string;
+  isHighlighted?: boolean;
+};
+
+type FaqItem = {
+  question: string;
+  answer: string;
+};
+
+type PlanCardProps = {
+  plan: PricingPlan;
+};
+
+type FaqCardProps = {
+  item: FaqItem;
+};
+
+const plans: PricingPlan[] = [
   {
     name: 'Free',
     price: 'Free',
@@ -24,6 +49,8 @@ const plans = [
     ctaLabel: 'Start 14-day trial',
     ctaVariant: 'default' as const,
     badge: 'Most Popular',
+    billingPeriod: '/month',
+    isHighlighted: true,
     features: [
       'Unlimited active projects',
       'Faster implementation workflows',
@@ -37,6 +64,7 @@ const plans = [
     summary: 'For shared delivery across product and engineering.',
     ctaLabel: 'Start 14-day trial',
     ctaVariant: 'outline' as const,
+    billingPeriod: '/month',
     features: [
       'Up to 10 project members',
       'Centralized team billing',
@@ -46,7 +74,7 @@ const plans = [
   },
 ];
 
-const faqItems = [
+const faqItems: FaqItem[] = [
   {
     question: 'Bring your own key (BYOK)?',
     answer:
@@ -59,7 +87,63 @@ const faqItems = [
   },
 ];
 
-export function PricingSection() {
+function PlanCard({ plan }: PlanCardProps): React.JSX.Element {
+  const cardClassName = plan.isHighlighted
+    ? 'flex h-full flex-col border-border/70 border-primary shadow-lg shadow-primary/10'
+    : 'flex h-full flex-col border-border/70 shadow-sm';
+
+  return (
+    <Card className={cardClassName}>
+      <CardHeader className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-2xl font-semibold tracking-tight text-foreground">{plan.name}</h3>
+          {plan.badge ? <Badge>{plan.badge}</Badge> : null}
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-bold tracking-tight text-foreground">{plan.price}</span>
+            {plan.billingPeriod ? (
+              <span className="pb-1 text-sm text-muted-foreground">{plan.billingPeriod}</span>
+            ) : null}
+          </div>
+          <CardDescription className="text-sm leading-6">{plan.summary}</CardDescription>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-1">
+        <ul className="space-y-3">
+          {plan.features.map((feature) => (
+            <li key={feature} className="flex items-start gap-3 text-sm text-muted-foreground">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+
+      <CardFooter>
+        <Button asChild className="w-full" size="lg" variant={plan.ctaVariant}>
+          <Link href="/auth/signin">{plan.ctaLabel}</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function FaqCard({ item }: FaqCardProps): React.JSX.Element {
+  return (
+    <Card className="border-border/70 bg-card/80 shadow-sm">
+      <CardHeader>
+        <h3 className="text-lg font-semibold tracking-tight text-foreground">{item.question}</h3>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm leading-6 text-muted-foreground">{item.answer}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function PricingSection(): React.JSX.Element {
   return (
     <section
       id="pricing"
@@ -81,71 +165,14 @@ export function PricingSection() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            {plans.map((plan) => {
-              const isHighlighted = plan.name === 'Pro';
-
-              return (
-                <Card
-                  key={plan.name}
-                  className={`flex h-full flex-col border-border/70 ${
-                    isHighlighted ? 'border-primary shadow-lg shadow-primary/10' : 'shadow-sm'
-                  }`}
-                >
-                  <CardHeader className="space-y-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-2xl font-semibold tracking-tight text-foreground">
-                        {plan.name}
-                      </h3>
-                      {plan.badge ? <Badge>{plan.badge}</Badge> : null}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-end gap-2">
-                        <span className="text-4xl font-bold tracking-tight text-foreground">
-                          {plan.price}
-                        </span>
-                        {plan.price !== 'Free' ? (
-                          <span className="pb-1 text-sm text-muted-foreground">/month</span>
-                        ) : null}
-                      </div>
-                      <CardDescription className="text-sm leading-6">
-                        {plan.summary}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="flex-1">
-                    <ul className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-3 text-sm text-muted-foreground">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-
-                  <CardFooter>
-                    <Button asChild className="w-full" size="lg" variant={plan.ctaVariant}>
-                      <Link href="/auth/signin">{plan.ctaLabel}</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+            {plans.map((plan) => (
+              <PlanCard key={plan.name} plan={plan} />
+            ))}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {faqItems.map((item) => (
-              <Card key={item.question} className="border-border/70 bg-card/80 shadow-sm">
-                <CardHeader>
-                  <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                    {item.question}
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-6 text-muted-foreground">{item.answer}</p>
-                </CardContent>
-              </Card>
+              <FaqCard key={item.question} item={item} />
             ))}
           </div>
         </div>
