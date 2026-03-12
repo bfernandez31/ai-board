@@ -173,7 +173,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             if (model) metrics.model = String(model);
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
-            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5.3-codex'), nonCachedInputTokens, outputTokens, cachedTokens);
+            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5.4'), nonCachedInputTokens, outputTokens, cachedTokens);
           }
 
           if (isToolEvent) {
@@ -292,13 +292,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 const OPENAI_PRICING: Record<string, { input: number; output: number; cached: number }> = {
   'gpt-5-codex':   { input: 1.25, output: 10.00, cached: 0.625 },
   'gpt-5.3-codex': { input: 1.75, output: 14.00, cached: 0.875 },
+  'gpt-5.4':       { input: 2.50, output: 15.00, cached: 0.25 },
   'gpt-5':         { input: 2.00, output: 8.00,  cached: 1.00 },
-  'o3':            { input: 2.00, output: 8.00,  cached: 1.00 },
-  'o4-mini':       { input: 0.40, output: 1.60,  cached: 0.20 },
 };
 
 function estimateOpenAICost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
-  const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5.3-codex']!;
+  const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5.4']!;
   return (
     (inputTokens / 1_000_000) * pricing.input +
     (outputTokens / 1_000_000) * pricing.output +
