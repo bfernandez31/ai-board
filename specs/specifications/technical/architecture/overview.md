@@ -146,8 +146,11 @@ Stage Transition
 
 **Page Routes**:
 ```
+/                                      # Public landing page
+/auth/signin                           # Sign-in page
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
+/settings/billing                    # Authenticated billing management
 /legal/terms                         # Terms of Service (public, no auth required)
 /legal/privacy                       # Privacy Policy (public, no auth required)
 ```
@@ -156,6 +159,11 @@ Stage Transition
 ```
 /api/projects/{projectId}/tickets    # Tickets API
 /api/projects/{projectId}/jobs/status # Job polling
+/api/billing/plans                   # Plan metadata for billing UI
+/api/billing/checkout                # Stripe Checkout session creation
+/api/billing/portal                  # Stripe Customer Portal session creation
+/api/billing/subscription            # Current subscription details
+/api/billing/usage                   # Current plan usage and limits
 ```
 
 **Ticket Navigation Flow**:
@@ -163,6 +171,34 @@ Stage Transition
 - Redirect format: `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
 - Board component detects `modal=open` parameter and automatically opens ticket modal
 - URL parameters cleaned up after modal opens to prevent re-opening on page refresh
+
+### Public Marketing Surface
+
+- The landing page is a server-rendered marketing route composed from section components in `components/landing/`
+- `app/landing/page.tsx` renders the hero, features, workflow, pricing, and CTA sections in order
+- The pricing section is a static UI component that renders plan cards and FAQ content without calling billing APIs
+- Footer navigation includes a `/#pricing` anchor so users can jump directly to the pricing section from any page
+
+**Pricing Entry Flow**:
+```typescript
+export default function LandingPage(): React.JSX.Element {
+  return (
+    <div className="min-h-screen">
+      <HeroSection />
+      <FeaturesGrid />
+      <WorkflowSection />
+      <PricingSection />
+      <CTASection />
+    </div>
+  );
+}
+```
+
+**Pricing Section Characteristics**:
+- Implemented in `components/landing/pricing-section.tsx`
+- Uses shadcn/ui `Card`, `Badge`, and `Button` primitives plus `lucide-react` check icons
+- Stores marketing plan content in local typed arrays (`plans`, `faqItems`) inside the component module
+- Sends all CTA clicks to `/auth/signin`; subscription creation remains isolated to the authenticated billing area
 
 #### Authorization Pattern
 ```typescript

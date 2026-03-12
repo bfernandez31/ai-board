@@ -10,12 +10,12 @@ A global footer is rendered on all pages (public and authenticated) via the root
 
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
-- Navigation links: "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
+- Navigation links: "Pricing" → `/#pricing`, "Terms of Service" → `/legal/terms`, "Privacy Policy" → `/legal/privacy`
 
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Links use muted foreground styling with primary-color hover state
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -56,6 +56,37 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 ---
 
 ## Landing Page
+
+### Pricing Section
+
+The landing page includes a dedicated pricing section between the workflow explanation and the closing call-to-action.
+
+**Placement**:
+- Render order: Hero → Features → Workflow → Pricing → CTA
+- Section anchor: `#pricing`
+- Footer "Pricing" link jumps directly to this section from any page
+
+**Content**:
+- Section label badge: "Pricing"
+- Heading: "Simple pricing for every stage"
+- Supporting copy describing free, upgrade, and team adoption paths
+- Three pricing cards: Free, Pro, Team
+- Two FAQ cards covering BYOK and supported agents
+
+**Plan Cards**:
+- Free card uses a "Get Started" CTA linking to `/auth/signin`
+- Pro card is visually highlighted and labeled "Most Popular"
+- Pro and Team cards show "Start 14-day trial" CTAs linking to `/auth/signin`
+- Each card lists plan-specific capabilities in checklist format
+
+**Layout**:
+- Pricing cards display in a single column on smaller screens and three columns on large screens
+- FAQ cards display below the plan cards in one column on smaller screens and two columns on medium screens and up
+- Section uses a bordered gradient background to visually separate pricing from the surrounding marketing sections
+
+**Purpose**:
+- Gives unauthenticated visitors a scannable plan comparison before sign-in
+- Directs all conversion actions to the sign-in flow rather than starting checkout from the public landing page
 
 ### Hero Section Background Animation
 

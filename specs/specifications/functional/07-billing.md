@@ -80,6 +80,17 @@ Usage data is fetched from `GET /api/billing/usage` via the `useUsage` hook (Tan
 
 Users access billing at `/settings/billing`.
 
+## Public Pricing Entry Point
+
+Unauthenticated visitors can review a public pricing comparison on the landing page before signing in.
+
+### Landing Page Pricing Preview
+
+- The landing page exposes a `#pricing` section with Free, Pro, and Team comparison cards plus short FAQs
+- All pricing CTAs route to `/auth/signin`
+- The public pricing section is informational and does not start Stripe Checkout directly
+- Authenticated billing actions continue to happen from `/settings/billing`
+
 ### Display Elements
 
 - **Current plan card**: Shows active plan name, status (active, trialing, past due, canceled), and relevant dates (trial end, billing period end, grace period end).
