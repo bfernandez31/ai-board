@@ -2,25 +2,13 @@ import { PLANS } from '@/lib/billing/plans';
 import { PricingCard } from './pricing-card';
 import { PricingFAQ } from './pricing-faq';
 
-export function PricingSection() {
-  const planCards = [
-    {
-      ...PLANS.FREE,
-      ctaLabel: 'Get Started',
-      isPopular: false,
-    },
-    {
-      ...PLANS.PRO,
-      ctaLabel: 'Start 14-day trial',
-      isPopular: true,
-    },
-    {
-      ...PLANS.TEAM,
-      ctaLabel: 'Start 14-day trial',
-      isPopular: false,
-    },
-  ];
+const PLAN_CARDS = [
+  { ...PLANS.FREE, ctaLabel: 'Get Started', isPopular: false },
+  { ...PLANS.PRO, ctaLabel: 'Start 14-day trial', isPopular: true },
+  { ...PLANS.TEAM, ctaLabel: 'Start 14-day trial', isPopular: false },
+];
 
+export function PricingSection() {
   return (
     <section id="pricing" className="py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4">
@@ -32,7 +20,7 @@ export function PricingSection() {
             Start free and scale as your team grows. All plans include AI-powered development workflows.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {planCards.map((card) => (
+            {PLAN_CARDS.map((card) => (
               <PricingCard
                 key={card.plan}
                 name={card.name}
