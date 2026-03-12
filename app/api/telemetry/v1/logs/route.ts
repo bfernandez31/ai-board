@@ -159,18 +159,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
           if (isCodexTokenEvent) {
             // Codex uses different attribute names for token counts
-            const inputTokens = parseIntAttribute(findAttribute(attrs, 'input_token_count'));
+            // Codex input_token_count is the TOTAL input (includes cached),
+            // unlike Claude where input_tokens is only non-cached.
+            // Normalize: store only non-cached in inputTokens for consistency.
+            const totalInputTokens = parseIntAttribute(findAttribute(attrs, 'input_token_count'));
             const outputTokens = parseIntAttribute(findAttribute(attrs, 'output_token_count'));
             const cachedTokens = parseIntAttribute(findAttribute(attrs, 'cached_token_count'));
-            metrics.inputTokens += inputTokens;
+            const nonCachedInputTokens = totalInputTokens - cachedTokens;
+            metrics.inputTokens += nonCachedInputTokens;
             metrics.outputTokens += outputTokens;
             metrics.cacheReadTokens += cachedTokens;
             const model = findAttribute(attrs, 'model');
             if (model) metrics.model = String(model);
 
             // Estimate cost from OpenAI API pricing (Codex doesn't report cost_usd)
-            // Non-cached input tokens = total input - cached
-            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5-codex'), inputTokens - cachedTokens, outputTokens, cachedTokens);
+            metrics.costUsd += estimateOpenAICost(String(model ?? 'gpt-5.3-codex'), nonCachedInputTokens, outputTokens, cachedTokens);
           }
 
           if (isToolEvent) {
@@ -295,7 +298,7 @@ const OPENAI_PRICING: Record<string, { input: number; output: number; cached: nu
 };
 
 function estimateOpenAICost(model: string, inputTokens: number, outputTokens: number, cachedTokens: number): number {
-  const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5-codex']!;
+  const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING['gpt-5.3-codex']!;
   return (
     (inputTokens / 1_000_000) * pricing.input +
     (outputTokens / 1_000_000) * pricing.output +
