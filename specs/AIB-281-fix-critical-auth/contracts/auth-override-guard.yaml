@@ -1,0 +1,149 @@
+openapi: 3.0.3
+info:
+  title: AI-Board Auth Override Guard Contract
+  version: 1.0.0
+  description: >
+    Contract for the protected-request authentication behavior after closing the
+    unsafe x-test-user-id bypass. This contract documents shared auth semantics
+    for representative protected endpoints rather than introducing new endpoints.
+
+servers:
+  - url: /api
+    description: Relative API path
+
+paths:
+  /tokens:
+    get:
+      summary: List the authenticated user's personal access tokens
+      operationId: listTokens
+      tags:
+        - Auth Guard
+      parameters:
+        - $ref: '#/components/parameters/TestUserHeader'
+      responses:
+        '200':
+          description: Tokens returned for the authenticated session user
+        '401':
+          description: >
+            Request is unauthenticated. In non-test environments, supplying only
+            x-test-user-id MUST still return 401.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                headerOnlyRejected:
+                  value:
+                    error: Unauthorized
+                    code: AUTH_REQUIRED
+  /projects/{projectId}/jobs/status:
+    get:
+      summary: Poll project job status for an authenticated project member
+      operationId: getProjectJobStatus
+      tags:
+        - Auth Guard
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/TestUserHeader'
+      responses:
+        '200':
+          description: Job status returned for the session or PAT owner
+        '401':
+          description: Caller is not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is authenticated but lacks project access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    TestUserHeader:
+      name: x-test-user-id
+      in: header
+      required: false
+      description: >
+        Test-only identity override. Valid only in explicit automated test
+        context (`TEST_MODE=true` or `NODE_ENV=test`). Forbidden elsewhere.
+      schema:
+        type: string
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          nullable: true
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+    bearerPat:
+      type: http
+      scheme: bearer
+      bearerFormat: PAT
+
+security:
+  - bearerPat: []
+  - sessionAuth: []
+
+x-ai-board-auth-rules:
+  environmentRules:
+    nonTest:
+      description: Preview, development, and production-like environments unless explicitly flagged as test.
+      behavior:
+        - x-test-user-id alone never authenticates a request.
+        - A valid PAT identity takes precedence over x-test-user-id.
+        - A valid session identity takes precedence over x-test-user-id.
+        - Forbidden header use should emit an operator-visible log entry.
+    explicitTest:
+      description: Automated test execution with TEST_MODE=true or NODE_ENV=test.
+      behavior:
+        - x-test-user-id may resolve a seeded test user.
+        - Unknown test user IDs fail closed.
+
+x-ai-board-verification-scenarios:
+  - name: Header-only request rejected outside test mode
+    request:
+      path: /api/tokens
+      headers:
+        x-test-user-id: victim-user-id
+    expected:
+      status: 401
+      identitySource: none
+  - name: PAT identity preserved when conflicting header is present
+    request:
+      path: /api/projects/1/jobs/status
+      headers:
+        Authorization: Bearer pat_validtoken
+        x-test-user-id: different-user-id
+    expected:
+      status: 200
+      identitySource: pat
+  - name: Test override works only in explicit test mode
+    request:
+      path: /api/tokens
+      headers:
+        x-test-user-id: test-user-id
+    environment:
+      TEST_MODE: 'true'
+    expected:
+      status: 200
+      identitySource: test-override
