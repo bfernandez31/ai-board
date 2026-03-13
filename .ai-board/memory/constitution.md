@@ -219,7 +219,7 @@ This project is developed **100% via ai-board automated workflows**. There are n
 **Non-Negotiable Rules**:
 - NO README, GUIDE, INDEX, or educational documentation files at project root (except CLAUDE.md)
 - All AI guidance MUST be in constitution.md, CLAUDE.md, or `.claude/skills/`
-- NO "example" files, "quickstart" tutorials, or "how-to" guides for human developers
+- NO "example" files, "quickstart" tutorials, or "how-to" guides for human developers — exception: files inside `specs/[ticket-key]/` directories are workflow-generated artifacts and are exempt from this rule
 - Spec-kit templates and tasks address AI agents, not human team members
 - DO NOT create documentation explaining "how to do X" for humans - the AI uses constitution and skills
 - Ticket specs in `specs/[ticket-key]/`, consolidated specs in `specs/specifications/` - never pollute project root
