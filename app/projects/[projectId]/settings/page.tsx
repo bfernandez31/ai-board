@@ -1,42 +1,36 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getProject } from '@/lib/db/projects';
-import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
-import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { AiCredentialsCard } from '@/components/settings/ai-credentials-card';
-import { Button } from '@/components/ui/button';
+import { DefaultAgentCard } from '@/components/settings/default-agent-card';
+import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
-import { listProjectAiCredentials } from '@/lib/services/ai-credential-service';
+import { Button } from '@/components/ui/button';
+import { getProject } from '@/lib/db/projects';
 import { getCurrentUser } from '@/lib/db/users';
+import { listProjectAiCredentials } from '@/lib/services/ai-credential-service';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-/**
- * Project Settings Page (Server Component)
- *
- * Displays project configuration including:
- * - Default clarification policy
- * - Other project settings (future)
- */
+function parseProjectId(projectId: string): number {
+  const parsedProjectId = Number.parseInt(projectId, 10);
+
+  if (Number.isNaN(parsedProjectId) || parsedProjectId <= 0) {
+    notFound();
+  }
+
+  return parsedProjectId;
+}
+
 export default async function ProjectSettingsPage({
   params,
 }: {
   params: Promise<{ projectId: string }>;
-}) {
+}): Promise<JSX.Element> {
   const { projectId: projectIdString } = await params;
-
-  // Parse and validate projectId
-  const projectId = parseInt(projectIdString, 10);
-
-  // Return 404 if projectId is not a valid number
-  if (isNaN(projectId) || projectId <= 0) {
-    notFound();
-  }
-
-  // Fetch project (with authentication check)
+  const projectId = parseProjectId(projectIdString);
   const project = await getProject(projectId).catch((error) => {
     if (
       error instanceof Error &&
@@ -51,18 +45,18 @@ export default async function ProjectSettingsPage({
   const initialProviders = await listProjectAiCredentials(projectId, currentUser.id === project.userId);
 
   return (
-    <main className="container mx-auto py-10 max-w-4xl">
+    <main className="container mx-auto max-w-4xl py-10">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="mt-2 text-muted-foreground">
               Configure default behavior for {project.name}
             </p>
           </div>
           <Link href={`/projects/${projectId}/board`}>
             <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Board
             </Button>
           </Link>

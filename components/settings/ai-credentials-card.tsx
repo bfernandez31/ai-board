@@ -5,6 +5,10 @@ import type { ProviderStatusView } from '@/lib/types/ai-credentials';
 import { AiProviderStatusRow } from '@/components/settings/ai-provider-status-row';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+type ProviderUpdate =
+  | ProviderStatusView
+  | { provider: ProviderStatusView['provider']; status: 'NOT_CONFIGURED' };
+
 interface AiCredentialsCardProps {
   projectId: number;
   initialProviders: ProviderStatusView[];
@@ -16,9 +20,7 @@ export function AiCredentialsCard({
 }: AiCredentialsCardProps) {
   const [providers, setProviders] = useState<ProviderStatusView[]>(initialProviders);
 
-  function handleProviderUpdate(
-    updated: ProviderStatusView | { provider: ProviderStatusView['provider']; status: 'NOT_CONFIGURED' }
-  ) {
+  function handleProviderUpdate(updated: ProviderUpdate): void {
     setProviders((current) =>
       current.map((provider) => {
         if (provider.provider !== updated.provider) {

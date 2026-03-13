@@ -24,29 +24,48 @@ type CredentialRecord = Prisma.ProjectAiCredentialGetPayload<{
   };
 }>;
 
-function deriveProviderStatus(
-  credential: CredentialRecord | null,
+const credentialFieldSelection = {
+  id: true,
+  projectId: true,
+  provider: true,
+  encryptedKey: true,
+  encryptionIv: true,
+  encryptionTag: true,
+  lastFour: true,
+  validationStatus: true,
+  validationMessage: true,
+  validatedAt: true,
+} satisfies Prisma.ProjectAiCredentialSelect;
+
+function isCredentialInvalid(credential: Pick<CredentialRecord, 'validationStatus'>): boolean {
+  return (
+    credential.validationStatus === AiCredentialValidationStatus.INVALID ||
+    credential.validationStatus === AiCredentialValidationStatus.ERROR
+  );
+}
+
+function buildMissingProviderStatus(
+  provider: AiProvider,
   canManage: boolean
 ): ProviderStatusView {
-  if (!credential) {
-    return {
-      provider: canManage ? AiProvider.ANTHROPIC : AiProvider.ANTHROPIC,
-      status: 'NOT_CONFIGURED',
-      validationStatus: null,
-      lastFour: null,
-      validatedAt: null,
-      message: null,
-      canManage,
-    };
-  }
+  return {
+    provider,
+    status: 'NOT_CONFIGURED',
+    validationStatus: null,
+    lastFour: null,
+    validatedAt: null,
+    message: null,
+    canManage,
+  };
+}
 
+function deriveProviderStatus(
+  credential: CredentialRecord,
+  canManage: boolean
+): ProviderStatusView {
   return {
     provider: credential.provider,
-    status:
-      credential.validationStatus === AiCredentialValidationStatus.INVALID ||
-      credential.validationStatus === AiCredentialValidationStatus.ERROR
-        ? 'INVALID'
-        : 'CONFIGURED',
+    status: isCredentialInvalid(credential) ? 'INVALID' : 'CONFIGURED',
     validationStatus: credential.validationStatus,
     lastFour: canManage ? credential.lastFour : null,
     validatedAt: credential.validatedAt?.toISOString() ?? null,
@@ -55,28 +74,13 @@ function deriveProviderStatus(
   };
 }
 
-function selectCredentialFields() {
-  return {
-    id: true,
-    projectId: true,
-    provider: true,
-    encryptedKey: true,
-    encryptionIv: true,
-    encryptionTag: true,
-    lastFour: true,
-    validationStatus: true,
-    validationMessage: true,
-    validatedAt: true,
-  } satisfies Prisma.ProjectAiCredentialSelect;
-}
-
 export async function listProjectAiCredentials(
   projectId: number,
   canManage: boolean
 ): Promise<ProviderStatusView[]> {
   const credentials = await prisma.projectAiCredential.findMany({
     where: { projectId },
-    select: selectCredentialFields(),
+    select: credentialFieldSelection,
   });
 
   const byProvider = new Map(credentials.map((credential) => [credential.provider, credential]));
@@ -84,15 +88,7 @@ export async function listProjectAiCredentials(
   return AI_PROVIDERS.map((provider) => {
     const credential = byProvider.get(provider) ?? null;
     if (!credential) {
-      return {
-        provider,
-        status: 'NOT_CONFIGURED',
-        validationStatus: null,
-        lastFour: null,
-        validatedAt: null,
-        message: null,
-        canManage,
-      };
+      return buildMissingProviderStatus(provider, canManage);
     }
 
     return deriveProviderStatus(credential, canManage);
@@ -132,7 +128,7 @@ export async function upsertProjectAiCredential(
       createdByUserId: userId,
       updatedByUserId: userId,
     },
-    select: selectCredentialFields(),
+    select: credentialFieldSelection,
   });
 
   return deriveProviderStatus(credential, true);
@@ -149,7 +145,7 @@ export async function revalidateProjectAiCredential(
         provider,
       },
     },
-    select: selectCredentialFields(),
+    select: credentialFieldSelection,
   });
 
   if (!existing) {
@@ -165,7 +161,7 @@ export async function revalidateProjectAiCredential(
       validationMessage: validation.message,
       validatedAt: new Date(validation.validatedAt),
     },
-    select: selectCredentialFields(),
+    select: credentialFieldSelection,
   });
 
   return deriveProviderStatus(updated, true);
@@ -193,7 +189,7 @@ export async function getCredentialReadinessFailures(
         in: providers,
       },
     },
-    select: selectCredentialFields(),
+    select: credentialFieldSelection,
   });
 
   const byProvider = new Map(credentials.map((credential) => [credential.provider, credential]));
@@ -212,10 +208,7 @@ export async function getCredentialReadinessFailures(
       continue;
     }
 
-    if (
-      credential.validationStatus === AiCredentialValidationStatus.INVALID ||
-      credential.validationStatus === AiCredentialValidationStatus.ERROR
-    ) {
+    if (isCredentialInvalid(credential)) {
       failures.push({
         provider,
         reason: 'INVALID',

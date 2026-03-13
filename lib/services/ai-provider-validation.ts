@@ -1,20 +1,45 @@
 import { AiProvider } from '@prisma/client';
 import type { ProviderValidationResult } from '@/lib/types/ai-credentials';
 
-function sanitizedMessage(provider: AiProvider, status: ProviderValidationResult['validationStatus']): string {
+const providerValidationConfig = {
+  [AiProvider.ANTHROPIC]: {
+    name: 'Anthropic',
+    validationUrl: 'https://api.anthropic.com/v1/models',
+    buildHeaders(apiKey: string): HeadersInit {
+      return {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      };
+    },
+    invalidMessage:
+      'Anthropic rejected this API key. Check the key, workspace access, and billing status.',
+  },
+  [AiProvider.OPENAI]: {
+    name: 'OpenAI',
+    validationUrl: 'https://api.openai.com/v1/models',
+    buildHeaders(apiKey: string): HeadersInit {
+      return {
+        Authorization: `Bearer ${apiKey}`,
+      };
+    },
+    invalidMessage:
+      'OpenAI rejected this API key. Check the key, project access, and billing status.',
+  },
+} as const;
+
+function sanitizedMessage(
+  provider: AiProvider,
+  status: ProviderValidationResult['validationStatus']
+): string {
   if (status === 'VALID') {
     return 'Credential validated successfully.';
   }
 
   if (status === 'INVALID') {
-    return provider === AiProvider.ANTHROPIC
-      ? 'Anthropic rejected this API key. Check the key, workspace access, and billing status.'
-      : 'OpenAI rejected this API key. Check the key, project access, and billing status.';
+    return providerValidationConfig[provider].invalidMessage;
   }
 
-  return provider === AiProvider.ANTHROPIC
-    ? 'Anthropic validation could not be completed. Try again shortly.'
-    : 'OpenAI validation could not be completed. Try again shortly.';
+  return `${providerValidationConfig[provider].name} validation could not be completed. Try again shortly.`;
 }
 
 function buildResult(
@@ -48,60 +73,35 @@ function getTestValidationResult(provider: AiProvider, apiKey: string): Provider
   return null;
 }
 
-async function validateAnthropic(apiKey: string): Promise<ProviderValidationResult> {
-  const testResult = getTestValidationResult(AiProvider.ANTHROPIC, apiKey);
+async function validateRemoteProvider(
+  provider: AiProvider,
+  apiKey: string
+): Promise<ProviderValidationResult> {
+  const testResult = getTestValidationResult(provider, apiKey);
   if (testResult) {
     return testResult;
   }
 
+  const trimmedApiKey = apiKey.trim();
+  const config = providerValidationConfig[provider];
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/models', {
-      headers: {
-        'x-api-key': apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-      },
+    const response = await fetch(config.validationUrl, {
+      headers: config.buildHeaders(trimmedApiKey),
       cache: 'no-store',
     });
 
     if (response.ok) {
-      return buildResult(AiProvider.ANTHROPIC, 'VALID');
+      return buildResult(provider, 'VALID');
     }
 
     if ([400, 401, 403].includes(response.status)) {
-      return buildResult(AiProvider.ANTHROPIC, 'INVALID');
+      return buildResult(provider, 'INVALID');
     }
 
-    return buildResult(AiProvider.ANTHROPIC, 'ERROR');
+    return buildResult(provider, 'ERROR');
   } catch {
-    return buildResult(AiProvider.ANTHROPIC, 'ERROR');
-  }
-}
-
-async function validateOpenAI(apiKey: string): Promise<ProviderValidationResult> {
-  const testResult = getTestValidationResult(AiProvider.OPENAI, apiKey);
-  if (testResult) {
-    return testResult;
-  }
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/models', {
-      headers: {
-        Authorization: `Bearer ${apiKey.trim()}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (response.ok) {
-      return buildResult(AiProvider.OPENAI, 'VALID');
-    }
-
-    if ([400, 401, 403].includes(response.status)) {
-      return buildResult(AiProvider.OPENAI, 'INVALID');
-    }
-
-    return buildResult(AiProvider.OPENAI, 'ERROR');
-  } catch {
-    return buildResult(AiProvider.OPENAI, 'ERROR');
+    return buildResult(provider, 'ERROR');
   }
 }
 
@@ -111,9 +111,8 @@ export async function validateProviderApiKey(
 ): Promise<ProviderValidationResult> {
   switch (provider) {
     case AiProvider.ANTHROPIC:
-      return validateAnthropic(apiKey);
     case AiProvider.OPENAI:
-      return validateOpenAI(apiKey);
+      return validateRemoteProvider(provider, apiKey);
     default:
       return buildResult(provider, 'ERROR');
   }

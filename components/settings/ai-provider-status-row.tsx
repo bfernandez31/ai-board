@@ -14,7 +14,17 @@ const PROVIDER_LABELS: Record<ProviderStatusView['provider'], string> = {
   OPENAI: 'OpenAI',
 };
 
-function statusVariant(provider: ProviderStatusView): 'default' | 'destructive' | 'secondary' | 'outline' {
+type ProviderUpdate =
+  | ProviderStatusView
+  | { provider: ProviderStatusView['provider']; status: 'NOT_CONFIGURED' };
+
+interface ProviderErrorResponse {
+  error?: string;
+}
+
+function statusVariant(
+  provider: ProviderStatusView
+): 'default' | 'destructive' | 'secondary' | 'outline' {
   if (provider.status === 'INVALID') {
     return 'destructive';
   }
@@ -27,10 +37,27 @@ function statusVariant(provider: ProviderStatusView): 'default' | 'destructive' 
   return 'secondary';
 }
 
+async function parseProviderResponse(
+  response: Response,
+  fallbackMessage: string
+): Promise<ProviderUpdate> {
+  const payload = (await response.json()) as ProviderUpdate | ProviderErrorResponse;
+  if (!response.ok) {
+    const errorMessage =
+      'error' in payload && typeof payload.error === 'string'
+        ? payload.error
+        : fallbackMessage;
+
+    throw new Error(errorMessage);
+  }
+
+  return payload as ProviderUpdate;
+}
+
 interface AiProviderStatusRowProps {
   provider: ProviderStatusView;
   projectId: number;
-  onUpdated: (provider: ProviderStatusView | { provider: ProviderStatusView['provider']; status: 'NOT_CONFIGURED' }) => void;
+  onUpdated: (provider: ProviderUpdate) => void;
 }
 
 export function AiProviderStatusRow({
@@ -55,12 +82,7 @@ export function AiProviderStatusRow({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey }),
       });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to save credential');
-      }
-
+      const payload = await parseProviderResponse(response, 'Failed to save credential');
       onUpdated(payload);
       setApiKey('');
       setDialogOpen(false);
@@ -79,11 +101,7 @@ export function AiProviderStatusRow({
       const response = await fetch(`/api/projects/${projectId}/ai-credentials/${provider.provider}/validate`, {
         method: 'POST',
       });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to validate credential');
-      }
-
+      const payload = await parseProviderResponse(response, 'Failed to validate credential');
       onUpdated(payload);
     } catch (validationError) {
       setError(validationError instanceof Error ? validationError.message : 'Failed to validate credential');
@@ -100,11 +118,7 @@ export function AiProviderStatusRow({
       const response = await fetch(`/api/projects/${projectId}/ai-credentials/${provider.provider}`, {
         method: 'DELETE',
       });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to delete credential');
-      }
-
+      const payload = await parseProviderResponse(response, 'Failed to delete credential');
       onUpdated(payload);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete credential');
