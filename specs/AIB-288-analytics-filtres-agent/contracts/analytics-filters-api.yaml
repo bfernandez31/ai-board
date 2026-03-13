@@ -1,0 +1,412 @@
+openapi: 3.0.3
+info:
+  title: AI Board Analytics Filters API
+  version: 1.0.0
+  description: Filter-aware analytics contract for project dashboards.
+
+paths:
+  /api/projects/{projectId}/analytics:
+    get:
+      summary: Get filtered project analytics
+      operationId: getFilteredProjectAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: integer
+            minimum: 1
+        - name: range
+          in: query
+          required: false
+          description: Date range to apply to analytics
+          schema:
+            $ref: '#/components/schemas/TimeRange'
+        - name: statusScope
+          in: query
+          required: false
+          description: Ticket status scope applied to all analytics summaries and charts
+          schema:
+            $ref: '#/components/schemas/StatusScope'
+        - name: agentScope
+          in: query
+          required: false
+          description: Agent filter applied to all analytics summaries and charts
+          schema:
+            oneOf:
+              - type: string
+                enum: [all]
+              - $ref: '#/components/schemas/Agent'
+            default: all
+      responses:
+        '200':
+          description: Filtered analytics payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+              examples:
+                filteredResult:
+                  value:
+                    filters:
+                      timeRange: 30d
+                      statusScope: shipped
+                      agentScope: all
+                      periodLabel: Last 30 days
+                    availableAgents:
+                      - value: CLAUDE
+                        label: Claude
+                        jobCount: 12
+                      - value: CODEX
+                        label: Codex
+                        jobCount: 8
+                    overview:
+                      totalCost: 45.67
+                      costTrend: 12.5
+                      successRate: 94.2
+                      avgDuration: 125000
+                      ticketsShipped: 8
+                      ticketsClosed: 2
+                      ticketPeriodLabel: Last 30 days
+                    costOverTime:
+                      - date: '2026-03-01'
+                        cost: 5.23
+                    costByStage:
+                      - stage: BUILD
+                        cost: 28.45
+                        percentage: 62.3
+                    tokenUsage:
+                      inputTokens: 1250000
+                      outputTokens: 450000
+                      cacheTokens: 380000
+                    cacheEfficiency:
+                      totalTokens: 2080000
+                      cacheTokens: 380000
+                      savingsPercentage: 18.3
+                      estimatedSavingsUsd: 3.42
+                    topTools:
+                      - tool: Edit
+                        count: 245
+                    workflowDistribution:
+                      - type: FULL
+                        count: 12
+                        percentage: 60
+                    velocity:
+                      - week: '2026-W09'
+                        ticketsShipped: 3
+                    timeRange: 30d
+                    generatedAt: '2026-03-13T12:00:00.000Z'
+                    jobCount: 45
+                    hasData: true
+                emptyState:
+                  value:
+                    filters:
+                      timeRange: 7d
+                      statusScope: closed
+                      agentScope: CODEX
+                      periodLabel: Last 7 days
+                    availableAgents:
+                      - value: CLAUDE
+                        label: Claude
+                        jobCount: 12
+                      - value: CODEX
+                        label: Codex
+                        jobCount: 8
+                    overview:
+                      totalCost: 0
+                      costTrend: 0
+                      successRate: 0
+                      avgDuration: 0
+                      ticketsShipped: 0
+                      ticketsClosed: 0
+                      ticketPeriodLabel: Last 7 days
+                    costOverTime: []
+                    costByStage: []
+                    tokenUsage:
+                      inputTokens: 0
+                      outputTokens: 0
+                      cacheTokens: 0
+                    cacheEfficiency:
+                      totalTokens: 0
+                      cacheTokens: 0
+                      savingsPercentage: 0
+                      estimatedSavingsUsd: 0
+                    topTools: []
+                    workflowDistribution: []
+                    velocity: []
+                    timeRange: 7d
+                    generatedAt: '2026-03-13T12:00:00.000Z'
+                    jobCount: 0
+                    hasData: false
+        '400':
+          description: Invalid filter values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid analytics filter
+                code: INVALID_QUERY
+        '403':
+          description: Project access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AnalyticsResponse:
+      type: object
+      required:
+        - filters
+        - availableAgents
+        - overview
+        - costOverTime
+        - costByStage
+        - tokenUsage
+        - cacheEfficiency
+        - topTools
+        - workflowDistribution
+        - velocity
+        - timeRange
+        - generatedAt
+        - jobCount
+        - hasData
+      properties:
+        filters:
+          $ref: '#/components/schemas/AnalyticsFilterState'
+        availableAgents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentOption'
+        overview:
+          $ref: '#/components/schemas/OverviewMetrics'
+        costOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostDataPoint'
+        costByStage:
+          type: array
+          items:
+            $ref: '#/components/schemas/StageCost'
+        tokenUsage:
+          $ref: '#/components/schemas/TokenBreakdown'
+        cacheEfficiency:
+          $ref: '#/components/schemas/CacheMetrics'
+        topTools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolUsage'
+        workflowDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowBreakdown'
+        velocity:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyVelocity'
+        timeRange:
+          $ref: '#/components/schemas/TimeRange'
+        generatedAt:
+          type: string
+          format: date-time
+        jobCount:
+          type: integer
+          minimum: 0
+        hasData:
+          type: boolean
+
+    AnalyticsFilterState:
+      type: object
+      required:
+        - timeRange
+        - statusScope
+        - agentScope
+        - periodLabel
+      properties:
+        timeRange:
+          $ref: '#/components/schemas/TimeRange'
+        statusScope:
+          $ref: '#/components/schemas/StatusScope'
+        agentScope:
+          oneOf:
+            - type: string
+              enum: [all]
+            - $ref: '#/components/schemas/Agent'
+        periodLabel:
+          type: string
+
+    AgentOption:
+      type: object
+      required:
+        - value
+        - label
+        - jobCount
+      properties:
+        value:
+          $ref: '#/components/schemas/Agent'
+        label:
+          type: string
+        jobCount:
+          type: integer
+          minimum: 0
+
+    OverviewMetrics:
+      type: object
+      required:
+        - totalCost
+        - costTrend
+        - successRate
+        - avgDuration
+        - ticketsShipped
+        - ticketsClosed
+        - ticketPeriodLabel
+      properties:
+        totalCost:
+          type: number
+          format: float
+        costTrend:
+          type: number
+          format: float
+        successRate:
+          type: number
+          format: float
+        avgDuration:
+          type: integer
+        ticketsShipped:
+          type: integer
+          minimum: 0
+        ticketsClosed:
+          type: integer
+          minimum: 0
+        ticketPeriodLabel:
+          type: string
+
+    CostDataPoint:
+      type: object
+      required: [date, cost]
+      properties:
+        date:
+          type: string
+        cost:
+          type: number
+          format: float
+
+    StageCost:
+      type: object
+      required: [stage, cost, percentage]
+      properties:
+        stage:
+          type: string
+          enum: [SPECIFY, PLAN, BUILD, VERIFY]
+        cost:
+          type: number
+          format: float
+        percentage:
+          type: number
+          format: float
+
+    TokenBreakdown:
+      type: object
+      required: [inputTokens, outputTokens, cacheTokens]
+      properties:
+        inputTokens:
+          type: integer
+          minimum: 0
+        outputTokens:
+          type: integer
+          minimum: 0
+        cacheTokens:
+          type: integer
+          minimum: 0
+
+    CacheMetrics:
+      type: object
+      required: [totalTokens, cacheTokens, savingsPercentage, estimatedSavingsUsd]
+      properties:
+        totalTokens:
+          type: integer
+          minimum: 0
+        cacheTokens:
+          type: integer
+          minimum: 0
+        savingsPercentage:
+          type: number
+          format: float
+        estimatedSavingsUsd:
+          type: number
+          format: float
+
+    ToolUsage:
+      type: object
+      required: [tool, count]
+      properties:
+        tool:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+
+    WorkflowBreakdown:
+      type: object
+      required: [type, count, percentage]
+      properties:
+        type:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        count:
+          type: integer
+          minimum: 0
+        percentage:
+          type: number
+          format: float
+
+    WeeklyVelocity:
+      type: object
+      required: [week, ticketsShipped]
+      properties:
+        week:
+          type: string
+        ticketsShipped:
+          type: integer
+          minimum: 0
+
+    TimeRange:
+      type: string
+      enum: [7d, 30d, 90d, all]
+      default: 30d
+
+    StatusScope:
+      type: string
+      enum: [shipped, closed, shipped+closed]
+      default: shipped
+
+    Agent:
+      type: string
+      enum: [CLAUDE, CODEX]
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
