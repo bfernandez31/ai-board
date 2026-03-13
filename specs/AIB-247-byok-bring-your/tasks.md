@@ -55,8 +55,8 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Write integration tests for save and list endpoints in `tests/integration/api-keys/crud.test.ts` (save key, list masked, owner-only enforcement, member read access)
-- [ ] T013 [P] [US1] Write component tests for `ApiKeysCard` in `tests/unit/components/api-keys-card.test.tsx` (render states, save flow, owner vs member view)
+- [x] T012 [P] [US1] Write integration tests for save and list endpoints in `tests/integration/api-keys/crud.test.ts` (save key, list masked, owner-only enforcement, member read access)
+- [x] T013 [P] [US1] Write component tests for `ApiKeysCard` in `tests/unit/components/api-keys-card.test.tsx` (render states, save flow, owner vs member view)
 
 **Checkpoint**: User Story 1 should be fully functional — owners can add keys, see masked previews, members see status
 
@@ -75,7 +75,7 @@
 
 ### Tests for User Story 4
 
-- [ ] T016 [US4] Add integration tests for workflow key injection in `tests/integration/api-keys/crud.test.ts` (key retrieval + decryption, missing key blocking)
+- [x] T016 [US4] Add integration tests for workflow key injection in `tests/integration/api-keys/crud.test.ts` (key retrieval + decryption, missing key blocking)
 
 **Checkpoint**: User Stories 1 and 4 form the complete MVP — keys can be stored and used by workflows
 
@@ -94,7 +94,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [US2] Add integration tests for validate endpoint in `tests/integration/api-keys/crud.test.ts` (valid key, invalid key, no key configured, owner-only access)
+- [x] T019 [US2] Add integration tests for validate endpoint in `tests/integration/api-keys/crud.test.ts` (valid key, invalid key, no key configured, owner-only access)
 
 **Checkpoint**: Owners can now validate keys before relying on them
 
@@ -113,7 +113,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [US3] Add integration tests for delete endpoint in `tests/integration/api-keys/crud.test.ts` (delete key, 404 for missing key, owner-only access)
+- [x] T022 [US3] Add integration tests for delete endpoint in `tests/integration/api-keys/crud.test.ts` (delete key, 404 for missing key, owner-only access)
 
 **Checkpoint**: Full BYOK key lifecycle management is complete
 
