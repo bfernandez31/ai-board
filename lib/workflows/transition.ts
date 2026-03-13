@@ -1,8 +1,9 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
+import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent, ApiKeyProvider } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getProjectApiKey } from '@/lib/db/api-keys';
 
 const prisma = new PrismaClient();
 
@@ -37,6 +38,11 @@ export type TicketWithProject = Ticket & {
 /** Resolve the effective agent: ticket override > project default > CLAUDE fallback */
 export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
   return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
+}
+
+/** Map agent to API key provider */
+function agentToProvider(agent: Agent): ApiKeyProvider {
+  return agent === Agent.CODEX ? ApiKeyProvider.OPENAI : ApiKeyProvider.ANTHROPIC;
 }
 
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
@@ -212,6 +218,20 @@ export async function handleTicketTransition(
 
         const effectiveAgent = resolveEffectiveAgent(ticket);
 
+        // Resolve BYOK API key for the effective agent
+        const provider = agentToProvider(effectiveAgent);
+        const byokKey = await getProjectApiKey(ticket.projectId, provider);
+
+        if (!byokKey && !process.env.ANTHROPIC_API_KEY) {
+          // No BYOK key and no platform key - workflows can't run
+          await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+          return {
+            success: false,
+            error: `No API key configured. Please add your ${provider === ApiKeyProvider.ANTHROPIC ? 'Anthropic' : 'OpenAI'} API key in Project Settings > API Keys.`,
+            errorCode: 'GITHUB_ERROR',
+          };
+        }
+
         if (isQuickImpl) {
           const quickImplPayload = {
             ticketKey: ticket.ticketKey,
@@ -277,12 +297,18 @@ export async function handleTicketTransition(
           workflowFile = 'speckit.yml';
         }
 
+        // Inject BYOK key into workflow inputs if configured
+        if (byokKey) {
+          workflowInputs.byok_api_key = byokKey;
+        }
+
         console.log('[Workflow Dispatch]', {
           aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
           targetRepo: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           workflow: workflowFile,
           command,
           ticketKey: ticket.ticketKey,
+          hasByokKey: !!byokKey,
         });
 
         await octokit.actions.createWorkflowDispatch({

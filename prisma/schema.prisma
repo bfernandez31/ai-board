@@ -75,12 +75,30 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  apiKeys             ProjectApiKey[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
   @@index([userId])
   @@index([key])
   @@index([activeCleanupJobId])
+}
+
+model ProjectApiKey {
+  id             Int             @id @default(autoincrement())
+  projectId      Int
+  provider       ApiKeyProvider
+  encryptedKey   String          @db.VarChar(500)
+  iv             String          @db.VarChar(32)
+  authTag        String          @db.VarChar(32)
+  preview        String          @db.VarChar(4)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
 }
 
 model ProjectMember {
@@ -285,6 +303,11 @@ enum WorkflowType {
 enum Agent {
   CLAUDE
   CODEX
+}
+
+enum ApiKeyProvider {
+  ANTHROPIC
+  OPENAI
 }
 
 enum SubscriptionPlan {
