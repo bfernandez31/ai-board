@@ -42,6 +42,18 @@ on:
         type: string
         default: 'CLAUDE'
 
+      anthropicApiKey:
+        description: 'Anthropic API key (BYOK - injected at dispatch)'
+        required: false
+        type: string
+        default: ''
+
+      openaiApiKey:
+        description: 'OpenAI API key (BYOK - injected at dispatch)'
+        required: false
+        type: string
+        default: ''
+
 jobs:
   quick-impl:
     runs-on: ubuntu-latest
@@ -87,6 +99,16 @@ jobs:
       OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
 
     steps:
+      - name: Mask API Keys
+        if: inputs.anthropicApiKey != '' || inputs.openaiApiKey != ''
+        run: |
+          if [ -n "${{ inputs.anthropicApiKey }}" ]; then
+            echo "::add-mask::${{ inputs.anthropicApiKey }}"
+          fi
+          if [ -n "${{ inputs.openaiApiKey }}" ]; then
+            echo "::add-mask::${{ inputs.openaiApiKey }}"
+          fi
+
       - name: Debug Inputs
         run: |
           echo "🔍 Debug workflow inputs:"

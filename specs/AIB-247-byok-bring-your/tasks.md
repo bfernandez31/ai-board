@@ -70,8 +70,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T014 [US4] Update workflow dispatch in `lib/workflows/transition.ts` to retrieve and decrypt project API key via `getEncryptedKey` + `decrypt`, inject as workflow input (`anthropicApiKey`/`openaiApiKey`), block with actionable error if key missing
-- [ ] T015 [US4] Update relevant workflow YAML files in `.github/workflows/` to accept API key inputs and mask them with `::add-mask::`
+- [x] T014 [US4] Update workflow dispatch in `lib/workflows/transition.ts` to retrieve and decrypt project API key via `getEncryptedKey` + `decrypt`, inject as workflow input (`anthropicApiKey`/`openaiApiKey`), block with actionable error if key missing
+- [x] T015 [US4] Update relevant workflow YAML files in `.github/workflows/` to accept API key inputs and mask them with `::add-mask::`
 
 ### Tests for User Story 4
 

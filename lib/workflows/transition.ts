@@ -3,6 +3,8 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getEncryptedKey } from '@/lib/db/api-keys';
+import { decrypt } from '@/lib/crypto/encryption';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +23,7 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_API_KEY';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
@@ -212,6 +214,23 @@ export async function handleTicketTransition(
 
         const effectiveAgent = resolveEffectiveAgent(ticket);
 
+        // Retrieve and decrypt project API key for the effective agent's provider
+        const provider = effectiveAgent === Agent.CLAUDE ? 'ANTHROPIC' : 'OPENAI';
+        const encryptedApiKey = await getEncryptedKey(ticket.projectId, provider);
+
+        if (!encryptedApiKey) {
+          const providerLabel = provider === 'ANTHROPIC' ? 'Anthropic' : 'OpenAI';
+          await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+          return {
+            success: false,
+            error: `API key required. Configure your ${providerLabel} API key in Project Settings to run workflows.`,
+            errorCode: 'MISSING_API_KEY',
+          };
+        }
+
+        const decryptedApiKey = decrypt(encryptedApiKey);
+        const apiKeyInputName = provider === 'ANTHROPIC' ? 'anthropicApiKey' : 'openaiApiKey';
+
         if (isQuickImpl) {
           const quickImplPayload = {
             ticketKey: ticket.ticketKey,
@@ -233,6 +252,7 @@ export async function handleTicketTransition(
             workflowInputs.attachments = JSON.stringify(ticket.attachments);
           }
 
+          workflowInputs[apiKeyInputName] = decryptedApiKey;
           workflowFile = 'quick-impl.yml';
         } else if (command === 'verify') {
           workflowInputs = {
@@ -245,6 +265,7 @@ export async function handleTicketTransition(
             agent: effectiveAgent,
           };
 
+          workflowInputs[apiKeyInputName] = decryptedApiKey;
           workflowFile = 'verify.yml';
         } else {
           workflowInputs = {
@@ -274,6 +295,7 @@ export async function handleTicketTransition(
             }
           }
 
+          workflowInputs[apiKeyInputName] = decryptedApiKey;
           workflowFile = 'speckit.yml';
         }
 
