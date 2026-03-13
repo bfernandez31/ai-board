@@ -22,6 +22,10 @@ export interface ApiKeyValidationResult {
   message: string;
 }
 
+const PROVIDER_VALIDATION_SUCCESS_MESSAGE = 'API key is valid';
+const PROVIDER_VALIDATION_REJECTED_MESSAGE = 'API key was rejected';
+const PROVIDER_VALIDATION_REQUEST_FAILED_MESSAGE = 'Provider validation request failed';
+
 function getEncryptionKey(): Buffer {
   const secret =
     process.env.PROJECT_SECRET_ENCRYPTION_KEY ??
@@ -97,13 +101,48 @@ export function buildProjectApiKeysState(project: {
 }
 
 export function getProviderForAgent(agent: Agent): ProjectApiKeyProvider {
-  return agent === Agent.CODEX ? 'openai' : 'anthropic';
+  switch (agent) {
+    case Agent.CODEX:
+      return 'openai';
+    default:
+      return 'anthropic';
+  }
 }
 
 export function getMissingProjectApiKeyMessage(agent: Agent): string {
-  return agent === Agent.CODEX
-    ? 'OpenAI API key is required in project settings before Codex workflows can run.'
-    : 'Anthropic API key is required in project settings before Claude workflows can run.';
+  switch (agent) {
+    case Agent.CODEX:
+      return 'OpenAI API key is required in project settings before Codex workflows can run.';
+    default:
+      return 'Anthropic API key is required in project settings before Claude workflows can run.';
+  }
+}
+
+function buildProviderValidationRequest(
+  provider: ProjectApiKeyProvider,
+  apiKey: string
+): RequestInit & { url: string } {
+  switch (provider) {
+    case 'anthropic':
+      return {
+        url: 'https://api.anthropic.com/v1/models',
+        method: 'GET',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: AbortSignal.timeout(8000),
+      };
+    case 'openai':
+      return {
+        url: 'https://api.openai.com/v1/models',
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: AbortSignal.timeout(8000),
+      };
+  }
 }
 
 export async function validateProviderApiKey(
@@ -111,39 +150,26 @@ export async function validateProviderApiKey(
   apiKey: string
 ): Promise<ApiKeyValidationResult> {
   if (process.env.NODE_ENV === 'test') {
+    const isRejected = apiKey.toLowerCase().includes('invalid');
+
     return {
-      valid: !apiKey.toLowerCase().includes('invalid'),
-      message: apiKey.toLowerCase().includes('invalid')
-        ? 'API key was rejected'
-        : 'API key is valid',
+      valid: !isRejected,
+      message: isRejected
+        ? PROVIDER_VALIDATION_REJECTED_MESSAGE
+        : PROVIDER_VALIDATION_SUCCESS_MESSAGE,
     };
   }
 
   try {
-    const response =
-      provider === 'anthropic'
-        ? await fetch('https://api.anthropic.com/v1/models', {
-            method: 'GET',
-            headers: {
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            signal: AbortSignal.timeout(8000),
-          })
-        : await fetch('https://api.openai.com/v1/models', {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-            },
-            signal: AbortSignal.timeout(8000),
-          });
+    const { url, ...requestInit } = buildProviderValidationRequest(provider, apiKey);
+    const response = await fetch(url, requestInit);
 
     if (response.ok) {
-      return { valid: true, message: 'API key is valid' };
+      return { valid: true, message: PROVIDER_VALIDATION_SUCCESS_MESSAGE };
     }
 
     if (response.status === 401 || response.status === 403) {
-      return { valid: false, message: 'API key was rejected' };
+      return { valid: false, message: PROVIDER_VALIDATION_REJECTED_MESSAGE };
     }
 
     return {
@@ -153,7 +179,7 @@ export async function validateProviderApiKey(
   } catch {
     return {
       valid: false,
-      message: 'Provider validation request failed',
+      message: PROVIDER_VALIDATION_REQUEST_FAILED_MESSAGE,
     };
   }
 }

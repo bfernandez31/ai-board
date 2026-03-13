@@ -10,49 +10,74 @@ import {
   projectApiKeyUpdateSchema,
 } from '@/app/lib/schemas/project-api-keys';
 
+type ProjectApiKeysRouteContext = {
+  params: Promise<{ projectId: string }>;
+};
+
 function parseProjectId(projectId: string): number | null {
   const parsed = parseInt(projectId, 10);
   return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
 }
 
+async function getProjectIdFromContext(
+  context: ProjectApiKeysRouteContext
+): Promise<number | null> {
+  const { projectId } = await context.params;
+
+  return parseProjectId(projectId);
+}
+
+function createInvalidProjectIdResponse(): NextResponse {
+  return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+}
+
+function handleProjectApiKeysError(error: unknown, action: string): NextResponse {
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { error: 'Validation failed', issues: error.issues },
+      { status: 400 }
+    );
+  }
+
+  if (error instanceof Error && error.message === 'Project not found') {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
+
+  if (error instanceof Error && error.message === 'Unauthorized') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  console.error(`[project-api-keys] Failed to ${action}:`, error);
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: ProjectApiKeysRouteContext
 ): Promise<NextResponse> {
   try {
-    const { projectId: projectIdString } = await context.params;
-    const projectId = parseProjectId(projectIdString);
+    const projectId = await getProjectIdFromContext(context);
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+      return createInvalidProjectIdResponse();
     }
 
     const apiKeys = await getProjectApiKeysState(projectId, request);
     return NextResponse.json({ apiKeys });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    console.error('[project-api-keys] Failed to fetch API key settings:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleProjectApiKeysError(error, 'fetch API key settings');
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: ProjectApiKeysRouteContext
 ): Promise<NextResponse> {
   try {
-    const { projectId: projectIdString } = await context.params;
-    const projectId = parseProjectId(projectIdString);
+    const projectId = await getProjectIdFromContext(context);
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+      return createInvalidProjectIdResponse();
     }
 
     const body = await request.json();
@@ -67,36 +92,19 @@ export async function PATCH(
 
     return NextResponse.json({ apiKeys });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        { error: 'Validation failed', issues: error.issues },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    console.error('[project-api-keys] Failed to update API key:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleProjectApiKeysError(error, 'update API key');
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: ProjectApiKeysRouteContext
 ): Promise<NextResponse> {
   try {
-    const { projectId: projectIdString } = await context.params;
-    const projectId = parseProjectId(projectIdString);
+    const projectId = await getProjectIdFromContext(context);
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+      return createInvalidProjectIdResponse();
     }
 
     const body = await request.json();
@@ -105,22 +113,6 @@ export async function DELETE(
 
     return NextResponse.json({ apiKeys });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        { error: 'Validation failed', issues: error.issues },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error && error.message === 'Project not found') {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    console.error('[project-api-keys] Failed to delete API key:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleProjectApiKeysError(error, 'delete API key');
   }
 }

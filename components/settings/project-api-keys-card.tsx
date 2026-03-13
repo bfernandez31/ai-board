@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useRouter } from 'next/navigation';
 
 interface ProviderState {
   configured: boolean;
@@ -23,8 +29,28 @@ interface ProjectApiKeysCardProps {
 }
 
 type Provider = 'anthropic' | 'openai';
+const PROVIDERS: Provider[] = ['anthropic', 'openai'];
 
-export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
+const PROVIDER_CONFIG: Record<
+  Provider,
+  {
+    title: string;
+    description: string;
+  }
+> = {
+  anthropic: {
+    title: 'Anthropic API Key',
+    description: 'Used for Claude workflows.',
+  },
+  openai: {
+    title: 'OpenAI API Key',
+    description: 'Used for Codex workflows.',
+  },
+};
+
+export function ProjectApiKeysCard({
+  project,
+}: ProjectApiKeysCardProps): React.JSX.Element {
   const router = useRouter();
   const [values, setValues] = useState<Record<Provider, string>>({
     anthropic: '',
@@ -36,13 +62,22 @@ export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
     openai: null,
   });
 
-  async function saveKey(provider: Provider) {
+  function updateValue(provider: Provider, value: string): void {
+    setValues((current) => ({ ...current, [provider]: value }));
+  }
+
+  function updateMessage(provider: Provider, nextMessage: string): void {
+    setMessage((current) => ({
+      ...current,
+      [provider]: nextMessage,
+    }));
+  }
+
+  async function saveKey(provider: Provider): Promise<void> {
     const apiKey = values[provider].trim();
+
     if (!apiKey) {
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Enter an API key first.',
-      }));
+      updateMessage(provider, 'Enter an API key first.');
       return;
     }
 
@@ -58,23 +93,17 @@ export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
         throw new Error('Failed to save API key');
       }
 
-      setValues((current) => ({ ...current, [provider]: '' }));
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Saved successfully.',
-      }));
+      updateValue(provider, '');
+      updateMessage(provider, 'Saved successfully.');
       router.refresh();
     } catch {
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Failed to save API key.',
-      }));
+      updateMessage(provider, 'Failed to save API key.');
     } finally {
       setBusyProvider(null);
     }
   }
 
-  async function testKey(provider: Provider) {
+  async function testKey(provider: Provider): Promise<void> {
     setBusyProvider(provider);
     try {
       const response = await fetch(`/api/projects/${project.id}/api-keys/test`, {
@@ -87,21 +116,15 @@ export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
       });
 
       const result = (await response.json()) as { valid?: boolean; message?: string };
-      setMessage((current) => ({
-        ...current,
-        [provider]: result.message ?? 'Validation completed.',
-      }));
+      updateMessage(provider, result.message ?? 'Validation completed.');
     } catch {
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Failed to validate API key.',
-      }));
+      updateMessage(provider, 'Failed to validate API key.');
     } finally {
       setBusyProvider(null);
     }
   }
 
-  async function removeKey(provider: Provider) {
+  async function removeKey(provider: Provider): Promise<void> {
     setBusyProvider(provider);
     try {
       const response = await fetch(`/api/projects/${project.id}/api-keys`, {
@@ -114,17 +137,11 @@ export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
         throw new Error('Failed to delete API key');
       }
 
-      setValues((current) => ({ ...current, [provider]: '' }));
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Removed successfully.',
-      }));
+      updateValue(provider, '');
+      updateMessage(provider, 'Removed successfully.');
       router.refresh();
     } catch {
-      setMessage((current) => ({
-        ...current,
-        [provider]: 'Failed to remove API key.',
-      }));
+      updateMessage(provider, 'Failed to remove API key.');
     } finally {
       setBusyProvider(null);
     }
@@ -139,33 +156,30 @@ export function ProjectApiKeysCard({ project }: ProjectApiKeysCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <ProviderRow
-          provider="anthropic"
-          title="Anthropic API Key"
-          description="Used for Claude workflows."
-          value={values.anthropic}
-          configuredValue={project.apiKeys.anthropic.maskedValue}
-          busy={busyProvider === 'anthropic'}
-          message={message.anthropic}
-          onChange={(value) => setValues((current) => ({ ...current, anthropic: value }))}
-          onSave={() => saveKey('anthropic')}
-          onTest={() => testKey('anthropic')}
-          onRemove={() => removeKey('anthropic')}
-        />
-
-        <ProviderRow
-          provider="openai"
-          title="OpenAI API Key"
-          description="Used for Codex workflows."
-          value={values.openai}
-          configuredValue={project.apiKeys.openai.maskedValue}
-          busy={busyProvider === 'openai'}
-          message={message.openai}
-          onChange={(value) => setValues((current) => ({ ...current, openai: value }))}
-          onSave={() => saveKey('openai')}
-          onTest={() => testKey('openai')}
-          onRemove={() => removeKey('openai')}
-        />
+        {PROVIDERS.map((provider) => (
+          <ProviderRow
+            key={provider}
+            provider={provider}
+            title={PROVIDER_CONFIG[provider].title}
+            description={PROVIDER_CONFIG[provider].description}
+            value={values[provider]}
+            configuredValue={project.apiKeys[provider].maskedValue}
+            busy={busyProvider === provider}
+            message={message[provider]}
+            onChange={function handleChange(value: string): void {
+              updateValue(provider, value);
+            }}
+            onSave={function handleSave(): Promise<void> {
+              return saveKey(provider);
+            }}
+            onTest={function handleTest(): Promise<void> {
+              return testKey(provider);
+            }}
+            onRemove={function handleRemove(): Promise<void> {
+              return removeKey(provider);
+            }}
+          />
+        ))}
       </CardContent>
     </Card>
   );
@@ -197,7 +211,7 @@ function ProviderRow({
   onSave,
   onTest,
   onRemove,
-}: ProviderRowProps) {
+}: ProviderRowProps): React.JSX.Element {
   const inputId = `${provider}-api-key`;
 
   return (
