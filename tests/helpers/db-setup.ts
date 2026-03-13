@@ -1,5 +1,6 @@
 import { getPrismaClient } from './db-cleanup';
 import { createTicket } from '@/lib/db/tickets';
+import { encryptProjectApiKey } from '@/lib/project-api-keys';
 
 /**
  * Database setup utilities for testing project-ticket relationships
@@ -73,6 +74,10 @@ export async function createTestProject(
       githubOwner,
       githubRepo,
       userId: testUser.id,
+      anthropicApiKeyEncrypted: encryptProjectApiKey('sk-ant-test-default-12345678'),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey('sk-openai-test-default-12345678'),
+      openaiApiKeyPreview: '5678',
       updatedAt: new Date(),
     },
   });
@@ -156,6 +161,10 @@ export async function setupTestData(projectId?: number): Promise<{ project: Test
     where: { id: targetProjectId },
     update: {
       userId: testUser.id,
+      anthropicApiKeyEncrypted: encryptProjectApiKey('sk-ant-test-default-12345678'),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey('sk-openai-test-default-12345678'),
+      openaiApiKeyPreview: '5678',
     },
     create: {
       id: targetProjectId,
@@ -165,6 +174,10 @@ export async function setupTestData(projectId?: number): Promise<{ project: Test
       githubOwner: 'test',
       githubRepo: `test${targetProjectId}`,
       userId: testUser.id,
+      anthropicApiKeyEncrypted: encryptProjectApiKey('sk-ant-test-default-12345678'),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey('sk-openai-test-default-12345678'),
+      openaiApiKeyPreview: '5678',
       updatedAt: new Date(),
     },
   });
@@ -212,6 +225,10 @@ export async function createTicketWithJob(
     where: { id: 1 },
     update: {
       userId: testUser.id,
+      anthropicApiKeyEncrypted: encryptProjectApiKey('sk-ant-test-default-12345678'),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey('sk-openai-test-default-12345678'),
+      openaiApiKeyPreview: '5678',
     },
     create: {
       id: 1,
@@ -221,6 +238,10 @@ export async function createTicketWithJob(
       githubOwner: 'test',
       githubRepo: 'test',
       userId: testUser.id,
+      anthropicApiKeyEncrypted: encryptProjectApiKey('sk-ant-test-default-12345678'),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey('sk-openai-test-default-12345678'),
+      openaiApiKeyPreview: '5678',
       updatedAt: new Date(),
     },
   });

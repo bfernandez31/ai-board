@@ -19,6 +19,30 @@ describe('Ticket Workflows', () => {
   });
 
   describe('Quick Implementation Workflow', () => {
+    it('should block quick-impl when the required project API key is missing', async () => {
+      await prisma.project.update({
+        where: { id: ctx.projectId },
+        data: { defaultAgent: 'CLAUDE', anthropicApiKeyEncrypted: null, anthropicApiKeyPreview: null },
+      });
+
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Missing key quick impl ticket',
+          description: 'Test missing Anthropic key',
+        }
+      );
+      const ticketId = createResponse.data.id;
+
+      const response = await ctx.api.post<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
+        { targetStage: 'BUILD', quickImpl: true }
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toContain('Anthropic API key is required');
+    });
+
     it('should allow INBOX to BUILD transition with quick-impl flag', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,

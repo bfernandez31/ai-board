@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { encryptProjectApiKey } from '@/lib/project-api-keys';
 
 /**
  * Database cleanup utility for E2E tests
@@ -6,6 +7,8 @@ import { PrismaClient } from '@prisma/client';
  */
 
 let prisma: PrismaClient | null = null;
+const TEST_ANTHROPIC_KEY = 'sk-ant-test-default-12345678';
+const TEST_OPENAI_KEY = 'sk-openai-test-default-12345678';
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
@@ -101,6 +104,10 @@ export async function ensureTestFixtures(): Promise<string> {
         update: {
           userId: testUser.id,
           clarificationPolicy: 'AUTO', // Reset to default for test isolation
+          anthropicApiKeyEncrypted: encryptProjectApiKey(TEST_ANTHROPIC_KEY),
+          anthropicApiKeyPreview: '5678',
+          openaiApiKeyEncrypted: encryptProjectApiKey(TEST_OPENAI_KEY),
+          openaiApiKeyPreview: '5678',
         },
         create: {
           id: project.id,
@@ -111,6 +118,10 @@ export async function ensureTestFixtures(): Promise<string> {
           githubRepo: project.repo,
           userId: testUser.id,
           clarificationPolicy: 'AUTO',
+          anthropicApiKeyEncrypted: encryptProjectApiKey(TEST_ANTHROPIC_KEY),
+          anthropicApiKeyPreview: '5678',
+          openaiApiKeyEncrypted: encryptProjectApiKey(TEST_OPENAI_KEY),
+          openaiApiKeyPreview: '5678',
           updatedAt: new Date(),
         },
       });
@@ -406,6 +417,10 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
     update: {
       userId: testUser.id,
       clarificationPolicy: 'AUTO',
+      anthropicApiKeyEncrypted: encryptProjectApiKey(TEST_ANTHROPIC_KEY),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey(TEST_OPENAI_KEY),
+      openaiApiKeyPreview: '5678',
     },
     create: {
       id: projectId,
@@ -416,6 +431,10 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
       githubRepo: github.repo,
       userId: testUser.id,
       clarificationPolicy: 'AUTO',
+      anthropicApiKeyEncrypted: encryptProjectApiKey(TEST_ANTHROPIC_KEY),
+      anthropicApiKeyPreview: '5678',
+      openaiApiKeyEncrypted: encryptProjectApiKey(TEST_OPENAI_KEY),
+      openaiApiKeyPreview: '5678',
       updatedAt: new Date(),
     },
   });

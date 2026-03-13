@@ -6,6 +6,8 @@ import { ClarificationPolicyCard } from '@/components/settings/clarification-pol
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
+import { ProjectApiKeysCard } from '@/components/settings/project-api-keys-card';
+import { buildProjectApiKeysState } from '@/lib/project-api-keys';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -74,6 +76,16 @@ export default async function ProjectSettingsPage({
             project={{
               id: project.id,
               defaultAgent: project.defaultAgent,
+            }}
+          />
+
+          <ProjectApiKeysCard
+            project={{
+              id: project.id,
+              apiKeys: buildProjectApiKeysState({
+                anthropicApiKeyPreview: project.anthropicApiKeyPreview,
+                openaiApiKeyPreview: project.openaiApiKeyPreview,
+              }),
             }}
           />
 

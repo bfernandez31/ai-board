@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { ClarificationPolicy, Agent } from '@prisma/client';
+import { getWorkflowHeaders } from '@/tests/helpers/workflow-auth';
 
 describe('Project Settings - clarificationPolicy', () => {
   let ctx: TestContext;
@@ -276,6 +277,10 @@ describe('Project Settings - clarificationPolicy', () => {
         githubOwner: string;
         githubRepo: string;
         clarificationPolicy: string;
+        apiKeys: {
+          anthropic: { configured: boolean; maskedValue: string | null };
+          openai: { configured: boolean; maskedValue: string | null };
+        };
         createdAt: string;
         updatedAt: string;
       }>(`/api/projects/${ctx.projectId}`);
@@ -288,8 +293,95 @@ describe('Project Settings - clarificationPolicy', () => {
       expect(response.data).toHaveProperty('githubOwner');
       expect(response.data).toHaveProperty('githubRepo');
       expect(response.data).toHaveProperty('clarificationPolicy');
+      expect(response.data).toHaveProperty('apiKeys');
       expect(response.data).toHaveProperty('createdAt');
       expect(response.data).toHaveProperty('updatedAt');
+    });
+  });
+
+  describe('Project API keys', () => {
+    it('stores API keys encrypted and returns masked metadata only', async () => {
+      const response = await ctx.api.patch<{
+        apiKeys: {
+          anthropic: { configured: boolean; maskedValue: string | null };
+        };
+      }>(`/api/projects/${ctx.projectId}/api-keys`, {
+        provider: 'anthropic',
+        apiKey: 'sk-ant-test-12345678',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.apiKeys.anthropic.configured).toBe(true);
+      expect(response.data.apiKeys.anthropic.maskedValue).toBe('••••5678');
+
+      const project = await prisma.project.findUnique({
+        where: { id: ctx.projectId },
+        select: {
+          anthropicApiKeyEncrypted: true,
+          anthropicApiKeyPreview: true,
+        },
+      });
+
+      expect(project?.anthropicApiKeyPreview).toBe('5678');
+      expect(project?.anthropicApiKeyEncrypted).toBeTruthy();
+      expect(project?.anthropicApiKeyEncrypted).not.toContain('sk-ant-test-12345678');
+    });
+
+    it('tests a stored API key without returning the plaintext key', async () => {
+      await ctx.api.patch(`/api/projects/${ctx.projectId}/api-keys`, {
+        provider: 'openai',
+        apiKey: 'sk-openai-test-12345678',
+      });
+
+      const response = await ctx.api.post<{ valid: boolean; message: string }>(
+        `/api/projects/${ctx.projectId}/api-keys/test`,
+        { provider: 'openai' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.valid).toBe(true);
+      expect(response.data.message).toBe('API key is valid');
+      expect(JSON.stringify(response.data)).not.toContain('sk-openai-test-12345678');
+    });
+
+    it('deletes the selected provider key', async () => {
+      await ctx.api.patch(`/api/projects/${ctx.projectId}/api-keys`, {
+        provider: 'openai',
+        apiKey: 'sk-openai-test-12345678',
+      });
+
+      const rawResponse = await ctx.api.fetch(`/api/projects/${ctx.projectId}/api-keys`, {
+        method: 'DELETE',
+        body: JSON.stringify({ provider: 'openai' }),
+      });
+
+      const data = (await rawResponse.json()) as {
+        apiKeys: { openai: { configured: boolean; maskedValue: string | null } };
+      };
+
+      expect(rawResponse.status).toBe(200);
+      expect(data.apiKeys.openai.configured).toBe(false);
+      expect(data.apiKeys.openai.maskedValue).toBeNull();
+    });
+
+    it('provides workflow-only decrypted credentials for the selected agent', async () => {
+      await ctx.api.patch(`/api/projects/${ctx.projectId}/api-keys`, {
+        provider: 'anthropic',
+        apiKey: 'sk-ant-test-12345678',
+      });
+
+      const response = await ctx.api.fetch(
+        `/api/projects/${ctx.projectId}/agent-credentials?agent=CLAUDE`,
+        {
+          headers: getWorkflowHeaders(),
+        }
+      );
+
+      const data = (await response.json()) as { provider: string; apiKey: string };
+
+      expect(response.status).toBe(200);
+      expect(data.provider).toBe('anthropic');
+      expect(data.apiKey).toBe('sk-ant-test-12345678');
     });
   });
 });

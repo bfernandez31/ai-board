@@ -3,6 +3,7 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { assertProjectApiKeyForAgent } from '@/lib/db/project-api-keys';
 
 const prisma = new PrismaClient();
 
@@ -191,6 +192,9 @@ export async function handleTicketTransition(
     const githubToken = process.env.GITHUB_TOKEN;
     const aiboardOwner = process.env.GITHUB_OWNER;
     const aiboardRepo = process.env.GITHUB_REPO;
+    const effectiveAgent = resolveEffectiveAgent(ticket);
+
+    await assertProjectApiKeyForAgent(ticket.projectId, effectiveAgent);
 
     if (!aiboardOwner || !aiboardRepo) {
       return {
@@ -201,7 +205,7 @@ export async function handleTicketTransition(
     }
 
     if (!isWorkflowTestMode(githubToken)) {
-      let workflowFile: string = '';
+    let workflowFile: string = '';
 
       try {
         const octokit = new Octokit({
@@ -209,8 +213,6 @@ export async function handleTicketTransition(
         });
 
         let workflowInputs: Record<string, string>;
-
-        const effectiveAgent = resolveEffectiveAgent(ticket);
 
         if (isQuickImpl) {
           const quickImplPayload = {
@@ -330,6 +332,14 @@ export async function handleTicketTransition(
       jobId: job.id,
     };
   } catch (error) {
+    if (error instanceof Error && error.message.includes('API key is required')) {
+      return {
+        success: false,
+        error: error.message,
+        errorCode: 'GITHUB_ERROR',
+      };
+    }
+
     console.error('Error in handleTicketTransition:', error);
     return {
       success: false,

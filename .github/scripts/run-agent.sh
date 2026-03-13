@@ -25,8 +25,8 @@ log_error() {
 validate_auth() {
   case "$AGENT_TYPE" in
     CLAUDE)
-      if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-        log_error "CLAUDE_CODE_OAUTH_TOKEN is required for agent type CLAUDE"
+      if [[ -z "${ANTHROPIC_API_KEY:-}" ]] && [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+        log_error "ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN is required for agent type CLAUDE"
         exit 1
       fi
       ;;
@@ -35,6 +35,46 @@ validate_auth() {
         log_error "OPENAI_API_KEY or CODEX_AUTH_JSON is required for agent type CODEX"
         exit 1
       fi
+      ;;
+  esac
+}
+
+fetch_project_credentials() {
+  if [[ -z "${APP_URL:-}" ]] || [[ -z "${WORKFLOW_API_TOKEN:-}" ]] || [[ -z "${PROJECT_ID:-}" ]]; then
+    log_error "APP_URL, WORKFLOW_API_TOKEN, and PROJECT_ID are required to load project API keys"
+    exit 1
+  fi
+
+  log_info "Fetching project-scoped API key for ${AGENT_TYPE}"
+
+  local response
+  response=$(curl -sS -w '\n%{http_code}' \
+    "${APP_URL}/api/projects/${PROJECT_ID}/agent-credentials?agent=${AGENT_TYPE}" \
+    -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}")
+
+  local status
+  status=$(echo "$response" | tail -n 1)
+  local body
+  body=$(echo "$response" | sed '$d')
+
+  if [[ "$status" != "200" ]]; then
+    local message
+    message=$(BODY="$body" node -e "try { const data = JSON.parse(process.env.BODY || '{}'); process.stdout.write(data.error || 'Project API key not configured'); } catch { process.stdout.write('Project API key not configured'); }")
+    log_error "$message"
+    exit 1
+  fi
+
+  local api_key
+  api_key=$(BODY="$body" node -e "const data = JSON.parse(process.env.BODY || '{}'); if (!data.apiKey) process.exit(1); process.stdout.write(data.apiKey)")
+
+  case "$AGENT_TYPE" in
+    CLAUDE)
+      export ANTHROPIC_API_KEY="$api_key"
+      unset CLAUDE_CODE_OAUTH_TOKEN
+      ;;
+    CODEX)
+      export OPENAI_API_KEY="$api_key"
+      unset CODEX_AUTH_JSON
       ;;
   esac
 }
@@ -191,11 +231,13 @@ ${ARGS}"
 
 case "$AGENT_TYPE" in
   CLAUDE)
+    fetch_project_credentials
     validate_auth
     install_claude
     invoke_claude
     ;;
   CODEX)
+    fetch_project_credentials
     validate_auth
     install_codex
     setup_codex_telemetry

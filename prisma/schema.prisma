@@ -71,6 +71,10 @@ model Project {
   updatedAt           DateTime
   clarificationPolicy ClarificationPolicy @default(AUTO)
   defaultAgent        Agent               @default(CLAUDE)
+  anthropicApiKeyEncrypted String?        @db.Text
+  anthropicApiKeyPreview   String?        @db.VarChar(4)
+  openaiApiKeyEncrypted    String?        @db.Text
+  openaiApiKeyPreview      String?        @db.VarChar(4)
   activeCleanupJobId  Int?
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]

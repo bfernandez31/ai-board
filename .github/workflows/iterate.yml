@@ -50,6 +50,7 @@ jobs:
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      PROJECT_ID: ${{ inputs.project_id }}
       APP_URL: ${{ vars.APP_URL }}
       WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_EXECUTION: ${{ contains(inputs.ticket_id, '[e2e]') }}
