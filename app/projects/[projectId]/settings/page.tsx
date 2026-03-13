@@ -2,10 +2,12 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
+import { requireAuth } from '@/lib/db/users';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
+import { APIKeysCard } from '@/components/settings/api-keys-card';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -34,15 +36,19 @@ export default async function ProjectSettingsPage({
   }
 
   // Fetch project (with authentication check)
-  const project = await getProject(projectId).catch((error) => {
-    if (
-      error instanceof Error &&
-      (error.message === 'Project not found' || error.message === 'Unauthorized')
-    ) {
-      notFound();
-    }
-    throw error;
-  });
+  const [project, currentUserId] = await Promise.all([
+    getProject(projectId).catch((error) => {
+      if (
+        error instanceof Error &&
+        (error.message === 'Project not found' || error.message === 'Unauthorized')
+      ) {
+        notFound();
+      }
+      throw error;
+    }),
+    requireAuth(),
+  ]);
+  const isOwner = project.userId === currentUserId;
 
   return (
     <main className="container mx-auto py-10 max-w-4xl">
@@ -81,6 +87,13 @@ export default async function ProjectSettingsPage({
             project={{
               id: project.id,
               name: project.name,
+            }}
+          />
+
+          <APIKeysCard
+            project={{
+              id: project.id,
+              isOwner,
             }}
           />
         </div>

@@ -46,16 +46,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Unit tests for encryption encrypt/decrypt and format validation in `tests/unit/encryption.test.ts`
-- [ ] T008 [P] [US1] Integration tests for POST save and GET list endpoints in `tests/integration/api-keys/crud.test.ts`
+- [x] T007 [P] [US1] Unit tests for encryption encrypt/decrypt and format validation in `tests/unit/encryption.test.ts`
+- [x] T008 [P] [US1] Integration tests for POST save and GET list endpoints in `tests/integration/api-keys/crud.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement POST `/api/projects/[projectId]/api-keys/route.ts` — save/replace key with `verifyProjectOwnership`, Zod validation, format check, encrypt, upsert, return masked preview (support `skipValidation: true` initially)
-- [ ] T010 [US1] Implement GET `/api/projects/[projectId]/api-keys/route.ts` — list keys with `verifyProjectAccess`, owner sees masked preview + updatedAt, member sees only configured status
-- [ ] T011 [US1] Create `components/settings/api-keys-card.tsx` — card with per-provider rows showing status/masked preview, input for adding keys, save button, owner-only edit controls, member read-only status view; use TanStack Query for data fetching
-- [ ] T012 [US1] Add `APIKeysCard` to `app/projects/[projectId]/settings/page.tsx` — import and render within existing settings layout
-- [ ] T013 [P] [US1] Component tests for APIKeysCard rendering and owner/member views in `tests/unit/components/api-keys-card.test.tsx`
+- [x] T009 [US1] Implement POST `/api/projects/[projectId]/api-keys/route.ts` — save/replace key with `verifyProjectOwnership`, Zod validation, format check, encrypt, upsert, return masked preview (support `skipValidation: true` initially)
+- [x] T010 [US1] Implement GET `/api/projects/[projectId]/api-keys/route.ts` — list keys with `verifyProjectAccess`, owner sees masked preview + updatedAt, member sees only configured status
+- [x] T011 [US1] Create `components/settings/api-keys-card.tsx` — card with per-provider rows showing status/masked preview, input for adding keys, save button, owner-only edit controls, member read-only status view; use TanStack Query for data fetching
+- [x] T012 [US1] Add `APIKeysCard` to `app/projects/[projectId]/settings/page.tsx` — import and render within existing settings layout
+- [x] T013 [P] [US1] Component tests for APIKeysCard rendering and owner/member views in `tests/unit/components/api-keys-card.test.tsx`
 
 **Checkpoint**: Project owners can configure and view masked API keys. Keys encrypted at rest.
 
