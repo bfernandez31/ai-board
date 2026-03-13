@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
+import { getCurrentUser } from '@/lib/db/users';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
+import { ApiKeysCard } from '@/components/settings/api-keys-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
 
@@ -33,16 +35,21 @@ export default async function ProjectSettingsPage({
     notFound();
   }
 
-  // Fetch project (with authentication check)
-  const project = await getProject(projectId).catch((error) => {
-    if (
-      error instanceof Error &&
-      (error.message === 'Project not found' || error.message === 'Unauthorized')
-    ) {
-      notFound();
-    }
-    throw error;
-  });
+  // Fetch project and current user (with authentication check)
+  const [project, currentUser] = await Promise.all([
+    getProject(projectId).catch((error) => {
+      if (
+        error instanceof Error &&
+        (error.message === 'Project not found' || error.message === 'Unauthorized')
+      ) {
+        notFound();
+      }
+      throw error;
+    }),
+    getCurrentUser(),
+  ]);
+
+  const isOwner = currentUser.id === project.userId;
 
   return (
     <main className="container mx-auto py-10 max-w-4xl">
@@ -75,6 +82,11 @@ export default async function ProjectSettingsPage({
               id: project.id,
               defaultAgent: project.defaultAgent,
             }}
+          />
+
+          <ApiKeysCard
+            project={{ id: project.id }}
+            isOwner={isOwner}
           />
 
           <ConstitutionCard

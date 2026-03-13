@@ -48,10 +48,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Create `POST` handler (save/replace key) in `app/api/projects/[projectId]/api-keys/route.ts` — Zod validation, format check, encrypt, upsert via `lib/db/api-keys.ts`, owner-only via `verifyProjectOwnership`
-- [ ] T009 [P] [US1] Create `GET` handler (list masked keys) in `app/api/projects/[projectId]/api-keys/route.ts` — return both providers with `configured` boolean and masked preview, access via `verifyProjectAccess`
-- [ ] T010 [US1] Create `ApiKeysCard` component in `components/settings/api-keys-card.tsx` — provider sections with status indicator, masked preview, input field for adding key, save button; read-only mode for non-owners
-- [ ] T011 [US1] Add `ApiKeysCard` to project settings page in `app/projects/[projectId]/settings/page.tsx`
+- [x] T008 [P] [US1] Create `POST` handler (save/replace key) in `app/api/projects/[projectId]/api-keys/route.ts` — Zod validation, format check, encrypt, upsert via `lib/db/api-keys.ts`, owner-only via `verifyProjectOwnership`
+- [x] T009 [P] [US1] Create `GET` handler (list masked keys) in `app/api/projects/[projectId]/api-keys/route.ts` — return both providers with `configured` boolean and masked preview, access via `verifyProjectAccess`
+- [x] T010 [US1] Create `ApiKeysCard` component in `components/settings/api-keys-card.tsx` — provider sections with status indicator, masked preview, input field for adding key, save button; read-only mode for non-owners
+- [x] T011 [US1] Add `ApiKeysCard` to project settings page in `app/projects/[projectId]/settings/page.tsx`
 
 ### Tests for User Story 1
 
@@ -89,8 +89,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Create `POST` handler for key validation in `app/api/projects/[projectId]/api-keys/[provider]/validate/route.ts` — decrypt stored key, call provider API (Anthropic: POST `/v1/messages`, OpenAI: GET `/v1/models`), return valid/invalid/unreachable
-- [ ] T018 [US2] Add "Test Key" button and validation result display to `ApiKeysCard` in `components/settings/api-keys-card.tsx`
+- [x] T017 [US2] Create `POST` handler for key validation in `app/api/projects/[projectId]/api-keys/[provider]/validate/route.ts` — decrypt stored key, call provider API (Anthropic: POST `/v1/messages`, OpenAI: GET `/v1/models`), return valid/invalid/unreachable
+- [x] T018 [US2] Add "Test Key" button and validation result display to `ApiKeysCard` in `components/settings/api-keys-card.tsx`
 
 ### Tests for User Story 2
 
@@ -108,8 +108,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Create `DELETE` handler in `app/api/projects/[projectId]/api-keys/[provider]/route.ts` — owner-only via `verifyProjectOwnership`, return warning message about blocked workflows
-- [ ] T021 [US3] Add "Remove Key" button with confirmation dialog and workflow-blocked warning to `ApiKeysCard` in `components/settings/api-keys-card.tsx`
+- [x] T020 [US3] Create `DELETE` handler in `app/api/projects/[projectId]/api-keys/[provider]/route.ts` — owner-only via `verifyProjectOwnership`, return warning message about blocked workflows
+- [x] T021 [US3] Add "Remove Key" button with confirmation dialog and workflow-blocked warning to `ApiKeysCard` in `components/settings/api-keys-card.tsx`
 
 ### Tests for User Story 3
 
