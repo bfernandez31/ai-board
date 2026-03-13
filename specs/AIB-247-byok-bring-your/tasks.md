@@ -123,9 +123,9 @@
 
 **Purpose**: Security hardening and final validation across all user stories
 
-- [ ] T023 Verify zero key exposure — audit all API responses, logs, and error traces for full key leakage in all route handlers
-- [ ] T024 Add `API_KEY_ENCRYPTION_KEY` to `.env.example` with generation instructions
-- [ ] T025 Run quickstart.md validation — verify all implementation steps match actual code
+- [x] T023 Verify zero key exposure — audit all API responses, logs, and error traces for full key leakage in all route handlers
+- [x] T024 Add `API_KEY_ENCRYPTION_KEY` to `.env.example` with generation instructions
+- [x] T025 Run quickstart.md validation — verify all implementation steps match actual code
 
 ---
 
