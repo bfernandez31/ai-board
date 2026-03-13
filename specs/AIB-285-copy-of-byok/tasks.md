@@ -88,15 +88,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Unit tests for provider-specific key validation (Anthropic, OpenAI, network failure) in `tests/unit/api-key-validation.test.ts`
-- [ ] T018 [P] [US2] Integration tests for POST validate endpoint in `tests/integration/api-keys/validate.test.ts`
+- [x] T017 [P] [US2] Unit tests for provider-specific key validation (Anthropic, OpenAI, network failure) in `tests/unit/api-key-validation.test.ts`
+- [x] T018 [P] [US2] Integration tests for POST validate endpoint in `tests/integration/api-keys/validate.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Add provider-specific live validation to `lib/api-keys/validate.ts` — Anthropic: POST `/v1/messages` with `max_tokens: 1`; OpenAI: GET `/v1/models`; 10s timeout; return valid/invalid/unreachable
-- [ ] T020 [US2] Implement POST `/api/projects/[projectId]/api-keys/validate/route.ts` — test key without saving, `verifyProjectOwnership`, return `ValidateAPIKeyResponse`
-- [ ] T021 [US2] Update POST save endpoint in `app/api/projects/[projectId]/api-keys/route.ts` to call live validation before saving (unless `skipValidation: true`); on network failure with `skipValidation: false`, return warning and allow save per FR-014
-- [ ] T022 [US2] Update `components/settings/api-keys-card.tsx` — add "Test" button per provider that calls validate endpoint, display validation feedback (valid/invalid/unreachable), allow save-without-validation option
+- [x] T019 [US2] Add provider-specific live validation to `lib/api-keys/validate.ts` — Anthropic: POST `/v1/messages` with `max_tokens: 1`; OpenAI: GET `/v1/models`; 10s timeout; return valid/invalid/unreachable
+- [x] T020 [US2] Implement POST `/api/projects/[projectId]/api-keys/validate/route.ts` — test key without saving, `verifyProjectOwnership`, return `ValidateAPIKeyResponse`
+- [x] T021 [US2] Update POST save endpoint in `app/api/projects/[projectId]/api-keys/route.ts` to call live validation before saving (unless `skipValidation: true`); on network failure with `skipValidation: false`, return warning and allow save per FR-014
+- [x] T022 [US2] Update `components/settings/api-keys-card.tsx` — add "Test" button per provider that calls validate endpoint, display validation feedback (valid/invalid/unreachable), allow save-without-validation option
 
 **Checkpoint**: Key validation provides immediate feedback. Save-without-validation supported when provider is unreachable.
 
