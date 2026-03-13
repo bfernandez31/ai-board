@@ -70,7 +70,7 @@ export async function validateKeyWithProvider(
         signal: AbortSignal.timeout(VALIDATION_TIMEOUT),
       });
 
-      if (response.ok || response.status === 200) {
+      if (response.ok) {
         return { valid: true, message: 'API key is valid' };
       }
 
@@ -109,16 +109,7 @@ export async function validateKeyWithProvider(
     }
 
     return { valid: false, message: 'API key is invalid or does not have required permissions' };
-  } catch (error) {
-    // Network errors, timeouts
-    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
-      return {
-        valid: false,
-        message: 'Could not reach the provider API. Please try again later.',
-        unreachable: true,
-      };
-    }
-
+  } catch {
     return {
       valid: false,
       message: 'Could not reach the provider API. Please try again later.',

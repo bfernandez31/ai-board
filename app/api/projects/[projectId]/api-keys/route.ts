@@ -3,8 +3,7 @@ import { ZodError } from 'zod';
 import { verifyProjectOwnership, verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { requireAuth } from '@/lib/db/users';
 import { saveApiKey, listApiKeys } from '@/lib/db/api-keys';
-import { saveApiKeySchema } from '@/lib/api-keys/validate';
-import { validateKeyFormat, validateKeyWithProvider } from '@/lib/api-keys/validate';
+import { saveApiKeySchema, validateKeyFormat, validateKeyWithProvider } from '@/lib/api-keys/validate';
 import { prisma } from '@/lib/db/client';
 import type { APIProvider as PrismaAPIProvider } from '@prisma/client';
 

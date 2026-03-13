@@ -40,6 +40,12 @@ const PROVIDER_PREFIXES: Record<APIProvider, string> = {
   OPENAI: 'sk-...',
 };
 
+function ValidationIcon({ result }: { result: ValidateAPIKeyResponse }) {
+  if (result.valid) return <CheckCircle className="h-4 w-4" />;
+  if (result.unreachable) return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+  return <XCircle className="h-4 w-4" />;
+}
+
 export function APIKeysCard({ project }: APIKeysCardProps) {
   const queryClient = useQueryClient();
 
@@ -245,13 +251,7 @@ function ProviderRow({ provider, status, projectId, isOwner, onUpdate }: Provide
 
           {validationResult && (
             <div className={`flex items-center gap-2 text-sm ${validationResult.valid ? 'text-green-600' : 'text-destructive'}`}>
-              {validationResult.valid ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : validationResult.unreachable ? (
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
+              <ValidationIcon result={validationResult} />
               <span>{validationResult.message}</span>
             </div>
           )}
