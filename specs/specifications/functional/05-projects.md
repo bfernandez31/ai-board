@@ -216,6 +216,39 @@ Projects have a configurable default AI agent that determines which AI executes 
 - Ticket `agent` field is `null` by default (means: use project default)
 - Effective agent resolved at workflow dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 
+### Project API Key Management
+
+Projects store provider credentials in project settings so workflow runs use the correct API key for the selected agent.
+
+**Supported Providers**:
+
+1. **Anthropic API Key**:
+   - Used when the effective agent is `CLAUDE`
+   - Displayed as masked metadata only (for example `••••5678`)
+
+2. **OpenAI API Key**:
+   - Used when the effective agent is `CODEX`
+   - Displayed as masked metadata only
+
+**Settings Experience**:
+- Project settings include a "Bring Your Own API Keys" card
+- Each provider row shows whether a key is currently configured
+- Users can paste a replacement key without viewing the stored plaintext value
+- "Test key" validates either the pasted key or the currently stored key against the provider API
+- "Remove key" deletes the stored credential for that provider
+
+**Access Control**:
+- Project owners can save, replace, test, and remove project API keys
+- Project members can view masked configuration state but cannot change stored credentials
+- Workflow-only credential delivery is handled through a separate API path that is not available to browser sessions
+
+**Workflow Behavior**:
+- Every workflow run resolves the effective agent first
+- Claude workflows require an Anthropic key on the project
+- Codex workflows require an OpenAI key on the project
+- If the required key is missing, the ticket transition is rejected before workflow dispatch
+- Workflow runners receive the decrypted key just-in-time and use it only for that job execution
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:

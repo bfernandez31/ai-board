@@ -347,7 +347,6 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 ### Environment Variables
 
 **GitHub Secrets**:
-- `ANTHROPIC_API_KEY`: Claude API key
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
 - `GH_PAT`: GitHub Personal Access Token with `repo` scope (for external repository access)
 - `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
@@ -379,10 +378,13 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 sequenceDiagram
     participant WF as Workflow Step
     participant RS as run-agent.sh
+    participant API as Agent Credentials API
     participant CLI as Agent CLI
 
     WF->>RS: run-agent.sh AGENT_TYPE COMMAND [ARGS]
-    RS->>RS: validate_auth (check secret present)
+    RS->>API: GET /api/projects/:projectId/agent-credentials?agent=AGENT_TYPE
+    API-->>RS: project provider credential
+    RS->>RS: validate_auth (check fetched credential present)
     alt AGENT_TYPE = CLAUDE
         RS->>CLI: bun add -g @anthropic-ai/claude-code
         RS->>CLI: claude --dangerously-skip-permissions "/COMMAND ARGS"
@@ -407,11 +409,17 @@ sequenceDiagram
 | Concern | CLAUDE | CODEX |
 |---------|--------|-------|
 | Package | `@anthropic-ai/claude-code` | `@openai/codex` |
-| Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) |
+| Runtime credential source | Project Anthropic API key fetched from ai-board API | Project OpenAI API key fetched from ai-board API |
 | Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` |
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` (generated from `CLAUDE.md`, ≤32KB) |
 | Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5-codex`), `CODEX_REASONING` env var (default: `high`) |
+
+**Project Credential Fetch**:
+- `run-agent.sh` requires `APP_URL`, `WORKFLOW_API_TOKEN`, and `PROJECT_ID`
+- The script fetches the decrypted provider key immediately before CLI login or execution
+- Workflow repositories do not store provider API keys as GitHub secrets
+- Missing project credentials fail the step before any agent command runs
 
 **AGENTS.md Generation** (Codex only):
 - Copies `CLAUDE.md` to `AGENTS.md` in the working directory
@@ -437,15 +445,16 @@ sequenceDiagram
 
 **Error Handling**:
 - Missing auth secret → exits before any CLI installation with descriptive message
+- Missing project API key → exits after credential lookup with the API error message
 - CLI binary not found after install → fails with clear install error
 - Command `.md` file not found (Codex) → exits with file path shown
 - Unsupported agent type → exits listing supported values: `CLAUDE`, `CODEX`
 - Exit code from underlying CLI is always propagated to calling workflow step
 
 **Environment Variables**:
-- `CLAUDE_CODE_OAUTH_TOKEN`: Required when `AGENT_TYPE=CLAUDE`
-- `OPENAI_API_KEY`: Required when `AGENT_TYPE=CODEX` (API key auth mode)
-- `CODEX_AUTH_JSON`: Alternative to `OPENAI_API_KEY` for Codex (base64-encoded OAuth `auth.json` from `codex login`; decoded and written to `~/.codex/auth.json`)
+- `PROJECT_ID`: Required; used to resolve the project's stored provider key
+- `APP_URL`: Required; base URL for agent credential and status APIs
+- `WORKFLOW_API_TOKEN`: Required; authenticates workflow API requests back to ai-board
 - `CODEX_MODEL`: Optional Codex model override (default: `gpt-5-codex`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set
@@ -453,13 +462,14 @@ sequenceDiagram
 
 **Usage in Workflows**:
 
-All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `ai-board-assist.yml`, `iterate.yml`) invoke commands through this script, replacing previous hardcoded `bun add -g @anthropic-ai/claude-code` and direct `claude` invocations:
+All 6 workflows (`speckit.yml`, `quick-impl.yml`, `verify.yml`, `cleanup.yml`, `ai-board-assist.yml`, `iterate.yml`) invoke commands through this script and pass the project context needed to fetch credentials at runtime:
 
 ```yaml
 - name: Run agent command
   env:
-    CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    PROJECT_ID: ${{ inputs.project_id }}
+    APP_URL: ${{ vars.APP_URL }}
+    WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
   run: |
     .github/scripts/run-agent.sh "${{ inputs.agent }}" ai-board.specify "$PAYLOAD"
 ```

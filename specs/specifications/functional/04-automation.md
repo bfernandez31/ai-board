@@ -620,7 +620,7 @@ Workflows execute on GitHub Actions infrastructure:
 **Authentication**:
 - GitHub token for repository access
 - API token for status updates
-- `CLAUDE_CODE_OAUTH_TOKEN` for Claude CLI access, or `OPENAI_API_KEY` for Codex CLI access (resolved by agent type)
+- Project-scoped provider credentials fetched at workflow runtime using `PROJECT_ID`, `APP_URL`, and `WORKFLOW_API_TOKEN`
 
 ### Workflow Timeouts
 
@@ -1039,6 +1039,12 @@ The effective agent is determined by a priority chain:
 **Scope**:
 - All workflow types receive the resolved agent: SPECIFY, PLAN, BUILD, VERIFY, QUICK, CLEAN, AI-BOARD assist, iterate
 - Agent selection is read-only during dispatch — it flows from the database into workflow inputs without changing ticket state
+
+**Credential Requirement**:
+- Workflows always run with project-scoped API keys
+- `CLAUDE` workflows require an Anthropic key configured in project settings
+- `CODEX` workflows require an OpenAI key configured in project settings
+- Missing credentials block workflow dispatch and return an error on the attempted ticket transition instead of starting a job that will fail later
 
 ## Cleanup Workflow
 

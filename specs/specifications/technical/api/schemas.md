@@ -365,6 +365,51 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 - **defaultAgent**: NOT NULL at database level, default: CLAUDE; must be a valid `Agent` enum value when provided
 - Updates are partial (all fields optional)
 
+### Project API Key Schemas
+
+```typescript
+export const projectApiKeyProviderSchema = z.enum(['anthropic', 'openai']);
+
+export const projectApiKeyUpdateSchema = z.object({
+  provider: projectApiKeyProviderSchema,
+  apiKey: z.string().trim().min(8).max(500),
+});
+
+export const projectApiKeyDeleteSchema = z.object({
+  provider: projectApiKeyProviderSchema,
+});
+
+export const projectApiKeyTestSchema = z.object({
+  provider: projectApiKeyProviderSchema,
+  apiKey: z.string().trim().min(8).max(500).optional(),
+});
+```
+
+**Validation Rules**:
+- `provider` must be `anthropic` or `openai`
+- `apiKey` accepts trimmed values between 8 and 500 characters
+- Test requests may omit `apiKey` to validate the currently stored provider key
+
+### Project API Key Response Shape
+
+```typescript
+interface ProjectApiKeySummary {
+  configured: boolean;
+  maskedValue: string | null;
+  preview: string | null;
+}
+
+interface ProjectApiKeysState {
+  anthropic: ProjectApiKeySummary;
+  openai: ProjectApiKeySummary;
+}
+```
+
+**Serialization Rules**:
+- Project responses expose only masked metadata for stored provider keys
+- `maskedValue` is formatted as `••••` + preview
+- Encrypted project credential columns are never returned by session-authenticated endpoints
+
 ## Image Attachment Schemas
 
 ### UploadImageSchema

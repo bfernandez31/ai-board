@@ -136,7 +136,7 @@ Each card shows: plan name, monthly price, feature list (checkmark icons), and a
 
 A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion items:
 
-1. "What does BYOK mean?" — explains Bring Your Own Key, required on Free plan
+1. "What does BYOK mean?" — explains Bring Your Own Key and that each project stores Claude and Codex provider keys in Project Settings
 2. "Which AI agents are supported?" — Claude (Anthropic) and Codex (OpenAI)
 3. "How does the 14-day trial work?" — Pro/Team trial, cancel anytime
 4. "Can I switch plans?" — upgrade/downgrade via billing settings

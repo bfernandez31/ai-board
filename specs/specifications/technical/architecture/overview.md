@@ -300,7 +300,8 @@ if (!project) {
 #### GitHub Actions
 - **Runners**: Ubuntu-latest (cloud-hosted)
 - **Environment Setup**: Node.js 22, Python 3.11, PostgreSQL, Playwright
-- **Secrets**: ANTHROPIC_API_KEY, WORKFLOW_API_TOKEN
+- **Secrets**: WORKFLOW_API_TOKEN, Vercel tokens, GitHub access tokens
+- **Project AI Credentials**: Anthropic and OpenAI keys are fetched per project from the application API at runtime
 - **Artifacts**: Spec/plan/task files committed to feature branches
 
 #### PostgreSQL Hosting

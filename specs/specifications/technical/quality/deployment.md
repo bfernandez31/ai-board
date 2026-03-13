@@ -129,9 +129,11 @@ steps:
 **Command Execution**:
 
 ```yaml
-  - name: Run Claude Command
+  - name: Run Agent Command
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      PROJECT_ID: ${{ inputs.project_id }}
+      APP_URL: ${{ vars.APP_URL }}
+      WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
       SKIP_SPECKIT_EXECUTION: ${{ startsWith(inputs.ticketTitle, '[e2e]') && 'true' || 'false' }}
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_board_test
     run: |
@@ -471,12 +473,13 @@ Required secrets in repository settings:
 
 | Secret | Purpose | Example |
 |--------|---------|---------|
-| `ANTHROPIC_API_KEY` | Claude Code API key | `sk-ant-api03-...` |
 | `WORKFLOW_API_TOKEN` | Workflow authentication | Random 32-char string |
 | `VERCEL_TOKEN` | Vercel API authentication | `vercel_api_token_...` |
 | `VERCEL_ORG_ID` | Vercel organization ID | `team_abc123...` |
 | `VERCEL_PROJECT_ID` | Vercel project ID | `prj_xyz789...` |
 | `GITHUB_TOKEN` | Automatic (GitHub provides) | N/A |
+
+Provider API keys are not stored as repository-level GitHub secrets. Workflows fetch the required Anthropic or OpenAI credential from the ai-board API for the current project at runtime.
 
 ### GitHub Variables
 
@@ -509,6 +512,9 @@ CLOUDINARY_API_SECRET=<api-secret>
 
 # Workflow (must match GitHub secret)
 WORKFLOW_API_TOKEN=<same-as-github-secret>
+
+# Project API key encryption
+PROJECT_SECRET_ENCRYPTION_KEY=<optional-dedicated-encryption-secret>
 ```
 
 **Preview** (optional, different database):

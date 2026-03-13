@@ -395,14 +395,19 @@
   - `NEXTAUTH_URL`: Application URL
   - `GITHUB_ID`: GitHub OAuth app ID
   - `GITHUB_SECRET`: GitHub OAuth app secret
-  - `ANTHROPIC_API_KEY`: Claude API key
   - `WORKFLOW_API_TOKEN`: GitHub Actions authentication
+  - `PROJECT_SECRET_ENCRYPTION_KEY`: Optional dedicated secret for encrypting project API keys at rest
   - `CLOUDINARY_CLOUD_NAME`: Cloudinary account
   - `CLOUDINARY_API_KEY`: Cloudinary API key
   - `CLOUDINARY_API_SECRET`: Cloudinary API secret
   - `VAPID_PUBLIC_KEY`: Web Push VAPID public key (browser push notifications)
   - `VAPID_PRIVATE_KEY`: Web Push VAPID private key (server push authentication)
   - `VAPID_SUBJECT`: VAPID subject (contact email or URL)
+
+**Project Credential Storage**:
+- Anthropic and OpenAI provider keys are stored per project in the database
+- Encrypted values use AES-256-GCM with a key derived from `PROJECT_SECRET_ENCRYPTION_KEY`
+- If `PROJECT_SECRET_ENCRYPTION_KEY` is absent, the app falls back to `NEXTAUTH_SECRET`, then `WORKFLOW_API_TOKEN`
 
 ## Package Management
 

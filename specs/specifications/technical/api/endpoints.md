@@ -97,7 +97,7 @@ Fetch all projects for the authenticated user with shipping status.
 
 ### GET /api/projects/:projectId
 
-Fetch project details including clarification policy.
+Fetch project details including project settings and masked API key state.
 
 **Authentication**: Required (session)
 **Authorization**: Must be project owner or member
@@ -117,6 +117,19 @@ Fetch project details including clarification policy.
   "githubRepo": "ai-board",
   "userId": "user-abc123",
   "clarificationPolicy": "AUTO",
+  "defaultAgent": "CLAUDE",
+  "apiKeys": {
+    "anthropic": {
+      "configured": true,
+      "maskedValue": "••••5678",
+      "preview": "5678"
+    },
+    "openai": {
+      "configured": false,
+      "maskedValue": null,
+      "preview": null
+    }
+  },
   "activeCleanupJobId": null,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T10:30:00.000Z"
@@ -124,6 +137,11 @@ Fetch project details including clarification policy.
 ```
 
 **Fields**:
+- `defaultAgent`: Project-level default workflow agent (`CLAUDE` or `CODEX`)
+- `apiKeys`: Masked API key state for Anthropic and OpenAI project credentials
+  - `configured`: Whether a key exists for the provider
+  - `maskedValue`: Display-safe form shown in the settings UI
+  - `preview`: Last 4 characters of the stored key
 - `activeCleanupJobId`: ID of active cleanup job (null if no cleanup in progress)
   - Used by frontend to show cleanup lock banner
   - Lock automatically cleared when cleanup job reaches terminal state
@@ -180,6 +198,197 @@ Update project details including clarification policy.
 - `401`: Not authenticated
 - `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found
+
+### GET /api/projects/:projectId/api-keys
+
+Fetch masked project API key state for the authenticated project user.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Response** (200 OK):
+```json
+{
+  "apiKeys": {
+    "anthropic": {
+      "configured": true,
+      "maskedValue": "••••5678",
+      "preview": "5678"
+    },
+    "openai": {
+      "configured": false,
+      "maskedValue": null,
+      "preview": null
+    }
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Not authenticated
+- `404`: Project not found
+
+### PATCH /api/projects/:projectId/api-keys
+
+Create or replace a stored project API key for one provider.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Request Body**:
+```json
+{
+  "provider": "anthropic",
+  "apiKey": "sk-ant-..."
+}
+```
+
+**Behavior**:
+- The API key is encrypted before persistence
+- The response returns masked metadata only
+- Replacing a key overwrites the previous encrypted value for that provider
+
+**Response** (200 OK):
+```json
+{
+  "apiKeys": {
+    "anthropic": {
+      "configured": true,
+      "maskedValue": "••••5678",
+      "preview": "5678"
+    },
+    "openai": {
+      "configured": false,
+      "maskedValue": null,
+      "preview": null
+    }
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or request body
+- `401`: Not authenticated
+- `404`: Project not found
+
+### DELETE /api/projects/:projectId/api-keys
+
+Remove a stored provider key from the project.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Request Body**:
+```json
+{
+  "provider": "openai"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "apiKeys": {
+    "anthropic": {
+      "configured": true,
+      "maskedValue": "••••5678",
+      "preview": "5678"
+    },
+    "openai": {
+      "configured": false,
+      "maskedValue": null,
+      "preview": null
+    }
+  }
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or request body
+- `401`: Not authenticated
+- `404`: Project not found
+
+### POST /api/projects/:projectId/api-keys/test
+
+Validate either a pasted API key or the currently stored provider key against the provider API.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Request Body**:
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-proj-..."
+}
+```
+
+**Behavior**:
+- If `apiKey` is omitted, the endpoint validates the stored provider key
+- The plaintext key is never returned in the response
+- Successful responses include the mapped workflow agent for the provider
+
+**Response** (200 OK):
+```json
+{
+  "valid": true,
+  "message": "API key is valid",
+  "agent": "CODEX"
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID, invalid request body, or no stored key exists for the provider
+- `401`: Not authenticated
+- `404`: Project not found
+
+### GET /api/projects/:projectId/agent-credentials?agent=:agent
+
+Fetch the decrypted provider credential for a workflow run.
+
+**Authentication**: Required (workflow bearer token)
+**Authorization**: Workflow token only
+
+**Query Parameters**:
+- `agent` (required): `CLAUDE` or `CODEX`
+
+**Response** (200 OK):
+```json
+{
+  "provider": "anthropic",
+  "apiKey": "sk-ant-..."
+}
+```
+
+**Behavior**:
+- `CLAUDE` resolves to the project's Anthropic key
+- `CODEX` resolves to the project's OpenAI key
+- Returns `404` when the project does not have a key for the requested agent
+
+```mermaid
+sequenceDiagram
+    participant WF as GitHub Workflow
+    participant RS as run-agent.sh
+    participant API as Agent Credentials API
+    participant DB as Database
+    participant CLI as Agent CLI
+
+    WF->>RS: Start agent step with PROJECT_ID and agent
+    RS->>API: GET /api/projects/:projectId/agent-credentials?agent=...
+    API->>DB: Load encrypted project provider key
+    DB-->>API: Encrypted value + preview
+    API->>API: Decrypt provider key
+    API-->>RS: provider + apiKey
+    RS->>CLI: Export provider key and invoke agent
+    CLI-->>RS: Exit status
+    RS-->>WF: Step result
+```
+
+**Errors**:
+- `400`: Invalid project ID or invalid agent
+- `401`: Invalid or missing workflow token
+- `404`: Project API key not configured
 
 ## Ticket Endpoints
 

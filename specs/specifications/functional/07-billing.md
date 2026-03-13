@@ -18,7 +18,7 @@ AI-Board provides three subscription tiers (Free, Pro, Team) with Stripe-based b
 
 **Billing**: Monthly only (USD). No annual option.
 
-**BYOK**: Free plan users must supply their own API key to use AI features. Paid plans are not affected by this requirement.
+**Project API Keys**: AI workflows run with project-scoped Anthropic and OpenAI API keys configured in project settings. Billing plans control quotas and collaboration features; API key management is handled at the project level.
 
 ### Plan Limits Enforcement
 

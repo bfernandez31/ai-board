@@ -190,7 +190,9 @@ sequenceDiagram
     rect rgb(240, 255, 240)
         Note over GH,CLI: 2. Agent Execution (via run-agent.sh)
         GH->>CLI: run-agent.sh AGENT_TYPE COMMAND [ARGS]
-        CLI->>CLI: Validate auth (CLAUDE_CODE_OAUTH_TOKEN or OPENAI_API_KEY)
+        CLI->>API: Fetch project API key for resolved agent
+        API-->>CLI: Decrypted provider credential
+        CLI->>CLI: Validate auth (fetched provider key present)
         CLI->>CLI: Install CLI (claude or codex)
         CLI->>TGT: cd target/ (working directory)
         CLI->>CLI: Execute command (reads .claude/commands/COMMAND.md via symlink)
@@ -246,7 +248,7 @@ The `run-agent.sh` script abstracts CLI differences:
 | **Project context** | Reads `CLAUDE.md` natively | Generates `AGENTS.md` from `CLAUDE.md` (max 32KB) |
 | **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5-codex`) |
 | **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) |
-| **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64-encoded OAuth token from `codex login`) |
+| **Credential source** | Project Anthropic API key fetched from ai-board API | Project OpenAI API key fetched from ai-board API |
 
 ### Command Compatibility
 

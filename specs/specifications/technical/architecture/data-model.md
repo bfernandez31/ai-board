@@ -779,6 +779,13 @@ export function resolveEffectiveAgent(
 }
 ```
 
+**Project Credential Fields**:
+- `Project.anthropicApiKeyEncrypted`: Encrypted Anthropic provider key used by Claude workflows
+- `Project.anthropicApiKeyPreview`: Last 4 characters shown in project settings
+- `Project.openaiApiKeyEncrypted`: Encrypted OpenAI provider key used by Codex workflows
+- `Project.openaiApiKeyPreview`: Last 4 characters shown in project settings
+- Plaintext provider keys are never stored in the database
+
 ### SubscriptionPlan
 
 ```prisma
