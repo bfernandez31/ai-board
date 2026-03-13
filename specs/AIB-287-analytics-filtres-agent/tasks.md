@@ -109,9 +109,9 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T022 Run `bun run type-check` and fix any TypeScript errors across all modified files
-- [ ] T023 Run `bun run lint` and fix any linting issues across all modified files
-- [ ] T024 Run quickstart.md validation — verify all 10 file modifications listed in `specs/AIB-287-analytics-filtres-agent/quickstart.md` are implemented
+- [x] T022 Run `bun run type-check` and fix any TypeScript errors across all modified files
+- [x] T023 Run `bun run lint` and fix any linting issues across all modified files
+- [x] T024 Run quickstart.md validation — verify all 10 file modifications listed in `specs/AIB-287-analytics-filtres-agent/quickstart.md` are implemented
 
 ---
 
