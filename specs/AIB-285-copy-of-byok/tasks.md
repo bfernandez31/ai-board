@@ -110,12 +110,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Integration tests for DELETE endpoint and key replacement in `tests/integration/api-keys/manage.test.ts`
+- [x] T023 [P] [US4] Integration tests for DELETE endpoint and key replacement in `tests/integration/api-keys/manage.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Implement DELETE `/api/projects/[projectId]/api-keys/[provider]/route.ts` — delete key with `verifyProjectOwnership`, return 404 if not found
-- [ ] T025 [US4] Update `components/settings/api-keys-card.tsx` — add "Delete" button with confirmation dialog per provider, "Replace" flow that shows input when key already exists, optimistic UI updates via TanStack Query invalidation
+- [x] T024 [US4] Implement DELETE `/api/projects/[projectId]/api-keys/[provider]/route.ts` — delete key with `verifyProjectOwnership`, return 404 if not found
+- [x] T025 [US4] Update `components/settings/api-keys-card.tsx` — add "Delete" button with confirmation dialog per provider, "Replace" flow that shows input when key already exists, optimistic UI updates via TanStack Query invalidation
 
 **Checkpoint**: Full key lifecycle management complete. Replace and delete work independently.
 
