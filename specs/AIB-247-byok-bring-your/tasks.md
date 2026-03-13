@@ -27,14 +27,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Create AES-256-GCM encrypt/decrypt utilities in `lib/crypto/encryption.ts` using Node.js native `crypto` module with `API_KEY_ENCRYPTION_KEY` env var
-- [ ] T004 [P] Create provider-specific format validation in `lib/validation/api-key-formats.ts` (Anthropic: `sk-ant-` prefix, OpenAI: `sk-` prefix, min length 20)
-- [ ] T005 Create database CRUD operations in `lib/db/api-keys.ts` (`getApiKeysByProject`, `saveApiKey`, `deleteApiKey`, `getEncryptedKey`)
+- [x] T003 [P] Create AES-256-GCM encrypt/decrypt utilities in `lib/crypto/encryption.ts` using Node.js native `crypto` module with `API_KEY_ENCRYPTION_KEY` env var
+- [x] T004 [P] Create provider-specific format validation in `lib/validation/api-key-formats.ts` (Anthropic: `sk-ant-` prefix, OpenAI: `sk-` prefix, min length 20)
+- [x] T005 Create database CRUD operations in `lib/db/api-keys.ts` (`getApiKeysByProject`, `saveApiKey`, `deleteApiKey`, `getEncryptedKey`)
 
 ### Foundational Tests
 
-- [ ] T006 [P] Write unit tests for encryption in `tests/unit/crypto-encryption.test.ts` (encrypt/decrypt roundtrip, different IVs per call, tamper detection, invalid key handling)
-- [ ] T007 [P] Write unit tests for format validation in `tests/unit/api-key-formats.test.ts` (valid/invalid formats per provider, edge cases)
+- [x] T006 [P] Write unit tests for encryption in `tests/unit/crypto-encryption.test.ts` (encrypt/decrypt roundtrip, different IVs per call, tamper detection, invalid key handling)
+- [x] T007 [P] Write unit tests for format validation in `tests/unit/api-key-formats.test.ts` (valid/invalid formats per provider, edge cases)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
