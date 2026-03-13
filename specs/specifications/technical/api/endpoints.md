@@ -2446,6 +2446,176 @@ Fetch aggregated analytics data for project visualization.
 
 **Performance**: Optimized with database aggregation, <3s for projects with up to 1,000 jobs
 
+## API Key Endpoints (BYOK)
+
+Project owners configure their own AI provider keys so that workflow costs are billed to their account. Keys are encrypted at rest (AES-256-GCM) and never returned in plaintext.
+
+### GET /api/projects/:projectId/api-keys
+
+List configured API key statuses for a project.
+
+**Authentication**: Required (session)
+**Authorization**: Owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "keys": [
+    {
+      "provider": "ANTHROPIC",
+      "configured": true,
+      "preview": "abcd",
+      "updatedAt": "2026-03-13T10:00:00.000Z"
+    },
+    {
+      "provider": "OPENAI",
+      "configured": false,
+      "preview": null,
+      "updatedAt": null
+    }
+  ]
+}
+```
+
+**Authorization differences**:
+- **Owner**: sees `preview` (last 4 chars) and `updatedAt` for configured keys
+- **Member**: sees only `configured` boolean; `preview` and `updatedAt` are `null`
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: Not a project member
+- `500`: Database error
+
+### POST /api/projects/:projectId/api-keys
+
+Save or replace an API key for a provider. Format-validates the key prefix, then live-validates against the provider API before saving.
+
+**Authentication**: Required (session)
+**Authorization**: Owner only
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "apiKey": "sk-ant-api03-...",
+  "skipValidation": false
+}
+```
+
+**Fields**:
+- `provider` (required): `ANTHROPIC` or `OPENAI`
+- `apiKey` (required): Raw API key (trimmed server-side)
+- `skipValidation` (optional, default `false`): Skip live provider validation
+
+**Response** (200 OK — key saved and validated):
+```json
+{
+  "provider": "ANTHROPIC",
+  "configured": true,
+  "preview": "abcd",
+  "validated": true,
+  "message": "API key saved successfully"
+}
+```
+
+**Response** (200 OK — provider unreachable, saved with warning):
+```json
+{
+  "provider": "ANTHROPIC",
+  "configured": true,
+  "preview": "abcd",
+  "validated": false,
+  "message": "API key saved without validation (provider unreachable)"
+}
+```
+
+**Errors**:
+- `400`: Invalid format (wrong key prefix) — `code: "INVALID_FORMAT"`
+- `400`: Key invalid or expired — `code: "VALIDATION_FAILED"`
+- `400`: Zod validation error
+- `401`: Not authenticated
+- `403`: Not the project owner
+- `500`: Database error
+
+### POST /api/projects/:projectId/api-keys/validate
+
+Test an API key without saving it. Returns validation result within 5 seconds.
+
+**Authentication**: Required (session)
+**Authorization**: Owner only
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "apiKey": "sk-ant-api03-..."
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "valid": true,
+  "unreachable": false,
+  "error": null
+}
+```
+
+**Response** (200 OK — invalid key):
+```json
+{
+  "valid": false,
+  "unreachable": false,
+  "error": "Invalid API key"
+}
+```
+
+**Response** (200 OK — provider unavailable):
+```json
+{
+  "valid": false,
+  "unreachable": true,
+  "error": "Provider API unreachable"
+}
+```
+
+**Errors**:
+- `400`: Invalid format — `code: "INVALID_FORMAT"`
+- `401`: Not authenticated
+- `403`: Not the project owner
+
+### DELETE /api/projects/:projectId/api-keys/:provider
+
+Permanently delete an API key for a provider.
+
+**Authentication**: Required (session)
+**Authorization**: Owner only
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (string, required): `ANTHROPIC` or `OPENAI`
+
+**Response** (200 OK):
+```json
+{
+  "message": "API key deleted successfully",
+  "provider": "ANTHROPIC"
+}
+```
+
+**Errors**:
+- `400`: Invalid provider value
+- `401`: Not authenticated
+- `403`: Not the project owner
+- `404`: No key configured for this provider
+- `500`: Database error
+
 ## Project Member Endpoints
 
 ### GET /api/projects/:projectId/members

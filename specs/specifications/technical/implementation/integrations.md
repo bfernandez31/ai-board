@@ -86,6 +86,8 @@ export async function dispatchWorkflow(params: {
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
   - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
   - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
+  - `anthropic_api_key` - BYOK Anthropic key (empty string = use repo secret)
+  - `openai_api_key` - BYOK OpenAI key (empty string = use repo secret)
 - **Repository Checkout**: Checks out external project repository using `repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}`
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
@@ -166,6 +168,68 @@ export async function dispatchWorkflow(params: {
 - **Conditions**: Vercel production deployment success
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
+
+### BYOK Key Injection
+
+Before any workflow is dispatched, the system retrieves and injects the project's configured API keys as workflow inputs. This happens after agent resolution.
+
+```typescript
+// lib/workflows/transition.ts (simplified)
+const primaryProvider = agentToProvider(effectiveAgent); // CLAUDE→ANTHROPIC, CODEX→OPENAI
+const anthropicKey = await getDecryptedKey(ticket.projectId, APIProvider.ANTHROPIC);
+const openaiKey = await getDecryptedKey(ticket.projectId, APIProvider.OPENAI);
+
+// FR-009: Block external projects with no key for their primary provider
+if (isExternalProject(ticket.project)) {
+  const primaryKey = primaryProvider === APIProvider.ANTHROPIC ? anthropicKey : openaiKey;
+  if (!primaryKey) {
+    // Delete the pending job and return error to UI
+    return { success: false, error: '...Configure a BYOK key in Project Settings...', errorCode: 'MISSING_API_KEY' };
+  }
+}
+
+// Inject into workflow inputs (empty string → workflow uses repo secret fallback)
+workflowInputs.anthropic_api_key = anthropicKey ?? '';
+workflowInputs.openai_api_key = openaiKey ?? '';
+```
+
+**Dispatch Strategy**:
+
+| Scenario | Behavior |
+|----------|----------|
+| External project, key configured | Key decrypted and injected as `anthropic_api_key` / `openai_api_key` |
+| External project, key missing | Dispatch blocked; pending job deleted; `MISSING_API_KEY` error returned |
+| Self-managed project (ai-board), no BYOK key | Empty string injected; workflow falls back to `ANTHROPIC_API_KEY` repo secret |
+| Self-managed project, key configured | Configured key used (BYOK takes precedence) |
+
+**Sequence Diagram — BYOK Workflow Dispatch**:
+
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as Transition API
+    participant DB as Database
+    participant GH as GitHub Actions
+    participant Prov as AI Provider
+
+    UI->>API: POST /api/tickets/:id/transition
+    API->>DB: Create Job (PENDING)
+    API->>DB: getDecryptedKey(projectId, ANTHROPIC)
+    API->>DB: getDecryptedKey(projectId, OPENAI)
+
+    alt External project, primary key missing
+        API->>DB: Delete Job
+        API-->>UI: 400 MISSING_API_KEY
+    else Key configured or self-managed
+        API->>GH: createWorkflowDispatch(inputs: { anthropic_api_key, openai_api_key, ... })
+        API-->>UI: 200 OK
+        GH->>Prov: AI agent calls (using injected key)
+        GH->>API: PATCH /api/jobs/:id/status (COMPLETED)
+    end
+```
+
+**Environment Variable Required**:
+- `API_KEY_ENCRYPTION_SECRET`: Master key for AES-256-GCM encryption/decryption of stored API keys
 
 ### Agent Resolution
 
@@ -347,13 +411,16 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 ### Environment Variables
 
 **GitHub Secrets**:
-- `ANTHROPIC_API_KEY`: Claude API key
+- `ANTHROPIC_API_KEY`: Default Claude API key (used when no BYOK key configured — self-managed projects only)
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
 - `GH_PAT`: GitHub Personal Access Token with `repo` scope (for external repository access)
 - `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
 - `VERCEL_ORG_ID`: Vercel organization/team ID
 - `VERCEL_PROJECT_ID`: Vercel project ID
 - `GITHUB_TOKEN`: Automatic (provided by GitHub, ai-board repository only)
+
+**Application Secrets** (Vercel environment):
+- `API_KEY_ENCRYPTION_SECRET`: Master key for AES-256-GCM encryption of BYOK API keys stored in the database
 
 **Repository Variables**:
 - `APP_URL`: Application URL for API calls (e.g., `https://ai-board.vercel.app`)

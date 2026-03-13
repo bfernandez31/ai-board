@@ -78,6 +78,7 @@ model Project {
   tickets              Ticket[]
   jobs                 Job[]
   projectMembers       ProjectMember[]
+  apiKeys              ProjectAPIKey[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -539,6 +540,53 @@ model PushSubscription {
 - Subscriptions automatically upserted (endpoint is unique key)
 - Graceful degradation when browser doesn't support push notifications
 
+### ProjectAPIKey
+
+Encrypted API keys for BYOK (Bring Your Own Key) workflow execution.
+
+```prisma
+model ProjectAPIKey {
+  id           Int         @id @default(autoincrement())
+  projectId    Int
+  provider     APIProvider
+  encryptedKey String      @db.Text
+  preview      String      @db.VarChar(4)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+}
+```
+
+**Purpose**: Stores encrypted AI provider API keys so project owners can bear the cost of workflow execution.
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required foreign key)
+- `provider`: AI provider enum (`ANTHROPIC` or `OPENAI`)
+- `encryptedKey`: AES-256-GCM encrypted API key (never stored or returned in plaintext)
+- `preview`: Last 4 characters of the original key (e.g., `abcd` from `sk-ant-...abcd`)
+- `createdAt`: Key creation timestamp
+- `updatedAt`: Last modification timestamp (set on replace)
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Unique `(projectId, provider)` — one key per provider per project
+- Index on `projectId` for fast lookup during workflow dispatch
+
+**Business Rules**:
+- Keys are encrypted using AES-256-GCM via Node.js built-in `crypto` before storage
+- The master encryption key is stored as the `API_KEY_ENCRYPTION_SECRET` environment variable
+- Plaintext keys never appear in logs, API responses, or client-side state
+- GET responses return only `configured`, `preview` (last 4 chars), and `updatedAt`; members see only `configured`
+- Upsert behavior: saving a new key for an existing provider silently replaces the old one
+- Cascade delete when project is deleted
+
 ### ProjectMember
 
 Project collaboration with many-to-many user-project relationship.
@@ -669,6 +717,24 @@ model StripeEvent {
 - Records are never deleted (permanent audit log of processed events)
 
 ## Enums
+
+### APIProvider
+
+AI service providers supported for BYOK key configuration.
+
+```prisma
+enum APIProvider {
+  ANTHROPIC  // Anthropic Claude API
+  OPENAI     // OpenAI Codex API
+}
+```
+
+**Usage**:
+- One key per provider per project (`ProjectAPIKey`)
+- Matched against the effective agent at workflow dispatch time:
+  - `CLAUDE` agent → requires `ANTHROPIC` key
+  - `CODEX` agent → requires `OPENAI` key
+- Both keys may be configured simultaneously; dispatch injects both (empty string falls back to repo secrets for self-managed projects)
 
 ### Stage
 
@@ -811,7 +877,8 @@ User
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
-│   └── projectMembers (one-to-many) → ProjectMember
+│   ├── projectMembers (one-to-many) → ProjectMember
+│   └── apiKeys (one-to-many) → ProjectAPIKey (max 2: one per APIProvider)
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)

@@ -185,6 +185,45 @@ Projects include a constitution document that defines development guidelines, te
 - User-friendly errors for network or API issues
 - Preserves unsaved edits on save failure for retry
 
+### API Keys (BYOK)
+
+Project owners can configure their own AI provider API keys so that workflow execution costs are billed directly to their account rather than the platform.
+
+**Purpose**:
+- Decouples AI cost from the platform subscription
+- Allows project owners to use their own Anthropic and OpenAI accounts
+- Required for external projects (non-self-managed) to run any workflows
+
+**Supported Providers**:
+- **Anthropic** — used when the effective agent is CLAUDE
+- **OpenAI** — used when the effective agent is CODEX
+
+**Key Configuration**:
+- Accessible from the project settings page (API Keys card)
+- Owner-only — project members can see whether keys are configured but cannot view, add, modify, or delete them
+- One key per provider per project (replace by saving a new key)
+- UI shows a masked preview of the last 4 characters (e.g., `****abcd`) and the last-updated date
+
+**Key Validation**:
+- Format is validated before saving (e.g., Anthropic keys must start with `sk-ant-`)
+- A live test call to the provider API confirms the key is valid before saving
+- If the provider API is temporarily unreachable, the key can still be saved with a warning
+- A separate "Test Key" action validates without saving
+
+**Key Lifecycle**:
+- **Save / Replace**: Enter a new key and save — previous key is overwritten immediately
+- **Delete**: Remove a key with a confirmation prompt; workflows can no longer run (for external projects) until a new key is configured
+- Whitespace is trimmed automatically before validation and storage
+
+**Backward Compatibility**:
+- The ai-board self-managed project does not require BYOK keys — workflows fall back to repository-level secrets
+- External projects without a configured key for their agent's provider are blocked from running workflows, with a clear actionable error message
+
+**Security**:
+- Keys are encrypted at rest (AES-256-GCM) before storage
+- Plaintext keys never appear in logs, API responses, or client-side state
+- Only the masked 4-character preview is ever returned after initial submission
+
 ### Default Agent Configuration
 
 Projects have a configurable default AI agent that determines which AI executes workflow automation for all tickets:
