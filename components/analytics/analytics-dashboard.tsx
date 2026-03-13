@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { AnalyticsData, TimeRange } from '@/lib/analytics/types';
+import type { AnalyticsData, StatusFilter as StatusFilterType, TimeRange } from '@/lib/analytics/types';
 import { TimeRangeSelector } from './time-range-selector';
+import { StatusFilter } from './status-filter';
+import { AgentFilter } from './agent-filter';
 import { OverviewCards } from './overview-cards';
 import { EmptyState } from './empty-state';
 import { CostOverTimeChart } from './cost-over-time-chart';
@@ -23,8 +25,15 @@ interface AnalyticsDashboardProps {
   initialData: AnalyticsData;
 }
 
-async function fetchAnalytics(projectId: number, range: TimeRange): Promise<AnalyticsData> {
-  const response = await fetch(`/api/projects/${projectId}/analytics?range=${range}`);
+async function fetchAnalytics(
+  projectId: number,
+  range: TimeRange,
+  status: StatusFilterType,
+  agent: string | null
+): Promise<AnalyticsData> {
+  const params = new URLSearchParams({ range, status });
+  if (agent) params.set('agent', agent);
+  const response = await fetch(`/api/projects/${projectId}/analytics?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch analytics');
   }
@@ -35,12 +44,16 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialRange = (searchParams.get('range') as TimeRange) || initialData.timeRange;
+  const initialStatus = (searchParams.get('status') as StatusFilterType) || 'shipped';
+  const initialAgent = searchParams.get('agent') || null;
   const [range, setRange] = useState<TimeRange>(initialRange);
+  const [status, setStatus] = useState<StatusFilterType>(initialStatus);
+  const [agent, setAgent] = useState<string | null>(initialAgent);
 
   const { data } = useQuery({
-    queryKey: queryKeys.analytics.data(projectId, range),
-    queryFn: () => fetchAnalytics(projectId, range),
-    initialData: range === initialData.timeRange ? initialData : undefined,
+    queryKey: queryKeys.analytics.data(projectId, range, status, agent),
+    queryFn: () => fetchAnalytics(projectId, range, status, agent),
+    initialData: range === initialData.timeRange && status === 'shipped' && agent === null ? initialData : undefined,
     refetchInterval: 15000, // 15-second polling
     staleTime: 10000,
   });
@@ -48,17 +61,35 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const { data: subscription } = useSubscription();
   const analytics = data ?? initialData;
 
+  const updateUrl = (newRange: TimeRange, newStatus: StatusFilterType, newAgent: string | null) => {
+    const params = new URLSearchParams();
+    params.set('range', newRange);
+    if (newStatus !== 'shipped') params.set('status', newStatus);
+    if (newAgent) params.set('agent', newAgent);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   const handleRangeChange = (newRange: TimeRange) => {
     setRange(newRange);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('range', newRange);
-    router.push(`?${params.toString()}`, { scroll: false });
+    updateUrl(newRange, status, agent);
+  };
+
+  const handleStatusChange = (newStatus: StatusFilterType) => {
+    setStatus(newStatus);
+    updateUrl(range, newStatus, agent);
+  };
+
+  const handleAgentChange = (newAgent: string | null) => {
+    setAgent(newAgent);
+    updateUrl(range, status, newAgent);
   };
 
   if (!analytics.hasData) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <StatusFilter value={status} onChange={handleStatusChange} />
+          <AgentFilter value={agent} onChange={handleAgentChange} agents={analytics.availableAgents ?? []} />
           <TimeRangeSelector value={range} onChange={handleRangeChange} />
         </div>
         <EmptyState />
@@ -73,7 +104,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
       </div>
 
       {/* Overview Cards */}
-      <OverviewCards metrics={analytics.overview} />
+      <OverviewCards metrics={analytics.overview} timeRange={range} />
 
       {/* Charts Grid - Responsive Bento Layout */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

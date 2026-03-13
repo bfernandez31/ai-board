@@ -1,16 +1,18 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, Ship } from 'lucide-react';
-import type { OverviewMetrics } from '@/lib/analytics/types';
-import { formatCost, formatDuration, formatPercentage } from '@/lib/analytics/aggregations';
+import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, Ship, XCircle } from 'lucide-react';
+import type { OverviewMetrics, TimeRange } from '@/lib/analytics/types';
+import { formatCost, formatDuration, formatPercentage, getTimeRangeLabel } from '@/lib/analytics/aggregations';
 import { cn } from '@/lib/utils';
 
 interface OverviewCardsProps {
   metrics: OverviewMetrics;
+  timeRange: TimeRange;
 }
 
-export function OverviewCards({ metrics }: OverviewCardsProps) {
+export function OverviewCards({ metrics, timeRange }: OverviewCardsProps) {
+  const rangeLabel = getTimeRangeLabel(timeRange);
   const trendIcon =
     metrics.costTrend >= 0 ? (
       <TrendingUp className="h-4 w-4 text-red-400" />
@@ -19,7 +21,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
     );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       {/* Total Cost */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -73,7 +75,19 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{metrics.ticketsShipped}</div>
-          <p className="text-xs text-muted-foreground">this month</p>
+          <p className="text-xs text-muted-foreground">{rangeLabel}</p>
+        </CardContent>
+      </Card>
+
+      {/* Tickets Closed */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-foreground">Tickets Closed</CardTitle>
+          <XCircle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{metrics.ticketsClosed}</div>
+          <p className="text-xs text-muted-foreground">{rangeLabel}</p>
         </CardContent>
       </Card>
     </div>

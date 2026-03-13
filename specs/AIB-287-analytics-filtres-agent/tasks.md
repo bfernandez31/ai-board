@@ -52,9 +52,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Create `StatusFilter` component (shadcn Select with "Shipped" default, "Closed", "Shipped + Closed" options) in `components/analytics/status-filter.tsx`
-- [ ] T014 [US1] Add `status` state to `AnalyticsDashboard` (initialized from URL `searchParams`), sync changes to URL via `router.push()`, pass `status` to TanStack Query fetch, and render `StatusFilter` in filter bar in `components/analytics/analytics-dashboard.tsx`
-- [ ] T015 [US1] Parse and validate `status` query param from `searchParams`, pass to `getAnalyticsData()` for SSR hydration in `app/projects/[projectId]/analytics/page.tsx`
+- [x] T013 [US1] Create `StatusFilter` component (shadcn Select with "Shipped" default, "Closed", "Shipped + Closed" options) in `components/analytics/status-filter.tsx`
+- [x] T014 [US1] Add `status` state to `AnalyticsDashboard` (initialized from URL `searchParams`), sync changes to URL via `router.push()`, pass `status` to TanStack Query fetch, and render `StatusFilter` in filter bar in `components/analytics/analytics-dashboard.tsx`
+- [x] T015 [US1] Parse and validate `status` query param from `searchParams`, pass to `getAnalyticsData()` for SSR hydration in `app/projects/[projectId]/analytics/page.tsx`
 
 **Checkpoint**: Status filter fully functional — selecting "Shipped", "Closed", or "Shipped + Closed" updates all dashboard widgets. URL persists selection.
 
@@ -68,8 +68,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Update "Tickets Shipped" card to accept `timeRange` prop and display dynamic label (e.g., "last 7 days", "last 30 days") using `getTimeRangeLabel()` in `components/analytics/overview-cards.tsx`
-- [ ] T017 [US2] Pass `timeRange` prop from `AnalyticsDashboard` to `OverviewCards` component in `components/analytics/analytics-dashboard.tsx`
+- [x] T016 [US2] Update "Tickets Shipped" card to accept `timeRange` prop and display dynamic label (e.g., "last 7 days", "last 30 days") using `getTimeRangeLabel()` in `components/analytics/overview-cards.tsx`
+- [x] T017 [US2] Pass `timeRange` prop from `AnalyticsDashboard` to `OverviewCards` component in `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: Shipped card label dynamically reflects selected time range. Count already fixed in Phase 2 (T004).
 
@@ -83,9 +83,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Create `AgentFilter` component (shadcn Select with "All Agents" default + dynamic agent list from `availableAgents`) in `components/analytics/agent-filter.tsx`
-- [ ] T019 [US3] Add `agent` state to `AnalyticsDashboard` (initialized from URL `searchParams`), sync changes to URL via `router.push()`, pass `agent` to TanStack Query fetch, and render `AgentFilter` in filter bar in `components/analytics/analytics-dashboard.tsx`
-- [ ] T020 [US3] Parse and validate `agent` query param from `searchParams`, pass to `getAnalyticsData()` for SSR hydration in `app/projects/[projectId]/analytics/page.tsx`
+- [x] T018 [US3] Create `AgentFilter` component (shadcn Select with "All Agents" default + dynamic agent list from `availableAgents`) in `components/analytics/agent-filter.tsx`
+- [x] T019 [US3] Add `agent` state to `AnalyticsDashboard` (initialized from URL `searchParams`), sync changes to URL via `router.push()`, pass `agent` to TanStack Query fetch, and render `AgentFilter` in filter bar in `components/analytics/analytics-dashboard.tsx`
+- [x] T020 [US3] Parse and validate `agent` query param from `searchParams`, pass to `getAnalyticsData()` for SSR hydration in `app/projects/[projectId]/analytics/page.tsx`
 
 **Checkpoint**: Agent filter fully functional — selecting a specific agent updates all dashboard widgets. Combined with status filter via AND logic.
 
@@ -99,7 +99,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T021 [US4] Add "Tickets Closed" card (5th card, XCircle icon) with dynamic time range label to the overview cards grid in `components/analytics/overview-cards.tsx`
+- [x] T021 [US4] Add "Tickets Closed" card (5th card, XCircle icon) with dynamic time range label to the overview cards grid in `components/analytics/overview-cards.tsx`
 
 **Checkpoint**: Dashboard now shows both Shipped and Closed ticket counts side by side. Both respect time range and status filters.
 
