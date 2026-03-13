@@ -16,8 +16,8 @@
 
 **Purpose**: Database schema changes for ProjectApiKey model and environment setup
 
-- [ ] T001 Add `ApiKeyProvider` enum and `ProjectApiKey` model to `prisma/schema.prisma`, add `apiKeys` relation to `Project` model
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add_project_api_keys`) and regenerate client
+- [x] T001 Add `ApiKeyProvider` enum and `ProjectApiKey` model to `prisma/schema.prisma`, add `apiKeys` relation to `Project` model
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add_project_api_keys`) and regenerate client
 
 ---
 
