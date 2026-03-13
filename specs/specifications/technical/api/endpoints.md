@@ -3029,6 +3029,125 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 
 ---
 
+## API Key Endpoints (BYOK)
+
+Project owners can configure their own API keys for AI providers. Keys are encrypted at rest and never returned after initial entry.
+
+**Authorization**: Project owner only (`verifyProjectOwnership`)
+
+### GET /api/projects/:projectId/api-keys
+
+List configured API key providers with masked previews.
+
+**Response** (200 OK):
+```json
+{
+  "apiKeys": [
+    {
+      "id": 1,
+      "provider": "ANTHROPIC",
+      "preview": "ab12",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-13T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Note**: Full key is never returned — only the last 4 characters as `preview`.
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
+### PUT /api/projects/:projectId/api-keys
+
+Create or update an API key for a provider. The key is encrypted before storage and never returned.
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "key": "sk-ant-..."
+}
+```
+
+**Validation**:
+- `provider`: `ANTHROPIC` or `OPENAI`
+- `key`: 10–500 characters
+
+**Response** (200 OK):
+```json
+{
+  "apiKey": {
+    "id": 1,
+    "provider": "ANTHROPIC",
+    "preview": "ab12",
+    "createdAt": "2026-03-13T00:00:00.000Z",
+    "updatedAt": "2026-03-13T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**:
+- `400`: Validation failure or `API_KEY_ENCRYPTION_KEY` not configured
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
+### DELETE /api/projects/:projectId/api-keys
+
+Remove an API key for a provider.
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC"
+}
+```
+
+**Response** (200 OK):
+```json
+{ "success": true }
+```
+
+**Errors**:
+- `400`: Validation failure
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
+### POST /api/projects/:projectId/api-keys/validate
+
+Test an API key against the provider without storing it. Makes a lightweight call to the provider's models list endpoint.
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "key": "sk-ant-..."
+}
+```
+
+**Response** (200 OK):
+```json
+{ "valid": true }
+```
+
+Or on failure:
+```json
+{ "valid": false, "error": "Invalid API key" }
+```
+
+**Errors**:
+- `400`: Validation failure
+- `401`: Not authenticated
+- `403`: Not project owner
+- `404`: Project not found
+
+---
+
 ## Pagination
 
 Currently not implemented. All endpoints return complete result sets.

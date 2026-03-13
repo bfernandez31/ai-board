@@ -17,12 +17,18 @@ sequenceDiagram
 
     UI->>API: POST /api/transition
     API->>DB: Create Job (PENDING)
-    API->>GH: octokit.createWorkflowDispatch()
-    API-->>UI: 200 OK
+    API->>DB: Fetch BYOK key (ProjectApiKey)
+    alt No BYOK key and no platform key
+        API->>DB: Delete Job
+        API-->>UI: 400 No API key configured
+    else Key available
+        API->>GH: octokit.createWorkflowDispatch()
+        API-->>UI: 200 OK
+    end
 
     GH->>GH: Checkout ai-board repo
     GH->>Ext: Clone external repo (GH_PAT)
-    GH->>CLI: Execute Claude command
+    GH->>CLI: Execute CLI command (BYOK key injected as env var)
 
     CLI->>CLI: Read specs, write code
     CLI->>Ext: Commit changes
@@ -196,6 +202,36 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
 | `iterate.yml` | Discrete `agent` input |
 
 The mixed strategy (embed in JSON payloads vs. discrete input) respects the GitHub Actions 10-input limit — `speckit.yml` remains at 10 inputs and `ai-board-assist.yml` is at exactly 10 inputs.
+
+### BYOK Key Resolution
+
+Before dispatching any workflow, the transition handler resolves the API key to use for the effective agent:
+
+```typescript
+// lib/workflows/transition.ts
+const provider = agentToProvider(effectiveAgent); // CODEX → OPENAI, else ANTHROPIC
+const byokKey = await getProjectApiKey(ticket.projectId, provider);
+
+if (!byokKey && !process.env.ANTHROPIC_API_KEY) {
+  // No key available — block dispatch with user-friendly error
+  await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+  return {
+    success: false,
+    error: `No API key configured. Please add your ${provider} API key in Project Settings > API Keys.`,
+    errorCode: 'GITHUB_ERROR',
+  };
+}
+```
+
+**Key Resolution Priority**:
+1. Project BYOK key (`ProjectApiKey` table, decrypted via `lib/crypto/encrypt.ts`)
+2. Platform key (`ANTHROPIC_API_KEY` env var) — used as fallback when no BYOK key
+
+**Provider Mapping**:
+- `Agent.CLAUDE` → `ApiKeyProvider.ANTHROPIC`
+- `Agent.CODEX` → `ApiKeyProvider.OPENAI`
+
+**Security**: The decrypted key is injected into the GitHub Actions workflow environment. It is never logged, stored in job records, or returned to the client.
 
 ### Claude Commands
 

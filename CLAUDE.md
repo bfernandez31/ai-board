@@ -63,6 +63,7 @@ For all models, fields, enums, and relationships, read `prisma/schema.prisma` (s
 - Subscription: One per user (FREE/PRO/TEAM), effective plan considers grace period; `lib/billing/` for billing logic; `PlanLimits` includes `maxMembersPerProject` (0=not allowed, 10=Team)
 - Usage: `GET /api/billing/usage` returns current counts vs limits; `useUsage` hook (15s polling) powers dashboard `UsageBanner` and ticket/project creation quota gates
 - StripeEvent: Idempotency log for webhook events (keyed on Stripe event ID)
+- ProjectApiKey: BYOK API keys per project+provider; encrypted at rest (AES-256-GCM via `lib/crypto/encrypt.ts`); requires `API_KEY_ENCRYPTION_KEY` env var; only last 4 chars stored as `preview`
 
 ## API Patterns
 

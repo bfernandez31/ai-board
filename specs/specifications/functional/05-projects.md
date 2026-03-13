@@ -216,6 +216,40 @@ Projects have a configurable default AI agent that determines which AI executes 
 - Ticket `agent` field is `null` by default (means: use project default)
 - Effective agent resolved at workflow dispatch time via `resolveEffectiveAgent(ticket.agent, project.defaultAgent)`
 
+### API Keys (BYOK — Bring Your Own Key)
+
+Project owners can supply their own API keys for AI providers so that AI workflow costs are billed to their own accounts instead of the platform's.
+
+**Purpose**:
+- Enables project owners to use their own Anthropic or OpenAI accounts
+- Required when the platform does not provide a shared API key
+- Allows cost control and quota management per project
+
+**Supported Providers**:
+
+1. **Anthropic (Claude)** — used when the project's default agent is `CLAUDE`
+2. **OpenAI (Codex)** — used when the project's default agent is `CODEX`
+
+**Configuration** (Project Settings > API Keys):
+- Each provider shows as a row with a "Configure" button when no key is set
+- Once saved, the key is masked as `****{last4chars}` — the full key is never displayed again
+- "Replace" button allows overwriting an existing key
+- "Delete" (trash icon) button removes the key
+- "Test" button validates the key against the provider API before saving — shows ✓ Valid or ✗ error message
+- Input field is password-type by default with a show/hide toggle
+
+**Security**:
+- Keys are encrypted at rest with AES-256-GCM before storage
+- Only the last 4 characters are retained as a display preview
+- Keys never appear in API responses, logs, or job records after initial entry
+- Only project owners can view, configure, or delete API keys
+
+**Workflow Behavior**:
+- When a ticket's workflow is dispatched, the system looks up the BYOK key for the effective agent's provider
+- If a BYOK key is configured, it is injected into the GitHub Actions environment for the workflow
+- If no BYOK key is configured and the platform has no shared API key, the workflow dispatch is blocked with an explicit message directing the user to configure a key in Settings
+- The fallback to the platform key is transparent — no user action needed
+
 ### Clarification Policy Configuration
 
 Projects have a configurable default clarification policy:

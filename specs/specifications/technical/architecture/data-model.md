@@ -642,6 +642,59 @@ model Subscription {
 - CANCELED records are preserved (not deleted) for audit; `getEffectivePlan` returns `FREE`
 - Cascade delete when user account deleted (only via account deletion, not subscription cancellation)
 
+### ProjectApiKey
+
+Encrypted API keys that project owners provide for AI providers (BYOK — Bring Your Own Key).
+
+```prisma
+model ProjectApiKey {
+  id           Int            @id @default(autoincrement())
+  projectId    Int
+  provider     ApiKeyProvider
+  encryptedKey String         @db.VarChar(500)
+  iv           String         @db.VarChar(32)
+  authTag      String         @db.VarChar(32)
+  preview      String         @db.VarChar(4)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+}
+```
+
+**Purpose**: Store user-provided API keys for AI providers encrypted at rest, enabling AI workflows to use the project owner's own account rather than the platform's keys.
+
+**Fields**:
+- `projectId`: Parent project (required foreign key, cascade delete)
+- `provider`: AI provider (`ANTHROPIC` or `OPENAI`)
+- `encryptedKey`: AES-256-GCM ciphertext (hex-encoded, max 500 chars)
+- `iv`: Initialization vector for AES-256-GCM (hex-encoded, 12 bytes → 24 hex chars)
+- `authTag`: GCM authentication tag (hex-encoded, 16 bytes → 32 hex chars)
+- `preview`: Last 4 characters of plaintext key — displayed in UI as `****{preview}`
+- `createdAt`, `updatedAt`: Timestamps
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Unique (projectId, provider) — one key per provider per project
+- Index on projectId for efficient lookup
+
+**Security**:
+- Encryption: AES-256-GCM via `lib/crypto/encrypt.ts`
+- Key material: Derived from `API_KEY_ENCRYPTION_KEY` env var (SHA-256 hash, 32 bytes)
+- Plaintext key never stored, logged, or returned via API after initial entry
+- Only `preview` (last 4 chars) is returned to clients
+
+**Business Rules**:
+- Only project owners can create/read/delete API keys
+- Upsert semantics: saving a new key for an existing provider replaces the old one
+- If no BYOK key is configured and no platform API key exists, workflow dispatch is blocked with an explicit error
+- Key validity can be tested via `/api/projects/:projectId/api-keys/validate` before saving
+
 ### StripeEvent
 
 Idempotency log for processed Stripe webhook events.
@@ -779,6 +832,21 @@ export function resolveEffectiveAgent(
 }
 ```
 
+### ApiKeyProvider
+
+AI provider identifiers for BYOK keys.
+
+```prisma
+enum ApiKeyProvider {
+  ANTHROPIC  // Anthropic Claude
+  OPENAI     // OpenAI Codex
+}
+```
+
+**Usage**:
+- Used in `ProjectApiKey.provider` to identify which provider a key belongs to
+- Mapped to workflow agent via `agentToProvider()`: `CODEX` → `OPENAI`, all others → `ANTHROPIC`
+
 ### SubscriptionPlan
 
 ```prisma
@@ -811,7 +879,8 @@ User
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
-│   └── projectMembers (one-to-many) → ProjectMember
+│   ├── projectMembers (one-to-many) → ProjectMember
+│   └── apiKeys (one-to-many) → ProjectApiKey
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)
