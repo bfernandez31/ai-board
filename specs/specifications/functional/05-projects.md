@@ -387,8 +387,15 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/analytics`
 
 **Dashboard Features**:
-- **Overview Cards**: Display total cost, success rate, average job duration, and tickets shipped (current month)
+- **Overview Cards**: Display total cost, success rate, average job duration, tickets shipped, and tickets closed for the active analytics slice
   - Card titles displayed in white text for optimal contrast against dark background
+- **Status Filter**: Selects which ticket outcomes feed the dashboard
+  - Options: Shipped only, Closed only, Shipped + Closed
+  - Default: Shipped only
+- **Agent Filter**: Narrows analytics to one AI agent or keeps the combined project view
+  - Default: All agents
+  - Lists agents that have recorded jobs in the project
+  - Agent options remain available when the date range changes, even if the selected period has no matching activity
 - **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
   - Chart title displayed in white text for improved readability
 - **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
@@ -404,18 +411,21 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - **Velocity**: Bar chart displaying tickets shipped per week
   - Chart title displayed in white text for improved readability
 
-**Time Range Selection**:
+**Filter Behavior**:
 - Preset options: 7 days, 30 days, 90 days, all time
 - Default: 30-day view
 - Charts auto-adjust granularity (daily for <30 days, weekly for ≥30 days)
+- The time range, status filter, and agent filter update the dashboard as one synchronized view
+- All overview cards and charts use the same active filter state
+- Ticket summary cards label their counts with the active period (for example, "Last 7 days" or "All time")
 
 **Empty States**:
-- Friendly empty states with guidance when no job data exists
-- Encourages users to create their first workflow
+- Friendly empty states with guidance when no jobs or tickets match the selected range, status, and agent combination
+- Empty states describe the active status scope and period so users can broaden the slice without guessing
 
 **Data Updates**:
 - Polling-based refresh every 15 seconds
-- Automatically reflects new job completions
+- Automatically reflects new job completions while preserving the selected filters
 
 **Access Control**:
 - Only project owners and members can view analytics

@@ -2334,16 +2334,30 @@ Fetch aggregated analytics data for project visualization.
 
 **Query Parameters**:
 - `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
+- `statusScope` (string, optional): Ticket outcome scope (shipped|closed|shipped+closed, default: shipped)
+- `agentScope` (string, optional): Agent scope (all|CLAUDE|CODEX, default: all)
 
 **Response** (200 OK):
 ```json
 {
+  "filters": {
+    "timeRange": "30d",
+    "statusScope": "shipped",
+    "agentScope": "all",
+    "periodLabel": "Last 30 days"
+  },
+  "availableAgents": [
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 24 },
+    { "value": "CODEX", "label": "Codex", "jobCount": 11 }
+  ],
   "overview": {
     "totalCost": 45.67,
     "costTrend": 12.5,
     "successRate": 94.2,
     "avgDuration": 125000,
-    "ticketsShipped": 8
+    "ticketsShipped": 8,
+    "ticketsClosed": 3,
+    "ticketPeriodLabel": "Last 30 days"
   },
   "costOverTime": [
     { "date": "2025-11-20", "cost": 5.23 },
@@ -2389,12 +2403,23 @@ Fetch aggregated analytics data for project visualization.
 ```
 
 **Fields**:
+- `filters`: Normalized filter state applied to the response
+  - `timeRange`: Effective time range after validation
+  - `statusScope`: Effective ticket outcome scope
+  - `agentScope`: Effective agent scope
+  - `periodLabel`: Human-readable label used by the overview cards and empty state
+- `availableAgents`: Stable list of agents with recorded jobs in the project
+  - `value`: Agent identifier used by the query string
+  - `label`: Display label shown in the UI
+  - `jobCount`: Total jobs for that agent across the project
 - `overview`: Summary metrics for the selected time period
   - `totalCost`: Total cost in USD
   - `costTrend`: Percentage change compared to previous equivalent period
-  - `successRate`: Percentage of COMPLETED jobs (excludes PENDING/RUNNING)
-  - `avgDuration`: Average job duration in milliseconds
-  - `ticketsShipped`: Tickets shipped in current month
+  - `successRate`: Percentage of COMPLETED jobs within the active analytics slice (COMPLETED vs FAILED)
+  - `avgDuration`: Average completed-job duration in milliseconds
+  - `ticketsShipped`: Tickets in `SHIP` that match the active range and agent scope
+  - `ticketsClosed`: Tickets in `CLOSED` that match the active range and agent scope
+  - `ticketPeriodLabel`: Human-readable period label for the shipped and closed summary cards
 - `costOverTime`: Daily or weekly cost data points
   - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
   - `cost`: Cost in USD for period
@@ -2418,27 +2443,61 @@ Fetch aggregated analytics data for project visualization.
   - `type`: FULL, QUICK, or CLEAN
   - `count`: Number of tickets using this type
   - `percentage`: Percentage of total tickets
-- `velocity`: Weekly shipping velocity
+- `velocity`: Weekly ticket volume for the active analytics slice
   - `week`: ISO week identifier (YYYY-Www)
-  - `ticketsShipped`: Tickets shipped that week
-- `timeRange`: Applied time range filter
+  - `ticketsShipped`: Number of matching shipped and/or closed tickets grouped into that week
+- `timeRange`: Applied time range filter (mirrors `filters.timeRange`)
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total jobs included in analysis
-- `hasData`: False if no completed jobs with telemetry data
+- `hasData`: False if no matching completed jobs contain telemetry data
 
 **Data Aggregation**:
-- Includes only COMPLETED jobs (excludes PENDING, RUNNING, FAILED, CANCELLED from cost/token calculations)
+- Query params are validated with Zod before aggregation; invalid combinations return `INVALID_QUERY`
+- `statusScope` controls which ticket stages are included:
+  - `shipped` → `SHIP`
+  - `closed` → `CLOSED`
+  - `shipped+closed` → both terminal stages
+- `agentScope` filters by the ticket's effective agent:
+  - direct ticket agent match, or
+  - inherited project `defaultAgent` when the ticket agent is `null`
+- Includes only COMPLETED jobs for cost, token, top-tool, and cost-by-stage calculations
+- Uses COMPLETED and FAILED jobs when computing success rate and determining whether the current slice has data
 - Stage derived from job command (specify→SPECIFY, plan→PLAN, implement→BUILD, verify→VERIFY)
 - Cost trend compares current period to previous equivalent period
 - Granularity auto-adjusts: daily for <30 days, weekly for ≥30 days
-- Top tools limited to 10 entries with "Other" aggregation for remaining tools
+- Shipped counts use `ticket.updatedAt`; closed counts use `ticket.closedAt` when present and fall back to `ticket.updatedAt`
+- `availableAgents` is project-wide and does not shrink when the selected date range has no matching rows
+- Top tools limited to 10 entries
 
 **Empty State**:
-- Returns zero values when no completed jobs exist
+- Returns zero values when no matching completed jobs exist
 - `hasData` field indicates data availability
 
+**Request Sequence**:
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Analytics Dashboard
+    participant R as Next.js Router
+    participant RQ as React Query
+    participant API as GET /api/projects/:projectId/analytics
+    participant DB as Prisma/PostgreSQL
+
+    U->>UI: Change range, status, or agent filter
+    UI->>R: Push updated search params
+    UI->>RQ: Query with key {projectId, range, statusScope, agentScope}
+    RQ->>API: GET /analytics?range=...&statusScope=...&agentScope=...
+    API->>API: Validate and normalize query params
+    API->>DB: Fetch project-wide available agents
+    API->>DB: Aggregate jobs and tickets for matching stages and effective agent
+    DB-->>API: Aggregated rows
+    API-->>RQ: Normalized filters + metrics + availableAgents
+    RQ-->>UI: Refresh cards, charts, and empty state
+    UI-->>U: Show synchronized analytics slice
+```
+
 **Errors**:
-- `400`: Invalid time range parameter
+- `400`: Invalid analytics filter (`range`, `statusScope`, or `agentScope`)
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found

@@ -69,7 +69,83 @@ export const queryKeys = {
 - Consistent across codebase
 - Easy cache debugging
 
+### Analytics Query Keys
+
+The analytics dashboard keys cache entries by the full filter state so each range, status scope, and agent scope combination is cached independently.
+
+```typescript
+export const queryKeys = {
+  analytics: {
+    all: (projectId: number) => ['analytics', projectId] as const,
+    data: (
+      projectId: number,
+      filters: { range: string; statusScope: string; agentScope: string }
+    ) => ['analytics', projectId, filters] as const,
+  },
+};
+```
+
+**Behavior**:
+- Prevents a shipped-only response from overwriting a closed-only or per-agent response
+- Keeps browser back/forward navigation aligned with the cached slice identified by the URL
+- Allows the dashboard to reuse server-rendered initial data when the current URL filters match the initial payload
+
 ## Query Hooks
+
+### Analytics Dashboard Query
+
+The analytics page server-renders the first response with normalized search params, then the client dashboard keeps the URL, React state, and React Query cache in sync.
+
+```typescript
+const [filters, setFilters] = useState<AnalyticsQueryState>(
+  normalizeAnalyticsQueryState({
+    range: searchParams.get('range') ?? initialData.filters.timeRange,
+    statusScope: searchParams.get('statusScope') ?? initialData.filters.statusScope,
+    agentScope: searchParams.get('agentScope') ?? initialData.filters.agentScope,
+  })
+);
+
+const { data } = useQuery({
+  queryKey: queryKeys.analytics.data(projectId, filters),
+  queryFn: () => fetchAnalytics(projectId, filters),
+  initialData: hasMatchingInitialFilters(filters, initialData) ? initialData : undefined,
+  refetchInterval: 15000,
+  staleTime: 10000,
+});
+```
+
+**Analytics state rules**:
+- `range` defaults to `30d`
+- `statusScope` defaults to `shipped`
+- `agentScope` defaults to `all`
+- Invalid URL values are normalized before the dashboard fetches or renders
+- Filter changes update the query string with `router.push(..., { scroll: false })`
+- Empty states render from the normalized filter payload returned by the API, so the message always matches the actual slice
+
+**Available-agent handling**:
+- The API returns `availableAgents` for the whole project, not just the active period
+- A user can keep an agent selected while switching to a time range with zero matching jobs
+- Zero-match responses keep the same filters and return `hasData: false` instead of silently resetting the selection
+
+**Sequence**:
+```mermaid
+sequenceDiagram
+    participant P as Analytics Page
+    participant D as Analytics Dashboard
+    participant U as URL Search Params
+    participant Q as React Query Cache
+    participant A as Analytics API
+
+    P->>A: Initial request with normalized search params
+    A-->>P: Initial analytics payload
+    P->>D: Render initialData
+    D->>U: Read range/statusScope/agentScope
+    D->>Q: Seed matching cache entry from initialData
+    D->>A: Poll or refetch for active filter state
+    A-->>Q: Return normalized filters and metrics
+    Q-->>D: Refresh dashboard slice
+    D->>U: Push updated params when user changes filters
+```
 
 ### Tickets Query
 
