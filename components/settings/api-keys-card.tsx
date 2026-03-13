@@ -28,6 +28,8 @@ interface ApiKeysCardProps {
   };
 }
 
+const PROVIDERS: Provider[] = ["ANTHROPIC", "OPENAI"];
+
 const PROVIDER_CONFIG: Record<
   Provider,
   { label: string; placeholder: string; prefix: string }
@@ -310,8 +312,6 @@ export function ApiKeysCard({ project }: ApiKeysCardProps) {
     fetchKeys();
   }, [fetchKeys]);
 
-  const providers: Provider[] = ["ANTHROPIC", "OPENAI"];
-
   return (
     <Card>
       <CardHeader>
@@ -328,7 +328,7 @@ export function ApiKeysCard({ project }: ApiKeysCardProps) {
           </div>
         ) : (
           <div className="space-y-3" data-testid="api-keys-list">
-            {providers.map((provider) => (
+            {PROVIDERS.map((provider) => (
               <ApiKeyRow
                 key={provider}
                 provider={provider}

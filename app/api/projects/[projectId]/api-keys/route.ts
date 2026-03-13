@@ -83,24 +83,19 @@ export async function PUT(
     const encrypted = encryptApiKey(key);
     const preview = key.slice(-4);
 
+    const keyData = {
+      encryptedKey: encrypted.encryptedKey,
+      iv: encrypted.iv,
+      authTag: encrypted.authTag,
+      preview,
+    };
+
     const apiKey = await prisma.projectApiKey.upsert({
       where: {
         projectId_provider: { projectId, provider },
       },
-      create: {
-        projectId,
-        provider,
-        encryptedKey: encrypted.encryptedKey,
-        iv: encrypted.iv,
-        authTag: encrypted.authTag,
-        preview,
-      },
-      update: {
-        encryptedKey: encrypted.encryptedKey,
-        iv: encrypted.iv,
-        authTag: encrypted.authTag,
-        preview,
-      },
+      create: { projectId, provider, ...keyData },
+      update: keyData,
       select: {
         id: true,
         provider: true,

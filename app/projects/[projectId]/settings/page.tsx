@@ -25,16 +25,12 @@ export default async function ProjectSettingsPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId: projectIdString } = await params;
-
-  // Parse and validate projectId
   const projectId = parseInt(projectIdString, 10);
 
-  // Return 404 if projectId is not a valid number
   if (isNaN(projectId) || projectId <= 0) {
     notFound();
   }
 
-  // Fetch project (with authentication check)
   const project = await getProject(projectId).catch((error) => {
     if (
       error instanceof Error &&
@@ -63,34 +59,32 @@ export default async function ProjectSettingsPage({
           </Link>
         </div>
 
-        <div className="space-y-6">
-          <ClarificationPolicyCard
-            project={{
-              id: project.id,
-              clarificationPolicy: project.clarificationPolicy,
-            }}
-          />
+        <ClarificationPolicyCard
+          project={{
+            id: project.id,
+            clarificationPolicy: project.clarificationPolicy,
+          }}
+        />
 
-          <DefaultAgentCard
-            project={{
-              id: project.id,
-              defaultAgent: project.defaultAgent,
-            }}
-          />
+        <DefaultAgentCard
+          project={{
+            id: project.id,
+            defaultAgent: project.defaultAgent,
+          }}
+        />
 
-          <ConstitutionCard
-            project={{
-              id: project.id,
-              name: project.name,
-            }}
-          />
+        <ConstitutionCard
+          project={{
+            id: project.id,
+            name: project.name,
+          }}
+        />
 
-          <ApiKeysCard
-            project={{
-              id: project.id,
-            }}
-          />
-        </div>
+        <ApiKeysCard
+          project={{
+            id: project.id,
+          }}
+        />
       </div>
     </main>
   );

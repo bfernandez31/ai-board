@@ -53,51 +53,44 @@ export async function POST(
   }
 }
 
+const PROVIDER_ENDPOINTS: Record<
+  ApiKeyProvider,
+  { url: string; headers: (key: string) => Record<string, string> }
+> = {
+  [ApiKeyProvider.ANTHROPIC]: {
+    url: "https://api.anthropic.com/v1/models",
+    headers: (key) => ({ "x-api-key": key, "anthropic-version": "2023-06-01" }),
+  },
+  [ApiKeyProvider.OPENAI]: {
+    url: "https://api.openai.com/v1/models",
+    headers: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+};
+
 async function validateApiKey(
   provider: ApiKeyProvider,
   key: string
 ): Promise<{ valid: boolean; error?: string }> {
-  try {
-    if (provider === ApiKeyProvider.ANTHROPIC) {
-      const response = await fetch("https://api.anthropic.com/v1/models", {
-        method: "GET",
-        headers: {
-          "x-api-key": key,
-          "anthropic-version": "2023-06-01",
-        },
-      });
-
-      if (response.ok) {
-        return { valid: true };
-      }
-
-      if (response.status === 401) {
-        return { valid: false, error: "Invalid API key" };
-      }
-
-      return { valid: false, error: `API returned status ${response.status}` };
-    }
-
-    if (provider === ApiKeyProvider.OPENAI) {
-      const response = await fetch("https://api.openai.com/v1/models", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${key}`,
-        },
-      });
-
-      if (response.ok) {
-        return { valid: true };
-      }
-
-      if (response.status === 401) {
-        return { valid: false, error: "Invalid API key" };
-      }
-
-      return { valid: false, error: `API returned status ${response.status}` };
-    }
-
+  const endpoint = PROVIDER_ENDPOINTS[provider];
+  if (!endpoint) {
     return { valid: false, error: "Unknown provider" };
+  }
+
+  try {
+    const response = await fetch(endpoint.url, {
+      method: "GET",
+      headers: endpoint.headers(key),
+    });
+
+    if (response.ok) {
+      return { valid: true };
+    }
+
+    if (response.status === 401) {
+      return { valid: false, error: "Invalid API key" };
+    }
+
+    return { valid: false, error: `API returned status ${response.status}` };
   } catch {
     return { valid: false, error: "Failed to reach provider API" };
   }
