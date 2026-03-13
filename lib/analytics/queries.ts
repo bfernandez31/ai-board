@@ -38,6 +38,13 @@ interface MetricFilters {
   agentScope: AgentScope;
 }
 
+interface AggregatedTokenUsage {
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 function getAgentWhere(agentScope: AgentScope): Prisma.TicketWhereInput | undefined {
   if (agentScope === 'all') {
     return undefined;
@@ -148,12 +155,13 @@ async function getTicketStatusCounts(
   filters: AnalyticsFilterState,
   rangeStart: Date | null
 ) {
+  const includedStages = getIncludedStages(filters.statusScope);
   const sharedWhere = {
     projectId,
     ...(getAgentWhere(filters.agentScope) ?? {}),
   } satisfies Prisma.TicketWhereInput;
 
-  const shippedCount = getIncludedStages(filters.statusScope).includes('SHIP')
+  const shippedCount = includedStages.includes('SHIP')
     ? await prisma.ticket.count({
         where: {
           ...sharedWhere,
@@ -163,7 +171,7 @@ async function getTicketStatusCounts(
       })
     : 0;
 
-  const closedCount = getIncludedStages(filters.statusScope).includes('CLOSED')
+  const closedCount = includedStages.includes('CLOSED')
     ? await prisma.ticket.count({
         where: {
           ...sharedWhere,
@@ -312,7 +320,7 @@ async function getTokenUsage(
   projectId: number,
   filters: AnalyticsFilterState,
   now: Date
-): Promise<TokenBreakdown> {
+): Promise<AggregatedTokenUsage> {
   const rangeStart = getDateRangeStart(filters.timeRange, now);
 
   const result = await prisma.job.aggregate({
@@ -328,25 +336,30 @@ async function getTokenUsage(
   return {
     inputTokens: result._sum.inputTokens ?? 0,
     outputTokens: result._sum.outputTokens ?? 0,
-    cacheTokens: (result._sum.cacheReadTokens ?? 0) + (result._sum.cacheCreationTokens ?? 0),
+    cacheReadTokens: result._sum.cacheReadTokens ?? 0,
+    cacheCreationTokens: result._sum.cacheCreationTokens ?? 0,
   };
 }
 
-async function getCacheEfficiency(
-  projectId: number,
-  filters: AnalyticsFilterState,
-  now: Date
-): Promise<CacheMetrics> {
-  const tokenUsage = await getTokenUsage(projectId, filters, now);
-  const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
+function toTokenBreakdown(tokenUsage: AggregatedTokenUsage): TokenBreakdown {
+  return {
+    inputTokens: tokenUsage.inputTokens,
+    outputTokens: tokenUsage.outputTokens,
+    cacheTokens: tokenUsage.cacheReadTokens + tokenUsage.cacheCreationTokens,
+  };
+}
+
+function toCacheMetrics(tokenUsage: AggregatedTokenUsage): CacheMetrics {
+  const cacheTokens = tokenUsage.cacheReadTokens + tokenUsage.cacheCreationTokens;
+  const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + cacheTokens;
   const savingsPercentage =
-    totalTokens > 0 ? Math.round((tokenUsage.cacheTokens / totalTokens) * 1000) / 10 : 0;
+    totalTokens > 0 ? Math.round((cacheTokens / totalTokens) * 1000) / 10 : 0;
 
   return {
     totalTokens,
-    cacheTokens: tokenUsage.cacheTokens,
+    cacheTokens,
     savingsPercentage,
-    estimatedSavingsUsd: Math.round(tokenUsage.cacheTokens * 0.0000027 * 100) / 100,
+    estimatedSavingsUsd: Math.round(cacheTokens * 0.0000027 * 100) / 100,
   };
 }
 
@@ -443,8 +456,7 @@ export async function getAnalyticsData(
     overview,
     costOverTime,
     costByStage,
-    tokenUsage,
-    cacheEfficiency,
+    aggregatedTokenUsage,
     topTools,
     workflowDistribution,
     velocity,
@@ -453,11 +465,13 @@ export async function getAnalyticsData(
     getCostOverTime(projectId, filters, now),
     getCostByStage(projectId, filters, now),
     getTokenUsage(projectId, filters, now),
-    getCacheEfficiency(projectId, filters, now),
     getTopTools(projectId, filters, now),
     getWorkflowDistribution(projectId, filters, now),
     getVelocityData(projectId, filters, now),
   ]);
+
+  const tokenUsage = toTokenBreakdown(aggregatedTokenUsage);
+  const cacheEfficiency = toCacheMetrics(aggregatedTokenUsage);
 
   return {
     filters,

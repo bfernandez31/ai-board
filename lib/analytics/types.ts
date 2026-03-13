@@ -32,6 +32,18 @@ export interface AgentOption {
   jobCount: number;
 }
 
+function isTimeRange(value: string | null | undefined): value is TimeRange {
+  return TIME_RANGE_VALUES.includes(value as TimeRange);
+}
+
+function isStatusScope(value: string | null | undefined): value is StatusScope {
+  return STATUS_SCOPE_VALUES.includes(value as StatusScope);
+}
+
+function isAgentScope(value: string | null | undefined): value is AgentScope {
+  return value === 'all' || ANALYTICS_AGENT_VALUES.includes(value as AnalyticsAgent);
+}
+
 export function getPeriodLabel(range: TimeRange): string {
   switch (range) {
     case '7d':
@@ -68,14 +80,9 @@ export function getAgentLabel(agent: AnalyticsAgent): string {
 export function normalizeAnalyticsQueryState(
   input?: Partial<Record<'range' | 'statusScope' | 'agentScope', string | null>>
 ): AnalyticsQueryState {
-  const range = TIME_RANGE_VALUES.includes((input?.range ?? '') as TimeRange)
-    ? ((input?.range as TimeRange) ?? '30d')
-    : '30d';
-  const statusScope = STATUS_SCOPE_VALUES.includes((input?.statusScope ?? '') as StatusScope)
-    ? ((input?.statusScope as StatusScope) ?? 'shipped')
-    : 'shipped';
-  const agentScope =
-    input?.agentScope === 'CLAUDE' || input?.agentScope === 'CODEX' ? input.agentScope : 'all';
+  const range = isTimeRange(input?.range) ? input.range : '30d';
+  const statusScope = isStatusScope(input?.statusScope) ? input.statusScope : 'shipped';
+  const agentScope = isAgentScope(input?.agentScope) ? input.agentScope : 'all';
 
   return {
     range,

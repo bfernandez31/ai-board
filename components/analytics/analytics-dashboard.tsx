@@ -36,6 +36,8 @@ interface AnalyticsDashboardProps {
   initialData: AnalyticsData;
 }
 
+const STATUS_SCOPE_OPTIONS = ['shipped', 'closed', 'shipped+closed'] as const;
+
 async function fetchAnalytics(
   projectId: number,
   filters: AnalyticsQueryState
@@ -52,6 +54,66 @@ async function fetchAnalytics(
   return response.json();
 }
 
+function renderStatusScopeOptions() {
+  return STATUS_SCOPE_OPTIONS.map((scope) => (
+    <SelectItem key={scope} value={scope}>
+      {getStatusScopeLabel(scope)}
+    </SelectItem>
+  ));
+}
+
+function hasMatchingInitialFilters(
+  filters: AnalyticsQueryState,
+  initialData: AnalyticsData
+): boolean {
+  return (
+    filters.range === initialData.filters.timeRange &&
+    filters.statusScope === initialData.filters.statusScope &&
+    filters.agentScope === initialData.filters.agentScope
+  );
+}
+
+interface AnalyticsFiltersProps {
+  availableAgents: AnalyticsData['availableAgents'];
+  filters: AnalyticsQueryState;
+  onAgentScopeChange: (agentScope: AnalyticsQueryState['agentScope']) => void;
+  onRangeChange: (range: TimeRange) => void;
+  onStatusScopeChange: (statusScope: AnalyticsQueryState['statusScope']) => void;
+}
+
+function AnalyticsFilters({
+  availableAgents,
+  filters,
+  onAgentScopeChange,
+  onRangeChange,
+  onStatusScopeChange,
+}: AnalyticsFiltersProps) {
+  return (
+    <div className="flex flex-col gap-3 md:flex-row md:justify-end">
+      <TimeRangeSelector value={filters.range} onChange={onRangeChange} />
+      <Select value={filters.statusScope} onValueChange={onStatusScopeChange}>
+        <SelectTrigger className="w-full md:w-[180px]" aria-label="Status scope">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>{renderStatusScopeOptions()}</SelectContent>
+      </Select>
+      <Select value={filters.agentScope} onValueChange={onAgentScopeChange}>
+        <SelectTrigger className="w-full md:w-[180px]" aria-label="Agent scope">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All agents</SelectItem>
+          {availableAgents.map((agent) => (
+            <SelectItem key={agent.value} value={agent.value}>
+              {agent.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,12 +128,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const { data } = useQuery({
     queryKey: queryKeys.analytics.data(projectId, filters),
     queryFn: () => fetchAnalytics(projectId, filters),
-    initialData:
-      filters.range === initialData.filters.timeRange &&
-      filters.statusScope === initialData.filters.statusScope &&
-      filters.agentScope === initialData.filters.agentScope
-        ? initialData
-        : undefined,
+    initialData: hasMatchingInitialFilters(filters, initialData) ? initialData : undefined,
     refetchInterval: 15000, // 15-second polling
     staleTime: 10000,
   });
@@ -103,34 +160,13 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   if (!analytics.hasData) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-          <TimeRangeSelector value={filters.range} onChange={handleRangeChange} />
-          <Select value={filters.statusScope} onValueChange={handleStatusScopeChange}>
-            <SelectTrigger className="w-full md:w-[180px]" aria-label="Status scope">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(['shipped', 'closed', 'shipped+closed'] as const).map((scope) => (
-                <SelectItem key={scope} value={scope}>
-                  {getStatusScopeLabel(scope)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.agentScope} onValueChange={handleAgentScopeChange}>
-            <SelectTrigger className="w-full md:w-[180px]" aria-label="Agent scope">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All agents</SelectItem>
-              {analytics.availableAgents.map((agent) => (
-                <SelectItem key={agent.value} value={agent.value}>
-                  {agent.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <AnalyticsFilters
+          availableAgents={analytics.availableAgents}
+          filters={filters}
+          onAgentScopeChange={handleAgentScopeChange}
+          onRangeChange={handleRangeChange}
+          onStatusScopeChange={handleStatusScopeChange}
+        />
         <EmptyState filters={analytics.filters} />
       </div>
     );
@@ -138,34 +174,13 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-        <TimeRangeSelector value={filters.range} onChange={handleRangeChange} />
-        <Select value={filters.statusScope} onValueChange={handleStatusScopeChange}>
-          <SelectTrigger className="w-full md:w-[180px]" aria-label="Status scope">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(['shipped', 'closed', 'shipped+closed'] as const).map((scope) => (
-              <SelectItem key={scope} value={scope}>
-                {getStatusScopeLabel(scope)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filters.agentScope} onValueChange={handleAgentScopeChange}>
-          <SelectTrigger className="w-full md:w-[180px]" aria-label="Agent scope">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All agents</SelectItem>
-            {analytics.availableAgents.map((agent) => (
-              <SelectItem key={agent.value} value={agent.value}>
-                {agent.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <AnalyticsFilters
+        availableAgents={analytics.availableAgents}
+        filters={filters}
+        onAgentScopeChange={handleAgentScopeChange}
+        onRangeChange={handleRangeChange}
+        onStatusScopeChange={handleStatusScopeChange}
+      />
 
       <OverviewCards metrics={analytics.overview} />
 
