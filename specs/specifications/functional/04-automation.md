@@ -4,6 +4,8 @@
 
 The automation system enables AI-powered workflows that automatically generate specifications, plans, and implementations when tickets move through workflow stages.
 
+Project automation also enforces provider readiness for BYOK workflows. Before any workflow job is dispatched, the system checks whether the project has valid credentials for each provider required by the selected command and effective agent.
+
 ## Workflow Overview
 
 ```mermaid
@@ -156,6 +158,13 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 - New stage transitions blocked while job is PENDING or RUNNING
 - Clear error message explains job must complete first
 - AI-BOARD mentions disabled during active jobs
+
+**Provider Readiness Checks**:
+- Workflow launches are evaluated before dispatch against the providers required for the command being started.
+- Claude-driven workflows require a valid Anthropic key when the project is using BYOK for that path.
+- Codex-driven workflows require a valid OpenAI key when the project is using BYOK for that path.
+- A blocked launch does not create a runnable workflow and returns provider-specific guidance so the user can fix project settings first.
+- When a launch succeeds, the workflow uses a job-scoped credential snapshot so later key rotation or deletion does not change an in-progress run.
 
 **Validation**:
 - System checks for active jobs before creating new job

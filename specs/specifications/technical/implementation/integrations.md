@@ -10,18 +10,21 @@ sequenceDiagram
     participant API as Next.js API
     participant DB as Prisma/PostgreSQL
     participant GH as GitHub Actions
-    participant CLI as Claude CLI
+    participant CLI as Agent CLI
     participant Ext as External Repo
 
     Note over UI,Ext: Workflow Dispatch Pattern
 
     UI->>API: POST /api/transition
-    API->>DB: Create Job (PENDING)
+    API->>DB: Check required provider credentials
+    API->>DB: Create Job + credential snapshots (PENDING)
     API->>GH: octokit.createWorkflowDispatch()
     API-->>UI: 200 OK
 
     GH->>GH: Checkout ai-board repo
     GH->>Ext: Clone external repo (GH_PAT)
+    GH->>API: GET /api/projects/:projectId/jobs/:jobId/provider-credentials
+    API-->>GH: Job-scoped provider credentials
     GH->>CLI: Execute Claude command
 
     CLI->>CLI: Read specs, write code
@@ -37,6 +40,33 @@ sequenceDiagram
         UI->>API: GET /api/jobs/status
         API->>DB: Query job
         API-->>UI: Job status
+    end
+```
+
+### Provider Credential Runtime Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant API as Transition API
+    participant DB as Prisma/PostgreSQL
+    participant GH as GitHub Actions
+    participant WFAPI as Workflow Credential API
+    participant Agent as Claude/Codex
+
+    U->>API: Start workflow transition
+    API->>DB: Resolve required providers from command + agent
+    API->>DB: Verify project credential readiness
+    alt Missing or invalid provider
+        API-->>U: BYOK_REQUIRED with provider guidance
+    else All providers valid
+        API->>DB: Create job and credential snapshots
+        API->>GH: Dispatch workflow
+        GH->>WFAPI: GET provider-credentials (Bearer token)
+        WFAPI->>DB: Load job snapshots
+        WFAPI-->>GH: Decrypted provider credentials
+        GH->>Agent: Export ANTHROPIC_API_KEY / OPENAI_API_KEY
+        Agent-->>GH: Run command with job-scoped credentials
     end
 ```
 
@@ -92,6 +122,7 @@ export async function dispatchWorkflow(params: {
 - **Services**: PostgreSQL for implement command
 - **Dependencies**: Playwright with browser binaries (cached)
 - **Timeout**: 120 minutes maximum
+- **BYOK Runtime**: Fetches `/api/projects/{projectId}/jobs/{jobId}/provider-credentials` with `WORKFLOW_API_TOKEN` and exports provider-specific env vars before invoking the agent
 - **Note**: At the 10-input GitHub Actions limit. Agent is embedded in `specifyPayload` JSON for the SPECIFY command and passed as a discrete `agent` input for PLAN/BUILD commands.
 
 **Quick-Impl Workflow** (`.github/workflows/quick-impl.yml`):
@@ -105,6 +136,7 @@ export async function dispatchWorkflow(params: {
 - **Timeout**: 120 minutes maximum (matches full spec-kit workflow)
 - **Differences**: Skips full spec generation, creates minimal spec.md
 - **Same**: Test execution, branch management, job status updates
+- **BYOK Runtime**: Fetches job-scoped provider credentials before running `/ai-board.quick-impl`
 - **Note**: Agent is embedded in `quickImplPayload` JSON (e.g., `{ ticketKey, title, description, agent }`).
 
 **Verify Workflow** (`.github/workflows/verify.yml`):
@@ -115,6 +147,7 @@ export async function dispatchWorkflow(params: {
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Actions**: Runs tests and creates pull request
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
+- **BYOK Runtime**: Loads job-scoped provider credentials before test and agent steps
 - **Agent Forwarding**: Forwards `agent` input to iterate.yml when dispatching iterate workflow
 
 **AI-BOARD Assist** (`.github/workflows/ai-board-assist.yml`):
@@ -126,6 +159,7 @@ export async function dispatchWorkflow(params: {
 - **Telemetry Pre-Fetch**: Executes `fetch-telemetry.sh` for `/compare` commands
 - **Command**: Claude updates spec/plan based on comment request
 - **Response**: Posts summary comment via API
+- **BYOK Runtime**: Loads job-scoped provider credentials before invoking the agent
 - **Note**: At exactly the 10-input GitHub Actions limit. Forwards `agent` when dispatching iterate.yml for minor VERIFY fixes.
 
 **Deploy Preview** (`.github/workflows/deploy-preview.yml`):
@@ -149,6 +183,7 @@ export async function dispatchWorkflow(params: {
 - **Dependencies**: Playwright with chromium browser
 - **Command**: Executes `/cleanup` Claude command
 - **Actions**: Diff-based technical debt analysis, creates cleanup branch, transitions to VERIFY
+- **BYOK Runtime**: Loads job-scoped provider credentials before invoking the agent
 - **Timeout**: 45 minutes maximum
 
 **Iterate Workflow** (`.github/workflows/iterate.yml`):
@@ -160,6 +195,7 @@ export async function dispatchWorkflow(params: {
 - **Dispatch Source**: Triggered by ai-board-assist.yml for minor VERIFY fixes (<30% divergence)
 - **Command**: Executes targeted code fixes and syncs documentation
 - **Actions**: Fix issues, update branch specs, synchronize global docs, commit and push
+- **BYOK Runtime**: Loads job-scoped provider credentials before invoking the agent
 
 **Auto-Ship** (`.github/workflows/auto-ship.yml`):
 - **Trigger**: `deployment_status` event
@@ -196,6 +232,22 @@ export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
 | `iterate.yml` | Discrete `agent` input |
 
 The mixed strategy (embed in JSON payloads vs. discrete input) respects the GitHub Actions 10-input limit — `speckit.yml` remains at 10 inputs and `ai-board-assist.yml` is at exactly 10 inputs.
+
+### Provider Requirement Resolution
+
+Workflow provider requirements are derived from the dispatched command and effective agent:
+
+```typescript
+const DEFAULT_PROVIDER_BY_AGENT: Record<Agent, AiProvider[]> = {
+  [Agent.CLAUDE]: ['ANTHROPIC'],
+  [Agent.CODEX]: ['OPENAI'],
+};
+```
+
+- Claude workflows require Anthropic credentials
+- Codex workflows require OpenAI credentials
+- The transition layer blocks dispatch when any required provider is missing or invalid
+- Successful dispatch snapshots the current provider credentials per job
 
 ### Claude Commands
 
@@ -348,6 +400,8 @@ await fetch(`${APP_URL}/api/jobs/${job_id}/status`, {
 
 **GitHub Secrets**:
 - `ANTHROPIC_API_KEY`: Claude API key
+- `OPENAI_API_KEY`: Codex API key when repository-level credentials are used
+- `PROJECT_CREDENTIAL_ENCRYPTION_KEY`: 32-byte key used by the application to encrypt and decrypt project-scoped BYOK credentials at rest
 - `WORKFLOW_API_TOKEN`: Workflow authentication token
 - `GH_PAT`: GitHub Personal Access Token with `repo` scope (for external repository access)
 - `VERCEL_TOKEN`: Vercel API token (for deploy-preview workflow)
@@ -412,6 +466,8 @@ sequenceDiagram
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
 | Project context | `CLAUDE.md` (native) | `AGENTS.md` (generated from `CLAUDE.md`, ≤32KB) |
 | Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5-codex`), `CODEX_REASONING` env var (default: `high`) |
+
+When BYOK credential snapshots are present for the job, the workflow injects `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` before `run-agent.sh` executes. This allows agent authentication to use project-scoped credentials without placing secrets in workflow inputs.
 
 **AGENTS.md Generation** (Codex only):
 - Copies `CLAUDE.md` to `AGENTS.md` in the working directory

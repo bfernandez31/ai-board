@@ -181,6 +181,147 @@ Update project details including clarification policy.
 - `403`: User is not project owner (members cannot update project settings)
 - `404`: Project not found
 
+### GET /api/projects/:projectId/ai-credentials
+
+Fetch project-scoped provider credential status for Anthropic and OpenAI.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "providers": [
+    {
+      "provider": "ANTHROPIC",
+      "status": "CONFIGURED",
+      "validationStatus": "VALID",
+      "lastFour": "abcd",
+      "validatedAt": "2026-03-13T12:00:00.000Z",
+      "message": "Credential validated successfully.",
+      "canManage": true
+    },
+    {
+      "provider": "OPENAI",
+      "status": "NOT_CONFIGURED",
+      "validationStatus": null,
+      "lastFour": null,
+      "validatedAt": null,
+      "message": null,
+      "canManage": true
+    }
+  ]
+}
+```
+
+**Member Response Shaping**:
+- Members receive the same provider list and status values
+- `lastFour` is always `null`
+- `canManage` is `false`
+
+**Errors**:
+- `400`: Invalid project ID
+- `401`: Not authenticated
+- `404`: Project not found
+
+### PUT /api/projects/:projectId/ai-credentials/:provider
+
+Save or replace a project-scoped provider key.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (required): `ANTHROPIC` or `OPENAI`
+
+**Request Body**:
+```json
+{
+  "apiKey": "sk-example"
+}
+```
+
+**Behavior**:
+- Encrypts the key before storage
+- Stores only masked display metadata for UI reads
+- Validates the key with the provider during save
+- Returns masked provider status only
+
+**Response** (200 OK):
+```json
+{
+  "provider": "OPENAI",
+  "status": "CONFIGURED",
+  "validationStatus": "VALID",
+  "lastFour": "1234",
+  "validatedAt": "2026-03-13T12:00:00.000Z",
+  "message": "Credential validated successfully.",
+  "canManage": true
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID, provider, or request body
+- `401`: Not authenticated
+- `404`: Project not found
+
+### POST /api/projects/:projectId/ai-credentials/:provider/validate
+
+Re-validate the currently stored project-scoped provider key.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (required): `ANTHROPIC` or `OPENAI`
+
+**Response** (200 OK):
+```json
+{
+  "provider": "ANTHROPIC",
+  "status": "INVALID",
+  "validationStatus": "INVALID",
+  "lastFour": "abcd",
+  "validatedAt": "2026-03-13T12:05:00.000Z",
+  "message": "Anthropic rejected this API key. Check the key, workspace access, and billing status.",
+  "canManage": true
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or provider
+- `401`: Not authenticated
+- `404`: Project not found or credential not found
+
+### DELETE /api/projects/:projectId/ai-credentials/:provider
+
+Delete a stored project-scoped provider key.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (required): `ANTHROPIC` or `OPENAI`
+
+**Response** (200 OK):
+```json
+{
+  "provider": "OPENAI",
+  "status": "NOT_CONFIGURED"
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or provider
+- `401`: Not authenticated
+- `404`: Project not found or credential not found
+
 ## Ticket Endpoints
 
 ### GET /api/projects/:projectId/tickets
@@ -1017,6 +1158,11 @@ Transition ticket to target stage with workflow dispatch.
   6. Creates rollback-reset job to track the git reset operation
 - **VERIFY → SHIP**: Manual transition (no workflow)
 
+**BYOK Gating**:
+- Before creating a runnable workflow, the system resolves the providers required by the command and effective agent.
+- If any required provider credential is missing or marked invalid for the project, the transition is rejected before workflow dispatch.
+- Successful launches snapshot the required provider credentials per job so later key rotation affects only future jobs.
+
 **Errors**:
 - `400`: Invalid transition (non-sequential, job not completed, rollback not allowed)
 - `401`: Not authenticated
@@ -1039,7 +1185,62 @@ Transition ticket to target stage with workflow dispatch.
 }
 ```
 
+**Error Response** (BYOK Required):
+```json
+{
+  "error": "Required provider credentials are missing or invalid for this workflow.",
+  "code": "BYOK_REQUIRED",
+  "details": {
+    "currentStage": "PLAN",
+    "targetStage": "BUILD",
+    "providerFailures": [
+      {
+        "provider": "OPENAI",
+        "reason": "INVALID",
+        "validationStatus": "INVALID",
+        "message": "OpenAI rejected this API key. Check the key, project access, and billing status."
+      }
+    ]
+  }
+}
+```
+
 ## Comment Endpoints
+
+### GET /api/projects/:projectId/jobs/:jobId/provider-credentials
+
+Fetch the job-scoped provider credential snapshot for a running workflow.
+
+**Authentication**: Required (Bearer token)
+**Authorization**: Must present a valid workflow API token
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `jobId` (number, required): Job ID
+
+**Response** (200 OK):
+```json
+{
+  "credentials": [
+    {
+      "provider": "ANTHROPIC",
+      "apiKey": "sk-ant-example",
+      "lastFour": "abcd",
+      "source": "PROJECT_BYOK"
+    }
+  ]
+}
+```
+
+**Behavior**:
+- Returns only credentials snapshotted for the specified job
+- Used by GitHub Actions workflows to export runtime `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` environment variables
+- Returns `404` when the job has no BYOK credential snapshot
+
+**Errors**:
+- `400`: Invalid project or job ID
+- `401`: Missing or invalid workflow token
+- `404`: Credential snapshot not found
 
 ### GET /api/projects/:projectId/tickets/:id/comments
 

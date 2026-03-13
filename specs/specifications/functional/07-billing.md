@@ -18,7 +18,17 @@ AI-Board provides three subscription tiers (Free, Pro, Team) with Stripe-based b
 
 **Billing**: Monthly only (USD). No annual option.
 
-**BYOK**: Free plan users must supply their own API key to use AI features. Paid plans are not affected by this requirement.
+**BYOK**: Free plan users manage project-scoped Anthropic and OpenAI API keys from project settings. Workflow launches that require a missing or invalid provider key are blocked before execution. Paid plans are not gated by project-managed provider keys.
+
+### BYOK on Free Plan
+
+On the Free plan, AI usage depends on project-managed provider credentials instead of platform-managed access.
+
+- Project owners can save, validate, replace, and delete one Anthropic key and one OpenAI key per project from project settings.
+- Project members can see whether each provider is configured, but they cannot reveal or manage stored keys.
+- Saved keys are always masked in the product. The full key is only accepted during save or replace.
+- Workflow launches check the providers required by the selected command and effective agent before creating work that would fail later.
+- If a required provider key is missing or invalid, the launch is blocked with provider-specific guidance that points the user to project settings.
 
 ### Plan Limits Enforcement
 

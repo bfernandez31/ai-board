@@ -151,6 +151,34 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
 - Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
 
+## Project Settings
+
+### AI Credentials Card
+
+Project settings includes a "Bring Your Own API Keys" card for project-scoped provider credentials.
+
+**Providers**:
+- Anthropic
+- OpenAI
+
+**Owner experience**:
+- Owners can open a modal to save a new key or replace an existing key for each provider.
+- Owners can validate a stored key without re-entering it.
+- Owners can delete a stored key to disable future workflow launches that require that provider.
+- Each provider row shows a status badge, masked suffix, and high-level validation message.
+
+**Member experience**:
+- Members can see whether each provider is configured, invalid, or not configured.
+- Members do not see the masked suffix.
+- Members do not see save, replace, validate, or delete actions.
+- A read-only note explains that only project owners can manage stored API keys.
+
+**Secret handling**:
+- API key inputs use password fields.
+- After save or replace, the interface returns to masked status only.
+- The product shows at most the last four characters of a stored key, and only to the project owner.
+- Validation messages provide provider-safe troubleshooting guidance without exposing the raw key.
+
 ---
 
 ## Visual Design

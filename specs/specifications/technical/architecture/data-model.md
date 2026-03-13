@@ -78,6 +78,8 @@ model Project {
   tickets              Ticket[]
   jobs                 Job[]
   projectMembers       ProjectMember[]
+  aiCredentials        ProjectAiCredential[]
+  jobCredentialSnapshots JobAiCredentialSnapshot[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -114,7 +116,7 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, Jobs, ProjectMembers
+- One-to-many: Tickets, Jobs, ProjectMembers, ProjectAiCredentials, JobAiCredentialSnapshots
 
 **Constraints**:
 - Unique key (project identifier for ticket prefixes)
@@ -282,6 +284,7 @@ model Job {
 
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerCredentialSnapshots JobAiCredentialSnapshot[]
 
   @@index([ticketId])
   @@index([projectId])
@@ -317,6 +320,7 @@ model Job {
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
 - Belongs to Project (required, cascade delete)
+- One-to-many: JobAiCredentialSnapshots
 
 **Constraints**:
 - Index on ticketId for job history queries
@@ -338,6 +342,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Status updated by workflow via API (Bearer token auth)
 - Terminal states cannot transition to other states
 - Idempotent updates allowed (same status returns 200)
+- Required BYOK provider credentials are snapshotted at job creation time when the workflow depends on project-managed keys
 - Most recent job (by startedAt) used for transition validation
 - Jobs retained indefinitely for audit trail, except:
   - Deleted when VERIFY to PLAN rollback occurs (job record removed as part of rollback)
@@ -346,6 +351,83 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 **Telemetry Data Usage**:
 - Telemetry fields aggregated and displayed in ticket Stats tab
 - Stats tab visibility: only shown when ticket has ≥1 job
+
+### ProjectAiCredential
+
+Project-scoped encrypted provider credential for BYOK workflow execution.
+
+```prisma
+model ProjectAiCredential {
+  id                Int                          @id @default(autoincrement())
+  projectId         Int
+  provider          AiProvider
+  encryptedKey      String
+  encryptionIv      String                       @db.VarChar(64)
+  encryptionTag     String                       @db.VarChar(64)
+  lastFour          String                       @db.VarChar(4)
+  validationStatus  AiCredentialValidationStatus @default(PENDING)
+  validationMessage String?                      @db.VarChar(255)
+  validatedAt       DateTime?
+  createdByUserId   String
+  updatedByUserId   String
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  project           Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy         User                         @relation("ProjectAiCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy         User                         @relation("ProjectAiCredentialUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  snapshots         JobAiCredentialSnapshot[]
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@index([projectId, validationStatus])
+}
+```
+
+**Purpose**: Stores one encrypted Anthropic key and one encrypted OpenAI key per project.
+
+**Business Rules**:
+- Scoped to a single project and provider
+- Full plaintext key is never returned in project settings responses
+- `lastFour` stores masked display metadata only
+- `validationStatus` and `validationMessage` reflect the latest safe provider check
+- Owner metadata tracks who created and last updated the credential
+- Deleting a project cascades to its stored provider credentials
+
+### JobAiCredentialSnapshot
+
+Immutable job-scoped copy of a provider credential captured at workflow launch.
+
+```prisma
+model JobAiCredentialSnapshot {
+  id                   Int                      @id @default(autoincrement())
+  jobId                Int
+  projectId            Int
+  provider             AiProvider
+  source               WorkflowCredentialSource
+  projectAiCredentialId Int
+  encryptedKey         String
+  encryptionIv         String                   @db.VarChar(64)
+  encryptionTag        String                   @db.VarChar(64)
+  lastFour             String                   @db.VarChar(4)
+  createdAt            DateTime                 @default(now())
+
+  job                  Job                      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  project              Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectAiCredential  ProjectAiCredential      @relation(fields: [projectAiCredentialId], references: [id], onDelete: Restrict)
+
+  @@unique([jobId, provider])
+  @@index([projectId, jobId])
+}
+```
+
+**Purpose**: Preserves the launch-time credential state used by a workflow, even if the project owner rotates or deletes the underlying project credential later.
+
+**Business Rules**:
+- Created transactionally with the job record before workflow dispatch
+- One snapshot per provider per job
+- Deleting a job cascades to its snapshots
+- In-progress workflows read credentials from snapshots, not directly from the current project credential
 - Aggregated metrics calculated from all jobs on a ticket:
   - Total cost: sum of all `costUsd` values
   - Total duration: sum of all `durationMs` values
@@ -750,6 +832,40 @@ enum ClarificationPolicy {
 - Project policy overrides system default (AUTO)
 - Null ticket policy means inherit from project
 
+### AiProvider
+
+Supported BYOK provider identities.
+
+```prisma
+enum AiProvider {
+  ANTHROPIC
+  OPENAI
+}
+```
+
+### AiCredentialValidationStatus
+
+Latest stored provider validation outcome.
+
+```prisma
+enum AiCredentialValidationStatus {
+  PENDING
+  VALID
+  INVALID
+  ERROR
+}
+```
+
+### WorkflowCredentialSource
+
+Source of the credential material exposed to a workflow at runtime.
+
+```prisma
+enum WorkflowCredentialSource {
+  PROJECT_BYOK
+}
+```
+
 ### Agent
 
 AI agent that executes workflow automation for a ticket or project.
@@ -807,10 +923,13 @@ User
 ├── projects (one-to-many) → Project
 │   ├── tickets (one-to-many) → Ticket
 │   │   ├── jobs (one-to-many) → Job
+│   │   │   └── providerCredentialSnapshots (one-to-many) → JobAiCredentialSnapshot
 │   │   ├── comments (one-to-many) → Comment
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
+│   ├── aiCredentials (one-to-many) → ProjectAiCredential
+│   ├── jobCredentialSnapshots (one-to-many) → JobAiCredentialSnapshot
 │   └── projectMembers (one-to-many) → ProjectMember
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
@@ -838,6 +957,11 @@ User
 - `Job(projectId)` - Project job polling
 - `Job(ticketId)` - Job history per ticket
 - `Job(status)` - Running jobs query
+
+**BYOK Credential Queries**:
+- `ProjectAiCredential(projectId)` - List project provider statuses
+- `ProjectAiCredential(projectId, validationStatus)` - Find invalid provider credentials quickly during workflow gating
+- `JobAiCredentialSnapshot(projectId, jobId)` - Fetch job-scoped provider credentials for workflow runners
 
 **Comment Queries**:
 - `Comment(ticketId, createdAt)` - Chronological sorting
