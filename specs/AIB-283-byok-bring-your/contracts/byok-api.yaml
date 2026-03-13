@@ -1,0 +1,441 @@
+openapi: 3.0.3
+info:
+  title: AI-Board BYOK API
+  description: Project-scoped Bring Your Own API Key management and workflow credential gating.
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Relative API path
+
+paths:
+  /projects/{projectId}/ai-credentials:
+    get:
+      operationId: listProjectAiCredentials
+      summary: List BYOK provider statuses for a project
+      tags:
+        - Project Settings
+        - BYOK
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Provider statuses returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - providers
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderStatusView'
+              examples:
+                owner:
+                  value:
+                    providers:
+                      - provider: ANTHROPIC
+                        status: CONFIGURED
+                        validationStatus: VALID
+                        lastFour: "7f3a"
+                        validatedAt: "2026-03-13T12:00:00.000Z"
+                        message: "Credential validated successfully."
+                        canManage: true
+                      - provider: OPENAI
+                        status: NOT_CONFIGURED
+                        validationStatus: null
+                        lastFour: null
+                        validatedAt: null
+                        message: null
+                        canManage: true
+                member:
+                  value:
+                    providers:
+                      - provider: ANTHROPIC
+                        status: CONFIGURED
+                        validationStatus: VALID
+                        lastFour: null
+                        validatedAt: "2026-03-13T12:00:00.000Z"
+                        message: "Credential validated successfully."
+                        canManage: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+
+  /projects/{projectId}/ai-credentials/{provider}:
+    put:
+      operationId: upsertProjectAiCredential
+      summary: Save or replace a provider key
+      tags:
+        - Project Settings
+        - BYOK
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Provider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCredentialRequest'
+      responses:
+        '200':
+          description: Credential saved and masked metadata returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderStatusView'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+        '502':
+          description: Provider validation failed unexpectedly
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: deleteProjectAiCredential
+      summary: Delete a provider key
+      tags:
+        - Project Settings
+        - BYOK
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Provider'
+      responses:
+        '200':
+          description: Credential removed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - provider
+                  - status
+                properties:
+                  provider:
+                    $ref: '#/components/schemas/AiProvider'
+                  status:
+                    type: string
+                    enum: [NOT_CONFIGURED]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+
+  /projects/{projectId}/ai-credentials/{provider}/validate:
+    post:
+      operationId: validateProjectAiCredential
+      summary: Re-validate the currently stored provider key
+      tags:
+        - Project Settings
+        - BYOK
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Provider'
+      responses:
+        '200':
+          description: Validation result returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderStatusView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Project or credential not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects/{projectId}/jobs/{jobId}/provider-credentials:
+    get:
+      operationId: getWorkflowProviderCredentials
+      summary: Retrieve job-scoped provider credential snapshots for a running workflow
+      tags:
+        - Workflows
+        - BYOK
+      security:
+        - workflowBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Provider secrets returned for workflow runtime only
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - credentials
+                properties:
+                  credentials:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkflowProviderCredential'
+        '401':
+          description: Invalid or missing workflow token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No matching job snapshot found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects/{projectId}/tickets/{ticketId}/transition:
+    post:
+      operationId: transitionTicketStage
+      summary: Transition a ticket stage and optionally dispatch workflow execution
+      tags:
+        - Tickets
+        - Workflows
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            oneOf:
+              - type: integer
+              - type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetStage
+              properties:
+                targetStage:
+                  type: string
+                  enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP]
+      responses:
+        '200':
+          description: Transition accepted
+        '400':
+          description: Invalid transition or BYOK requirement failure
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/ByokTransitionError'
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Provider:
+      name: provider
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/AiProvider'
+
+  schemas:
+    AiProvider:
+      type: string
+      enum:
+        - ANTHROPIC
+        - OPENAI
+
+    ValidationStatus:
+      type: string
+      enum:
+        - PENDING
+        - VALID
+        - INVALID
+        - ERROR
+
+    ProviderStatus:
+      type: string
+      enum:
+        - NOT_CONFIGURED
+        - CONFIGURED
+        - INVALID
+
+    UpsertCredentialRequest:
+      type: object
+      required:
+        - apiKey
+      properties:
+        apiKey:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Plaintext provider key submitted only for save/replace
+
+    ProviderStatusView:
+      type: object
+      required:
+        - provider
+        - status
+        - validationStatus
+        - lastFour
+        - validatedAt
+        - message
+        - canManage
+      properties:
+        provider:
+          $ref: '#/components/schemas/AiProvider'
+        status:
+          $ref: '#/components/schemas/ProviderStatus'
+        validationStatus:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ValidationStatus'
+        lastFour:
+          type: string
+          nullable: true
+          minLength: 4
+          maxLength: 4
+        validatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        message:
+          type: string
+          nullable: true
+          maxLength: 255
+        canManage:
+          type: boolean
+
+    WorkflowProviderCredential:
+      type: object
+      required:
+        - provider
+        - apiKey
+        - lastFour
+      properties:
+        provider:
+          $ref: '#/components/schemas/AiProvider'
+        apiKey:
+          type: string
+          description: Returned only to workflow-token-authenticated callers
+        lastFour:
+          type: string
+          minLength: 4
+          maxLength: 4
+
+    ByokTransitionError:
+      type: object
+      required:
+        - error
+        - code
+        - details
+      properties:
+        error:
+          type: string
+          example: "Workflow launch blocked: required AI provider credentials are missing or invalid."
+        code:
+          type: string
+          enum:
+            - BYOK_REQUIRED
+        details:
+          type: object
+          required:
+            - providers
+          properties:
+            providers:
+              type: array
+              items:
+                type: object
+                required:
+                  - provider
+                  - status
+                  - message
+                properties:
+                  provider:
+                    $ref: '#/components/schemas/AiProvider'
+                  status:
+                    $ref: '#/components/schemas/ProviderStatus'
+                  message:
+                    type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          nullable: true
+
+  responses:
+    Unauthorized:
+      description: Request is not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized
+    Forbidden:
+      description: Request is authenticated but caller is not the project owner
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Forbidden
+            code: OWNER_REQUIRED
+    ProjectNotFound:
+      description: Project not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Project not found
+    ValidationFailed:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Validation failed
+
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+    workflowBearer:
+      type: http
+      scheme: bearer
+
+security:
+  - session: []
