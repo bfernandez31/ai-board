@@ -185,6 +185,41 @@ Projects include a constitution document that defines development guidelines, te
 - User-friendly errors for network or API issues
 - Preserves unsaved edits on save failure for retry
 
+### API Key Management (BYOK)
+
+Projects support Bring Your Own Key (BYOK) — owners configure their own AI provider API keys so AI costs are charged directly to them.
+
+**Purpose**:
+- Route AI workflow costs to the user's own provider accounts
+- Required on the Free plan before any workflow can run
+- Per-project scoping: each project has its own keys
+
+**Supported Providers**:
+1. **Anthropic** — Required for tickets using the CLAUDE agent
+2. **OpenAI** — Required for tickets using the CODEX agent
+
+**Key Storage**:
+- Keys are encrypted at rest (AES-256-GCM) and never returned in full after submission
+- Only the last 4 characters (preview) are displayed after saving
+- One key per provider per project; saving a new key replaces the existing one
+
+**Managing Keys** (owner only):
+- Accessible from the project settings page (API Keys section)
+- Enter a key and save — format is validated before encryption
+- Click "Test Key" to validate the saved key against the provider's live API
+- Click "Remove Key" to permanently delete a key (with confirmation warning)
+
+**Member visibility**:
+- Members can see which providers are configured (masked preview) but cannot add, change, or remove keys
+
+**Workflow Blocking**:
+- If a workflow is triggered for a project that is missing the required provider key, the workflow is blocked immediately with: *"API key required. Configure your [Provider] API key in Project Settings to run workflows."*
+- No workflow job is created when the key is missing
+
+**Key Validation**:
+- Format check runs before saving (Anthropic keys must start with `sk-ant-`, OpenAI keys with `sk-`)
+- Live validation tests the key against the provider's API; result is `valid`, `invalid`, or `unreachable`
+
 ### Default Agent Configuration
 
 Projects have a configurable default AI agent that determines which AI executes workflow automation for all tickets:

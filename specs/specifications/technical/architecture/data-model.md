@@ -114,7 +114,7 @@ model Project {
 
 **Relationships**:
 - Belongs to User (required, cascade delete)
-- One-to-many: Tickets, Jobs, ProjectMembers
+- One-to-many: Tickets, Jobs, ProjectMembers, ProjectApiKeys
 
 **Constraints**:
 - Unique key (project identifier for ticket prefixes)
@@ -642,6 +642,54 @@ model Subscription {
 - CANCELED records are preserved (not deleted) for audit; `getEffectivePlan` returns `FREE`
 - Cascade delete when user account deleted (only via account deletion, not subscription cancellation)
 
+### ProjectApiKey
+
+Encrypted API keys for AI providers, scoped to a project. Enables BYOK (Bring Your Own Key) workflows.
+
+```prisma
+model ProjectApiKey {
+  id           Int            @id @default(autoincrement())
+  projectId    Int
+  provider     ApiKeyProvider
+  encryptedKey String         @db.VarChar(500)
+  preview      String         @db.VarChar(4)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+}
+```
+
+**Purpose**: Store encrypted AI provider API keys at the project level so workflows use user-provided keys instead of platform keys.
+
+**Fields**:
+- `id`: Auto-incrementing unique identifier
+- `projectId`: Parent project (required foreign key)
+- `provider`: AI provider enum (`ANTHROPIC` or `OPENAI`)
+- `encryptedKey`: AES-256-GCM encrypted API key (never returned to client after save)
+- `preview`: Last 4 characters of the original key (safe to display, e.g., "X4kL")
+- `createdAt`: Key creation timestamp
+- `updatedAt`: Last replacement timestamp
+
+**Relationships**:
+- Belongs to Project (required, cascade delete)
+
+**Constraints**:
+- Unique (projectId, provider) — one key per provider per project
+- Index on projectId for efficient key lookup at workflow dispatch time
+- Cascade delete when project is deleted
+
+**Business Rules**:
+- Only project owners can create, replace, or delete keys (members have read-only visibility)
+- Full key value is never returned to clients after the initial save — only `preview` is exposed
+- Saving a key for a provider that already has one replaces it (upsert behavior)
+- Keys are encrypted at rest using AES-256-GCM with a server-side `ENCRYPTION_KEY` environment variable
+- Workflow dispatch fails with `MISSING_API_KEY` error when no key is configured for the required provider
+- ANTHROPIC keys required for CLAUDE agent tickets; OPENAI keys required for CODEX agent tickets
+
 ### StripeEvent
 
 Idempotency log for processed Stripe webhook events.
@@ -779,6 +827,22 @@ export function resolveEffectiveAgent(
 }
 ```
 
+### ApiKeyProvider
+
+AI provider enum for BYOK key management.
+
+```prisma
+enum ApiKeyProvider {
+  ANTHROPIC  // Anthropic Claude (used with CLAUDE agent)
+  OPENAI     // OpenAI (used with CODEX agent)
+}
+```
+
+**Usage**:
+- One key per provider per project
+- Provider selection is automatic based on resolved agent at workflow dispatch time
+- `CLAUDE` agent tickets require `ANTHROPIC` key; `CODEX` agent tickets require `OPENAI` key
+
 ### SubscriptionPlan
 
 ```prisma
@@ -811,7 +875,8 @@ User
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
-│   └── projectMembers (one-to-many) → ProjectMember
+│   ├── projectMembers (one-to-many) → ProjectMember
+│   └── apiKeys (one-to-many) → ProjectApiKey
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)

@@ -3029,6 +3029,159 @@ Stripe webhook handler. Receives and processes subscription lifecycle events.
 
 ---
 
+## API Key Endpoints (BYOK)
+
+Project-scoped BYOK (Bring Your Own Key) management. Keys are encrypted at rest and never returned in full after initial submission.
+
+### GET /api/projects/:projectId/api-keys
+
+List configured API keys (masked preview only).
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Response** (200 OK):
+```json
+{
+  "keys": [
+    {
+      "provider": "ANTHROPIC",
+      "preview": "X4kL",
+      "configured": true,
+      "updatedAt": "2026-03-13T10:00:00.000Z"
+    },
+    {
+      "provider": "OPENAI",
+      "preview": "9mZp",
+      "configured": true,
+      "updatedAt": "2026-03-13T11:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Notes**:
+- Full key value is never returned — only `preview` (last 4 characters)
+- Members can see which keys are configured but cannot manage them
+
+**Errors**:
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `400`: Invalid project ID
+
+---
+
+### POST /api/projects/:projectId/api-keys
+
+Save or replace an API key for a provider.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (owner-only action)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "provider": "ANTHROPIC",
+  "key": "sk-ant-api03-..."
+}
+```
+
+**Validation**:
+- `provider`: Required, enum (`ANTHROPIC` | `OPENAI`)
+- `key`: Required, 20-500 characters; format-validated per provider before encryption
+  - `ANTHROPIC`: Must start with `sk-ant-`
+  - `OPENAI`: Must start with `sk-`
+
+**Response** (200 OK):
+```json
+{
+  "provider": "ANTHROPIC",
+  "preview": "X4kL",
+  "configured": true,
+  "updatedAt": "2026-03-13T10:00:00.000Z"
+}
+```
+
+**Behavior**: Upserts — saves new key or replaces existing key for the same provider.
+
+**Errors**:
+- `400`: Invalid format, failed schema validation
+- `401`: Not authenticated
+- `403`: User is not project owner
+
+---
+
+### DELETE /api/projects/:projectId/api-keys/:provider
+
+Remove an API key for a specific provider.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (owner-only action)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (string, required): Provider name (`ANTHROPIC` | `OPENAI`, case-insensitive)
+
+**Response** (200 OK):
+```json
+{
+  "provider": "ANTHROPIC",
+  "configured": false,
+  "message": "API key removed. Workflows requiring Anthropic will be blocked until a new key is configured."
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or unsupported provider
+- `401`: Not authenticated
+- `403`: User is not project owner
+- `404`: No API key found for provider
+
+---
+
+### POST /api/projects/:projectId/api-keys/:provider/validate
+
+Test a saved API key against the provider's live API.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner (owner-only action)
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `provider` (string, required): Provider name (`ANTHROPIC` | `OPENAI`, case-insensitive)
+
+**Response** (200 OK):
+```json
+{
+  "provider": "ANTHROPIC",
+  "valid": true,
+  "message": "API key is valid and working."
+}
+```
+
+**`valid` field values**:
+- `true`: Key authenticated successfully with provider
+- `false`: Provider returned 401 (key invalid or revoked)
+- `null`: Provider API unreachable (network error; key validity unknown)
+
+**Validation Logic**:
+- `ANTHROPIC`: POST to `https://api.anthropic.com/v1/messages` with minimal payload; 401 = invalid, 200/400 = valid
+- `OPENAI`: GET `https://api.openai.com/v1/models`; 401 = invalid, 200 = valid
+
+**Errors**:
+- `400`: Invalid project ID or unsupported provider
+- `401`: Not authenticated
+- `403`: User is not project owner
+- `404`: No API key configured for provider
+
+---
+
 ## Pagination
 
 Currently not implemented. All endpoints return complete result sets.

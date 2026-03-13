@@ -86,6 +86,7 @@ export async function dispatchWorkflow(params: {
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
   - `agent` (discrete input) - Resolved agent value for PLAN/BUILD commands
   - `specifyPayload` - JSON payload for SPECIFY command (includes `agent` field)
+  - `anthropicApiKey` or `openaiApiKey` - Decrypted BYOK key for the effective agent's provider
 - **Repository Checkout**: Checks out external project repository using `repository: ${{ inputs.githubOwner }}/${{ inputs.githubRepo }}`
 - **Environment**: ubuntu-latest, Node.js 22.20.0, Python 3.11, PostgreSQL 14
 - **Commands**: specify, plan, task, implement, clarify
@@ -99,6 +100,7 @@ export async function dispatchWorkflow(params: {
 - **Inputs**:
   - `ticket_id`, `quickImplPayload`, `attachments`, `job_id`, `project_id`
   - `githubRepository` (required) - Target repository in format owner/repo
+  - `anthropicApiKey` or `openaiApiKey` - Decrypted BYOK key for the effective agent's provider
 - **Repository Checkout**: Checks out external project repository
 - **Environment**: Same as speckit.yml (ubuntu-latest, Node.js, Python, PostgreSQL 14, Playwright)
 - **Command**: Executes `/ai-board.quick-impl` with JSON payload
@@ -112,6 +114,7 @@ export async function dispatchWorkflow(params: {
 - **Inputs**:
   - `ticket_id`, `job_id`, `project_id`, `branch`, `workflowType`, `agent`
   - `githubOwner`, `githubRepo` (required) - Target repository for checkout
+  - `anthropicApiKey` or `openaiApiKey` - Decrypted BYOK key for the effective agent's provider
 - **Repository Checkout**: Checks out external project repository at specified branch
 - **Actions**: Runs tests and creates pull request
 - **Test Execution**: Conditional based on workflowType (FULL or QUICK)
@@ -166,6 +169,58 @@ export async function dispatchWorkflow(params: {
 - **Conditions**: Vercel production deployment success
 - **Action**: Transitions VERIFY → SHIP for tickets with merged branches
 - **Method**: Git ancestry check (`git merge-base --is-ancestor`)
+
+### BYOK Key Injection
+
+Before dispatching any workflow, the system retrieves and decrypts the project's API key for the effective agent's provider and injects it as a workflow input.
+
+**Provider-to-agent mapping**:
+- `CLAUDE` agent → `ANTHROPIC` provider → `anthropicApiKey` workflow input
+- `CODEX` agent → `OPENAI` provider → `openaiApiKey` workflow input
+
+**Key retrieval** (`lib/workflows/transition.ts`):
+```typescript
+const provider = effectiveAgent === Agent.CLAUDE ? 'ANTHROPIC' : 'OPENAI';
+const encryptedApiKey = await getEncryptedKey(ticket.projectId, provider);
+
+if (!encryptedApiKey) {
+  await prisma.job.delete({ where: { id: job.id } });
+  return {
+    success: false,
+    error: `API key required. Configure your ${providerLabel} API key in Project Settings to run workflows.`,
+    errorCode: 'MISSING_API_KEY',
+  };
+}
+
+const decryptedApiKey = decrypt(encryptedApiKey);
+workflowInputs[apiKeyInputName] = decryptedApiKey;
+```
+
+**Error behavior**: When no key is configured, the pending job is deleted and `MISSING_API_KEY` error is returned to the client before dispatch. No workflow is dispatched.
+
+**Sequence**:
+
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as Transition API
+    participant DB as Database
+    participant GH as GitHub Actions
+
+    UI->>API: POST /transition (stage change)
+    API->>DB: Create Job (PENDING)
+    API->>DB: getEncryptedKey(projectId, provider)
+    alt Key not configured
+        DB-->>API: null
+        API->>DB: Delete Job
+        API-->>UI: 400 MISSING_API_KEY
+    else Key found
+        DB-->>API: encryptedKey
+        API->>API: decrypt(encryptedKey)
+        API->>GH: dispatch workflow (+ anthropicApiKey / openaiApiKey)
+        API-->>UI: 200 OK
+    end
+```
 
 ### Agent Resolution
 
