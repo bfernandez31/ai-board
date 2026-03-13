@@ -387,8 +387,10 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/analytics`
 
 **Dashboard Features**:
-- **Overview Cards**: Display total cost, success rate, average job duration, and tickets shipped (current month)
+- **Overview Cards**: Display total cost, success rate, average job duration, tickets shipped, and tickets closed — all scoped to the selected time range and active filters
   - Card titles displayed in white text for optimal contrast against dark background
+  - **Tickets Shipped card**: Count reflects the selected time range (e.g., "last 7 days", "last 30 days", "all time")
+  - **Tickets Closed card**: Count of tickets that reached CLOSED stage within the selected time period
 - **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
   - Chart title displayed in white text for improved readability
 - **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
@@ -408,6 +410,20 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Preset options: 7 days, 30 days, 90 days, all time
 - Default: 30-day view
 - Charts auto-adjust granularity (daily for <30 days, weekly for ≥30 days)
+
+**Status Filter**:
+- Filter all metrics by ticket stage: "Shipped" (SHIP only, default), "Closed" (CLOSED only), or "Shipped + Closed" (both)
+- Applies globally to all dashboard widgets simultaneously
+- Default is "Shipped" to preserve existing behavior
+
+**Agent Filter**:
+- Filter all metrics by the AI model that executed the jobs
+- "All Agents" selected by default; dropdown populated dynamically with only models that have at least one job on the project
+- Raw model values shown (e.g., "claude-opus-4")
+
+**Filter Behavior**:
+- All three filters (time range, status, agent) combine with AND logic
+- Filter state persists in URL query parameters (`?range=30d&status=shipped&agent=claude-opus-4`) for sharing and page refresh
 
 **Empty States**:
 - Friendly empty states with guidance when no job data exists

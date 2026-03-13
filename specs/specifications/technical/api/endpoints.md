@@ -2334,6 +2334,8 @@ Fetch aggregated analytics data for project visualization.
 
 **Query Parameters**:
 - `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
+- `status` (string, optional): Ticket stage filter (shipped|closed|all, default: shipped) — `shipped` = SHIP stage only, `closed` = CLOSED stage only, `all` = both SHIP and CLOSED
+- `agent` (string, optional): Filter by AI model string (e.g., `claude-opus-4`); omit or leave empty for all agents
 
 **Response** (200 OK):
 ```json
@@ -2343,7 +2345,8 @@ Fetch aggregated analytics data for project visualization.
     "costTrend": 12.5,
     "successRate": 94.2,
     "avgDuration": 125000,
-    "ticketsShipped": 8
+    "ticketsShipped": 8,
+    "ticketsClosed": 3
   },
   "costOverTime": [
     { "date": "2025-11-20", "cost": 5.23 },
@@ -2381,6 +2384,7 @@ Fetch aggregated analytics data for project visualization.
     { "week": "2025-W47", "ticketsShipped": 5 },
     { "week": "2025-W48", "ticketsShipped": 2 }
   ],
+  "availableAgents": ["claude-opus-4", "claude-sonnet-4-6"],
   "timeRange": "30d",
   "generatedAt": "2025-11-28T10:30:00Z",
   "jobCount": 45,
@@ -2389,12 +2393,13 @@ Fetch aggregated analytics data for project visualization.
 ```
 
 **Fields**:
-- `overview`: Summary metrics for the selected time period
+- `overview`: Summary metrics for the selected time period and active filters
   - `totalCost`: Total cost in USD
   - `costTrend`: Percentage change compared to previous equivalent period
   - `successRate`: Percentage of COMPLETED jobs (excludes PENDING/RUNNING)
   - `avgDuration`: Average job duration in milliseconds
-  - `ticketsShipped`: Tickets shipped in current month
+  - `ticketsShipped`: Tickets that reached SHIP stage within the selected time range (respects status filter)
+  - `ticketsClosed`: Tickets that reached CLOSED stage within the selected time range
 - `costOverTime`: Daily or weekly cost data points
   - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
   - `cost`: Cost in USD for period
@@ -2421,6 +2426,7 @@ Fetch aggregated analytics data for project visualization.
 - `velocity`: Weekly shipping velocity
   - `week`: ISO week identifier (YYYY-Www)
   - `ticketsShipped`: Tickets shipped that week
+- `availableAgents`: Array of distinct `Job.model` strings that have at least one job on this project; used to populate the agent filter dropdown
 - `timeRange`: Applied time range filter
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total jobs included in analysis
@@ -2429,6 +2435,9 @@ Fetch aggregated analytics data for project visualization.
 **Data Aggregation**:
 - Includes only COMPLETED jobs (excludes PENDING, RUNNING, FAILED, CANCELLED from cost/token calculations)
 - Stage derived from job command (specify→SPECIFY, plan→PLAN, implement→BUILD, verify→VERIFY)
+- Status filter applies to all job-level queries via `Job.ticket.stage` relation filter
+- Agent filter applies to all job-level queries via `Job.model` equality filter
+- All three filters (range, status, agent) combine with AND logic
 - Cost trend compares current period to previous equivalent period
 - Granularity auto-adjusts: daily for <30 days, weekly for ≥30 days
 - Top tools limited to 10 entries with "Other" aggregation for remaining tools
@@ -2438,7 +2447,7 @@ Fetch aggregated analytics data for project visualization.
 - `hasData` field indicates data availability
 
 **Errors**:
-- `400`: Invalid time range parameter
+- `400`: Invalid query parameters (range, status, or agent validation failed)
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found
