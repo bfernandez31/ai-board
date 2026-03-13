@@ -42,27 +42,19 @@ export function validateApiKeyFormat(
     };
   }
 
-  // OpenAI keys start with "sk-" but NOT "sk-ant-"
-  if (provider === 'OPENAI') {
-    if (key.startsWith('sk-ant-')) {
-      return {
-        valid: false,
-        error: "This looks like an Anthropic key. OpenAI keys start with 'sk-' but not 'sk-ant-'.",
-      };
-    }
-    if (!key.startsWith(rules.prefix)) {
-      return {
-        valid: false,
-        error: `Invalid key format. OpenAI keys must start with '${rules.prefix}'.`,
-      };
-    }
-  } else {
-    if (!key.startsWith(rules.prefix)) {
-      return {
-        valid: false,
-        error: `Invalid key format. ${rules.label} keys must start with '${rules.prefix}'.`,
-      };
-    }
+  // Detect cross-provider mismatch: Anthropic key pasted into OpenAI field
+  if (provider === 'OPENAI' && key.startsWith('sk-ant-')) {
+    return {
+      valid: false,
+      error: "This looks like an Anthropic key. OpenAI keys start with 'sk-' but not 'sk-ant-'.",
+    };
+  }
+
+  if (!key.startsWith(rules.prefix)) {
+    return {
+      valid: false,
+      error: `Invalid key format. ${rules.label} keys must start with '${rules.prefix}'.`,
+    };
   }
 
   return { valid: true };

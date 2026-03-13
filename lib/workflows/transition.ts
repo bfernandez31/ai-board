@@ -203,7 +203,7 @@ export async function handleTicketTransition(
     }
 
     if (!isWorkflowTestMode(githubToken)) {
-      let workflowFile: string = '';
+      let workflowFile = 'unknown';
 
       try {
         const octokit = new Octokit({

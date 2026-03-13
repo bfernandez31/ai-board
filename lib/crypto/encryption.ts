@@ -44,15 +44,12 @@ export function encrypt(plaintext: string): string {
  */
 export function decrypt(encrypted: string): string {
   const key = getEncryptionKey();
-  const parts = encrypted.split(':');
+  const [ivHex, authTagHex, ciphertext, ...rest] = encrypted.split(':');
 
-  if (parts.length !== 3) {
+  if (ivHex === undefined || authTagHex === undefined || ciphertext === undefined || rest.length > 0) {
     throw new Error('Invalid encrypted data format');
   }
 
-  const ivHex = parts[0]!;
-  const authTagHex = parts[1]!;
-  const ciphertext = parts[2]!;
   const iv = Buffer.from(ivHex, 'hex');
   const authTag = Buffer.from(authTagHex, 'hex');
 
@@ -61,7 +58,5 @@ export function decrypt(encrypted: string): string {
   });
   decipher.setAuthTag(authTag);
 
-  const decrypted = decipher.update(ciphertext, 'hex', 'utf8') + decipher.final('utf8');
-
-  return decrypted;
+  return decipher.update(ciphertext, 'hex', 'utf8') + decipher.final('utf8');
 }
