@@ -11,10 +11,10 @@
 
 **Purpose**: Establish the schema and shared DTO surface used by all BYOK flows.
 
-- [ ] T001 Add `AiProvider`, `AiCredentialValidationStatus`, `WorkflowCredentialSource`, `ProjectAiCredential`, and `JobAiCredentialSnapshot` to `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
-- [ ] T002 Create the BYOK migration SQL under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` for the `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` changes
-- [ ] T003 [P] Define BYOK domain types in `/home/runner/work/ai-board/ai-board/target/lib/types/ai-credentials.ts`
-- [ ] T004 [P] Define request and response validation schemas in `/home/runner/work/ai-board/ai-board/target/lib/schemas/ai-credentials.ts`
+- [X] T001 Add `AiProvider`, `AiCredentialValidationStatus`, `WorkflowCredentialSource`, `ProjectAiCredential`, and `JobAiCredentialSnapshot` to `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`
+- [X] T002 Create the BYOK migration SQL under `/home/runner/work/ai-board/ai-board/target/prisma/migrations/` for the `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` changes
+- [X] T003 [P] Define BYOK domain types in `/home/runner/work/ai-board/ai-board/target/lib/types/ai-credentials.ts`
+- [X] T004 [P] Define request and response validation schemas in `/home/runner/work/ai-board/ai-board/target/lib/schemas/ai-credentials.ts`
 
 ---
 
@@ -24,11 +24,11 @@
 
 **⚠️ CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T005 Regenerate the Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` with `bunx prisma generate`
-- [ ] T006 Implement server-side encryption and masking helpers using `PROJECT_CREDENTIAL_ENCRYPTION_KEY` in `/home/runner/work/ai-board/ai-board/target/lib/security/project-ai-credentials.ts`
-- [ ] T007 [P] Implement command and agent to provider resolution in `/home/runner/work/ai-board/ai-board/target/lib/services/workflow-provider-requirements.ts`
-- [ ] T008 [P] Implement Anthropic and OpenAI validation adapters with sanitized error mapping in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-provider-validation.ts`
-- [ ] T009 Implement BYOK persistence, list shaping, validation orchestration, deletion, and job snapshot creation in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-credential-service.ts`
+- [X] T005 Regenerate the Prisma client from `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma` with `bunx prisma generate`
+- [X] T006 Implement server-side encryption and masking helpers using `PROJECT_CREDENTIAL_ENCRYPTION_KEY` in `/home/runner/work/ai-board/ai-board/target/lib/security/project-ai-credentials.ts`
+- [X] T007 [P] Implement command and agent to provider resolution in `/home/runner/work/ai-board/ai-board/target/lib/services/workflow-provider-requirements.ts`
+- [X] T008 [P] Implement Anthropic and OpenAI validation adapters with sanitized error mapping in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-provider-validation.ts`
+- [X] T009 Implement BYOK persistence, list shaping, validation orchestration, deletion, and job snapshot creation in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-credential-service.ts`
 
 **Checkpoint**: Shared BYOK persistence, crypto, validation, and requirement resolution are ready for story work.
 
@@ -42,18 +42,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Add unit coverage for encryption, decryption, and masked metadata helpers in `/home/runner/work/ai-board/ai-board/target/tests/unit/project-ai-credentials.test.ts`
-- [ ] T011 [P] [US1] Add component coverage for owner save and validate states in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credentials-card.test.tsx`
-- [ ] T012 [P] [US1] Add backend integration coverage for listing, saving, and validating provider keys in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
+- [X] T010 [P] [US1] Add unit coverage for encryption, decryption, and masked metadata helpers in `/home/runner/work/ai-board/ai-board/target/tests/unit/project-ai-credentials.test.ts`
+- [X] T011 [P] [US1] Add component coverage for owner save and validate states in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credentials-card.test.tsx`
+- [X] T012 [P] [US1] Add backend integration coverage for listing, saving, and validating provider keys in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement provider status listing with owner/member response shaping in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/route.ts`
-- [ ] T014 [US1] Implement provider save and replace handling in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/route.ts`
-- [ ] T015 [US1] Implement explicit re-validation of stored keys in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/validate/route.ts`
-- [ ] T016 [P] [US1] Build provider status row rendering for masked state and validation badges in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-provider-status-row.tsx`
-- [ ] T017 [US1] Build the owner/member BYOK settings card with save and validate actions in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-credentials-card.tsx`
-- [ ] T018 [US1] Add the BYOK settings card to `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx`
+- [X] T013 [P] [US1] Implement provider status listing with owner/member response shaping in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/route.ts`
+- [X] T014 [US1] Implement provider save and replace handling in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/route.ts`
+- [X] T015 [US1] Implement explicit re-validation of stored keys in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/validate/route.ts`
+- [X] T016 [P] [US1] Build provider status row rendering for masked state and validation badges in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-provider-status-row.tsx`
+- [X] T017 [US1] Build the owner/member BYOK settings card with save and validate actions in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-credentials-card.tsx`
+- [X] T018 [US1] Add the BYOK settings card to `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx`
 
 **Checkpoint**: Owners can save and validate keys end to end, and members can see only high-level provider status.
 
@@ -67,14 +67,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Extend project credential integration coverage for replace, delete, and member read-only cases in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
-- [ ] T020 [P] [US2] Extend settings card component coverage for replace and delete actions in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credentials-card.test.tsx`
+- [X] T019 [P] [US2] Extend project credential integration coverage for replace, delete, and member read-only cases in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
+- [X] T020 [P] [US2] Extend settings card component coverage for replace and delete actions in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ai-credentials-card.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement provider deletion and `NOT_CONFIGURED` responses in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/route.ts`
-- [ ] T022 [US2] Update rotation and deletion orchestration, ownership metadata, and member-safe status shaping in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-credential-service.ts`
-- [ ] T023 [US2] Add replace and delete UX plus member read-only states in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-credentials-card.tsx`
+- [X] T021 [US2] Implement provider deletion and `NOT_CONFIGURED` responses in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/[provider]/route.ts`
+- [X] T022 [US2] Update rotation and deletion orchestration, ownership metadata, and member-safe status shaping in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-credential-service.ts`
+- [X] T023 [US2] Add replace and delete UX plus member read-only states in `/home/runner/work/ai-board/ai-board/target/components/settings/ai-credentials-card.tsx`
 
 **Checkpoint**: Rotation and deletion work safely for owners, and non-owners remain status-only readers.
 
@@ -88,16 +88,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add unit coverage for workflow provider requirement resolution in `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-provider-requirements.test.ts`
-- [ ] T025 [P] [US3] Add backend integration coverage for BYOK launch blocking and success paths in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transition-byok.test.ts`
+- [X] T024 [P] [US3] Add unit coverage for workflow provider requirement resolution in `/home/runner/work/ai-board/ai-board/target/tests/unit/ai-provider-requirements.test.ts`
+- [X] T025 [P] [US3] Add backend integration coverage for BYOK launch blocking and success paths in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transition-byok.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Extend pre-dispatch provider gating and credential snapshot creation in `/home/runner/work/ai-board/ai-board/target/lib/workflows/transition.ts`
-- [ ] T027 [P] [US3] Implement workflow-token-authenticated snapshot retrieval in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/[jobId]/provider-credentials/route.ts`
-- [ ] T028 [US3] Extend BYOK failure payloads in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
-- [ ] T029 [P] [US3] Update BYOK runtime provider auth export logic in `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`
-- [ ] T030 [P] [US3] Update workflow runtime credential fetch and env wiring in `/home/runner/work/ai-board/ai-board/target/.github/workflows/speckit.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/quick-impl.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/verify.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/iterate.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/cleanup.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml`
+- [X] T026 [US3] Extend pre-dispatch provider gating and credential snapshot creation in `/home/runner/work/ai-board/ai-board/target/lib/workflows/transition.ts`
+- [X] T027 [P] [US3] Implement workflow-token-authenticated snapshot retrieval in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/[jobId]/provider-credentials/route.ts`
+- [X] T028 [US3] Extend BYOK failure payloads in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/transition/route.ts`
+- [X] T029 [P] [US3] Update BYOK runtime provider auth export logic in `/home/runner/work/ai-board/ai-board/target/.github/scripts/run-agent.sh`
+- [X] T030 [P] [US3] Update workflow runtime credential fetch and env wiring in `/home/runner/work/ai-board/ai-board/target/.github/workflows/speckit.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/quick-impl.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/verify.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/iterate.yml`, `/home/runner/work/ai-board/ai-board/target/.github/workflows/cleanup.yml`, and `/home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml`
 
 **Checkpoint**: Workflow launches are gated before dispatch, valid launches snapshot credentials, and workflows consume only job-scoped secrets.
 
@@ -111,14 +111,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T031 [P] [US4] Extend project credential integration coverage for sanitized validation failures and masked-only responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
-- [ ] T032 [P] [US4] Extend BYOK transition integration coverage to assert workflow-visible responses never expose secrets in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transition-byok.test.ts`
+- [X] T031 [P] [US4] Extend project credential integration coverage for sanitized validation failures and masked-only responses in `/home/runner/work/ai-board/ai-board/target/tests/integration/projects/ai-credentials.test.ts`
+- [X] T032 [P] [US4] Extend BYOK transition integration coverage to assert workflow-visible responses never expose secrets in `/home/runner/work/ai-board/ai-board/target/tests/integration/tickets/transition-byok.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Harden provider-safe validation messages and redaction behavior in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-provider-validation.ts`
-- [ ] T034 [US4] Restrict workflow credential payloads to authenticated job snapshots only in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/[jobId]/provider-credentials/route.ts`
-- [ ] T035 [US4] Enforce masked-only status rendering for members and owners in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/route.ts` and `/home/runner/work/ai-board/ai-board/target/components/settings/ai-provider-status-row.tsx`
+- [X] T033 [US4] Harden provider-safe validation messages and redaction behavior in `/home/runner/work/ai-board/ai-board/target/lib/services/ai-provider-validation.ts`
+- [X] T034 [US4] Restrict workflow credential payloads to authenticated job snapshots only in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/jobs/[jobId]/provider-credentials/route.ts`
+- [X] T035 [US4] Enforce masked-only status rendering for members and owners in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/ai-credentials/route.ts` and `/home/runner/work/ai-board/ai-board/target/components/settings/ai-provider-status-row.tsx`
 
 **Checkpoint**: All BYOK surfaces remain masked and sanitized, even for validation failures and workflow-facing responses.
 
@@ -128,9 +128,9 @@
 
 **Purpose**: Final verification and contract alignment across all user stories.
 
-- [ ] T036 [P] Validate the implemented flows against `/home/runner/work/ai-board/ai-board/target/specs/AIB-283-byok-bring-your/quickstart.md`
-- [ ] T037 [P] Reconcile API behavior with `/home/runner/work/ai-board/ai-board/target/specs/AIB-283-byok-bring-your/contracts/byok-api.yaml`
-- [ ] T038 Run `bun run type-check` and `bun run lint` after the BYOK changes rooted in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, `/home/runner/work/ai-board/ai-board/target/lib/`, `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/tests/`
+- [X] T036 [P] Validate the implemented flows against `/home/runner/work/ai-board/ai-board/target/specs/AIB-283-byok-bring-your/quickstart.md`
+- [X] T037 [P] Reconcile API behavior with `/home/runner/work/ai-board/ai-board/target/specs/AIB-283-byok-bring-your/contracts/byok-api.yaml`
+- [X] T038 Run `bun run type-check` and `bun run lint` after the BYOK changes rooted in `/home/runner/work/ai-board/ai-board/target/prisma/schema.prisma`, `/home/runner/work/ai-board/ai-board/target/lib/`, `/home/runner/work/ai-board/ai-board/target/app/`, `/home/runner/work/ai-board/ai-board/target/components/`, and `/home/runner/work/ai-board/ai-board/target/tests/`
 
 ---
 

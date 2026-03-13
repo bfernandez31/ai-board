@@ -197,6 +197,35 @@ jobs:
             echo "⚠️ setup-test-env.sh not found, skipping test environment setup"
           fi
 
+      - name: Fetch BYOK Provider Credentials
+        if: ${{ env.SKIP_CLAUDE != 'true' && inputs.job_id != '' && inputs.project_id != '' }}
+        run: |
+          status_code=$(curl -sS -o /tmp/provider-credentials.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            "${APP_URL}/api/projects/${{ inputs.project_id }}/jobs/${{ inputs.job_id }}/provider-credentials")
+
+          if [ "$status_code" = "200" ]; then
+            node -e '
+              const fs = require("fs");
+              const payload = JSON.parse(fs.readFileSync("/tmp/provider-credentials.json", "utf8"));
+              for (const credential of payload.credentials || []) {
+                if (credential.provider === "ANTHROPIC") {
+                  fs.appendFileSync(process.env.GITHUB_ENV, `ANTHROPIC_API_KEY=${credential.apiKey}\n`);
+                }
+                if (credential.provider === "OPENAI") {
+                  fs.appendFileSync(process.env.GITHUB_ENV, `OPENAI_API_KEY=${credential.apiKey}\n`);
+                }
+              }
+            '
+            echo "✅ Loaded BYOK provider credentials"
+          elif [ "$status_code" = "404" ]; then
+            echo "ℹ️ No BYOK provider credentials for this job"
+          else
+            echo "❌ Failed to fetch BYOK provider credentials (HTTP $status_code)"
+            cat /tmp/provider-credentials.json
+            exit 1
+          fi
+
       - name: Fetch Telemetry for Compare
         if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') }}
         working-directory: target

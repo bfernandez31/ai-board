@@ -4,8 +4,11 @@ import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
+import { AiCredentialsCard } from '@/components/settings/ai-credentials-card';
 import { Button } from '@/components/ui/button';
 import { ConstitutionCard } from '@/components/settings/constitution-card';
+import { listProjectAiCredentials } from '@/lib/services/ai-credential-service';
+import { getCurrentUser } from '@/lib/db/users';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -44,6 +47,9 @@ export default async function ProjectSettingsPage({
     throw error;
   });
 
+  const currentUser = await getCurrentUser();
+  const initialProviders = await listProjectAiCredentials(projectId, currentUser.id === project.userId);
+
   return (
     <main className="container mx-auto py-10 max-w-4xl">
       <div className="space-y-6">
@@ -75,6 +81,11 @@ export default async function ProjectSettingsPage({
               id: project.id,
               defaultAgent: project.defaultAgent,
             }}
+          />
+
+          <AiCredentialsCard
+            projectId={project.id}
+            initialProviders={initialProviders}
           />
 
           <ConstitutionCard

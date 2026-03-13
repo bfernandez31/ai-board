@@ -50,6 +50,7 @@ model Job {
   durationMs         Int?     // Total Claude API duration in milliseconds
   model              String?  @db.VarChar(50) // Primary model used
   toolsUsed          String[] @default([])    // List of tools used (Edit, Write, Bash, etc.)
+  providerCredentialSnapshots JobAiCredentialSnapshot[]
 
   @@index([projectId])
   @@index([startedAt])
@@ -75,6 +76,8 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  aiCredentials       ProjectAiCredential[]
+  jobCredentialSnapshots JobAiCredentialSnapshot[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -158,6 +161,8 @@ model User {
   pushSubscriptions     PushSubscription[]
   personalAccessTokens  PersonalAccessToken[]
   subscription          Subscription?
+  projectAiCredentialsCreated ProjectAiCredential[] @relation("ProjectAiCredentialCreatedBy")
+  projectAiCredentialsUpdated ProjectAiCredential[] @relation("ProjectAiCredentialUpdatedBy")
 
   @@index([email])
 }
@@ -244,6 +249,53 @@ model PushSubscription {
   @@index([endpoint])
 }
 
+model ProjectAiCredential {
+  id               Int                          @id @default(autoincrement())
+  projectId        Int
+  provider         AiProvider
+  encryptedKey     String
+  encryptionIv     String                       @db.VarChar(64)
+  encryptionTag    String                       @db.VarChar(64)
+  lastFour         String                       @db.VarChar(4)
+  validationStatus AiCredentialValidationStatus @default(PENDING)
+  validationMessage String?                     @db.VarChar(255)
+  validatedAt      DateTime?
+  createdByUserId  String
+  updatedByUserId  String
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  project          Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy        User                         @relation("ProjectAiCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy        User                         @relation("ProjectAiCredentialUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  snapshots        JobAiCredentialSnapshot[]
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@index([projectId, validationStatus])
+}
+
+model JobAiCredentialSnapshot {
+  id                  Int                      @id @default(autoincrement())
+  jobId               Int
+  projectId           Int
+  provider            AiProvider
+  source              WorkflowCredentialSource
+  projectAiCredentialId Int
+  encryptedKey        String
+  encryptionIv        String                   @db.VarChar(64)
+  encryptionTag       String                   @db.VarChar(64)
+  lastFour            String                   @db.VarChar(4)
+  createdAt           DateTime                 @default(now())
+
+  job                 Job                      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  project             Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectAiCredential ProjectAiCredential      @relation(fields: [projectAiCredentialId], references: [id], onDelete: Restrict)
+
+  @@unique([jobId, provider])
+  @@index([projectId, jobId])
+}
+
 enum AuthProvider {
   GITHUB
   GOOGLE
@@ -256,6 +308,22 @@ enum ClarificationPolicy {
   CONSERVATIVE
   PRAGMATIC
   INTERACTIVE
+}
+
+enum AiProvider {
+  ANTHROPIC
+  OPENAI
+}
+
+enum AiCredentialValidationStatus {
+  PENDING
+  VALID
+  INVALID
+  ERROR
+}
+
+enum WorkflowCredentialSource {
+  PROJECT_BYOK
 }
 
 enum JobStatus {

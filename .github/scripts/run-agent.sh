@@ -25,8 +25,8 @@ log_error() {
 validate_auth() {
   case "$AGENT_TYPE" in
     CLAUDE)
-      if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-        log_error "CLAUDE_CODE_OAUTH_TOKEN is required for agent type CLAUDE"
+      if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]] && [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+        log_error "CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is required for agent type CLAUDE"
         exit 1
       fi
       ;;

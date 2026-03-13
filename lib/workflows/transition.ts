@@ -3,6 +3,8 @@ import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { createJobCredentialSnapshots, getCredentialReadinessFailures } from '@/lib/services/ai-credential-service';
+import { resolveWorkflowProviderRequirement } from '@/lib/services/workflow-provider-requirements';
 
 const prisma = new PrismaClient();
 
@@ -21,12 +23,18 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'BYOK_REQUIRED';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
     jobStatus?: JobStatus;
     jobCommand?: string;
+    providerFailures?: Array<{
+      provider: string;
+      reason: 'MISSING' | 'INVALID';
+      validationStatus: string | null;
+      message: string;
+    }>;
   };
 }
 
@@ -149,6 +157,7 @@ export async function handleTicketTransition(
     }
 
     const command = isQuickImpl ? 'quick-impl' : STAGE_COMMAND_MAP[targetStage];
+    const effectiveAgent = resolveEffectiveAgent(ticket);
 
     if (!command) {
       return {
@@ -156,10 +165,29 @@ export async function handleTicketTransition(
       };
     }
 
+    const providerRequirement = resolveWorkflowProviderRequirement(command, effectiveAgent);
+    const providerFailures = await getCredentialReadinessFailures(
+      ticket.projectId,
+      providerRequirement.providers
+    );
+
+    if (providerFailures.length > 0) {
+      return {
+        success: false,
+        error: 'Required provider credentials are missing or invalid for this workflow.',
+        errorCode: 'BYOK_REQUIRED',
+        details: {
+          currentStage,
+          targetStage,
+          providerFailures,
+        },
+      };
+    }
+
     let job;
     if (isQuickImpl) {
-      const [createdJob] = await prisma.$transaction([
-        prisma.job.create({
+      job = await prisma.$transaction(async (tx) => {
+        const createdJob = await tx.job.create({
           data: {
             ticketId: ticket.id,
             projectId: ticket.projectId,
@@ -168,23 +196,31 @@ export async function handleTicketTransition(
             startedAt: new Date(),
             updatedAt: new Date(),
           },
-        }),
-        prisma.ticket.update({
+        });
+
+        await createJobCredentialSnapshots(tx, ticket.projectId, createdJob.id, providerRequirement.providers);
+        await tx.ticket.update({
           where: { id: ticket.id },
           data: { workflowType: 'QUICK' },
-        }),
-      ]);
-      job = createdJob;
+        });
+
+        return createdJob;
+      });
     } else {
-      job = await prisma.job.create({
-        data: {
-          ticketId: ticket.id,
-          projectId: ticket.projectId,
-          command: command,
-          status: JobStatus.PENDING,
-          startedAt: new Date(),
-          updatedAt: new Date(),
-        },
+      job = await prisma.$transaction(async (tx) => {
+        const createdJob = await tx.job.create({
+          data: {
+            ticketId: ticket.id,
+            projectId: ticket.projectId,
+            command: command,
+            status: JobStatus.PENDING,
+            startedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        await createJobCredentialSnapshots(tx, ticket.projectId, createdJob.id, providerRequirement.providers);
+        return createdJob;
       });
     }
 
@@ -209,8 +245,6 @@ export async function handleTicketTransition(
         });
 
         let workflowInputs: Record<string, string>;
-
-        const effectiveAgent = resolveEffectiveAgent(ticket);
 
         if (isQuickImpl) {
           const quickImplPayload = {
