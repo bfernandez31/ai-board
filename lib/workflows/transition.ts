@@ -1,8 +1,9 @@
-import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent } from '@prisma/client';
+import { PrismaClient, Stage, JobStatus, Ticket, Project, Agent, APIProvider } from '@prisma/client';
 import { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { isValidTransition, Stage as ValidationStage } from '@/lib/stage-transitions';
 import { isWorkflowTestMode } from '@/app/lib/workflows/test-mode';
+import { getDecryptedKey } from '@/lib/db/api-keys';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ export interface TransitionResult {
   success: boolean;
   jobId?: number;
   error?: string;
-  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB';
+  errorCode?: 'INVALID_TRANSITION' | 'GITHUB_ERROR' | 'JOB_NOT_COMPLETED' | 'MISSING_JOB' | 'MISSING_API_KEY';
   details?: {
     currentStage?: Stage;
     targetStage?: Stage;
@@ -37,6 +38,18 @@ export type TicketWithProject = Ticket & {
 /** Resolve the effective agent: ticket override > project default > CLAUDE fallback */
 export function resolveEffectiveAgent(ticket: TicketWithProject): Agent {
   return ticket.agent ?? ticket.project.defaultAgent ?? Agent.CLAUDE;
+}
+
+/** Map Agent enum to APIProvider for key lookup */
+function agentToProvider(agent: Agent): APIProvider {
+  return agent === Agent.CODEX ? APIProvider.OPENAI : APIProvider.ANTHROPIC;
+}
+
+/** Check if project is external (not the ai-board repo itself) */
+function isExternalProject(project: Project): boolean {
+  const aiboardOwner = process.env.GITHUB_OWNER;
+  const aiboardRepo = process.env.GITHUB_REPO;
+  return project.githubOwner !== aiboardOwner || project.githubRepo !== aiboardRepo;
 }
 
 /** SPECIFY, PLAN, BUILD require validation; INBOX, VERIFY, SHIP do not */
@@ -277,12 +290,35 @@ export async function handleTicketTransition(
           workflowFile = 'speckit.yml';
         }
 
+        // BYOK: Retrieve and inject API keys for workflow dispatch
+        const primaryProvider = agentToProvider(effectiveAgent);
+        const anthropicKey = await getDecryptedKey(ticket.projectId, APIProvider.ANTHROPIC);
+        const openaiKey = await getDecryptedKey(ticket.projectId, APIProvider.OPENAI);
+
+        // FR-009: Block external projects without configured key for their agent's provider
+        if (isExternalProject(ticket.project)) {
+          const primaryKey = primaryProvider === APIProvider.ANTHROPIC ? anthropicKey : openaiKey;
+          if (!primaryKey) {
+            await prisma.job.delete({ where: { id: job.id } }).catch(() => {});
+            return {
+              success: false,
+              error: `No API key configured for ${primaryProvider}. Configure a BYOK key in Project Settings before running workflows.`,
+              errorCode: 'MISSING_API_KEY',
+            };
+          }
+        }
+
+        // Inject BYOK keys (empty string = workflow falls back to repo secrets)
+        workflowInputs.anthropic_api_key = anthropicKey ?? '';
+        workflowInputs.openai_api_key = openaiKey ?? '';
+
         console.log('[Workflow Dispatch]', {
           aiboardRepo: `${aiboardOwner}/${aiboardRepo}`,
           targetRepo: `${ticket.project.githubOwner}/${ticket.project.githubRepo}`,
           workflow: workflowFile,
           command,
           ticketKey: ticket.ticketKey,
+          hasByokKeys: { anthropic: !!anthropicKey, openai: !!openaiKey },
         });
 
         await octokit.actions.createWorkflowDispatch({

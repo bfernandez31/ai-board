@@ -69,12 +69,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Integration tests for workflow dispatch key injection and fallback behavior in `tests/integration/api-keys/workflow-dispatch.test.ts`
+- [x] T014 [P] [US3] Integration tests for workflow dispatch key injection and fallback behavior in `tests/integration/api-keys/workflow-dispatch.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Modify `lib/workflows/transition.ts` to retrieve and decrypt project API keys before workflow dispatch, inject as `anthropic_api_key` and `openai_api_key` inputs; pass empty string when no BYOK key exists
-- [ ] T016 [US3] Add pre-dispatch check in `lib/workflows/transition.ts` — block workflow dispatch for external projects without configured keys (FR-009), return actionable error message
+- [x] T015 [US3] Modify `lib/workflows/transition.ts` to retrieve and decrypt project API keys before workflow dispatch, inject as `anthropic_api_key` and `openai_api_key` inputs; pass empty string when no BYOK key exists
+- [x] T016 [US3] Add pre-dispatch check in `lib/workflows/transition.ts` — block workflow dispatch for external projects without configured keys (FR-009), return actionable error message
 
 **Checkpoint**: Workflows consume BYOK keys. Backward compatibility preserved for ai-board self-management.
 
