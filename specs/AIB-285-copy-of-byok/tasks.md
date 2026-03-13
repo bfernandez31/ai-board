@@ -125,9 +125,9 @@
 
 **Purpose**: Security hardening and final validation
 
-- [ ] T026 Audit all code paths to ensure API keys never appear in logs, API responses, or client-side state (FR-010, FR-011, SC-005)
-- [ ] T027 [P] Run `quickstart.md` validation — verify all implementation steps match the quickstart guide
-- [ ] T028 Run `bun run type-check` and `bun run lint` and fix all errors
+- [x] T026 Audit all code paths to ensure API keys never appear in logs, API responses, or client-side state (FR-010, FR-011, SC-005)
+- [x] T027 [P] Run `quickstart.md` validation — verify all implementation steps match the quickstart guide
+- [x] T028 Run `bun run type-check` and `bun run lint` and fix all errors
 
 ---
 
