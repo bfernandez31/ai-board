@@ -18,8 +18,8 @@
 
 **Purpose**: Add new types and utility functions that all user stories depend on
 
-- [ ] T001 Add `StatusFilter` type, `AnalyticsFilters` interface, `ticketsClosed` to `OverviewMetrics`, and `availableAgents` to `AnalyticsData` in `lib/analytics/types.ts`
-- [ ] T002 Add `getTimeRangeLabel(range: TimeRange): string` and `getStagesFromStatus(status: StatusFilter): Stage[]` utilities in `lib/analytics/aggregations.ts`
+- [x] T001 Add `StatusFilter` type, `AnalyticsFilters` interface, `ticketsClosed` to `OverviewMetrics`, and `availableAgents` to `AnalyticsData` in `lib/analytics/types.ts`
+- [x] T002 Add `getTimeRangeLabel(range: TimeRange): string` and `getStagesFromStatus(status: StatusFilter): Stage[]` utilities in `lib/analytics/aggregations.ts`
 
 ---
 
@@ -29,16 +29,16 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Update `getAnalyticsData()` signature to accept `status: StatusFilter` and `agent: string | null` params, and add `getAvailableAgents()` query (SELECT DISTINCT model) in `lib/analytics/queries.ts`
-- [ ] T004 Update `getOverviewMetrics()` to: (a) replace hardcoded `monthStart` with `rangeStart` for ticketsShipped count, (b) add `ticketsClosed` count query, (c) apply `stages` and `agent` filters to job-level queries in `lib/analytics/queries.ts`
-- [ ] T005 [P] Update `getCostOverTime()` to apply `{ ticket: { stage: { in: stages } } }` and `{ model: agent }` filters in `lib/analytics/queries.ts`
-- [ ] T006 [P] Update `getCostByStage()` to apply stage and agent filters in `lib/analytics/queries.ts`
-- [ ] T007 [P] Update `getTokenUsage()` (which also feeds `getCacheEfficiency`) to apply stage and agent filters in `lib/analytics/queries.ts`
-- [ ] T008 [P] Update `getTopTools()` to apply stage and agent filters in `lib/analytics/queries.ts`
-- [ ] T009 [P] Update `getVelocityData()` to use `stages` param instead of hardcoded `'SHIP'` and apply time range filter in `lib/analytics/queries.ts`
-- [ ] T010 [P] Update `getWorkflowDistribution()` to add stage filter in `lib/analytics/queries.ts`
-- [ ] T011 Add Zod validation for `status` and `agent` query params and pass validated values to `getAnalyticsData()` in `app/api/projects/[projectId]/analytics/route.ts`
-- [ ] T012 Update `queryKeys.analytics.data()` to include `status` and `agent` parameters in `app/lib/query-keys.ts`
+- [x] T003 Update `getAnalyticsData()` signature to accept `status: StatusFilter` and `agent: string | null` params, and add `getAvailableAgents()` query (SELECT DISTINCT model) in `lib/analytics/queries.ts`
+- [x] T004 Update `getOverviewMetrics()` to: (a) replace hardcoded `monthStart` with `rangeStart` for ticketsShipped count, (b) add `ticketsClosed` count query, (c) apply `stages` and `agent` filters to job-level queries in `lib/analytics/queries.ts`
+- [x] T005 [P] Update `getCostOverTime()` to apply `{ ticket: { stage: { in: stages } } }` and `{ model: agent }` filters in `lib/analytics/queries.ts`
+- [x] T006 [P] Update `getCostByStage()` to apply stage and agent filters in `lib/analytics/queries.ts`
+- [x] T007 [P] Update `getTokenUsage()` (which also feeds `getCacheEfficiency`) to apply stage and agent filters in `lib/analytics/queries.ts`
+- [x] T008 [P] Update `getTopTools()` to apply stage and agent filters in `lib/analytics/queries.ts`
+- [x] T009 [P] Update `getVelocityData()` to use `stages` param instead of hardcoded `'SHIP'` and apply time range filter in `lib/analytics/queries.ts`
+- [x] T010 [P] Update `getWorkflowDistribution()` to add stage filter in `lib/analytics/queries.ts`
+- [x] T011 Add Zod validation for `status` and `agent` query params and pass validated values to `getAnalyticsData()` in `app/api/projects/[projectId]/analytics/route.ts`
+- [x] T012 Update `queryKeys.analytics.data()` to include `status` and `agent` parameters in `app/lib/query-keys.ts`
 
 **Checkpoint**: Backend fully supports all three filters (range, status, agent). All existing behavior preserved with defaults (status=shipped, agent=null).
 

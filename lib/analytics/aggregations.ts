@@ -5,7 +5,7 @@
  * These functions are designed to be testable and reusable.
  */
 
-import type { StageKey, ToolUsage } from './types';
+import type { StageKey, StatusFilter, TimeRange, ToolUsage } from './types';
 
 /**
  * T005: Command-to-stage mapping
@@ -31,6 +31,36 @@ export const COMMAND_TO_STAGE: Record<string, StageKey> = {
  */
 export function getStageFromCommand(command: string): StageKey | null {
   return COMMAND_TO_STAGE[command] ?? null;
+}
+
+/**
+ * Get human-readable label for a time range
+ */
+export function getTimeRangeLabel(range: TimeRange): string {
+  switch (range) {
+    case '7d':
+      return 'last 7 days';
+    case '30d':
+      return 'last 30 days';
+    case '90d':
+      return 'last 90 days';
+    case 'all':
+      return 'all time';
+  }
+}
+
+/**
+ * Map status filter value to Prisma stage array
+ */
+export function getStagesFromStatus(status: StatusFilter): ('SHIP' | 'CLOSED')[] {
+  switch (status) {
+    case 'shipped':
+      return ['SHIP'];
+    case 'closed':
+      return ['CLOSED'];
+    case 'all':
+      return ['SHIP', 'CLOSED'];
+  }
 }
 
 /**

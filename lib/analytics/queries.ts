@@ -13,6 +13,7 @@ import type {
   OverviewMetrics,
   StageCost,
   StageKey,
+  StatusFilter,
   TimeRange,
   TokenBreakdown,
   ToolUsage,
@@ -28,6 +29,7 @@ import {
   getISOWeek,
   getPreviousPeriodStart,
   getStageFromCommand,
+  getStagesFromStatus,
   hasAnalyticsData,
 } from './aggregations';
 
@@ -41,10 +43,15 @@ import {
 async function getOverviewMetrics(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
 ): Promise<OverviewMetrics> {
   const rangeStart = getDateRangeStart(range, now);
   const prevRangeStart = getPreviousPeriodStart(range, now);
+
+  const stageFilter = { ticket: { stage: { in: stages } } };
+  const agentFilter = agent ? { model: agent } : {};
 
   // Current period query
   const currentJobs = await prisma.job.findMany({
@@ -52,6 +59,8 @@ async function getOverviewMetrics(
       projectId,
       status: { in: ['COMPLETED', 'FAILED'] },
       ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ...stageFilter,
+      ...agentFilter,
     },
     select: {
       status: true,
@@ -70,6 +79,8 @@ async function getOverviewMetrics(
             gte: prevRangeStart,
             lt: rangeStart ?? now,
           },
+          ...stageFilter,
+          ...agentFilter,
         },
         select: {
           costUsd: true,
@@ -90,13 +101,21 @@ async function getOverviewMetrics(
         )
       : 0;
 
-  // Tickets shipped this month
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  // Tickets shipped in selected time range (fixed: was hardcoded to current month)
   const ticketsShipped = await prisma.ticket.count({
     where: {
       projectId,
       stage: 'SHIP',
-      updatedAt: { gte: monthStart },
+      ...(rangeStart && { updatedAt: { gte: rangeStart } }),
+    },
+  });
+
+  // Tickets closed in selected time range
+  const ticketsClosed = await prisma.ticket.count({
+    where: {
+      projectId,
+      stage: 'CLOSED',
+      ...(rangeStart && { updatedAt: { gte: rangeStart } }),
     },
   });
 
@@ -106,6 +125,7 @@ async function getOverviewMetrics(
     successRate: Math.round(successRate * 10) / 10,
     avgDuration,
     ticketsShipped,
+    ticketsClosed,
   };
 }
 
@@ -115,7 +135,9 @@ async function getOverviewMetrics(
 async function getCostOverTime(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
 ): Promise<CostDataPoint[]> {
   const rangeStart = getDateRangeStart(range, now);
   const granularity = getGranularity(range);
@@ -126,6 +148,8 @@ async function getCostOverTime(
       status: 'COMPLETED',
       costUsd: { not: null },
       ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ticket: { stage: { in: stages } },
+      ...(agent && { model: agent }),
     },
     select: {
       completedAt: true,
@@ -156,7 +180,9 @@ async function getCostOverTime(
 async function getCostByStage(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
 ): Promise<StageCost[]> {
   const rangeStart = getDateRangeStart(range, now);
 
@@ -166,6 +192,8 @@ async function getCostByStage(
       status: 'COMPLETED',
       costUsd: { not: null },
       ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ticket: { stage: { in: stages } },
+      ...(agent && { model: agent }),
     },
     select: {
       command: true,
@@ -183,9 +211,9 @@ async function getCostByStage(
   }
 
   const totalCost = Array.from(stageCosts.values()).reduce((sum, cost) => sum + cost, 0);
-  const stages: StageKey[] = ['BUILD', 'SPECIFY', 'PLAN', 'VERIFY'];
+  const stageKeys: StageKey[] = ['BUILD', 'SPECIFY', 'PLAN', 'VERIFY'];
 
-  return stages
+  return stageKeys
     .map((stage) => {
       const cost = stageCosts.get(stage) ?? 0;
       return {
@@ -204,7 +232,9 @@ async function getCostByStage(
 async function getTokenUsage(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
 ): Promise<TokenBreakdown> {
   const rangeStart = getDateRangeStart(range, now);
 
@@ -213,6 +243,8 @@ async function getTokenUsage(
       projectId,
       status: 'COMPLETED',
       ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ticket: { stage: { in: stages } },
+      ...(agent && { model: agent }),
     },
     _sum: {
       inputTokens: true,
@@ -235,9 +267,11 @@ async function getTokenUsage(
 async function getCacheEfficiency(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
 ): Promise<CacheMetrics> {
-  const tokenUsage = await getTokenUsage(projectId, range, now);
+  const tokenUsage = await getTokenUsage(projectId, range, now, stages, agent);
 
   const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
   const savingsPercentage =
@@ -258,7 +292,13 @@ async function getCacheEfficiency(
 /**
  * Get top tools usage
  */
-async function getTopTools(projectId: number, range: TimeRange, now: Date): Promise<ToolUsage[]> {
+async function getTopTools(
+  projectId: number,
+  range: TimeRange,
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[],
+  agent: string | null
+): Promise<ToolUsage[]> {
   const rangeStart = getDateRangeStart(range, now);
 
   const jobs = await prisma.job.findMany({
@@ -266,6 +306,8 @@ async function getTopTools(projectId: number, range: TimeRange, now: Date): Prom
       projectId,
       status: 'COMPLETED',
       ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ticket: { stage: { in: stages } },
+      ...(agent && { model: agent }),
     },
     select: {
       toolsUsed: true,
@@ -281,7 +323,8 @@ async function getTopTools(projectId: number, range: TimeRange, now: Date): Prom
 async function getWorkflowDistribution(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[]
 ): Promise<WorkflowBreakdown[]> {
   const rangeStart = getDateRangeStart(range, now);
 
@@ -289,6 +332,7 @@ async function getWorkflowDistribution(
     by: ['workflowType'],
     where: {
       projectId,
+      stage: { in: stages },
       ...(rangeStart && { updatedAt: { gte: rangeStart } }),
     },
     _count: true,
@@ -311,14 +355,15 @@ async function getWorkflowDistribution(
 async function getVelocityData(
   projectId: number,
   range: TimeRange,
-  now: Date
+  now: Date,
+  stages: ('SHIP' | 'CLOSED')[]
 ): Promise<WeeklyVelocity[]> {
   const rangeStart = getDateRangeStart(range, now);
 
   const tickets = await prisma.ticket.findMany({
     where: {
       projectId,
-      stage: 'SHIP',
+      stage: { in: stages },
       ...(rangeStart && { updatedAt: { gte: rangeStart } }),
     },
     select: {
@@ -345,12 +390,32 @@ async function getVelocityData(
  * T011: Main orchestration function
  * Fetches all analytics data for a project.
  */
+/**
+ * Get distinct agent/model values for a project
+ */
+async function getAvailableAgents(projectId: number): Promise<string[]> {
+  const results = await prisma.job.findMany({
+    where: {
+      projectId,
+      model: { not: null },
+    },
+    select: { model: true },
+    distinct: ['model'],
+    orderBy: { model: 'asc' },
+  });
+
+  return results.map((r) => r.model).filter((m): m is string => m !== null);
+}
+
 export async function getAnalyticsData(
   projectId: number,
-  range: TimeRange = '30d'
+  range: TimeRange = '30d',
+  status: StatusFilter = 'shipped',
+  agent: string | null = null
 ): Promise<AnalyticsData> {
   const now = new Date();
   const rangeStart = getDateRangeStart(range, now);
+  const stages = getStagesFromStatus(status);
 
   // Get all jobs for hasData check
   const allJobs = await prisma.job.findMany({
@@ -378,15 +443,17 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    availableAgents,
   ] = await Promise.all([
-    getOverviewMetrics(projectId, range, now),
-    getCostOverTime(projectId, range, now),
-    getCostByStage(projectId, range, now),
-    getTokenUsage(projectId, range, now),
-    getCacheEfficiency(projectId, range, now),
-    getTopTools(projectId, range, now),
-    getWorkflowDistribution(projectId, range, now),
-    getVelocityData(projectId, range, now),
+    getOverviewMetrics(projectId, range, now, stages, agent),
+    getCostOverTime(projectId, range, now, stages, agent),
+    getCostByStage(projectId, range, now, stages, agent),
+    getTokenUsage(projectId, range, now, stages, agent),
+    getCacheEfficiency(projectId, range, now, stages, agent),
+    getTopTools(projectId, range, now, stages, agent),
+    getWorkflowDistribution(projectId, range, now, stages),
+    getVelocityData(projectId, range, now, stages),
+    getAvailableAgents(projectId),
   ]);
 
   return {
@@ -398,6 +465,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    availableAgents,
     timeRange: range,
     generatedAt: now.toISOString(),
     jobCount,

@@ -14,8 +14,10 @@ export interface OverviewMetrics {
   successRate: number;
   /** Average job duration in milliseconds */
   avgDuration: number;
-  /** Number of tickets shipped in current month */
+  /** Number of tickets shipped in selected time range */
   ticketsShipped: number;
+  /** Number of tickets closed in selected time range */
+  ticketsClosed: number;
 }
 
 export interface CostDataPoint {
@@ -79,6 +81,14 @@ export interface WeeklyVelocity {
 
 export type TimeRange = '7d' | '30d' | '90d' | 'all';
 
+export type StatusFilter = 'shipped' | 'closed' | 'all';
+
+export interface AnalyticsFilters {
+  range: TimeRange;
+  status: StatusFilter;
+  agent: string | null;
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -88,6 +98,8 @@ export interface AnalyticsData {
   topTools: ToolUsage[];
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
+  /** Distinct model values available for agent filter */
+  availableAgents: string[];
   timeRange: TimeRange;
   /** ISO timestamp of when data was generated */
   generatedAt: string;
