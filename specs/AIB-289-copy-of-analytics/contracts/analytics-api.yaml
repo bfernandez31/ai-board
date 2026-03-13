@@ -1,0 +1,339 @@
+openapi: 3.0.3
+info:
+  title: Project Analytics API
+  version: 1.1.0
+  description: |
+    Extended analytics contract for AIB-289. Adds ticket outcome and agent filters,
+    returns project-scoped agent options, and exposes period-accurate shipped/closed
+    overview metrics from the existing analytics endpoint.
+
+servers:
+  - url: /api
+    description: Next.js API routes
+
+paths:
+  /projects/{projectId}/analytics:
+    get:
+      summary: Fetch filtered analytics for a project dashboard
+      operationId: getProjectAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+        - name: range
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TimeRange'
+          description: Reporting window for analytics
+        - name: outcome
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TicketOutcomeFilter'
+          description: Terminal ticket outcome set used to scope analytics
+        - name: agent
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AgentFilter'
+          description: Effective AI agent filter (`all` or a project agent with recorded job history)
+      responses:
+        '200':
+          description: Filtered analytics payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+        '400':
+          description: Invalid filter parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Numeric project identifier
+
+  schemas:
+    TimeRange:
+      type: string
+      enum: [7d, 30d, 90d, all]
+      default: 30d
+
+    TicketOutcomeFilter:
+      type: string
+      enum: [shipped, closed, all-completed]
+      default: shipped
+
+    AgentFilter:
+      type: string
+      enum: [all, CLAUDE, CODEX]
+      default: all
+
+    CompletionMetric:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        label:
+          type: string
+          example: Last 30 days
+      required:
+        - count
+        - label
+
+    OverviewMetrics:
+      type: object
+      properties:
+        totalCost:
+          type: number
+          format: float
+        costTrend:
+          type: number
+          format: float
+        successRate:
+          type: number
+          format: float
+        avgDuration:
+          type: integer
+        ticketsShipped:
+          $ref: '#/components/schemas/CompletionMetric'
+        ticketsClosed:
+          $ref: '#/components/schemas/CompletionMetric'
+      required:
+        - totalCost
+        - costTrend
+        - successRate
+        - avgDuration
+        - ticketsShipped
+        - ticketsClosed
+
+    CostDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        cost:
+          type: number
+          format: float
+      required:
+        - date
+        - cost
+
+    StageCost:
+      type: object
+      properties:
+        stage:
+          type: string
+          enum: [SPECIFY, PLAN, BUILD, VERIFY]
+        cost:
+          type: number
+          format: float
+        percentage:
+          type: number
+          format: float
+      required:
+        - stage
+        - cost
+        - percentage
+
+    TokenBreakdown:
+      type: object
+      properties:
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        cacheTokens:
+          type: integer
+      required:
+        - inputTokens
+        - outputTokens
+        - cacheTokens
+
+    CacheMetrics:
+      type: object
+      properties:
+        totalTokens:
+          type: integer
+        cacheTokens:
+          type: integer
+        savingsPercentage:
+          type: number
+          format: float
+        estimatedSavingsUsd:
+          type: number
+          format: float
+      required:
+        - totalTokens
+        - cacheTokens
+        - savingsPercentage
+        - estimatedSavingsUsd
+
+    ToolUsage:
+      type: object
+      properties:
+        tool:
+          type: string
+        count:
+          type: integer
+      required:
+        - tool
+        - count
+
+    WorkflowBreakdown:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        count:
+          type: integer
+        percentage:
+          type: number
+          format: float
+      required:
+        - type
+        - count
+        - percentage
+
+    WeeklyVelocity:
+      type: object
+      properties:
+        week:
+          type: string
+          example: 2026-W10
+        ticketsShipped:
+          type: integer
+      required:
+        - week
+        - ticketsShipped
+
+    AnalyticsFilters:
+      type: object
+      properties:
+        range:
+          $ref: '#/components/schemas/TimeRange'
+        outcome:
+          $ref: '#/components/schemas/TicketOutcomeFilter'
+        agent:
+          $ref: '#/components/schemas/AgentFilter'
+      required:
+        - range
+        - outcome
+        - agent
+
+    AgentOption:
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/AgentFilter'
+        label:
+          type: string
+        jobCount:
+          type: integer
+          minimum: 0
+        isDefault:
+          type: boolean
+      required:
+        - value
+        - label
+        - jobCount
+        - isDefault
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        overview:
+          $ref: '#/components/schemas/OverviewMetrics'
+        costOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostDataPoint'
+        costByStage:
+          type: array
+          items:
+            $ref: '#/components/schemas/StageCost'
+        tokenUsage:
+          $ref: '#/components/schemas/TokenBreakdown'
+        cacheEfficiency:
+          $ref: '#/components/schemas/CacheMetrics'
+        topTools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolUsage'
+        workflowDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowBreakdown'
+        velocity:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyVelocity'
+        filters:
+          $ref: '#/components/schemas/AnalyticsFilters'
+        availableAgents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentOption'
+        generatedAt:
+          type: string
+          format: date-time
+        jobCount:
+          type: integer
+          minimum: 0
+        hasData:
+          type: boolean
+      required:
+        - overview
+        - costOverTime
+        - costByStage
+        - tokenUsage
+        - cacheEfficiency
+        - topTools
+        - workflowDistribution
+        - velocity
+        - filters
+        - availableAgents
+        - generatedAt
+        - jobCount
+        - hasData
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          nullable: true
+      required:
+        - error
