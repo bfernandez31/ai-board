@@ -190,8 +190,10 @@ components:
         - hasData
       properties:
         filters:
+          description: Normalized filters actually applied by the server.
           $ref: '#/components/schemas/AnalyticsFilterState'
         availableAgents:
+          description: Stable project-wide agent options that remain available across date-range changes.
           type: array
           items:
             $ref: '#/components/schemas/AgentOption'
@@ -296,6 +298,7 @@ components:
           type: integer
           minimum: 0
         ticketPeriodLabel:
+          description: User-facing label that matches the active time range for both ticket summary cards.
           type: string
 
     CostDataPoint:
@@ -409,4 +412,5 @@ components:
         error:
           type: string
         code:
+          description: Machine-readable error code for invalid filter requests.
           type: string

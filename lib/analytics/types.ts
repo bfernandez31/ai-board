@@ -1,21 +1,97 @@
 /**
  * Analytics Types
  *
- * TypeScript interfaces for analytics dashboard data structures.
- * These types match the API contract defined in contracts/analytics-api.yaml.
+ * Shared filter and payload definitions for the analytics dashboard.
  */
 
+export const TIME_RANGE_VALUES = ['7d', '30d', '90d', 'all'] as const;
+export const STATUS_SCOPE_VALUES = ['shipped', 'closed', 'shipped+closed'] as const;
+export const ANALYTICS_AGENT_VALUES = ['CLAUDE', 'CODEX'] as const;
+
+export type TimeRange = (typeof TIME_RANGE_VALUES)[number];
+export type StatusScope = (typeof STATUS_SCOPE_VALUES)[number];
+export type AnalyticsAgent = (typeof ANALYTICS_AGENT_VALUES)[number];
+export type AgentScope = 'all' | AnalyticsAgent;
+
+export interface AnalyticsFilterState {
+  timeRange: TimeRange;
+  statusScope: StatusScope;
+  agentScope: AgentScope;
+  periodLabel: string;
+}
+
+export interface AnalyticsQueryState {
+  range: TimeRange;
+  statusScope: StatusScope;
+  agentScope: AgentScope;
+}
+
+export interface AgentOption {
+  value: AnalyticsAgent;
+  label: string;
+  jobCount: number;
+}
+
+export function getPeriodLabel(range: TimeRange): string {
+  switch (range) {
+    case '7d':
+      return 'Last 7 days';
+    case '30d':
+      return 'Last 30 days';
+    case '90d':
+      return 'Last 90 days';
+    case 'all':
+      return 'All time';
+  }
+}
+
+export function getStatusScopeLabel(scope: StatusScope): string {
+  switch (scope) {
+    case 'shipped':
+      return 'Shipped only';
+    case 'closed':
+      return 'Closed only';
+    case 'shipped+closed':
+      return 'Shipped + Closed';
+  }
+}
+
+export function getAgentLabel(agent: AnalyticsAgent): string {
+  switch (agent) {
+    case 'CLAUDE':
+      return 'Claude';
+    case 'CODEX':
+      return 'Codex';
+  }
+}
+
+export function normalizeAnalyticsQueryState(
+  input?: Partial<Record<'range' | 'statusScope' | 'agentScope', string | null>>
+): AnalyticsQueryState {
+  const range = TIME_RANGE_VALUES.includes((input?.range ?? '') as TimeRange)
+    ? ((input?.range as TimeRange) ?? '30d')
+    : '30d';
+  const statusScope = STATUS_SCOPE_VALUES.includes((input?.statusScope ?? '') as StatusScope)
+    ? ((input?.statusScope as StatusScope) ?? 'shipped')
+    : 'shipped';
+  const agentScope =
+    input?.agentScope === 'CLAUDE' || input?.agentScope === 'CODEX' ? input.agentScope : 'all';
+
+  return {
+    range,
+    statusScope,
+    agentScope,
+  };
+}
+
 export interface OverviewMetrics {
-  /** Total cost in USD for the period */
   totalCost: number;
-  /** Percentage change compared to previous equivalent period */
   costTrend: number;
-  /** Percentage of successful jobs (COMPLETED / (COMPLETED + FAILED)) */
   successRate: number;
-  /** Average job duration in milliseconds */
   avgDuration: number;
-  /** Number of tickets shipped in current month */
   ticketsShipped: number;
+  ticketsClosed: number;
+  ticketPeriodLabel: string;
 }
 
 export interface CostDataPoint {
@@ -72,14 +148,13 @@ export interface WorkflowBreakdown {
 }
 
 export interface WeeklyVelocity {
-  /** ISO week identifier (YYYY-Www) */
   week: string;
   ticketsShipped: number;
 }
 
-export type TimeRange = '7d' | '30d' | '90d' | 'all';
-
 export interface AnalyticsData {
+  filters: AnalyticsFilterState;
+  availableAgents: AgentOption[];
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
   costByStage: StageCost[];
@@ -91,8 +166,6 @@ export interface AnalyticsData {
   timeRange: TimeRange;
   /** ISO timestamp of when data was generated */
   generatedAt: string;
-  /** Total jobs in range */
   jobCount: number;
-  /** False if no completed jobs with telemetry data */
   hasData: boolean;
 }

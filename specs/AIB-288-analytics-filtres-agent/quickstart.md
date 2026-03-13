@@ -12,23 +12,27 @@
 ## Run the app
 
 ```bash
-bun run dev
+TEST_MODE=true bun run dev
 ```
 
 Open `/projects/{projectId}/analytics`.
 
 ## Verify the feature manually
 
-1. Load analytics with no extra query params.
+1. Load analytics with no extra query params:
+   `/projects/{projectId}/analytics`
 2. Confirm the default view shows:
    - status scope `shipped`
    - agent scope `all`
-   - shipped and closed summary cards with the current period label
-3. Change status to `closed` and confirm all charts and summaries refresh together.
-4. Change status to `shipped+closed` and confirm combined totals are reflected everywhere.
-5. Change agent to `CLAUDE` or `CODEX` and confirm all metrics scope to that agent only.
+   - shipped and closed summary cards using the same period label
+3. Change status to `closed` and confirm all charts and summaries refresh together:
+   `/projects/{projectId}/analytics?range=30d&statusScope=closed&agentScope=all`
+4. Change status to `shipped+closed` and confirm combined totals are reflected everywhere:
+   `/projects/{projectId}/analytics?range=30d&statusScope=shipped+closed&agentScope=all`
+5. Change agent to `CLAUDE` or `CODEX` and confirm all metrics scope to that agent only while the selector still lists both agents.
 6. Switch between `7d`, `30d`, `90d`, and `all` and confirm both summary-card labels and counts update for each period.
-7. Select an agent with no activity in the active period and confirm zero states appear without removing the agent from the selector.
+7. Select an agent with no activity in the active period and confirm zero states appear without removing the agent from the selector:
+   `/projects/{projectId}/analytics?range=7d&statusScope=shipped&agentScope=CODEX`
 
 ## Suggested test commands
 

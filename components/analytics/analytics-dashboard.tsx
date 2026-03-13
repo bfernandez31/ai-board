@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { queryKeys } from '@/app/lib/query-keys';
-import type { AnalyticsData, TimeRange } from '@/lib/analytics/types';
+import {
+  getStatusScopeLabel,
+  normalizeAnalyticsQueryState,
+  type AnalyticsData,
+  type AnalyticsQueryState,
+  type TimeRange,
+} from '@/lib/analytics/types';
 import { TimeRangeSelector } from './time-range-selector';
 import { OverviewCards } from './overview-cards';
 import { EmptyState } from './empty-state';
@@ -17,14 +23,29 @@ import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
 import { useSubscription } from '@/hooks/use-subscription';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AnalyticsDashboardProps {
   projectId: number;
   initialData: AnalyticsData;
 }
 
-async function fetchAnalytics(projectId: number, range: TimeRange): Promise<AnalyticsData> {
-  const response = await fetch(`/api/projects/${projectId}/analytics?range=${range}`);
+async function fetchAnalytics(
+  projectId: number,
+  filters: AnalyticsQueryState
+): Promise<AnalyticsData> {
+  const params = new URLSearchParams({
+    range: filters.range,
+    statusScope: filters.statusScope,
+    agentScope: filters.agentScope,
+  });
+  const response = await fetch(`/api/projects/${projectId}/analytics?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch analytics');
   }
@@ -34,13 +55,23 @@ async function fetchAnalytics(projectId: number, range: TimeRange): Promise<Anal
 export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRange = (searchParams.get('range') as TimeRange) || initialData.timeRange;
-  const [range, setRange] = useState<TimeRange>(initialRange);
+  const [filters, setFilters] = useState<AnalyticsQueryState>(
+    normalizeAnalyticsQueryState({
+      range: searchParams.get('range') ?? initialData.filters.timeRange,
+      statusScope: searchParams.get('statusScope') ?? initialData.filters.statusScope,
+      agentScope: searchParams.get('agentScope') ?? initialData.filters.agentScope,
+    })
+  );
 
   const { data } = useQuery({
-    queryKey: queryKeys.analytics.data(projectId, range),
-    queryFn: () => fetchAnalytics(projectId, range),
-    initialData: range === initialData.timeRange ? initialData : undefined,
+    queryKey: queryKeys.analytics.data(projectId, filters),
+    queryFn: () => fetchAnalytics(projectId, filters),
+    initialData:
+      filters.range === initialData.filters.timeRange &&
+      filters.statusScope === initialData.filters.statusScope &&
+      filters.agentScope === initialData.filters.agentScope
+        ? initialData
+        : undefined,
     refetchInterval: 15000, // 15-second polling
     staleTime: 10000,
   });
@@ -48,31 +79,94 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
   const { data: subscription } = useSubscription();
   const analytics = data ?? initialData;
 
-  const handleRangeChange = (newRange: TimeRange) => {
-    setRange(newRange);
+  const updateFilters = (nextFilters: AnalyticsQueryState) => {
+    setFilters(nextFilters);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('range', newRange);
+    params.set('range', nextFilters.range);
+    params.set('statusScope', nextFilters.statusScope);
+    params.set('agentScope', nextFilters.agentScope);
     router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleRangeChange = (range: TimeRange) => {
+    updateFilters({ ...filters, range });
+  };
+
+  const handleStatusScopeChange = (statusScope: AnalyticsQueryState['statusScope']) => {
+    updateFilters({ ...filters, statusScope });
+  };
+
+  const handleAgentScopeChange = (agentScope: AnalyticsQueryState['agentScope']) => {
+    updateFilters({ ...filters, agentScope });
   };
 
   if (!analytics.hasData) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <TimeRangeSelector value={range} onChange={handleRangeChange} />
+        <div className="flex flex-col gap-3 md:flex-row md:justify-end">
+          <TimeRangeSelector value={filters.range} onChange={handleRangeChange} />
+          <Select value={filters.statusScope} onValueChange={handleStatusScopeChange}>
+            <SelectTrigger className="w-full md:w-[180px]" aria-label="Status scope">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['shipped', 'closed', 'shipped+closed'] as const).map((scope) => (
+                <SelectItem key={scope} value={scope}>
+                  {getStatusScopeLabel(scope)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filters.agentScope} onValueChange={handleAgentScopeChange}>
+            <SelectTrigger className="w-full md:w-[180px]" aria-label="Agent scope">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All agents</SelectItem>
+              {analytics.availableAgents.map((agent) => (
+                <SelectItem key={agent.value} value={agent.value}>
+                  {agent.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <EmptyState />
+        <EmptyState filters={analytics.filters} />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <TimeRangeSelector value={range} onChange={handleRangeChange} />
+      <div className="flex flex-col gap-3 md:flex-row md:justify-end">
+        <TimeRangeSelector value={filters.range} onChange={handleRangeChange} />
+        <Select value={filters.statusScope} onValueChange={handleStatusScopeChange}>
+          <SelectTrigger className="w-full md:w-[180px]" aria-label="Status scope">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(['shipped', 'closed', 'shipped+closed'] as const).map((scope) => (
+              <SelectItem key={scope} value={scope}>
+                {getStatusScopeLabel(scope)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filters.agentScope} onValueChange={handleAgentScopeChange}>
+          <SelectTrigger className="w-full md:w-[180px]" aria-label="Agent scope">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All agents</SelectItem>
+            {analytics.availableAgents.map((agent) => (
+              <SelectItem key={agent.value} value={agent.value}>
+                {agent.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Overview Cards */}
       <OverviewCards metrics={analytics.overview} />
 
       {/* Charts Grid - Responsive Bento Layout */}

@@ -1,7 +1,15 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, Ship } from 'lucide-react';
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  CheckCircle,
+  Ship,
+  CircleCheckBig,
+} from 'lucide-react';
 import type { OverviewMetrics } from '@/lib/analytics/types';
 import { formatCost, formatDuration, formatPercentage } from '@/lib/analytics/aggregations';
 import { cn } from '@/lib/utils';
@@ -19,8 +27,7 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
     );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {/* Total Cost */}
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Total Cost</CardTitle>
@@ -41,7 +48,6 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      {/* Success Rate */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Success Rate</CardTitle>
@@ -53,7 +59,6 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      {/* Avg Duration */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Avg Duration</CardTitle>
@@ -65,7 +70,6 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardContent>
       </Card>
 
-      {/* Tickets Shipped */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-foreground">Tickets Shipped</CardTitle>
@@ -73,7 +77,18 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{metrics.ticketsShipped}</div>
-          <p className="text-xs text-muted-foreground">this month</p>
+          <p className="text-xs text-muted-foreground">{metrics.ticketPeriodLabel}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-foreground">Tickets Closed</CardTitle>
+          <CircleCheckBig className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{metrics.ticketsClosed}</div>
+          <p className="text-xs text-muted-foreground">{metrics.ticketPeriodLabel}</p>
         </CardContent>
       </Card>
     </div>

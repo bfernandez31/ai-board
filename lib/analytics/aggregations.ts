@@ -5,7 +5,7 @@
  * These functions are designed to be testable and reusable.
  */
 
-import type { StageKey, ToolUsage } from './types';
+import type { StageKey, StatusScope, ToolUsage } from './types';
 
 /**
  * T005: Command-to-stage mapping
@@ -190,4 +190,15 @@ export function formatDuration(ms: number): string {
 export function calculateTrend(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
+}
+
+export function getIncludedStages(statusScope: StatusScope): ('SHIP' | 'CLOSED')[] {
+  switch (statusScope) {
+    case 'shipped':
+      return ['SHIP'];
+    case 'closed':
+      return ['CLOSED'];
+    case 'shipped+closed':
+      return ['SHIP', 'CLOSED'];
+  }
 }

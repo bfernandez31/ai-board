@@ -123,10 +123,40 @@ describe('Query Keys Factory', () => {
       expect(queryKeys.analytics.all(10)).toEqual(['analytics', 10]);
     });
 
-    it('should return correct key for analytics data with range', () => {
-      expect(queryKeys.analytics.data(1, '7d')).toEqual(['analytics', 1, '7d']);
-      expect(queryKeys.analytics.data(2, '30d')).toEqual(['analytics', 2, '30d']);
-      expect(queryKeys.analytics.data(3, '90d')).toEqual(['analytics', 3, '90d']);
+    it('should return correct key for analytics data with full filter state', () => {
+      expect(
+        queryKeys.analytics.data(1, {
+          range: '7d',
+          statusScope: 'shipped',
+          agentScope: 'all',
+        })
+      ).toEqual([
+        'analytics',
+        1,
+        { range: '7d', statusScope: 'shipped', agentScope: 'all' },
+      ]);
+      expect(
+        queryKeys.analytics.data(2, {
+          range: '30d',
+          statusScope: 'closed',
+          agentScope: 'CLAUDE',
+        })
+      ).toEqual([
+        'analytics',
+        2,
+        { range: '30d', statusScope: 'closed', agentScope: 'CLAUDE' },
+      ]);
+      expect(
+        queryKeys.analytics.data(3, {
+          range: '90d',
+          statusScope: 'shipped+closed',
+          agentScope: 'CODEX',
+        })
+      ).toEqual([
+        'analytics',
+        3,
+        { range: '90d', statusScope: 'shipped+closed', agentScope: 'CODEX' },
+      ]);
     });
   });
 

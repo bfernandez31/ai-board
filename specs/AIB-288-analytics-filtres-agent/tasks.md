@@ -16,9 +16,9 @@
 
 **Purpose**: Prepare shared test harnesses and UI test entry points used across the analytics filter work
 
-- [ ] T001 Create analytics API integration test scaffold in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts
-- [ ] T002 [P] Create analytics contract test scaffold for filter query permutations in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics-contract.test.ts
-- [ ] T003 [P] Create analytics dashboard component test scaffold in /home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx
+- [x] T001 Create analytics API integration test scaffold in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts ✅ DONE
+- [x] T002 [P] Create analytics contract test scaffold for filter query permutations in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics-contract.test.ts ✅ DONE
+- [x] T003 [P] Create analytics dashboard component test scaffold in /home/runner/work/ai-board/ai-board/target/tests/unit/components/analytics-dashboard.test.tsx ✅ DONE
 
 ---
 
@@ -28,11 +28,11 @@
 
 **⚠️ CRITICAL**: Complete this phase before starting user story implementation
 
-- [ ] T004 Define shared analytics filter, agent option, and overview response types in /home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts
-- [ ] T005 [P] Extend analytics React Query cache keys for range, statusScope, and agentScope in /home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts
-- [ ] T006 [P] Add unit coverage for analytics filter normalization and period-label helpers in /home/runner/work/ai-board/ai-board/target/tests/unit/analytics-filter-state.test.ts
-- [ ] T007 Implement range, statusScope, and agentScope query parsing with Zod validation in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts
-- [ ] T008 Implement shared filter-aware analytics query primitives and available-agent lookup in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts
+- [x] T004 Define shared analytics filter, agent option, and overview response types in /home/runner/work/ai-board/ai-board/target/lib/analytics/types.ts ✅ DONE
+- [x] T005 [P] Extend analytics React Query cache keys for range, statusScope, and agentScope in /home/runner/work/ai-board/ai-board/target/app/lib/query-keys.ts ✅ DONE
+- [x] T006 [P] Add unit coverage for analytics filter normalization and period-label helpers in /home/runner/work/ai-board/ai-board/target/tests/unit/analytics-filter-state.test.ts ✅ DONE
+- [x] T007 Implement range, statusScope, and agentScope query parsing with Zod validation in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/analytics/route.ts ✅ DONE
+- [x] T008 Implement shared filter-aware analytics query primitives and available-agent lookup in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts ✅ DONE
 
 **Checkpoint**: The analytics endpoint can normalize all filters, cache entries can segment by full filter state, and story work can proceed safely
 
@@ -46,15 +46,15 @@
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T009 [P] [US1] Add contract assertions for shipped, closed, and shipped+closed query responses in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics-contract.test.ts
-- [ ] T010 [P] [US1] Add integration coverage for shipped-only defaults, status-only filtering, and zero-match states in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts
+- [x] T009 [P] [US1] Add contract assertions for shipped, closed, and shipped+closed query responses in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics-contract.test.ts ✅ DONE
+- [x] T010 [P] [US1] Add integration coverage for shipped-only defaults, status-only filtering, and zero-match states in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts ✅ DONE
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Update the analytics API contract for statusScope filters and normalized filter metadata in /home/runner/work/ai-board/ai-board/target/specs/AIB-288-analytics-filtres-agent/contracts/analytics-filters-api.yaml
-- [ ] T012 [US1] Apply status-scope inclusion rules to all analytics aggregations in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts
-- [ ] T013 [US1] Thread statusScope through the initial analytics page load in /home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx
-- [ ] T014 [US1] Add a shared status filter control and synchronized refetch flow in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx
+- [x] T011 [US1] Update the analytics API contract for statusScope filters and normalized filter metadata in /home/runner/work/ai-board/ai-board/target/specs/AIB-288-analytics-filtres-agent/contracts/analytics-filters-api.yaml ✅ DONE
+- [x] T012 [US1] Apply status-scope inclusion rules to all analytics aggregations in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts ✅ DONE
+- [x] T013 [US1] Thread statusScope through the initial analytics page load in /home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx ✅ DONE
+- [x] T014 [US1] Add a shared status filter control and synchronized refetch flow in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx ✅ DONE
 
 **Checkpoint**: User Story 1 is complete when the default shipped-only analytics view is correct and status changes refresh the entire dashboard as one filtered slice
 
@@ -68,14 +68,14 @@
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T015 [P] [US2] Add integration coverage for agentScope filtering and stable availableAgents metadata in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts
-- [ ] T016 [P] [US2] Add query-key coverage for agentScope-specific cache entries in /home/runner/work/ai-board/ai-board/target/tests/unit/query-keys.test.ts
+- [x] T015 [P] [US2] Add integration coverage for agentScope filtering and stable availableAgents metadata in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts ✅ DONE
+- [x] T016 [P] [US2] Add query-key coverage for agentScope-specific cache entries in /home/runner/work/ai-board/ai-board/target/tests/unit/query-keys.test.ts ✅ DONE
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Add effective-agent derivation and project-wide available-agent options to analytics queries in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts
-- [ ] T018 [US2] Thread agentScope through server-rendered analytics page state in /home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx
-- [ ] T019 [US2] Add an agent filter control and URL/query synchronization in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx
+- [x] T017 [US2] Add effective-agent derivation and project-wide available-agent options to analytics queries in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts ✅ DONE
+- [x] T018 [US2] Thread agentScope through server-rendered analytics page state in /home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx ✅ DONE
+- [x] T019 [US2] Add an agent filter control and URL/query synchronization in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx ✅ DONE
 
 **Checkpoint**: User Story 2 is complete when any agent selection produces a fully scoped dashboard and the selector remains stable across time-range changes
 
@@ -89,14 +89,14 @@
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T020 [P] [US3] Add integration coverage for period-aware shipped and closed summary counts across all supported ranges in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts
-- [ ] T021 [P] [US3] Add component coverage for shipped and closed summary card labels in /home/runner/work/ai-board/ai-board/target/tests/unit/components/overview-cards.test.tsx
+- [x] T020 [P] [US3] Add integration coverage for period-aware shipped and closed summary counts across all supported ranges in /home/runner/work/ai-board/ai-board/target/tests/integration/projects/analytics.test.ts ✅ DONE
+- [x] T021 [P] [US3] Add component coverage for shipped and closed summary card labels in /home/runner/work/ai-board/ai-board/target/tests/unit/components/overview-cards.test.tsx ✅ DONE
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Compute shippedCount, closedCount, and ticket period labels from the active filter state in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts
-- [ ] T023 [US3] Render period-aware shipped and closed summary cards in /home/runner/work/ai-board/ai-board/target/components/analytics/overview-cards.tsx
-- [ ] T024 [US3] Surface period-aware ticket summary data through the dashboard props and empty-state handling in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx
+- [x] T022 [US3] Compute shippedCount, closedCount, and ticket period labels from the active filter state in /home/runner/work/ai-board/ai-board/target/lib/analytics/queries.ts ✅ DONE
+- [x] T023 [US3] Render period-aware shipped and closed summary cards in /home/runner/work/ai-board/ai-board/target/components/analytics/overview-cards.tsx ✅ DONE
+- [x] T024 [US3] Surface period-aware ticket summary data through the dashboard props and empty-state handling in /home/runner/work/ai-board/ai-board/target/components/analytics/analytics-dashboard.tsx ✅ DONE
 
 **Checkpoint**: User Story 3 is complete when ticket summaries always match the active range, status scope, and agent scope with accurate labels
 
@@ -106,8 +106,8 @@
 
 **Purpose**: Finish validation, documentation, and regression protection across all stories
 
-- [ ] T025 [P] Document manual verification for status, agent, and period filters in /home/runner/work/ai-board/ai-board/target/specs/AIB-288-analytics-filtres-agent/quickstart.md
-- [ ] T026 Refine no-match filter messaging for shared analytics empty states in /home/runner/work/ai-board/ai-board/target/components/analytics/empty-state.tsx
+- [x] T025 [P] Document manual verification for status, agent, and period filters in /home/runner/work/ai-board/ai-board/target/specs/AIB-288-analytics-filtres-agent/quickstart.md ✅ DONE
+- [x] T026 Refine no-match filter messaging for shared analytics empty states in /home/runner/work/ai-board/ai-board/target/components/analytics/empty-state.tsx ✅ DONE
 
 ---
 

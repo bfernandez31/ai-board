@@ -53,7 +53,7 @@ export function VelocityChart({ data }: VelocityChartProps) {
                     <div className="rounded-lg border bg-background p-3 shadow-md">
                       <p className="font-medium">{item.week}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.ticketsShipped} tickets shipped
+                        {item.ticketsShipped} tickets
                       </p>
                     </div>
                   );

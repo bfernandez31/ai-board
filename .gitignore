@@ -78,3 +78,11 @@ AGENTS.md
 
 # local Claude Code settings and symlinks
 .claude/
+
+# editor and temp files
+.vscode/
+.idea/
+Thumbs.db
+*.tmp
+*.swp
+dist/

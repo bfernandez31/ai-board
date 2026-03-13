@@ -5,7 +5,7 @@ import { getProject } from '@/lib/db/projects';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
 import { Button } from '@/components/ui/button';
-import type { TimeRange } from '@/lib/analytics/types';
+import { normalizeAnalyticsQueryState } from '@/lib/analytics/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,10 +15,10 @@ export default async function AnalyticsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; statusScope?: string; agentScope?: string }>;
 }) {
   const { projectId: projectIdString } = await params;
-  const { range = '30d' } = await searchParams;
+  const search = await searchParams;
 
   const projectId = parseInt(projectIdString, 10);
 
@@ -36,8 +36,8 @@ export default async function AnalyticsPage({
     throw error;
   });
 
-  const validRange = ['7d', '30d', '90d', 'all'].includes(range) ? (range as TimeRange) : '30d';
-  const initialData = await getAnalyticsData(projectId, validRange);
+  const initialFilters = normalizeAnalyticsQueryState(search);
+  const initialData = await getAnalyticsData(projectId, initialFilters);
 
   return (
     <main className="container mx-auto py-10 max-w-7xl">
