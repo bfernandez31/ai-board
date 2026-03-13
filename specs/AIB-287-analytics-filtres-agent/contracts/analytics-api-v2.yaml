@@ -1,0 +1,241 @@
+openapi: 3.0.3
+info:
+  title: Analytics API v2 - Filters Extension
+  description: Extended analytics endpoint with status and agent filtering
+  version: 2.0.0
+
+paths:
+  /api/projects/{projectId}/analytics:
+    get:
+      summary: Get project analytics with filters
+      description: |
+        Returns aggregated analytics data for a project.
+        All metrics respect the combined filter state (range AND status AND agent).
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d', 'all']
+            default: '30d'
+          description: Time range for data aggregation
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['shipped', 'closed', 'all']
+            default: 'shipped'
+          description: |
+            Filter by ticket stage.
+            - shipped: Only SHIP stage tickets/jobs
+            - closed: Only CLOSED stage tickets/jobs
+            - all: Both SHIP and CLOSED stage tickets/jobs
+        - name: agent
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Filter by AI agent model string (e.g., "claude-opus-4").
+            Omit or leave empty for all agents.
+            Only applies to job-level metrics (not ticket-level queries like velocity).
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsData'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to access project
+        '404':
+          description: Project not found
+
+components:
+  schemas:
+    AnalyticsData:
+      type: object
+      required:
+        - overview
+        - costOverTime
+        - costByStage
+        - tokenUsage
+        - cacheEfficiency
+        - topTools
+        - workflowDistribution
+        - velocity
+        - timeRange
+        - generatedAt
+        - jobCount
+        - hasData
+        - availableAgents
+      properties:
+        overview:
+          $ref: '#/components/schemas/OverviewMetrics'
+        costOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostDataPoint'
+        costByStage:
+          type: array
+          items:
+            $ref: '#/components/schemas/StageCost'
+        tokenUsage:
+          $ref: '#/components/schemas/TokenBreakdown'
+        cacheEfficiency:
+          $ref: '#/components/schemas/CacheMetrics'
+        topTools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolUsage'
+          maxItems: 10
+        workflowDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowBreakdown'
+        velocity:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyVelocity'
+        timeRange:
+          type: string
+          enum: ['7d', '30d', '90d', 'all']
+        generatedAt:
+          type: string
+          format: date-time
+        jobCount:
+          type: integer
+        hasData:
+          type: boolean
+        availableAgents:
+          type: array
+          items:
+            type: string
+          description: Distinct model values from jobs in this project (non-null only)
+
+    OverviewMetrics:
+      type: object
+      required:
+        - totalCost
+        - costTrend
+        - successRate
+        - avgDuration
+        - ticketsShipped
+        - ticketsClosed
+      properties:
+        totalCost:
+          type: number
+          description: Total cost in USD for the period
+        costTrend:
+          type: number
+          description: Percentage change vs previous period
+        successRate:
+          type: number
+          description: Percentage of successful jobs (0-100)
+        avgDuration:
+          type: number
+          description: Average job duration in milliseconds
+        ticketsShipped:
+          type: integer
+          description: Tickets in SHIP stage within selected time range
+        ticketsClosed:
+          type: integer
+          description: Tickets in CLOSED stage within selected time range
+
+    CostDataPoint:
+      type: object
+      required: [date, cost]
+      properties:
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD) or week (YYYY-Www)
+        cost:
+          type: number
+
+    StageCost:
+      type: object
+      required: [stage, cost, percentage]
+      properties:
+        stage:
+          type: string
+          enum: [SPECIFY, PLAN, BUILD, VERIFY]
+        cost:
+          type: number
+        percentage:
+          type: number
+
+    TokenBreakdown:
+      type: object
+      required: [inputTokens, outputTokens, cacheTokens]
+      properties:
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        cacheTokens:
+          type: integer
+
+    CacheMetrics:
+      type: object
+      required: [totalTokens, cacheTokens, savingsPercentage, estimatedSavingsUsd]
+      properties:
+        totalTokens:
+          type: integer
+        cacheTokens:
+          type: integer
+        savingsPercentage:
+          type: number
+        estimatedSavingsUsd:
+          type: number
+
+    ToolUsage:
+      type: object
+      required: [tool, count]
+      properties:
+        tool:
+          type: string
+        count:
+          type: integer
+
+    WorkflowBreakdown:
+      type: object
+      required: [type, count, percentage]
+      properties:
+        type:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        count:
+          type: integer
+        percentage:
+          type: number
+
+    WeeklyVelocity:
+      type: object
+      required: [week, ticketsShipped]
+      properties:
+        week:
+          type: string
+          description: ISO week (YYYY-Www)
+        ticketsShipped:
+          type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
