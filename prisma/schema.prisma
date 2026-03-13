@@ -75,6 +75,7 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  apiKeys             ProjectAPIKey[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -287,6 +288,11 @@ enum Agent {
   CODEX
 }
 
+enum APIProvider {
+  ANTHROPIC
+  OPENAI
+}
+
 enum SubscriptionPlan {
   FREE
   PRO
@@ -333,4 +339,19 @@ model StripeEvent {
 
   @@index([type])
   @@index([processedAt])
+}
+
+model ProjectAPIKey {
+  id           Int         @id @default(autoincrement())
+  projectId    Int
+  provider     APIProvider
+  encryptedKey String      @db.Text
+  preview      String      @db.VarChar(4)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider])
+  @@index([projectId])
 }

@@ -18,10 +18,10 @@
 
 **Purpose**: Prisma schema, encryption utility, environment config, and shared types
 
-- [ ] T001 Add `APIProvider` enum and `ProjectAPIKey` model to `prisma/schema.prisma`, add `apiKeys` relation on `Project` model, then run `bunx prisma generate`
-- [ ] T002 Add `ENCRYPTION_MASTER_KEY` entry to `.env.example` with description comment
-- [ ] T003 [P] Create AES-256-GCM encrypt/decrypt utilities in `lib/encryption/api-keys.ts` using Node.js built-in `crypto` (IV 12 bytes, authTag 16 bytes, concatenated base64 output)
-- [ ] T004 [P] Create shared TypeScript types in `lib/types/api-keys.ts` (`APIProvider`, `APIKeyStatus`, `SaveAPIKeyRequest`, `ValidateAPIKeyRequest`, `SaveAPIKeyResponse`, `ValidateAPIKeyResponse`)
+- [x] T001 Add `APIProvider` enum and `ProjectAPIKey` model to `prisma/schema.prisma`, add `apiKeys` relation on `Project` model, then run `bunx prisma generate`
+- [x] T002 Add `ENCRYPTION_MASTER_KEY` entry to `.env.example` with description comment
+- [x] T003 [P] Create AES-256-GCM encrypt/decrypt utilities in `lib/encryption/api-keys.ts` using Node.js built-in `crypto` (IV 12 bytes, authTag 16 bytes, concatenated base64 output)
+- [x] T004 [P] Create shared TypeScript types in `lib/types/api-keys.ts` (`APIProvider`, `APIKeyStatus`, `SaveAPIKeyRequest`, `ValidateAPIKeyRequest`, `SaveAPIKeyResponse`, `ValidateAPIKeyResponse`)
 
 ---
 
@@ -31,8 +31,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create database CRUD operations in `lib/db/api-keys.ts` (save/upsert with encryption, list by project, delete by provider, get decrypted key for workflow dispatch)
-- [ ] T006 [P] Create API key format validation in `lib/api-keys/validate.ts` (prefix checks: Anthropic `sk-ant-`, OpenAI `sk-`; trim whitespace; Zod schemas for request validation)
+- [x] T005 Create database CRUD operations in `lib/db/api-keys.ts` (save/upsert with encryption, list by project, delete by provider, get decrypted key for workflow dispatch)
+- [x] T006 [P] Create API key format validation in `lib/api-keys/validate.ts` (prefix checks: Anthropic `sk-ant-`, OpenAI `sk-`; trim whitespace; Zod schemas for request validation)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
