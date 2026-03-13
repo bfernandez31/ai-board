@@ -26,7 +26,7 @@ export function PricingCard({
       className={`relative flex flex-col ${isPopular ? 'border-primary shadow-md' : ''}`}
     >
       {isPopular && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Most Popular</Badge>
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground border-primary hover:bg-primary">Most Popular</Badge>
       )}
       <CardHeader className="text-center">
         <h3 className="text-2xl font-bold text-foreground">{name}</h3>
