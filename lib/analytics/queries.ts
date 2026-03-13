@@ -262,17 +262,9 @@ async function getTokenUsage(
 }
 
 /**
- * Get cache efficiency metrics
+ * Compute cache efficiency metrics from pre-fetched token data
  */
-async function getCacheEfficiency(
-  projectId: number,
-  range: TimeRange,
-  now: Date,
-  stages: ('SHIP' | 'CLOSED')[],
-  agent: string | null
-): Promise<CacheMetrics> {
-  const tokenUsage = await getTokenUsage(projectId, range, now, stages, agent);
-
+function computeCacheEfficiency(tokenUsage: TokenBreakdown): CacheMetrics {
   const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
   const savingsPercentage =
     totalTokens > 0 ? Math.round((tokenUsage.cacheTokens / totalTokens) * 1000) / 10 : 0;
@@ -387,10 +379,6 @@ async function getVelocityData(
 }
 
 /**
- * T011: Main orchestration function
- * Fetches all analytics data for a project.
- */
-/**
  * Get distinct agent/model values for a project
  */
 async function getAvailableAgents(projectId: number): Promise<string[]> {
@@ -439,7 +427,6 @@ export async function getAnalyticsData(
     costOverTime,
     costByStage,
     tokenUsage,
-    cacheEfficiency,
     topTools,
     workflowDistribution,
     velocity,
@@ -449,12 +436,14 @@ export async function getAnalyticsData(
     getCostOverTime(projectId, range, now, stages, agent),
     getCostByStage(projectId, range, now, stages, agent),
     getTokenUsage(projectId, range, now, stages, agent),
-    getCacheEfficiency(projectId, range, now, stages, agent),
     getTopTools(projectId, range, now, stages, agent),
     getWorkflowDistribution(projectId, range, now, stages),
     getVelocityData(projectId, range, now, stages),
     getAvailableAgents(projectId),
   ]);
+
+  // Derive cache efficiency from already-fetched token data (no extra query)
+  const cacheEfficiency = computeCacheEfficiency(tokenUsage);
 
   return {
     overview,

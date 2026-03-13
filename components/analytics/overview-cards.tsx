@@ -13,12 +13,9 @@ interface OverviewCardsProps {
 
 export function OverviewCards({ metrics, timeRange }: OverviewCardsProps) {
   const rangeLabel = getTimeRangeLabel(timeRange);
-  const trendIcon =
-    metrics.costTrend >= 0 ? (
-      <TrendingUp className="h-4 w-4 text-red-400" />
-    ) : (
-      <TrendingDown className="h-4 w-4 text-green-400" />
-    );
+  const costIncreased = metrics.costTrend >= 0;
+  const trendColor = costIncreased ? 'text-red-400' : 'text-green-400';
+  const TrendIcon = costIncreased ? TrendingUp : TrendingDown;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -31,11 +28,9 @@ export function OverviewCards({ metrics, timeRange }: OverviewCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{formatCost(metrics.totalCost)}</div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            {trendIcon}
-            <span
-              className={cn(metrics.costTrend >= 0 ? 'text-red-400' : 'text-green-400')}
-            >
-              {metrics.costTrend >= 0 ? '+' : ''}
+            <TrendIcon className={cn('h-4 w-4', trendColor)} />
+            <span className={trendColor}>
+              {costIncreased ? '+' : ''}
               {formatPercentage(metrics.costTrend)}
             </span>
             <span>vs previous period</span>

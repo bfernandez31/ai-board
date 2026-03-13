@@ -99,7 +99,9 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <StatusFilter value={status} onChange={handleStatusChange} />
+        <AgentFilter value={agent} onChange={handleAgentChange} agents={analytics.availableAgents ?? []} />
         <TimeRangeSelector value={range} onChange={handleRangeChange} />
       </div>
 
