@@ -15,6 +15,28 @@ const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
 const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
 const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX']);
 
+function parseProjectId(projectIdString: string): number {
+  const projectId = parseInt(projectIdString, 10);
+
+  if (isNaN(projectId) || projectId <= 0) {
+    notFound();
+  }
+
+  return projectId;
+}
+
+function getSearchParamValue<T extends string>(
+  value: string | undefined,
+  validValues: Set<T>,
+  fallback: T
+): T {
+  if (!value) {
+    return fallback;
+  }
+
+  return validValues.has(value as T) ? (value as T) : fallback;
+}
+
 export default async function AnalyticsPage({
   params,
   searchParams,
@@ -24,12 +46,7 @@ export default async function AnalyticsPage({
 }) {
   const { projectId: projectIdString } = await params;
   const search = await searchParams;
-
-  const projectId = parseInt(projectIdString, 10);
-
-  if (isNaN(projectId) || projectId <= 0) {
-    notFound();
-  }
+  const projectId = parseProjectId(projectIdString);
 
   const project = await getProject(projectId).catch((error) => {
     if (
@@ -42,15 +59,13 @@ export default async function AnalyticsPage({
   });
 
   const filters = {
-    range: VALID_RANGES.has(search.range as TimeRange)
-      ? (search.range as TimeRange)
-      : DEFAULT_ANALYTICS_FILTERS.range,
-    outcome: VALID_OUTCOMES.has(search.outcome as TicketOutcomeFilter)
-      ? (search.outcome as TicketOutcomeFilter)
-      : DEFAULT_ANALYTICS_FILTERS.outcome,
-    agent: VALID_AGENTS.has(search.agent as AgentFilter)
-      ? (search.agent as AgentFilter)
-      : DEFAULT_ANALYTICS_FILTERS.agent,
+    range: getSearchParamValue(search.range, VALID_RANGES, DEFAULT_ANALYTICS_FILTERS.range),
+    outcome: getSearchParamValue(
+      search.outcome,
+      VALID_OUTCOMES,
+      DEFAULT_ANALYTICS_FILTERS.outcome
+    ),
+    agent: getSearchParamValue(search.agent, VALID_AGENTS, DEFAULT_ANALYTICS_FILTERS.agent),
   };
 
   const initialData = await getAnalyticsData(projectId, filters);

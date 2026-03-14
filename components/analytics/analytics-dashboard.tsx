@@ -36,6 +36,8 @@ interface AnalyticsDashboardProps {
   initialData: AnalyticsData;
 }
 
+const OUTCOME_OPTIONS = ['shipped', 'closed', 'all-completed'] as const;
+
 async function fetchAnalytics(projectId: number, filters: AnalyticsFilters): Promise<AnalyticsData> {
   const params = new URLSearchParams({
     range: filters.range,
@@ -67,6 +69,17 @@ function getInitialFilters(searchParams: URLSearchParams, initialData: Analytics
   };
 }
 
+function buildFilterSearchParams(
+  searchParams: URLSearchParams,
+  filters: AnalyticsFilters
+): URLSearchParams {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set('range', filters.range);
+  params.set('outcome', filters.outcome);
+  params.set('agent', filters.agent);
+  return params;
+}
+
 export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,10 +102,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
 
   const updateFilters = (nextFilters: AnalyticsFilters) => {
     setFilters(nextFilters);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('range', nextFilters.range);
-    params.set('outcome', nextFilters.outcome);
-    params.set('agent', nextFilters.agent);
+    const params = buildFilterSearchParams(searchParams, nextFilters);
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
@@ -115,7 +125,7 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
               <SelectValue placeholder="Outcome" />
             </SelectTrigger>
             <SelectContent>
-              {(['shipped', 'closed', 'all-completed'] as const).map((outcome) => (
+              {OUTCOME_OPTIONS.map((outcome) => (
                 <SelectItem key={outcome} value={outcome}>
                   {getOutcomeLabel(outcome)}
                 </SelectItem>

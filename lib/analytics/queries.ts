@@ -31,6 +31,7 @@ import {
   calculateTrend,
   formatDateForGrouping,
   getDateRangeStart,
+  getAgentLabel,
   getGranularity,
   getISOWeek,
   getPreviousPeriodStart,
@@ -73,6 +74,23 @@ function buildOutcomeStages(outcome: TicketOutcomeFilter): Stage[] {
   }
 }
 
+function buildTicketStageRangeWhere(
+  stage: 'SHIP' | 'CLOSED',
+  rangeStart: Date | null
+): Prisma.TicketWhereInput {
+  if (stage === 'SHIP') {
+    return {
+      stage,
+      ...(rangeStart ? { updatedAt: { gte: rangeStart } } : {}),
+    };
+  }
+
+  return {
+    stage,
+    closedAt: rangeStart ? { gte: rangeStart } : { not: null },
+  };
+}
+
 function buildTicketMembershipWhere(filters: AnalyticsFilters): Prisma.TicketWhereInput {
   const clauses: Prisma.TicketWhereInput[] = [
     {
@@ -93,30 +111,24 @@ function buildTicketMembershipWhere(filters: AnalyticsFilters): Prisma.TicketWhe
 function buildTicketRangeWhere(filters: AnalyticsFilters, now: Date): Prisma.TicketWhereInput {
   const rangeStart = getDateRangeStart(filters.range, now);
   const agentWhere = buildEffectiveAgentWhere(filters.agent);
+  let rangeWhere: Prisma.TicketWhereInput;
 
-  const rangeWhere =
-    filters.outcome === 'all-completed'
-      ? {
-          OR: [
-            {
-              stage: 'SHIP' as const,
-              ...(rangeStart ? { updatedAt: { gte: rangeStart } } : {}),
-            },
-            {
-              stage: 'CLOSED' as const,
-              closedAt: rangeStart ? { gte: rangeStart } : { not: null },
-            },
-          ],
-        }
-      : filters.outcome === 'shipped'
-        ? {
-            stage: 'SHIP' as const,
-            ...(rangeStart ? { updatedAt: { gte: rangeStart } } : {}),
-          }
-        : {
-            stage: 'CLOSED' as const,
-            closedAt: rangeStart ? { gte: rangeStart } : { not: null },
-          };
+  switch (filters.outcome) {
+    case 'all-completed':
+      rangeWhere = {
+        OR: [
+          buildTicketStageRangeWhere('SHIP', rangeStart),
+          buildTicketStageRangeWhere('CLOSED', rangeStart),
+        ],
+      };
+      break;
+    case 'shipped':
+      rangeWhere = buildTicketStageRangeWhere('SHIP', rangeStart);
+      break;
+    case 'closed':
+      rangeWhere = buildTicketStageRangeWhere('CLOSED', rangeStart);
+      break;
+  }
 
   if (!agentWhere) {
     return rangeWhere;
@@ -218,7 +230,7 @@ async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
     if (jobCount > 0) {
       options.push({
         value: agent,
-        label: agent === 'CLAUDE' ? 'Claude' : 'Codex',
+        label: getAgentLabel(agent),
         jobCount,
         isDefault: false,
       });
@@ -239,16 +251,14 @@ async function getCompletionMetrics(
 
   const shippedWhere: Prisma.TicketWhereInput = {
     projectId,
-    stage: 'SHIP',
-    ...(rangeStart ? { updatedAt: { gte: rangeStart } } : {}),
-    ...(agentWhere ? agentWhere : {}),
+    ...buildTicketStageRangeWhere('SHIP', rangeStart),
+    ...(agentWhere ?? {}),
   };
 
   const closedWhere: Prisma.TicketWhereInput = {
     projectId,
-    stage: 'CLOSED',
-    closedAt: rangeStart ? { gte: rangeStart } : { not: null },
-    ...(agentWhere ? agentWhere : {}),
+    ...buildTicketStageRangeWhere('CLOSED', rangeStart),
+    ...(agentWhere ?? {}),
   };
 
   const [shippedCount, closedCount] = await Promise.all([
@@ -414,12 +424,7 @@ async function getTokenUsage(
   };
 }
 
-async function getCacheEfficiency(
-  projectId: number,
-  filters: AnalyticsFilters,
-  now: Date
-): Promise<CacheMetrics> {
-  const tokenUsage = await getTokenUsage(projectId, filters, now);
+function getCacheEfficiency(tokenUsage: TokenBreakdown): CacheMetrics {
   const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
   const savingsPercentage =
     totalTokens > 0 ? Math.round((tokenUsage.cacheTokens / totalTokens) * 1000) / 10 : 0;
@@ -553,7 +558,6 @@ export async function getAnalyticsData(
     costOverTime,
     costByStage,
     tokenUsage,
-    cacheEfficiency,
     topTools,
     workflowDistribution,
     velocity,
@@ -562,11 +566,12 @@ export async function getAnalyticsData(
     getCostOverTime(projectId, normalizedFilters, now),
     getCostByStage(projectId, normalizedFilters, now),
     getTokenUsage(projectId, normalizedFilters, now),
-    getCacheEfficiency(projectId, normalizedFilters, now),
     getTopTools(projectId, normalizedFilters, now),
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
   ]);
+
+  const cacheEfficiency = getCacheEfficiency(tokenUsage);
 
   return {
     overview,
