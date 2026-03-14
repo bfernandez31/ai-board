@@ -7,9 +7,10 @@ import { formatCost } from '@/lib/analytics/aggregations';
 
 interface CostOverTimeChartProps {
   data: CostDataPoint[];
+  emptyMessage?: string;
 }
 
-export function CostOverTimeChart({ data }: CostOverTimeChartProps) {
+export function CostOverTimeChart({ data, emptyMessage = 'No cost data available' }: CostOverTimeChartProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -18,7 +19,7 @@ export function CostOverTimeChart({ data }: CostOverTimeChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No cost data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>

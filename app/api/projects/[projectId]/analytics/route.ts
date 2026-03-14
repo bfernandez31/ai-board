@@ -5,6 +5,8 @@ import { getAnalyticsData } from '@/lib/analytics/queries';
 
 const querySchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
+  outcome: z.enum(['shipped', 'closed', 'all-completed']).default('shipped'),
+  agent: z.enum(['all', 'CLAUDE', 'CODEX']).default('all'),
 });
 
 export async function GET(
@@ -22,15 +24,17 @@ export async function GET(
     await verifyProjectAccess(projectId);
 
     const { searchParams } = new URL(request.url);
-    const { range } = querySchema.parse({
-      range: searchParams.get('range') || '30d',
+    const filters = querySchema.parse({
+      range: searchParams.get('range') || undefined,
+      outcome: searchParams.get('outcome') || undefined,
+      agent: searchParams.get('agent') || undefined,
     });
 
-    const data = await getAnalyticsData(projectId, range);
+    const data = await getAnalyticsData(projectId, filters);
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid time range' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid analytics filters' }, { status: 400 });
     }
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {

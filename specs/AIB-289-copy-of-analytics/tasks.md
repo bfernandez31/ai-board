@@ -18,10 +18,10 @@
 
 **Purpose**: Align shared analytics types, defaults, and test scaffolding before query and UI work begins.
 
-- [ ] T001 Audit existing analytics implementation touchpoints in `lib/analytics/types.ts`, `lib/analytics/aggregations.ts`, `lib/analytics/queries.ts`, `app/api/projects/[projectId]/analytics/route.ts`, `app/lib/query-keys.ts`, `app/projects/[projectId]/analytics/page.tsx`, `components/analytics/analytics-dashboard.tsx`, `components/analytics/overview-cards.tsx`, and `components/analytics/empty-state.tsx`
-- [ ] T002 [P] Add canonical analytics filter unions, defaults, agent metadata, and completion metric types in `lib/analytics/types.ts`
-- [ ] T003 [P] Add shared range-label and filter helper exports in `lib/analytics/aggregations.ts`
-- [ ] T004 [P] Prepare analytics test fixtures/helpers for mixed outcomes and agents in `tests/integration/analytics/analytics-route.test.ts` and `tests/unit/components/analytics-dashboard.test.tsx`
+- [X] T001 Audit existing analytics implementation touchpoints in `lib/analytics/types.ts`, `lib/analytics/aggregations.ts`, `lib/analytics/queries.ts`, `app/api/projects/[projectId]/analytics/route.ts`, `app/lib/query-keys.ts`, `app/projects/[projectId]/analytics/page.tsx`, `components/analytics/analytics-dashboard.tsx`, `components/analytics/overview-cards.tsx`, and `components/analytics/empty-state.tsx`
+- [X] T002 [P] Add canonical analytics filter unions, defaults, agent metadata, and completion metric types in `lib/analytics/types.ts`
+- [X] T003 [P] Add shared range-label and filter helper exports in `lib/analytics/aggregations.ts`
+- [X] T004 [P] Prepare analytics test fixtures/helpers for mixed outcomes and agents in `tests/integration/analytics/analytics-route.test.ts` and `tests/unit/components/analytics-dashboard.test.tsx`
 
 ---
 
@@ -31,13 +31,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Refactor `getAnalyticsData` inputs and shared filter application flow in `lib/analytics/queries.ts`
-- [ ] T006 Implement reusable Prisma filter builders for range, outcome membership, and effective agent resolution in `lib/analytics/queries.ts`
-- [ ] T007 Implement project-scoped available-agent derivation and filter echo metadata in `lib/analytics/queries.ts`
-- [ ] T008 Expand analytics response shaping for `filters`, `availableAgents`, `ticketsShipped`, `ticketsClosed`, `jobCount`, and `hasData` in `lib/analytics/queries.ts`
-- [ ] T009 Validate `range`, `outcome`, and `agent` query params with Zod and wire the expanded analytics service in `app/api/projects/[projectId]/analytics/route.ts`
-- [ ] T010 Update analytics React Query keys to include `range`, `outcome`, and `agent` in `app/lib/query-keys.ts`
-- [ ] T011 Parse all analytics filter search params and hydrate initial filter state in `app/projects/[projectId]/analytics/page.tsx`
+- [X] T005 Refactor `getAnalyticsData` inputs and shared filter application flow in `lib/analytics/queries.ts`
+- [X] T006 Implement reusable Prisma filter builders for range, outcome membership, and effective agent resolution in `lib/analytics/queries.ts`
+- [X] T007 Implement project-scoped available-agent derivation and filter echo metadata in `lib/analytics/queries.ts`
+- [X] T008 Expand analytics response shaping for `filters`, `availableAgents`, `ticketsShipped`, `ticketsClosed`, `jobCount`, and `hasData` in `lib/analytics/queries.ts`
+- [X] T009 Validate `range`, `outcome`, and `agent` query params with Zod and wire the expanded analytics service in `app/api/projects/[projectId]/analytics/route.ts`
+- [X] T010 Update analytics React Query keys to include `range`, `outcome`, and `agent` in `app/lib/query-keys.ts`
+- [X] T011 Parse all analytics filter search params and hydrate initial filter state in `app/projects/[projectId]/analytics/page.tsx`
 
 **Checkpoint**: Foundation ready - one analytics endpoint returns the full filtered payload and the page can hydrate all filter dimensions consistently.
 
@@ -51,15 +51,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Add integration coverage for shipped, closed, and all-completed API filtering in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T013 [P] [US1] Add query-key coverage for the outcome filter dimension in `tests/unit/query-keys.test.ts`
-- [ ] T014 [P] [US1] Add dashboard filter-state coverage for outcome selection and stale-data prevention in `tests/unit/components/analytics-dashboard.test.tsx`
+- [X] T012 [P] [US1] Add integration coverage for shipped, closed, and all-completed API filtering in `tests/integration/analytics/analytics-route.test.ts`
+- [X] T013 [P] [US1] Add query-key coverage for the outcome filter dimension in `tests/unit/query-keys.test.ts`
+- [X] T014 [P] [US1] Add dashboard filter-state coverage for outcome selection and stale-data prevention in `tests/unit/components/analytics-dashboard.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Update outcome-aware job, stage, tool, token, workflow, and velocity aggregations in `lib/analytics/queries.ts`
-- [ ] T016 [US1] Add the outcome selector UI and single-path filter state updates in `components/analytics/analytics-dashboard.tsx`
-- [ ] T017 [US1] Propagate the selected outcome through analytics fetches, URL params, and child chart props in `components/analytics/analytics-dashboard.tsx`
+- [X] T015 [US1] Update outcome-aware job, stage, tool, token, workflow, and velocity aggregations in `lib/analytics/queries.ts`
+- [X] T016 [US1] Add the outcome selector UI and single-path filter state updates in `components/analytics/analytics-dashboard.tsx`
+- [X] T017 [US1] Propagate the selected outcome through analytics fetches, URL params, and child chart props in `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: User Story 1 is independently functional when outcome changes refresh the entire dashboard coherently.
 
@@ -73,15 +73,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add integration coverage for effective-agent filtering and available agent options in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T019 [P] [US2] Add query-key coverage for the agent filter dimension in `tests/unit/query-keys.test.ts`
-- [ ] T020 [P] [US2] Add dashboard coverage for agent option rendering and agent-specific refresh behavior in `tests/unit/components/analytics-dashboard.test.tsx`
+- [X] T018 [P] [US2] Add integration coverage for effective-agent filtering and available agent options in `tests/integration/analytics/analytics-route.test.ts`
+- [X] T019 [P] [US2] Add query-key coverage for the agent filter dimension in `tests/unit/query-keys.test.ts`
+- [X] T020 [P] [US2] Add dashboard coverage for agent option rendering and agent-specific refresh behavior in `tests/unit/components/analytics-dashboard.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Apply effective-agent filtering across all job-backed analytics queries in `lib/analytics/queries.ts`
-- [ ] T022 [US2] Add the agent selector, default all-agents behavior, and available-agent wiring in `components/analytics/analytics-dashboard.tsx`
-- [ ] T023 [US2] Ensure analytics child components receive agent-aware empty-state context from `components/analytics/analytics-dashboard.tsx` and `components/analytics/empty-state.tsx`
+- [X] T021 [US2] Apply effective-agent filtering across all job-backed analytics queries in `lib/analytics/queries.ts`
+- [X] T022 [US2] Add the agent selector, default all-agents behavior, and available-agent wiring in `components/analytics/analytics-dashboard.tsx`
+- [X] T023 [US2] Ensure analytics child components receive agent-aware empty-state context from `components/analytics/analytics-dashboard.tsx` and `components/analytics/empty-state.tsx`
 
 **Checkpoint**: User Story 2 is independently functional when the dashboard can isolate analytics to one effective agent without exposing irrelevant filter options.
 
@@ -95,14 +95,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add integration coverage for range-accurate shipped and closed completion metrics in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T025 [P] [US3] Add dashboard coverage for completion-card label updates across time ranges in `tests/unit/components/analytics-dashboard.test.tsx`
+- [X] T024 [P] [US3] Add integration coverage for range-accurate shipped and closed completion metrics in `tests/integration/analytics/analytics-route.test.ts`
+- [X] T025 [P] [US3] Add dashboard coverage for completion-card label updates across time ranges in `tests/unit/components/analytics-dashboard.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Replace month-based completion calculations with range-aware shipped and closed metrics in `lib/analytics/queries.ts`
-- [ ] T027 [US3] Update overview card formatting and labels for separate shipped and closed metrics in `components/analytics/overview-cards.tsx`
-- [ ] T028 [US3] Ensure initial page hydration and client refresh both surface the period-accurate completion metrics in `app/projects/[projectId]/analytics/page.tsx` and `components/analytics/analytics-dashboard.tsx`
+- [X] T026 [US3] Replace month-based completion calculations with range-aware shipped and closed metrics in `lib/analytics/queries.ts`
+- [X] T027 [US3] Update overview card formatting and labels for separate shipped and closed metrics in `components/analytics/overview-cards.tsx`
+- [X] T028 [US3] Ensure initial page hydration and client refresh both surface the period-accurate completion metrics in `app/projects/[projectId]/analytics/page.tsx` and `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: User Story 3 is independently functional when completion cards stay accurate for every supported time range.
 
@@ -116,14 +116,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T029 [P] [US4] Add integration coverage for no-job filter combinations that still return zeroed completion metrics in `tests/integration/analytics/analytics-route.test.ts`
-- [ ] T030 [P] [US4] Add dashboard coverage for per-section empty states and overview persistence in `tests/unit/components/analytics-dashboard.test.tsx`
+- [X] T029 [P] [US4] Add integration coverage for no-job filter combinations that still return zeroed completion metrics in `tests/integration/analytics/analytics-route.test.ts`
+- [X] T030 [P] [US4] Add dashboard coverage for per-section empty states and overview persistence in `tests/unit/components/analytics-dashboard.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Remove the dashboard-level no-data bailout and keep section rendering keyed to the active payload in `components/analytics/analytics-dashboard.tsx`
-- [ ] T032 [US4] Update filter-aware empty copy and sparse-state behavior in `components/analytics/empty-state.tsx`, `components/analytics/cost-over-time-chart.tsx`, `components/analytics/cost-by-stage-chart.tsx`, `components/analytics/token-usage-chart.tsx`, `components/analytics/cache-efficiency-chart.tsx`, `components/analytics/top-tools-chart.tsx`, `components/analytics/workflow-distribution-chart.tsx`, and `components/analytics/velocity-chart.tsx`
-- [ ] T033 [US4] Align `hasData` semantics with job-backed sections only while preserving completion cards in `lib/analytics/queries.ts` and `components/analytics/analytics-dashboard.tsx`
+- [X] T031 [US4] Remove the dashboard-level no-data bailout and keep section rendering keyed to the active payload in `components/analytics/analytics-dashboard.tsx`
+- [X] T032 [US4] Update filter-aware empty copy and sparse-state behavior in `components/analytics/empty-state.tsx`, `components/analytics/cost-over-time-chart.tsx`, `components/analytics/cost-by-stage-chart.tsx`, `components/analytics/token-usage-chart.tsx`, `components/analytics/cache-efficiency-chart.tsx`, `components/analytics/top-tools-chart.tsx`, `components/analytics/workflow-distribution-chart.tsx`, and `components/analytics/velocity-chart.tsx`
+- [X] T033 [US4] Align `hasData` semantics with job-backed sections only while preserving completion cards in `lib/analytics/queries.ts` and `components/analytics/analytics-dashboard.tsx`
 
 **Checkpoint**: User Story 4 is independently functional when empty combinations are clearly explained without hiding valid completion data.
 
@@ -133,8 +133,8 @@
 
 **Purpose**: Final validation, cleanup, and cross-story consistency.
 
-- [ ] T034 [P] Normalize filter labels, selector copy, and shared helper usage across `components/analytics/analytics-dashboard.tsx`, `components/analytics/overview-cards.tsx`, and `lib/analytics/aggregations.ts`
-- [ ] T035 [P] Run the analytics validation sequence from `specs/AIB-289-copy-of-analytics/quickstart.md` by updating any missing assertions in `tests/unit/query-keys.test.ts`, `tests/unit/components/analytics-dashboard.test.tsx`, and `tests/integration/analytics/analytics-route.test.ts`
+- [X] T034 [P] Normalize filter labels, selector copy, and shared helper usage across `components/analytics/analytics-dashboard.tsx`, `components/analytics/overview-cards.tsx`, and `lib/analytics/aggregations.ts`
+- [X] T035 [P] Run the analytics validation sequence from `specs/AIB-289-copy-of-analytics/quickstart.md` by updating any missing assertions in `tests/unit/query-keys.test.ts`, `tests/unit/components/analytics-dashboard.test.tsx`, and `tests/integration/analytics/analytics-route.test.ts`
 - [ ] T036 Run `bun run test:unit`, `bun run test:integration -- analytics`, `bun run type-check`, and `bun run lint` from `/home/runner/work/ai-board/ai-board/target`
 
 ---

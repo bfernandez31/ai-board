@@ -7,9 +7,13 @@ import { formatAbbreviatedNumber, formatCost, formatPercentage } from '@/lib/ana
 
 interface CacheEfficiencyChartProps {
   data: CacheMetrics;
+  emptyMessage?: string;
 }
 
-export function CacheEfficiencyChart({ data }: CacheEfficiencyChartProps) {
+export function CacheEfficiencyChart({
+  data,
+  emptyMessage = 'No cache data available',
+}: CacheEfficiencyChartProps) {
   const chartData = [
     { name: 'Cache', value: data.cacheTokens, color: 'hsl(var(--chart-5))' },
     { name: 'Non-Cache', value: data.totalTokens - data.cacheTokens, color: 'hsl(var(--chart-4))' },
@@ -23,7 +27,7 @@ export function CacheEfficiencyChart({ data }: CacheEfficiencyChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No cache data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>

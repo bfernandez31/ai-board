@@ -7,9 +7,13 @@ import { formatAbbreviatedNumber } from '@/lib/analytics/aggregations';
 
 interface TokenUsageChartProps {
   data: TokenBreakdown;
+  emptyMessage?: string;
 }
 
-export function TokenUsageChart({ data }: TokenUsageChartProps) {
+export function TokenUsageChart({
+  data,
+  emptyMessage = 'No token data available',
+}: TokenUsageChartProps) {
   const chartData = [
     { name: 'Input', tokens: data.inputTokens, fill: 'hsl(var(--chart-1))' },
     { name: 'Output', tokens: data.outputTokens, fill: 'hsl(var(--chart-2))' },
@@ -26,7 +30,7 @@ export function TokenUsageChart({ data }: TokenUsageChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No token data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>
