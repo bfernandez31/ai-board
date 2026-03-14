@@ -387,22 +387,28 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/analytics`
 
 **Dashboard Features**:
-- **Overview Cards**: Display total cost, success rate, average job duration, and tickets shipped (current month)
-  - Card titles displayed in white text for optimal contrast against dark background
+- **Overview Cards**: Display total cost, success rate, average job duration, tickets shipped, and tickets closed for the active time range
 - **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
-  - Chart title displayed in white text for improved readability
 - **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
-  - Chart title displayed in white text for improved readability
 - **Token Usage**: Chart showing input tokens, output tokens, and cache tokens
-  - Chart title displayed in white text for improved readability
 - **Cache Efficiency**: Ring/donut chart displaying cache savings percentage
-  - Chart title displayed in white text for improved readability
 - **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
-  - Chart title displayed in white text for improved readability
 - **Workflow Distribution**: Donut chart showing proportion of FULL, QUICK, and CLEAN workflows
-  - Chart title displayed in white text for improved readability
 - **Velocity**: Bar chart displaying tickets shipped per week
-  - Chart title displayed in white text for improved readability
+
+**Dashboard Filters**:
+- **Time Range**: 7 days, 30 days, 90 days, or all time
+- **Ticket Outcome**: Shipped, closed, or all completed tickets
+- **Agent**: All agents, or one recorded AI agent with job history in the current project
+- Filter changes update overview cards and all charts together so the dashboard stays internally consistent
+- Filter state is stored in the analytics page URL so the current view persists across refreshes and shared links
+
+**Overview Metrics**:
+- Total cost and cost trend for the active filters
+- Success rate based on completed versus failed jobs in the active filters
+- Average duration for completed jobs in the active filters
+- Tickets shipped count for the selected time range and agent filter
+- Tickets closed count for the selected time range and agent filter
 
 **Time Range Selection**:
 - Preset options: 7 days, 30 days, 90 days, all time
@@ -410,12 +416,13 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Charts auto-adjust granularity (daily for <30 days, weekly for ≥30 days)
 
 **Empty States**:
-- Friendly empty states with guidance when no job data exists
-- Encourages users to create their first workflow
+- When filters match no job analytics, overview cards remain visible for the active period
+- Charts and breakdown sections show filter-aware empty states instead of stale values
+- Empty copy explains the active agent, outcome, and time range selection
 
 **Data Updates**:
 - Polling-based refresh every 15 seconds
-- Automatically reflects new job completions
+- Automatically reflects new job completions while keeping the current filters applied
 
 **Access Control**:
 - Only project owners and members can view analytics

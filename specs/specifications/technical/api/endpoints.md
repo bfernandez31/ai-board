@@ -2334,6 +2334,34 @@ Fetch aggregated analytics data for project visualization.
 
 **Query Parameters**:
 - `range` (string, optional): Time range for analytics (7d|30d|90d|all, default: 30d)
+- `outcome` (string, optional): Terminal ticket outcome scope (shipped|closed|all-completed, default: shipped)
+- `agent` (string, optional): Effective agent scope (all|CLAUDE|CODEX, default: all)
+
+**Behavior**:
+- The endpoint returns one coherent analytics payload for the active `range`, `outcome`, and `agent` filters.
+- Job-backed metrics use jobs whose tickets currently match the selected outcome set and effective agent.
+- Effective agent resolution uses `ticket.agent` when present and falls back to `project.defaultAgent`.
+- Ticket completion metrics stay visible even when no filtered jobs contain telemetry data.
+- If a requested agent is not available in the current project, the analytics service falls back to `all`.
+
+**Sequence**:
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as Analytics Route
+    participant A as Analytics Service
+    participant DB as Database
+
+    C->>R: GET /api/projects/:projectId/analytics?range&outcome&agent
+    R->>R: Validate session, project access, and filter enums
+    R->>A: getAnalyticsData(projectId, filters)
+    A->>DB: Load available agents with completed-ticket job history
+    A->>A: Normalize invalid agent selections
+    A->>DB: Query filtered jobs, tickets, and grouped aggregates
+    DB-->>A: Metrics, completion counts, and chart series
+    A-->>R: Analytics payload with filters and availableAgents
+    R-->>C: 200 JSON
+```
 
 **Response** (200 OK):
 ```json
@@ -2343,7 +2371,14 @@ Fetch aggregated analytics data for project visualization.
     "costTrend": 12.5,
     "successRate": 94.2,
     "avgDuration": 125000,
-    "ticketsShipped": 8
+    "ticketsShipped": {
+      "count": 8,
+      "label": "Last 30 days"
+    },
+    "ticketsClosed": {
+      "count": 3,
+      "label": "Last 30 days"
+    }
   },
   "costOverTime": [
     { "date": "2025-11-20", "cost": 5.23 },
@@ -2381,7 +2416,16 @@ Fetch aggregated analytics data for project visualization.
     { "week": "2025-W47", "ticketsShipped": 5 },
     { "week": "2025-W48", "ticketsShipped": 2 }
   ],
-  "timeRange": "30d",
+  "filters": {
+    "range": "30d",
+    "outcome": "shipped",
+    "agent": "all"
+  },
+  "availableAgents": [
+    { "value": "all", "label": "All agents", "jobCount": 45, "isDefault": true },
+    { "value": "CLAUDE", "label": "Claude", "jobCount": 30, "isDefault": false },
+    { "value": "CODEX", "label": "Codex", "jobCount": 15, "isDefault": false }
+  ],
   "generatedAt": "2025-11-28T10:30:00Z",
   "jobCount": 45,
   "hasData": true
@@ -2394,7 +2438,8 @@ Fetch aggregated analytics data for project visualization.
   - `costTrend`: Percentage change compared to previous equivalent period
   - `successRate`: Percentage of COMPLETED jobs (excludes PENDING/RUNNING)
   - `avgDuration`: Average job duration in milliseconds
-  - `ticketsShipped`: Tickets shipped in current month
+  - `ticketsShipped`: Shipped ticket count and label for the active range and agent filter
+  - `ticketsClosed`: Closed ticket count and label for the active range and agent filter
 - `costOverTime`: Daily or weekly cost data points
   - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
   - `cost`: Cost in USD for period
@@ -2421,24 +2466,32 @@ Fetch aggregated analytics data for project visualization.
 - `velocity`: Weekly shipping velocity
   - `week`: ISO week identifier (YYYY-Www)
   - `ticketsShipped`: Tickets shipped that week
-- `timeRange`: Applied time range filter
+- `filters`: Applied filter set returned by the server
+- `availableAgents`: Agent filter options derived from completed tickets with recorded job history in the project
 - `generatedAt`: Timestamp when analytics were generated
-- `jobCount`: Total jobs included in analysis
-- `hasData`: False if no completed jobs with telemetry data
+- `jobCount`: Total filtered jobs in range, including completed and failed jobs
+- `hasData`: False if the filtered selection contains no completed jobs with telemetry data
 
 **Data Aggregation**:
-- Includes only COMPLETED jobs (excludes PENDING, RUNNING, FAILED, CANCELLED from cost/token calculations)
+- Includes `COMPLETED` and `FAILED` jobs for success-rate and job-count calculations
+- Includes only `COMPLETED` jobs for cost, token, cache, tool, and stage breakdown calculations
 - Stage derived from job command (specify→SPECIFY, plan→PLAN, implement→BUILD, verify→VERIFY)
-- Cost trend compares current period to previous equivalent period
+- Cost trend compares the current filtered period to the previous equivalent period
 - Granularity auto-adjusts: daily for <30 days, weekly for ≥30 days
-- Top tools limited to 10 entries with "Other" aggregation for remaining tools
+- Outcome filtering uses the ticket's current terminal stage: `SHIP`, `CLOSED`, or both
+- Completion cards and workflow distribution use terminal ticket timestamps for the selected range
+  - `SHIP` uses `ticket.updatedAt`
+  - `CLOSED` uses `ticket.closedAt`
+- Velocity groups filtered shipped and/or closed tickets into ISO weeks based on their terminal event date
+- Top tools limited to 10 entries
 
 **Empty State**:
-- Returns zero values when no completed jobs exist
-- `hasData` field indicates data availability
+- Returns zeroed or empty chart sections when the filtered selection has no completed telemetry-backed jobs
+- Still returns shipped and closed completion metrics for the active range and agent filter
+- `hasData` indicates whether job-backed analytics sections should render data or empty states
 
 **Errors**:
-- `400`: Invalid time range parameter
+- `400`: Invalid analytics filters
 - `401`: Not authenticated
 - `403`: User is neither project owner nor member
 - `404`: Project not found
