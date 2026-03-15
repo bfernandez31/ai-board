@@ -10,6 +10,31 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 describe('Landing Page - Pricing Section', () => {
   describe('GET / (pricing content)', () => {
+    it('should render the updated hero messaging and section anchors', async () => {
+      const response = await fetch(BASE_URL);
+      expect(response.status).toBe(200);
+
+      const html = await response.text();
+      expect(html).toContain('AI delivery, without the workflow chaos');
+      expect(html).toContain('See workflow');
+      expect(html).toContain('Explore pricing');
+      expect(html).toContain('href="#workflow"');
+      expect(html).toContain('href="#pricing"');
+      expect(html).toContain('Production-ready flow');
+      expect(html).toContain('Team-visible progress');
+    });
+
+    it('should render proof-driven workflow sections', async () => {
+      const response = await fetch(BASE_URL);
+      const html = await response.text();
+
+      expect(html).toContain('Why teams switch to ai-board');
+      expect(html).toContain('A calmer path from ticket to shipped code');
+      expect(html).toContain('Designed for reviewable AI delivery');
+      expect(html).toContain('One workspace for product, engineering, and AI agents');
+      expect(html).toContain('Ready to make AI work feel operational?');
+    });
+
     it('should return 200 and contain the pricing section', async () => {
       const response = await fetch(BASE_URL);
       expect(response.status).toBe(200);

@@ -12,12 +12,12 @@ import { CTASection } from '@/components/landing/cta-section';
  */
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
+    <main className="min-h-screen bg-background">
       <HeroSection />
       <FeaturesGrid />
       <WorkflowSection />
       <PricingSection />
       <CTASection />
-    </div>
+    </main>
   );
 }

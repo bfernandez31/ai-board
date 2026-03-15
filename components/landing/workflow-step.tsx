@@ -5,44 +5,33 @@ interface WorkflowStepProps {
   isLast?: boolean;
 }
 
-const stageColors = {
-  INBOX: '#6c7086',    // Catppuccin overlay-0 (gray)
-  SPECIFY: '#b4befe',  // Catppuccin lavender
-  PLAN: '#89b4fa',     // Catppuccin blue
-  BUILD: '#f9cb98',    // Catppuccin peach
-  VERIFY: '#f2cdcd',   // Catppuccin flamingo
+const stageStyles: Record<WorkflowStepProps['stage'], string> = {
+  INBOX: 'border-ctp-overlay0/40 bg-ctp-overlay0/10 text-ctp-subtext1',
+  SPECIFY: 'border-ctp-lavender/40 bg-ctp-lavender/10 text-ctp-lavender',
+  PLAN: 'border-ctp-blue/40 bg-ctp-blue/10 text-ctp-blue',
+  BUILD: 'border-ctp-peach-light/40 bg-ctp-peach-light/10 text-ctp-peach-light',
+  VERIFY: 'border-ctp-flamingo/40 bg-ctp-flamingo/10 text-ctp-flamingo',
 };
 
 export function WorkflowStep({ stage, title, description, isLast = false }: WorkflowStepProps) {
-  const color = stageColors[stage];
-
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-4" data-testid="workflow-step">
-      {/* Stage badge */}
+    <div
+      className="flex flex-col gap-4 rounded-3xl border border-border/70 bg-card/70 p-5 md:flex-row md:items-center"
+      data-testid="workflow-step"
+    >
       <div className="flex-shrink-0">
-        <div
-          className="px-4 py-2 rounded-full text-sm font-bold"
-          style={{ backgroundColor: color, color: '#1e1e2e' }}
-        >
+        <div className={`rounded-full border px-4 py-2 text-sm font-bold ${stageStyles[stage]}`}>
           {stage}
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1">
-        <h4 className="text-base font-semibold text-[hsl(var(--ctp-text))] mb-1">
-          {title}
-        </h4>
-        <p className="text-sm text-[hsl(var(--ctp-subtext-0))]">
-          {description}
-        </p>
+        <h4 className="mb-1 text-base font-semibold text-foreground">{title}</h4>
+        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
 
-      {/* Connector arrow (not shown for last item) */}
       {!isLast && (
-        <div className="hidden md:block flex-shrink-0 text-[hsl(var(--ctp-surface-0))]">
-          →
-        </div>
+        <div className="hidden flex-shrink-0 text-muted-foreground/50 md:block">→</div>
       )}
     </div>
   );

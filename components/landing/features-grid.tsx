@@ -1,60 +1,86 @@
 import { Sparkles, LayoutGrid, GitBranch, Zap, Image, RefreshCw } from 'lucide-react';
 import { FeatureCard } from './feature-card';
 
-export function FeaturesGrid() {
-  const features = [
-    {
-      icon: Sparkles,
-      iconColor: '#8B5CF6', // violet
-      title: 'AI-Powered Specifications',
-      description: 'Automatically generate detailed specifications from tickets with intelligent clarification.',
-    },
-    {
-      icon: LayoutGrid,
-      iconColor: '#89b4fa', // blue
-      title: 'Visual Kanban Board',
-      description: 'Track tasks through INBOX → SPECIFY → PLAN → BUILD → VERIFY stages with drag-and-drop interface.',
-    },
-    {
-      icon: GitBranch,
-      iconColor: '#a6e3a1', // green
-      title: 'Git Platform Integration',
-      description: 'Connect with GitHub, GitLab, or Bitbucket to sync issues and manage workflows.',
-    },
-    {
-      icon: Zap,
-      iconColor: '#f9e2af', // yellow
-      title: 'Automated Workflows',
-      description: 'Trigger automated specification, planning, and implementation tasks with your CI/CD pipeline.',
-    },
-    {
-      icon: Image,
-      iconColor: '#f5c2e7', // pink
-      title: 'Image Management',
-      description: 'Upload and manage images with cloud storage integration for documentation and specifications.',
-    },
-    {
-      icon: RefreshCw,
-      iconColor: '#89dceb', // cyan
-      title: 'Real-Time Updates',
-      description: 'Get instant feedback on workflow status with live polling and job tracking.',
-    },
-  ];
+const features = [
+  {
+    icon: Sparkles,
+    iconClassName: 'text-ctp-lavender',
+    accentClassName: 'from-ctp-lavender/10',
+    title: 'AI specs with fewer handoffs',
+    description:
+      'Move from rough ticket notes to a scoped implementation path with clearer prompts, stage context, and built-in guardrails.',
+  },
+  {
+    icon: LayoutGrid,
+    iconClassName: 'text-ctp-blue',
+    accentClassName: 'from-ctp-blue/10',
+    title: 'A board everyone can read',
+    description:
+      'Product, engineering, and operators share one view of where a ticket is blocked, moving, or ready for review.',
+  },
+  {
+    icon: GitBranch,
+    iconClassName: 'text-ctp-green',
+    accentClassName: 'from-ctp-green/10',
+    title: 'Branch and repo context included',
+    description:
+      'Keep workflow automation tied to the right repository, stage, and branch without asking teams to chase status in separate tools.',
+  },
+  {
+    icon: Zap,
+    iconClassName: 'text-ctp-yellow',
+    accentClassName: 'from-ctp-yellow/10',
+    title: 'Fast automation with human checkpoints',
+    description:
+      'Run quick implementations when work is simple, then fall back to deeper planning when a change needs more rigor.',
+  },
+  {
+    icon: Image,
+    iconClassName: 'text-ctp-pink',
+    accentClassName: 'from-ctp-pink/10',
+    title: 'Specs that keep visual context',
+    description:
+      'Attach screenshots, references, and notes so generated work stays aligned with product intent and review expectations.',
+  },
+  {
+    icon: RefreshCw,
+    iconClassName: 'text-ctp-sky',
+    accentClassName: 'from-ctp-sky/10',
+    title: 'Live status, not stale updates',
+    description:
+      'Poll jobs, comments, and notifications in one place so progress is visible while AI agents are still working.',
+  },
+] as const;
 
+export function FeaturesGrid() {
   return (
-    <section id="features" className="py-16 md:py-24 lg:py-32 bg-[hsl(var(--ctp-mantle))]">
+    <section
+      id="features"
+      aria-labelledby="features-title"
+      className="relative overflow-hidden py-20 md:py-24 lg:py-32"
+    >
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-card to-transparent" />
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
-            Everything You Need
-          </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
-            Powerful features to streamline your development workflow from idea to production.
-          </p>
+          <div className="mx-auto mb-12 max-w-3xl text-center">
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
+              Why teams switch to ai-board
+            </p>
+            <h2
+              id="features-title"
+              className="mb-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+            >
+              One workspace for product, engineering, and AI agents
+            </h2>
+            <p className="text-lg leading-8 text-muted-foreground md:text-xl">
+              Replace scattered tickets, docs, and workflow status with a board that makes AI
+              delivery easier to trust and easier to ship.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <FeatureCard key={index} {...feature} />
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
             ))}
           </div>
         </div>

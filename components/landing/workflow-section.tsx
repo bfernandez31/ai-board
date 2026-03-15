@@ -1,52 +1,91 @@
 import { WorkflowStep } from './workflow-step';
 import { MiniKanbanDemo } from './mini-kanban-demo';
 
+const workflowPrinciples = [
+  {
+    title: 'Clear ownership',
+    description: 'Every ticket keeps its stage, branch, and repository context visible to the whole team.',
+  },
+  {
+    title: 'Reviewable automation',
+    description: 'AI can move quickly without hiding the checkpoints that matter before code ships.',
+  },
+  {
+    title: 'Less coordination drag',
+    description: 'Product, engineering, and QA can follow the same status language from backlog to verify.',
+  },
+] as const;
+
 export function WorkflowSection() {
   const steps = [
     {
       stage: 'INBOX' as const,
-      title: 'Create ticket from issue',
-      description: 'Import from your Git platform or create tickets manually',
+      title: 'Capture the ticket once',
+      description: 'Bring work in from your repo or create it directly without losing project context.',
     },
     {
       stage: 'SPECIFY' as const,
-      title: 'AI generates specification',
-      description: 'Automated spec generation with intelligent clarification',
+      title: 'Shape the request',
+      description: 'Generate a tighter spec with enough detail for AI to work without guesswork.',
     },
     {
       stage: 'PLAN' as const,
-      title: 'Create implementation plan',
-      description: 'Technical design with architecture guidelines',
+      title: 'Make the implementation legible',
+      description: 'Turn the spec into a practical plan that still respects architecture and test expectations.',
     },
     {
       stage: 'BUILD' as const,
-      title: 'Execute implementation',
-      description: 'Automated development through your CI/CD pipeline',
+      title: 'Build with guardrails',
+      description: 'Run implementation in automation while preserving enough structure for humans to review it.',
     },
     {
       stage: 'VERIFY' as const,
-      title: 'Review and deploy',
-      description: 'Final validation before shipping to production',
+      title: 'Verify before shipping',
+      description: 'Keep final checks visible so teams can trust what is ready for production.',
     },
   ];
 
   return (
-    <section id="workflow" className="py-16 md:py-24 lg:py-32">
+    <section
+      id="workflow"
+      aria-labelledby="workflow-title"
+      className="relative overflow-hidden py-20 md:py-24 lg:py-32"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary))_0%,transparent_35%)] opacity-15" />
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
-            Streamlined Development Workflow
-          </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
-            Move your ideas from concept to production with a proven 6-stage workflow.
-          </p>
+          <div className="mx-auto mb-12 max-w-3xl text-center">
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
+              Designed for reviewable AI delivery
+            </p>
+            <h2
+              id="workflow-title"
+              className="mb-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+            >
+              A calmer path from ticket to shipped code
+            </h2>
+            <p className="text-lg leading-8 text-muted-foreground md:text-xl">
+              ai-board keeps the workflow explicit, so teams can automate more work without making
+              ownership, review, or deployment feel opaque.
+            </p>
+          </div>
 
-          {/* Animated Mini-Kanban Demo - Desktop only */}
+          <div className="mb-10 grid gap-4 md:grid-cols-3">
+            {workflowPrinciples.map((principle) => (
+              <div
+                key={principle.title}
+                className="rounded-3xl border border-border/70 bg-card/70 p-6 backdrop-blur"
+              >
+                <h3 className="mb-2 text-lg font-semibold text-foreground">{principle.title}</h3>
+                <p className="text-sm leading-6 text-muted-foreground">{principle.description}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="hidden lg:block mb-16">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
           </div>
 
-          {/* Detailed step descriptions - Mobile only */}
           <div className="flex flex-col gap-8 lg:hidden">
             {steps.map((step, index) => (
               <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
