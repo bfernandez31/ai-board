@@ -100,22 +100,59 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 
 ### Landing Page Structure
 
-The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+The landing page is a server-rendered `<main>` element displayed to unauthenticated visitors only. It is composed of five sequential sections:
 
-1. **HeroSection** — animated hero with background ticket cards
-2. **FeaturesGrid** — product feature highlights
+1. **HeroSection** — animated hero with background ticket cards (`aria-labelledby="hero-heading"`)
+2. **FeaturesGrid** — product feature highlights (`aria-labelledby="features-heading"`)
 3. **WorkflowSection** — workflow stage showcase
-4. **PricingSection** — pricing cards and FAQ (`#pricing`)
-5. **CTASection** — final call-to-action
+4. **PricingSection** — pricing cards and FAQ (`id="pricing"`, `aria-labelledby="pricing-heading"`)
+5. **CTASection** — final call-to-action (`aria-labelledby="cta-heading"`)
 
-All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion). Decorative background elements use `aria-hidden="true"`.
+
+### Hero Section
+
+**Content**:
+- Announcement pill: inline badge with pulsing dot indicator and label "AI-powered development workflows"
+- Heading (`id="hero-heading"`): "Build Better Software with AI" — gradient text from `primary` → `ctp-lavender` → `ctp-blue`
+- Subheadline: muted text, `max-w-2xl`, describes ticket-to-deployment transformation
+- Trust signal: "Free forever for solo developers · No credit card required" below CTA buttons
+
+**CTA Buttons**:
+- Primary: "Get Started Free" with `ArrowRight` icon → `/auth/signin`
+- Secondary (outline): "See How It Works" → `#workflow` anchor
+
+**Background layers**:
+- Animated ticket cards (`AnimatedTicketBackground`) as `-z-10`
+- Radial glow overlay (`bg-[radial-gradient(...)]`) as `-z-10` for depth
+
+### Features Grid
+
+**Section** (`id="features"`, `aria-labelledby="features-heading"`):
+- Heading: "Everything You Need"
+- Sub-heading: muted, `max-w-2xl`
+- Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`
+- React key: `feature.title` (stable, not index)
+
+**Feature Cards** (`components/landing/feature-card.tsx`):
+
+Each card has a rounded icon container (12×12, colored background) with a centered icon, followed by title and description. The container scales up (`group-hover:scale-110`) on card hover.
+
+| Feature | Icon | Icon color | Background |
+|---------|------|------------|------------|
+| AI-Powered Specifications | Sparkles | `text-ctp-mauve` | `bg-ctp-mauve/10` |
+| Visual Kanban Board | LayoutGrid | `text-ctp-blue` | `bg-ctp-blue/10` |
+| Git Platform Integration | GitBranch | `text-ctp-green` | `bg-ctp-green/10` |
+| Automated Workflows | Zap | `text-ctp-yellow` | `bg-ctp-yellow/10` |
+| Image Management | Image | `text-ctp-pink` | `bg-ctp-pink/10` |
+| Real-Time Updates | RefreshCw | `text-ctp-sky` | `bg-ctp-sky/10` |
 
 ### Pricing Section
 
 The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and a FAQ to unauthenticated visitors. It is positioned after `WorkflowSection` and before `CTASection` with `id="pricing"` for anchor linking.
 
 **Layout**:
-- Section heading: "Simple, transparent pricing" (centered)
+- Section heading: "Simple, transparent pricing" (centered, `id="pricing-heading"`)
 - Sub-heading: description text (centered, `max-w-2xl`)
 - Plan cards: `grid-cols-1 md:grid-cols-3` — single column on mobile, 3 columns on `md+`
 - FAQ: below the cards, `max-w-2xl mx-auto`
@@ -124,17 +161,17 @@ The pricing section (`components/landing/pricing-section.tsx`) displays subscrip
 
 Plan data is sourced from `lib/billing/plans.ts` (`PLANS` constant) — the same source of truth used by the billing settings page. This ensures pricing shown on the landing page always matches in-app billing.
 
-| Plan | Price | CTA Label | Highlighted |
-|------|-------|-----------|-------------|
-| Free | $0 | "Get Started" | No |
-| Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`) |
-| Team | $30/mo | "Start 14-day trial" | No |
+| Plan | Price | CTA Label | CTA Variant | Highlighted |
+|------|-------|-----------|-------------|-------------|
+| Free | $0 | "Get Started" | `outline` | No |
+| Pro | $15/mo | "Start 14-day trial" | `default` | Yes — "Most Popular" badge, `border-primary`, `scale-[1.02]`, `shadow-primary/10` |
+| Team | $30/mo | "Start 14-day trial" | `outline` | No |
 
-Each card shows: plan name, monthly price, feature list (checkmark icons), and a CTA button. All CTA buttons link to `/auth/signin`.
+Each card shows: plan name, monthly price, feature list (checkmark icons with `text-ctp-green`), and a CTA button. All CTA buttons link to `/auth/signin`. The feature list uses `role="list"` with `aria-label="{name} plan features"`. All buttons include `focus-visible` ring styles for keyboard accessibility.
 
 **FAQ** (`components/landing/pricing-faq.tsx`):
 
-A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion items:
+A `'use client'` component using `Collapsible` from shadcn/ui. The FAQ container uses `role="region"` with `aria-labelledby="faq-heading"`. Four accordion items:
 
 1. "What does BYOK mean?" — explains Bring Your Own Key, required on Free plan
 2. "Which AI agents are supported?" — Claude (Anthropic) and Codex (OpenAI)
@@ -147,9 +184,11 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - Minimum supported viewport: 375px (no horizontal scroll)
 
 **Accessibility**:
-- `aria-hidden` is not needed (content is informational, not decorative)
-- Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
-- Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+- All sections use `aria-labelledby` pointing to their heading element
+- Collapsible triggers have `focus-visible` ring and `rounded-sm` for keyboard visibility
+- `ChevronDown` rotates 180° when open; marked `aria-hidden="true"`
+- Text contrast meets WCAG AA — semantic color tokens only, no hardcoded hex values
+- Icon containers and decorative elements are `aria-hidden="true"`
 
 ---
 
