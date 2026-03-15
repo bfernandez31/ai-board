@@ -5,56 +5,69 @@ export function FeaturesGrid() {
   const features = [
     {
       icon: Sparkles,
-      iconColor: '#8B5CF6', // violet
+      iconClassName: 'text-ctp-mauve',
+      bgClassName: 'bg-ctp-mauve/10',
       title: 'AI-Powered Specifications',
       description: 'Automatically generate detailed specifications from tickets with intelligent clarification.',
     },
     {
       icon: LayoutGrid,
-      iconColor: '#89b4fa', // blue
+      iconClassName: 'text-ctp-blue',
+      bgClassName: 'bg-ctp-blue/10',
       title: 'Visual Kanban Board',
-      description: 'Track tasks through INBOX → SPECIFY → PLAN → BUILD → VERIFY stages with drag-and-drop interface.',
+      description: 'Track tasks through INBOX → SPECIFY → PLAN → BUILD → VERIFY stages with drag-and-drop.',
     },
     {
       icon: GitBranch,
-      iconColor: '#a6e3a1', // green
+      iconClassName: 'text-ctp-green',
+      bgClassName: 'bg-ctp-green/10',
       title: 'Git Platform Integration',
       description: 'Connect with GitHub, GitLab, or Bitbucket to sync issues and manage workflows.',
     },
     {
       icon: Zap,
-      iconColor: '#f9e2af', // yellow
+      iconClassName: 'text-ctp-yellow',
+      bgClassName: 'bg-ctp-yellow/10',
       title: 'Automated Workflows',
-      description: 'Trigger automated specification, planning, and implementation tasks with your CI/CD pipeline.',
+      description: 'Trigger automated specification, planning, and implementation with your CI/CD pipeline.',
     },
     {
       icon: Image,
-      iconColor: '#f5c2e7', // pink
+      iconClassName: 'text-ctp-pink',
+      bgClassName: 'bg-ctp-pink/10',
       title: 'Image Management',
-      description: 'Upload and manage images with cloud storage integration for documentation and specifications.',
+      description: 'Upload and manage images with cloud storage integration for docs and specifications.',
     },
     {
       icon: RefreshCw,
-      iconColor: '#89dceb', // cyan
+      iconClassName: 'text-ctp-sky',
+      bgClassName: 'bg-ctp-sky/10',
       title: 'Real-Time Updates',
       description: 'Get instant feedback on workflow status with live polling and job tracking.',
     },
   ];
 
   return (
-    <section id="features" className="py-16 md:py-24 lg:py-32 bg-[hsl(var(--ctp-mantle))]">
+    <section
+      id="features"
+      className="py-16 md:py-24 lg:py-32 bg-card"
+      aria-labelledby="features-heading"
+    >
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
+          <h2
+            id="features-heading"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-center text-foreground mb-4"
+          >
             Everything You Need
           </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Powerful features to streamline your development workflow from idea to production.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <FeatureCard key={index} {...feature} />
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
             ))}
           </div>
         </div>

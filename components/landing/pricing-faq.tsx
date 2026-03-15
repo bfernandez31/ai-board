@@ -41,14 +41,15 @@ function FAQItem({ item }: { item: FAQItemData }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between py-4 text-left text-foreground font-medium hover:text-primary transition-colors">
-        {item.question}
+      <CollapsibleTrigger className="flex w-full items-center justify-between py-4 text-left text-foreground font-medium hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm">
+        <span>{item.question}</span>
         <ChevronDown
-          className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`h-5 w-5 flex-shrink-0 ml-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
         />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <p className="pb-4 text-muted-foreground">{item.answer}</p>
+        <p className="pb-4 text-muted-foreground leading-relaxed">{item.answer}</p>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -56,8 +57,8 @@ function FAQItem({ item }: { item: FAQItemData }) {
 
 export function PricingFAQ() {
   return (
-    <div className="mt-16 max-w-2xl mx-auto">
-      <h3 className="text-2xl font-bold text-center text-foreground mb-8">
+    <div className="mt-16 max-w-2xl mx-auto" role="region" aria-labelledby="faq-heading">
+      <h3 id="faq-heading" className="text-2xl font-bold text-center text-foreground mb-8">
         Frequently Asked Questions
       </h3>
       <div className="divide-y divide-border">

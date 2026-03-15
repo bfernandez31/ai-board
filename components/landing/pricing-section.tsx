@@ -10,16 +10,23 @@ const PLAN_CARDS = [
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="py-16 md:py-24 lg:py-32">
+    <section
+      id="pricing"
+      className="py-16 md:py-24 lg:py-32 bg-card"
+      aria-labelledby="pricing-heading"
+    >
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-4">
+          <h2
+            id="pricing-heading"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-center text-foreground mb-4"
+          >
             Simple, transparent pricing
           </h2>
-          <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Start free and scale as your team grows. All plans include AI-powered development workflows.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {PLAN_CARDS.map((card) => (
               <PricingCard
                 key={card.plan}

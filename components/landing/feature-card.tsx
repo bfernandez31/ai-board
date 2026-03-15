@@ -2,26 +2,30 @@ import type { LucideIcon } from 'lucide-react';
 
 interface FeatureCardProps {
   icon: LucideIcon;
-  iconColor: string;
+  iconClassName: string;
+  bgClassName: string;
   title: string;
   description: string;
 }
 
-export function FeatureCard({ icon: Icon, iconColor, title, description }: FeatureCardProps) {
+export function FeatureCard({ icon: Icon, iconClassName, bgClassName, title, description }: FeatureCardProps) {
   return (
     <div
-      className="p-6 rounded-lg border border-border bg-ctp-mantle hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/10"
+      className="group p-6 rounded-xl border border-border bg-background hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5"
       data-testid="feature-card"
     >
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0">
-          <Icon className="w-8 h-8" style={{ color: iconColor }} />
+        <div
+          className={`flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-lg ${bgClassName} transition-transform duration-300 group-hover:scale-110`}
+          aria-hidden="true"
+        >
+          <Icon className={`w-6 h-6 ${iconClassName}`} />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-2">
             {title}
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             {description}
           </p>
         </div>
