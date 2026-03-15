@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-background';
+import { Button } from '@/components/ui/button';
 
 const heroMetrics = [
   {
@@ -27,7 +28,7 @@ const trustPoints = [
   'Proof-first storytelling instead of generic SaaS copy',
 ] as const;
 
-export function HeroSection() {
+export function HeroSection(): JSX.Element {
   return (
     <section
       aria-labelledby="landing-hero-title"

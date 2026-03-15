@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 
-export function CTASection() {
+export function CTASection(): JSX.Element {
   return (
     <section
       className="relative overflow-hidden py-20 md:py-24 lg:py-32"

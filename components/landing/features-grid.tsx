@@ -1,4 +1,5 @@
-import { Sparkles, LayoutGrid, GitBranch, Zap, Image, RefreshCw } from 'lucide-react';
+import { GitBranch, Image, LayoutGrid, RefreshCw, Sparkles, Zap } from 'lucide-react';
+
 import { FeatureCard } from './feature-card';
 
 const features = [
@@ -52,7 +53,7 @@ const features = [
   },
 ] as const;
 
-export function FeaturesGrid() {
+export function FeaturesGrid(): JSX.Element {
   return (
     <section
       id="features"
@@ -61,7 +62,7 @@ export function FeaturesGrid() {
     >
       <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-card to-transparent" />
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           <div className="mx-auto mb-12 max-w-3xl text-center">
             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
               Why teams switch to ai-board

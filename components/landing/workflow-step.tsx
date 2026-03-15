@@ -1,4 +1,6 @@
-interface WorkflowStepProps {
+import { cn } from '@/lib/utils';
+
+export interface WorkflowStepProps {
   stage: 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY';
   title: string;
   description: string;
@@ -13,16 +15,24 @@ const stageStyles: Record<WorkflowStepProps['stage'], string> = {
   VERIFY: 'border-ctp-flamingo/40 bg-ctp-flamingo/10 text-ctp-flamingo',
 };
 
-export function WorkflowStep({ stage, title, description, isLast = false }: WorkflowStepProps) {
+export function WorkflowStep({
+  stage,
+  title,
+  description,
+  isLast = false,
+}: WorkflowStepProps): JSX.Element {
+  const stageBadgeClassName = cn(
+    'rounded-full border px-4 py-2 text-sm font-bold',
+    stageStyles[stage]
+  );
+
   return (
     <div
       className="flex flex-col gap-4 rounded-3xl border border-border/70 bg-card/70 p-5 md:flex-row md:items-center"
       data-testid="workflow-step"
     >
       <div className="flex-shrink-0">
-        <div className={`rounded-full border px-4 py-2 text-sm font-bold ${stageStyles[stage]}`}>
-          {stage}
-        </div>
+        <div className={stageBadgeClassName}>{stage}</div>
       </div>
 
       <div className="flex-1">

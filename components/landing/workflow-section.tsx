@@ -1,5 +1,5 @@
-import { WorkflowStep } from './workflow-step';
 import { MiniKanbanDemo } from './mini-kanban-demo';
+import { WorkflowStep, type WorkflowStepProps } from './workflow-step';
 
 const workflowPrinciples = [
   {
@@ -16,34 +16,35 @@ const workflowPrinciples = [
   },
 ] as const;
 
-export function WorkflowSection() {
-  const steps = [
-    {
-      stage: 'INBOX' as const,
-      title: 'Capture the ticket once',
-      description: 'Bring work in from your repo or create it directly without losing project context.',
-    },
-    {
-      stage: 'SPECIFY' as const,
-      title: 'Shape the request',
-      description: 'Generate a tighter spec with enough detail for AI to work without guesswork.',
-    },
-    {
-      stage: 'PLAN' as const,
-      title: 'Make the implementation legible',
-      description: 'Turn the spec into a practical plan that still respects architecture and test expectations.',
-    },
-    {
-      stage: 'BUILD' as const,
-      title: 'Build with guardrails',
-      description: 'Run implementation in automation while preserving enough structure for humans to review it.',
-    },
-    {
-      stage: 'VERIFY' as const,
-      title: 'Verify before shipping',
-      description: 'Keep final checks visible so teams can trust what is ready for production.',
-    },
-  ];
+const workflowSteps: ReadonlyArray<WorkflowStepProps> = [
+  {
+    stage: 'INBOX',
+    title: 'Capture the ticket once',
+    description: 'Bring work in from your repo or create it directly without losing project context.',
+  },
+  {
+    stage: 'SPECIFY',
+    title: 'Shape the request',
+    description: 'Generate a tighter spec with enough detail for AI to work without guesswork.',
+  },
+  {
+    stage: 'PLAN',
+    title: 'Make the implementation legible',
+    description: 'Turn the spec into a practical plan that still respects architecture and test expectations.',
+  },
+  {
+    stage: 'BUILD',
+    title: 'Build with guardrails',
+    description: 'Run implementation in automation while preserving enough structure for humans to review it.',
+  },
+  {
+    stage: 'VERIFY',
+    title: 'Verify before shipping',
+    description: 'Keep final checks visible so teams can trust what is ready for production.',
+  },
+] as const;
+
+export function WorkflowSection(): JSX.Element {
 
   return (
     <section
@@ -53,7 +54,7 @@ export function WorkflowSection() {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary))_0%,transparent_35%)] opacity-15" />
       <div className="container mx-auto px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto max-w-7xl">
           <div className="mx-auto mb-12 max-w-3xl text-center">
             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
               Designed for reviewable AI delivery
@@ -82,13 +83,17 @@ export function WorkflowSection() {
             ))}
           </div>
 
-          <div className="hidden lg:block mb-16">
+          <div className="mb-16 hidden lg:block">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
           </div>
 
           <div className="flex flex-col gap-8 lg:hidden">
-            {steps.map((step, index) => (
-              <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
+            {workflowSteps.map((step, index) => (
+              <WorkflowStep
+                key={step.stage}
+                {...step}
+                isLast={index === workflowSteps.length - 1}
+              />
             ))}
           </div>
         </div>
