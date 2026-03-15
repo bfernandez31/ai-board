@@ -36,8 +36,8 @@ export function WorkflowStep({ stage, step, title, description, isLast = false }
       </div>
 
       {/* Content */}
-      <div className={`flex-1 pb-6 ${isLast ? '' : ''}`}>
-        <div className={`inline-flex items-center gap-2 mb-1`}>
+      <div className="flex-1 pb-6">
+        <div className="inline-flex items-center gap-2 mb-1">
           <span
             className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${colors.bg} ${colors.text}`}
           >
