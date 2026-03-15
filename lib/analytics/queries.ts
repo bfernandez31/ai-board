@@ -5,127 +5,336 @@
  * All queries are read-only against existing Job and Ticket tables.
  */
 
+import { JobStatus } from '@prisma/client';
+import type { Prisma, Stage, WorkflowType } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import type {
+  AgentOption,
   AnalyticsData,
+  AnalyticsFilters,
   CacheMetrics,
+  CompletionMetric,
   CostDataPoint,
+  NamedAgent,
   OverviewMetrics,
   StageCost,
   StageKey,
-  TimeRange,
+  TicketOutcomeFilter,
   TokenBreakdown,
   ToolUsage,
   WeeklyVelocity,
   WorkflowBreakdown,
 } from './types';
 import {
+  DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
   calculateTrend,
   formatDateForGrouping,
   getDateRangeStart,
+  getAgentLabel,
   getGranularity,
   getISOWeek,
   getPreviousPeriodStart,
+  getRangeLabel,
   getStageFromCommand,
   hasAnalyticsData,
 } from './aggregations';
 
-/**
- * T010: Query helpers for different analytics sections
- */
+const COMPLETED_TICKET_STAGES: Stage[] = ['SHIP', 'CLOSED'];
+const JOB_STATUSES: JobStatus[] = [JobStatus.COMPLETED, JobStatus.FAILED];
 
-/**
- * Get overview metrics for a project within a time range
- */
-async function getOverviewMetrics(
+function buildEffectiveAgentWhere(agent: NamedAgent | 'all'): Prisma.TicketWhereInput | undefined {
+  if (agent === 'all') {
+    return undefined;
+  }
+
+  return {
+    OR: [
+      { agent },
+      {
+        agent: null,
+        project: {
+          is: {
+            defaultAgent: agent,
+          },
+        },
+      },
+    ],
+  };
+}
+
+function buildOutcomeStages(outcome: TicketOutcomeFilter): Stage[] {
+  switch (outcome) {
+    case 'shipped':
+      return ['SHIP'];
+    case 'closed':
+      return ['CLOSED'];
+    case 'all-completed':
+      return COMPLETED_TICKET_STAGES;
+  }
+}
+
+function buildTicketStageRangeWhere(
+  stage: 'SHIP' | 'CLOSED',
+  rangeStart: Date | null
+): Prisma.TicketWhereInput {
+  if (stage === 'SHIP') {
+    return {
+      stage,
+      ...(rangeStart ? { updatedAt: { gte: rangeStart } } : {}),
+    };
+  }
+
+  return {
+    stage,
+    closedAt: rangeStart ? { gte: rangeStart } : { not: null },
+  };
+}
+
+function buildTicketMembershipWhere(filters: AnalyticsFilters): Prisma.TicketWhereInput {
+  const clauses: Prisma.TicketWhereInput[] = [
+    {
+      stage: {
+        in: buildOutcomeStages(filters.outcome),
+      },
+    },
+  ];
+
+  const agentWhere = buildEffectiveAgentWhere(filters.agent);
+  if (agentWhere) {
+    clauses.push(agentWhere);
+  }
+
+  return clauses.length === 1 ? clauses[0]! : { AND: clauses };
+}
+
+function buildTicketRangeWhere(filters: AnalyticsFilters, now: Date): Prisma.TicketWhereInput {
+  const rangeStart = getDateRangeStart(filters.range, now);
+  const agentWhere = buildEffectiveAgentWhere(filters.agent);
+  let rangeWhere: Prisma.TicketWhereInput;
+
+  switch (filters.outcome) {
+    case 'all-completed':
+      rangeWhere = {
+        OR: [
+          buildTicketStageRangeWhere('SHIP', rangeStart),
+          buildTicketStageRangeWhere('CLOSED', rangeStart),
+        ],
+      };
+      break;
+    case 'shipped':
+      rangeWhere = buildTicketStageRangeWhere('SHIP', rangeStart);
+      break;
+    case 'closed':
+      rangeWhere = buildTicketStageRangeWhere('CLOSED', rangeStart);
+      break;
+  }
+
+  if (!agentWhere) {
+    return rangeWhere;
+  }
+
+  return {
+    AND: [rangeWhere, agentWhere],
+  };
+}
+
+function buildJobWhere(
   projectId: number,
-  range: TimeRange,
-  now: Date
-): Promise<OverviewMetrics> {
-  const rangeStart = getDateRangeStart(range, now);
-  const prevRangeStart = getPreviousPeriodStart(range, now);
+  filters: AnalyticsFilters,
+  now: Date,
+  statuses: JobStatus[] = JOB_STATUSES
+): Prisma.JobWhereInput {
+  const rangeStart = getDateRangeStart(filters.range, now);
 
-  // Current period query
-  const currentJobs = await prisma.job.findMany({
+  return {
+    projectId,
+    status: { in: statuses },
+    ticket: {
+      is: buildTicketMembershipWhere(filters),
+    },
+    ...(rangeStart ? { completedAt: { gte: rangeStart } } : {}),
+  };
+}
+
+function buildPreviousPeriodJobWhere(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Prisma.JobWhereInput | null {
+  const rangeStart = getDateRangeStart(filters.range, now);
+  const previousPeriodStart = getPreviousPeriodStart(filters.range, now);
+
+  if (!rangeStart || !previousPeriodStart) {
+    return null;
+  }
+
+  return {
+    projectId,
+    status: { in: JOB_STATUSES },
+    ticket: {
+      is: buildTicketMembershipWhere(filters),
+    },
+    completedAt: {
+      gte: previousPeriodStart,
+      lt: rangeStart,
+    },
+  };
+}
+
+async function getAvailableAgents(projectId: number): Promise<AgentOption[]> {
+  const tickets = await prisma.ticket.findMany({
     where: {
       projectId,
-      status: { in: ['COMPLETED', 'FAILED'] },
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      stage: { in: COMPLETED_TICKET_STAGES },
+      jobs: {
+        some: {},
+      },
     },
     select: {
-      status: true,
-      costUsd: true,
-      durationMs: true,
+      agent: true,
+      project: {
+        select: {
+          defaultAgent: true,
+        },
+      },
+      _count: {
+        select: {
+          jobs: true,
+        },
+      },
     },
   });
 
-  // Previous period query (for trend calculation)
-  const previousJobs = prevRangeStart
-    ? await prisma.job.findMany({
-        where: {
-          projectId,
-          status: { in: ['COMPLETED', 'FAILED'] },
-          completedAt: {
-            gte: prevRangeStart,
-            lt: rangeStart ?? now,
-          },
-        },
-        select: {
-          costUsd: true,
-        },
-      })
-    : [];
+  const counts = new Map<NamedAgent, number>([
+    ['CLAUDE', 0],
+    ['CODEX', 0],
+  ]);
 
-  // Calculate metrics
-  const completedJobs = currentJobs.filter((j) => j.status === 'COMPLETED');
-  const totalCost = completedJobs.reduce((sum, j) => sum + (j.costUsd ?? 0), 0);
-  const previousCost = previousJobs.reduce((sum, j) => sum + (j.costUsd ?? 0), 0);
+  for (const ticket of tickets) {
+    const effectiveAgent = (ticket.agent ?? ticket.project.defaultAgent) as NamedAgent;
+    counts.set(effectiveAgent, (counts.get(effectiveAgent) ?? 0) + ticket._count.jobs);
+  }
+
+  const options: AgentOption[] = [
+    {
+      value: 'all',
+      label: 'All agents',
+      jobCount: Array.from(counts.values()).reduce((sum, count) => sum + count, 0),
+      isDefault: true,
+    },
+  ];
+
+  for (const agent of ['CLAUDE', 'CODEX'] as const) {
+    const jobCount = counts.get(agent) ?? 0;
+    if (jobCount > 0) {
+      options.push({
+        value: agent,
+        label: getAgentLabel(agent),
+        jobCount,
+        isDefault: false,
+      });
+    }
+  }
+
+  return options;
+}
+
+async function getCompletionMetrics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<Pick<OverviewMetrics, 'ticketsShipped' | 'ticketsClosed'>> {
+  const rangeStart = getDateRangeStart(filters.range, now);
+  const agentWhere = buildEffectiveAgentWhere(filters.agent);
+  const label = getRangeLabel(filters.range);
+
+  const shippedWhere: Prisma.TicketWhereInput = {
+    projectId,
+    ...buildTicketStageRangeWhere('SHIP', rangeStart),
+    ...(agentWhere ?? {}),
+  };
+
+  const closedWhere: Prisma.TicketWhereInput = {
+    projectId,
+    ...buildTicketStageRangeWhere('CLOSED', rangeStart),
+    ...(agentWhere ?? {}),
+  };
+
+  const [shippedCount, closedCount] = await Promise.all([
+    filters.outcome === 'closed' ? Promise.resolve(0) : prisma.ticket.count({ where: shippedWhere }),
+    filters.outcome === 'shipped' ? Promise.resolve(0) : prisma.ticket.count({ where: closedWhere }),
+  ]);
+
+  const toMetric = (count: number): CompletionMetric => ({
+    count,
+    label,
+  });
+
+  return {
+    ticketsShipped: toMetric(shippedCount),
+    ticketsClosed: toMetric(closedCount),
+  };
+}
+
+async function getOverviewMetrics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<OverviewMetrics> {
+  const currentJobWhere = buildJobWhere(projectId, filters, now);
+  const previousJobWhere = buildPreviousPeriodJobWhere(projectId, filters, now);
+
+  const [currentJobs, previousJobs, completionMetrics] = await Promise.all([
+    prisma.job.findMany({
+      where: currentJobWhere,
+      select: {
+        status: true,
+        costUsd: true,
+        durationMs: true,
+      },
+    }),
+    previousJobWhere
+      ? prisma.job.findMany({
+          where: previousJobWhere,
+          select: {
+            costUsd: true,
+          },
+        })
+      : Promise.resolve([]),
+    getCompletionMetrics(projectId, filters, now),
+  ]);
+
+  const completedJobs = currentJobs.filter((job) => job.status === 'COMPLETED');
+  const totalCost = completedJobs.reduce((sum, job) => sum + (job.costUsd ?? 0), 0);
+  const previousCost = previousJobs.reduce((sum, job) => sum + (job.costUsd ?? 0), 0);
   const successRate =
     currentJobs.length > 0 ? (completedJobs.length / currentJobs.length) * 100 : 0;
   const avgDuration =
     completedJobs.length > 0
       ? Math.round(
-          completedJobs.reduce((sum, j) => sum + (j.durationMs ?? 0), 0) / completedJobs.length
+          completedJobs.reduce((sum, job) => sum + (job.durationMs ?? 0), 0) / completedJobs.length
         )
       : 0;
-
-  // Tickets shipped this month
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const ticketsShipped = await prisma.ticket.count({
-    where: {
-      projectId,
-      stage: 'SHIP',
-      updatedAt: { gte: monthStart },
-    },
-  });
 
   return {
     totalCost: Math.round(totalCost * 100) / 100,
     costTrend: Math.round(calculateTrend(totalCost, previousCost) * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
     avgDuration,
-    ticketsShipped,
+    ...completionMetrics,
   };
 }
 
-/**
- * Get cost over time data points
- */
 async function getCostOverTime(
   projectId: number,
-  range: TimeRange,
+  filters: AnalyticsFilters,
   now: Date
 ): Promise<CostDataPoint[]> {
-  const rangeStart = getDateRangeStart(range, now);
-  const granularity = getGranularity(range);
-
   const jobs = await prisma.job.findMany({
     where: {
-      projectId,
-      status: 'COMPLETED',
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
       costUsd: { not: null },
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
     },
     select: {
       completedAt: true,
@@ -134,8 +343,9 @@ async function getCostOverTime(
     orderBy: { completedAt: 'asc' },
   });
 
-  // Group by date/week
   const grouped = new Map<string, number>();
+  const granularity = getGranularity(filters.range);
+
   for (const job of jobs) {
     if (!job.completedAt) continue;
     const key = formatDateForGrouping(job.completedAt, granularity);
@@ -150,22 +360,15 @@ async function getCostOverTime(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/**
- * Get cost breakdown by stage
- */
 async function getCostByStage(
   projectId: number,
-  range: TimeRange,
+  filters: AnalyticsFilters,
   now: Date
 ): Promise<StageCost[]> {
-  const rangeStart = getDateRangeStart(range, now);
-
   const jobs = await prisma.job.findMany({
     where: {
-      projectId,
-      status: 'COMPLETED',
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
       costUsd: { not: null },
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
     },
     select: {
       command: true,
@@ -173,7 +376,6 @@ async function getCostByStage(
     },
   });
 
-  // Group by stage
   const stageCosts = new Map<StageKey, number>();
   for (const job of jobs) {
     const stage = getStageFromCommand(job.command);
@@ -194,25 +396,18 @@ async function getCostByStage(
         percentage: totalCost > 0 ? Math.round((cost / totalCost) * 1000) / 10 : 0,
       };
     })
-    .filter((s) => s.cost > 0)
+    .filter((stage) => stage.cost > 0)
     .sort((a, b) => b.cost - a.cost);
 }
 
-/**
- * Get token usage breakdown
- */
 async function getTokenUsage(
   projectId: number,
-  range: TimeRange,
+  filters: AnalyticsFilters,
   now: Date
 ): Promise<TokenBreakdown> {
-  const rangeStart = getDateRangeStart(range, now);
-
   const result = await prisma.job.aggregate({
     where: {
-      projectId,
-      status: 'COMPLETED',
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
     },
     _sum: {
       inputTokens: true,
@@ -229,22 +424,10 @@ async function getTokenUsage(
   };
 }
 
-/**
- * Get cache efficiency metrics
- */
-async function getCacheEfficiency(
-  projectId: number,
-  range: TimeRange,
-  now: Date
-): Promise<CacheMetrics> {
-  const tokenUsage = await getTokenUsage(projectId, range, now);
-
+function getCacheEfficiency(tokenUsage: TokenBreakdown): CacheMetrics {
   const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheTokens;
   const savingsPercentage =
     totalTokens > 0 ? Math.round((tokenUsage.cacheTokens / totalTokens) * 1000) / 10 : 0;
-
-  // Estimate savings: cache tokens at 10% of input token cost
-  // Rough estimate: $3 per 1M input tokens, cache saves 90% of that
   const estimatedSavingsUsd = Math.round(tokenUsage.cacheTokens * 0.0000027 * 100) / 100;
 
   return {
@@ -255,83 +438,71 @@ async function getCacheEfficiency(
   };
 }
 
-/**
- * Get top tools usage
- */
-async function getTopTools(projectId: number, range: TimeRange, now: Date): Promise<ToolUsage[]> {
-  const rangeStart = getDateRangeStart(range, now);
-
+async function getTopTools(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<ToolUsage[]> {
   const jobs = await prisma.job.findMany({
-    where: {
-      projectId,
-      status: 'COMPLETED',
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
-    },
+    where: buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
     select: {
       toolsUsed: true,
     },
   });
 
-  return aggregateTools(jobs.map((j) => j.toolsUsed));
+  return aggregateTools(jobs.map((job) => job.toolsUsed));
 }
 
-/**
- * Get workflow distribution
- */
 async function getWorkflowDistribution(
   projectId: number,
-  range: TimeRange,
+  filters: AnalyticsFilters,
   now: Date
 ): Promise<WorkflowBreakdown[]> {
-  const rangeStart = getDateRangeStart(range, now);
-
   const tickets = await prisma.ticket.groupBy({
     by: ['workflowType'],
     where: {
       projectId,
-      ...(rangeStart && { updatedAt: { gte: rangeStart } }),
+      ...buildTicketRangeWhere(filters, now),
     },
     _count: true,
   });
 
-  const total = tickets.reduce((sum, t) => sum + t._count, 0);
+  const total = tickets.reduce((sum, ticket) => sum + ticket._count, 0);
 
   return tickets
-    .map((t) => ({
-      type: t.workflowType as 'FULL' | 'QUICK' | 'CLEAN',
-      count: t._count,
-      percentage: total > 0 ? Math.round((t._count / total) * 1000) / 10 : 0,
+    .map((ticket) => ({
+      type: ticket.workflowType as WorkflowType,
+      count: ticket._count,
+      percentage: total > 0 ? Math.round((ticket._count / total) * 1000) / 10 : 0,
     }))
     .sort((a, b) => b.count - a.count);
 }
 
-/**
- * Get velocity data (tickets shipped per week)
- */
 async function getVelocityData(
   projectId: number,
-  range: TimeRange,
+  filters: AnalyticsFilters,
   now: Date
 ): Promise<WeeklyVelocity[]> {
-  const rangeStart = getDateRangeStart(range, now);
-
   const tickets = await prisma.ticket.findMany({
     where: {
       projectId,
-      stage: 'SHIP',
-      ...(rangeStart && { updatedAt: { gte: rangeStart } }),
+      ...buildTicketRangeWhere(filters, now),
     },
     select: {
+      stage: true,
       updatedAt: true,
+      closedAt: true,
     },
     orderBy: { updatedAt: 'asc' },
   });
 
-  // Group by week
   const weekly = new Map<string, number>();
+
   for (const ticket of tickets) {
-    const year = ticket.updatedAt.getFullYear();
-    const week = getISOWeek(ticket.updatedAt);
+    const eventDate = ticket.stage === 'CLOSED' ? ticket.closedAt : ticket.updatedAt;
+    if (!eventDate) continue;
+    const year = eventDate.getFullYear();
+    const week = getISOWeek(eventDate);
     const key = `${year}-W${week.toString().padStart(2, '0')}`;
     weekly.set(key, (weekly.get(key) ?? 0) + 1);
   }
@@ -341,23 +512,37 @@ async function getVelocityData(
     .sort((a, b) => a.week.localeCompare(b.week));
 }
 
-/**
- * T011: Main orchestration function
- * Fetches all analytics data for a project.
- */
+function normalizeFilters(
+  filters: Partial<AnalyticsFilters> = {},
+  availableAgents?: AgentOption[]
+): AnalyticsFilters {
+  const normalized: AnalyticsFilters = {
+    range: filters.range ?? DEFAULT_ANALYTICS_FILTERS.range,
+    outcome: filters.outcome ?? DEFAULT_ANALYTICS_FILTERS.outcome,
+    agent: filters.agent ?? DEFAULT_ANALYTICS_FILTERS.agent,
+  };
+
+  if (
+    normalized.agent !== 'all' &&
+    availableAgents &&
+    !availableAgents.some((option) => option.value === normalized.agent)
+  ) {
+    normalized.agent = 'all';
+  }
+
+  return normalized;
+}
+
 export async function getAnalyticsData(
   projectId: number,
-  range: TimeRange = '30d'
+  filters: Partial<AnalyticsFilters> = DEFAULT_ANALYTICS_FILTERS
 ): Promise<AnalyticsData> {
   const now = new Date();
-  const rangeStart = getDateRangeStart(range, now);
+  const availableAgents = await getAvailableAgents(projectId);
+  const normalizedFilters = normalizeFilters(filters, availableAgents);
 
-  // Get all jobs for hasData check
-  const allJobs = await prisma.job.findMany({
-    where: {
-      projectId,
-      ...(rangeStart && { completedAt: { gte: rangeStart } }),
-    },
+  const filteredJobs = await prisma.job.findMany({
+    where: buildJobWhere(projectId, normalizedFilters, now),
     select: {
       status: true,
       costUsd: true,
@@ -365,29 +550,28 @@ export async function getAnalyticsData(
     },
   });
 
-  const hasData = hasAnalyticsData(allJobs);
-  const jobCount = allJobs.length;
+  const hasData = hasAnalyticsData(filteredJobs);
+  const jobCount = filteredJobs.length;
 
-  // Fetch all metrics in parallel
   const [
     overview,
     costOverTime,
     costByStage,
     tokenUsage,
-    cacheEfficiency,
     topTools,
     workflowDistribution,
     velocity,
   ] = await Promise.all([
-    getOverviewMetrics(projectId, range, now),
-    getCostOverTime(projectId, range, now),
-    getCostByStage(projectId, range, now),
-    getTokenUsage(projectId, range, now),
-    getCacheEfficiency(projectId, range, now),
-    getTopTools(projectId, range, now),
-    getWorkflowDistribution(projectId, range, now),
-    getVelocityData(projectId, range, now),
+    getOverviewMetrics(projectId, normalizedFilters, now),
+    getCostOverTime(projectId, normalizedFilters, now),
+    getCostByStage(projectId, normalizedFilters, now),
+    getTokenUsage(projectId, normalizedFilters, now),
+    getTopTools(projectId, normalizedFilters, now),
+    getWorkflowDistribution(projectId, normalizedFilters, now),
+    getVelocityData(projectId, normalizedFilters, now),
   ]);
+
+  const cacheEfficiency = getCacheEfficiency(tokenUsage);
 
   return {
     overview,
@@ -398,7 +582,8 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
-    timeRange: range,
+    filters: normalizedFilters,
+    availableAgents,
     generatedAt: now.toISOString(),
     jobCount,
     hasData,

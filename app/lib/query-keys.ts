@@ -38,7 +38,8 @@ export const queryKeys = {
 
   analytics: {
     all: (projectId: number) => ['analytics', projectId] as const,
-    data: (projectId: number, range: string) => ['analytics', projectId, range] as const,
+    data: (projectId: number, range: string, outcome: string, agent: string) =>
+      ['analytics', projectId, range, outcome, agent] as const,
   },
 
   users: {

@@ -6,9 +6,13 @@ import type { WeeklyVelocity } from '@/lib/analytics/types';
 
 interface VelocityChartProps {
   data: WeeklyVelocity[];
+  emptyMessage?: string;
 }
 
-export function VelocityChart({ data }: VelocityChartProps) {
+export function VelocityChart({
+  data,
+  emptyMessage = 'No velocity data available',
+}: VelocityChartProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -17,7 +21,7 @@ export function VelocityChart({ data }: VelocityChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No velocity data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>
