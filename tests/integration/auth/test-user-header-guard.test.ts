@@ -44,7 +44,10 @@ describe("x-test-user-id auth guard", () => {
     })
 
     expect(response.status).toBe(401)
-    expect(response.data).toMatchObject({ error: "Unauthorized" })
+    expect(response.data).toMatchObject({
+      error: "Unauthorized",
+      code: "AUTH_REQUIRED",
+    })
   })
 
   it("preserves session identity when a conflicting header is present without explicit override", async () => {

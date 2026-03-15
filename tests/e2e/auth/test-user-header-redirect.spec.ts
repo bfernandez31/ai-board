@@ -22,27 +22,6 @@ test.describe("x-test-user-id proxy guard", () => {
     await context.close()
   })
 
-  test("returns 401 for protected API requests when x-test-user-id is sent without explicit override", async ({
-    playwright,
-  }) => {
-    const request = await playwright.request.newContext({
-      baseURL: "http://localhost:3000",
-      extraHTTPHeaders: {
-        [TEST_USER_HEADER]: "test-user-id",
-      },
-    })
-
-    const response = await request.get("/api/tokens")
-
-    expect(response.status()).toBe(401)
-    await expect(response.json()).resolves.toMatchObject({
-      error: "Unauthorized",
-      code: "AUTH_REQUIRED",
-    })
-
-    await request.dispose()
-  })
-
   test("continues to allow explicit test override requests in the browser harness", async ({
     page,
   }) => {
