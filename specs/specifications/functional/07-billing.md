@@ -78,7 +78,7 @@ Usage data is fetched from `GET /api/billing/usage` via the `useUsage` hook (Tan
 
 ## Landing Page Pricing Display
 
-Plan pricing is also surfaced publicly on the landing page (`/landing`, section `#pricing`) for unauthenticated visitors. The data source is the same `PLANS` constant from `lib/billing/plans.ts` used throughout the application, ensuring the displayed prices and features are always consistent with actual plan limits.
+Plan pricing is also surfaced publicly on the home page (`/`, section `#pricing`) for unauthenticated visitors. The data source is the same `PLANS` constant from `lib/billing/plans.ts` used throughout the application, ensuring the displayed prices and features are always consistent with actual plan limits.
 
 The landing page pricing display is read-only and static — it does not interact with Stripe or the subscription API. All CTAs on the landing page direct visitors to `/auth/signin` before any billing flow begins.
 

@@ -57,28 +57,29 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 
 ## Landing Page
 
+The public marketing experience is served from `/`. Unauthenticated visitors see the landing page, while authenticated users are redirected to `/projects`.
+
 ### Hero Section Background Animation
 
 **Visual Effect**:
 - Subtle animated ticket cards drift across the hero section background
 - Reinforces the product's core concept (ticket management) visually
 - Premium visual effect without interfering with text content
-- 15-20 semi-transparent ticket cards move from left to right
-- Each card completes one cycle in 40-60 seconds (randomized)
+- 18 semi-transparent ticket cards move across the hero background
+- Each card uses deterministic animation timing so SSR and hydration stay aligned
 
 **Ticket Card Appearance**:
-- Size: 64x40px mini ticket cards
-- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber)
-- Opacity: 0.10-0.15 for subtle appearance
-- Blur: 2px blur filter for enhanced depth perception
+- Size: 96x64px mini ticket cards
+- Colors: Cycles through Catppuccin-inspired ticket accents (mauve, blue, sapphire, green, yellow)
+- Semi-transparent fills and borders keep the content readable
+- Blur and shadow create depth without obscuring copy
 - Rotation: Random rotation between -10° to +10° for organic feel
 - Content: Minimal decorative lines (abstract, not readable text)
 
 **Responsive Behavior**:
-- Desktop (≥1024px): 18 animated ticket cards
-- Tablet (768-1023px): 12 animated ticket cards
-- Mobile (<768px): 8 animated ticket cards
-- Animation maintains 60fps performance across all devices
+- One shared background animation is rendered across breakpoints
+- Hero content switches to a two-column layout on large screens and a stacked layout on smaller screens
+- Primary and secondary actions stack vertically on mobile and align horizontally on `sm+`
 
 **Interaction Design**:
 - Cards positioned behind hero text (z-index layering)
@@ -87,34 +88,98 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - Animation does not capture or block any user interactions
 
 **Accessibility**:
-- Completely disabled when user has "prefers-reduced-motion" enabled
+- Motion-sensitive users receive a non-animated variant through `motion-reduce`
 - Hidden from assistive technologies (aria-hidden)
 - Text remains fully legible with contrast ratio ≥4.5:1
-- No motion for users with motion sensitivity
+- The hero section is labeled with `aria-labelledby="landing-hero-title"`
 
 **Performance**:
-- CSS-only implementation (no JavaScript required)
+- No client-side state is required for the hero refresh
 - GPU-accelerated transforms for smooth animation
-- Page load time increases by no more than 200ms
-- Browser window resize adapts gracefully without page reload
+- Deterministic animation values avoid SSR/client mismatches
+
+### Hero Messaging And CTAs
+
+The hero presents ai-board as an operational system for AI delivery rather than a generic landing page.
+
+**Primary copy**:
+- Eyebrow: "Purpose-built for AI-native delivery teams"
+- Headline: "AI delivery, without the workflow chaos"
+- Supporting copy emphasizes visible, reviewable automation and clearer team status
+
+**Actions**:
+- Primary CTA: "Get Started Free" → `/auth/signin`
+- Secondary CTA: "See workflow" → `#workflow`
+- Tertiary CTA: "Explore pricing" → `#pricing`
+
+**Proof elements**:
+- Three trust bullets reinforce hierarchy, accessibility, and proof-first storytelling
+- A "Delivery snapshot" card surfaces three proof metrics:
+  - `25%` — "Production-ready flow"
+  - `90 min` — "Team-visible progress"
+  - `6 stages` — "Clear decision points"
 
 ### Landing Page Structure
 
-The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+The landing page is a server-rendered `<main>` container with `bg-background`. It is displayed to unauthenticated visitors only and is composed of five sequential sections:
 
-1. **HeroSection** — animated hero with background ticket cards
-2. **FeaturesGrid** — product feature highlights
-3. **WorkflowSection** — workflow stage showcase
+1. **HeroSection** — proof-led hero, anchor CTAs, animated ticket background, and delivery snapshot card
+2. **FeaturesGrid** — six product value cards for shared visibility, repo context, quick automation, visual context, and live status
+3. **WorkflowSection** — review-oriented workflow overview with principle cards and stage walkthrough
 4. **PricingSection** — pricing cards and FAQ (`#pricing`)
-5. **CTASection** — final call-to-action
+5. **CTASection** — final conversion section focused on operational AI delivery
 
-All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+The sticky marketing header on `/` exposes matching anchor links for `#features`, `#workflow`, and `#pricing`, plus a sign-in action.
+
+### Features Grid
+
+The features section reframes the product around cross-functional visibility and trustworthy automation.
+
+**Section copy**:
+- Eyebrow: "Why teams switch to ai-board"
+- Heading: "One workspace for product, engineering, and AI agents"
+- Supporting text focuses on replacing scattered tickets, docs, and workflow status
+
+**Feature cards**:
+- "AI specs with fewer handoffs"
+- "A board everyone can read"
+- "Branch and repo context included"
+- "Fast automation with human checkpoints"
+- "Specs that keep visual context"
+- "Live status, not stale updates"
+
+Cards use semantic token styling, icon accents, hover elevation, and gradient overlays instead of hardcoded inline colors.
+
+### Workflow Section
+
+The workflow section explains the delivery model in business terms before showing stage-level detail.
+
+**Section copy**:
+- Eyebrow: "Designed for reviewable AI delivery"
+- Heading: "A calmer path from ticket to shipped code"
+
+**Principles**:
+- "Clear ownership"
+- "Reviewable automation"
+- "Less coordination drag"
+
+**Responsive presentation**:
+- Desktop (`lg+`): shows the animated `MiniKanbanDemo`
+- Mobile and tablet (`<lg`): show five explicit workflow steps
+
+**Workflow steps**:
+1. INBOX — "Capture the ticket once"
+2. SPECIFY — "Shape the request"
+3. PLAN — "Make the implementation legible"
+4. BUILD — "Build with guardrails"
+5. VERIFY — "Verify before shipping"
 
 ### Pricing Section
 
 The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and a FAQ to unauthenticated visitors. It is positioned after `WorkflowSection` and before `CTASection` with `id="pricing"` for anchor linking.
 
 **Layout**:
+- Eyebrow label: "Pricing"
 - Section heading: "Simple, transparent pricing" (centered)
 - Sub-heading: description text (centered, `max-w-2xl`)
 - Plan cards: `grid-cols-1 md:grid-cols-3` — single column on mobile, 3 columns on `md+`
@@ -150,6 +215,18 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - `aria-hidden` is not needed (content is informational, not decorative)
 - Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
 - Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+
+### Final CTA Section
+
+The final section closes the page with operational messaging rather than generic growth copy.
+
+**Section copy**:
+- Eyebrow: "Start with less friction"
+- Heading: "Ready to make AI work feel operational?"
+- Supporting text emphasizes clearer workflows, stronger review points, and a landing experience that reflects the product
+
+**Action**:
+- Single CTA button: "Get Started Free" → `/auth/signin`
 
 ---
 

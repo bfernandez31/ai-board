@@ -112,6 +112,30 @@ User Action (Drag-and-drop)
   → Failure: Rollback to previous state
 ```
 
+#### Public Home Route Flow
+
+The root route (`app/page.tsx`) is an authentication-aware server component that decides whether to render the marketing experience or send the user into the product.
+
+```mermaid
+sequenceDiagram
+    participant U as Visitor
+    participant Home as app/page.tsx
+    participant DB as getCurrentUserOrNull
+    participant Landing as app/landing/page.tsx
+    participant Header as components/layout/header.tsx
+
+    U->>Home: GET /
+    Home->>DB: Resolve current user
+    DB-->>Home: User or null
+    alt Authenticated
+        Home-->>U: Redirect /projects
+    else Unauthenticated
+        Home->>Landing: Render marketing sections
+        Landing-->>Header: Expose #features, #workflow, #pricing anchors
+        Landing-->>U: Hero, features, workflow, pricing, CTA
+    end
+```
+
 #### Workflow Automation Flow
 ```
 Stage Transition
@@ -146,11 +170,20 @@ Stage Transition
 
 **Page Routes**:
 ```
+/                                  # Public home page (landing for unauthenticated users, redirect for authenticated users)
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
 /legal/terms                         # Terms of Service (public, no auth required)
 /legal/privacy                       # Privacy Policy (public, no auth required)
 ```
+
+#### Marketing Landing Composition
+
+- `app/page.tsx` checks `getCurrentUserOrNull()` on the server before rendering
+- `app/landing/page.tsx` wraps the marketing experience in a semantic `<main className="min-h-screen bg-background">`
+- The landing page composes `HeroSection`, `FeaturesGrid`, `WorkflowSection`, `PricingSection`, and `CTASection` in that order
+- The header switches to a marketing variant on `/` for unauthenticated users and exposes anchor navigation to `#features`, `#workflow`, and `#pricing`
+- `PricingSection` remains server-rendered, while `PricingFAQ` is the client-side accordion used for collapsible answers
 
 **API Routes**:
 ```
