@@ -1,60 +1,81 @@
-import { Sparkles, LayoutGrid, GitBranch, Zap, Image, RefreshCw } from 'lucide-react';
+import { Bot, Eye, FolderKanban, GitBranch, ShieldCheck, TimerReset } from 'lucide-react';
 import { FeatureCard } from './feature-card';
 
+const features = [
+  {
+    icon: FolderKanban,
+    iconClassName: 'text-primary',
+    title: 'Clear ownership across every stage',
+    description:
+      'The board shows what is waiting for clarification, planned for implementation, actively building, and ready for verification.',
+  },
+  {
+    icon: ShieldCheck,
+    iconClassName: 'text-ctp-green',
+    title: 'Built-in quality gates',
+    description:
+      'Verification, deployment checks, and workflow rollback rules are visible inside the same system that runs the work.',
+  },
+  {
+    icon: Bot,
+    iconClassName: 'text-ctp-blue',
+    title: 'Shared context, not scattered prompts',
+    description:
+      'Ticket descriptions, AI instructions, specs, plans, and comments stay connected so the next step starts with context.',
+  },
+  {
+    icon: GitBranch,
+    iconClassName: 'text-ctp-lavender',
+    title: 'Repository-aware automation',
+    description:
+      'Branching, implementation jobs, previews, and rollbacks are tied back to the ticket instead of being spread across tools.',
+  },
+  {
+    icon: Eye,
+    iconClassName: 'text-ctp-rosewater',
+    title: 'Readable by humans under pressure',
+    description:
+      'Audit-friendly status, plain language stage labels, and high-contrast interfaces make the workflow usable during real delivery.',
+  },
+  {
+    icon: TimerReset,
+    iconClassName: 'text-ctp-teal',
+    title: 'Workflow clarity without extra coordination layers',
+    description:
+      'Teams can understand what changed, what is blocked, and what ships next without building a parallel reporting habit.',
+  },
+];
+
 export function FeaturesGrid() {
-  const features = [
-    {
-      icon: Sparkles,
-      iconColor: '#8B5CF6', // violet
-      title: 'AI-Powered Specifications',
-      description: 'Automatically generate detailed specifications from tickets with intelligent clarification.',
-    },
-    {
-      icon: LayoutGrid,
-      iconColor: '#89b4fa', // blue
-      title: 'Visual Kanban Board',
-      description: 'Track tasks through INBOX → SPECIFY → PLAN → BUILD → VERIFY stages with drag-and-drop interface.',
-    },
-    {
-      icon: GitBranch,
-      iconColor: '#a6e3a1', // green
-      title: 'Git Platform Integration',
-      description: 'Connect with GitHub, GitLab, or Bitbucket to sync issues and manage workflows.',
-    },
-    {
-      icon: Zap,
-      iconColor: '#f9e2af', // yellow
-      title: 'Automated Workflows',
-      description: 'Trigger automated specification, planning, and implementation tasks with your CI/CD pipeline.',
-    },
-    {
-      icon: Image,
-      iconColor: '#f5c2e7', // pink
-      title: 'Image Management',
-      description: 'Upload and manage images with cloud storage integration for documentation and specifications.',
-    },
-    {
-      icon: RefreshCw,
-      iconColor: '#89dceb', // cyan
-      title: 'Real-Time Updates',
-      description: 'Get instant feedback on workflow status with live polling and job tracking.',
-    },
-  ];
-
   return (
-    <section id="features" className="py-16 md:py-24 lg:py-32 bg-[hsl(var(--ctp-mantle))]">
+    <section id="features" className="relative py-20 md:py-24 lg:py-28">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
-            Everything You Need
-          </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
-            Powerful features to streamline your development workflow from idea to production.
-          </p>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 grid gap-8 rounded-[2rem] border border-border/70 bg-card/60 p-8 shadow-lg backdrop-blur lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">
+                Why AI Board
+              </p>
+              <h2 className="mt-4 max-w-xl text-balance text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+                Designed for calm, auditable execution
+              </h2>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <FeatureCard key={index} {...feature} />
+            <div className="space-y-4">
+              <p className="text-lg leading-8 text-muted-foreground">
+                AI Board is for teams that want AI speed without losing operational clarity. The
+                product keeps ticket intent, workflow state, and release confidence visible in one
+                place.
+              </p>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-5 py-4 text-sm text-foreground">
+                Workflow clarity without extra coordination layers
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
             ))}
           </div>
         </div>

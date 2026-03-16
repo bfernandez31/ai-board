@@ -1,53 +1,57 @@
 import { WorkflowStep } from './workflow-step';
 import { MiniKanbanDemo } from './mini-kanban-demo';
 
+const steps = [
+  {
+    stage: 'INBOX' as const,
+    title: 'Capture the request where it starts',
+    description: 'Bring in the ticket, keep the title honest, and give the workflow a clear starting point.',
+  },
+  {
+    stage: 'SPECIFY' as const,
+    title: 'Turn ambiguity into a shared spec',
+    description: 'Clarify the job before implementation so AI output has direction instead of guesswork.',
+  },
+  {
+    stage: 'PLAN' as const,
+    title: 'Lock implementation intent',
+    description: 'Define the technical path, affected files, and validation approach before code lands.',
+  },
+  {
+    stage: 'BUILD' as const,
+    title: 'Run the implementation with context attached',
+    description: 'Branching, code changes, and workflow jobs stay connected to the same ticket trail.',
+  },
+  {
+    stage: 'VERIFY' as const,
+    title: 'Review before the last irreversible step',
+    description: 'Tests, manual review, and rollback pathways remain visible until the team is ready to ship.',
+  },
+];
+
 export function WorkflowSection() {
-  const steps = [
-    {
-      stage: 'INBOX' as const,
-      title: 'Create ticket from issue',
-      description: 'Import from your Git platform or create tickets manually',
-    },
-    {
-      stage: 'SPECIFY' as const,
-      title: 'AI generates specification',
-      description: 'Automated spec generation with intelligent clarification',
-    },
-    {
-      stage: 'PLAN' as const,
-      title: 'Create implementation plan',
-      description: 'Technical design with architecture guidelines',
-    },
-    {
-      stage: 'BUILD' as const,
-      title: 'Execute implementation',
-      description: 'Automated development through your CI/CD pipeline',
-    },
-    {
-      stage: 'VERIFY' as const,
-      title: 'Review and deploy',
-      description: 'Final validation before shipping to production',
-    },
-  ];
-
   return (
-    <section id="workflow" className="py-16 md:py-24 lg:py-32">
+    <section id="workflow" className="py-20 md:py-24 lg:py-28">
       <div className="container mx-auto px-4">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
-            Streamlined Development Workflow
-          </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
-            Move your ideas from concept to production with a proven 6-stage workflow.
-          </p>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">
+              Delivery Workflow
+            </p>
+            <h2 className="mt-4 text-balance text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+              One workflow from ticket intake to shipped code
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-muted-foreground">
+              Keep the board visible to everyone, let AI do the repetitive work, and preserve the
+              human checkpoints that matter when quality and accountability are on the line.
+            </p>
+          </div>
 
-          {/* Animated Mini-Kanban Demo - Desktop only */}
-          <div className="hidden lg:block mb-16">
+          <div className="rounded-[2rem] border border-border/70 bg-card/60 p-5 shadow-lg backdrop-blur md:p-6">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
           </div>
 
-          {/* Detailed step descriptions - Mobile only */}
-          <div className="flex flex-col gap-8 lg:hidden">
+          <div className="mt-10 grid gap-4">
             {steps.map((step, index) => (
               <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
             ))}
