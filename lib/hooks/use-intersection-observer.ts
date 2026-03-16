@@ -30,9 +30,16 @@ export function useIntersectionObserver(
   const root = options?.root;
 
   const stableOptions = useMemo<IntersectionObserverInit | undefined>(
-    () => (threshold !== undefined || rootMargin !== undefined || root !== undefined
-      ? { threshold, rootMargin, root }
-      : undefined),
+    () => {
+      if (threshold === undefined && rootMargin === undefined && root === undefined) {
+        return undefined;
+      }
+      const init: IntersectionObserverInit = {};
+      if (threshold !== undefined) init.threshold = threshold;
+      if (rootMargin !== undefined) init.rootMargin = rootMargin;
+      if (root !== undefined) init.root = root;
+      return init;
+    },
     [threshold, rootMargin, root]
   );
 
