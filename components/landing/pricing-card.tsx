@@ -23,13 +23,13 @@ export function PricingCard({
 }: PricingCardProps) {
   return (
     <Card
-      className={`relative flex flex-col ${isPopular ? 'border-primary shadow-md shadow-primary/20' : ''}`}
+      className={`relative flex flex-col transition-shadow ${isPopular ? 'border-primary shadow-lg shadow-primary/20 scale-[1.02] lg:scale-105' : 'hover:shadow-md'}`}
     >
       {isPopular && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground border-primary hover:bg-primary">Most Popular</Badge>
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground border-primary hover:bg-primary px-4 py-1">Most Popular</Badge>
       )}
       <CardHeader className="text-center">
-        <h3 className="text-2xl font-bold text-foreground">{name}</h3>
+        <h3 className={`text-2xl font-bold ${isPopular ? 'text-primary' : 'text-foreground'}`}>{name}</h3>
         <div className="mt-2">
           <span className="text-4xl font-bold text-foreground">
             ${price / 100}

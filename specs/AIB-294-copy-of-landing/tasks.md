@@ -114,10 +114,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T036 [US4] Enhance visual hierarchy of pricing cards to make tier differences immediately clear in `components/landing/pricing-section.tsx`
-- [ ] T037 [US4] Make "Most Popular" plan visually prominent without overwhelming other options in `components/landing/pricing-card.tsx`
-- [ ] T038 [US4] Verify FAQ keyboard interaction (Enter/Space toggles, `aria-expanded` announced) in `components/landing/pricing-faq.tsx`
-- [ ] T039 [US4] Run `bun run type-check && bun run lint` to verify pricing section changes
+- [x] T036 [US4] Enhance visual hierarchy of pricing cards to make tier differences immediately clear in `components/landing/pricing-section.tsx`
+- [x] T037 [US4] Make "Most Popular" plan visually prominent without overwhelming other options in `components/landing/pricing-card.tsx`
+- [x] T038 [US4] Verify FAQ keyboard interaction (Enter/Space toggles, `aria-expanded` announced) in `components/landing/pricing-faq.tsx`
+- [x] T039 [US4] Run `bun run type-check && bun run lint` to verify pricing section changes
 
 **Checkpoint**: Pricing section has clear visual hierarchy, accessible FAQ interactions, and proper screen reader announcements.
 
