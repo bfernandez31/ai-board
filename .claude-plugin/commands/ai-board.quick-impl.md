@@ -48,13 +48,20 @@ This command implements simple features directly from ticket context without for
 
 3. **Understand project context**:
    - Read project CLAUDE.md for tech stack, conventions, and architecture
+   - Read `.ai-board/memory/constitution.md` for non-negotiable rules and principles
    - Identify relevant source files based on ticket description
    - Review existing patterns and code style
 
 4. **Test-Driven Development (TDD) approach**:
-   - **ALWAYS write tests first** before implementation if the feature changes the behavior
-   - Create or update test files based on ticket requirements
-   - Follow existing test patterns (Playwright for E2E, Vitest for unit tests)
+   - **ALWAYS write tests first** before implementation if the feature changes behavior
+   - **Search existing tests FIRST** — extend, don't duplicate
+   - Use this decision tree to select test type:
+     1. Pure function? → **Unit test** (`tests/unit/`)
+     2. React component with interactions? → **Component test** (`tests/unit/components/`)
+     3. API endpoint or DB operation? → **Integration test** (`tests/integration/[domain]/`)
+     4. REQUIRES browser (OAuth, drag-drop, keyboard nav)? → **E2E** (`tests/e2e/`)
+     5. Unsure? → **Integration test** (default)
+   - API tests use Vitest, NOT Playwright (10-20x faster)
    - Ensure tests FAIL initially (red phase)
 
 5. **Implement the change**:

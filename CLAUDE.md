@@ -28,7 +28,7 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 - **Push Notifications**: web-push ^3.6.x (VAPID), Web Push API, Service Worker (/public/sw.js)
 - **Billing**: stripe (server-side only), Stripe Checkout + Customer Portal, webhook handler at `/api/webhooks/stripe`
 
-**Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query. See `.ai-board/memory/constitution.md` (Section II) for full standards.
+**Forbidden**: No UI libs besides shadcn/ui + Radix. No ORMs besides Prisma. No state libs (Redux, Zustand, etc.) — use React hooks + TanStack Query.
 
 **Colors**: NEVER hardcode hex/rgb colors (`text-[#...]`, `bg-[#...]`). Use Tailwind semantic tokens only (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.). All text must be readable (WCAG AA 4.5:1 contrast). See `globals.css` and `tailwind.config.ts` for available tokens.
 
@@ -123,8 +123,6 @@ See `.github/workflows/` for implementation. Key workflows:
 
 ## Testing
 
-**MANDATORY**: Invoke `/ai-board:testing` skill before writing, planning, or modifying tests. Applies to all workflows: FULL, QUICK, CLEAN, VERIFY stages.
-
 **Critical rules** (always apply):
 - E2E is expensive (~5s each) — default to integration tests when unsure
 - Search existing tests FIRST — extend, don't duplicate
@@ -133,7 +131,9 @@ See `.github/workflows/` for implementation. Key workflows:
 
 **Test locations**: `tests/unit/`, `tests/unit/components/`, `tests/integration/`, `tests/e2e/`
 
-For Testing Trophy strategy, decision trees, and RTL patterns, see `.ai-board/memory/constitution.md` (Section III) and the `/ai-board:testing` skill.
+**Test type decision tree**: Pure function → unit | React component → component | API/DB → integration | Browser-required → E2E | Unsure → integration
+
+For detailed patterns (RTL, MSW, worker isolation), see `.claude-plugin/skills/testing/patterns/`.
 
 ## Deep Reference
 
@@ -141,6 +141,6 @@ For topics beyond this file, read these sources before implementing:
 
 | Topic | Read This |
 |-------|-----------|
-| Full tech standards, SOLID principles, forbidden deps | `.ai-board/memory/constitution.md` |
+| Core principles, non-negotiable rules, governance | `.ai-board/memory/constitution.md` |
 | Consolidated feature specifications | `specs/specifications/` directory |
 | API request/response schemas | `specs/specifications/schemas.md` |

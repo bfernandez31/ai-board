@@ -28,28 +28,10 @@ UI components follow shadcn/ui patterns; server logic follows Next.js convention
 
 
 ### III. Test-Driven Development (NON-NEGOTIABLE)
-Tests verify behavior from specs. Testing Trophy architecture prioritizes fast integration tests over slow E2E tests.
-
-**Testing Trophy Strategy** (MANDATORY):
-
-| Layer | Tool | Location | Speed | Use For |
-|-------|------|----------|-------|---------|
-| Static | TypeScript + ESLint | - | Instant | Type/syntax errors |
-| Unit | Vitest | `tests/unit/` | ~1ms | Pure functions, utilities, hooks |
-| Component | Vitest + RTL | `tests/unit/components/` | ~10-50ms | Interactive UI behavior (forms, modals, user interactions) |
-| Integration | Vitest + Prisma + fetch | `tests/integration/` | ~50ms | API endpoints, database, state machines |
-| E2E | Playwright | `tests/e2e/` | ~5s | Browser-required only (auth, drag-drop, keyboard) |
+Tests verify behavior from specs. Testing Trophy architecture prioritizes fast integration tests over slow E2E tests. See CLAUDE.md for test commands, locations, and layer details.
 
 **Non-Negotiable Rules**:
-- **API tests use Vitest, NOT Playwright** - 10-20x faster execution
-- **E2E tests are for browser-required features ONLY**: OAuth flow, drag-drop (DnD Kit), keyboard navigation, viewport testing
-- Tests organized by domain (tickets, projects, jobs), NOT by spec document
 - Tests verify behavior, not implementation details
-- **ALWAYS search for existing tests FIRST** before creating new test files
-- Update and extend existing test files rather than creating duplicates
-- Unit tests in `/tests/unit/[feature].test.ts` using Vitest
-- Integration tests in `/tests/integration/[domain]/[feature].test.ts` using Vitest
-- E2E tests in `/tests/e2e/[feature].spec.ts` using Playwright
 - No feature is complete without passing tests
 
 **Test Selection Decision Tree**:
@@ -64,12 +46,6 @@ Tests verify behavior from specs. Testing Trophy architecture prioritizes fast i
 - **User Interactions**: Use `userEvent` over `fireEvent` for realistic event simulation
 - **Test Behavior**: Focus on user-visible behavior, not implementation details
 - **Provider Setup**: Use `renderWithProviders()` from `tests/utils/component-test-utils.tsx`
-
-**Test Commands**:
-- `bun run test:unit` - Fast unit tests (~1ms each)
-- `bun run test:integration` - API/DB tests (~50ms each, requires dev server)
-- `bun run test:e2e` - Browser tests (~5s each)
-- `bun run test` - All tests
 
 **Rationale**: Testing Trophy architecture (Kent C. Dodds) provides optimal ROI. Integration tests offer high confidence with fast feedback. E2E tests are expensive and should be minimized to browser-required features. Spec-first AI development means tests verify specs are correctly implemented.
 
@@ -99,55 +75,19 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 
 **Rationale**: Migrations provide version control for schema changes and enable safe rollback. Transactions ensure consistency (ACID properties). Soft deletes support audit trails and undo functionality. Schema-level constraints prevent invalid data at the source.
 
-## Technology Standards
+## Development Standards
 
-**Mandatory Stack**:
-- **Frontend**: Next.js 16 (App Router), React 18, TypeScript, TailwindCSS
-- **UI Components**: shadcn/ui exclusively for primitives
-- **State Management**: TanStack Query v5 (React Query) for server state
-- **Drag & Drop**: @dnd-kit/core and @dnd-kit/sortable
-- **Backend**: Next.js API Routes (App Router conventions)
-- **Database**: PostgreSQL 14+ via Prisma ORM
-- **AI Integration**: Anthropic Claude API (Sonnet 4.5)
-- **GitHub Integration**: GitHub CLI (`gh` command) for repository operations
-- **Spec-kit**: GitHub spec-kit for specification-driven workflows
-- **Testing**: Vitest (unit + integration tests), Playwright (E2E browser tests only)
-- **Hosting**: Vercel (optimized for Next.js)
+See CLAUDE.md for the full tech stack and forbidden dependencies. The constitution enforces the following additional standards:
 
-**Future Additions** (not yet implemented):
-- Authentication: NextAuth.js
-
-**Forbidden Dependencies**:
-- No UI libraries besides shadcn/ui and Radix UI (shadcn's foundation)
-- No ORMs besides Prisma
-- No state management libraries (Redux, MobX, Zustand, etc.) for client state—use React hooks
-- TanStack Query is the ONLY allowed library for server state management
-
-## Development Workflow
-
-**Code Organization**:
-- `/app`: Next.js App Router pages and layouts
-- `/app/api`: API route handlers
-- `/components`: Reusable React components (feature-based folders)
-- `/lib`: Shared utilities and helper functions
-- `/prisma`: Database schema and migrations
-- `/tests/unit`: Vitest unit tests for pure functions
-- `/tests/integration`: Vitest integration tests for API/database
-- `/tests/e2e`: Playwright E2E tests (browser-required only)
-- `/public`: Static assets
-
-**Code Quality Standards**:
-- ESLint and Prettier configured and enforced
+**Code Quality**:
 - Descriptive variable names (no single-letter variables except loop indices)
 - JSDoc comments for exported functions with complex logic
 - Functional components with hooks (no class components)
 - Prefer `const` over `let`, avoid `var` entirely
 
 **State Management**:
-- Local state: `useState`
-- Shared state within component tree: `useContext`
-- Complex state logic: `useReducer`
-- Server state: TanStack Query v5 (React Query) for data fetching, caching, and mutations
+- Local state: `useState`; shared state: `useContext`; complex logic: `useReducer`
+- Server state: TanStack Query v5 for data fetching, caching, and mutations
 - Optimistic updates required for all mutations (create, update, delete operations)
 
 **Error Handling**:
@@ -155,52 +95,6 @@ All database changes go through Prisma migrations. Transactions protect multi-st
 - Return structured error responses: `{ error: string, code?: string }`
 - Log errors with context (request ID, user ID if applicable)
 - User-facing error messages must be clear and actionable
-
-**GitHub Workflow**:
-- Feature branches: `ai-board/[feature-name]`
-- Use GitHub CLI (`gh`) for repository operations from backend
-- Pull requests auto-created with descriptive titles and bodies
-- Main branch auto-deploys to Vercel production
-- Preview deployments for all pull requests
-
-**Database Workflow**:
-- Local development: `prisma migrate dev`
-- Production: `prisma migrate deploy` (automated in CI/CD)
-- Always run migrations before deploying code that depends on schema changes
-- Use `prisma studio` for local database inspection
-
-**Testing Workflow**:
-- Write unit tests (Vitest) for pure utility functions
-- Write integration tests (Vitest) for API endpoints and database operations
-- Write E2E tests (Playwright) ONLY for browser-required features
-- Verify tests fail (Red), implement to pass (Green), refactor
-- Run `bun run test:unit` for unit tests (fast feedback, ~1ms each)
-- Run `bun run test:integration` for API/DB tests (~50ms each, requires dev server)
-- Run `bun run test:e2e` for browser tests (~5s each)
-- Run `bun run test` to execute full test suite
-
-**AI Agent Implementation Guidelines**:
-When implementing features, AI agents (Claude Code, GitHub Copilot, etc.) MUST:
-1. Read `specs/[feature]/spec.md` for requirements
-2. **Search for existing tests** using Grep/Glob before writing any tests
-3. **Update existing tests** if found, or create new tests only if none exist
-4. Follow existing code patterns (review similar components/routes)
-5. Use shadcn/ui components (never create UI primitives from scratch)
-6. Match existing folder structure conventions
-7. **Write tests following Testing Trophy strategy**:
-   - Vitest unit tests for pure functions (`tests/unit/[feature].test.ts`)
-   - Vitest + RTL component tests for interactive UI (`tests/unit/components/[component].test.tsx`)
-   - Vitest integration tests for API/DB (`tests/integration/[domain]/[feature].test.ts`)
-   - Playwright E2E ONLY if browser-required (`tests/e2e/[feature].spec.ts`)
-8. Add TypeScript types explicitly (no implicit `any`)
-9. Handle errors gracefully with try-catch and user-friendly messages
-10. Verify all tests pass before considering feature complete
-
-**Test File Management**:
-- Tests organized by domain (tickets, projects, jobs), NOT by spec document
-- Extend existing test suites rather than creating parallel test files
-- Group related tests in the same file (e.g., all ticket API tests in `tests/integration/tickets/crud.test.ts`)
-- Only create new test files when testing genuinely new functionality with no existing coverage
 
 ### V. Specification Clarification Guardrails
 Auto-resolved specification decisions MUST preserve quality while avoiding unnecessary over-engineering. Mode selection prioritizes risk management without sacrificing baseline safeguards.
@@ -214,18 +108,14 @@ Auto-resolved specification decisions MUST preserve quality while avoiding unnec
 **Rationale**: These guardrails let automation accelerate routine clarifications while guaranteeing that critical protections (security, data quality, verified tests) remain intact. Teams gain speed from PRAGMATIC choices when appropriate, but AUTO cannot degrade quality silently and CONSERVATIVE remains the safe default for uncertain work.
 
 ### VI. AI-First Development Model
-This project is developed **100% via ai-board automated workflows**. There are no human developers writing code directly.
+This project is developed **100% via ai-board automated workflows**. See CLAUDE.md for operational details.
 
 **Non-Negotiable Rules**:
-- NO README, GUIDE, INDEX, or educational documentation files at project root (except CLAUDE.md)
+- NO README, GUIDE, or educational documentation files at project root (except CLAUDE.md/AGENTS.md)
+- NO "example" files, "quickstart" tutorials, or "how-to" guides — exception: `specs/[ticket-key]/` directories are workflow artifacts
 - All AI guidance MUST be in constitution.md, CLAUDE.md, or `.claude/skills/`
-- NO "example" files, "quickstart" tutorials, or "how-to" guides for human developers — exception: files inside `specs/[ticket-key]/` directories are workflow-generated artifacts and are exempt from this rule
-- Spec-kit templates and tasks address AI agents, not human team members
-- DO NOT create documentation explaining "how to do X" for humans - the AI uses constitution and skills
-- Ticket specs in `specs/[ticket-key]/`, consolidated specs in `specs/specifications/` - never pollute project root
-- When implementing tests, use existing patterns in codebase - do not create teaching materials
 
-**Rationale**: ai-board is a fully automated development platform. All code is generated by AI agents following the constitution and CLAUDE.md. Human-oriented documentation (guides, tutorials, examples) is unnecessary overhead that pollutes the codebase. AI agents learn from constitution, skills, and existing code patterns.
+**Rationale**: All code is generated by AI agents following the constitution and CLAUDE.md. Human-oriented documentation is unnecessary overhead.
 
 ## Governance
 
@@ -255,4 +145,4 @@ This project is developed **100% via ai-board automated workflows**. There are n
 - Agent instruction files MUST NOT contradict constitution principles
 - Agent instruction files provide tactical guidance; constitution provides strategic rules
 
-**Version**: 1.5.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2025-12-28
+**Version**: 1.6.0 | **Ratified**: 2025-09-30 | **Last Amended**: 2026-03-16

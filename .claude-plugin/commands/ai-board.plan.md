@@ -83,6 +83,22 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 **Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
 
+## Testing Strategy (include in plan)
+
+When defining the Testing section of the plan, use this decision tree to assign test types per user story:
+
+1. Pure function with no React/API dependencies? → **Unit test** (`tests/unit/`)
+2. React component with user interactions? → **Component test** (`tests/unit/components/`) with mocked hooks
+3. API endpoint or database operation? → **Integration test** (`tests/integration/[domain]/`) with Vitest + Prisma
+4. REQUIRES a real browser (OAuth, drag-drop, keyboard nav, viewport)? → **E2E test** (`tests/e2e/`) with Playwright
+5. Unsure? → Default to **Integration test** (fastest full-stack feedback)
+
+**Critical rules**:
+- API tests use Vitest, NOT Playwright (10-20x faster)
+- E2E is expensive (~5s each) — only for browser-required features
+- Search existing tests FIRST — extend, don't duplicate
+- RTL query priority: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
+
 ## Key rules
 
 - Use absolute paths
