@@ -12,7 +12,7 @@ export function FeatureCard({
   iconClassName,
   title,
   description,
-}: FeatureCardProps) {
+}: FeatureCardProps): React.JSX.Element {
   return (
     <article
       className="group rounded-3xl border border-border/70 bg-card/80 p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"

@@ -1,11 +1,13 @@
 interface WorkflowStepProps {
-  stage: 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY';
+  stage: WorkflowStage;
   title: string;
   description: string;
   isLast?: boolean;
 }
 
-const stageClasses = {
+export type WorkflowStage = 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY';
+
+const stageClasses: Record<WorkflowStage, string> = {
   INBOX: 'bg-secondary text-secondary-foreground',
   SPECIFY: 'bg-ctp-lavender/25 text-ctp-lavender',
   PLAN: 'bg-ctp-blue/25 text-ctp-blue',
@@ -13,7 +15,12 @@ const stageClasses = {
   VERIFY: 'bg-ctp-rosewater/25 text-ctp-rosewater',
 };
 
-export function WorkflowStep({ stage, title, description, isLast = false }: WorkflowStepProps) {
+export function WorkflowStep({
+  stage,
+  title,
+  description,
+  isLast = false,
+}: WorkflowStepProps): React.JSX.Element {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center" data-testid="workflow-step">
       <div className="flex-shrink-0">

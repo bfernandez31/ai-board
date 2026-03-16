@@ -3,19 +3,40 @@ import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-background';
 
+interface HeroStat {
+  value: string;
+  label: string;
+}
+
+interface FocusItem {
+  title: string;
+  description: string;
+}
+
 const proofPoints = [
   'Built for AI-first product delivery',
   'Every step stays reviewable',
   'Designed for teams that need visible progress',
 ];
 
-const stats = [
+const stats: HeroStat[] = [
   { value: '5', label: 'delivery stages from intake to verification' },
   { value: '1', label: 'shared board for specs, jobs, and rollout' },
   { value: '0', label: 'extra status meetings to know what changed' },
 ];
 
-export function HeroSection() {
+const focusItems: FocusItem[] = [
+  {
+    title: 'Specification captured',
+    description: 'Ticket scope, implementation notes, and rollout expectations stay attached.',
+  },
+  {
+    title: 'Verification stays visible',
+    description: 'Review, tests, and final decision points remain easy to audit later.',
+  },
+];
+
+export function HeroSection(): React.JSX.Element {
   return (
     <section className="relative overflow-hidden border-b border-border/60 py-20 md:py-24 lg:py-32">
       <AnimatedTicketBackground className="absolute inset-0 -z-20 opacity-70" />
@@ -53,7 +74,10 @@ export function HeroSection() {
 
             <ul className="mt-8 flex flex-col gap-3 text-left sm:grid sm:grid-cols-2 sm:gap-4 lg:max-w-2xl">
               {proofPoints.map((item) => (
-                <li key={item} className="flex items-center gap-3 rounded-full border border-border/70 bg-card/60 px-4 py-3 text-sm text-foreground backdrop-blur">
+                <li
+                  key={item}
+                  className="flex items-center gap-3 rounded-full border border-border/70 bg-card/60 px-4 py-3 text-sm text-foreground backdrop-blur"
+                >
                   <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />
                   <span>{item}</span>
                 </li>
@@ -99,18 +123,12 @@ export function HeroSection() {
                 </div>
 
                 <div className="grid gap-3">
-                  <div className="rounded-xl border border-border/70 bg-card px-4 py-3">
-                    <p className="text-sm font-medium text-foreground">Specification captured</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Ticket scope, implementation notes, and rollout expectations stay attached.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-border/70 bg-card px-4 py-3">
-                    <p className="text-sm font-medium text-foreground">Verification stays visible</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Review, tests, and final decision points remain easy to audit later.
-                    </p>
-                  </div>
+                  {focusItems.map((item) => (
+                    <div key={item.title} className="rounded-xl border border-border/70 bg-card px-4 py-3">
+                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

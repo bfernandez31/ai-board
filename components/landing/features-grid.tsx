@@ -46,7 +46,10 @@ const features = [
   },
 ];
 
-export function FeaturesGrid() {
+const featureSectionSummary =
+  'AI Board is for teams that want AI speed without losing operational clarity. The product keeps ticket intent, workflow state, and release confidence visible in one place.';
+
+export function FeaturesGrid(): React.JSX.Element {
   return (
     <section id="features" className="relative py-20 md:py-24 lg:py-28">
       <div className="container mx-auto px-4">
@@ -62,11 +65,7 @@ export function FeaturesGrid() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-lg leading-8 text-muted-foreground">
-                AI Board is for teams that want AI speed without losing operational clarity. The
-                product keeps ticket intent, workflow state, and release confidence visible in one
-                place.
-              </p>
+              <p className="text-lg leading-8 text-muted-foreground">{featureSectionSummary}</p>
               <div className="rounded-2xl border border-border/70 bg-background/70 px-5 py-4 text-sm text-foreground">
                 Workflow clarity without extra coordination layers
               </div>

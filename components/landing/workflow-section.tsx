@@ -1,35 +1,41 @@
-import { WorkflowStep } from './workflow-step';
 import { MiniKanbanDemo } from './mini-kanban-demo';
+import { WorkflowStep, type WorkflowStage } from './workflow-step';
 
-const steps = [
+interface WorkflowSectionStep {
+  stage: WorkflowStage;
+  title: string;
+  description: string;
+}
+
+const steps: WorkflowSectionStep[] = [
   {
-    stage: 'INBOX' as const,
+    stage: 'INBOX',
     title: 'Capture the request where it starts',
     description: 'Bring in the ticket, keep the title honest, and give the workflow a clear starting point.',
   },
   {
-    stage: 'SPECIFY' as const,
+    stage: 'SPECIFY',
     title: 'Turn ambiguity into a shared spec',
     description: 'Clarify the job before implementation so AI output has direction instead of guesswork.',
   },
   {
-    stage: 'PLAN' as const,
+    stage: 'PLAN',
     title: 'Lock implementation intent',
     description: 'Define the technical path, affected files, and validation approach before code lands.',
   },
   {
-    stage: 'BUILD' as const,
+    stage: 'BUILD',
     title: 'Run the implementation with context attached',
     description: 'Branching, code changes, and workflow jobs stay connected to the same ticket trail.',
   },
   {
-    stage: 'VERIFY' as const,
+    stage: 'VERIFY',
     title: 'Review before the last irreversible step',
     description: 'Tests, manual review, and rollback pathways remain visible until the team is ready to ship.',
   },
 ];
 
-export function WorkflowSection() {
+export function WorkflowSection(): React.JSX.Element {
   return (
     <section id="workflow" className="py-20 md:py-24 lg:py-28">
       <div className="container mx-auto px-4">
@@ -48,7 +54,7 @@ export function WorkflowSection() {
           </div>
 
           <div className="rounded-[2rem] border border-border/70 bg-card/60 p-5 shadow-lg backdrop-blur md:p-6">
-            <MiniKanbanDemo className="max-w-7xl mx-auto" />
+            <MiniKanbanDemo className="mx-auto max-w-7xl" />
           </div>
 
           <div className="mt-10 grid gap-4">

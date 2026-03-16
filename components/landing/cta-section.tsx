@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function CTASection() {
+export function CTASection(): React.JSX.Element {
   return (
     <section className="py-20 md:py-24 lg:py-28" data-testid="final-cta-section">
       <div className="container mx-auto px-4">
