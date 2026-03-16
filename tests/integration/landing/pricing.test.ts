@@ -16,7 +16,7 @@ describe('Landing Page - Pricing Section', () => {
 
       const html = await response.text();
       expect(html).toContain('id="pricing"');
-      expect(html).toContain('Simple, transparent pricing');
+      expect(html).toContain('Start free, then unlock more throughput and collaboration.');
     });
 
     it('should render all three plan names', async () => {
@@ -41,7 +41,7 @@ describe('Landing Page - Pricing Section', () => {
       const response = await fetch(BASE_URL);
       const html = await response.text();
 
-      expect(html).toContain('Get Started');
+      expect(html).toContain('Get Started Free');
       expect(html).toContain('Start 14-day trial');
       expect(html).toContain('/auth/signin');
     });
@@ -76,11 +76,11 @@ describe('Landing Page - Pricing Section', () => {
       const response = await fetch(BASE_URL);
       const html = await response.text();
 
-      expect(html).toContain('Frequently Asked Questions');
-      expect(html).toContain('What does BYOK mean?');
-      expect(html).toContain('Which AI agents are supported?');
-      expect(html).toContain('How does the 14-day trial work?');
-      expect(html).toContain('Can I switch plans?');
+      expect(html).toContain('Pricing questions teams ask before they switch');
+      expect(html).toContain('How should I think about the Free plan?');
+      expect(html).toContain('What changes when I move to Pro?');
+      expect(html).toContain('When does Team make sense?');
+      expect(html).toContain('Do I need to relearn the workflow when upgrading?');
     });
 
     it('should contain navigation link to pricing section', async () => {

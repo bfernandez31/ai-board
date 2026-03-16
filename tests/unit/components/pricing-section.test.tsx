@@ -74,7 +74,7 @@ describe('PricingCard', () => {
 describe('PricingSection', () => {
   it('renders section heading', () => {
     render(<PricingSection />);
-    expect(screen.getByText('Simple, transparent pricing')).toBeInTheDocument();
+    expect(screen.getByText('Start free, then unlock more throughput and collaboration.')).toBeInTheDocument();
   });
 
   it('renders three pricing cards with correct plan names', () => {
@@ -97,9 +97,9 @@ describe('PricingSection', () => {
     expect(badges).toHaveLength(1);
   });
 
-  it('renders "Get Started" CTA for Free plan', () => {
+  it('renders "Get Started Free" CTA for Free plan', () => {
     render(<PricingSection />);
-    expect(screen.getByRole('link', { name: 'Get Started' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get Started Free' })).toBeInTheDocument();
   });
 
   it('renders "Start 14-day trial" CTA for Pro and Team plans', () => {
@@ -120,36 +120,36 @@ describe('PricingSection', () => {
 describe('PricingFAQ', () => {
   it('renders "Frequently Asked Questions" heading', () => {
     render(<PricingFAQ />);
-    expect(screen.getByText('Frequently Asked Questions')).toBeInTheDocument();
+    expect(screen.getByText('Pricing questions teams ask before they switch')).toBeInTheDocument();
   });
 
   it('renders 4 FAQ questions', () => {
     render(<PricingFAQ />);
-    expect(screen.getByText('What does BYOK mean?')).toBeInTheDocument();
-    expect(screen.getByText('Which AI agents are supported?')).toBeInTheDocument();
-    expect(screen.getByText('How does the 14-day trial work?')).toBeInTheDocument();
-    expect(screen.getByText('Can I switch plans?')).toBeInTheDocument();
+    expect(screen.getByText('How should I think about the Free plan?')).toBeInTheDocument();
+    expect(screen.getByText('What changes when I move to Pro?')).toBeInTheDocument();
+    expect(screen.getByText('When does Team make sense?')).toBeInTheDocument();
+    expect(screen.getByText('Do I need to relearn the workflow when upgrading?')).toBeInTheDocument();
   });
 
   it('expands FAQ answer on click', async () => {
     const user = userEvent.setup();
     render(<PricingFAQ />);
 
-    const byokTrigger = screen.getByText('What does BYOK mean?');
-    await user.click(byokTrigger);
+    const trigger = screen.getByText('How should I think about the Free plan?');
+    await user.click(trigger);
 
-    expect(screen.getByText(/Bring Your Own Key/i)).toBeInTheDocument();
+    expect(screen.getByText(/solo experimentation/i)).toBeInTheDocument();
   });
 
-  it('shows AI agents answer with Claude and Codex', async () => {
+  it('shows upgrade answer without changing the workflow model', async () => {
     const user = userEvent.setup();
     render(<PricingFAQ />);
 
-    const agentsTrigger = screen.getByText('Which AI agents are supported?');
-    await user.click(agentsTrigger);
+    const trigger = screen.getByText('Do I need to relearn the workflow when upgrading?');
+    await user.click(trigger);
 
-    const content = screen.getByText(/Claude/i);
+    const content = screen.getByText(/stage model stays consistent/i);
     expect(content).toBeInTheDocument();
-    expect(content.textContent).toMatch(/Codex/i);
+    expect(content.textContent).toMatch(/upgrading changes capacity/i);
   });
 });

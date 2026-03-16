@@ -17,6 +17,9 @@ Validate the landing page refresh against message clarity, distinctiveness, acce
 3. Replace landing-page hardcoded colors with semantic Tailwind tokens or token-backed classes.
 4. Preserve supported claims only; do not introduce testimonials, customer counts, or features not represented in the product.
 5. Keep decorative motion optional and reduced-motion safe.
+6. Preserve section order as `hero -> proof -> workflow -> capabilities -> pricing -> final-cta`.
+7. Keep the primary CTA label as `Get Started Free` wherever it points to `/auth/signin`.
+8. Keep the secondary workflow CTA label as `Explore Workflow` wherever it points to `#workflow`.
 
 ## Verification Flow
 
@@ -27,6 +30,14 @@ Validate the landing page refresh against message clarity, distinctiveness, acce
 5. Manually verify the page at mobile, tablet, and desktop widths.
 6. Tab through the page from header to final CTA and confirm focus order matches reading order.
 7. Enable reduced-motion preference in browser tooling and confirm decorative surfaces become static or simplified without hiding key content.
+
+## Reviewer Expectations
+
+- Header marketing anchors should appear in this order: `Proof`, `Workflow`, `Capabilities`, `Pricing`, then the primary auth CTA.
+- The hero and final CTA should reinforce the same next step instead of introducing a different conversion label.
+- The proof section should focus on supportable workflow artifacts: specifications, stage progression, and workflow-backed execution.
+- The workflow section should explain the staged process in plain language and remain readable without relying on animation.
+- The page should avoid horizontal scrolling from mobile through desktop widths.
 
 ## Review Prompts
 

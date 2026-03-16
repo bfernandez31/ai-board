@@ -15,24 +15,24 @@ interface FAQItemData {
 
 const FAQ_ITEMS: FAQItemData[] = [
   {
-    question: 'What does BYOK mean?',
+    question: 'How should I think about the Free plan?',
     answer:
-      'BYOK stands for Bring Your Own Key. On the Free plan, you provide your own API keys for AI services like Claude and Codex. Paid plans include API access so you can get started without managing your own keys.',
+      'Free is designed for evaluation and solo experimentation. You bring your own API keys, create a limited number of tickets each month, and verify whether the workflow fits your process before upgrading.',
   },
   {
-    question: 'Which AI agents are supported?',
+    question: 'What changes when I move to Pro?',
     answer:
-      'We support Claude by Anthropic and Codex by OpenAI as AI agents for automated development workflows. Both agents can generate specifications, implementation plans, and production-ready code.',
+      'Pro keeps the same staged workflow but raises your throughput and removes the need to bring your own keys, which makes it easier to adopt the product as part of daily delivery.',
   },
   {
-    question: 'How does the 14-day trial work?',
+    question: 'When does Team make sense?',
     answer:
-      'Pro and Team plans include a 14-day free trial. You get full access to all plan features during the trial period. No charge until the trial ends, and you can cancel anytime.',
+      'Team is for projects that need shared access, more members, and better visibility across the same ticket-to-ship process. It is the collaboration tier rather than a different product path.',
   },
   {
-    question: 'Can I switch plans?',
+    question: 'Do I need to relearn the workflow when upgrading?',
     answer:
-      'Yes, you can upgrade or downgrade your plan at any time from your billing settings. When upgrading, you get immediate access to the new plan features. When downgrading, changes take effect at the end of your current billing period.',
+      'No. The stage model stays consistent across plans, so upgrading changes capacity and collaboration options more than it changes how work moves through the board.',
   },
 ];
 
@@ -58,7 +58,7 @@ export function PricingFAQ() {
   return (
     <div className="mt-16 max-w-2xl mx-auto">
       <h3 className="text-2xl font-bold text-center text-foreground mb-8">
-        Frequently Asked Questions
+        Pricing questions teams ask before they switch
       </h3>
       <div className="divide-y divide-border">
         {FAQ_ITEMS.map((item) => (

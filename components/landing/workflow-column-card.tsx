@@ -79,14 +79,14 @@ export function WorkflowColumnCard({
         className={`
           workflow-column
           flex flex-col h-full min-h-[280px] rounded-lg border overflow-hidden
-          shadow-[0_0_24px_rgba(0,0,0,0.35)]
+          shadow-sm
           transition-all duration-300 ease-out
           ${stage.bgColor}
           ${stage.borderColor}
           group-hover:scale-105
-          group-hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]
+          group-hover:shadow-md
           group-hover:z-10
-          ${!prefersReducedMotion ? 'group-hover:-translate-y-1' : ''}
+          ${!prefersReducedMotion ? 'motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:duration-300' : ''}
         `}
         data-column-index={stage.index}
         data-column-name={stage.name}
@@ -98,13 +98,13 @@ export function WorkflowColumnCard({
           className={`${stage.headerBgColor} border-b ${stage.headerBorderColor} px-4 py-2.5`}
         >
           <div className="flex items-center justify-between gap-3">
-            <h2
-              className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
-            >
+              <h2
+                className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
+              >
               {stage.label}
             </h2>
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${stage.badgeBgColor} ${stage.badgeTextColor}`}
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-sm ring-1 ring-inset ring-white/10 ${stage.badgeBgColor} ${stage.badgeTextColor}`}
             >
               {tickets.length}
             </span>
@@ -153,7 +153,7 @@ export function WorkflowColumnCard({
 
       {/* Beautiful Purple Tooltip */}
       {isHovered && (
-        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute -bottom-16 left-1/2 z-20 -translate-x-1/2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200">
           <div className="relative">
             {/* Arrow pointing up */}
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-primary"></div>

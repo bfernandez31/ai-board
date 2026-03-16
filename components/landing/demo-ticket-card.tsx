@@ -39,8 +39,7 @@ export function DemoTicketCard({
         hover:bg-background
         overflow-hidden
         shadow-sm
-        cursor-grab
-        active:cursor-grabbing
+        cursor-default
         ${prefersReducedMotion ? 'duration-300' : 'duration-200'}
       `}
       data-ticket-id={ticket.id}

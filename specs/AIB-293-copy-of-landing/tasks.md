@@ -11,9 +11,9 @@
 
 **Purpose**: Establish the shared landing-page content contract and test files that all story work will build on.
 
-- [ ] T001 Create a shared landing-page content map aligned to `/home/runner/work/ai-board/ai-board/target/specs/AIB-293-copy-of-landing/contracts/landing-page-contract.yaml` in `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts`
-- [ ] T002 [P] Create the landing-page component test scaffold for narrative sections and CTA assertions in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
-- [ ] T003 [P] Create the landing-page browser test scaffold for keyboard order, viewport coverage, and reduced-motion checks in `/home/runner/work/ai-board/ai-board/target/tests/e2e/landing-page.spec.ts`
+- [X] T001 Create a shared landing-page content map aligned to `/home/runner/work/ai-board/ai-board/target/specs/AIB-293-copy-of-landing/contracts/landing-page-contract.yaml` in `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts`
+- [X] T002 [P] Create the landing-page component test scaffold for narrative sections and CTA assertions in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
+- [X] T003 [P] Create the landing-page browser test scaffold for keyboard order, viewport coverage, and reduced-motion checks in `/home/runner/work/ai-board/ai-board/target/tests/e2e/landing-page.spec.ts`
 
 ---
 
@@ -23,10 +23,10 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Refactor `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` to render sections from `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts` with the contract order for hero, proof, workflow, capabilities, pricing, and final CTA
-- [ ] T005 [P] Replace landing-specific hardcoded color usage with semantic or token-backed classes in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
-- [ ] T006 [P] Replace shared marketing navigation hardcoded colors and align anchor labels with landing sections in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx`
-- [ ] T007 [P] Make decorative landing motion reduced-motion safe and reusable in `/home/runner/work/ai-board/ai-board/target/app/landing/components/animated-ticket-background.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`
+- [X] T004 Refactor `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` to render sections from `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts` with the contract order for hero, proof, workflow, capabilities, pricing, and final CTA
+- [X] T005 [P] Replace landing-specific hardcoded color usage with semantic or token-backed classes in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
+- [X] T006 [P] Replace shared marketing navigation hardcoded colors and align anchor labels with landing sections in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx`
+- [X] T007 [P] Make decorative landing motion reduced-motion safe and reusable in `/home/runner/work/ai-board/ai-board/target/app/landing/components/animated-ticket-background.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`
 
 **Checkpoint**: Foundation ready. User story phases can now proceed with stable section data, semantic styling, and shared motion/navigation rules.
 
@@ -40,16 +40,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add Vitest coverage for landing-page section order, hero messaging, and repeated CTA labels in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
-- [ ] T009 [P] [US1] Add route-level assertions for unauthenticated landing render and authenticated redirect behavior in `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/homepage.test.ts`
+- [X] T008 [P] [US1] Add Vitest coverage for landing-page section order, hero messaging, and repeated CTA labels in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
+- [X] T009 [P] [US1] Add route-level assertions for unauthenticated landing render and authenticated redirect behavior in `/home/runner/work/ai-board/ai-board/target/tests/integration/landing/homepage.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Rewrite the hero narrative, CTA copy, and above-the-fold hierarchy in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`
-- [ ] T011 [P] [US1] Create a proof/trust strip that surfaces supportable differentiators and CTA reinforcement in `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx`
-- [ ] T012 [US1] Rework the capability overview to remove redundant copy and connect each section to the visitor journey in `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/feature-card.tsx`
-- [ ] T013 [US1] Update the landing-page composition to insert `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx` and preserve the contract section order in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx`
-- [ ] T014 [US1] Align the final conversion message and CTA wording with the hero in `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
+- [X] T010 [P] [US1] Rewrite the hero narrative, CTA copy, and above-the-fold hierarchy in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`
+- [X] T011 [P] [US1] Create a proof/trust strip that surfaces supportable differentiators and CTA reinforcement in `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx`
+- [X] T012 [US1] Rework the capability overview to remove redundant copy and connect each section to the visitor journey in `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/feature-card.tsx`
+- [X] T013 [US1] Update the landing-page composition to insert `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx` and preserve the contract section order in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx`
+- [X] T014 [US1] Align the final conversion message and CTA wording with the hero in `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
 
 **Checkpoint**: User Story 1 is complete when a first-time visitor can identify what AI Board does, who it is for, and the main next step without scanning unrelated sections.
 
@@ -63,14 +63,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Extend component assertions for proof signals, workflow specificity, and pricing CTA consistency in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
+- [X] T015 [P] [US2] Extend component assertions for proof signals, workflow specificity, and pricing CTA consistency in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T016 [P] [US2] Refresh the workflow section narrative and differentiated section pacing in `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-step.tsx`
-- [ ] T017 [P] [US2] Rework the animated workflow demo to emphasize real AI Board artifacts and stage progression in `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-column-card.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/demo-ticket-card.tsx`
-- [ ] T018 [P] [US2] Update pricing and trust presentation so plan clarity supports the narrative without generic copy in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx`
-- [ ] T019 [US2] Refine the landing-page background rhythm and closing section emphasis while keeping semantic tokens in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
+- [X] T016 [P] [US2] Refresh the workflow section narrative and differentiated section pacing in `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-step.tsx`
+- [X] T017 [P] [US2] Rework the animated workflow demo to emphasize real AI Board artifacts and stage progression in `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-column-card.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/demo-ticket-card.tsx`
+- [X] T018 [P] [US2] Update pricing and trust presentation so plan clarity supports the narrative without generic copy in `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-card.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-faq.tsx`
+- [X] T019 [US2] Refine the landing-page background rhythm and closing section emphasis while keeping semantic tokens in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/proof-strip.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
 
 **Checkpoint**: User Story 2 is complete when the page feels recognizably more original, each section has a distinct role, and all claims remain supportable by the product.
 
@@ -84,14 +84,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Add Playwright coverage for responsive layout, keyboard traversal, and CTA reachability in `/home/runner/work/ai-board/ai-board/target/tests/e2e/landing-page.spec.ts`
-- [ ] T021 [P] [US3] Add unit coverage for reduced-motion behavior in landing animation components in `/home/runner/work/ai-board/ai-board/target/tests/unit/mini-kanban-animation.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-reduced-motion.test.ts`
+- [X] T020 [P] [US3] Add Playwright coverage for responsive layout, keyboard traversal, and CTA reachability in `/home/runner/work/ai-board/ai-board/target/tests/e2e/landing-page.spec.ts`
+- [X] T021 [P] [US3] Add unit coverage for reduced-motion behavior in landing animation components in `/home/runner/work/ai-board/ai-board/target/tests/unit/mini-kanban-animation.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-reduced-motion.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Fix marketing header and mobile menu focus order, link labels, and breakpoint behavior in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx`
-- [ ] T023 [P] [US3] Improve section-level heading structure, spacing, and no-horizontal-scroll behavior in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
-- [ ] T024 [US3] Ensure decorative motion falls back cleanly for reduced-motion users in `/home/runner/work/ai-board/ai-board/target/app/landing/components/animated-ticket-background.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-column-card.tsx`
+- [X] T022 [P] [US3] Fix marketing header and mobile menu focus order, link labels, and breakpoint behavior in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx`
+- [X] T023 [P] [US3] Improve section-level heading structure, spacing, and no-horizontal-scroll behavior in `/home/runner/work/ai-board/ai-board/target/components/landing/hero-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/features-grid.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-section.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/pricing-section.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/cta-section.tsx`
+- [X] T024 [US3] Ensure decorative motion falls back cleanly for reduced-motion users in `/home/runner/work/ai-board/ai-board/target/app/landing/components/animated-ticket-background.tsx`, `/home/runner/work/ai-board/ai-board/target/components/landing/mini-kanban-demo.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/landing/workflow-column-card.tsx`
 
 **Checkpoint**: User Story 3 is complete when keyboard users, reduced-motion users, and visitors on mobile through desktop can traverse the page without blocked actions or readability regressions.
 
@@ -102,8 +102,8 @@
 **Purpose**: Final validation and cleanup that spans all stories.
 
 - [ ] T025 [P] Run the landing-page verification flow from `/home/runner/work/ai-board/ai-board/target/specs/AIB-293-copy-of-landing/quickstart.md` and capture any required assertion updates in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/landing-page.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/e2e/landing-page.spec.ts`
-- [ ] T026 [P] Document final section-order, CTA, and accessibility expectations for future reviewers in `/home/runner/work/ai-board/ai-board/target/specs/AIB-293-copy-of-landing/quickstart.md`
-- [ ] T027 Run final landing-page cleanup in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts` to remove dead copy paths and keep the contract-aligned composition maintainable
+- [X] T026 [P] Document final section-order, CTA, and accessibility expectations for future reviewers in `/home/runner/work/ai-board/ai-board/target/specs/AIB-293-copy-of-landing/quickstart.md`
+- [X] T027 Run final landing-page cleanup in `/home/runner/work/ai-board/ai-board/target/app/landing/page.tsx` and `/home/runner/work/ai-board/ai-board/target/components/landing/content.ts` to remove dead copy paths and keep the contract-aligned composition maintainable
 
 ---
 

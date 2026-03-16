@@ -11,6 +11,13 @@ import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
 import { TicketSearch } from '@/components/search/ticket-search';
 
+const MARKETING_NAV_ITEMS = [
+  { href: '#proof', label: 'Proof' },
+  { href: '#workflow', label: 'Workflow' },
+  { href: '#capabilities', label: 'Capabilities' },
+  { href: '#pricing', label: 'Pricing' },
+];
+
 interface ProjectInfo {
   id: number;
   name: string;
@@ -85,7 +92,7 @@ export function Header() {
   return (
     <header
       className={`sticky top-0 z-50 w-full bg-background text-foreground transition-all duration-200 ${
-        isScrolled ? 'border-b shadow-[0_1px_12px_rgba(139,92,246,0.15)]' : ''
+        isScrolled ? 'border-b shadow-sm backdrop-blur' : ''
       }`}
     >
       <div className="flex h-16 items-center px-6">
@@ -107,28 +114,28 @@ export function Header() {
           <>
             {/* Desktop: Full layout with separator and icon */}
             <div className="hidden md:flex items-center gap-3 ml-8">
-              <span className="text-zinc-400">|</span>
-              <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-lg font-semibold text-foreground">{projectInfo.name}</span>
               <a
                 href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="View project specifications on GitHub"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <FileText className="w-5 h-5" />
               </a>
               <Link
                 href={`/projects/${projectInfo.id}/analytics`}
                 aria-label="View project analytics"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <BarChart3 className="w-5 h-5" />
               </Link>
               <Link
                 href={`/projects/${projectInfo.id}/activity`}
                 aria-label="View project activity"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Activity className="w-5 h-5" />
               </Link>
@@ -136,8 +143,8 @@ export function Header() {
 
             {/* Mobile: Compact with ellipsis */}
             <div className="flex md:hidden items-center gap-2 ml-2 flex-1 overflow-hidden">
-              <span className="text-zinc-400 shrink-0">|</span>
-              <span className="text-sm font-semibold text-zinc-50 truncate flex-1">
+              <span className="text-muted-foreground shrink-0">|</span>
+              <span className="text-sm font-semibold text-foreground truncate flex-1">
                 {projectInfo.name}
               </span>
             </div>
@@ -160,19 +167,17 @@ export function Header() {
           {/* Marketing variant: Show navigation links + Sign In button */}
           {isMarketingVariant && (
             <div className="hidden md:flex items-center gap-3">
-              <Link href="#features" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Features
-              </Link>
-              <Link href="#workflow" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Workflow
-              </Link>
-              <Link href="#pricing" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Pricing
-              </Link>
+              {MARKETING_NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-sm px-1 text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {item.label}
+                </Link>
+              ))}
               <Link href="/auth/signin">
-                <Button variant="default">
-                  Sign In
-                </Button>
+                <Button variant="default">Get Started Free</Button>
               </Link>
             </div>
           )}

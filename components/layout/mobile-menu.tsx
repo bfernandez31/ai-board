@@ -14,6 +14,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
+const MARKETING_LINKS = [
+  { href: '#proof', label: 'Proof' },
+  { href: '#workflow', label: 'Workflow' },
+  { href: '#capabilities', label: 'Capabilities' },
+  { href: '#pricing', label: 'Pricing' },
+];
+
 interface MobileMenuProps {
   projectId?: number | undefined;
   projectName?: string | undefined;
@@ -33,15 +40,12 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation menu">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent
-        side="right"
-        className="bg-[hsl(var(--ctp-mantle))] text-[hsl(var(--ctp-text))]"
-      >
+      <SheetContent side="right" className="bg-background text-foreground">
         <VisuallyHidden>
           <SheetTitle>Navigation Menu</SheetTitle>
         </VisuallyHidden>
@@ -51,7 +55,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
           <>
             <div className="mt-6 px-2">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
+                <p className="text-lg font-semibold text-foreground">{projectName}</p>
                 <div className="flex items-center gap-2">
                   {githubOwner && githubRepo && (
                     <a
@@ -59,7 +63,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="View project specifications on GitHub"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground transition-colors hover:text-foreground"
                       onClick={() => setOpen(false)}
                     >
                       <FileText className="w-5 h-5" />
@@ -69,7 +73,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                     <Link
                       href={`/projects/${projectId}/analytics`}
                       aria-label="View project analytics"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground transition-colors hover:text-foreground"
                       onClick={() => setOpen(false)}
                     >
                       <BarChart3 className="w-5 h-5" />
@@ -79,7 +83,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                     <Link
                       href={`/projects/${projectId}/activity`}
                       aria-label="View project activity"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground transition-colors hover:text-foreground"
                       onClick={() => setOpen(false)}
                     >
                       <Activity className="w-5 h-5" />
@@ -92,7 +96,22 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
           </>
         )}
 
-        <div className="flex flex-col gap-4 mt-4">
+        {!session?.user && (
+          <nav aria-label="Mobile marketing navigation" className="mt-6 flex flex-col gap-2">
+            {MARKETING_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-md px-2 py-2 text-base font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        <div className="mt-4 flex flex-col gap-4">
           {session?.user ? (
             // Authenticated user menu
             <>
@@ -117,7 +136,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
 
               <Button
                 variant="outline"
-                className="w-full justify-center text-red-600 hover:text-red-700"
+                className="w-full justify-center text-destructive hover:text-destructive"
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -128,7 +147,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
             // Unauthenticated menu
             <Link href="/auth/signin" onClick={() => setOpen(false)}>
               <Button variant="default" className="w-full justify-center">
-                Sign In
+                Get Started Free
               </Button>
             </Link>
           )}

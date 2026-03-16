@@ -10,13 +10,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock pathname - MUST be before component import
 let mockPathname = '/projects/1/board';
+let mockSessionStatus: 'authenticated' | 'unauthenticated' = 'authenticated';
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
 // Mock next-auth session
 vi.mock('next-auth/react', () => ({
-  useSession: () => ({ status: 'authenticated', data: { user: { name: 'Test' } } }),
+  useSession: () => ({
+    status: mockSessionStatus,
+    data: mockSessionStatus === 'authenticated' ? { user: { name: 'Test' } } : null,
+  }),
 }));
 
 // Mock TicketSearch to detect if it's rendered
@@ -53,6 +57,7 @@ describe('Header', () => {
     });
     // Reset to default board page path
     mockPathname = '/projects/1/board';
+    mockSessionStatus = 'authenticated';
 
     // Mock fetch for project info
     global.fetch = vi.fn().mockResolvedValue({
@@ -62,6 +67,21 @@ describe('Header', () => {
         githubOwner: 'owner',
         githubRepo: 'repo',
       }),
+    });
+  });
+
+  describe('Marketing Navigation', () => {
+    it('shows updated landing anchors for unauthenticated homepage visitors', async () => {
+      mockPathname = '/';
+      mockSessionStatus = 'unauthenticated';
+
+      renderHeader();
+
+      expect(screen.getByRole('link', { name: 'Proof' })).toHaveAttribute('href', '#proof');
+      expect(screen.getByRole('link', { name: 'Workflow' })).toHaveAttribute('href', '#workflow');
+      expect(screen.getByRole('link', { name: 'Capabilities' })).toHaveAttribute('href', '#capabilities');
+      expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute('href', '#pricing');
+      expect(screen.getByRole('link', { name: 'Get Started Free' })).toHaveAttribute('href', '/auth/signin');
     });
   });
 

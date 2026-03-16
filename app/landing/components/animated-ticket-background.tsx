@@ -33,7 +33,7 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
     animationDuration: `${duration}s`,
     animationDelay: `${delay}s`,
     top: `${verticalPosition}%`,
-    transform: `rotate(${rotation}deg)`,
+    transform: `translateY(-50%) rotate(${rotation}deg)`,
     willChange: 'left, transform',
   };
 
@@ -71,7 +71,10 @@ export default function AnimatedTicketBackground({ className = '' }: { className
   const tickets = Array.from({ length: 18 }, (_, i) => getTicketProps(i));
 
   return (
-    <div className={`animated-ticket-background absolute inset-0 ${className}`}>
+    <div
+      className={`animated-ticket-background absolute inset-0 overflow-hidden motion-reduce:hidden ${className}`}
+      aria-hidden="true"
+    >
       {tickets.map((props) => (
         <TicketCard key={props.index} {...props} />
       ))}

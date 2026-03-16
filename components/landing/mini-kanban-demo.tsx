@@ -7,7 +7,6 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { WorkflowColumnCard } from './workflow-column-card';
 import { useAnimationState } from '@/lib/hooks/use-animation-state';
 import { useIntersectionObserver } from '@/lib/hooks/use-intersection-observer';
@@ -17,6 +16,7 @@ import {
   type DemoTicket,
   type WorkflowStage,
 } from '@/lib/utils/animation-helpers';
+import { WORKFLOW_HIGHLIGHTS } from '@/components/landing/content';
 
 export interface MiniKanbanDemoProps {
   className?: string;
@@ -84,24 +84,19 @@ export function MiniKanbanDemo({
         ))}
       </div>
 
-      {/* Icon Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-6 px-4 py-6 bg-card/50 border border-border rounded-lg">
-        <div className="flex items-center gap-2">
-          <BotOff className="w-5 h-5 text-ctp-red" strokeWidth={2} />
-          <span className="text-sm text-foreground font-medium">No AI</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-ctp-blue" strokeWidth={2} />
-          <span className="text-sm text-foreground font-medium">Review option</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <BotMessageSquare className="w-5 h-5 text-primary" strokeWidth={2} />
-          <span className="text-sm text-foreground font-medium">Chat assistance</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-ctp-green" strokeWidth={2} />
-          <span className="text-sm text-foreground font-medium">AI automation</span>
-        </div>
+      <div className="grid gap-4 rounded-lg border border-border bg-card/50 px-4 py-6 md:grid-cols-3">
+        {WORKFLOW_HIGHLIGHTS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.title} className="flex items-start gap-3">
+              <Icon className="mt-0.5 h-5 w-5 text-primary" strokeWidth={2} />
+              <div>
+                <p className="text-sm font-medium text-foreground">{item.title}</p>
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

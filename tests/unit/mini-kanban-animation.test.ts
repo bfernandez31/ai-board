@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAnimationState } from '@/lib/hooks/use-animation-state';
 import type { DemoTicket } from '@/lib/utils/animation-helpers';
+import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 
 // Mock useReducedMotion hook
 vi.mock('@/lib/hooks/use-reduced-motion', () => ({
@@ -81,5 +82,19 @@ describe('useAnimationState', () => {
     });
 
     expect(result.current.isVisible).toBe(true);
+  });
+
+  it('does not progress when reduced motion is preferred', () => {
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+
+    const { result } = renderHook(() => useAnimationState(TEST_TICKETS, 10000));
+    const initialTickets = [...result.current.tickets];
+
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+
+    expect(result.current.prefersReducedMotion).toBe(true);
+    expect(result.current.tickets).toEqual(initialTickets);
   });
 });

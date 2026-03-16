@@ -1,20 +1,32 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getLandingSectionContent, LANDING_CTAS } from '@/components/landing/content';
+
+const section = getLandingSectionContent('final-cta');
+const primaryCta = LANDING_CTAS['primary-sign-in'];
 
 export function CTASection() {
   return (
-    <section className="py-16 md:py-24 lg:py-32 bg-gradient-to-r from-[#8B5CF6]/20 via-[#6366F1]/20 to-[#3B82F6]/20" data-testid="final-cta-section">
+    <section
+      id="final-cta"
+      aria-labelledby="final-cta-heading"
+      className="border-t border-border bg-muted/40 py-16 md:py-24 lg:py-28"
+      data-testid="final-cta-section"
+    >
       <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-[hsl(var(--ctp-text))] mb-6">
-            Ready to Transform Your Workflow?
-          </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] mb-8">
-            Join teams building better software with AI-powered development workflows.
+        <div className="mx-auto max-w-3xl rounded-3xl border border-border bg-background/90 px-6 py-10 text-center shadow-sm md:px-10">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
+            {section.eyebrow}
           </p>
-          <Link href="/auth/signin">
-            <Button size="lg" className="transform hover:scale-105 transition-transform">
-              Get Started Free
+          <h2 id="final-cta-heading" className="mt-4 text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
+            {section.heading}
+          </h2>
+          <p className="mt-6 text-base leading-7 text-muted-foreground md:text-lg">
+            {section.supportingText}
+          </p>
+          <Link href={primaryCta.href}>
+            <Button size="lg" className="mt-8">
+              {primaryCta.label}
             </Button>
           </Link>
         </div>
