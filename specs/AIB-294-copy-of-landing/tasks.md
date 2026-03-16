@@ -48,16 +48,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Add skip-to-content link at the top of the landing page and corresponding anchor target in `app/landing/page.tsx`
-- [ ] T010 [US1] Audit and fix heading hierarchy (h1 → h2 → h3) across all section components in `components/landing/hero-section.tsx`, `features-grid.tsx`, `workflow-section.tsx`, `pricing-section.tsx`, `cta-section.tsx`
-- [ ] T011 [P] [US1] Add `aria-hidden="true"` to decorative elements in `app/landing/components/animated-ticket-background.tsx` and verify `prefers-reduced-motion` support
-- [ ] T012 [P] [US1] Add `aria-label` attributes and visible focus indicators (3px solid outline) to `components/landing/feature-card.tsx`
-- [ ] T013 [P] [US1] Add `aria-label` attributes to workflow stage elements in `components/landing/workflow-step.tsx`
-- [ ] T014 [P] [US1] Add accessibility improvements (aria attributes, focus management) to `components/landing/workflow-column-card.tsx`
-- [ ] T015 [US1] Verify and fix `aria-expanded` and `aria-controls` attributes on collapsible triggers in `components/landing/pricing-faq.tsx`
-- [ ] T016 [P] [US1] Verify contrast ratios and add visible focus indicators to `components/landing/pricing-card.tsx`
-- [ ] T017 [US1] Verify logical keyboard tab order across the entire landing page and fix any focus traps or skipped elements in `app/landing/page.tsx` and section components
-- [ ] T018 [US1] Run `bun run type-check && bun run lint` to verify accessibility changes introduce no regressions
+- [x] T009 [US1] Add skip-to-content link at the top of the landing page and corresponding anchor target in `app/landing/page.tsx`
+- [x] T010 [US1] Audit and fix heading hierarchy (h1 → h2 → h3) across all section components in `components/landing/hero-section.tsx`, `features-grid.tsx`, `workflow-section.tsx`, `pricing-section.tsx`, `cta-section.tsx`
+- [x] T011 [P] [US1] Add `aria-hidden="true"` to decorative elements in `app/landing/components/animated-ticket-background.tsx` and verify `prefers-reduced-motion` support
+- [x] T012 [P] [US1] Add `aria-label` attributes and visible focus indicators (3px solid outline) to `components/landing/feature-card.tsx`
+- [x] T013 [P] [US1] Add `aria-label` attributes to workflow stage elements in `components/landing/workflow-step.tsx`
+- [x] T014 [P] [US1] Add accessibility improvements (aria attributes, focus management) to `components/landing/workflow-column-card.tsx`
+- [x] T015 [US1] Verify and fix `aria-expanded` and `aria-controls` attributes on collapsible triggers in `components/landing/pricing-faq.tsx`
+- [x] T016 [P] [US1] Verify contrast ratios and add visible focus indicators to `components/landing/pricing-card.tsx`
+- [x] T017 [US1] Verify logical keyboard tab order across the entire landing page and fix any focus traps or skipped elements in `app/landing/page.tsx` and section components
+- [x] T018 [US1] Run `bun run type-check && bun run lint` to verify accessibility changes introduce no regressions
 
 **Checkpoint**: The landing page is fully keyboard-navigable with visible focus indicators, proper heading hierarchy, screen reader support, and WCAG AA contrast compliance (SC-001, SC-002, SC-006).
 

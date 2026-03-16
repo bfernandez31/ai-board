@@ -23,7 +23,7 @@ export function PricingCard({
 }: PricingCardProps) {
   return (
     <Card
-      className={`relative flex flex-col ${isPopular ? 'border-primary shadow-md' : ''}`}
+      className={`relative flex flex-col ${isPopular ? 'border-primary shadow-md shadow-primary/20' : ''}`}
     >
       {isPopular && (
         <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground border-primary hover:bg-primary">Most Popular</Badge>

@@ -36,18 +36,23 @@ const FAQ_ITEMS: FAQItemData[] = [
   },
 ];
 
-function FAQItem({ item }: { item: FAQItemData }) {
+function FAQItem({ item, index }: { item: FAQItemData; index: number }) {
   const [isOpen, setIsOpen] = useState(false);
+  const contentId = `faq-content-${index}`;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between py-4 text-left text-foreground font-medium hover:text-primary transition-colors">
+      <CollapsibleTrigger
+        className="flex w-full items-center justify-between py-4 text-left text-foreground font-medium hover:text-primary transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-primary focus-visible:outline-offset-2 focus-visible:rounded-sm"
+        aria-controls={contentId}
+      >
         {item.question}
         <ChevronDown
           className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
         />
       </CollapsibleTrigger>
-      <CollapsibleContent>
+      <CollapsibleContent id={contentId} role="region" aria-label={item.question}>
         <p className="pb-4 text-muted-foreground">{item.answer}</p>
       </CollapsibleContent>
     </Collapsible>
@@ -61,8 +66,8 @@ export function PricingFAQ() {
         Frequently Asked Questions
       </h3>
       <div className="divide-y divide-border">
-        {FAQ_ITEMS.map((item) => (
-          <FAQItem key={item.question} item={item} />
+        {FAQ_ITEMS.map((item, index) => (
+          <FAQItem key={item.question} item={item} index={index} />
         ))}
       </div>
     </div>

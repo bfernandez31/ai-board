@@ -73,7 +73,7 @@ export function WorkflowColumnCard({
   const icons = STAGE_ICONS[stage.index] || [];
 
   return (
-    <div className="relative group">
+    <div className="relative group" role="region" aria-label={`${stage.name} workflow stage`}>
       {/* Column Card */}
       <div
         className={`
@@ -98,11 +98,11 @@ export function WorkflowColumnCard({
           className={`${stage.headerBgColor} border-b ${stage.headerBorderColor} px-4 py-2.5`}
         >
           <div className="flex items-center justify-between gap-3">
-            <h2
+            <h3
               className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
             >
               {stage.label}
-            </h2>
+            </h3>
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${stage.badgeBgColor} ${stage.badgeTextColor}`}
             >
