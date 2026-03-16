@@ -98,17 +98,83 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
 
+### Hero Section Messaging and Layout
+
+The landing page opens with a two-column hero that positions AI Board as an AI delivery system for teams that need visible, reviewable execution.
+
+**Primary content**:
+- Eyebrow label: "AI delivery system with board-native workflow context"
+- Headline: "An AI delivery system for teams that ship"
+- Supporting copy emphasizes ticket intent, implementation flow, and release confidence staying in one place
+
+**Calls to action**:
+- Primary CTA: "Start free" → `/auth/signin`
+- Secondary CTA: "See workflow" → `#workflow`
+
+**Proof points**:
+- "Built for AI-first product delivery"
+- "Every step stays reviewable"
+- "Designed for teams that need visible progress"
+
+**Supporting panel**:
+- A card-style summary panel sits beside the main copy on large screens
+- The panel presents delivery stats, a "Live delivery board" label, and a current-focus summary for the BUILD stage
+- On smaller screens the panel stacks below the hero copy without changing content order
+
 ### Landing Page Structure
 
 The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
 
-1. **HeroSection** — animated hero with background ticket cards
-2. **FeaturesGrid** — product feature highlights
-3. **WorkflowSection** — workflow stage showcase
+1. **HeroSection** — positioning statement, proof points, CTAs, and delivery summary panel
+2. **FeaturesGrid** — value framing focused on ownership, quality gates, context, and workflow clarity
+3. **WorkflowSection** — delivery-stage explanation paired with a board demo
 4. **PricingSection** — pricing cards and FAQ (`#pricing`)
-5. **CTASection** — final call-to-action
+5. **CTASection** — closing conversion panel with sign-in and pricing links
 
 All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+
+### Features Section
+
+The features section reframes the landing page around operational clarity rather than a generic feature inventory.
+
+**Section header**:
+- Eyebrow label: "Why AI Board"
+- Headline: "Designed for calm, auditable execution"
+- Supporting copy explains that ticket intent, workflow state, and release confidence remain visible in one place
+
+**Feature themes**:
+- Clear ownership across every stage
+- Built-in quality gates
+- Shared context, not scattered prompts
+- Repository-aware automation
+- Readable by humans under pressure
+- Workflow clarity without extra coordination layers
+
+**Layout**:
+- Introductory summary panel displayed above the card grid
+- Feature cards use a single-column layout on mobile, two columns on medium screens, and three columns on extra-large screens
+- Each feature card uses semantic color tokens for icon emphasis and a bordered card surface for contrast
+
+### Workflow Section
+
+The workflow section explains the operating model in present-tense delivery language instead of step names alone.
+
+**Section header**:
+- Eyebrow label: "Delivery Workflow"
+- Headline: "One workflow from ticket intake to shipped code"
+- Supporting copy explains that AI handles repetitive work while human review points remain visible
+
+**Stage descriptions**:
+- `INBOX` — capture the request where it starts
+- `SPECIFY` — turn ambiguity into a shared spec
+- `PLAN` — lock implementation intent
+- `BUILD` — run the implementation with context attached
+- `VERIFY` — review before the last irreversible step
+
+**Layout**:
+- The mini kanban demo is shown inside a bordered surface
+- Stage explanation cards are displayed below the demo across all viewports
+- Each stage uses a semantic badge color and a companion description card
 
 ### Pricing Section
 
@@ -150,6 +216,24 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - `aria-hidden` is not needed (content is informational, not decorative)
 - Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
 - Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+
+### Final Call To Action
+
+The landing page closes with a bordered conversion panel that reinforces reduced coordination overhead.
+
+**Content**:
+- Eyebrow label: "Start Shipping"
+- Headline: "Replace status chasing with visible momentum"
+- Supporting copy focuses on keeping the ticket, AI workflow, and verification path together
+
+**Calls to action**:
+- Primary CTA: "Launch your workspace" → `/auth/signin`
+- Secondary CTA: "Review pricing" → `#pricing`
+
+**Layout**:
+- Content and CTA buttons stack on mobile
+- On large screens the message and button group align in a two-column layout
+- Both buttons remain visible without relying on hover-only affordances
 
 ---
 

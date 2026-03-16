@@ -146,6 +146,7 @@ Stage Transition
 
 **Page Routes**:
 ```
+/landing                            # Public marketing page for unauthenticated visitors
 /projects/{projectId}/board          # Board view
 /ticket/{ticketKey}                  # Direct ticket access (redirects to board with modal)
 /legal/terms                         # Terms of Service (public, no auth required)
@@ -163,6 +164,13 @@ Stage Transition
 - Redirect format: `/projects/{projectId}/board?ticket={ticketKey}&modal=open`
 - Board component detects `modal=open` parameter and automatically opens ticket modal
 - URL parameters cleaned up after modal opens to prevent re-opening on page refresh
+
+#### Public Marketing Route Pattern
+- `/landing` is a server-rendered public route composed from section components in `components/landing/`
+- The page renders `HeroSection`, `FeaturesGrid`, `WorkflowSection`, `PricingSection`, and `CTASection` in a fixed top-to-bottom sequence
+- The root wrapper applies `bg-background` so the landing page uses the same semantic surface system as the rest of the application
+- In-page navigation links target anchored sections such as `#workflow` and `#pricing`
+- Decorative motion is isolated to the animated hero background while primary marketing copy remains static and server-rendered
 
 #### Authorization Pattern
 ```typescript

@@ -31,6 +31,7 @@ tests/
 │   │   ├── ticket-search.test.tsx
 │   │   ├── comment-form.test.tsx
 │   │   ├── notification-dropdown.test.tsx
+│   │   ├── landing-page.test.tsx
 │   │   └── mention-input.test.tsx
 │   ├── job-state-machine.test.ts
 │   ├── useJobPolling.test.ts
@@ -81,6 +82,21 @@ Component tests verify React component behavior from a user's perspective using 
 - **Component state changes**: Conditional rendering based on user actions
 - **Query Priority**: `getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort)
 - **User Events**: Use `userEvent` over `fireEvent` for realistic interactions
+
+### Marketing Route Component Coverage
+
+The landing page uses component tests instead of browser tests because the implemented behavior is presentational and link-driven rather than browser-API dependent.
+
+**Covered by `tests/unit/components/landing-page.test.tsx`**:
+- Hero copy, proof points, and primary CTA targets
+- Feature-section headline and card narrative
+- Workflow-section heading and visible stage labels
+- Final CTA links to sign-in and pricing anchors
+
+**Testing pattern**:
+- `next/link` is mocked to plain anchors so link targets can be asserted directly
+- Each landing section is rendered independently to keep failures localized to a single marketing block
+- Assertions use accessible headings and link names instead of implementation details
 
 ### When to Use Integration Tests (Vitest)
 
