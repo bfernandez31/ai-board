@@ -20,7 +20,7 @@ export default function LandingPage() {
       >
         Skip to main content
       </a>
-      <main id="main-content">
+      <div id="main-content">
         <HeroSection />
         <div className="section-divider mx-auto max-w-4xl" />
         <FadeInSection>
@@ -38,7 +38,7 @@ export default function LandingPage() {
         <FadeInSection>
           <CTASection />
         </FadeInSection>
-      </main>
+      </div>
     </div>
   );
 }
