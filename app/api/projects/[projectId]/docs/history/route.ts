@@ -197,11 +197,11 @@ export async function GET(
     });
 
     return NextResponse.json(response);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[docs/history/GET] Error fetching commit history:', error);
 
     // GitHub API errors
-    if (error.status === 404) {
+    if ((error as { status?: number }).status === 404) {
       return NextResponse.json(
         { error: 'Branch or file not found in repository', code: 'BRANCH_NOT_FOUND' },
         { status: 404 }

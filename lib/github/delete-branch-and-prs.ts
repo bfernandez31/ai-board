@@ -67,9 +67,9 @@ export async function deleteBranchAndPRs(
         state: 'open',
       });
       prs = data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 404 errors mean the branch or repo doesn't exist - treat as no PRs to close
-      if (error.status === 404) {
+      if ((error as { status?: number }).status === 404) {
         prs = [];
       } else {
         throw error;
@@ -99,14 +99,15 @@ export async function deleteBranchAndPRs(
         ref: `heads/${branchName}`, // GitHub API expects refs/heads/ prefix
       });
       branchDeleted = true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { status?: number; message?: string };
       // 404 errors are acceptable (branch already deleted) - idempotent operation
-      if (error.status === 404) {
+      if (err.status === 404) {
         branchDeleted = false; // Branch was already deleted
       } else if (
-        error.status === 422 &&
-        error.message &&
-        error.message.toLowerCase().includes('reference does not exist')
+        err.status === 422 &&
+        err.message &&
+        err.message.toLowerCase().includes('reference does not exist')
       ) {
         // 422 errors with "reference does not exist" message mean branch is already deleted
         // This is acceptable - treat as successful deletion (idempotent)
@@ -121,38 +122,41 @@ export async function deleteBranchAndPRs(
       prsClosed: prCount,
       branchDeleted,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number };
     // Log error for debugging
     console.error('GitHub cleanup failed:', {
       owner,
       repo,
       branchName,
-      error: error.message,
-      status: error.status,
+      error: err.message,
+      status: err.status,
     });
 
     // Provide more specific error messages for common failures
-    if (error.status === 403) {
+    if (err.status === 403) {
       throw new Error(
         `GitHub API permission denied. Check token scope includes 'repo' access.`
       );
     }
 
-    if (error.status === 429) {
+    if (err.status === 429) {
       throw new Error(
         `GitHub API rate limit exceeded. Please try again later. Resets at: ${
-          error.response?.headers?.['x-ratelimit-reset'] || 'unknown'
+          ((error as { response?: { headers?: Record<string, string> } }).response?.headers?.[
+            'x-ratelimit-reset'
+          ]) || 'unknown'
         }`
       );
     }
 
-    if (error.status === 422) {
+    if (err.status === 422) {
       throw new Error(
         `Cannot delete protected branch: ${branchName}. Remove branch protection in GitHub settings.`
       );
     }
 
     // Re-throw with original error message for other cases
-    throw new Error(`GitHub cleanup failed: ${error.message}`);
+    throw new Error(`GitHub cleanup failed: ${err.message}`);
   }
 }

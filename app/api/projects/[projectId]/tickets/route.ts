@@ -153,8 +153,8 @@ export async function POST(
         const parsed = await parseFormData(request);
         fields = parsed.fields;
         files = parsed.files;
-      } catch (error: any) {
-        if (error.code === 1015) {
+      } catch (error: unknown) {
+        if ((error as { code?: number }).code === 1015) {
           return NextResponse.json(
             {
               error: 'Maximum 5 images allowed per ticket',
@@ -163,7 +163,7 @@ export async function POST(
             { status: 400 }
           );
         }
-        if (error.code === 1009) {
+        if ((error as { code?: number }).code === 1009) {
           return NextResponse.json(
             {
               error: 'Total file size exceeds 10MB limit',

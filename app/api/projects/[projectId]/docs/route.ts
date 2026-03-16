@@ -220,19 +220,20 @@ export async function POST(
         updatedAt: new Date().toISOString(),
         message: `${docType}.md updated successfully`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error('[docs/POST] Git operation failed:', {
         ticketId,
         docType,
-        error: error.message,
+        error: err.message,
       });
 
       // Handle merge conflicts
-      if (error.message?.includes('another user has modified')) {
+      if (err.message?.includes('another user has modified')) {
         return NextResponse.json(
           {
             success: false,
-            error: error.message,
+            error: err.message,
             code: 'MERGE_CONFLICT',
           },
           { status: 409 }
@@ -240,11 +241,11 @@ export async function POST(
       }
 
       // Handle branch not found
-      if (error.message?.includes('Branch') && error.message?.includes('not found')) {
+      if (err.message?.includes('Branch') && err.message?.includes('not found')) {
         return NextResponse.json(
           {
             success: false,
-            error: error.message,
+            error: err.message,
             code: 'BRANCH_NOT_FOUND',
           },
           { status: 404 }
@@ -257,12 +258,12 @@ export async function POST(
           success: false,
           error: 'Failed to save changes to repository',
           code: 'NETWORK_ERROR',
-          details: error.message,
+          details: err.message,
         },
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[docs/POST] Unexpected error:', error);
     return NextResponse.json(
       {
