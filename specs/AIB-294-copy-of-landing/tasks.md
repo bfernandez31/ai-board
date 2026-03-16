@@ -18,8 +18,8 @@
 
 **Purpose**: Verify existing project structure, identify all hardcoded hex values, and prepare globals
 
-- [ ] T001 Audit all landing page components for hardcoded hex/rgb values and document findings in `components/landing/` and `app/landing/`
-- [ ] T002 Verify existing Catppuccin Mocha semantic tokens are available in `app/globals.css` and `tailwind.config.ts` per color mapping in data-model.md
+- [x] T001 Audit all landing page components for hardcoded hex/rgb values and document findings in `components/landing/` and `app/landing/`
+- [x] T002 Verify existing Catppuccin Mocha semantic tokens are available in `app/globals.css` and `tailwind.config.ts` per color mapping in data-model.md
 
 ---
 
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete — all subsequent phases assume semantic tokens are in place.
 
-- [ ] T003 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/hero-section.tsx` (see data-model.md color mapping)
-- [ ] T004 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/features-grid.tsx`
-- [ ] T005 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/workflow-step.tsx`
-- [ ] T006 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/cta-section.tsx`
-- [ ] T007 [P] Replace hardcoded hex color prop in `components/landing/feature-card.tsx` to accept semantic token class names instead of hex values
-- [ ] T008 Run `bun run type-check && bun run lint` to verify zero regressions after token replacement
+- [x] T003 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/hero-section.tsx` (see data-model.md color mapping)
+- [x] T004 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/features-grid.tsx`
+- [x] T005 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/workflow-step.tsx`
+- [x] T006 [P] Replace hardcoded hex colors with semantic Tailwind tokens in `components/landing/cta-section.tsx`
+- [x] T007 [P] Replace hardcoded hex color prop in `components/landing/feature-card.tsx` to accept semantic token class names instead of hex values
+- [x] T008 Run `bun run type-check && bun run lint` to verify zero regressions after token replacement
 
 **Checkpoint**: Zero hardcoded hex/rgb colors remain in landing page components (SC-003). Visual output should be identical to before.
 

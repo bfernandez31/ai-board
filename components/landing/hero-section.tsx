@@ -11,12 +11,12 @@ export function HeroSection() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Gradient Title */}
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-[#8B5CF6] via-[#6366F1] to-[#3B82F6] bg-clip-text text-transparent">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-ctp-mauve via-primary to-ctp-blue bg-clip-text text-transparent">
             Build Better Software with AI-Powered Workflows
           </h1>
 
           {/* Subheadline */}
-          <p className="text-xl md:text-2xl text-[hsl(var(--ctp-subtext-0))] mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Transform tickets into production-ready features with AI-powered workflows. Streamline development from specification to deployment.
           </p>
 
