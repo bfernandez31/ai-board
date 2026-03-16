@@ -127,12 +127,12 @@
 
 **Purpose**: Final validation across all user stories, edge cases, and performance
 
-- [ ] T040 Verify edge case: page at very large viewport widths (> 2560px) — content centered with max-width container
-- [ ] T041 Verify edge case: browser zoom at 200% — no overlapping elements, content remains accessible
-- [ ] T042 Verify page load performance remains within 10% of current metrics (SC-009) — no significant regression from visual enhancements
-- [ ] T043 Run full existing test suite (`bun run test`) to confirm no regressions
-- [ ] T044 Final `bun run type-check && bun run lint` pass across all modified files
-- [ ] T045 Run quickstart.md validation checklist — confirm all items pass
+- [x] T040 Verify edge case: page at very large viewport widths (> 2560px) — content centered with max-width container
+- [x] T041 Verify edge case: browser zoom at 200% — no overlapping elements, content remains accessible
+- [x] T042 Verify page load performance remains within 10% of current metrics (SC-009) — no significant regression from visual enhancements
+- [x] T043 Run full existing test suite (`bun run test`) to confirm no regressions
+- [x] T044 Final `bun run type-check && bun run lint` pass across all modified files
+- [x] T045 Run quickstart.md validation checklist — confirm all items pass
 
 ---
 
