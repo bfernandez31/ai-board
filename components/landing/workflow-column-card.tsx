@@ -91,7 +91,7 @@ export function WorkflowColumnCard({
           ${stage.bgColor}
           ${stage.borderColor}
           group-hover:scale-105
-          group-hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]
+          group-hover:shadow-[0_0_40px_hsl(var(--primary)/0.4)]
           group-hover:z-10
           ${!prefersReducedMotion ? 'group-hover:-translate-y-1' : ''}
         `}
