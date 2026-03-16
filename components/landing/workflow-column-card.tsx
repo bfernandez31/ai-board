@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import { useState, type ElementType } from 'react';
 import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { DemoTicketCard } from './demo-ticket-card';
 import type { WorkflowStage, DemoTicket } from '@/lib/utils/animation-helpers';
@@ -29,7 +29,7 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
 };
 
 // Icon configuration per stage (column index)
-const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> = {
+const STAGE_ICONS: Record<number, { icon: ElementType; label: string }[]> = {
   0: [{ icon: BotOff, label: 'No AI' }], // INBOX
   1: [
     { icon: Eye, label: 'Review' },
@@ -52,6 +52,13 @@ const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> 
   ], // VERIFY
   5: [], // SHIP - no icons
 };
+
+function getIconColor(icon: ElementType): string {
+  if (icon === BotOff) return 'text-ctp-red';
+  if (icon === Eye) return 'text-ctp-blue';
+  if (icon === BotMessageSquare) return 'text-primary';
+  return 'text-ctp-green';
+}
 
 /**
  * Workflow column with beautiful hover effects
@@ -128,19 +135,10 @@ export function WorkflowColumnCard({
             <div className="flex items-center justify-center gap-2">
               {icons.map((iconConfig, index) => {
                 const IconComponent = iconConfig.icon;
-                // Color based on icon type
-                const iconColor =
-                  IconComponent === BotOff
-                    ? 'text-ctp-red' // Red for No AI
-                    : IconComponent === Eye
-                      ? 'text-ctp-blue' // Blue for Review
-                      : IconComponent === BotMessageSquare
-                        ? 'text-primary' // Purple for Chat
-                        : 'text-ctp-green'; // Green for AI automation
                 return (
                   <IconComponent
                     key={index}
-                    className={`w-4 h-4 ${iconColor}`}
+                    className={`w-4 h-4 ${getIconColor(IconComponent)}`}
                     strokeWidth={2}
                     aria-label={iconConfig.label}
                   />
