@@ -102,6 +102,22 @@ Client Request
   → Response with Data
 ```
 
+#### Public Homepage Flow
+```
+Visitor requests /
+  → Server checks current session
+  → Authenticated:
+    → Redirect to /projects
+  → Unauthenticated:
+    → Render landing page section sequence
+      → hero
+      → proof
+      → workflow
+      → capabilities
+      → pricing
+      → final CTA
+```
+
 #### Optimistic Update Flow
 ```
 User Action (Drag-and-drop)
@@ -257,6 +273,38 @@ if (!project) {
 - **State Machine**: Invalid transitions return descriptive errors
 
 ### Security Architecture
+
+## Marketing Homepage Composition
+
+The public homepage is implemented as a server-rendered composition rooted at `app/page.tsx` and `app/landing/page.tsx`.
+
+- `app/page.tsx` performs the auth gate for `/`, redirecting authenticated users to `/projects` and rendering the landing page for unauthenticated visitors.
+- `app/landing/page.tsx` maps a fixed `LANDING_SECTION_ORDER` array to section components, keeping the page structure data-driven rather than hardcoded in JSX order.
+- `components/landing/content.ts` holds the landing content contract, including section metadata, CTA definitions, trust signals, workflow steps, capability cards, and pricing callouts.
+- Shared layout components (`components/layout/header.tsx` and `components/layout/mobile-menu.tsx`) expose matching marketing anchors for `#proof`, `#workflow`, `#capabilities`, and `#pricing`.
+
+```mermaid
+sequenceDiagram
+    participant V as Visitor
+    participant Home as app/page.tsx
+    participant Auth as getCurrentUserOrNull
+    participant Landing as app/landing/page.tsx
+    participant Content as components/landing/content.ts
+    participant Header as Marketing Header
+
+    V->>Home: Request /
+    Home->>Auth: Check current user
+    alt Authenticated user
+        Auth-->>Home: User
+        Home-->>V: Redirect /projects
+    else Unauthenticated visitor
+        Auth-->>Home: null
+        Home->>Landing: Render landing page
+        Landing->>Content: Read section order + copy contract
+        Landing-->>V: Hero -> Proof -> Workflow -> Capabilities -> Pricing -> Final CTA
+        Header-->>V: Marketing anchor links + sign-in CTA
+    end
+```
 
 #### Authentication Layer
 - **NextAuth.js**: Session-based authentication

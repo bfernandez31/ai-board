@@ -200,6 +200,15 @@ The MCP server uses PAT authentication to access AI-Board API:
 
 ## Session Management
 
+### Public Homepage Session Gate
+
+The root route (`app/page.tsx`) uses server-side session lookup to split public and authenticated entry paths:
+
+- If `getCurrentUserOrNull()` returns a user, the route redirects to `/projects`
+- If no user is present, the route renders the marketing landing page
+
+This keeps the public homepage accessible without authentication while preventing signed-in users from landing on marketing content after login.
+
 ### Server-Side Session Access
 
 ```typescript

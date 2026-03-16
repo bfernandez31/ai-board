@@ -15,7 +15,7 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Links use muted text color with semantic hover styling
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -51,74 +51,79 @@ The sign-in page displays a consent notice below the OAuth buttons:
 
 > "By signing in, you agree to our Terms of Service and Privacy Policy"
 
-Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
+Links use semantic accent styling, and surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
 
 ---
 
 ## Landing Page
 
-### Hero Section Background Animation
-
-**Visual Effect**:
-- Subtle animated ticket cards drift across the hero section background
-- Reinforces the product's core concept (ticket management) visually
-- Premium visual effect without interfering with text content
-- 15-20 semi-transparent ticket cards move from left to right
-- Each card completes one cycle in 40-60 seconds (randomized)
-
-**Ticket Card Appearance**:
-- Size: 64x40px mini ticket cards
-- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber)
-- Opacity: 0.10-0.15 for subtle appearance
-- Blur: 2px blur filter for enhanced depth perception
-- Rotation: Random rotation between -10° to +10° for organic feel
-- Content: Minimal decorative lines (abstract, not readable text)
-
-**Responsive Behavior**:
-- Desktop (≥1024px): 18 animated ticket cards
-- Tablet (768-1023px): 12 animated ticket cards
-- Mobile (<768px): 8 animated ticket cards
-- Animation maintains 60fps performance across all devices
-
-**Interaction Design**:
-- Cards positioned behind hero text (z-index layering)
-- No pointer event interference with text or buttons
-- Users can click buttons and select text without animation blocking
-- Animation does not capture or block any user interactions
-
-**Accessibility**:
-- Completely disabled when user has "prefers-reduced-motion" enabled
-- Hidden from assistive technologies (aria-hidden)
-- Text remains fully legible with contrast ratio ≥4.5:1
-- No motion for users with motion sensitivity
-
-**Performance**:
-- CSS-only implementation (no JavaScript required)
-- GPU-accelerated transforms for smooth animation
-- Page load time increases by no more than 200ms
-- Browser window resize adapts gracefully without page reload
-
 ### Landing Page Structure
 
-The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+The marketing homepage at `/` is a server-rendered page shown to unauthenticated visitors. Authenticated visitors are redirected to `/projects`.
 
-1. **HeroSection** — animated hero with background ticket cards
-2. **FeaturesGrid** — product feature highlights
-3. **WorkflowSection** — workflow stage showcase
-4. **PricingSection** — pricing cards and FAQ (`#pricing`)
-5. **CTASection** — final call-to-action
+The landing page is composed from a shared content contract and rendered in this fixed order:
 
-All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+1. **HeroSection** (`#hero`) — primary value proposition, two CTAs, and a short "what visitors should understand" summary
+2. **ProofStrip** (`#proof`) — trust signals that explain why the workflow is reviewable
+3. **WorkflowSection** (`#workflow`) — staged workflow explanation plus a visual kanban demo
+4. **FeaturesGrid** (`#capabilities`) — concrete product capabilities tied to the delivery journey
+5. **PricingSection** (`#pricing`) — plan callouts, pricing cards, and FAQ
+6. **CTASection** (`#final-cta`) — closing conversion message aligned with the hero CTA
+
+The page uses shared landing content definitions for section order, CTA labels, trust signals, workflow steps, capability cards, and pricing callouts so copy and anchors remain consistent across components.
+
+### Marketing Navigation
+
+The global header switches to a marketing variant on `/` for unauthenticated visitors.
+
+**Desktop navigation**:
+- Section links: `#proof`, `#workflow`, `#capabilities`, `#pricing`
+- Primary action: "Get Started Free" linking to `/auth/signin`
+- Keyboard focus order follows the visible link order and ends on the CTA link
+
+**Mobile navigation**:
+- Opens in a sheet menu
+- Repeats the same marketing anchors and CTA as the desktop header
+- Closes after a navigation selection so focus can return to page content
+
+### Hero Section Background Animation
+
+The hero uses a decorative background of 18 drifting mini ticket cards behind the content.
+
+**Ticket card appearance**:
+- Size: `w-24 h-16`
+- Colors: Catppuccin-derived semantic utility classes (`mauve`, `blue`, `sapphire`, `green`, `yellow`)
+- Rotation: deterministic variation between `-10deg` and `+10deg`
+- Content: two abstract decorative lines inside each card
+
+**Motion behavior**:
+- Cards drift horizontally with durations between roughly 30 and 50 seconds
+- Motion is decorative only and never blocks text or CTA interaction
+- The background container is hidden entirely for users who prefer reduced motion
+
+**Accessibility**:
+- Decorative ticket cards are `aria-hidden`
+- The motion surface disables pointer events
+- Hero text and CTA buttons remain in the primary reading and tab order
+
+### Workflow Section
+
+The workflow section explains the delivery sequence with five named stages: `INBOX`, `SPECIFY`, `PLAN`, `BUILD`, and `VERIFY`.
+
+**Layout behavior**:
+- Desktop: shows the animated kanban demo above the narrative content
+- Mobile and tablet: prioritizes the text walkthrough and omits the large demo layout
+- A supporting sidebar explains the workflow differentiators and repeats the "Explore Workflow" CTA
 
 ### Pricing Section
 
-The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and a FAQ to unauthenticated visitors. It is positioned after `WorkflowSection` and before `CTASection` with `id="pricing"` for anchor linking.
+The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and FAQ content to unauthenticated visitors. It is positioned after the capabilities section and before the final CTA section.
 
 **Layout**:
-- Section heading: "Simple, transparent pricing" (centered)
-- Sub-heading: description text (centered, `max-w-2xl`)
-- Plan cards: `grid-cols-1 md:grid-cols-3` — single column on mobile, 3 columns on `md+`
-- FAQ: below the cards, `max-w-2xl mx-auto`
+- Intro copy from the shared landing content contract
+- Three short pricing callouts above the plan cards
+- Plan cards: `grid-cols-1 md:grid-cols-3`
+- FAQ: below the plan cards, centered within a constrained width container
 
 **Plan Cards** (`components/landing/pricing-card.tsx`):
 
@@ -126,7 +131,7 @@ Plan data is sourced from `lib/billing/plans.ts` (`PLANS` constant) — the same
 
 | Plan | Price | CTA Label | Highlighted |
 |------|-------|-----------|-------------|
-| Free | $0 | "Get Started" | No |
+| Free | $0 | "Get Started Free" | No |
 | Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`) |
 | Team | $30/mo | "Start 14-day trial" | No |
 
@@ -142,14 +147,14 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 4. "Can I switch plans?" — upgrade/downgrade via billing settings
 
 **Responsive behavior**:
-- Mobile (< 768px): cards stack in single column
-- Tablet / Desktop (≥ 768px): 3-column card grid
-- Minimum supported viewport: 375px (no horizontal scroll)
+- Mobile: cards stack in a single column and CTA text remains fully visible
+- Tablet and desktop: cards display in a three-column grid
+- The page supports common mobile, tablet, and desktop widths without horizontal scroll
 
 **Accessibility**:
-- `aria-hidden` is not needed (content is informational, not decorative)
 - Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
-- Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+- Text contrast uses semantic color tokens only
+- Keyboard users can reach all major marketing actions in header, sections, pricing, and final CTA order
 
 ---
 
