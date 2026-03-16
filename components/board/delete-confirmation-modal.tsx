@@ -14,62 +14,14 @@ import { getConfirmationMessage } from '@/lib/utils/stage-confirmation-messages'
 import type { Ticket } from '@prisma/client';
 import { TicketWithVersion } from '@/lib/types';
 
-/**
- * Props for DeleteConfirmationModal component
- */
 export interface DeleteConfirmationModalProps {
-  /**
-   * Ticket to be deleted (null when modal closed)
-   */
   ticket: TicketWithVersion | null;
-
-  /**
-   * Whether the modal is open
-   */
   open: boolean;
-
-  /**
-   * Callback when modal open state changes
-   */
   onOpenChange: (open: boolean) => void;
-
-  /**
-   * Callback when user confirms deletion
-   */
   onConfirm: () => void;
-
-  /**
-   * Whether deletion is in progress (for loading state)
-   */
   isDeleting?: boolean;
 }
 
-/**
- * Confirmation modal for ticket deletion
- *
- * Features:
- * - Stage-specific confirmation messages
- * - Displays ticket key and title
- * - Red destructive action button
- * - Cancel button to abort deletion
- * - Loading state support
- *
- * Uses shadcn/ui AlertDialog component for consistent styling
- *
- * @param props - DeleteConfirmationModalProps
- * @returns AlertDialog component or null if no ticket
- *
- * @example
- * ```typescript
- * <DeleteConfirmationModal
- *   ticket={ticketToDelete}
- *   open={confirmModalOpen}
- *   onOpenChange={setConfirmModalOpen}
- *   onConfirm={handleDeleteConfirm}
- *   isDeleting={deleteTicket.isPending}
- * />
- * ```
- */
 export function DeleteConfirmationModal({
   ticket,
   open,
