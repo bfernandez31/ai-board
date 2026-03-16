@@ -50,7 +50,7 @@ export function PricingCard({
         </ul>
       </CardContent>
       <CardFooter>
-        <Button asChild className="w-full" size="lg">
+        <Button asChild className="w-full min-h-[44px]" size="lg">
           <Link href={ctaHref}>{ctaLabel}</Link>
         </Button>
       </CardFooter>

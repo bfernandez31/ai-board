@@ -95,12 +95,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Replace `hidden lg:block` / `lg:hidden` pattern with responsive layout in `components/landing/workflow-section.tsx` so workflow content is visible on all viewports
-- [ ] T031 [US3] Create mobile-optimized workflow visualization (horizontally-scrollable compact columns or animated carousel) in `components/landing/mini-kanban-demo.tsx` or new `components/landing/mobile-workflow-demo.tsx`
-- [ ] T032 [P] [US3] Ensure all CTA buttons have minimum touch target size of 44x44px (`min-h-[44px] min-w-[44px]`) across `components/landing/hero-section.tsx`, `cta-section.tsx`, `pricing-card.tsx`
-- [ ] T033 [US3] Verify tablet layout (768px-1023px) adapts gracefully with appropriate card sizes and spacing in `components/landing/features-grid.tsx` and `components/landing/pricing-section.tsx`
-- [ ] T034 [US3] Test mobile performance — ensure no jank from animations or heavy elements on 375px and 768px viewports
-- [ ] T035 [US3] Run `bun run type-check && bun run lint` to verify mobile enhancement changes
+- [x] T030 [US3] Replace `hidden lg:block` / `lg:hidden` pattern with responsive layout in `components/landing/workflow-section.tsx` so workflow content is visible on all viewports
+- [x] T031 [US3] Create mobile-optimized workflow visualization (horizontally-scrollable compact columns or animated carousel) in `components/landing/mini-kanban-demo.tsx` or new `components/landing/mobile-workflow-demo.tsx`
+- [x] T032 [P] [US3] Ensure all CTA buttons have minimum touch target size of 44x44px (`min-h-[44px] min-w-[44px]`) across `components/landing/hero-section.tsx`, `cta-section.tsx`, `pricing-card.tsx`
+- [x] T033 [US3] Verify tablet layout (768px-1023px) adapts gracefully with appropriate card sizes and spacing in `components/landing/features-grid.tsx` and `components/landing/pricing-section.tsx`
+- [x] T034 [US3] Test mobile performance — ensure no jank from animations or heavy elements on 375px and 768px viewports
+- [x] T035 [US3] Run `bun run type-check && bun run lint` to verify mobile enhancement changes
 
 **Checkpoint**: Workflow section renders meaningful content on mobile (SC-005), all touch targets >= 44x44px (SC-004), and performance is smooth on mobile viewports (SC-009).
 

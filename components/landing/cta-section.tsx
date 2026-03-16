@@ -16,7 +16,7 @@ export function CTASection() {
             Join teams building better software with AI-powered development workflows.
           </p>
           <Link href="/auth/signin">
-            <Button size="lg" className="transform hover:scale-105 transition-transform">
+            <Button size="lg" className="min-h-[44px] transform hover:scale-105 transition-transform">
               Get Started Free
             </Button>
           </Link>
