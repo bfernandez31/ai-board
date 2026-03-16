@@ -71,17 +71,17 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Add new animation `@keyframes` (fade-in, slide-up) and gradient utility classes to `app/globals.css`, and register animation names in `tailwind.config.ts` if needed
-- [ ] T020 [P] [US2] Add scroll-triggered section fade-in animations using IntersectionObserver with `motion-safe:` / `motion-reduce:` classes to `components/landing/hero-section.tsx`
-- [ ] T021 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/features-grid.tsx` with reduced-motion support
-- [ ] T022 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/workflow-section.tsx` with reduced-motion support
-- [ ] T023 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/pricing-section.tsx` with reduced-motion support
-- [ ] T024 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/cta-section.tsx` with reduced-motion support
-- [ ] T025 [US2] Add distinctive section dividers (gradient or SVG shapes) between major sections in `app/landing/page.tsx` or section components
-- [ ] T026 [US2] Add unique decorative elements (gradient mesh patterns, custom border treatments) to at least 2 sections to achieve SC-008 (3+ distinctive elements)
-- [ ] T027 [US2] Refine typography spacing and visual rhythm across all section components for improved readability (FR-013)
-- [ ] T028 [US2] Verify all new animations are fully functional and content remains visible when animations are disabled (`prefers-reduced-motion`) — test across all sections
-- [ ] T029 [US2] Run `bun run type-check && bun run lint` to verify visual enhancement changes
+- [x] T019 [P] [US2] Add new animation `@keyframes` (fade-in, slide-up) and gradient utility classes to `app/globals.css`, and register animation names in `tailwind.config.ts` if needed
+- [x] T020 [P] [US2] Add scroll-triggered section fade-in animations using IntersectionObserver with `motion-safe:` / `motion-reduce:` classes to `components/landing/hero-section.tsx`
+- [x] T021 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/features-grid.tsx` with reduced-motion support
+- [x] T022 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/workflow-section.tsx` with reduced-motion support
+- [x] T023 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/pricing-section.tsx` with reduced-motion support
+- [x] T024 [P] [US2] Add scroll-triggered fade-in animations to `components/landing/cta-section.tsx` with reduced-motion support
+- [x] T025 [US2] Add distinctive section dividers (gradient or SVG shapes) between major sections in `app/landing/page.tsx` or section components
+- [x] T026 [US2] Add unique decorative elements (gradient mesh patterns, custom border treatments) to at least 2 sections to achieve SC-008 (3+ distinctive elements)
+- [x] T027 [US2] Refine typography spacing and visual rhythm across all section components for improved readability (FR-013)
+- [x] T028 [US2] Verify all new animations are fully functional and content remains visible when animations are disabled (`prefers-reduced-motion`) — test across all sections
+- [x] T029 [US2] Run `bun run type-check && bun run lint` to verify visual enhancement changes
 
 **Checkpoint**: Landing page has 3+ distinctive visual elements (SC-008), smooth scroll animations that respect reduced-motion (SC-007), and refined typography/spacing (FR-013).
 

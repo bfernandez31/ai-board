@@ -3,6 +3,7 @@ import { FeaturesGrid } from '@/components/landing/features-grid';
 import { WorkflowSection } from '@/components/landing/workflow-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { CTASection } from '@/components/landing/cta-section';
+import { FadeInSection } from '@/components/landing/fade-in-section';
 
 /**
  * Landing Page
@@ -20,11 +21,23 @@ export default function LandingPage() {
         Skip to main content
       </a>
       <main id="main-content">
-      <HeroSection />
-      <FeaturesGrid />
-      <WorkflowSection />
-      <PricingSection />
-      <CTASection />
+        <HeroSection />
+        <div className="section-divider mx-auto max-w-4xl" />
+        <FadeInSection>
+          <FeaturesGrid />
+        </FadeInSection>
+        <div className="section-divider mx-auto max-w-4xl" />
+        <FadeInSection>
+          <WorkflowSection />
+        </FadeInSection>
+        <div className="section-divider mx-auto max-w-4xl" />
+        <FadeInSection>
+          <PricingSection />
+        </FadeInSection>
+        <div className="section-divider mx-auto max-w-4xl" />
+        <FadeInSection>
+          <CTASection />
+        </FadeInSection>
       </main>
     </div>
   );
