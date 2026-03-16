@@ -423,6 +423,26 @@ The header maintains consistent layout across all pages within a project:
 - Analytics/Settings pages: Spacer element provides flex spacing to position right-side elements
 - Landing page (no project): Spacer element ensures right-side alignment
 
+### User Menu
+
+The user menu provides authenticated account navigation via an avatar button in the header.
+
+**Trigger**: Clicking the circular avatar button (`data-testid="user-menu"`) opens a dropdown aligned to the right edge of the header.
+
+**Dropdown Contents** (authenticated):
+- User display name and email (non-interactive label)
+- **Billing** → `/settings/billing` (CreditCard icon)
+- **API Tokens** → `/settings/tokens` (Key icon)
+- **Sign out** — triggers `signOut` with redirect to `/auth/signin`
+
+**Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
+
+**Mobile Behavior** (<768px): Avatar button is hidden; Billing and API Tokens links are surfaced inside the mobile hamburger menu instead.
+
+**Component**: `components/auth/user-menu.tsx`
+
+---
+
 ### Analytics Navigation
 
 The header provides quick access to project analytics:
@@ -444,6 +464,21 @@ The header provides quick access to project analytics:
 - Positioned below project name in mobile menu drawer
 - Clicking navigates to analytics page and closes menu
 - Part of project-specific navigation group
+
+### Mobile Menu (Hamburger)
+
+The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `Sheet` panel visible only on <768px viewports.
+
+**Authenticated User Contents**:
+1. User avatar, display name, and email
+2. **Billing** → `/settings/billing` (CreditCard icon)
+3. **API Tokens** → `/settings/tokens` (Key icon)
+4. **Sign Out** button (red text, LogOut icon)
+
+**Project-specific section** (shown when `projectId` and `projectName` are provided):
+- Project name header with icon links: Specifications (GitHub), Analytics, Activity
+
+All navigation items close the sheet on click.
 
 **Accessibility**:
 - `aria-label="View project analytics"` for screen readers
