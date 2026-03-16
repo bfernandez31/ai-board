@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, FileText, BarChart3, Activity } from 'lucide-react';
+import { Menu, LogOut, FileText, BarChart3, Activity, CreditCard, Key } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -112,6 +112,26 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                   <p className="text-xs text-muted-foreground">{session.user.email}</p>
                 </div>
               </div>
+
+              <div className="border-t border-border my-2" />
+
+              <Link
+                href="/settings/billing"
+                className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                onClick={() => setOpen(false)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Billing
+              </Link>
+
+              <Link
+                href="/settings/tokens"
+                className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                onClick={() => setOpen(false)}
+              >
+                <Key className="mr-2 h-4 w-4" />
+                API Tokens
+              </Link>
 
               <div className="border-t border-border my-2" />
 
