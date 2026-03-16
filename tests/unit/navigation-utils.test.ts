@@ -171,7 +171,7 @@ describe('createNavigationContext', () => {
 
   it('should throw error for missing notification', () => {
     expect(() =>
-      createNavigationContext(null as any, 1)
+      createNavigationContext(null as unknown as NotificationWithNavData, 1)
     ).toThrow('Notification is required');
   });
 
@@ -237,7 +237,7 @@ describe('isValidNotificationForNavigation', () => {
 
   it('should return false for missing id', () => {
     const invalid = { ...validNotification };
-    delete (invalid as any).id;
+    delete (invalid as Record<string, unknown>).id;
     expect(isValidNotificationForNavigation(invalid)).toBe(false);
   });
 
@@ -248,7 +248,7 @@ describe('isValidNotificationForNavigation', () => {
 
   it('should return false for missing projectId', () => {
     const invalid = { ...validNotification };
-    delete (invalid as any).projectId;
+    delete (invalid as Record<string, unknown>).projectId;
     expect(isValidNotificationForNavigation(invalid)).toBe(false);
   });
 
@@ -259,7 +259,7 @@ describe('isValidNotificationForNavigation', () => {
 
   it('should return false for missing ticketKey', () => {
     const invalid = { ...validNotification };
-    delete (invalid as any).ticketKey;
+    delete (invalid as Record<string, unknown>).ticketKey;
     expect(isValidNotificationForNavigation(invalid)).toBe(false);
   });
 
@@ -270,7 +270,7 @@ describe('isValidNotificationForNavigation', () => {
 
   it('should return false for missing commentId', () => {
     const invalid = { ...validNotification };
-    delete (invalid as any).commentId;
+    delete (invalid as Record<string, unknown>).commentId;
     expect(isValidNotificationForNavigation(invalid)).toBe(false);
   });
 

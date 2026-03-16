@@ -54,7 +54,7 @@ export async function commitImageToRepo(
         sha = data.sha;
       }
     } catch (error) {
-      if ((error as any).status !== 404) throw error;
+      if ((error as { status?: number }).status !== 404) throw error;
     }
 
     const response = await octokit.repos.createOrUpdateFileContents({
@@ -162,7 +162,7 @@ export async function deleteTicketAssets(
 
     return { commitSha: lastCommitSha, success: true };
   } catch (error) {
-    if ((error as any).status === 404) {
+    if ((error as { status?: number }).status === 404) {
       return { commitSha: '', success: true };
     }
 

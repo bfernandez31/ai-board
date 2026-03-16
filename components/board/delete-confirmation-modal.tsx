@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { getConfirmationMessage } from '@/lib/utils/stage-confirmation-messages';
+import type { Ticket } from '@prisma/client';
 import { TicketWithVersion } from '@/lib/types';
 
 /**
@@ -79,7 +80,7 @@ export function DeleteConfirmationModal({
   if (!ticket) return null;
 
   // Get stage-specific confirmation message (cast to expected type)
-  const message = getConfirmationMessage(ticket as any);
+  const message = getConfirmationMessage(ticket as unknown as Ticket);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

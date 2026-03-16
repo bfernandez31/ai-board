@@ -91,13 +91,14 @@ async function parseFormData(request: NextRequest): Promise<{ fields: Fields; fi
     },
   });
 
-  // Add required properties for formidable
-  (nodeStream as any).headers = Object.fromEntries(request.headers.entries());
-  (nodeStream as any).method = request.method;
-  (nodeStream as any).url = request.url;
+  // Add required properties for formidable (it expects IncomingMessage-like object)
+  const formStream = nodeStream as Readable & { headers: Record<string, string>; method: string; url: string };
+  formStream.headers = Object.fromEntries(request.headers.entries());
+  formStream.method = request.method;
+  formStream.url = request.url;
 
   return new Promise((resolve, reject) => {
-    form.parse(nodeStream as any, (err, fields, files) => {
+    form.parse(formStream as unknown as import('http').IncomingMessage, (err, fields, files) => {
       if (err) {
         reject(err);
       } else {
@@ -386,7 +387,7 @@ export async function POST(
     if (attachments.length > 0) {
       finalTicket = await prisma.ticket.update({
         where: { id: ticket.id },
-        data: { attachments: attachments as any },
+        data: { attachments: attachments as unknown as import('@prisma/client').Prisma.InputJsonValue },
       });
     }
 

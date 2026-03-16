@@ -1,6 +1,6 @@
 import { test, expect } from '../../helpers/worker-isolation';
-import type { Page, APIResponse } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import type { Page, APIResponse, APIRequestContext } from '@playwright/test';
+import { PrismaClient, Stage } from '@prisma/client';
 import { getPrismaClient, cleanupDatabase } from '../../helpers/db-cleanup';
 
 /**
@@ -30,7 +30,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
    * For automated stages (SPECIFY, PLAN, BUILD), creates a COMPLETED job to satisfy validation
    */
   const createTicket = async (
-    request: any,
+    request: APIRequestContext,
     projectId: number,
     stage: string = 'INBOX'
   ): Promise<{ id: number; version: number; title: string }> => {
@@ -52,7 +52,7 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     if (stage !== 'INBOX') {
       await prisma.ticket.update({
         where: { id: ticket.id },
-        data: { stage: stage as any },
+        data: { stage: stage as Stage },
       });
 
       // For automated stages, create a COMPLETED job to satisfy validation

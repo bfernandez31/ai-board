@@ -102,7 +102,7 @@ describe('UserService', () => {
 
       const mockUser = { id: '12345' };
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockResolvedValue(mockUser),
@@ -136,9 +136,9 @@ describe('UserService', () => {
       } as Account;
 
       const mockUser = { id: '12345' };
-      let capturedCreateData: any = null;
+      let capturedCreateData: Record<string, unknown> | null = null;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockImplementation(({ create }) => {
@@ -182,7 +182,7 @@ describe('UserService', () => {
         },
       };
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         return callback(mockTx);
       });
 
@@ -210,7 +210,7 @@ describe('UserService', () => {
         access_token: 'gho_token123',
       } as Account;
 
-      (prisma.$transaction as any).mockRejectedValue(new Error('Database connection error'));
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database connection error'));
 
       await expect(createOrUpdateUser(mockProfile, mockAccount)).rejects.toThrow(
         'Database connection error'
@@ -232,7 +232,7 @@ describe('UserService', () => {
         access_token: 'gho_token123',
       } as Account;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockResolvedValue({ id: '12345' }),
@@ -264,7 +264,7 @@ describe('UserService', () => {
         access_token: 'gho_token123',
       } as Account;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockRejectedValue(new Error('Unique constraint violation')),
@@ -302,7 +302,7 @@ describe('UserService', () => {
       // Database user has DIFFERENT ID than GitHub ID
       const mockUser = { id: 'database-user-id-12345' };
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockResolvedValue(mockUser),
@@ -342,9 +342,9 @@ describe('UserService', () => {
       } as Account;
 
       const mockUser = { id: '12345', email: 'alice@github.com' };
-      let capturedUpdateData: any = null;
+      let capturedUpdateData: Record<string, unknown> | null = null;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockImplementation(({ update }) => {
@@ -383,9 +383,9 @@ describe('UserService', () => {
       } as Account;
 
       const mockUser = { id: '12345' };
-      let capturedUpdateData: any = null;
+      let capturedUpdateData: Record<string, unknown> | null = null;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockImplementation(({ update }) => {
@@ -426,9 +426,9 @@ describe('UserService', () => {
       } as Account;
 
       const mockUser = { id: '12345' };
-      let capturedAccountUpdate: any = null;
+      let capturedAccountUpdate: Record<string, unknown> | null = null;
 
-      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const mockTx = {
           user: {
             upsert: vi.fn().mockResolvedValue(mockUser),

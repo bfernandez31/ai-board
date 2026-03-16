@@ -1,4 +1,5 @@
 import { test, expect } from '../../helpers/worker-isolation';
+import type { APIRequestContext } from '@playwright/test';
 import { cleanupDatabase, getPrismaClient } from '../../helpers/db-cleanup';
 
 /**
@@ -27,7 +28,7 @@ test.describe('Inline Ticket Editing - User Interface', () => {
    * Helper: Create a ticket via API and return its data
    */
   const createTicket = async (
-    request: any,
+    request: APIRequestContext,
     projectId: number,
     title: string = 'Test Ticket',
     description: string = 'Test description'

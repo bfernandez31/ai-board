@@ -69,14 +69,15 @@ interface BoardProps {
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
-function mergeTransitionFields(serverData: Record<string, any>, current: TicketWithVersion): TicketWithVersion {
+function mergeTransitionFields(serverData: Record<string, unknown>, current: TicketWithVersion): TicketWithVersion {
+  const data = serverData as Partial<TicketWithVersion>;
   return {
     ...current,
-    stage: serverData.stage || current.stage,
-    version: serverData.version || current.version,
-    branch: serverData.branch !== undefined ? serverData.branch : current.branch,
-    workflowType: serverData.workflowType || current.workflowType,
-    updatedAt: serverData.updatedAt || current.updatedAt,
+    stage: data.stage || current.stage,
+    version: data.version || current.version,
+    branch: data.branch !== undefined ? data.branch : current.branch,
+    workflowType: data.workflowType || current.workflowType,
+    updatedAt: data.updatedAt || current.updatedAt,
   };
 }
 
@@ -413,8 +414,8 @@ export function Board({
       ticket: TicketWithVersion,
       targetStage: Stage,
       config: {
-        mergeServerData?: (serverData: Record<string, any>, current: TicketWithVersion) => TicketWithVersion;
-        onApiError?: (error: Record<string, any>, status: number) => void;
+        mergeServerData?: (serverData: Record<string, unknown>, current: TicketWithVersion) => TicketWithVersion;
+        onApiError?: (error: { error?: string; message?: string }, status: number) => void;
         successToast: { title: string; description: string };
         networkErrorToast: { title: string; description: string };
       }
@@ -443,7 +444,7 @@ export function Board({
         );
 
         if (!response.ok) {
-          const error = await response.json();
+          const error = (await response.json()) as { error?: string; message?: string };
           revert();
           if (config.onApiError) {
             config.onApiError(error, response.status);
@@ -706,13 +707,16 @@ export function Board({
     setPendingVerifyRollback(null);
 
     await performTransition(ticket, targetStage, {
-      mergeServerData: (serverData, current) => ({
-        ...current,
-        stage: serverData.stage || current.stage,
-        version: serverData.version || current.version,
-        previewUrl: serverData.previewUrl,
-        updatedAt: serverData.updatedAt || current.updatedAt,
-      }),
+      mergeServerData: (serverData, current): TicketWithVersion => {
+        const data = serverData as Partial<TicketWithVersion>;
+        return {
+          ...current,
+          stage: data.stage || current.stage,
+          version: data.version || current.version,
+          previewUrl: data.previewUrl ?? current.previewUrl ?? null,
+          updatedAt: data.updatedAt || current.updatedAt,
+        };
+      },
       onApiError: (error) => {
         toast({
           variant: 'destructive',
@@ -945,7 +949,7 @@ export function Board({
     const initial = initialJobs.get(ticketId) || [];
     const polled = polledJobs.filter(job => job.ticketId === ticketId);
     const jobMap = new Map(initial.map(j => [j.id, j]));
-    polled.forEach(pj => { jobMap.set(pj.id, pj as any); });
+    polled.forEach(pj => { jobMap.set(pj.id, pj as unknown as Job); });
     return Array.from(jobMap.values());
   }, [initialJobs, polledJobs]);
 
@@ -959,7 +963,7 @@ export function Board({
     const ticketWithJobs = {
       ...activeTicket,
       jobs: allTicketJobs.map(j => ({ status: j.status })),
-    } as any;
+    } as unknown as Parameters<typeof isTicketDeletable>[0];
 
     const isDeletable = isTicketDeletable(ticketWithJobs);
     const reason = getDeletionBlockReason(ticketWithJobs);

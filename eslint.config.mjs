@@ -18,6 +18,7 @@ const eslintConfig = [
       "*.tsbuildinfo",
       "next-env.d.ts",
       "mcp-server/",
+      "specs/",
     ],
   },
   ...nextCoreWebVitals,
