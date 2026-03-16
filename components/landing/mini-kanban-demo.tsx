@@ -1,13 +1,6 @@
-/**
- * Mini Kanban Demo Component
- * Animated demo of 6-stage workflow for landing page
- * Includes icon legend explaining user interaction points
- */
-
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { WorkflowColumnCard } from './workflow-column-card';
+import { useEffect, useRef } from 'react';
 import { useAnimationState } from '@/lib/hooks/use-animation-state';
 import { useIntersectionObserver } from '@/lib/hooks/use-intersection-observer';
 import {
@@ -17,6 +10,7 @@ import {
   type WorkflowStage,
 } from '@/lib/utils/animation-helpers';
 import { WORKFLOW_HIGHLIGHTS } from '@/components/landing/content';
+import { WorkflowColumnCard } from './workflow-column-card';
 
 export interface MiniKanbanDemoProps {
   className?: string;
@@ -24,46 +18,41 @@ export interface MiniKanbanDemoProps {
   autoStart?: boolean;
 }
 
-/**
- * Mini Kanban demo component with automatic ticket progression
- *
- * @param className - Additional CSS classes
- * @param animationInterval - Time between progressions (default: 4000ms)
- * @param autoStart - Whether to start animation immediately (default: true)
- */
+function createEmptyTicketColumns(): Record<number, DemoTicket[]> {
+  return WORKFLOW_STAGES.reduce<Record<number, DemoTicket[]>>((grouped, stage) => {
+    grouped[stage.index] = [];
+    return grouped;
+  }, {});
+}
+
+function groupTicketsByColumn(tickets: DemoTicket[]): Record<number, DemoTicket[]> {
+  const grouped = createEmptyTicketColumns();
+
+  tickets.forEach((ticket) => {
+    grouped[ticket.column]?.push(ticket);
+  });
+
+  return grouped;
+}
+
 export function MiniKanbanDemo({
   className = '',
   animationInterval = 4000,
   autoStart = true,
-}: MiniKanbanDemoProps) {
+}: MiniKanbanDemoProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersectionObserver(containerRef, { threshold: 0.1 });
 
-  const {
-    tickets,
-    prefersReducedMotion,
-    setVisible,
-  } = useAnimationState(DEMO_TICKETS, autoStart ? animationInterval : 0);
+  const { tickets, prefersReducedMotion, setVisible } = useAnimationState(
+    DEMO_TICKETS,
+    autoStart ? animationInterval : 0
+  );
 
-  // Update visibility state when intersection changes
   useEffect(() => {
     setVisible(isVisible);
   }, [isVisible, setVisible]);
 
-  // Group tickets by column
-  const ticketsByColumn = React.useMemo(() => {
-    const grouped: Record<number, DemoTicket[]> = {};
-    for (let i = 0; i <= 5; i++) {
-      grouped[i] = [];
-    }
-    tickets.forEach((ticket) => {
-      const column = grouped[ticket.column];
-      if (column) {
-        column.push(ticket);
-      }
-    });
-    return grouped;
-  }, [tickets]);
+  const ticketsByColumn = groupTicketsByColumn(tickets);
 
   return (
     <div
@@ -72,13 +61,12 @@ export function MiniKanbanDemo({
       data-visible={isVisible}
       data-reduced-motion={prefersReducedMotion}
     >
-      {/* Mobile/Tablet: 2-3 columns, Desktop: 6 columns */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8">
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {WORKFLOW_STAGES.map((stage: WorkflowStage) => (
           <WorkflowColumnCard
             key={stage.index}
             stage={stage}
-            tickets={ticketsByColumn[stage.index] || []}
+            tickets={ticketsByColumn[stage.index] ?? []}
             prefersReducedMotion={prefersReducedMotion}
           />
         ))}

@@ -1,34 +1,43 @@
 import { type CSSProperties } from 'react';
 
-// Catppuccin color palette for ticket borders
 const TICKET_COLORS = ['mauve', 'blue', 'sapphire', 'green', 'yellow'] as const;
 type TicketColor = (typeof TICKET_COLORS)[number];
+type TicketColorClasses = Record<TicketColor, { border: string; bg: string }>;
 
 interface TicketCardProps {
   index: number;
   color: TicketColor;
-  duration: number; // seconds
-  delay: number; // seconds
-  verticalPosition: number; // percentage
-  rotation: number; // degrees
+  duration: number;
+  delay: number;
+  verticalPosition: number;
+  rotation: number;
 }
 
-/** Deterministic animation properties seeded by index for consistent SSR/client rendering */
+const TICKET_COLOR_CLASSES: TicketColorClasses = {
+  mauve: { border: 'border-ctp-mauve/40', bg: 'bg-ctp-mauve/30' },
+  blue: { border: 'border-ctp-blue/40', bg: 'bg-ctp-blue/30' },
+  sapphire: { border: 'border-ctp-sapphire/40', bg: 'bg-ctp-sapphire/30' },
+  green: { border: 'border-ctp-green/40', bg: 'bg-ctp-green/30' },
+  yellow: { border: 'border-ctp-yellow/40', bg: 'bg-ctp-yellow/30' },
+};
+
 function getTicketProps(index: number): TicketCardProps {
   const seed = index + 1;
-  const pseudoRandom = (multiplier: number) => ((seed * multiplier) % 97) / 97;
+  const pseudoRandom = function (multiplier: number): number {
+    return ((seed * multiplier) % 97) / 97;
+  };
 
   return {
     index,
     color: TICKET_COLORS[index % TICKET_COLORS.length] as TicketColor,
-    duration: 30 + pseudoRandom(13) * 20, // 30-50s (faster)
-    delay: -(pseudoRandom(17) * 30), // Negative delays: start mid-animation
-    verticalPosition: pseudoRandom(23) * 100, // 0-100%
-    rotation: -10 + pseudoRandom(31) * 20, // -10 to +10 degrees
+    duration: 30 + pseudoRandom(13) * 20,
+    delay: -(pseudoRandom(17) * 30),
+    verticalPosition: pseudoRandom(23) * 100,
+    rotation: -10 + pseudoRandom(31) * 20,
   };
 }
 
-function TicketCard({ color, duration, delay, verticalPosition, rotation }: TicketCardProps) {
+function TicketCard({ color, duration, delay, verticalPosition, rotation }: TicketCardProps): React.JSX.Element {
   const style: CSSProperties = {
     animationDuration: `${duration}s`,
     animationDelay: `${delay}s`,
@@ -37,29 +46,15 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
     willChange: 'left, transform',
   };
 
-  // Explicit Tailwind classes required for JIT compiler
-  const colorClasses: Record<TicketColor, { border: string; bg: string }> = {
-    mauve: { border: 'border-ctp-mauve/40', bg: 'bg-ctp-mauve/30' },
-    blue: { border: 'border-ctp-blue/40', bg: 'bg-ctp-blue/30' },
-    sapphire: { border: 'border-ctp-sapphire/40', bg: 'bg-ctp-sapphire/30' },
-    green: { border: 'border-ctp-green/40', bg: 'bg-ctp-green/30' },
-    yellow: { border: 'border-ctp-yellow/40', bg: 'bg-ctp-yellow/30' },
-  };
-
-  const classes = colorClasses[color];
+  const classes = TICKET_COLOR_CLASSES[color];
 
   return (
     <div
-      className={`
-        ticket-card absolute w-24 h-16 rounded-lg border-2
-        ${classes.border} backdrop-blur-sm shadow-lg
-        pointer-events-none
-        motion-safe:animate-ticket-drift motion-reduce:animate-none
-      `}
+      className={`ticket-card pointer-events-none absolute h-16 w-24 rounded-lg border-2 ${classes.border} shadow-lg backdrop-blur-sm motion-safe:animate-ticket-drift motion-reduce:animate-none`}
       style={style}
       aria-hidden="true"
     >
-      <div className="p-3 space-y-2">
+      <div className="space-y-2 p-3">
         <div className={`h-1.5 w-12 rounded ${classes.bg}`} />
         <div className={`h-1.5 w-8 rounded ${classes.bg}`} />
       </div>
@@ -67,7 +62,13 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation }: Tick
   );
 }
 
-export default function AnimatedTicketBackground({ className = '' }: { className?: string }) {
+interface AnimatedTicketBackgroundProps {
+  className?: string;
+}
+
+export default function AnimatedTicketBackground({
+  className = '',
+}: AnimatedTicketBackgroundProps): React.JSX.Element {
   const tickets = Array.from({ length: 18 }, (_, i) => getTicketProps(i));
 
   return (

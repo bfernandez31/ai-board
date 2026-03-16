@@ -6,8 +6,13 @@ import { getLandingSectionContent, LANDING_CTAS } from '@/components/landing/con
 const section = getLandingSectionContent('hero');
 const primaryCta = LANDING_CTAS['primary-sign-in'];
 const secondaryCta = LANDING_CTAS['secondary-workflow'];
+const HERO_TAKEAWAYS = [
+  'AI Board turns a ticket into a spec, task plan, implementation run, and verification trail.',
+  'The product is for teams that want AI help without losing reviewable process.',
+  'The next step is simple: sign in, create a ticket, and follow the staged workflow.',
+];
 
-export function HeroSection() {
+export function HeroSection(): React.JSX.Element {
   return (
     <section
       id="hero"
@@ -51,11 +56,7 @@ export function HeroSection() {
               What visitors should understand in one pass
             </p>
             <ul className="mt-5 space-y-4">
-              {[
-                'AI Board turns a ticket into a spec, task plan, implementation run, and verification trail.',
-                'The product is for teams that want AI help without losing reviewable process.',
-                'The next step is simple: sign in, create a ticket, and follow the staged workflow.',
-              ].map((item) => (
+              {HERO_TAKEAWAYS.map((item) => (
                 <li key={item} className="flex gap-3 text-sm leading-6 text-muted-foreground md:text-base">
                   <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                   <span>{item}</span>
