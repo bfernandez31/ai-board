@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState, RefObject } from 'react';
+import { useEffect, useMemo, useState, RefObject } from 'react';
 
 /**
  * Hook to detect when an element is visible in the viewport
@@ -25,6 +25,24 @@ export function useIntersectionObserver(
 ): boolean {
   const [isVisible, setIsVisible] = useState(false);
 
+  const threshold = options?.threshold;
+  const rootMargin = options?.rootMargin;
+  const root = options?.root;
+
+  const stableOptions = useMemo<IntersectionObserverInit | undefined>(
+    () => {
+      if (threshold === undefined && rootMargin === undefined && root === undefined) {
+        return undefined;
+      }
+      const init: IntersectionObserverInit = {};
+      if (threshold !== undefined) init.threshold = threshold;
+      if (rootMargin !== undefined) init.rootMargin = rootMargin;
+      if (root !== undefined) init.root = root;
+      return init;
+    },
+    [threshold, rootMargin, root]
+  );
+
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
@@ -37,14 +55,14 @@ export function useIntersectionObserver(
       if (entry) {
         setIsVisible(entry.isIntersecting);
       }
-    }, options);
+    }, stableOptions);
 
     observer.observe(element);
 
     return () => {
       observer.disconnect();
     };
-  }, [ref, options]);
+  }, [ref, stableOptions]);
 
   // Fallback: always visible if IntersectionObserver unavailable
   if (typeof window !== 'undefined' && typeof IntersectionObserver === 'undefined') {

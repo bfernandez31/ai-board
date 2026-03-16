@@ -15,7 +15,7 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Links use muted subtext color with purple hover transition (`hover:text-primary`)
 - Separated from content by a top border
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
@@ -51,7 +51,7 @@ The sign-in page displays a consent notice below the OAuth buttons:
 
 > "By signing in, you agree to our Terms of Service and Privacy Policy"
 
-Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
+Links use purple accent color (`text-primary`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
 
 ---
 
@@ -68,7 +68,7 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 
 **Ticket Card Appearance**:
 - Size: 64x40px mini ticket cards
-- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber)
+- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber) using semantic Tailwind tokens
 - Opacity: 0.10-0.15 for subtle appearance
 - Blur: 2px blur filter for enhanced depth perception
 - Rotation: Random rotation between -10° to +10° for organic feel
@@ -87,8 +87,8 @@ Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted su
 - Animation does not capture or block any user interactions
 
 **Accessibility**:
-- Completely disabled when user has "prefers-reduced-motion" enabled
-- Hidden from assistive technologies (aria-hidden)
+- Completely disabled when user has "prefers-reduced-motion" enabled (`motion-reduce:` classes)
+- Hidden from assistive technologies (`aria-hidden="true"`)
 - Text remains fully legible with contrast ratio ≥4.5:1
 - No motion for users with motion sensitivity
 
@@ -104,11 +104,29 @@ The landing page is a server-rendered page displayed to unauthenticated visitors
 
 1. **HeroSection** — animated hero with background ticket cards
 2. **FeaturesGrid** — product feature highlights
-3. **WorkflowSection** — workflow stage showcase
+3. **WorkflowSection** — workflow stage showcase (visible on all viewports)
 4. **PricingSection** — pricing cards and FAQ (`#pricing`)
 5. **CTASection** — final call-to-action
 
 All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+
+**Skip Navigation**: A skip-to-content link is rendered at the top of the landing page (`<a href="#main-content">`) for keyboard users. It becomes visible on focus and bypasses header navigation, jumping directly to the main content area.
+
+**Scroll Animations**: Sections use scroll-triggered fade-in animations via IntersectionObserver. All animations respect `prefers-reduced-motion` — when enabled, content is visible immediately with no motion. Content is always readable even if animations are disabled or fail to load.
+
+**Color Token Compliance**: All landing page components use semantic Tailwind tokens exclusively. No hardcoded hex or rgb color values are used anywhere in landing page components.
+
+### Workflow Section
+
+The workflow section (`components/landing/workflow-section.tsx`) showcases the 6-stage ticket lifecycle (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP).
+
+**Desktop (≥1024px)**: Full interactive Kanban demo (`mini-kanban-demo.tsx`) with animated ticket cards and polished micro-interactions.
+
+**Mobile & Tablet (<1024px)**: An optimized workflow visualization displays all 6 stages in a scrollable, touch-friendly layout. This replaces the previous behavior of hiding the demo entirely on small screens, ensuring all visitors understand the workflow regardless of device.
+
+**Accessibility**:
+- Each workflow stage element has a descriptive `aria-label`
+- Stage icons use semantic color tokens (no hardcoded hex values)
 
 ### Pricing Section
 
@@ -127,10 +145,12 @@ Plan data is sourced from `lib/billing/plans.ts` (`PLANS` constant) — the same
 | Plan | Price | CTA Label | Highlighted |
 |------|-------|-----------|-------------|
 | Free | $0 | "Get Started" | No |
-| Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`) |
+| Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`, elevated visual prominence) |
 | Team | $30/mo | "Start 14-day trial" | No |
 
-Each card shows: plan name, monthly price, feature list (checkmark icons), and a CTA button. All CTA buttons link to `/auth/signin`.
+The "Most Popular" Pro plan receives elevated visual treatment (larger scale, more prominent border) to guide visitors toward the recommended option while keeping other plans clearly readable.
+
+Each card shows: plan name, monthly price, feature list (checkmark icons), and a CTA button. All CTA buttons link to `/auth/signin`. CTA buttons meet minimum touch target size of 44×44px on all viewports.
 
 **FAQ** (`components/landing/pricing-faq.tsx`):
 
@@ -148,7 +168,9 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 
 **Accessibility**:
 - `aria-hidden` is not needed (content is informational, not decorative)
-- Collapsible triggers are keyboard-accessible; `ChevronDown` rotates 180° when open
+- Collapsible triggers are keyboard-accessible with `aria-expanded` state announced to screen readers
+- `aria-controls` links each trigger to its content panel
+- `ChevronDown` rotates 180° when open
 - Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
 
 ---
@@ -697,21 +719,46 @@ When user has no projects:
 - Escape to close modals/cancel actions
 
 **Focus Management**:
-- Visible focus indicators
-- Logical focus order
+- Visible focus indicators (minimum 3px solid outline meeting WCAG AA requirements)
+- Logical focus order matching visual layout
 - Focus trapped in modals
 - Auto-focus on form inputs when appropriate
 - Action buttons in modals do not auto-focus to prevent unintended activation
 - Users navigate to interactive elements via keyboard (Tab key)
 
+**Landing Page Skip Navigation**:
+- Skip-to-content link at top of landing page
+- Becomes visible on focus (hidden by default)
+- Allows keyboard users to bypass navigation and jump to `#main-content`
+
 ### Visual Accessibility
 
 **Contrast**:
-- Sufficient contrast ratios for text (WCAG AA compliance)
-- Analytics dashboard card titles displayed in white (`text-white`) for optimal contrast
-- Analytics chart titles displayed in white for improved readability against dark backgrounds
+- All text meets WCAG AA contrast ratios: 4.5:1 for normal text, 3:1 for large text and UI components
+- Analytics dashboard card titles displayed in `text-white` for optimal contrast on dark backgrounds
+- Analytics chart titles displayed in `text-white` for improved readability against dark backgrounds
 - Color not sole indicator of state
 - Icons supplement color coding
+
+**Color System**:
+- All components use semantic Tailwind tokens (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.)
+- No hardcoded hex or rgb values in any component files
+- Theming and dark mode supported through CSS custom properties in `globals.css`
+
+**Motion & Animation**:
+- All animations respect `prefers-reduced-motion` media query using `motion-safe:` / `motion-reduce:` Tailwind classes
+- Content remains fully visible and functional when animations are disabled
+- Scroll-triggered animations degrade to immediate visibility when motion is reduced
+- Decorative animated elements (e.g., hero background) are fully disabled under reduced-motion preferences
+
+**Decorative Elements**:
+- All purely decorative elements use `aria-hidden="true"` to hide from assistive technologies
+- Visual flourishes, background animations, and icon decorations do not pollute the accessibility tree
+
+**Heading Hierarchy**:
+- Pages maintain semantic heading hierarchy: `h1` for page title, `h2` for section headings, `h3` for subsections
+- Landing page sections each have a single `h2` heading
+- No heading levels are skipped
 
 **Text**:
 - Readable font sizes (minimum 14px)

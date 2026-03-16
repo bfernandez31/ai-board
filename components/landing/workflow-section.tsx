@@ -34,20 +34,20 @@ export function WorkflowSection() {
     <section id="workflow" className="py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-[hsl(var(--ctp-text))] mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-4">
             Streamlined Development Workflow
           </h2>
-          <p className="text-xl text-[hsl(var(--ctp-subtext-0))] text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Move your ideas from concept to production with a proven 6-stage workflow.
           </p>
 
-          {/* Animated Mini-Kanban Demo - Desktop only */}
-          <div className="hidden lg:block mb-16">
+          {/* Animated Mini-Kanban Demo - All viewports */}
+          <div className="mb-12 lg:mb-16">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
           </div>
 
-          {/* Detailed step descriptions - Mobile only */}
-          <div className="flex flex-col gap-8 lg:hidden">
+          {/* Detailed step descriptions - Mobile/Tablet supplementary view */}
+          <div className="flex flex-col gap-6 lg:hidden">
             {steps.map((step, index) => (
               <WorkflowStep key={step.stage} {...step} isLast={index === steps.length - 1} />
             ))}

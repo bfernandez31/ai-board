@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { WorkflowColumnCard } from './workflow-column-card';
 import { useAnimationState } from '@/lib/hooks/use-animation-state';
@@ -15,7 +15,6 @@ import {
   DEMO_TICKETS,
   WORKFLOW_STAGES,
   type DemoTicket,
-  type WorkflowStage,
 } from '@/lib/utils/animation-helpers';
 
 export interface MiniKanbanDemoProps {
@@ -51,7 +50,7 @@ export function MiniKanbanDemo({
   }, [isVisible, setVisible]);
 
   // Group tickets by column
-  const ticketsByColumn = React.useMemo(() => {
+  const ticketsByColumn = useMemo(() => {
     const grouped: Record<number, DemoTicket[]> = {};
     for (let i = 0; i <= 5; i++) {
       grouped[i] = [];
@@ -74,7 +73,7 @@ export function MiniKanbanDemo({
     >
       {/* Mobile/Tablet: 2-3 columns, Desktop: 6 columns */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8">
-        {WORKFLOW_STAGES.map((stage: WorkflowStage) => (
+        {WORKFLOW_STAGES.map((stage) => (
           <WorkflowColumnCard
             key={stage.index}
             stage={stage}

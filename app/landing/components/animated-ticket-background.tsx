@@ -71,7 +71,7 @@ export default function AnimatedTicketBackground({ className = '' }: { className
   const tickets = Array.from({ length: 18 }, (_, i) => getTicketProps(i));
 
   return (
-    <div className={`animated-ticket-background absolute inset-0 ${className}`}>
+    <div className={`animated-ticket-background absolute inset-0 ${className}`} aria-hidden="true">
       {tickets.map((props) => (
         <TicketCard key={props.index} {...props} />
       ))}
