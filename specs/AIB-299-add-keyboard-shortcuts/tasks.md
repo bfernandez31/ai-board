@@ -18,8 +18,8 @@
 
 **Purpose**: Create foundational hooks and add data attributes needed by all user stories
 
-- [ ] T001 [P] Create `useHoverCapability` hook using `useSyncExternalStore` + `matchMedia('(hover: hover)')` pattern from `useReducedMotion` in `lib/hooks/use-hover-capability.ts`
-- [ ] T002 [P] Add `data-testid="ticket-search-input"` attribute to the search `<Input>` element in `components/search/ticket-search.tsx`
+- [x] T001 [P] Create `useHoverCapability` hook using `useSyncExternalStore` + `matchMedia('(hover: hover)')` pattern from `useReducedMotion` in `lib/hooks/use-hover-capability.ts`
+- [x] T002 [P] Add `data-testid="ticket-search-input"` attribute to the search `<Input>` element in `components/search/ticket-search.tsx`
 
 ---
 
@@ -29,7 +29,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create `useKeyboardShortcuts` hook with global `keydown` listener, `isEditableElement` guard, and shortcut map (`N`, `S`, `/`, `1`–`6`, `?`) in `lib/hooks/use-keyboard-shortcuts.ts`
+- [x] T003 Create `useKeyboardShortcuts` hook with global `keydown` listener, `isEditableElement` guard, and shortcut map (`N`, `S`, `/`, `1`–`6`, `?`) in `lib/hooks/use-keyboard-shortcuts.ts`
 
 **Checkpoint**: Foundation ready — hooks exist, board integration can begin
 
@@ -43,8 +43,8 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Unit test `useHoverCapability` hook: matchMedia match/no-match, server snapshot returns false in `tests/unit/use-hover-capability.test.ts`
-- [ ] T005 [P] [US1] Unit test `useKeyboardShortcuts` hook: `N` fires `onNewTicket`, suppressed in input/textarea/contentEditable, suppressed when `enabled=false`, `preventDefault` called in `tests/unit/use-keyboard-shortcuts.test.ts`
+- [x] T004 [P] [US1] Unit test `useHoverCapability` hook: matchMedia match/no-match, server snapshot returns false in `tests/unit/use-hover-capability.test.ts`
+- [x] T005 [P] [US1] Unit test `useKeyboardShortcuts` hook: `N` fires `onNewTicket`, suppressed in input/textarea/contentEditable, suppressed when `enabled=false`, `preventDefault` called in `tests/unit/use-keyboard-shortcuts.test.ts`
 
 ### Implementation for User Story 1
 
