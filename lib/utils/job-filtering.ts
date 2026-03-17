@@ -70,8 +70,7 @@ export function getWorkflowJob(jobs: Job[], currentStage: Stage): Job | null {
  */
 export function getAIBoardJob(jobs: Job[], currentStage: Stage): Job | null {
   const aiBoardJobs = jobs
-    .filter((job) => job.command.startsWith('comment-'))
-    .filter((job) => matchesStage(job.command, currentStage))
+    .filter((job) => job.command.startsWith('comment-') && matchesStage(job.command, currentStage))
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
   return aiBoardJobs[0] || null;

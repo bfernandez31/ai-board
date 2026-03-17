@@ -103,10 +103,10 @@ export function OverviewCards({ metrics }: OverviewCardsProps) {
         </CardHeader>
         <CardContent>
           <div className={cn('text-2xl font-bold', qualityTier?.textColor)}>
-            {metrics.avgQualityScore != null ? metrics.avgQualityScore : 'N/A'}
+            {metrics.avgQualityScore ?? 'N/A'}
           </div>
           <p className="text-xs text-muted-foreground">
-            {qualityTier ? qualityTier.label : 'No scored reviews'}
+            {qualityTier?.label ?? 'No scored reviews'}
           </p>
         </CardContent>
       </Card>
