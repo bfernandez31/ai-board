@@ -66,6 +66,11 @@ function convertTicketForModal(ticket: TicketWithVersion | null) {
   };
 }
 
+const STAGE_BY_NUMBER: Record<number, string> = {
+  1: 'INBOX', 2: 'SPECIFY', 3: 'PLAN',
+  4: 'BUILD', 5: 'VERIFY', 6: 'SHIP',
+};
+
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
@@ -197,23 +202,24 @@ export function Board({
     }
   }, []);
 
+  const handleNewTicketShortcut = useCallback(() => setIsNewTicketModalOpen(true), []);
+  const handleFocusSearchShortcut = useCallback(() => {
+    document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
+  }, []);
+  const handleColumnNavShortcut = useCallback((columnIndex: number) => {
+    const stage = STAGE_BY_NUMBER[columnIndex];
+    if (stage) {
+      document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+    }
+  }, []);
+  const handleToggleHelpShortcut = useCallback(() => setIsShortcutsHelpOpen(prev => !prev), []);
+
   useKeyboardShortcuts({
     enabled: hasHover && !isAnyModalOpen,
-    onNewTicket: useCallback(() => setIsNewTicketModalOpen(true), []),
-    onFocusSearch: useCallback(() => {
-      document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
-    }, []),
-    onColumnNav: useCallback((columnIndex: number) => {
-      const STAGE_BY_NUMBER: Record<number, string> = {
-        1: 'INBOX', 2: 'SPECIFY', 3: 'PLAN',
-        4: 'BUILD', 5: 'VERIFY', 6: 'SHIP',
-      };
-      const stage = STAGE_BY_NUMBER[columnIndex];
-      if (stage) {
-        document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-      }
-    }, []),
-    onToggleHelp: useCallback(() => setIsShortcutsHelpOpen(prev => !prev), []),
+    onNewTicket: handleNewTicketShortcut,
+    onFocusSearch: handleFocusSearchShortcut,
+    onColumnNav: handleColumnNavShortcut,
+    onToggleHelp: handleToggleHelpShortcut,
   });
 
   // Configure sensors for drag and drop

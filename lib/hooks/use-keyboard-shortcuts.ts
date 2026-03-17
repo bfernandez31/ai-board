@@ -14,8 +14,7 @@ function isEditableElement(target: EventTarget | null): boolean {
   if (!target || !(target instanceof HTMLElement)) return false;
   const tagName = target.tagName;
   if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
-  if (target.isContentEditable) return true;
-  return false;
+  return target.isContentEditable;
 }
 
 export function useKeyboardShortcuts({
