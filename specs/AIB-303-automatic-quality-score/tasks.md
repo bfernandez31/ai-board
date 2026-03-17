@@ -47,12 +47,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Component test for `QualityScoreBadge` testing all 4 threshold colors, null score, boundary values (0, 49, 50, 69, 70, 89, 90, 100) in `tests/unit/components/quality-score-badge.test.tsx`
+- [x] T008 [P] [US1] Component test for `QualityScoreBadge` testing all 4 threshold colors, null score, boundary values (0, 49, 50, 69, 70, 89, 90, 100) in `tests/unit/components/quality-score-badge.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Create `QualityScoreBadge` component with colored badge displaying score and threshold color (Excellent=green, Good=blue, Fair=amber, Poor=red) in `components/ticket/quality-score-badge.tsx`
-- [ ] T010 [US1] Integrate `QualityScoreBadge` into `components/board/ticket-card.tsx` — render badge for tickets with a quality score from the latest COMPLETED verify job; hide for QUICK/CLEAN workflows
+- [x] T009 [US1] Create `QualityScoreBadge` component with colored badge displaying score and threshold color (Excellent=green, Good=blue, Fair=amber, Poor=red) in `components/ticket/quality-score-badge.tsx`
+- [x] T010 [US1] Integrate `QualityScoreBadge` into `components/board/ticket-card.tsx` — render badge for tickets with a quality score from the latest COMPLETED verify job; hide for QUICK/CLEAN workflows
 
 **Checkpoint**: Ticket cards show quality score badges with correct threshold colors
 
@@ -66,12 +66,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] Component test for `QualityScoreSection` testing dimension breakdown rendering, latest score selection from multiple verify jobs, null/missing state in `tests/unit/components/quality-score-section.test.tsx`
+- [x] T011 [P] [US2] Component test for `QualityScoreSection` testing dimension breakdown rendering, latest score selection from multiple verify jobs, null/missing state in `tests/unit/components/quality-score-section.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Create `QualityScoreSection` component showing overall score, threshold label (Excellent/Good/Fair/Poor), and 5 dimension sub-scores with weights in `components/ticket/quality-score-section.tsx`
-- [ ] T013 [US2] Integrate `QualityScoreSection` into `components/ticket/ticket-stats.tsx` — render above existing summary cards, conditional on latest COMPLETED verify job having a quality score
+- [x] T012 [US2] Create `QualityScoreSection` component showing overall score, threshold label (Excellent/Good/Fair/Poor), and 5 dimension sub-scores with weights in `components/ticket/quality-score-section.tsx`
+- [x] T013 [US2] Integrate `QualityScoreSection` into `components/ticket/ticket-stats.tsx` — render above existing summary cards, conditional on latest COMPLETED verify job having a quality score
 
 **Checkpoint**: Stats tab shows full quality score breakdown for scored tickets
 

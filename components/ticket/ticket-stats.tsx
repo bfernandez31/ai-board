@@ -14,6 +14,7 @@ import {
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
 import { JobsTimeline } from './jobs-timeline';
+import { QualityScoreSection } from './quality-score-section';
 
 /**
  * Props for TicketStats component
@@ -176,6 +177,9 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
 
   return (
     <div className="space-y-2" data-testid="ticket-stats">
+      {/* Quality Score Section (above summary cards) */}
+      <QualityScoreSection jobs={mergedJobs} />
+
       {/* Summary Cards */}
       <StatsSummaryCards stats={stats} />
 

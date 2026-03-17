@@ -18,12 +18,14 @@ import { DeployConfirmationModal } from './deploy-confirmation-modal';
 import { isTicketDeployable } from '@/app/lib/utils/deploy-preview-eligibility';
 import { useDeployPreview } from '@/app/lib/hooks/mutations/useDeployPreview';
 import { useHasMounted } from '@/lib/hooks/use-has-mounted';
+import { QualityScoreBadge } from '@/components/ticket/quality-score-badge';
 
 interface DraggableTicketCardProps {
   ticket: TicketWithVersion;
   workflowJob?: Job | null; // User Story 1: Workflow job display
   aiBoardJob?: Job | null; // User Story 2: AI-BOARD job display
   deployJob?: Job | null; // User Story: Deploy preview job display
+  qualityScore?: number | null; // Quality score from latest COMPLETED verify job
   isDraggable?: boolean;
   onTicketClick?: (ticket: TicketWithVersion) => void;
   /** Ticket with active preview (for single-preview warning) */
@@ -41,6 +43,7 @@ export const TicketCard = React.memo(
     workflowJob,
     aiBoardJob,
     deployJob,
+    qualityScore,
     isDraggable = true,
     onTicketClick,
     activePreviewTicket,
@@ -124,6 +127,9 @@ export const TicketCard = React.memo(
               {ticket.ticketKey}
             </span>
             <div className="flex items-center gap-2">
+              {ticket.workflowType === 'FULL' && (
+                <QualityScoreBadge score={qualityScore ?? null} />
+              )}
               {ticket.workflowType === 'QUICK' && (
                 <Badge
                   variant="outline"

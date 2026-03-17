@@ -309,9 +309,17 @@ export function Board({
       // Get all polled jobs for this ticket
       const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
 
+      // Helper: find quality score from latest COMPLETED verify job
+      const getLatestQualityScore = (jobs: Job[]): number | null => {
+        const verifyJob = jobs
+          .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
+          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
+        return verifyJob?.qualityScore ?? null;
+      };
+
       // If no jobs at all, return null state
       if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
-        return { workflow: null, aiBoard: null, deployJob: null };
+        return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
       }
 
       // If no polled jobs yet, use initial jobs (first render)
@@ -321,6 +329,7 @@ export function Board({
           workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
           aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
           deployJob: getDeployJob(ticketInitialJobs),
+          qualityScore: getLatestQualityScore(ticketInitialJobs),
         };
       }
 
@@ -364,6 +373,7 @@ export function Board({
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
         deployJob: getDeployJob(fullJobs),
+        qualityScore: getLatestQualityScore(fullJobs),
       };
     },
     [polledJobs, initialJobs, projectId, allTickets]

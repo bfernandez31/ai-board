@@ -37,6 +37,7 @@ export interface DualJobState {
   workflow: Job | null;
   aiBoard: Job | null;
   deployJob: Job | null;
+  qualityScore: number | null;
 }
 
 // Job type imported from Prisma schema
