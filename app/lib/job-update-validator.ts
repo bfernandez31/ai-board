@@ -18,7 +18,9 @@ import { z } from 'zod';
  * PENDING is the default status when a Job is created and cannot be set via this endpoint.
  */
 export const jobStatusUpdateSchema = z.object({
-  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'])
+  status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
+  qualityScore: z.number().int().min(0).max(100).optional(),
+  qualityScoreDetails: z.string().optional(),
 });
 
 /**

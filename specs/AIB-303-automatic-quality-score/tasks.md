@@ -30,10 +30,10 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Extend Zod validation schema in `app/lib/job-update-validator.ts` to accept optional `qualityScore` (int 0-100) and `qualityScoreDetails` (string) fields
-- [ ] T005 Update `PATCH /api/jobs/[id]/status/route.ts` to persist `qualityScore` and `qualityScoreDetails` when status is COMPLETED (silently ignore for other statuses)
-- [ ] T006 [P] Extend `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` with `qualityScore: number | null` and `qualityScoreDetails: string | null`
-- [ ] T007 [P] Add `qualityScore` and `qualityScoreDetails` to select clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
+- [x] T004 Extend Zod validation schema in `app/lib/job-update-validator.ts` to accept optional `qualityScore` (int 0-100) and `qualityScoreDetails` (string) fields
+- [x] T005 Update `PATCH /api/jobs/[id]/status/route.ts` to persist `qualityScore` and `qualityScoreDetails` when status is COMPLETED (silently ignore for other statuses)
+- [x] T006 [P] Extend `TicketJobWithTelemetry` interface in `lib/types/job-types.ts` with `qualityScore: number | null` and `qualityScoreDetails: string | null`
+- [x] T007 [P] Add `qualityScore` and `qualityScoreDetails` to select clause in `app/api/projects/[projectId]/tickets/[id]/jobs/route.ts`
 
 **Checkpoint**: API accepts and serves quality score data — user story implementation can begin
 

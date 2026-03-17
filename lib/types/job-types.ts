@@ -62,4 +62,6 @@ export interface TicketJobWithTelemetry {
   durationMs: number | null;
   model: string | null;
   toolsUsed: string[];
+  qualityScore: number | null;
+  qualityScoreDetails: string | null;
 }

@@ -165,6 +165,8 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
         durationMs: job.durationMs,
         model: job.model,
         toolsUsed: job.toolsUsed,
+        qualityScore: job.qualityScore ?? null,
+        qualityScoreDetails: job.qualityScoreDetails ?? null,
       };
     });
   }, [jobs, polledJobs]);
