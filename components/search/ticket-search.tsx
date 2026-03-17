@@ -98,6 +98,15 @@ export function TicketSearch({ projectId }: TicketSearchProps) {
     [isOpen, results, selectedIndex, searchTerm, handleSelect]
   );
 
+  // AIB-302: Listen for keyboard shortcut focus event
+  useEffect(() => {
+    const handleFocusSearch = () => {
+      inputRef.current?.focus();
+    };
+    document.addEventListener('board:focus-search', handleFocusSearch);
+    return () => document.removeEventListener('board:focus-search', handleFocusSearch);
+  }, []);
+
   // Auto-scroll selected item into view
   useEffect(() => {
     const selected = document.querySelector('[data-selected="true"]');

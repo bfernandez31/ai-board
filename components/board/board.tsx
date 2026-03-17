@@ -24,6 +24,9 @@ import { CloseZone } from './close-zone';
 import { DeleteConfirmationModal } from './delete-confirmation-modal';
 import { CloseConfirmationModal } from './close-confirmation-modal';
 import { CleanupInProgressBanner } from '@/components/cleanup/CleanupInProgressBanner';
+import { KeyboardShortcutsModal } from './keyboard-shortcuts-modal';
+import { NewTicketModal } from './new-ticket-modal';
+import { useBoardKeyboardShortcuts } from '@/hooks/use-board-keyboard-shortcuts';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Stage, isValidTransition, getAllStages } from '@/lib/stage-transitions';
 import { TicketWithVersion } from '@/lib/types';
@@ -154,6 +157,15 @@ export function Board({
     ticket: TicketWithVersion;
     targetStage: Stage;
   } | null>(null);
+
+  // AIB-302: Keyboard shortcut - new ticket modal state
+  const [shortcutNewTicketOpen, setShortcutNewTicketOpen] = useState(false);
+
+  // AIB-302: Keyboard shortcuts hook
+  const { isHelpOpen, setIsHelpOpen } = useBoardKeyboardShortcuts({
+    onNewTicket: useCallback(() => setShortcutNewTicketOpen(true), []),
+    onToggleHelp: useCallback(() => {}, []),
+  });
 
   // Delete confirmation state (T023)
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithVersion | null>(null);
@@ -1139,6 +1151,28 @@ export function Board({
         onConfirm={handleCloseConfirm}
         isClosing={isClosingTicket}
       />
+
+      {/* AIB-302: Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+
+      {/* AIB-302: New Ticket Modal (triggered by keyboard shortcut N) */}
+      <NewTicketModal
+        open={shortcutNewTicketOpen}
+        onOpenChange={setShortcutNewTicketOpen}
+        onTicketCreated={() => router.refresh()}
+        projectId={projectId}
+      />
+
+      {/* AIB-302: Keyboard shortcuts help button (desktop only) */}
+      <button
+        onClick={() => setIsHelpOpen(true)}
+        className="fixed bottom-4 right-4 z-40 hidden md:flex items-center justify-center w-8 h-8 rounded-full border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        aria-label="Keyboard shortcuts (?)"
+        title="Keyboard shortcuts (?)"
+        data-testid="keyboard-shortcuts-button"
+      >
+        <span className="text-sm font-mono font-semibold">?</span>
+      </button>
     </div>
   );
 }
