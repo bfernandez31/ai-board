@@ -212,7 +212,9 @@ export function Board({
       document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
     }
   }, []);
-  const handleToggleHelpShortcut = useCallback(() => setIsShortcutsHelpOpen(prev => !prev), []);
+  const handleToggleHelpShortcut = useCallback(() => {
+    handleShortcutsHelpChange(!isShortcutsHelpOpen);
+  }, [handleShortcutsHelpChange, isShortcutsHelpOpen]);
 
   useKeyboardShortcuts({
     enabled: hasHover && !isAnyModalOpen,
@@ -221,6 +223,21 @@ export function Board({
     onColumnNav: handleColumnNavShortcut,
     onToggleHelp: handleToggleHelpShortcut,
   });
+
+  // Separate listener for ? key when help dialog is open (fix: help dialog blocks useKeyboardShortcuts)
+  useEffect(() => {
+    if (!isShortcutsHelpOpen) return;
+
+    function handleHelpClose(event: KeyboardEvent) {
+      if (event.key === '?' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        handleShortcutsHelpChange(false);
+      }
+    }
+
+    document.addEventListener('keydown', handleHelpClose);
+    return () => document.removeEventListener('keydown', handleHelpClose);
+  }, [isShortcutsHelpOpen, handleShortcutsHelpChange]);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(

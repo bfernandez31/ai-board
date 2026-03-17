@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
-function fireKey(key: string, target?: EventTarget | null) {
-  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+function fireKey(key: string, target?: EventTarget | null, modifiers?: { metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean }) {
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...modifiers });
   if (target) {
     Object.defineProperty(event, 'target', { value: target });
   }
@@ -121,6 +121,24 @@ describe('useKeyboardShortcuts', () => {
     const div = document.createElement('div');
     div.contentEditable = 'true';
     fireKey('n', div);
+    expect(callbacks.onNewTicket).not.toHaveBeenCalled();
+  });
+
+  it('does not fire callbacks when metaKey is held', () => {
+    renderHook(() => useKeyboardShortcuts(callbacks));
+    fireKey('n', null, { metaKey: true });
+    expect(callbacks.onNewTicket).not.toHaveBeenCalled();
+  });
+
+  it('does not fire callbacks when ctrlKey is held', () => {
+    renderHook(() => useKeyboardShortcuts(callbacks));
+    fireKey('s', null, { ctrlKey: true });
+    expect(callbacks.onFocusSearch).not.toHaveBeenCalled();
+  });
+
+  it('does not fire callbacks when altKey is held', () => {
+    renderHook(() => useKeyboardShortcuts(callbacks));
+    fireKey('n', null, { altKey: true });
     expect(callbacks.onNewTicket).not.toHaveBeenCalled();
   });
 

@@ -29,6 +29,7 @@ export function useKeyboardShortcuts({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (isEditableElement(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       const key = event.key;
 
