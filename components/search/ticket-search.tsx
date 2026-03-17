@@ -120,6 +120,7 @@ export function TicketSearch({ projectId }: TicketSearchProps) {
             aria-label="Search tickets"
             aria-expanded={isOpen}
             aria-haspopup="listbox"
+            data-testid="ticket-search-input"
           />
         </div>
       </PopoverAnchor>

@@ -363,7 +363,7 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 
 **Interaction**:
 - Mouse hover states active
-- Keyboard shortcuts available
+- Keyboard shortcuts available (see [Keyboard Shortcuts](#keyboard-shortcuts-board))
 - Drag-and-drop with mouse
 - Context menus and tooltips
 
@@ -745,12 +745,26 @@ When user has no projects:
 
 ## Accessibility
 
+### Keyboard Shortcuts (Board) {#keyboard-shortcuts-board}
+
+Board-level keyboard shortcuts are active on desktop and tablet devices with a physical keyboard. Detection uses the CSS `(hover: hover)` media query. Shortcuts are suppressed when any text input, textarea, or contenteditable element is focused.
+
+| Key | Action |
+|-----|--------|
+| `N` | Open new ticket creation modal |
+| `S` / `/` | Focus search input |
+| `1` – `6` | Jump to board column (INBOX → SHIP) |
+| `?` | Toggle keyboard shortcuts help overlay |
+| `Esc` | Close topmost modal or overlay |
+
+A floating keyboard icon button is visible at the bottom-right corner of the board on hover-capable devices. Clicking it or pressing `?` opens the shortcuts reference overlay. On first board visit, the overlay appears automatically; subsequent visits skip the auto-show (tracked via `shortcuts-hint-dismissed` localStorage key).
+
 ### Keyboard Support
 
 **Navigation**:
 - Tab key navigates interactive elements
 - Arrow keys for tab switching
-- Shortcuts for common actions
+- Shortcuts for common actions (see board shortcuts above)
 - Escape to close modals/cancel actions
 
 **Focus Management**:
