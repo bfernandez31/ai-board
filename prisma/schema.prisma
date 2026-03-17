@@ -50,6 +50,7 @@ model Job {
   durationMs         Int?     // Total Claude API duration in milliseconds
   model              String?  @db.VarChar(50) // Primary model used
   toolsUsed          String[] @default([])    // List of tools used (Edit, Write, Bash, etc.)
+  qualityScore       Int?     // Code review quality score (0-100), only for VERIFY jobs
 
   @@index([projectId])
   @@index([startedAt])

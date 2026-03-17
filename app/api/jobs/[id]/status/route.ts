@@ -109,6 +109,7 @@ export async function PATCH(
     }
 
     requestedStatus = validationResult.data.status as JobStatus;
+    const qualityScore = validationResult.data.qualityScore;
 
     // Fetch current job from database
     const job = await prisma.job.findUnique({
@@ -177,9 +178,14 @@ export async function PATCH(
       status: JobStatus;
       startedAt?: Date;
       completedAt?: Date;
+      qualityScore?: number;
     } = {
       status: requestedStatus,
     };
+
+    if (qualityScore !== undefined) {
+      updateData.qualityScore = qualityScore;
+    }
 
     if (requestedStatus === 'RUNNING' && !job.startedAt) {
       updateData.startedAt = new Date();

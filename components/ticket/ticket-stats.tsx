@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Clock, Coins, Zap, Wrench } from 'lucide-react';
+import { DollarSign, Clock, Coins, Zap, Wrench, Award } from 'lucide-react';
 import type { TicketJob } from '@/components/board/ticket-detail-modal';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { useTicketStats, type TicketStats as TicketStatsType } from '@/lib/hooks/use-ticket-stats';
@@ -14,6 +14,7 @@ import {
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
 import { JobsTimeline } from './jobs-timeline';
+import { QualityScoreBadge } from '@/components/ui/quality-score-badge';
 
 /**
  * Props for TicketStats component
@@ -172,8 +173,31 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
   // Compute aggregated stats using the hook
   const stats = useTicketStats(mergedJobs);
 
+  // Get quality score from latest COMPLETED verify job
+  const qualityScore = useMemo(() => {
+    const verifyJobs = mergedJobs
+      .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+    return verifyJobs[0]?.qualityScore ?? null;
+  }, [mergedJobs]);
+
   return (
     <div className="space-y-2" data-testid="ticket-stats">
+      {/* Quality Score */}
+      {qualityScore != null && (
+        <Card className="bg-background border-border mb-4" data-testid="quality-score-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Award className="w-4 h-4" />
+                <span className="text-xs font-medium uppercase tracking-wider">Quality Score</span>
+              </div>
+              <QualityScoreBadge score={qualityScore} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <StatsSummaryCards stats={stats} />
 

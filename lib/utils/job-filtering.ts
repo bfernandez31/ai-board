@@ -106,3 +106,17 @@ export function getDeployJob(jobs: Job[]): Job | null {
 
   return deployJobs[0] || null;
 }
+
+/**
+ * getLatestQualityScore - Extract quality score from latest COMPLETED verify job
+ *
+ * Returns the qualityScore from the most recent COMPLETED verify job,
+ * or null if no scored verify job exists.
+ */
+export function getLatestQualityScore(jobs: Job[]): number | null {
+  const verifyJobs = jobs
+    .filter((job) => job.command === 'verify' && job.status === 'COMPLETED' && job.qualityScore != null)
+    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+  return verifyJobs[0]?.qualityScore ?? null;
+}

@@ -41,6 +41,8 @@ export interface OverviewMetrics {
   ticketsShipped: CompletionMetric;
   /** Number of closed tickets for the active filters */
   ticketsClosed: CompletionMetric;
+  /** Average quality score (0-100) for completed verify jobs, or null if no scores */
+  avgQualityScore: number | null;
 }
 
 export interface CostDataPoint {
@@ -102,6 +104,15 @@ export interface WeeklyVelocity {
   ticketsShipped: number;
 }
 
+export interface QualityScoreDataPoint {
+  /** ISO date (YYYY-MM-DD) or week identifier (YYYY-Www) */
+  date: string;
+  /** Average quality score for the period */
+  avgScore: number;
+  /** Number of scored jobs in the period */
+  count: number;
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -111,6 +122,7 @@ export interface AnalyticsData {
   topTools: ToolUsage[];
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
+  qualityOverTime: QualityScoreDataPoint[];
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */

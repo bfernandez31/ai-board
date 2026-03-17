@@ -17,6 +17,7 @@ import type {
   CostDataPoint,
   NamedAgent,
   OverviewMetrics,
+  QualityScoreDataPoint,
   StageCost,
   StageKey,
   TicketOutcomeFilter,
@@ -292,6 +293,8 @@ async function getOverviewMetrics(
         status: true,
         costUsd: true,
         durationMs: true,
+        command: true,
+        qualityScore: true,
       },
     }),
     previousJobWhere
@@ -317,11 +320,23 @@ async function getOverviewMetrics(
         )
       : 0;
 
+  // Compute average quality score from completed verify jobs
+  const scoredJobs = completedJobs.filter(
+    (job) => job.command === 'verify' && job.qualityScore != null
+  );
+  const avgQualityScore =
+    scoredJobs.length > 0
+      ? Math.round(
+          scoredJobs.reduce((sum, job) => sum + (job.qualityScore ?? 0), 0) / scoredJobs.length
+        )
+      : null;
+
   return {
     totalCost: Math.round(totalCost * 100) / 100,
     costTrend: Math.round(calculateTrend(totalCost, previousCost) * 10) / 10,
     successRate: Math.round(successRate * 10) / 10,
     avgDuration,
+    avgQualityScore,
     ...completionMetrics,
   };
 }
@@ -512,6 +527,46 @@ async function getVelocityData(
     .sort((a, b) => a.week.localeCompare(b.week));
 }
 
+async function getQualityOverTime(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<QualityScoreDataPoint[]> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
+      command: 'verify',
+      qualityScore: { not: null },
+    },
+    select: {
+      completedAt: true,
+      qualityScore: true,
+    },
+    orderBy: { completedAt: 'asc' },
+  });
+
+  const granularity = getGranularity(filters.range);
+  const grouped = new Map<string, { total: number; count: number }>();
+
+  for (const job of jobs) {
+    if (!job.completedAt || job.qualityScore == null) continue;
+    const key = formatDateForGrouping(job.completedAt, granularity);
+    const existing = grouped.get(key) ?? { total: 0, count: 0 };
+    grouped.set(key, {
+      total: existing.total + job.qualityScore,
+      count: existing.count + 1,
+    });
+  }
+
+  return Array.from(grouped.entries())
+    .map(([date, { total, count }]) => ({
+      date,
+      avgScore: Math.round(total / count),
+      count,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -561,6 +616,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    qualityOverTime,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
     getCostOverTime(projectId, normalizedFilters, now),
@@ -569,6 +625,7 @@ export async function getAnalyticsData(
     getTopTools(projectId, normalizedFilters, now),
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
+    getQualityOverTime(projectId, normalizedFilters, now),
   ]);
 
   const cacheEfficiency = getCacheEfficiency(tokenUsage);
@@ -582,6 +639,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    qualityOverTime,
     filters: normalizedFilters,
     availableAgents,
     generatedAt: now.toISOString(),

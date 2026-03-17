@@ -21,6 +21,7 @@ import { CacheEfficiencyChart } from './cache-efficiency-chart';
 import { TopToolsChart } from './top-tools-chart';
 import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
+import { QualityScoreChart } from './quality-score-chart';
 import { useSubscription } from '@/hooks/use-subscription';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 import {
@@ -205,6 +206,10 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
                   analytics.filters.agent
                 )} in this selection.`}
               />
+            </div>
+
+            <div>
+              <QualityScoreChart data={analytics.qualityOverTime} emptyMessage={emptyMessage} />
             </div>
 
             <div className="md:col-span-2">

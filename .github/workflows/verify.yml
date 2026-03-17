@@ -496,13 +496,55 @@ jobs:
 
           echo "✅ Code review completed"
 
+      # Phase 8: Parse Quality Score from code review output
+      - name: Parse Quality Score
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' && inputs.workflowType == 'FULL' }}
+        id: quality-score
+        working-directory: target
+        run: |
+          if [ -f "quality-score.json" ]; then
+            SCORE=$(node -e "
+              const fs = require('fs');
+              try {
+                const data = JSON.parse(fs.readFileSync('quality-score.json', 'utf-8'));
+                const score = parseInt(data.finalScore, 10);
+                if (!isNaN(score) && score >= 0 && score <= 100) {
+                  console.log(score);
+                } else {
+                  console.error('Invalid score value:', data.finalScore);
+                  process.exit(1);
+                }
+              } catch (e) {
+                console.error('Failed to parse quality-score.json:', e.message);
+                process.exit(1);
+              }
+            " 2>/dev/null)
+
+            if [ $? -eq 0 ] && [ -n "$SCORE" ]; then
+              echo "quality_score=$SCORE" >> "$GITHUB_OUTPUT"
+              echo "✅ Quality score: $SCORE"
+            else
+              echo "⚠️ Could not parse quality score, skipping"
+            fi
+          else
+            echo "ℹ️ No quality-score.json found, skipping quality score"
+          fi
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |
+          # Build JSON payload with optional qualityScore
+          QUALITY_SCORE="${{ steps.quality-score.outputs.quality_score }}"
+          if [ -n "$QUALITY_SCORE" ]; then
+            PAYLOAD="{\"status\": \"COMPLETED\", \"qualityScore\": $QUALITY_SCORE}"
+          else
+            PAYLOAD='{"status": "COMPLETED"}'
+          fi
+
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "COMPLETED"}' \
+            -d "$PAYLOAD" \
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
       - name: Update Job Status - Skipped (E2E)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getWorkflowJob, getAIBoardJob } from '@/lib/utils/job-filtering';
+import { getWorkflowJob, getAIBoardJob, getLatestQualityScore } from '@/lib/utils/job-filtering';
 import type { Job } from '@prisma/client';
 import type { Stage } from '@/lib/validations/ticket';
 
@@ -504,5 +504,105 @@ describe('getAIBoardJob', () => {
     const result = getAIBoardJob(jobs, 'SPECIFY' as Stage);
     expect(result).not.toBe(null);
     expect(result?.id).toBe(1);
+  });
+});
+
+describe('getLatestQualityScore', () => {
+  const baseJob = {
+    ticketId: 1,
+    projectId: 1,
+    branch: null,
+    commitSha: null,
+    logs: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  it('returns null for empty array', () => {
+    expect(getLatestQualityScore([])).toBe(null);
+  });
+
+  it('returns null when no verify jobs have quality scores', () => {
+    const jobs: Job[] = [
+      {
+        ...baseJob,
+        id: 1,
+        command: 'verify',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        completedAt: new Date('2024-01-01'),
+        qualityScore: null,
+      } as Job,
+    ];
+    expect(getLatestQualityScore(jobs)).toBe(null);
+  });
+
+  it('returns quality score from COMPLETED verify job', () => {
+    const jobs: Job[] = [
+      {
+        ...baseJob,
+        id: 1,
+        command: 'verify',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        completedAt: new Date('2024-01-01'),
+        qualityScore: 85,
+      } as Job,
+    ];
+    expect(getLatestQualityScore(jobs)).toBe(85);
+  });
+
+  it('returns score from latest COMPLETED verify job (after rollback)', () => {
+    const jobs: Job[] = [
+      {
+        ...baseJob,
+        id: 1,
+        command: 'verify',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        completedAt: new Date('2024-01-01'),
+        qualityScore: 60,
+      } as Job,
+      {
+        ...baseJob,
+        id: 2,
+        command: 'verify',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-05'),
+        completedAt: new Date('2024-01-05'),
+        qualityScore: 90,
+      } as Job,
+    ];
+    expect(getLatestQualityScore(jobs)).toBe(90);
+  });
+
+  it('ignores non-verify jobs', () => {
+    const jobs: Job[] = [
+      {
+        ...baseJob,
+        id: 1,
+        command: 'implement',
+        status: 'COMPLETED',
+        startedAt: new Date('2024-01-01'),
+        completedAt: new Date('2024-01-01'),
+        qualityScore: 95,
+      } as Job,
+    ];
+    expect(getLatestQualityScore(jobs)).toBe(null);
+  });
+
+  it('ignores FAILED verify jobs', () => {
+    const jobs: Job[] = [
+      {
+        ...baseJob,
+        id: 1,
+        command: 'verify',
+        status: 'FAILED',
+        startedAt: new Date('2024-01-01'),
+        completedAt: new Date('2024-01-01'),
+        qualityScore: 50,
+      } as Job,
+    ];
+    expect(getLatestQualityScore(jobs)).toBe(null);
   });
 });

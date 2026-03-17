@@ -39,7 +39,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { Job, ClarificationPolicy } from '@prisma/client';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { DualJobState } from '@/lib/types/job-types';
-import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-filtering';
+import { getWorkflowJob, getAIBoardJob, getDeployJob, getLatestQualityScore } from '@/lib/utils/job-filtering';
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
@@ -377,7 +377,7 @@ export function Board({
 
       // If no jobs at all, return null state
       if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
-        return { workflow: null, aiBoard: null, deployJob: null };
+        return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
       }
 
       // If no polled jobs yet, use initial jobs (first render)
@@ -387,6 +387,7 @@ export function Board({
           workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
           aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
           deployJob: getDeployJob(ticketInitialJobs),
+          qualityScore: getLatestQualityScore(ticketInitialJobs),
         };
       }
 
@@ -430,6 +431,7 @@ export function Board({
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
         deployJob: getDeployJob(fullJobs),
+        qualityScore: getLatestQualityScore(fullJobs),
       };
     },
     [polledJobs, initialJobs, projectId, allTickets]
