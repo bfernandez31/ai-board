@@ -27,6 +27,8 @@ export interface JobTypeConfig {
   ariaLabel: string; // Accessibility label template
 }
 
+import type { Job } from '@prisma/client';
+
 /**
  * DualJobState Interface
  *
@@ -39,9 +41,6 @@ export interface DualJobState {
   deployJob: Job | null;
   qualityScore: number | null;
 }
-
-// Job type imported from Prisma schema
-import type { Job } from '@prisma/client';
 
 /**
  * TicketJobWithTelemetry Interface

@@ -27,11 +27,7 @@ export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
         j.status === 'COMPLETED' &&
         j.qualityScore != null
     )
-    .sort((a, b) => {
-      const aTime = typeof a.startedAt === 'string' ? new Date(a.startedAt).getTime() : a.startedAt.getTime();
-      const bTime = typeof b.startedAt === 'string' ? new Date(b.startedAt).getTime() : b.startedAt.getTime();
-      return bTime - aTime;
-    })[0];
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0];
 
   if (!latestScoredJob || latestScoredJob.qualityScore == null) return null;
 

@@ -92,7 +92,9 @@ export const TicketCard = React.memo(
     const effectiveAgent = ticket.agent ?? ticket.project?.defaultAgent;
     const isAgentInherited = ticket.agent == null;
 
-    // Click handler that respects drag state
+    const isDeployJobActive = deployJob != null && (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING');
+    const showDeployButton = (!deployJob && isDeployable) || (deployJob != null && !isDeployJobActive && ticket.stage === 'VERIFY');
+
     const handleClick = () => {
       // Prevent click during drag
       if (!isDragging && onTicketClick) {
@@ -212,35 +214,24 @@ export const TicketCard = React.memo(
                   )}
 
                   {/* Deploy Icon: Show job status OR deploy button when deployable */}
-                  {deployJob ? (
-                    (deployJob.status === 'PENDING' || deployJob.status === 'RUNNING') ? (
-                      // Show deploy job status indicator for pending/running
-                      <JobStatusIndicator
-                        status={deployJob.status}
-                        command={deployJob.command}
-                        jobType={classifyJobType(deployJob.command)}
-                        stage={ticket.stage}
-                        animated={true}
-                        completedAt={deployJob.completedAt}
-                      />
-                    ) : ticket.stage === 'VERIFY' ? (
-                      // Show retry button for failed/cancelled/completed deploys (only in VERIFY stage)
-                      <TicketCardDeployIcon
-                        onDeploy={() => setShowDeployModal(true)}
-                        ticketKey={ticket.ticketKey}
-                        isDeploying={false}
-                        isDisabled={isDeployDisabled}
-                      />
-                    ) : null
-                  ) : isDeployable ? (
-                    // Show deploy button when deployable but no job running
+                  {isDeployJobActive && (
+                    <JobStatusIndicator
+                      status={deployJob.status}
+                      command={deployJob.command}
+                      jobType={classifyJobType(deployJob.command)}
+                      stage={ticket.stage}
+                      animated={true}
+                      completedAt={deployJob.completedAt}
+                    />
+                  )}
+                  {showDeployButton && (
                     <TicketCardDeployIcon
                       onDeploy={() => setShowDeployModal(true)}
                       ticketKey={ticket.ticketKey}
                       isDeploying={false}
                       isDisabled={isDeployDisabled}
                     />
-                  ) : null}
+                  )}
 
                   {/* AI-BOARD Job Indicator (compact icon-only) */}
                   {aiBoardJob && (
