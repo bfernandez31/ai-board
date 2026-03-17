@@ -46,6 +46,8 @@ import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
 import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { NewTicketModal } from './new-ticket-modal';
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
+import { ShortcutsHelpButton } from './shortcuts-help-button';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -178,9 +180,22 @@ export function Board({
 
   // AIB-299: Keyboard shortcuts state
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('shortcuts-hint-dismissed') !== 'true';
+    } catch { return false; }
+  });
   const hasHover = useHoverCapability();
 
-  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingCloseTransition;
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingCloseTransition;
+
+  const handleShortcutsHelpChange = useCallback((open: boolean) => {
+    setIsShortcutsHelpOpen(open);
+    if (!open) {
+      try { localStorage.setItem('shortcuts-hint-dismissed', 'true'); } catch {}
+    }
+  }, []);
 
   useKeyboardShortcuts({
     enabled: hasHover && !isAnyModalOpen,
@@ -198,7 +213,7 @@ export function Board({
         document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
       }
     }, []),
-    onToggleHelp: useCallback(() => {}, []),
+    onToggleHelp: useCallback(() => setIsShortcutsHelpOpen(prev => !prev), []),
   });
 
   // Configure sensors for drag and drop
@@ -1174,6 +1189,13 @@ export function Board({
         onOpenChange={setIsNewTicketModalOpen}
         projectId={projectId}
       />
+
+      {/* Keyboard Shortcuts Help (AIB-299) */}
+      <KeyboardShortcutsDialog
+        open={isShortcutsHelpOpen}
+        onOpenChange={handleShortcutsHelpChange}
+      />
+      <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
     </div>
   );
 }

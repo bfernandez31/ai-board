@@ -98,14 +98,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T011 [P] [US4] Component test for `KeyboardShortcutsDialog`: renders all shortcuts when open, hidden when closed, calls `onOpenChange` on close, accessible dialog role/heading in `tests/unit/components/keyboard-shortcuts-dialog.test.tsx`
-- [ ] T012 [P] [US4] Add test for `?` firing `onToggleHelp` callback to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
+- [x] T011 [P] [US4] Component test for `KeyboardShortcutsDialog`: renders all shortcuts when open, hidden when closed, calls `onOpenChange` on close, accessible dialog role/heading in `tests/unit/components/keyboard-shortcuts-dialog.test.tsx`
+- [x] T012 [P] [US4] Add test for `?` firing `onToggleHelp` callback to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T013 [P] [US4] Create `KeyboardShortcutsDialog` component with shadcn/ui Dialog, two-column Key|Action table, `<kbd>` styled keys in `components/board/keyboard-shortcuts-dialog.tsx`
-- [ ] T014 [P] [US4] Create `ShortcutsHelpButton` component with `Keyboard` icon from lucide-react, tooltip, hidden when `useHoverCapability()` returns false in `components/board/shortcuts-help-button.tsx`
-- [ ] T015 [US4] Integrate help overlay into board: add `isShortcutsHelpOpen` state with first-visit localStorage check (`shortcuts-hint-dismissed`), wire `onToggleHelp`, render `<KeyboardShortcutsDialog>` and `<ShortcutsHelpButton>`, set localStorage on dismiss in `components/board/board.tsx`
+- [x] T013 [P] [US4] Create `KeyboardShortcutsDialog` component with shadcn/ui Dialog, two-column Key|Action table, `<kbd>` styled keys in `components/board/keyboard-shortcuts-dialog.tsx`
+- [x] T014 [P] [US4] Create `ShortcutsHelpButton` component with `Keyboard` icon from lucide-react, tooltip, hidden when `useHoverCapability()` returns false in `components/board/shortcuts-help-button.tsx`
+- [x] T015 [US4] Integrate help overlay into board: add `isShortcutsHelpOpen` state with first-visit localStorage check (`shortcuts-hint-dismissed`), wire `onToggleHelp`, render `<KeyboardShortcutsDialog>` and `<ShortcutsHelpButton>`, set localStorage on dismiss in `components/board/board.tsx`
 
 **Checkpoint**: Help overlay discoverable via icon and `?` key, auto-shows on first visit
 
@@ -119,7 +119,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] T016 [US5] Verify Escape behavior works correctly with shadcn/ui Dialog (native support) for both `NewTicketModal` and `KeyboardShortcutsDialog`, ensure `enabled` flag suppresses shortcuts when any modal is open in `components/board/board.tsx`
+- [x] T016 [US5] Verify Escape behavior works correctly with shadcn/ui Dialog (native support) for both `NewTicketModal` and `KeyboardShortcutsDialog`, ensure `enabled` flag suppresses shortcuts when any modal is open in `components/board/board.tsx`
 
 **Checkpoint**: Escape correctly closes modals in priority order
 
@@ -129,8 +129,8 @@
 
 **Purpose**: Validation and cleanup across all user stories
 
-- [ ] T017 Run `bun run type-check` and fix any TypeScript errors
-- [ ] T018 Run `bun run lint` and fix any linting errors
+- [x] T017 Run `bun run type-check` and fix any TypeScript errors
+- [x] T018 Run `bun run lint` and fix any linting errors
 
 ---
 
