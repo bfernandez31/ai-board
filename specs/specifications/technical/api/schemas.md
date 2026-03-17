@@ -332,6 +332,7 @@ export type CreateAIBoardCommentInput = z.infer<typeof createAIBoardCommentSchem
 ```typescript
 export const updateJobStatusSchema = z.object({
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
+  qualityScore: z.number().int().min(0).max(100).optional(),
 });
 
 export type UpdateJobStatusInput = z.infer<typeof updateJobStatusSchema>;
@@ -341,6 +342,12 @@ export type UpdateJobStatusInput = z.infer<typeof updateJobStatusSchema>;
 - Valid transitions enforced in API route (not schema)
 - Terminal states (COMPLETED, FAILED, CANCELLED) cannot transition
 - Idempotent updates allowed (same status returns 200)
+
+**Quality Score**:
+- Optional integer 0-100
+- Only meaningful when status is COMPLETED
+- Sent by verify.yml for FULL workflow verify jobs only
+- Persisted to `Job.qualityScore` field
 
 ## Project Schemas
 

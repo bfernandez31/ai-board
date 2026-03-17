@@ -279,6 +279,7 @@ model Job {
   durationMs          Int?      // Total Claude API duration in milliseconds
   model               String?   @db.VarChar(50)  // Primary model used
   toolsUsed           String[]  @default([])     // List of tools used (Edit, Write, Bash, etc.)
+  qualityScore        Int?      // Code quality score 0-100 (VERIFY jobs, FULL workflow only)
 
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -313,6 +314,7 @@ model Job {
 - `durationMs`: Total duration of Claude API calls in milliseconds (nullable)
 - `model`: Primary Claude model used (max 50 chars, nullable)
 - `toolsUsed`: Array of Claude tools used during execution (default: empty array)
+- `qualityScore`: Code quality score 0-100 (nullable integer, VERIFY jobs only, FULL workflow only)
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -352,6 +354,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   - Total tokens: sum of `inputTokens` + `outputTokens`
   - Cache efficiency: `cacheReadTokens / (inputTokens + cacheReadTokens) * 100`
 - Tools usage aggregated from `toolsUsed` arrays across all jobs
+- Quality score sourced from latest COMPLETED verify job via `getLatestQualityScore()` helper
 - Null telemetry values treated as 0 for aggregation
 - Real-time updates via existing 2-second job polling mechanism
 

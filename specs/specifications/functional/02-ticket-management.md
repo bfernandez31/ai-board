@@ -279,6 +279,11 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 - No empty state shown when tab is absent
 
 **Summary Metrics**:
+- **Quality Score**: Code review score from the latest completed VERIFY job (FULL workflow only)
+  - Displayed at top of stats with Award icon
+  - Color-coded tier: Excellent (90+, green), Good (70-89, blue), Fair (50-69, amber), Poor (<50, red)
+  - Weighted score across 5 dimensions: Bug Detection (30%), Compliance (30%), Code Comments (20%), Historical Context (10%), PR Comments (10%)
+  - Only shown when a completed VERIFY job with a score exists
 - **Total Cost**: Aggregated cost in USD from all jobs (formatted as $X.XX)
 - **Total Duration**: Combined execution time across all jobs (formatted as Xm Xs)
 - **Total Tokens**: Sum of input and output tokens used
@@ -716,6 +721,9 @@ Timestamps display in user-friendly formats:
   - Visual badges distinguish workflow types on ticket cards:
     - QUICK: ⚡ Quick badge (amber styling)
     - CLEAN: ✨ Clean badge with sparkles icon (purple styling)
+  - **Quality Score Badge**: Compact colored badge shown next to workflow/agent badges on ticket cards
+    - Displays score value with color-coded background (green/blue/amber/red per tier)
+    - Sourced from latest completed VERIFY job; only shown when score exists
 
 ### Optional Configuration
 

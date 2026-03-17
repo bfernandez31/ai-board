@@ -2144,12 +2144,14 @@ Update job status (workflow-only endpoint).
 **Request Body**:
 ```json
 {
-  "status": "COMPLETED"
+  "status": "COMPLETED",
+  "qualityScore": 85
 }
 ```
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
+- `qualityScore`: Optional integer 0-100, only accepted when `status` is COMPLETED
 - State machine transitions enforced
 
 **Response** (200 OK):
@@ -2175,6 +2177,11 @@ Valid transitions:
 
 Invalid transitions return 400 error
 ```
+
+**Quality Score**:
+- Only set by verify.yml for FULL workflow jobs
+- Skipped for QUICK and CLEAN workflows
+- Value persisted on the Job record when provided
 
 ## Telemetry Endpoints
 
@@ -2378,8 +2385,13 @@ sequenceDiagram
     "ticketsClosed": {
       "count": 3,
       "label": "Last 30 days"
-    }
+    },
+    "avgQualityScore": 82
   },
+  "qualityOverTime": [
+    { "date": "2025-11-20", "avgScore": 78 },
+    { "date": "2025-11-21", "avgScore": 85 }
+  ],
   "costOverTime": [
     { "date": "2025-11-20", "cost": 5.23 },
     { "date": "2025-11-21", "cost": 8.45 }
@@ -2440,6 +2452,10 @@ sequenceDiagram
   - `avgDuration`: Average job duration in milliseconds
   - `ticketsShipped`: Shipped ticket count and label for the active range and agent filter
   - `ticketsClosed`: Closed ticket count and label for the active range and agent filter
+  - `avgQualityScore`: Average quality score (0-100) from completed VERIFY jobs (FULL workflow only); null when no scored jobs exist in the filter range
+- `qualityOverTime`: Daily or weekly average quality score data points (FULL workflow VERIFY jobs only)
+  - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
+  - `avgScore`: Average quality score for period (null when no data)
 - `costOverTime`: Daily or weekly cost data points
   - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
   - `cost`: Cost in USD for period

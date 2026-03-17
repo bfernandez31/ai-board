@@ -387,7 +387,7 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Navigates to `/projects/{projectId}/analytics`
 
 **Dashboard Features**:
-- **Overview Cards**: Display total cost, success rate, average job duration, tickets shipped, and tickets closed for the active time range
+- **Overview Cards**: Display total cost, success rate, average job duration, tickets shipped, tickets closed, and average quality score for the active time range
 - **Cost Over Time**: Area chart showing cost trends with selectable time ranges (7d, 30d, 90d, all time)
 - **Cost by Stage**: Horizontal bar chart breaking down cost across SPECIFY, PLAN, BUILD, VERIFY stages
 - **Token Usage**: Chart showing input tokens, output tokens, and cache tokens
@@ -395,6 +395,7 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - **Top Tools**: Horizontal bar chart ranking most-used AI tools (Edit, Read, Bash, etc.)
 - **Workflow Distribution**: Donut chart showing proportion of FULL, QUICK, and CLEAN workflows
 - **Velocity**: Bar chart displaying tickets shipped per week
+- **Quality Score Over Time**: Area chart showing average code review score trend with reference lines at 70 (Good) and 90 (Excellent)
 
 **Dashboard Filters**:
 - **Time Range**: 7 days, 30 days, 90 days, or all time
@@ -409,6 +410,7 @@ Users can access comprehensive analytics dashboard to visualize AI workflow metr
 - Average duration for completed jobs in the active filters
 - Tickets shipped count for the selected time range and agent filter
 - Tickets closed count for the selected time range and agent filter
+- Average quality score from completed VERIFY jobs (FULL workflow only) for the active filters
 
 **Time Range Selection**:
 - Preset options: 7 days, 30 days, 90 days, all time
