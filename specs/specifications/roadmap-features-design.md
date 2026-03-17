@@ -72,8 +72,10 @@
 - `?` = toggle shortcut help overlay
 - `Escape` = close any open modal/overlay
 - Help overlay: modal listing all shortcuts, dismissible
-- Shortcuts disabled when a text input/textarea is focused
-- Discoverable: small `?` icon in board footer or header
+- Shortcuts disabled when a text input/textarea/contenteditable is focused
+- Shortcuts disabled on mobile/tablet without physical keyboard (detect via media query `hover: hover`)
+- Desktop/tablet-with-keyboard only — no gestures or mobile equivalent (actions already accessible via existing touch UI)
+- Discoverable: small `?` icon in board header (desktop only, hidden on mobile)
 
 ---
 
@@ -253,23 +255,25 @@
 
 **Problem**: Hard to objectively measure if the AI is producing good work. Comparison is manual.
 
-**Solution**: Computed quality score after each VERIFY, tracked over time.
+**Solution**: Extend the existing `/ai-board.code-review` command so each review agent returns a dimension score (0-100) alongside its issues. A weighted final score is computed and stored on the verify job.
 
 **Functional Requirements**:
-- Score: 0-100, computed after VERIFY job completes (FULL workflow only, QUICK gets no score)
+- Score: 0-100, computed after VERIFY job completes (FULL workflow only)
+- Scoring is produced by the 5 existing code review agents — each agent returns a sub-score (0-100) for its dimension in addition to listing issues. The score reflects the agent's qualitative judgment, not just issue count.
 - Scoring dimensions (weighted):
-  - Tests pass rate: 30% (all pass = full points, proportional deduction)
-  - Fix iterations needed: 20% (0 fixes = full, each fix deducts points)
-  - Cost efficiency: 15% (compared to project average for similar operations)
-  - Duration efficiency: 15% (compared to project average)
-  - Lint/typecheck clean: 10% (clean = full, issues = proportional deduction)
-  - Code simplification delta: 10% (less simplification needed = higher score)
-- Displayed on: ticket card (small badge), ticket detail (Stats tab), analytics dashboard
-- Analytics: average quality score over time chart, per-agent comparison, trend line
+  - Bug Detection: 30% (absence of bugs found by shallow scan)
+  - Compliance (CLAUDE.md + Constitution): 30% (adherence to project rules)
+  - Code Comments compliance: 20% (respect of inline code guidance)
+  - Historical Context: 10% (consistency with git history patterns)
+  - Previous PR Comments: 10% (not repeating past mistakes)
+- Final score: weighted sum of dimension scores, rounded to integer
+- The code review command writes a structured scoring output (JSON) to the workspace. The workflow parses it and sends the score via the existing job status update endpoint.
 - Stored on Job model: `qualityScore` integer field (nullable, only for VERIFY jobs)
+- No score for: QUICK workflow, CLEAN workflow, failed/cancelled VERIFY jobs
 - When multiple VERIFY jobs exist (after rollback-reset), the displayed score is from the latest COMPLETED verify job. Rollback-reset supersedes previous scores.
-- Thresholds: Excellent (90+), Good (70-89), Fair (50-69), Poor (<50) with color coding
-- No score for: QUICK workflow, failed VERIFY, CLEAN workflow
+- Thresholds: Excellent (90+, green), Good (70-89, blue), Fair (50-69, amber), Poor (<50, red)
+- Displayed on: ticket card (small colored badge), ticket detail (Stats tab), analytics dashboard
+- Analytics: average quality score over time chart, per-agent comparison, trend line
 
 ---
 
