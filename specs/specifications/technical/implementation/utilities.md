@@ -2,6 +2,96 @@
 
 Shared utility functions and helpers used across the application.
 
+## Keyboard Shortcuts Hook
+
+### Purpose
+
+Registers and manages board-level keyboard shortcuts via a `keydown` event listener attached to `document`. Suppresses shortcuts when focus is on editable elements.
+
+### File Location
+
+`lib/hooks/use-keyboard-shortcuts.ts`
+
+### API Reference
+
+**Hook**: `useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void`
+
+**Parameters**:
+
+```typescript
+interface UseKeyboardShortcutsOptions {
+  enabled: boolean;          // Master toggle (set to false on touch-only devices)
+  onNewTicket: () => void;   // Handler for N key
+  onFocusSearch: () => void; // Handler for S / / keys
+  onColumnNav: (columnIndex: number) => void; // Handler for 1-6 keys
+  onToggleHelp: () => void;  // Handler for ? key
+}
+```
+
+**Registered Keys**: `N` (new ticket), `S` / `/` (search), `1`–`6` (column nav), `?` (help toggle)
+
+**Suppression Logic**: `isEditableElement()` returns `true` for `INPUT`, `TEXTAREA`, `SELECT`, and `contenteditable` elements. All shortcuts are skipped when focus is on these elements.
+
+**Lifecycle**: Adds `keydown` listener on mount, removes it on unmount or when `enabled` changes. All callbacks are included in the `useEffect` dependency array for correctness.
+
+### Usage
+
+```typescript
+useKeyboardShortcuts({
+  enabled: hasHoverCapability,
+  onNewTicket: () => setCreateModalOpen(true),
+  onFocusSearch: () => searchInputRef.current?.focus(),
+  onColumnNav: (idx) => scrollToColumn(idx),
+  onToggleHelp: () => setHelpOpen((prev) => !prev),
+});
+```
+
+### Testing
+
+**Unit Tests**: `tests/unit/use-keyboard-shortcuts.test.ts`
+
+---
+
+## Hover Capability Hook
+
+### Purpose
+
+Detects whether the current device has hover capability (fine pointer input), which indicates a physical keyboard is likely available. Uses `useSyncExternalStore` to react to media query changes without additional re-render overhead.
+
+### File Location
+
+`lib/hooks/use-hover-capability.ts`
+
+### API Reference
+
+**Hook**: `useHoverCapability(): boolean`
+
+**Returns**: `true` if the CSS media query `(hover: hover)` matches; `false` for touch-only devices. Always returns `false` during server-side rendering (SSR safe).
+
+**Mechanism**:
+- Media query: `(hover: hover)`
+- Subscription via `MediaQueryList.addEventListener('change', ...)`
+- Server snapshot: always `false` to avoid hydration mismatches
+
+### Usage
+
+```typescript
+const hasHover = useHoverCapability();
+
+// Conditionally render the shortcuts help button
+if (!hasHover) return null;
+```
+
+### Design Rationale
+
+**CSS media query over `navigator.maxTouchPoints`**: The `(hover: hover)` query is more reliable for detecting physical keyboard/pointer availability. Hybrid devices (e.g., Surface with keyboard attached) correctly return `true` since they have fine-pointer input.
+
+### Testing
+
+**Unit Tests**: `tests/unit/use-hover-capability.test.ts`
+
+---
+
 ## Agent Icons
 
 ### Purpose
