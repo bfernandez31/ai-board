@@ -48,7 +48,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Integrate `useHoverCapability` and `useKeyboardShortcuts` into board component: add `isNewTicketModalOpen` state, wire `onNewTicket` callback to open `NewTicketModal`, add `<NewTicketModal>` controlled instance in `components/board/board.tsx`
+- [x] T006 [US1] Integrate `useHoverCapability` and `useKeyboardShortcuts` into board component: add `isNewTicketModalOpen` state, wire `onNewTicket` callback to open `NewTicketModal`, add `<NewTicketModal>` controlled instance in `components/board/board.tsx`
 
 **Checkpoint**: `N` key creates tickets on desktop, suppressed on mobile and in text inputs
 
@@ -62,11 +62,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [US2] Add tests for `S` and `/` firing `onFocusSearch` callback to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
+- [x] T007 [US2] Add tests for `S` and `/` firing `onFocusSearch` callback to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Wire `onFocusSearch` callback in board integration to query `[data-testid="ticket-search-input"]` and call `.focus()` in `components/board/board.tsx`
+- [x] T008 [US2] Wire `onFocusSearch` callback in board integration to query `[data-testid="ticket-search-input"]` and call `.focus()` in `components/board/board.tsx`
 
 **Checkpoint**: `S` and `/` keys focus the search bar from anywhere on the board
 
@@ -80,11 +80,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T009 [US3] Add tests for `1`–`6` firing `onColumnNav` with correct column index to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
+- [x] T009 [US3] Add tests for `1`–`6` firing `onColumnNav` with correct column index to existing test file `tests/unit/use-keyboard-shortcuts.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Wire `onColumnNav` callback in board integration with `STAGE_BY_NUMBER` mapping and `scrollIntoView({ behavior: 'smooth', inline: 'center' })` targeting `[data-column=STAGE]` elements in `components/board/board.tsx`
+- [x] T010 [US3] Wire `onColumnNav` callback in board integration with `STAGE_BY_NUMBER` mapping and `scrollIntoView({ behavior: 'smooth', inline: 'center' })` targeting `[data-column=STAGE]` elements in `components/board/board.tsx`
 
 **Checkpoint**: Number keys navigate to columns with smooth scrolling
 

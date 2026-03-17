@@ -43,6 +43,9 @@ import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-fil
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
+import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { NewTicketModal } from './new-ticket-modal';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -172,6 +175,31 @@ export function Board({
 
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
+
+  // AIB-299: Keyboard shortcuts state
+  const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
+  const hasHover = useHoverCapability();
+
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingCloseTransition;
+
+  useKeyboardShortcuts({
+    enabled: hasHover && !isAnyModalOpen,
+    onNewTicket: useCallback(() => setIsNewTicketModalOpen(true), []),
+    onFocusSearch: useCallback(() => {
+      document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
+    }, []),
+    onColumnNav: useCallback((columnIndex: number) => {
+      const STAGE_BY_NUMBER: Record<number, string> = {
+        1: 'INBOX', 2: 'SPECIFY', 3: 'PLAN',
+        4: 'BUILD', 5: 'VERIFY', 6: 'SHIP',
+      };
+      const stage = STAGE_BY_NUMBER[columnIndex];
+      if (stage) {
+        document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+      }
+    }, []),
+    onToggleHelp: useCallback(() => {}, []),
+  });
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -1138,6 +1166,13 @@ export function Board({
         onOpenChange={(open) => !open && handleCloseCancel()}
         onConfirm={handleCloseConfirm}
         isClosing={isClosingTicket}
+      />
+
+      {/* Keyboard-triggered New Ticket Modal (AIB-299) */}
+      <NewTicketModal
+        open={isNewTicketModalOpen}
+        onOpenChange={setIsNewTicketModalOpen}
+        projectId={projectId}
       />
     </div>
   );
