@@ -37,7 +37,6 @@ function isTextInputFocused(): boolean {
 
 export interface BoardKeyboardShortcutsOptions {
   onNewTicket: () => void;
-  onToggleHelp: () => void;
 }
 
 export interface BoardKeyboardShortcutsResult {
@@ -47,7 +46,6 @@ export interface BoardKeyboardShortcutsResult {
 
 export function useBoardKeyboardShortcuts({
   onNewTicket,
-  onToggleHelp,
 }: BoardKeyboardShortcutsOptions): BoardKeyboardShortcutsResult {
   const [isHelpOpen, setIsHelpOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -96,7 +94,6 @@ export function useBoardKeyboardShortcuts({
       if (key === '?') {
         e.preventDefault();
         setIsHelpOpen((prev) => !prev);
-        onToggleHelp();
         return;
       }
 
@@ -128,7 +125,7 @@ export function useBoardKeyboardShortcuts({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isHelpOpen, onNewTicket, onToggleHelp, scrollToColumn, focusSearch]);
+  }, [isHelpOpen, onNewTicket, scrollToColumn, focusSearch]);
 
   return { isHelpOpen, setIsHelpOpen };
 }

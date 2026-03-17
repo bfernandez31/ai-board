@@ -164,7 +164,6 @@ export function Board({
   // AIB-302: Keyboard shortcuts hook
   const { isHelpOpen, setIsHelpOpen } = useBoardKeyboardShortcuts({
     onNewTicket: useCallback(() => setShortcutNewTicketOpen(true), []),
-    onToggleHelp: useCallback(() => {}, []),
   });
 
   // Delete confirmation state (T023)

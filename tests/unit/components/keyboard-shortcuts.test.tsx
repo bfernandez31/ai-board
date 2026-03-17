@@ -74,7 +74,6 @@ describe('KeyboardShortcutsModal', () => {
 describe('useBoardKeyboardShortcuts', () => {
   const defaultOptions = {
     onNewTicket: vi.fn(),
-    onToggleHelp: vi.fn(),
   };
 
   beforeEach(() => {
