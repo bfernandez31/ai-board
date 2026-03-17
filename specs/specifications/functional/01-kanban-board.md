@@ -78,6 +78,12 @@ Each ticket appears as a card within its current stage column. Cards display:
 - **Ticket ID**: Unique identifier (format: #1, #2, etc.)
 - **Stage Badge**: Current workflow stage with appropriate color
 - **Timestamp**: Last updated time in relative format ("2 hours ago") for recent updates or absolute format ("2025-09-30 14:30") for older updates
+- **Quality Score Badge** (conditional): Small colored badge showing the integer score (0-100), shown only for FULL workflow tickets with a COMPLETED verify job that has a quality score
+  - Green: Excellent (90-100)
+  - Blue: Good (70-89)
+  - Amber: Fair (50-69)
+  - Red: Poor (0-49)
+  - Not shown for QUICK/CLEAN workflows or failed/cancelled verify jobs
 
 ### Ticket Ordering
 

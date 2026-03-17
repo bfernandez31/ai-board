@@ -2144,12 +2144,16 @@ Update job status (workflow-only endpoint).
 **Request Body**:
 ```json
 {
-  "status": "COMPLETED"
+  "status": "COMPLETED",
+  "qualityScore": 83,
+  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.30},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"prComments\":{\"score\":95,\"weight\":0.10}},\"finalScore\":83}"
 }
 ```
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
+- `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for FULL workflow verify jobs; ignored otherwise
+- `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
 
 **Response** (200 OK):
@@ -2426,6 +2430,21 @@ sequenceDiagram
     { "value": "CLAUDE", "label": "Claude", "jobCount": 30, "isDefault": false },
     { "value": "CODEX", "label": "Codex", "jobCount": 15, "isDefault": false }
   ],
+  "qualityScore": {
+    "averageScore": 78,
+    "scoreOverTime": [
+      { "date": "2025-11-20", "score": 72 },
+      { "date": "2025-11-27", "score": 84 }
+    ],
+    "dimensionAverages": [
+      { "dimension": "bugDetection", "label": "Bug Detection", "weight": 0.30, "averageScore": 82 },
+      { "dimension": "compliance", "label": "Compliance", "weight": 0.30, "averageScore": 79 },
+      { "dimension": "codeComments", "label": "Code Comments", "weight": 0.20, "averageScore": 71 },
+      { "dimension": "historicalContext", "label": "Historical Context", "weight": 0.10, "averageScore": 75 },
+      { "dimension": "prComments", "label": "PR Comments", "weight": 0.10, "averageScore": 88 }
+    ],
+    "hasData": true
+  },
   "generatedAt": "2025-11-28T10:30:00Z",
   "jobCount": 45,
   "hasData": true
@@ -2468,6 +2487,17 @@ sequenceDiagram
   - `ticketsShipped`: Tickets shipped that week
 - `filters`: Applied filter set returned by the server
 - `availableAgents`: Agent filter options derived from completed tickets with recorded job history in the project
+- `qualityScore`: Code quality analytics (Team plan only; null for non-Team users)
+  - `averageScore`: Average final quality score across all FULL workflow COMPLETED verify jobs in range
+  - `scoreOverTime`: Weekly average quality scores (same granularity as `costOverTime`)
+    - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
+    - `score`: Average quality score for that period
+  - `dimensionAverages`: Per-dimension average scores across all scored verify jobs
+    - `dimension`: Internal dimension key (bugDetection, compliance, codeComments, historicalContext, prComments)
+    - `label`: Human-readable dimension name
+    - `weight`: Dimension weight in final score computation
+    - `averageScore`: Average dimension score across all scored jobs in range
+  - `hasData`: False if no FULL workflow COMPLETED verify jobs with quality scores exist in range
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total filtered jobs in range, including completed and failed jobs
 - `hasData`: False if the filtered selection contains no completed jobs with telemetry data
