@@ -159,7 +159,7 @@ ${ARGS}"
   fi
 
   log_info "Model: $model | Reasoning: $reasoning"
-  echo "$prompt" | codex exec --full-auto -m "$model" -c "reasoning_effort=\"$reasoning\"" -
+  echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
 }
 
 # --- Main dispatch ---

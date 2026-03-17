@@ -395,7 +395,7 @@ sequenceDiagram
         end
         RS->>RS: write ~/.codex/config.toml (OTEL telemetry)
         RS->>RS: read .claude/commands/COMMAND.md
-        RS->>CLI: echo prompt | codex exec --full-auto -m $CODEX_MODEL -
+        RS->>CLI: echo prompt | codex exec --dangerously-bypass-approvals-and-sandbox -m $CODEX_MODEL -
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
