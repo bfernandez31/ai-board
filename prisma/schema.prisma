@@ -51,6 +51,12 @@ model Job {
   model              String?  @db.VarChar(50) // Primary model used
   toolsUsed          String[] @default([])    // List of tools used (Edit, Write, Bash, etc.)
 
+  // Quality score (0-100) computed from code review agent dimension scores
+  // Only populated for COMPLETED verify jobs of FULL workflow tickets
+  qualityScore        Int?
+  // JSON string containing dimension sub-scores, weights, and threshold label
+  qualityScoreDetails String?
+
   @@index([projectId])
   @@index([startedAt])
   @@index([status])

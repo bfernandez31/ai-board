@@ -18,9 +18,9 @@
 
 **Purpose**: Prisma schema migration and shared quality score utilities
 
-- [ ] T001 Add `qualityScore Int?` and `qualityScoreDetails String?` fields to Job model in `prisma/schema.prisma`
-- [ ] T002 Run Prisma migration (`bunx prisma migrate dev --name add-quality-score-to-job`) and regenerate client (`bunx prisma generate`)
-- [ ] T003 Create shared quality score utilities (`getScoreThreshold()`, `getScoreColor()`, `parseQualityScoreDetails()`, types) in `lib/quality-score.ts`
+- [x] T001 Add `qualityScore Int?` and `qualityScoreDetails String?` fields to Job model in `prisma/schema.prisma`
+- [x] T002 Run Prisma migration (`bunx prisma migrate dev --name add-quality-score-to-job`) and regenerate client (`bunx prisma generate`)
+- [x] T003 Create shared quality score utilities (`getScoreThreshold()`, `getScoreColor()`, `parseQualityScoreDetails()`, types) in `lib/quality-score.ts`
 
 ---
 
