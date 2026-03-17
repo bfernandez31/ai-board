@@ -189,6 +189,26 @@ The board automatically updates when workflow-initiated stage transitions occur:
 - Single API call fetches all updated tickets
 - All affected tickets update simultaneously
 
+## Keyboard Shortcuts
+
+The board supports keyboard shortcuts on desktop and tablet devices with a physical keyboard. Shortcuts are disabled on touch-only devices and when focus is on any text input, textarea, or contenteditable element.
+
+| Key | Action |
+|-----|--------|
+| `N` | Open new ticket creation modal |
+| `S` or `/` | Focus the search input |
+| `1` – `6` | Scroll smoothly to the corresponding column (INBOX=1, SPECIFY=2, PLAN=3, BUILD=4, VERIFY=5, SHIP=6) |
+| `?` | Toggle the keyboard shortcuts help overlay |
+| `Escape` | Close the shortcuts help overlay |
+
+**Help Overlay**: The first time a physical-keyboard user visits the board, the shortcuts modal opens automatically. Subsequent visits do not auto-open the modal (dismissed state stored in `localStorage` under `shortcuts-hint-dismissed`). The overlay can be toggled at any time with `?`.
+
+**Device Detection**: Shortcuts activate only when `window.matchMedia('(hover: hover)').matches` is true, excluding touch-only devices.
+
+**Components**:
+- `hooks/use-board-keyboard-shortcuts.ts` — keyboard event handling and help overlay state
+- `components/board/keyboard-shortcuts-modal.tsx` — the shortcuts reference dialog
+
 ## Performance Expectations
 
 - Board loads and displays correctly on all supported viewport sizes

@@ -753,6 +753,18 @@ When user has no projects:
 - Shortcuts for common actions
 - Escape to close modals/cancel actions
 
+**Board Page Shortcuts** (desktop/physical keyboard only):
+
+| Key | Action |
+|-----|--------|
+| `N` | Open new ticket creation modal |
+| `S` or `/` | Focus search input |
+| `1` – `6` | Scroll to column (INBOX=1 … SHIP=6) |
+| `?` | Toggle keyboard shortcuts help overlay |
+| `Escape` | Close shortcuts help overlay |
+
+Shortcuts are suppressed when any text input, textarea, or contenteditable element has focus, and on touch-only devices (no hover pointer). On first visit the help overlay opens automatically; subsequent visits require `?` to open it.
+
 **Focus Management**:
 - Visible focus indicators (minimum 3px solid outline meeting WCAG AA requirements)
 - Logical focus order matching visual layout
