@@ -85,14 +85,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Unit test for score computation logic (weighted sum formula, rounding e.g. 83.5->84, threshold derivation, boundary values) in `tests/unit/quality-score.test.ts`
-- [ ] T015 [P] [US3] Integration test for PATCH endpoint accepting `qualityScore` on COMPLETED status, rejecting on RUNNING, null for QUICK workflow — extend `tests/integration/jobs/status.test.ts`
+- [x] T014 [P] [US3] Unit test for score computation logic (weighted sum formula, rounding e.g. 83.5->84, threshold derivation, boundary values) in `tests/unit/quality-score.test.ts`
+- [x] T015 [P] [US3] Integration test for PATCH endpoint accepting `qualityScore` on COMPLETED status, rejecting on RUNNING, null for QUICK workflow — extend `tests/integration/jobs/status.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Modify `.claude-plugin/commands/ai-board.code-review.md` to add scoring instructions to each of the 5 review agents (return dimension score 0-100 alongside issues)
-- [ ] T017 [US3] Add consolidation step to `.claude-plugin/commands/ai-board.code-review.md` that computes weighted final score and writes `quality-score.json` to workspace root
-- [ ] T018 [US3] Update `.github/workflows/verify.yml` to read `quality-score.json` after code review step and include `qualityScore` + `qualityScoreDetails` in the COMPLETED status PATCH request; skip for QUICK/CLEAN workflows
+- [x] T016 [US3] Modify `.claude-plugin/commands/ai-board.code-review.md` to add scoring instructions to each of the 5 review agents (return dimension score 0-100 alongside issues)
+- [x] T017 [US3] Add consolidation step to `.claude-plugin/commands/ai-board.code-review.md` that computes weighted final score and writes `quality-score.json` to workspace root
+- [x] T018 [US3] Update `.github/workflows/verify.yml` to read `quality-score.json` after code review step and include `qualityScore` + `qualityScoreDetails` in the COMPLETED status PATCH request; skip for QUICK/CLEAN workflows
 
 **Checkpoint**: VERIFY workflow produces and stores quality scores for FULL workflow tickets
 

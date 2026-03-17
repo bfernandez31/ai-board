@@ -171,6 +171,79 @@ describe('Jobs Status', () => {
     });
   });
 
+  describe('Quality Score on COMPLETED status', () => {
+    it('should persist qualityScore and qualityScoreDetails when COMPLETED', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const qualityScoreDetails = JSON.stringify({
+        dimensions: [
+          { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
+        ],
+        threshold: 'Good',
+        computedAt: '2026-03-17T10:30:00Z',
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'COMPLETED',
+          qualityScore: 83,
+          qualityScoreDetails,
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('COMPLETED');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.qualityScore).toBe(83);
+      expect(job?.qualityScoreDetails).toBe(qualityScoreDetails);
+    });
+
+    it('should silently ignore qualityScore when status is RUNNING', async () => {
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'RUNNING',
+          qualityScore: 83,
+          qualityScoreDetails: '{}',
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.status).toBe('RUNNING');
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.qualityScore).toBeNull();
+      expect(job?.qualityScoreDetails).toBeNull();
+    });
+
+    it('should accept COMPLETED without qualityScore (backwards compatible)', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED' }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.qualityScore).toBeNull();
+    });
+
+    it('should reject qualityScore outside 0-100 range', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const response = await workflowApi.patch<{ error: string }>(
+        `/api/jobs/${jobId}/status`,
+        { status: 'COMPLETED', qualityScore: 101 }
+      );
+
+      expect(response.status).toBe(400);
+    });
+  });
+
   describe('Job status lifecycle', () => {
     it('should track full job lifecycle: PENDING → RUNNING → COMPLETED', async () => {
       // Verify initial PENDING state (startedAt is set at job creation)
