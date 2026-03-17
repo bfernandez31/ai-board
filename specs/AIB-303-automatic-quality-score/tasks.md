@@ -106,16 +106,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T019 [P] [US4] Integration test for analytics endpoint returning quality score aggregations (score trend, dimension comparison, Team plan gating, empty state) in `tests/integration/analytics/quality-score.test.ts`
+- [x] T019 [P] [US4] Integration test for analytics endpoint returning quality score aggregations (score trend, dimension comparison, Team plan gating, empty state) in `tests/integration/analytics/quality-score.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T020 [P] [US4] Add `QualityScoreAnalytics`, `QualityScoreDataPoint`, `DimensionComparison` types to `lib/analytics/types.ts`
-- [ ] T021 [US4] Add quality score aggregation queries (score trend by date, dimension comparison AVG, overall average) to `lib/analytics/queries.ts`
-- [ ] T022 [US4] Extend analytics API endpoint in `app/api/projects/[projectId]/analytics/route.ts` to include `qualityScore` section in response (Team plan gated)
-- [ ] T023 [P] [US4] Create `QualityScoreTrendChart` component (Recharts line chart for score over time) in `components/analytics/quality-score-trend-chart.tsx`
-- [ ] T024 [P] [US4] Create `DimensionComparisonChart` component (Recharts bar chart for per-dimension averages) in `components/analytics/dimension-comparison-chart.tsx`
-- [ ] T025 [US4] Integrate quality score charts into `components/analytics/analytics-dashboard.tsx` with Team plan gating and empty state handling
+- [x] T020 [P] [US4] Add `QualityScoreAnalytics`, `QualityScoreDataPoint`, `DimensionComparison` types to `lib/analytics/types.ts`
+- [x] T021 [US4] Add quality score aggregation queries (score trend by date, dimension comparison AVG, overall average) to `lib/analytics/queries.ts`
+- [x] T022 [US4] Extend analytics API endpoint in `app/api/projects/[projectId]/analytics/route.ts` to include `qualityScore` section in response (Team plan gated)
+- [x] T023 [P] [US4] Create `QualityScoreTrendChart` component (Recharts line chart for score over time) in `components/analytics/quality-score-trend-chart.tsx`
+- [x] T024 [P] [US4] Create `DimensionComparisonChart` component (Recharts bar chart for per-dimension averages) in `components/analytics/dimension-comparison-chart.tsx`
+- [x] T025 [US4] Integrate quality score charts into `components/analytics/analytics-dashboard.tsx` with Team plan gating and empty state handling
 
 **Checkpoint**: Analytics dashboard shows quality score trends and dimension comparisons for Team plan users
 
@@ -125,9 +125,9 @@
 
 **Purpose**: Validation and final quality checks
 
-- [ ] T026 Run `bun run type-check` and fix any TypeScript errors across all modified files
-- [ ] T027 Run `bun run lint` and fix any linting issues across all modified files
-- [ ] T028 Run quickstart.md validation to confirm end-to-end implementation matches the quickstart order
+- [x] T026 Run `bun run type-check` and fix any TypeScript errors across all modified files
+- [x] T027 Run `bun run lint` and fix any linting issues across all modified files
+- [x] T028 Run quickstart.md validation to confirm end-to-end implementation matches the quickstart order
 
 ---
 

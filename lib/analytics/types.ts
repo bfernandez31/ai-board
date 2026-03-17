@@ -102,6 +102,25 @@ export interface WeeklyVelocity {
   ticketsShipped: number;
 }
 
+export interface QualityScoreDataPoint {
+  date: string;
+  averageScore: number;
+  count: number;
+}
+
+export interface DimensionComparison {
+  dimension: string;
+  averageScore: number;
+  weight: number;
+}
+
+export interface QualityScoreAnalytics {
+  scoreTrend: QualityScoreDataPoint[];
+  dimensionComparison: DimensionComparison[];
+  overallAverage: number | null;
+  totalScoredJobs: number;
+}
+
 export interface AnalyticsData {
   overview: OverviewMetrics;
   costOverTime: CostDataPoint[];
@@ -111,6 +130,7 @@ export interface AnalyticsData {
   topTools: ToolUsage[];
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
+  qualityScore?: QualityScoreAnalytics | null;
   filters: AnalyticsFilters;
   availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */

@@ -15,8 +15,11 @@ import type {
   CacheMetrics,
   CompletionMetric,
   CostDataPoint,
+  DimensionComparison,
   NamedAgent,
   OverviewMetrics,
+  QualityScoreAnalytics,
+  QualityScoreDataPoint,
   StageCost,
   StageKey,
   TicketOutcomeFilter,
@@ -25,6 +28,7 @@ import type {
   WeeklyVelocity,
   WorkflowBreakdown,
 } from './types';
+import { parseQualityScoreDetails } from '@/lib/quality-score';
 import {
   DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
@@ -512,6 +516,87 @@ async function getVelocityData(
     .sort((a, b) => a.week.localeCompare(b.week));
 }
 
+async function getQualityScoreAnalytics(
+  projectId: number,
+  filters: AnalyticsFilters,
+  now: Date
+): Promise<QualityScoreAnalytics> {
+  const jobs = await prisma.job.findMany({
+    where: {
+      ...buildJobWhere(projectId, filters, now, [JobStatus.COMPLETED]),
+      command: 'verify',
+      qualityScore: { not: null },
+    },
+    select: {
+      completedAt: true,
+      qualityScore: true,
+      qualityScoreDetails: true,
+    },
+    orderBy: { completedAt: 'asc' },
+  });
+
+  if (jobs.length === 0) {
+    return {
+      scoreTrend: [],
+      dimensionComparison: [],
+      overallAverage: null,
+      totalScoredJobs: 0,
+    };
+  }
+
+  // Score trend by date
+  const granularity = getGranularity(filters.range);
+  const trendMap = new Map<string, { total: number; count: number }>();
+  let scoreSum = 0;
+
+  for (const job of jobs) {
+    if (!job.completedAt || job.qualityScore == null) continue;
+    const key = formatDateForGrouping(job.completedAt, granularity);
+    const entry = trendMap.get(key) ?? { total: 0, count: 0 };
+    entry.total += job.qualityScore;
+    entry.count += 1;
+    trendMap.set(key, entry);
+    scoreSum += job.qualityScore;
+  }
+
+  const scoreTrend: QualityScoreDataPoint[] = Array.from(trendMap.entries())
+    .map(([date, { total, count }]) => ({
+      date,
+      averageScore: Math.round(total / count),
+      count,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Dimension comparison
+  const dimensionTotals = new Map<string, { total: number; count: number; weight: number }>();
+
+  for (const job of jobs) {
+    const details = parseQualityScoreDetails(job.qualityScoreDetails);
+    if (!details?.dimensions) continue;
+    for (const dim of details.dimensions) {
+      const entry = dimensionTotals.get(dim.name) ?? { total: 0, count: 0, weight: dim.weight };
+      entry.total += dim.score;
+      entry.count += 1;
+      dimensionTotals.set(dim.name, entry);
+    }
+  }
+
+  const dimensionComparison: DimensionComparison[] = Array.from(dimensionTotals.entries())
+    .map(([dimension, { total, count, weight }]) => ({
+      dimension,
+      averageScore: Math.round(total / count),
+      weight,
+    }))
+    .sort((a, b) => b.weight - a.weight);
+
+  return {
+    scoreTrend,
+    dimensionComparison,
+    overallAverage: Math.round(scoreSum / jobs.length),
+    totalScoredJobs: jobs.length,
+  };
+}
+
 function normalizeFilters(
   filters: Partial<AnalyticsFilters> = {},
   availableAgents?: AgentOption[]
@@ -561,6 +646,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    qualityScore,
   ] = await Promise.all([
     getOverviewMetrics(projectId, normalizedFilters, now),
     getCostOverTime(projectId, normalizedFilters, now),
@@ -569,6 +655,7 @@ export async function getAnalyticsData(
     getTopTools(projectId, normalizedFilters, now),
     getWorkflowDistribution(projectId, normalizedFilters, now),
     getVelocityData(projectId, normalizedFilters, now),
+    getQualityScoreAnalytics(projectId, normalizedFilters, now),
   ]);
 
   const cacheEfficiency = getCacheEfficiency(tokenUsage);
@@ -582,6 +669,7 @@ export async function getAnalyticsData(
     topTools,
     workflowDistribution,
     velocity,
+    qualityScore,
     filters: normalizedFilters,
     availableAgents,
     generatedAt: now.toISOString(),
