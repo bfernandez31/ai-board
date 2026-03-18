@@ -1,10 +1,11 @@
 # Authentication Implementation
 
-NextAuth.js setup, session management, Personal Access Tokens (PAT), and mock authentication for development/testing.
+NextAuth.js setup, session management, Personal Access Tokens (PAT), GitHub OAuth, and environment-gated dev login for development and preview access.
 
 ## NextAuth.js Configuration
 
-**Location**: `app/api/auth/[...nextauth]/route.ts`
+**Primary Configuration**: `lib/auth.ts`
+**Route Handler**: `app/api/auth/[...nextauth]/route.ts`
 
 ```typescript
 import NextAuth, { NextAuthOptions } from 'next-auth';
@@ -46,27 +47,72 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 ```
 
-## Mock Authentication (Development/Test)
+## Environment-Specific Authentication Modes
 
-**Test Mode**: Enabled when `NODE_ENV !== 'production'`
+Authentication behavior depends on runtime environment:
 
-```typescript
-// Simplified example - actual implementation in authOptions
-if (process.env.NODE_ENV !== 'production') {
-  return {
-    user: {
-      id: 'test-user-id',
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-    },
-  };
-}
+- **Production**: GitHub OAuth only
+- **Vercel preview**: GitHub OAuth plus optional credentials-based dev login when `DEV_LOGIN_SECRET` is configured
+- **Development**: GitHub OAuth plus optional credentials-based dev login when `DEV_LOGIN_SECRET` is configured
+- **Test**: NextAuth uses the Prisma adapter with database-backed sessions and the test user `test@e2e.local`
+
+The credentials-based dev login is not a general production auth path. It is enabled only when:
+- `DEV_LOGIN_SECRET` is present after trimming whitespace
+- `NODE_ENV !== 'production'` or `VERCEL_ENV === 'preview'`
+
+## Dev Login Provider
+
+**Files**:
+- `lib/auth.ts`
+- `app/lib/auth/dev-login.ts`
+- `app/lib/auth/user-service.ts`
+
+The app registers a NextAuth Credentials provider with provider id `dev-login` only when dev login is enabled for the current environment.
+
+### Validation Flow
+
+1. The sign-in page posts `email` and `secret` to NextAuth using provider id `dev-login`
+2. `authorizeDevLogin()` validates the payload with Zod
+3. The provided secret is compared to `DEV_LOGIN_SECRET` using `timingSafeEqual`
+4. The email is normalized to trimmed lowercase before persistence
+5. The app upserts a `User` record and a matching `Account` record with `provider="credentials"`
+6. NextAuth creates a session for that user
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Sign-In Page
+    participant NA as NextAuth
+    participant DL as authorizeDevLogin
+    participant DB as PostgreSQL
+
+    U->>UI: Submit email + shared secret
+    UI->>NA: signIn("dev-login", credentials)
+    NA->>DL: authorize(credentials)
+    DL->>DL: Validate email and secret
+    DL->>DL: timingSafeEqual(secret, DEV_LOGIN_SECRET)
+    DL->>DB: Upsert User and credentials Account
+    DB-->>DL: User record
+    DL-->>NA: Authorized user
+    NA-->>UI: Session + redirect
 ```
 
-**Benefits**:
-- No manual login in development
-- Automated E2E tests without auth complexity
-- Same security model (ownership validation still enforced)
+### Failure Behavior
+
+- Invalid email format returns `null` from the provider authorize callback
+- Missing or incorrect shared secret returns `null`
+- Disabled environments return `null`
+- NextAuth redirects back to `/auth/signin?error=CredentialsSignin`
+- The sign-in page maps that error code to the user-facing message `Invalid email or secret.`
+
+### Persistence Rules
+
+- Dev login users are keyed by normalized email address
+- The related NextAuth account uses:
+  - `provider: "credentials"`
+  - `providerAccountId: <normalized email>`
+- Repeat sign-ins reuse the same user and account rows
+- `emailVerified` is set when the credentials user is created or refreshed
 
 ## Personal Access Token (PAT) Authentication
 
@@ -438,11 +484,12 @@ DATABASE_URL=<postgresql-connection-string>
 ### Development
 
 ```env
-# NextAuth (mock mode auto-enabled)
+# NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=dev-secret
+DEV_LOGIN_SECRET=<shared-preview-secret>
 
-# GitHub OAuth (optional for mock mode)
+# GitHub OAuth
 GITHUB_ID=
 GITHUB_SECRET=
 
@@ -455,47 +502,44 @@ DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 **File**: `app/auth/signin/page.tsx`
 
 ```typescript
-'use client';
-
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-
-export default function SignInPage() {
-  const handleGitHubSignIn = async () => {
-    await signIn('github', {
-      callbackUrl: '/projects',
-    });
-  };
+export default async function SignInPage({ searchParams }) {
+  const params = await searchParams;
+  const callbackUrl = params.callbackUrl || "/projects";
+  const devLoginEnabled = isDevLoginEnabled();
+  const devLoginError = getDevLoginErrorMessage(params.error);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign in to AI Board</h1>
-        </div>
+    <Card>
+      {devLoginError ? <Alert>{devLoginError}</Alert> : null}
 
-        <div className="space-y-4">
-          <Button
-            onClick={handleGitHubSignIn}
-            className="w-full"
-            variant="outline"
-          >
-            Sign in with GitHub
-          </Button>
+      <form action={async () => { "use server"; await signIn("github", { redirectTo: callbackUrl }); }}>
+        <Button type="submit">Continue with GitHub</Button>
+      </form>
 
-          <Button disabled className="w-full" variant="outline">
-            GitLab (Coming soon)
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            BitBucket (Coming soon)
-          </Button>
-        </div>
-      </div>
-    </div>
+      {devLoginEnabled ? (
+        <form action={async (formData) => {
+          "use server";
+          await signIn("dev-login", {
+            email: formData.get("email"),
+            secret: formData.get("secret"),
+            redirectTo: callbackUrl,
+          });
+        }}>
+          <Input name="email" type="email" required />
+          <Input name="secret" type="password" required />
+          <Button type="submit">Sign in with Dev Login</Button>
+        </form>
+      ) : null}
+    </Card>
   );
 }
 ```
+
+**Behavior**:
+- GitHub remains the primary sign-in path in all environments
+- The dev login form is rendered only when the credentials provider is enabled
+- The page preserves `callbackUrl` for both GitHub and dev login flows
+- GitLab and BitBucket remain disabled placeholder actions
 
 ## Middleware Protection
 
@@ -526,7 +570,7 @@ export const config = {
 ## Security Considerations
 
 ### Session Security
-- Database-backed sessions (no JWT vulnerabilities)
+- JWT sessions in normal runtime and database-backed sessions in test runtime
 - 30-day max age with sliding window
 - CSRF protection via NextAuth
 - Secure cookies (httpOnly, sameSite)

@@ -47,13 +47,27 @@ Two public static pages accessible without authentication:
 
 **Design**: `max-w-3xl mx-auto` container, semantic headings, effective date displayed at top. Server Components with no client-side state.
 
+## Sign-In Page
+
+The public sign-in page at `/auth/signin` always shows GitHub OAuth as the primary sign-in option and keeps GitLab and BitBucket visible as disabled "Coming soon" actions.
+
+When dev login is enabled for the current environment, the page also shows a secondary **Dev Login** panel with:
+- An email field
+- A shared secret password field
+- A "Sign in with Dev Login" submit button
+- Helper text explaining that the shared preview secret can be used instead of GitHub OAuth
+
+Dev login is shown only when a shared secret is configured and the app is running outside production, or on a Vercel preview deployment. It is hidden on production deployments.
+
+If a credentials sign-in attempt fails, the page shows an inline destructive alert with the message "Invalid email or secret."
+
 ## Sign-In Page Consent Notice
 
-The sign-in page displays a consent notice below the OAuth buttons:
+The sign-in page displays a consent notice below the available sign-in actions:
 
 > "By signing in, you agree to our Terms of Service and Privacy Policy"
 
-Links use purple accent color (`text-primary`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
+Links use the primary accent color (`text-primary`), surrounding text uses muted subtext styling, and the notice remains informational rather than blocking.
 
 ---
 

@@ -188,19 +188,20 @@
 ### NextAuth.js
 - **Version**: Latest stable (v4)
 - **Strategy**: Session-based authentication
-- **Providers**: GitHub OAuth (production), mock (dev/test)
-- **Storage**: Database sessions (PostgreSQL)
+- **Providers**: GitHub OAuth in all environments, plus an environment-gated Credentials provider for dev login in development and Vercel preview deployments
+- **Storage**: JWT sessions in normal runtime, database sessions in test runtime
 - **Features Used**:
   - OAuth integration
+  - Credentials provider for preview/development access
   - Session callbacks
   - JWT callbacks
   - Custom pages (`/auth/signin`)
   - Middleware for protected routes
 
 ### Test Authentication
-- **Mode**: Mock authentication when `NODE_ENV !== 'production'`
+- **Mode**: Database-backed test sessions with seeded user identity
 - **Test User**: `test@e2e.local`
-- **Pattern**: Auto-login in development and E2E tests
+- **Pattern**: Stable authenticated test identity for automated tests
 - **Security Model**: Same validation, simplified auth flow
 
 ## Drag & Drop

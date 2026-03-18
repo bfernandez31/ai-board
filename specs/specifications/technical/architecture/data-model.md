@@ -49,7 +49,8 @@ model User {
 **Business Rules**:
 - Every project must have a user (required userId)
 - Email uniquely identifies users across system
-- Mock authentication uses `test@e2e.local` in development
+- Automated tests use `test@e2e.local` as the seeded test identity
+- Dev login users are created or reused by normalized email address and linked to a NextAuth `Account` row with `provider="credentials"`
 - Users can have multiple push subscriptions (different browsers/devices)
 - `stripeCustomerId` is set on first subscription checkout and is immutable thereafter
 - Each user has at most one Subscription record (one-to-one)

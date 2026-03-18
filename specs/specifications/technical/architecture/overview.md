@@ -260,8 +260,8 @@ if (!project) {
 
 #### Authentication Layer
 - **NextAuth.js**: Session-based authentication
-- **OAuth Providers**: GitHub OAuth (production), mock auth (dev/test)
-- **Session Storage**: Database-backed sessions
+- **Providers**: GitHub OAuth in all environments, plus an environment-gated credentials provider for dev login in development and Vercel preview deployments
+- **Session Storage**: JWT in normal runtime, database sessions in test runtime
 - **CSRF Protection**: NextAuth built-in protection
 
 #### Authorization Layer
