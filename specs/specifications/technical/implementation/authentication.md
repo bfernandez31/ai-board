@@ -4,22 +4,45 @@ NextAuth.js setup, session management, Personal Access Tokens (PAT), and mock au
 
 ## NextAuth.js Configuration
 
-**Location**: `app/api/auth/[...nextauth]/route.ts`
+**Location**: `lib/auth.ts`
 
 ```typescript
-import NextAuth, { NextAuthOptions } from 'next-auth';
+import NextAuth from 'next-auth';
 import GitHubProvider from 'next-auth/providers/github';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/app/lib/db';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { createOrUpdateDevUser } from '@/app/lib/auth/user-service';
+import { timingSafeEqual } from 'crypto';
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+function devLoginProvider() {
+  return CredentialsProvider({
+    id: 'credentials',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      secret: { label: 'Secret', type: 'password' },
+    },
+    async authorize(credentials) {
+      const { email, secret } = credentials ?? {};
+      if (!email || !secret) return null;
 
+      const envSecret = process.env.DEV_LOGIN_SECRET!;
+      const a = Buffer.alloc(Math.max(secret.length, envSecret.length));
+      const b = Buffer.alloc(Math.max(secret.length, envSecret.length));
+      a.write(secret);
+      b.write(envSecret);
+      if (!timingSafeEqual(a, b)) return null;
+
+      return createOrUpdateDevUser(email);
+    },
+  });
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     GitHubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
     }),
+    ...(process.env.DEV_LOGIN_SECRET ? [devLoginProvider()] : []),
   ],
 
   pages: {
@@ -27,24 +50,121 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
-      if (session.user) {
-        session.user.id = user.id;
+    async jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
+    },
+    async signIn({ account }) {
+      // Allow Credentials provider unconditionally (already validated by authorize)
+      if (account?.provider === 'credentials') return true;
+      // GitHub OAuth — allow all
+      return true;
     },
   },
 
   session: {
-    strategy: 'database',  // Store sessions in database
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,  // 30 days
   },
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+});
 ```
+
+## Dev Login (Preview Environments)
+
+**Purpose**: Allows testers to sign in on Vercel preview deployments where GitHub OAuth callback URLs are not registered.
+
+**Security model**: Two-variable gate — `DEV_LOGIN_SECRET` (server-side only) validates credentials; `NEXT_PUBLIC_DEV_LOGIN=true` (public) controls form visibility. The Credentials provider is not registered at all when `DEV_LOGIN_SECRET` is unset, so production is unaffected even if the public flag is accidentally set.
+
+### Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as SignIn Page
+    participant C as DevLoginForm
+    participant NA as NextAuth
+    participant DB as Database
+
+    U->>UI: Navigate to /auth/signin
+    UI->>UI: Check NEXT_PUBLIC_DEV_LOGIN
+    UI->>C: Render DevLoginForm (if flag set)
+    U->>C: Enter email + secret
+    C->>NA: signIn("credentials", { email, secret, redirect: false })
+    NA->>NA: authorize() — timingSafeEqual(secret, DEV_LOGIN_SECRET)
+    alt valid secret
+        NA->>DB: upsert user by email (createOrUpdateDevUser)
+        DB-->>NA: user record
+        NA-->>C: { ok: true }
+        C->>UI: router.push(callbackUrl)
+    else invalid secret
+        NA-->>C: { ok: false, error: "CredentialsSignin" }
+        C->>U: Show "Invalid credentials" error
+    end
+```
+
+### User Upsert (`createOrUpdateDevUser`)
+
+**File**: `app/lib/auth/user-service.ts`
+
+- Normalizes email to lowercase (FR-010)
+- Generates deterministic ID: SHA-256 of lowercase email, first 24 hex chars
+- Derives display name from email prefix (before `@`)
+- Prisma `upsert` by email — only updates `updatedAt` on existing users (preserves name/image from GitHub OAuth)
+
+```typescript
+export async function createOrUpdateDevUser(email: string) {
+  const normalized = email.toLowerCase();
+  const id = crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 24);
+  const name = normalized.split('@')[0];
+
+  return prisma.user.upsert({
+    where: { email: normalized },
+    update: { updatedAt: new Date() },
+    create: { id, email: normalized, name, emailVerified: new Date() },
+    select: { id: true, email: true, name: true },
+  });
+}
+```
+
+### DevLoginForm Component
+
+**File**: `components/auth/dev-login-form.tsx`
+
+- `"use client"` component using shadcn/ui `Input`, `Button`, `Label`
+- Client-side validation: both fields required, email format check
+- Calls `signIn("credentials", { email, secret, redirect: false })` from `next-auth/react`
+- Redirects to `callbackUrl` on success; shows inline error on failure
+
+### Sign-In Page
+
+**File**: `app/auth/signin/page.tsx`
+
+Both GitHub OAuth and Dev Login form are shown when `NEXT_PUBLIC_DEV_LOGIN=true`. A visual separator ("or") separates them.
+
+```typescript
+// Conditionally render dev login below GitHub button
+{process.env.NEXT_PUBLIC_DEV_LOGIN === 'true' && (
+  <>
+    <div className="relative"><span>or</span></div>
+    <DevLoginForm callbackUrl={callbackUrl} />
+  </>
+)}
+```
+
+### Security Properties
+
+- `DEV_LOGIN_SECRET` is **never** exposed to the client bundle (no `NEXT_PUBLIC_` prefix)
+- Secret comparison uses `crypto.timingSafeEqual` with buffer padding to prevent timing attacks on secret length
+- Credentials provider is absent from the providers array when `DEV_LOGIN_SECRET` is unset — no server-side attack surface in production
+- Same email used via GitHub OAuth and Dev Login resolves to the same user record (upsert by email)
+
+---
 
 ## Mock Authentication (Development/Test)
 
@@ -450,52 +570,23 @@ GITHUB_SECRET=
 DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 ```
 
+### Preview Environments (Vercel)
+
+```env
+# Dev Login — enables Credentials-based login on preview deployments
+# Set DEV_LOGIN_SECRET to a random 32+ character string
+# Set NEXT_PUBLIC_DEV_LOGIN=true to show the dev login form
+DEV_LOGIN_SECRET=<random-32-char-secret>
+NEXT_PUBLIC_DEV_LOGIN=true
+```
+
+> **Warning**: Do NOT set `DEV_LOGIN_SECRET` in production. The Credentials provider is only registered when this variable is present.
+
 ## Sign-In Page
 
 **File**: `app/auth/signin/page.tsx`
 
-```typescript
-'use client';
-
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-
-export default function SignInPage() {
-  const handleGitHubSignIn = async () => {
-    await signIn('github', {
-      callbackUrl: '/projects',
-    });
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign in to AI Board</h1>
-        </div>
-
-        <div className="space-y-4">
-          <Button
-            onClick={handleGitHubSignIn}
-            className="w-full"
-            variant="outline"
-          >
-            Sign in with GitHub
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            GitLab (Coming soon)
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            BitBucket (Coming soon)
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-```
+Server component that renders the GitHub OAuth button and, when `NEXT_PUBLIC_DEV_LOGIN=true`, also renders the `DevLoginForm` below a visual separator. The `callbackUrl` from the query string is forwarded to both sign-in paths.
 
 ## Middleware Protection
 
