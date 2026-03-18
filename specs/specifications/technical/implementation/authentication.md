@@ -46,6 +46,102 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 ```
 
+## Dev Login (Preview Environments)
+
+**Purpose**: Allows login on Vercel preview deployments where GitHub OAuth is unusable (random URLs per deploy).
+
+**Activation**: Enabled only when `DEV_LOGIN_SECRET` env var is set server-side. The sign-in form is shown only when `NEXT_PUBLIC_DEV_LOGIN=true` is set client-side.
+
+**Provider ID**: `dev-login` (NextAuth Credentials provider)
+
+### How It Works
+
+```typescript
+// lib/auth.ts — conditional provider registration
+...(process.env.DEV_LOGIN_SECRET ? [
+  Credentials({
+    id: "dev-login",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      secret: { label: "Secret", type: "password" },
+    },
+    async authorize(credentials) {
+      if (credentials?.secret !== process.env.DEV_LOGIN_SECRET) return null;
+      const user = await createOrUpdateDevUser(credentials.email);
+      return user;
+    },
+  }),
+] : [])
+```
+
+### User Provisioning
+
+**File**: `app/lib/auth/user-service.ts`
+
+```typescript
+/**
+ * Creates or updates a user via Dev Login (Credentials provider).
+ * Used only in preview environments when DEV_LOGIN_SECRET is set.
+ */
+export async function createOrUpdateDevUser(email: string) {
+  return prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      name: email.split('@')[0],
+      emailVerified: new Date(),
+    },
+  });
+}
+```
+
+### Sign-In Form
+
+**File**: `app/auth/signin/dev-login-form.tsx`
+
+The `DevLoginForm` client component renders below the GitHub button when `NEXT_PUBLIC_DEV_LOGIN=true`:
+
+```typescript
+// app/auth/signin/page.tsx
+const devLoginEnabled = process.env.NEXT_PUBLIC_DEV_LOGIN === "true"
+
+// ...
+{devLoginEnabled && <DevLoginForm callbackUrl={callbackUrl} />}
+```
+
+The form calls `signIn("dev-login", { email, secret, redirect: false })` and redirects on success.
+
+### Security Constraints
+
+- `DEV_LOGIN_SECRET` must **never** be set in production
+- `NEXT_PUBLIC_DEV_LOGIN` must **never** be `true` in production
+- Secret match is server-side — if secret doesn't match, `authorize()` returns `null`
+- No rate limiting (preview-only, not exposed to public traffic)
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as DevLoginForm
+    participant NA as NextAuth
+    participant DB as Database
+
+    U->>UI: Enter email + secret
+    UI->>NA: signIn("dev-login", { email, secret })
+    NA->>NA: authorize() — compare secret vs DEV_LOGIN_SECRET
+    alt Secret matches
+        NA->>DB: upsert user by email
+        DB-->>NA: user record
+        NA-->>UI: { url: callbackUrl }
+        UI->>U: Redirect to app
+    else Secret mismatch
+        NA-->>UI: { error: "CredentialsSignin" }
+        UI->>U: Show "Invalid email or secret"
+    end
+```
+
 ## Mock Authentication (Development/Test)
 
 **Test Mode**: Enabled when `NODE_ENV !== 'production'`
@@ -448,6 +544,16 @@ GITHUB_SECRET=
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
+```
+
+### Preview Environments (Vercel)
+
+```env
+# Dev Login — enables Credentials provider (NEVER set in production)
+DEV_LOGIN_SECRET=<shared-secret-for-preview>
+
+# Shows DevLoginForm on sign-in page (NEVER set in production)
+NEXT_PUBLIC_DEV_LOGIN=true
 ```
 
 ## Sign-In Page
