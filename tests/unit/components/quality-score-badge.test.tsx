@@ -19,35 +19,35 @@ describe('QualityScoreBadge', () => {
     expect(screen.getByTestId('quality-score-badge')).toHaveTextContent('83');
   });
 
-  // Excellent (90-100): green
-  it.each([90, 100])('applies green/emerald classes for score %i (Excellent)', (score) => {
+  // Excellent (90-100): green (ctp-green token)
+  it.each([90, 100])('applies ctp-green classes for score %i (Excellent)', (score) => {
     renderWithProviders(<QualityScoreBadge score={score} />);
     const badge = screen.getByTestId('quality-score-badge');
-    expect(badge.className).toContain('text-emerald-700');
-    expect(badge.className).toContain('bg-emerald-100');
+    expect(badge.className).toContain('text-ctp-green');
+    expect(badge.className).toContain('bg-ctp-green/10');
   });
 
-  // Good (70-89): blue
-  it.each([70, 89])('applies blue classes for score %i (Good)', (score) => {
+  // Good (70-89): blue (ctp-blue token)
+  it.each([70, 89])('applies ctp-blue classes for score %i (Good)', (score) => {
     renderWithProviders(<QualityScoreBadge score={score} />);
     const badge = screen.getByTestId('quality-score-badge');
-    expect(badge.className).toContain('text-blue-700');
-    expect(badge.className).toContain('bg-blue-100');
+    expect(badge.className).toContain('text-ctp-blue');
+    expect(badge.className).toContain('bg-ctp-blue/10');
   });
 
-  // Fair (50-69): amber
-  it.each([50, 69])('applies amber classes for score %i (Fair)', (score) => {
+  // Fair (50-69): yellow (ctp-yellow token)
+  it.each([50, 69])('applies ctp-yellow classes for score %i (Fair)', (score) => {
     renderWithProviders(<QualityScoreBadge score={score} />);
     const badge = screen.getByTestId('quality-score-badge');
-    expect(badge.className).toContain('text-amber-700');
-    expect(badge.className).toContain('bg-amber-100');
+    expect(badge.className).toContain('text-ctp-yellow');
+    expect(badge.className).toContain('bg-ctp-yellow/10');
   });
 
-  // Poor (0-49): red
-  it.each([0, 49])('applies red classes for score %i (Poor)', (score) => {
+  // Poor (0-49): red (ctp-red token)
+  it.each([0, 49])('applies ctp-red classes for score %i (Poor)', (score) => {
     renderWithProviders(<QualityScoreBadge score={score} />);
     const badge = screen.getByTestId('quality-score-badge');
-    expect(badge.className).toContain('text-red-700');
-    expect(badge.className).toContain('bg-red-100');
+    expect(badge.className).toContain('text-ctp-red');
+    expect(badge.className).toContain('bg-ctp-red/10');
   });
 });
