@@ -1,19 +1,44 @@
-import { signIn } from "@/lib/auth"
 import { DEV_LOGIN_PROVIDER_ID, getDevLoginErrorMessage, isDevLoginEnabled } from "@/app/lib/auth/dev-login"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { signIn } from "@/lib/auth"
 import { Github } from "lucide-react"
-import { SiGitlab, SiBitbucket } from "react-icons/si"
 import Link from "next/link"
+import type { ComponentType } from "react"
+import { SiBitbucket, SiGitlab } from "react-icons/si"
+
+type SignInPageProps = {
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>
+}
+
+type DisabledProviderButtonProps = {
+  icon: ComponentType<{ className?: string }>
+  name: string
+}
+
+function DisabledProviderButton({ icon: Icon, name }: DisabledProviderButtonProps) {
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        size="lg"
+        disabled
+        className="w-full cursor-not-allowed opacity-50"
+      >
+        <Icon className="mr-2 h-5 w-5" />
+        Continue with {name}
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">Coming soon</p>
+    </div>
+  )
+}
 
 export default async function SignInPage({
   searchParams,
-}: {
-  searchParams: Promise<{ callbackUrl?: string; error?: string }>
-}) {
+}: SignInPageProps) {
   const params = await searchParams
   const callbackUrl = params.callbackUrl || "/projects"
   const devLoginEnabled = isDevLoginEnabled()
@@ -35,13 +60,14 @@ export default async function SignInPage({
             </Alert>
           ) : null}
 
-          {/* GitHub OAuth - Active */}
-          <form action={async () => {
-            "use server"
-            await signIn("github", {
-              redirectTo: callbackUrl
-            })
-          }}>
+          <form
+            action={async () => {
+              "use server"
+              await signIn("github", {
+                redirectTo: callbackUrl,
+              })
+            }}
+          >
             <Button type="submit" className="w-full" size="lg">
               <Github className="mr-2 h-5 w-5" />
               Continue with GitHub
@@ -97,37 +123,9 @@ export default async function SignInPage({
             </div>
           ) : null}
 
-          {/* GitLab OAuth - Disabled */}
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              size="lg"
-              disabled
-              className="w-full opacity-50 cursor-not-allowed"
-            >
-              <SiGitlab className="mr-2 h-5 w-5" />
-              Continue with GitLab
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              Coming soon
-            </p>
-          </div>
+          <DisabledProviderButton icon={SiGitlab} name="GitLab" />
+          <DisabledProviderButton icon={SiBitbucket} name="BitBucket" />
 
-          {/* BitBucket OAuth - Disabled */}
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              size="lg"
-              disabled
-              className="w-full opacity-50 cursor-not-allowed"
-            >
-              <SiBitbucket className="mr-2 h-5 w-5" />
-              Continue with BitBucket
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              Coming soon
-            </p>
-          </div>
           <p className="text-sm text-center text-muted-foreground">
             By signing in, you agree to our{' '}
             <Link href="/legal/terms" className="text-primary hover:underline">

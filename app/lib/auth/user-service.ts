@@ -1,72 +1,67 @@
-import { prisma } from '@/lib/db/client';
-import type { Account } from 'next-auth';
+import { prisma } from "@/lib/db/client"
+import type { Account } from "next-auth"
 
-/**
- * GitHub profile data from OAuth provider
- */
 export interface GitHubProfile {
-  id: number;
-  email: string;
-  name: string | null;
-  login: string;
-  avatar_url: string;
-  email_verified?: boolean;
+  id: number
+  email: string
+  name: string | null
+  login: string
+  avatar_url: string
+  email_verified?: boolean
 }
 
-/**
- * Validates GitHub profile has required fields
- * @param profile - Profile data from GitHub OAuth
- * @returns True if profile is valid, false otherwise
- */
 export function validateGitHubProfile(profile: unknown): profile is GitHubProfile {
-  const p = profile as Record<string, unknown> | null | undefined;
+  const p = profile as Record<string, unknown> | null | undefined
   if (!p?.email) {
-    console.error('GitHub profile missing email', {
+    console.error("GitHub profile missing email", {
       providerId: p?.id,
       timestamp: new Date().toISOString(),
-    });
-    return false;
+    })
+    return false
   }
 
-  return true;
+  return true
 }
 
-/**
- * Creates or updates User and Account records in database
- * Uses transaction to ensure atomicity
- * @param profile - Validated GitHub profile
- * @param account - NextAuth account data
- * @returns User ID
- */
+function getGitHubDisplayName(profile: GitHubProfile): string {
+  return profile.name || profile.login
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
 export async function createOrUpdateUser(
   profile: GitHubProfile,
-  account: Account
+  account: Account,
 ): Promise<{ id: string }> {
-  return await prisma.$transaction(async (tx) => {
-    // Upsert User record
+  return prisma.$transaction(async (tx) => {
+    const githubUserId = String(profile.id)
+    const displayName = getGitHubDisplayName(profile)
+    const now = new Date()
+
     const user = await tx.user.upsert({
       where: { email: profile.email },
       update: {
-        name: profile.name || profile.login,
+        name: displayName,
         image: profile.avatar_url,
-        updatedAt: new Date(),
+        updatedAt: now,
       },
       create: {
-        id: String(profile.id), // Use GitHub ID as User ID
+        id: githubUserId,
         email: profile.email,
-        name: profile.name || profile.login,
-        emailVerified: new Date(),
+        name: displayName,
+        emailVerified: now,
         image: profile.avatar_url,
-        updatedAt: new Date(),
+        updatedAt: now,
       },
-    });
+    })
 
-    // Upsert Account record
     await tx.account.upsert({
       where: {
         provider_providerAccountId: {
-          provider: 'github',
-          providerAccountId: String(profile.id),
+          provider: "github",
+          providerAccountId: githubUserId,
         },
       },
       update: {
@@ -77,9 +72,9 @@ export async function createOrUpdateUser(
       create: {
         id: crypto.randomUUID(),
         userId: user.id,
-        type: 'oauth',
-        provider: 'github',
-        providerAccountId: String(profile.id),
+        type: "oauth",
+        provider: "github",
+        providerAccountId: githubUserId,
         access_token: account.access_token ?? null,
         refresh_token: account.refresh_token ?? null,
         expires_at: account.expires_at ?? null,
@@ -87,66 +82,61 @@ export async function createOrUpdateUser(
         scope: account.scope ?? null,
         id_token: account.id_token ?? null,
       },
-    });
+    })
 
-    return { id: user.id };
-  });
+    return { id: user.id }
+  })
 }
 
-/**
- * Creates or updates a user for the preview/dev credentials flow.
- * The account record keeps this flow idempotent and aligned with the existing auth model.
- * @param email - User email submitted through dev login
- * @returns User record
- */
 export async function createOrUpdateDevLoginUser(
-  email: string
+  email: string,
 ): Promise<{ id: string; email: string; name: string | null }> {
-  return await prisma.$transaction(async (tx) => {
-    const normalizedEmail = email.trim().toLowerCase();
+  return prisma.$transaction(async (tx) => {
+    const normalizedEmail = normalizeEmail(email)
+    const now = new Date()
 
     const user = await tx.user.upsert({
       where: { email: normalizedEmail },
       update: {
         email: normalizedEmail,
         name: normalizedEmail,
-        emailVerified: new Date(),
-        updatedAt: new Date(),
+        emailVerified: now,
+        updatedAt: now,
       },
       create: {
         id: crypto.randomUUID(),
         email: normalizedEmail,
         name: normalizedEmail,
-        emailVerified: new Date(),
-        updatedAt: new Date(),
+        emailVerified: now,
+        updatedAt: now,
       },
       select: {
         id: true,
         email: true,
         name: true,
       },
-    });
+    })
 
     await tx.account.upsert({
       where: {
         provider_providerAccountId: {
-          provider: 'credentials',
+          provider: "credentials",
           providerAccountId: normalizedEmail,
         },
       },
       update: {
         userId: user.id,
-        type: 'credentials',
+        type: "credentials",
       },
       create: {
         id: crypto.randomUUID(),
         userId: user.id,
-        type: 'credentials',
-        provider: 'credentials',
+        type: "credentials",
+        provider: "credentials",
         providerAccountId: normalizedEmail,
       },
-    });
+    })
 
-    return user;
-  });
+    return user
+  })
 }

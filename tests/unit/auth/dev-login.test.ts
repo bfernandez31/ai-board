@@ -5,6 +5,13 @@ import {
   isDevLoginEnabled,
 } from '@/app/lib/auth/dev-login';
 
+function createEnabledDevEnv(): NodeJS.ProcessEnv {
+  return {
+    NODE_ENV: 'development',
+    DEV_LOGIN_SECRET: 'secret-1234567890',
+  };
+}
+
 describe('dev-login auth helper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,10 +80,7 @@ describe('dev-login auth helper', () => {
           secret: 'secret-1234567890',
         },
         {
-          env: {
-            NODE_ENV: 'development',
-            DEV_LOGIN_SECRET: 'secret-1234567890',
-          },
+          env: createEnabledDevEnv(),
           createUser,
         }
       );
@@ -94,10 +98,7 @@ describe('dev-login auth helper', () => {
           secret: 'wrong-secret',
         },
         {
-          env: {
-            NODE_ENV: 'development',
-            DEV_LOGIN_SECRET: 'secret-1234567890',
-          },
+          env: createEnabledDevEnv(),
           createUser,
         }
       );
@@ -118,10 +119,7 @@ describe('dev-login auth helper', () => {
           secret: 'secret-1234567890',
         },
         {
-          env: {
-            NODE_ENV: 'development',
-            DEV_LOGIN_SECRET: 'secret-1234567890',
-          },
+          env: createEnabledDevEnv(),
           createUser,
         }
       );
