@@ -339,8 +339,13 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 
 ### Touch Support
 
+**Sensor Configuration**:
+- **Desktop**: `MouseSensor` with 8px distance threshold prevents accidental drags
+- **Touch devices**: `TouchSensor` with 250ms long-press delay and 20px tolerance
+- `MouseSensor` is used instead of `PointerSensor` to avoid intercepting touch events, which would bypass the `TouchSensor` delay and cause accidental drags on mobile
+
 **Mobile Interaction**:
-- Long-press to initiate drag
+- Long-press (≥250ms) to initiate drag — quick swipes scroll without triggering drag
 - Touch-friendly drag targets
 - Visual feedback adapted for touch
 - Smooth performance on mobile devices

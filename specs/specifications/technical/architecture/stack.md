@@ -210,7 +210,8 @@
   - `@dnd-kit/core`: Core drag-and-drop functionality
   - `@dnd-kit/sortable`: Sortable list utilities
 - **Features Used**:
-  - Touch device support
+  - `MouseSensor` for desktop (8px distance threshold)
+  - `TouchSensor` for mobile (250ms delay, 20px tolerance)
   - Drag overlays (ghost preview)
   - Collision detection
   - Accessibility (keyboard navigation)

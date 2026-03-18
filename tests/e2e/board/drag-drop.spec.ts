@@ -404,7 +404,8 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * T012: Test mobile scrolling does not trigger drag (T905)
-   * Validates that quick swipes for scrolling don't initiate drag operations
+   * Validates that quick touch swipes for scrolling don't initiate drag operations.
+   * Uses CDP touch events to simulate real touch input (TouchSensor requires 250ms delay).
    */
   test('mobile scrolling does not trigger accidental drag', async ({ page, request , projectId }) => {
     // Set mobile viewport
@@ -428,16 +429,28 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const ticketCard = page.locator(`[data-ticket-id="${firstTicket.id}"]`);
     const inboxColumn = page.locator('[data-stage="INBOX"]');
 
-    // Simulate quick swipe (< 250ms) - should allow scroll, not trigger drag
+    // Simulate quick touch swipe (< 250ms) via CDP — should scroll, not drag
     const ticketBox = await ticketCard.boundingBox();
     if (ticketBox) {
-      // Quick vertical swipe (100ms) - this should scroll, not drag
-      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-      await page.mouse.down();
-      // Move down quickly within 100ms (less than 250ms delay threshold)
-      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2 + 100, { steps: 1 });
-      await page.waitForTimeout(50); // Total interaction < 250ms
-      await page.mouse.up();
+      const cx = ticketBox.x + ticketBox.width / 2;
+      const cy = ticketBox.y + ticketBox.height / 2;
+      const cdp = await page.context().newCDPSession(page);
+
+      // Touch start
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: cx, y: cy }],
+      });
+      // Quick vertical swipe — released well before 250ms delay threshold
+      await page.waitForTimeout(50);
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: cx, y: cy + 100 }],
+      });
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
       await page.waitForTimeout(300);
     }
 
@@ -452,7 +465,8 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
 
   /**
    * T013: Test mobile long-press still triggers drag (T905)
-   * Validates that deliberate long-press (>= 250ms) initiates drag as expected
+   * Validates that deliberate touch long-press (>= 250ms) initiates drag as expected.
+   * Uses CDP touch events to simulate real touch input for TouchSensor activation.
    */
   test('mobile long-press triggers drag operation', async ({ page, request , projectId }) => {
     // Set mobile viewport
@@ -471,13 +485,34 @@ test.describe('Drag-and-Drop Ticket Movement', () => {
     const targetBox = await specifyColumn.boundingBox();
 
     if (ticketBox && targetBox) {
-      // Long-press (>= 250ms) then drag - should trigger drag operation
-      await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
-      await page.mouse.down();
-      await page.waitForTimeout(300); // Long-press delay (> 250ms threshold)
-      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
-      await page.mouse.up();
-      await page.waitForTimeout(200);
+      const cx = ticketBox.x + ticketBox.width / 2;
+      const cy = ticketBox.y + ticketBox.height / 2;
+      const tx = targetBox.x + targetBox.width / 2;
+      const ty = targetBox.y + targetBox.height / 2;
+      const cdp = await page.context().newCDPSession(page);
+
+      // Touch start — begin long-press
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: cx, y: cy }],
+      });
+      // Hold for 300ms (exceeds 250ms TouchSensor delay)
+      await page.waitForTimeout(300);
+      // Drag to target column in steps
+      const steps = 10;
+      for (let i = 1; i <= steps; i++) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: cx + (tx - cx) * (i / steps), y: cy + (ty - cy) * (i / steps) }],
+        });
+        await page.waitForTimeout(16); // ~60fps
+      }
+      // Release
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await page.waitForTimeout(300);
     }
 
     // Verify ticket moved to SPECIFY (drag succeeded)

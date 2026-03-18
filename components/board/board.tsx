@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -241,14 +241,14 @@ export function Board({
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8, // Prevent accidental drags
+        distance: 8, // Prevent accidental drags with mouse
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // Long-press duration for deliberate drag
+        delay: 250, // Long-press duration for deliberate drag on touch devices
         tolerance: 20, // Allow vertical scroll gestures without triggering drag (T905)
       },
     })
