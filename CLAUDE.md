@@ -107,7 +107,7 @@ For full endpoint catalog, read `specs/specifications/endpoints.md`.
 
 - **Projects 1-2**: Reserved for E2E tests (auto-cleaned)
 - **Project 3+**: Development and production
-- **Test prefix**: All test data must use `[e2e]` prefix
+- **Test prefix**: Project names, ticket titles, and token names must use `[e2e]` prefix (enables cleanup via `startsWith` queries)
 
 ## GitHub Workflows
 
@@ -126,7 +126,7 @@ See `.github/workflows/` for implementation. Key workflows:
 **Critical rules** (always apply):
 - E2E is expensive (~5s each) — default to integration tests when unsure
 - Search existing tests FIRST — extend, don't duplicate
-- `[e2e]` prefix required for all test data
+- `[e2e]` prefix required for test project names, ticket titles, and token names
 - API tests use Vitest, NOT Playwright
 
 **Test locations**: `tests/unit/`, `tests/unit/components/`, `tests/integration/`, `tests/e2e/`
