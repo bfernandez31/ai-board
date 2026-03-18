@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Github } from "lucide-react"
 import { SiGitlab, SiBitbucket } from "react-icons/si"
 import Link from "next/link"
+import { DevLoginForm } from "@/components/auth/dev-login-form"
 
 export default async function SignInPage({
   searchParams,
@@ -35,6 +36,11 @@ export default async function SignInPage({
               Continue with GitHub
             </Button>
           </form>
+
+          {/* Dev Login - Preview Environments Only */}
+          {process.env.NEXT_PUBLIC_DEV_LOGIN === 'true' && (
+            <DevLoginForm callbackUrl={callbackUrl} />
+          )}
 
           {/* GitLab OAuth - Disabled */}
           <div className="space-y-2">

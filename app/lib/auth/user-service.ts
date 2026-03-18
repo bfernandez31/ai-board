@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import type { Account } from 'next-auth';
+import { createHash } from 'crypto';
 
 /**
  * GitHub profile data from OAuth provider
@@ -29,6 +30,34 @@ export function validateGitHubProfile(profile: unknown): profile is GitHubProfil
   }
 
   return true;
+}
+
+/**
+ * Creates or updates a user for dev login (Credentials provider).
+ * Uses deterministic ID from email hash. Does not overwrite name/image on existing users.
+ */
+export async function createOrUpdateDevUser(
+  email: string
+): Promise<{ id: string; email: string; name: string }> {
+  const normalizedEmail = email.toLowerCase();
+  const id = createHash('sha256').update(normalizedEmail).digest('hex').slice(0, 24);
+  const name = normalizedEmail.split('@')[0] ?? normalizedEmail;
+
+  const user = await prisma.user.upsert({
+    where: { email: normalizedEmail },
+    update: {
+      updatedAt: new Date(),
+    },
+    create: {
+      id,
+      email: normalizedEmail,
+      name,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  return { id: user.id, email: user.email!, name: user.name! };
 }
 
 /**
