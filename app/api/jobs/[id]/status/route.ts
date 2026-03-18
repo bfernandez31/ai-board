@@ -177,6 +177,8 @@ export async function PATCH(
       status: JobStatus;
       startedAt?: Date;
       completedAt?: Date;
+      qualityScore?: number;
+      qualityScoreDetails?: string;
     } = {
       status: requestedStatus,
     };
@@ -187,6 +189,14 @@ export async function PATCH(
 
     if (isTerminalState) {
       updateData.completedAt = new Date();
+    }
+
+    // Persist quality score only on COMPLETED status
+    if (requestedStatus === 'COMPLETED' && validationResult.data.qualityScore != null) {
+      updateData.qualityScore = validationResult.data.qualityScore;
+      if (validationResult.data.qualityScoreDetails) {
+        updateData.qualityScoreDetails = validationResult.data.qualityScoreDetails;
+      }
     }
 
     const updatedJob = await prisma.job.update({

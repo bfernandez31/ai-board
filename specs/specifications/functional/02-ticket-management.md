@@ -278,6 +278,25 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 - Automatically shown/hidden based on job presence
 - No empty state shown when tab is absent
 
+**Quality Score Section**:
+
+For FULL workflow tickets with a COMPLETED verify job that has a quality score, a quality score section appears at the top of the Stats tab:
+
+- **Overall Score**: Integer 0-100 displayed prominently
+- **Threshold Label**: Human-readable classification with color coding:
+  - **Excellent** (90-100): green
+  - **Good** (70-89): blue
+  - **Fair** (50-69): amber
+  - **Poor** (0-49): red
+- **Dimension Breakdown**: All five dimensions with individual scores and weights:
+  - Bug Detection (30%)
+  - Compliance (30%)
+  - Code Comments (20%)
+  - Historical Context (10%)
+  - PR Comments (10%)
+- **Score Source**: Taken from the latest COMPLETED verify job when multiple exist (rollback-reset scenarios)
+- **Absence**: No quality score section appears for QUICK or CLEAN workflow tickets, or if the verify job failed or was cancelled
+
 **Summary Metrics**:
 - **Total Cost**: Aggregated cost in USD from all jobs (formatted as $X.XX)
 - **Total Duration**: Combined execution time across all jobs (formatted as Xm Xs)

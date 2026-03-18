@@ -53,8 +53,9 @@ sequenceDiagram
         GH->>AI: /code-simplifier
         GH->>AI: /sync-specifications
         GH->>GH: Create PR
-        GH->>AI: /code-review
-        GH->>API: Job COMPLETED
+        GH->>AI: /code-review (produces quality-score.json)
+        GH->>GH: Parse quality-score.json, compute weighted score
+        GH->>API: Job COMPLETED { qualityScore, qualityScoreDetails }
     end
 ```
 
@@ -148,6 +149,60 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 - For example, a job running `plan` then `tasks` sums metrics from both
 - Multiple OTLP batches from the same job accumulate correctly
 - Provides total resource usage for the complete workflow execution
+
+### Quality Score Computation (FULL Workflow VERIFY Only)
+
+For FULL workflow verify jobs, the code review step produces a quality score alongside its findings.
+
+**How it works**:
+1. The `/code-review` command runs 5 parallel review agents, each covering a scoring dimension:
+   - Bug Detection (weight: 30%)
+   - Compliance (weight: 30%)
+   - Code Comments (weight: 20%)
+   - Historical Context (weight: 10%)
+   - PR Comments (weight: 10%)
+2. Each agent returns a dimension score (0-100) alongside its issue list
+3. The command writes a `quality-score.json` file to the workspace
+4. The verify workflow parses the file and computes the weighted final score: `round(Σ score_i × weight_i)`
+5. The final score and dimension details are sent via `PATCH /api/jobs/:id/status` when marking the job COMPLETED
+6. The score is stored on the Job record (`qualityScore`, `qualityScoreDetails`) and displayed in the UI
+
+**Score thresholds**:
+| Range | Label | Color |
+|-------|-------|-------|
+| 90-100 | Excellent | Green |
+| 70-89 | Good | Blue |
+| 50-69 | Fair | Amber |
+| 0-49 | Poor | Red |
+
+**Conditions where no score is produced**:
+- QUICK or CLEAN workflow tickets
+- Verify job that fails or is cancelled
+- Code review command fails to produce `quality-score.json`
+
+```mermaid
+sequenceDiagram
+    participant VW as verify.yml
+    participant CR as /code-review command
+    participant A1 as Agent: Bug Detection
+    participant A2 as Agent: Compliance
+    participant AN as Agent: (×3 more)
+    participant API as PATCH /api/jobs/:id/status
+    participant DB as Database (Job)
+
+    VW->>CR: Run code review
+    CR->>A1: Review + score dimension
+    CR->>A2: Review + score dimension
+    CR->>AN: Review + score dimensions
+    A1-->>CR: { score: 90, issues: [...] }
+    A2-->>CR: { score: 80, issues: [...] }
+    AN-->>CR: { scores, issues }
+    CR->>CR: Compute weighted sum → finalScore
+    CR->>VW: Write quality-score.json
+    VW->>API: { status: "COMPLETED", qualityScore: 83, qualityScoreDetails: "{...}" }
+    API->>DB: UPDATE job SET qualityScore=83, qualityScoreDetails=...
+    API-->>VW: 200 OK
+```
 
 ### Job Restrictions
 

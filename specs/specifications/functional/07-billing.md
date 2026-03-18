@@ -12,7 +12,7 @@ AI-Board provides three subscription tiers (Free, Pro, Team) with Stripe-based b
 |------|-------|----------|---------------|---------|-----------|
 | Free | $0 | 1 | 5 | No | Standard |
 | Pro | $15/mo | Unlimited | Unlimited | No | Standard |
-| Team | $30/mo | Unlimited | Unlimited | Yes | Advanced |
+| Team | $30/mo | Unlimited | Unlimited | Yes | Advanced (includes quality score analytics) |
 
 **Trial**: Pro and Team plans include a 14-day free trial for new subscribers.
 
@@ -29,7 +29,7 @@ The system enforces limits at the API layer before any create operation:
 - **Pro/Team plan**: No project or ticket limits enforced.
 - **Member invitations**: Only available on Team plan. Free and Pro users cannot invite project members (`PLAN_LIMIT` 403).
 - **Team plan - member count**: Maximum 10 members per project. Attempting to add an 11th member returns a `PLAN_LIMIT` (403) error.
-- **Advanced analytics**: Only available on Team plan. Non-Team users see an upgrade prompt gate.
+- **Advanced analytics**: Only available on Team plan. Non-Team users see an upgrade prompt gate. Includes quality score trend charts and per-dimension comparisons.
 
 ### Effective Plan
 

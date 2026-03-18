@@ -261,6 +261,7 @@ export const StageColumn = React.memo(
                     workflowJob={dualJobs?.workflow || null}
                     aiBoardJob={dualJobs?.aiBoard || null}
                     deployJob={dualJobs?.deployJob || null}
+                    qualityScore={dualJobs?.qualityScore ?? null}
                     isDraggable={isDraggable}
                     activePreviewTicket={activePreviewTicket || null}
                     activeDeploymentTicket={activeDeploymentTicket || null}

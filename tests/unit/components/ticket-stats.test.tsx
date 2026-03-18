@@ -31,6 +31,8 @@ function createMockJob(
     durationMs: 300000, // 5 minutes
     model: 'claude-opus-4-5',
     toolsUsed: ['Read', 'Edit'],
+    qualityScore: null,
+    qualityScoreDetails: null,
     ...overrides,
   };
 }

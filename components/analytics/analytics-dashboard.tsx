@@ -21,6 +21,8 @@ import { CacheEfficiencyChart } from './cache-efficiency-chart';
 import { TopToolsChart } from './top-tools-chart';
 import { WorkflowDistributionChart } from './workflow-distribution-chart';
 import { VelocityChart } from './velocity-chart';
+import { QualityScoreTrendChart } from './quality-score-trend-chart';
+import { DimensionComparisonChart } from './dimension-comparison-chart';
 import { useSubscription } from '@/hooks/use-subscription';
 import { UpgradePrompt } from '@/components/billing/upgrade-prompt';
 import {
@@ -210,6 +212,24 @@ export function AnalyticsDashboard({ projectId, initialData }: AnalyticsDashboar
             <div className="md:col-span-2">
               <VelocityChart data={analytics.velocity} emptyMessage={emptyMessage} />
             </div>
+
+            {subscription?.limits.advancedAnalytics && analytics.qualityScore && (
+              <>
+                <div className="md:col-span-2">
+                  <QualityScoreTrendChart
+                    data={analytics.qualityScore.scoreTrend}
+                    emptyMessage={emptyMessage}
+                  />
+                </div>
+
+                <div className="lg:col-span-1">
+                  <DimensionComparisonChart
+                    data={analytics.qualityScore.dimensionComparison}
+                    emptyMessage={emptyMessage}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </>
       ) : (
