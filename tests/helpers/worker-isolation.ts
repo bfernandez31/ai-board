@@ -62,6 +62,14 @@ export const test = base.extend<{ projectId: number }>({
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(projectId);
   },
+  // Dismiss the keyboard shortcuts dialog before each test so it doesn't block interactions
+  page: async ({ page }, use) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('shortcuts-hint-dismissed', 'true');
+    });
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    await use(page);
+  },
 });
 
 // Re-export Playwright types for convenience

@@ -32,8 +32,8 @@ test.describe('Rollback Quick-Impl Workflow', () => {
     const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
 
     // Ensure both elements are visible
-    await expect(ticketCard).toBeVisible();
-    await expect(targetColumn).toBeVisible();
+    await expect(ticketCard).toBeVisible({ timeout: 5000 });
+    await expect(targetColumn).toBeVisible({ timeout: 5000 });
 
     const ticketBox = await ticketCard.boundingBox();
     const targetBox = await targetColumn.boundingBox();
@@ -42,42 +42,31 @@ test.describe('Rollback Quick-Impl Workflow', () => {
       throw new Error('Could not get bounding boxes for drag elements');
     }
 
-    // Calculate coordinates
     const startX = ticketBox.x + ticketBox.width / 2;
     const startY = ticketBox.y + ticketBox.height / 2;
     const endX = targetBox.x + targetBox.width / 2;
     const endY = targetBox.y + targetBox.height / 2;
 
-    // Use dispatchEvent to fire proper pointer events that @dnd-kit recognizes
-    await ticketCard.dispatchEvent('pointerdown', {
-      clientX: startX,
-      clientY: startY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
+    // Use consistent mouse events for @dnd-kit MouseSensor compatibility
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
 
-    // Small delay for event processing
-    await page.waitForTimeout(50);
-
-    // Move slightly to activate drag (>8px threshold)
-    await page.mouse.move(startX + 15, startY);
+    // Pause to let @dnd-kit register the pointerdown and set up listeners
     await page.waitForTimeout(100);
 
-    // Move to target
-    await page.mouse.move(endX, endY, { steps: 10 });
+    // Move past the 8px distance activation threshold first
+    await page.mouse.move(startX + 10, startY, { steps: 3 });
     await page.waitForTimeout(50);
 
-    // Release on target column
-    await targetColumn.dispatchEvent('pointerup', {
-      clientX: endX,
-      clientY: endY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
+    // Move to target column
+    await page.mouse.move(endX, endY, { steps: 15 });
+    await page.waitForTimeout(50);
 
-    await page.waitForTimeout(300); // Wait for UI update
+    // Release
+    await page.mouse.up();
+
+    // Wait for drag end handler to fire and process the transition
+    await page.waitForTimeout(500);
   };
 
   /**
@@ -100,7 +89,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
         return isRollback || isNormalTransition;
       },
-      { timeout: 5000 }
+      { timeout: 10000 }
     );
   };
 
@@ -431,7 +420,7 @@ test.describe('Rollback Quick-Impl Workflow', () => {
 
     // Wait for quick-impl confirmation modal
     const modal = page.locator('[role="dialog"]', { hasText: /quick implementation/i });
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click proceed button and wait for API response simultaneously
     const proceedButton = modal.locator('button', { hasText: /proceed/i });

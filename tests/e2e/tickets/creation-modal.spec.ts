@@ -26,7 +26,9 @@ test.describe("Ticket Creation Modal - Open/Close Workflow", () => {
 
     // Navigate to the board page before each test
     await page.goto(`/projects/${projectId}/board`);
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
+    // Wait for the New Ticket button to be visible and interactive
+    await page.getByRole("button", { name: /new ticket/i }).waitFor({ state: 'visible' });
   });
 
   test("should open modal when clicking + New Ticket button", async ({ page , projectId }) => {

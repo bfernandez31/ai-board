@@ -8,7 +8,7 @@
  * - Token list display
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
 
 test.describe('Personal Access Tokens', () => {
   test.beforeEach(async ({ page }) => {
@@ -87,16 +87,17 @@ test.describe('Personal Access Tokens', () => {
       // Wait for token to be generated
       await page.waitForSelector('text=Token Generated');
 
-      // Verify token is displayed
-      const tokenDisplay = page.locator('code');
+      // Verify token is displayed — scope to the Token Generated dialog
+      const dialog = page.getByRole('dialog').filter({ hasText: 'Token Generated' });
+      const tokenDisplay = dialog.locator('code').first();
       await expect(tokenDisplay).toBeVisible();
 
       // Verify token starts with pat_
       const tokenText = await tokenDisplay.textContent();
       expect(tokenText).toMatch(/^pat_[a-f0-9]{64}$/);
 
-      // Verify warning message is shown
-      await expect(page.locator('text=You won\'t be able to see it again')).toBeVisible();
+      // Verify warning message is shown — scope to dialog, use first() as text may appear in multiple elements
+      await expect(dialog.locator('text=You won\'t be able to see it again').first()).toBeVisible();
 
       // Verify copy button is present
       const copyButton = page.locator('button[aria-label*="copy" i], button:has(svg[class*="copy" i])').or(
@@ -139,11 +140,12 @@ test.describe('Personal Access Tokens', () => {
       // Verify token appears in list
       await expect(page.locator(`text=${tokenName}`)).toBeVisible();
 
-      // Verify preview is shown (format: ...xxxx)
-      await expect(page.locator('code:has-text("...")')).toBeVisible();
+      // Verify preview is shown (format: ...xxxx) — scope to main content area
+      const mainContent = page.locator('main');
+      await expect(mainContent.locator('code:has-text("...")').first()).toBeVisible();
 
-      // Verify "Never used" is shown for new token
-      await expect(page.locator('text=Never used')).toBeVisible();
+      // Verify "Never used" is shown for new token — scope to main content
+      await expect(mainContent.locator('text=Never used').first()).toBeVisible();
     });
 
     test('should show token metadata', async ({ page }) => {
@@ -184,10 +186,11 @@ test.describe('Personal Access Tokens', () => {
       await deleteButton.click();
 
       // Verify confirmation dialog opens
-      await expect(page.locator('text=Revoke Token?')).toBeVisible();
+      const revokeDialog = page.getByRole('alertdialog').or(page.getByRole('dialog').filter({ hasText: 'Revoke Token?' }));
+      await expect(revokeDialog).toBeVisible();
 
       // Verify token name is shown in dialog
-      await expect(page.locator(`text=${tokenName}`)).toBeVisible();
+      await expect(revokeDialog.locator(`text=${tokenName}`)).toBeVisible();
 
       // Verify warning message
       await expect(page.locator('text=will immediately lose access')).toBeVisible();

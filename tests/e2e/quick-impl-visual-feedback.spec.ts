@@ -74,17 +74,13 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const startX = ticketBox.x + ticketBox.width / 2;
     const startY = ticketBox.y + ticketBox.height / 2;
 
-    // Use dispatchEvent for reliable pointer events that @dnd-kit recognizes
-    await ticketCard.dispatchEvent('pointerdown', {
-      clientX: startX,
-      clientY: startY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
+    // Use mouse events for MouseSensor compatibility
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.waitForTimeout(100); // Let @dnd-kit register the mousedown
 
-    // Move slightly to activate PointerSensor (needs >8px)
-    await page.mouse.move(startX + 15, startY);
+    // Move past the 8px distance activation threshold
+    await page.mouse.move(startX + 15, startY, { steps: 3 });
     await page.waitForTimeout(200); // Wait for drag state to activate
 
     // Check SPECIFY column - should have blue border (normal workflow)
@@ -145,17 +141,13 @@ test.describe('Quick-Impl Visual Feedback', () => {
     const startX = ticketBox.x + ticketBox.width / 2;
     const startY = ticketBox.y + ticketBox.height / 2;
 
-    // Use dispatchEvent for reliable pointer events
-    await ticketCard.dispatchEvent('pointerdown', {
-      clientX: startX,
-      clientY: startY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
+    // Use mouse events for MouseSensor compatibility
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.waitForTimeout(100); // Let @dnd-kit register the mousedown
 
-    // Move slightly to activate PointerSensor (needs >8px)
-    await page.mouse.move(startX + 15, startY);
+    // Move past the 8px distance activation threshold
+    await page.mouse.move(startX + 15, startY, { steps: 3 });
     await page.waitForTimeout(200);
 
     // Verify styling is applied during drag
@@ -212,10 +204,11 @@ test.describe('Quick-Impl Visual Feedback', () => {
     // Move to ticket center and press down
     await page.mouse.move(ticketBox.x + ticketBox.width / 2, ticketBox.y + ticketBox.height / 2);
     await page.mouse.down();
+    await page.waitForTimeout(100); // Let @dnd-kit register the mousedown
 
-    // Move mouse slightly to trigger drag
-    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 10, ticketBox.y + ticketBox.height / 2 + 10, { steps: 5 });
-    await page.waitForTimeout(50);
+    // Move past the 8px distance activation threshold
+    await page.mouse.move(ticketBox.x + ticketBox.width / 2 + 15, ticketBox.y + ticketBox.height / 2, { steps: 3 });
+    await page.waitForTimeout(200); // Wait for drag state to activate
 
     // Check PLAN column - should have blue border (valid transition)
     const planColumn = page.locator('[data-testid="column-PLAN"]');

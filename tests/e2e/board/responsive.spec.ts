@@ -91,13 +91,13 @@ test.describe('Responsive Board Design', () => {
     await page.waitForTimeout(100);
 
     // Check that a different column header is now visible
-    const erroredHeader = page.getByRole('heading', { name: /errored/i }).first();
+    const verifyHeader = page.getByRole('heading', { name: /verify/i }).first();
 
     // At least one header should be visible after scroll
     const idleVisible = await idleHeader.isVisible();
-    const erroredVisible = await erroredHeader.isVisible();
+    const verifyVisible = await verifyHeader.isVisible();
 
-    expect(idleVisible || erroredVisible).toBe(true);
+    expect(idleVisible || verifyVisible).toBe(true);
   });
 
   test('should maintain ticket card readability on mobile', async ({ page , projectId }) => {
