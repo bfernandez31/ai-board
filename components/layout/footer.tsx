@@ -1,6 +1,18 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+/** Routes where the footer is hidden (full-height layouts like the board). */
+const HIDDEN_ROUTES = /^\/projects\/[^/]+\/board/;
 
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname && HIDDEN_ROUTES.test(pathname)) {
+    return null;
+  }
+
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6">

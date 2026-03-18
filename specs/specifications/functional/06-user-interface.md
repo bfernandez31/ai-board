@@ -6,7 +6,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 ## Global Footer
 
-A global footer is rendered on all pages (public and authenticated) via the root layout.
+A global footer is rendered on most pages (public and authenticated) via the root layout. It is **hidden on full-height layouts** such as the project board (`/projects/:id/board`) where it would interfere with the scrollable kanban view.
 
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
@@ -17,6 +17,8 @@ A global footer is rendered on all pages (public and authenticated) via the root
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
 - Links use muted subtext color with purple hover transition (`hover:text-primary`)
 - Separated from content by a top border
+
+**Visibility**: The component uses `usePathname()` to hide itself on routes matching `/projects/:id/board*`.
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
 
