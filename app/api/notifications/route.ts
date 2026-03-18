@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/db/users';
 import { getNotificationsForUser, getUnreadCount } from '@/app/lib/db/notifications';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
@@ -14,13 +14,13 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    const { searchParams } = new URL(_request.url);
+    const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '5'), 50);
 
     const notifications = await getNotificationsForUser(user.id, limit);
     const unreadCount = await getUnreadCount(user.id);
 
-    const notificationsDisplay = notifications.map((n: Awaited<ReturnType<typeof getNotificationsForUser>>[number]) => ({
+    const notificationsDisplay = notifications.map((n) => ({
       id: n.id,
       actorName: n.actor.name || n.actor.email,
       actorImage: n.actor.image,
