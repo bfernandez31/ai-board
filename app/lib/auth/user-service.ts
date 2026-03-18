@@ -108,7 +108,7 @@ export async function createOrUpdateDevUser(email: string): Promise<{ id: string
       create: {
         id: crypto.randomUUID(),
         email,
-        name: email.split('@')[0] ?? email,
+        name: email.split('@')[0] || email,
         emailVerified: new Date(),
         updatedAt: new Date(),
       },

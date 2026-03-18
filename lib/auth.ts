@@ -51,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           try {
             const { id } = await createOrUpdateDevUser(email);
-            return { id, email, name: email.split('@')[0] ?? email };
+            return { id, email, name: email.split('@')[0] || email };
           } catch (error) {
             console.error('Dev login failed', {
               email,
