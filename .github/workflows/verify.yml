@@ -492,27 +492,37 @@ jobs:
 
           # Always use Claude for code review — the command orchestrates Haiku/Sonnet agents
           # and benefits from a different agent reviewing the implementation
-          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER"
+          # Capture output for quality score parsing (agent prints QUALITY_SCORE_JSON: marker)
+          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-review" "$PR_NUMBER" 2>&1 | tee code-review-output.log
 
           echo "✅ Code review completed"
 
       # Read quality score from code review output (FULL workflow only)
+      # Strategy 1: Parse QUALITY_SCORE_JSON: marker from agent stdout (primary)
+      # Strategy 2: Read quality-score.json file (fallback)
       - name: Read Quality Score
         if: ${{ success() && env.SKIP_EXECUTION != 'true' && inputs.workflowType == 'FULL' }}
         id: quality-score
         working-directory: target
         run: |
-          if [ -f "quality-score.json" ]; then
-            echo "📊 Quality score file found"
+          if grep -q "QUALITY_SCORE_JSON:" code-review-output.log 2>/dev/null; then
+            echo "📊 Quality score found in agent output"
+            QUALITY_DETAILS=$(grep "QUALITY_SCORE_JSON:" code-review-output.log | tail -1 | sed 's/.*QUALITY_SCORE_JSON://')
+            QUALITY_SCORE=$(echo "$QUALITY_DETAILS" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).qualityScore))")
+            echo "quality_score=${QUALITY_SCORE}" >> "$GITHUB_OUTPUT"
+            echo "has_score=true" >> "$GITHUB_OUTPUT"
+            echo "quality_details_b64=$(echo "$QUALITY_DETAILS" | base64 -w0)" >> "$GITHUB_OUTPUT"
+            echo "   Score: ${QUALITY_SCORE}"
+          elif [ -f "quality-score.json" ]; then
+            echo "📊 Quality score file found (fallback)"
             QUALITY_SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('quality-score.json','utf-8')).qualityScore)")
             QUALITY_DETAILS=$(cat quality-score.json)
             echo "quality_score=${QUALITY_SCORE}" >> "$GITHUB_OUTPUT"
             echo "has_score=true" >> "$GITHUB_OUTPUT"
-            # Store details as base64 to avoid multiline issues
             echo "quality_details_b64=$(echo "$QUALITY_DETAILS" | base64 -w0)" >> "$GITHUB_OUTPUT"
             echo "   Score: ${QUALITY_SCORE}"
           else
-            echo "ℹ️ No quality-score.json found (code review may not have generated scores)"
+            echo "ℹ️ No quality score found (not in agent output, no quality-score.json file)"
             echo "has_score=false" >> "$GITHUB_OUTPUT"
           fi
 

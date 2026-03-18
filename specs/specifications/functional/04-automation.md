@@ -172,8 +172,8 @@ For FULL workflow verify jobs, the code review step produces a quality score alo
    - Historical Context (weight: 10%)
    - PR Comments (weight: 10%)
 2. Each agent returns a dimension score (0-100) alongside its issue list
-3. The command writes a `quality-score.json` file to the workspace
-4. The verify workflow parses the file and computes the weighted final score: `round(Σ score_i × weight_i)`
+3. The command prints the quality score JSON to stdout with a `QUALITY_SCORE_JSON:` prefix marker (the command does not have file write permissions)
+4. The verify workflow captures the agent's stdout and parses the marker to extract the score (with `quality-score.json` file as fallback)
 5. The final score and dimension details are sent via `PATCH /api/jobs/:id/status` when marking the job COMPLETED
 6. The score is stored on the Job record (`qualityScore`, `qualityScoreDetails`) and displayed in the UI
 
@@ -188,7 +188,7 @@ For FULL workflow verify jobs, the code review step produces a quality score alo
 **Conditions where no score is produced**:
 - QUICK or CLEAN workflow tickets
 - Verify job that fails or is cancelled
-- Code review command fails to produce `quality-score.json`
+- Code review command fails to print `QUALITY_SCORE_JSON:` marker to stdout
 
 ```mermaid
 sequenceDiagram
@@ -208,7 +208,8 @@ sequenceDiagram
     A2-->>CR: { score: 80, issues: [...] }
     AN-->>CR: { scores, issues }
     CR->>CR: Compute weighted sum → finalScore
-    CR->>VW: Write quality-score.json
+    CR->>VW: stdout: QUALITY_SCORE_JSON:{...}
+    VW->>VW: Parse marker from agent output log
     VW->>API: { status: "COMPLETED", qualityScore: 83, qualityScoreDetails: "{...}" }
     API->>DB: UPDATE job SET qualityScore=83, qualityScoreDetails=...
     API-->>VW: 200 OK

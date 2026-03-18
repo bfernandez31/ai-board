@@ -267,7 +267,7 @@
   - Historical Context: 10% (consistency with git history patterns)
   - Previous PR Comments: 10% (not repeating past mistakes)
 - Final score: weighted sum of dimension scores, rounded to integer
-- The code review command writes a structured scoring output (JSON) to the workspace. The workflow parses it and sends the score via the existing job status update endpoint.
+- The code review command prints the quality score JSON to stdout with a `QUALITY_SCORE_JSON:` prefix marker. The workflow captures the agent output and parses the marker to extract the score (with file fallback). The score is sent via the existing job status update endpoint.
 - Stored on Job model: `qualityScore` integer field (nullable, only for VERIFY jobs)
 - No score for: QUICK workflow, CLEAN workflow, failed/cancelled VERIFY jobs
 - When multiple VERIFY jobs exist (after rollback-reset), the displayed score is from the latest COMPLETED verify job. Rollback-reset supersedes previous scores.
