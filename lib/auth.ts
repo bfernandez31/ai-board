@@ -45,8 +45,7 @@ function devLoginProvider() {
         return null;
       }
 
-      const user = await createOrUpdateDevUser(email);
-      return user;
+      return createOrUpdateDevUser(email);
     },
   });
 }

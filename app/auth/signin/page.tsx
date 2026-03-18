@@ -24,7 +24,6 @@ export default async function SignInPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* GitHub OAuth - Active */}
           <form action={async () => {
             "use server"
             await signIn("github", {
@@ -37,12 +36,10 @@ export default async function SignInPage({
             </Button>
           </form>
 
-          {/* Dev Login - Preview Environments Only */}
           {process.env.NEXT_PUBLIC_DEV_LOGIN === 'true' && (
             <DevLoginForm callbackUrl={callbackUrl} />
           )}
 
-          {/* GitLab OAuth - Disabled */}
           <div className="space-y-2">
             <Button
               variant="outline"
@@ -58,7 +55,6 @@ export default async function SignInPage({
             </p>
           </div>
 
-          {/* BitBucket OAuth - Disabled */}
           <div className="space-y-2">
             <Button
               variant="outline"
