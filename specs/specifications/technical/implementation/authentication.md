@@ -4,46 +4,159 @@ NextAuth.js setup, session management, Personal Access Tokens (PAT), and the gua
 
 ## NextAuth.js Configuration
 
-**Location**: `app/api/auth/[...nextauth]/route.ts`
+**Location**: `lib/auth.ts`
 
 ```typescript
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import GitHubProvider from 'next-auth/providers/github';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/app/lib/db';
+import NextAuth from "next-auth"
+import Credentials from "next-auth/providers/credentials"
+import GitHub from "next-auth/providers/github"
+import { createOrUpdateDevUser, createOrUpdateUser, validateGitHubProfile } from "@/app/lib/auth/user-service"
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GitHubProvider({
+    GitHub({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      authorization: { params: { scope: "read:user user:email" } },
     }),
+    // Dev login — only registered when DEV_LOGIN_SECRET is set
+    ...(process.env.DEV_LOGIN_SECRET ? [
+      Credentials({
+        id: "dev-login",
+        name: "Dev Login",
+        credentials: {
+          email: { label: "Email", type: "email" },
+          secret: { label: "Secret", type: "password" },
+        },
+        async authorize(credentials) {
+          const email = credentials?.email as string | undefined;
+          const secret = credentials?.secret as string | undefined;
+          if (!email || !secret) return null;
+          if (secret !== process.env.DEV_LOGIN_SECRET) return null;
+          try {
+            const { id } = await createOrUpdateDevUser(email);
+            return { id, email, name: email.split('@')[0] || email };
+          } catch {
+            return null;
+          }
+        },
+      }),
+    ] : []),
   ],
 
-  pages: {
-    signIn: '/auth/signin',
-  },
-
   callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'dev-login') return true; // handled by authorize
+      if (account?.provider !== 'github') return false;
+      if (!validateGitHubProfile(profile)) return false;
+      const { id: userId } = await createOrUpdateUser(profile, account);
+      user.id = userId;
+      return true;
+    },
+    async jwt({ token, user }) {
+      if (user?.id) { token.id = user.id; token.userId = user.id; }
+      return token;
+    },
+    async session({ session, token, user }) {
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = (user?.id || token?.id || token?.userId) as string;
       }
       return session;
     },
   },
 
-  session: {
-    strategy: 'database',  // Store sessions in database
-    maxAge: 30 * 24 * 60 * 60,  // 30 days
-  },
-};
+  pages: { signIn: '/auth/signin', error: '/auth/error' },
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+  session: {
+    strategy: process.env.NODE_ENV === 'test' ? "database" : "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+})
+```
+
+## Dev Login (Preview Environments)
+
+**Purpose**: Allow sign-in with email + shared secret in preview/staging deployments where GitHub OAuth is not configured.
+
+**Activation**: Requires two environment variables:
+- `DEV_LOGIN_SECRET` (server-side) — registers the Credentials provider and validates the shared secret
+- `NEXT_PUBLIC_DEV_LOGIN=true` (client-side) — shows the `DevLoginForm` on the sign-in page
+
+When `DEV_LOGIN_SECRET` is absent the provider is not registered and no credentials-based login is possible.
+
+**Component**: `components/auth/dev-login-form.tsx`
+
+```typescript
+// Displayed on sign-in page only when NEXT_PUBLIC_DEV_LOGIN === "true"
+export function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
+  // email + secret fields, calls signIn("dev-login", { email, secret, redirect: false })
+  // redirects to callbackUrl on success, shows inline error on failure
+}
+```
+
+**User persistence**: `app/lib/auth/user-service.ts` — `createOrUpdateDevUser(email)`
+
+```typescript
+export async function createOrUpdateDevUser(email: string): Promise<{ id: string }> {
+  return await prisma.$transaction(async (tx) => {
+    const user = await tx.user.upsert({
+      where: { email },
+      update: { updatedAt: new Date() },
+      create: {
+        id: crypto.randomUUID(),
+        email,
+        name: email.split('@')[0] || email,
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await tx.account.upsert({
+      where: { provider_providerAccountId: { provider: 'credentials', providerAccountId: email } },
+      update: {},
+      create: {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        type: 'credentials',
+        provider: 'credentials',
+        providerAccountId: email,
+      },
+    });
+
+    return { id: user.id };
+  });
+}
+```
+
+**Security notes**:
+- Secret compared server-side inside `authorize()` — never exposed to the client
+- Should only be enabled on non-production deployments
+- Any email can be used; the user record is created on first login
+
+### Dev Login Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as DevLoginForm
+    participant NA as NextAuth (Credentials)
+    participant US as user-service
+    participant DB as Database
+
+    U->>UI: Enter email + secret
+    UI->>NA: signIn("dev-login", { email, secret })
+    NA->>NA: Compare secret vs DEV_LOGIN_SECRET
+    alt Secret mismatch
+        NA-->>UI: error
+        UI-->>U: "Invalid email or secret"
+    else Secret valid
+        NA->>US: createOrUpdateDevUser(email)
+        US->>DB: Upsert User + Account (credentials)
+        DB-->>US: user.id
+        US-->>NA: { id }
+        NA-->>UI: ok: true
+        UI->>U: Redirect to callbackUrl
+    end
 ```
 
 ## Test User Override Guard
@@ -238,9 +351,9 @@ sequenceDiagram
         A->>T: Validate PAT
         T->>DB: Resolve token owner
         A-->>C: Authenticated as PAT owner
-    else Browser session
+    else Browser session (GitHub OAuth or Dev Login)
         P->>A: Continue request
-        A->>S: Resolve session
+        A->>S: Resolve JWT session
         A-->>C: Authenticated as session user
     else Explicit test override
         P->>A: Continue request
@@ -500,16 +613,20 @@ GITHUB_SECRET=<github-oauth-client-secret>
 DATABASE_URL=<postgresql-connection-string>
 ```
 
-### Development
+### Development / Preview
 
 ```env
-# NextAuth (mock mode auto-enabled)
+# NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=dev-secret
 
-# GitHub OAuth (optional for mock mode)
+# GitHub OAuth (optional if using dev login instead)
 GITHUB_ID=
 GITHUB_SECRET=
+
+# Dev Login — set both to enable credentials-based login
+DEV_LOGIN_SECRET=<shared-secret-for-preview>
+NEXT_PUBLIC_DEV_LOGIN=true
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
@@ -519,45 +636,30 @@ DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 
 **File**: `app/auth/signin/page.tsx`
 
+Server component. Reads `callbackUrl` from search params (defaults to `/projects`).
+
+Renders:
+1. **GitHub OAuth button** — always visible; submits a server action calling `signIn("github")`
+2. **GitLab / BitBucket buttons** — disabled, "Coming soon"
+3. **DevLoginForm** — rendered only when `process.env.NEXT_PUBLIC_DEV_LOGIN === "true"`
+
 ```typescript
-'use client';
-
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-
-export default function SignInPage() {
-  const handleGitHubSignIn = async () => {
-    await signIn('github', {
-      callbackUrl: '/projects',
-    });
-  };
+export default async function SignInPage({ searchParams }) {
+  const { callbackUrl = "/projects" } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign in to AI Board</h1>
-        </div>
+    <Card>
+      {/* GitHub button — server action */}
+      <form action={async () => { "use server"; await signIn("github", { redirectTo: callbackUrl }) }}>
+        <Button type="submit">Continue with GitHub</Button>
+      </form>
 
-        <div className="space-y-4">
-          <Button
-            onClick={handleGitHubSignIn}
-            className="w-full"
-            variant="outline"
-          >
-            Sign in with GitHub
-          </Button>
+      {/* GitLab / BitBucket disabled */}
 
-          <Button disabled className="w-full" variant="outline">
-            GitLab (Coming soon)
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            BitBucket (Coming soon)
-          </Button>
-        </div>
-      </div>
-    </div>
+      {process.env.NEXT_PUBLIC_DEV_LOGIN === "true" && (
+        <DevLoginForm callbackUrl={callbackUrl} />
+      )}
+    </Card>
   );
 }
 ```
