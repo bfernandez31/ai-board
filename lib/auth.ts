@@ -1,7 +1,9 @@
 import NextAuth from "next-auth"
 import type { Adapter } from "next-auth/adapters"
+import Credentials from "next-auth/providers/credentials"
 import GitHub from "next-auth/providers/github"
 import { createOrUpdateUser, validateGitHubProfile } from "@/app/lib/auth/user-service"
+import { authorizeDevLogin, DEV_LOGIN_PROVIDER_ID, isDevLoginEnabled } from "@/app/lib/auth/dev-login"
 
 // Conditional imports to reduce Edge Runtime bundle size
 // Only import Prisma in test mode (database sessions)
@@ -31,12 +33,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
     }),
+    ...(isDevLoginEnabled()
+      ? [
+          Credentials({
+            id: DEV_LOGIN_PROVIDER_ID,
+            name: "Dev Login",
+            credentials: {
+              email: {
+                label: "Email",
+                type: "email",
+              },
+              secret: {
+                label: "Shared Secret",
+                type: "password",
+              },
+            },
+            authorize(credentials) {
+              return authorizeDevLogin(credentials)
+            },
+          }),
+        ]
+      : []),
   ],
 
   callbacks: {
     async signIn({ user, account, profile }) {
       // Skip database persistence in test mode (uses PrismaAdapter)
       if (process.env.NODE_ENV === 'test') {
+        return true;
+      }
+
+      if (account?.provider === DEV_LOGIN_PROVIDER_ID) {
         return true;
       }
 

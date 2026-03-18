@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createOrUpdateUser,
+  createOrUpdateDevLoginUser,
   validateGitHubProfile,
   type GitHubProfile,
 } from '@/app/lib/auth/user-service';
@@ -191,6 +192,52 @@ describe('UserService', () => {
       expect(prisma.$transaction).toHaveBeenCalled();
       expect(mockTx.user.upsert).toHaveBeenCalled();
       expect(mockTx.account.upsert).toHaveBeenCalled();
+    });
+  });
+
+  describe('createOrUpdateDevLoginUser', () => {
+    it('creates a credentials user and account for first sign-in', async () => {
+      const mockUser = { id: 'user-123', email: 'preview@example.com' };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockResolvedValue(mockUser),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-123', userId: 'user-123' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await createOrUpdateDevLoginUser('preview@example.com');
+
+      expect(result).toEqual(mockUser);
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('reuses the existing user email for repeat sign-in', async () => {
+      let capturedWhere: Record<string, unknown> | null = null;
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockImplementation(({ where }) => {
+              capturedWhere = where;
+              return Promise.resolve({ id: 'user-123', email: 'preview@example.com' });
+            }),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-123', userId: 'user-123' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await createOrUpdateDevLoginUser('preview@example.com');
+
+      expect(capturedWhere).toEqual({ email: 'preview@example.com' });
     });
   });
 

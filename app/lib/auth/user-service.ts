@@ -92,3 +92,61 @@ export async function createOrUpdateUser(
     return { id: user.id };
   });
 }
+
+/**
+ * Creates or updates a user for the preview/dev credentials flow.
+ * The account record keeps this flow idempotent and aligned with the existing auth model.
+ * @param email - User email submitted through dev login
+ * @returns User record
+ */
+export async function createOrUpdateDevLoginUser(
+  email: string
+): Promise<{ id: string; email: string; name: string | null }> {
+  return await prisma.$transaction(async (tx) => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await tx.user.upsert({
+      where: { email: normalizedEmail },
+      update: {
+        email: normalizedEmail,
+        name: normalizedEmail,
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        id: crypto.randomUUID(),
+        email: normalizedEmail,
+        name: normalizedEmail,
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
+
+    await tx.account.upsert({
+      where: {
+        provider_providerAccountId: {
+          provider: 'credentials',
+          providerAccountId: normalizedEmail,
+        },
+      },
+      update: {
+        userId: user.id,
+        type: 'credentials',
+      },
+      create: {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        type: 'credentials',
+        provider: 'credentials',
+        providerAccountId: normalizedEmail,
+      },
+    });
+
+    return user;
+  });
+}
