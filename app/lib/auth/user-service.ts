@@ -92,3 +92,48 @@ export async function createOrUpdateUser(
     return { id: user.id };
   });
 }
+
+/**
+ * Creates or updates a user via Dev Login (Credentials provider).
+ * Used only in preview environments when DEV_LOGIN_SECRET is set.
+ * @param email - User email address
+ * @returns User object for NextAuth
+ */
+export async function createOrUpdateDevUser(
+  email: string
+): Promise<{ id: string; email: string; name: string }> {
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      updatedAt: new Date(),
+    },
+    create: {
+      id: crypto.randomUUID(),
+      email,
+      name: email.split('@')[0] ?? null,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Upsert Account record for credentials provider
+  await prisma.account.upsert({
+    where: {
+      provider_providerAccountId: {
+        provider: 'credentials',
+        providerAccountId: email,
+      },
+    },
+    update: {},
+    create: {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      type: 'credentials',
+      provider: 'credentials',
+      providerAccountId: email,
+    },
+  });
+
+  const name = user.name ?? email.split('@')[0] ?? email;
+  return { id: user.id, email: user.email ?? email, name };
+}

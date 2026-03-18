@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createOrUpdateUser,
+  createOrUpdateDevUser,
   validateGitHubProfile,
   type GitHubProfile,
 } from '@/app/lib/auth/user-service';
@@ -11,6 +12,12 @@ import type { Account } from 'next-auth';
 vi.mock('@/lib/db/client', () => ({
   prisma: {
     $transaction: vi.fn(),
+    user: {
+      upsert: vi.fn(),
+    },
+    account: {
+      upsert: vi.fn(),
+    },
   },
 }));
 
@@ -449,6 +456,56 @@ describe('UserService', () => {
       expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
       expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
       expect(capturedAccountUpdate.expires_at).toBe(9876543210);
+    });
+  });
+
+  describe('createOrUpdateDevUser', () => {
+    it('creates a new dev user with email-based ID and name', async () => {
+      const mockUser = { id: 'uuid-123', email: 'dev@example.com', name: 'dev' };
+
+      vi.mocked(prisma.user.upsert).mockResolvedValue(mockUser as never);
+      vi.mocked(prisma.account.upsert).mockResolvedValue({ id: 'acc-1' } as never);
+
+      const result = await createOrUpdateDevUser('dev@example.com');
+
+      expect(result.id).toBe('uuid-123');
+      expect(result.email).toBe('dev@example.com');
+      expect(result.name).toBe('dev');
+
+      expect(prisma.user.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'dev@example.com' },
+        })
+      );
+
+      expect(prisma.account.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            provider_providerAccountId: {
+              provider: 'credentials',
+              providerAccountId: 'dev@example.com',
+            },
+          },
+        })
+      );
+    });
+
+    it('returns existing user on repeat login', async () => {
+      const mockUser = { id: 'existing-id', email: 'dev@example.com', name: 'Dev User' };
+
+      vi.mocked(prisma.user.upsert).mockResolvedValue(mockUser as never);
+      vi.mocked(prisma.account.upsert).mockResolvedValue({ id: 'acc-1' } as never);
+
+      const result = await createOrUpdateDevUser('dev@example.com');
+
+      expect(result.id).toBe('existing-id');
+      expect(result.name).toBe('Dev User');
+    });
+
+    it('throws when database fails', async () => {
+      vi.mocked(prisma.user.upsert).mockRejectedValue(new Error('DB error'));
+
+      await expect(createOrUpdateDevUser('dev@example.com')).rejects.toThrow('DB error');
     });
   });
 });
