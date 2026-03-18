@@ -18,10 +18,10 @@
 
 **Purpose**: Create the shared files and test helpers that all dev-login work will build on.
 
-- [ ] T001 Create the shared preview-auth helper module with exported dev-login types and placeholders in `app/lib/auth/dev-login.ts`
-- [ ] T002 [P] Create reusable unit-test fixtures for dev-login environment variables and credentials payloads in `tests/unit/auth/dev-login-test-helpers.ts`
-- [ ] T003 [P] Create reusable integration-test fixtures for NextAuth credential posts and session assertions in `tests/integration/auth/dev-login-test-helpers.ts`
-- [ ] T004 [P] Create reusable sign-in page render helpers for search params and server-action mocking in `tests/unit/components/sign-in-page-test-helpers.tsx`
+- [X] T001 Create the shared preview-auth helper module with exported dev-login types and placeholders in `app/lib/auth/dev-login.ts`
+- [X] T002 [P] Create reusable unit-test fixtures for dev-login environment variables and credentials payloads in `tests/unit/auth/dev-login-test-helpers.ts`
+- [X] T003 [P] Create reusable integration-test fixtures for NextAuth credential posts and session assertions in `tests/integration/auth/dev-login-test-helpers.ts`
+- [X] T004 [P] Create reusable sign-in page render helpers for search params and server-action mocking in `tests/unit/components/sign-in-page-test-helpers.tsx`
 
 ---
 
@@ -31,9 +31,9 @@
 
 **CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T005 Implement the shared preview-availability predicate, email normalization, and credentials schema in `app/lib/auth/dev-login.ts`
-- [ ] T006 Update `lib/auth.ts` to register a gated `Credentials` provider and keep provider-aware JWT/session callbacks compatible with both GitHub and credentials sign-in
-- [ ] T007 Update `app/auth/signin/page.tsx` to read `callbackUrl` and `error` query params and add the server-action plumbing needed for a credentials submit path
+- [X] T005 Implement the shared preview-availability predicate, email normalization, and credentials schema in `app/lib/auth/dev-login.ts`
+- [X] T006 Update `lib/auth.ts` to register a gated `Credentials` provider and keep provider-aware JWT/session callbacks compatible with both GitHub and credentials sign-in
+- [X] T007 Update `app/auth/signin/page.tsx` to read `callbackUrl` and `error` query params and add the server-action plumbing needed for a credentials submit path
 
 **Checkpoint**: Shared auth wiring is ready; user-story behavior can now be implemented and validated independently.
 
@@ -47,17 +47,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add unit tests for valid credentials parsing, normalized email handling, and successful provisioning in `tests/unit/auth/dev-login-success.test.ts`
-- [ ] T009 [P] [US1] Add component tests for the enabled preview sign-in form and callback preservation on `/auth/signin` in `tests/unit/components/sign-in-page-enabled.test.tsx`
-- [ ] T010 [P] [US1] Add contract tests for `POST /api/auth/callback/credentials` success redirects and `GET /api/auth/session` authenticated payloads in `tests/integration/auth/dev-login-contract-success.test.ts`
-- [ ] T011 [P] [US1] Add integration tests for first-time user creation and existing-user reuse in `tests/integration/auth/dev-login-success.test.ts`
-- [ ] T012 [P] [US1] Add a minimal browser redirect test for preview dev-login success in `tests/e2e/auth/dev-login.spec.ts`
+- [X] T008 [P] [US1] Add unit tests for valid credentials parsing, normalized email handling, and successful provisioning in `tests/unit/auth/dev-login-success.test.ts`
+- [X] T009 [P] [US1] Add component tests for the enabled preview sign-in form and callback preservation on `/auth/signin` in `tests/unit/components/sign-in-page-enabled.test.tsx`
+- [X] T010 [P] [US1] Add contract tests for `POST /api/auth/callback/credentials` success redirects and `GET /api/auth/session` authenticated payloads in `tests/integration/auth/dev-login-contract-success.test.ts`
+- [X] T011 [P] [US1] Add integration tests for first-time user creation and existing-user reuse in `tests/integration/auth/dev-login-success.test.ts`
+- [X] T012 [P] [US1] Add a minimal browser redirect test for preview dev-login success in `tests/e2e/auth/dev-login.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement transactional user lookup, first-time user creation, and credentials `Account` upsert in `app/lib/auth/dev-login.ts`
-- [ ] T014 [US1] Return the provisioned database user from `Credentials.authorize()` and preserve standard session IDs in `lib/auth.ts`
-- [ ] T015 [US1] Render and submit the preview-only email and shared-secret form, redirecting successful sign-ins to `/projects`, in `app/auth/signin/page.tsx`
+- [X] T013 [US1] Implement transactional user lookup, first-time user creation, and credentials `Account` upsert in `app/lib/auth/dev-login.ts`
+- [X] T014 [US1] Return the provisioned database user from `Credentials.authorize()` and preserve standard session IDs in `lib/auth.ts`
+- [X] T015 [US1] Render and submit the preview-only email and shared-secret form, redirecting successful sign-ins to `/projects`, in `app/auth/signin/page.tsx`
 
 **Checkpoint**: Valid preview credentials create or reuse the correct user and reach the projects area through the normal authenticated session flow.
 
@@ -71,15 +71,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add unit tests covering disabled combinations of `VERCEL_ENV`, `DEV_LOGIN_ENABLED`, and missing `DEV_LOGIN_SECRET` in `tests/unit/auth/dev-login-availability.test.ts`
-- [ ] T017 [P] [US2] Add component tests proving disabled environments render only the GitHub path on `/auth/signin` in `tests/unit/components/sign-in-page-disabled.test.tsx`
-- [ ] T018 [P] [US2] Add contract tests for hidden `/auth/signin` dev-login controls and rejected disabled credential callbacks in `tests/integration/auth/dev-login-contract-disabled.test.ts`
-- [ ] T019 [P] [US2] Add integration tests proving direct credentials attempts fail when preview gating is off in `tests/integration/auth/dev-login-disabled.test.ts`
+- [X] T016 [P] [US2] Add unit tests covering disabled combinations of `VERCEL_ENV`, `DEV_LOGIN_ENABLED`, and missing `DEV_LOGIN_SECRET` in `tests/unit/auth/dev-login-availability.test.ts`
+- [X] T017 [P] [US2] Add component tests proving disabled environments render only the GitHub path on `/auth/signin` in `tests/unit/components/sign-in-page-disabled.test.tsx`
+- [X] T018 [P] [US2] Add contract tests for hidden `/auth/signin` dev-login controls and rejected disabled credential callbacks in `tests/integration/auth/dev-login-contract-disabled.test.ts`
+- [X] T019 [P] [US2] Add integration tests proving direct credentials attempts fail when preview gating is off in `tests/integration/auth/dev-login-disabled.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Gate the sign-in page form entirely behind the shared preview predicate while preserving the GitHub button in `app/auth/signin/page.tsx`
-- [ ] T021 [US2] Reject credentials authorization early when preview dev login is unavailable in `app/lib/auth/dev-login.ts`
+- [X] T020 [US2] Gate the sign-in page form entirely behind the shared preview predicate while preserving the GitHub button in `app/auth/signin/page.tsx`
+- [X] T021 [US2] Reject credentials authorization early when preview dev login is unavailable in `app/lib/auth/dev-login.ts`
 
 **Checkpoint**: Disabled and production environments keep the current GitHub-only sign-in behavior with no usable credentials fallback.
 
@@ -93,15 +93,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Add unit tests for invalid email handling, secret mismatch handling, and non-leaking failure results in `tests/unit/auth/dev-login-failure.test.ts`
-- [ ] T023 [P] [US3] Add component tests for the generic `error=dev-login` retry message on `/auth/signin` in `tests/unit/components/sign-in-page-error.test.tsx`
-- [ ] T024 [P] [US3] Add contract tests for failed credential submissions redirecting back to `/auth/signin?error=dev-login` in `tests/integration/auth/dev-login-contract-failure.test.ts`
-- [ ] T025 [P] [US3] Add integration tests proving invalid attempts create no `User`, `Account`, or authenticated session state in `tests/integration/auth/dev-login-failure.test.ts`
+- [X] T022 [P] [US3] Add unit tests for invalid email handling, secret mismatch handling, and non-leaking failure results in `tests/unit/auth/dev-login-failure.test.ts`
+- [X] T023 [P] [US3] Add component tests for the generic `error=dev-login` retry message on `/auth/signin` in `tests/unit/components/sign-in-page-error.test.tsx`
+- [X] T024 [P] [US3] Add contract tests for failed credential submissions redirecting back to `/auth/signin?error=dev-login` in `tests/integration/auth/dev-login-contract-failure.test.ts`
+- [X] T025 [P] [US3] Add integration tests proving invalid attempts create no `User`, `Account`, or authenticated session state in `tests/integration/auth/dev-login-failure.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Implement secure secret comparison and generic failure responses without leaking secret details in `app/lib/auth/dev-login.ts`
-- [ ] T027 [US3] Render the generic inline dev-login failure state on `/auth/signin` and add fallback error mapping in `app/auth/signin/page.tsx` and `app/auth/error/page.tsx`
+- [X] T026 [US3] Implement secure secret comparison and generic failure responses without leaking secret details in `app/lib/auth/dev-login.ts`
+- [X] T027 [US3] Render the generic inline dev-login failure state on `/auth/signin` and add fallback error mapping in `app/auth/signin/page.tsx` and `app/auth/error/page.tsx`
 
 **Checkpoint**: Invalid preview credentials fail cleanly, persist nothing, and expose no sensitive authentication details.
 
@@ -111,11 +111,11 @@
 
 **Purpose**: Final verification across all stories and shared auth surfaces.
 
-- [ ] T028 Run `bun run test:unit` for `tests/unit/auth/dev-login-*.test.ts` and `tests/unit/components/sign-in-page-*.test.tsx`
-- [ ] T029 Run `bun run test:integration` for `tests/integration/auth/dev-login-*.test.ts` and `tests/integration/auth/dev-login-contract-*.test.ts`
-- [ ] T030 Run `bun run test:e2e` for `tests/e2e/auth/dev-login.spec.ts`
-- [ ] T031 Run `bun run type-check` and `bun run lint` and fix issues in `app/lib/auth/dev-login.ts`, `lib/auth.ts`, `app/auth/signin/page.tsx`, `app/auth/error/page.tsx`, and the new auth test files
-- [ ] T032 Run the verification steps from `specs/AIB-313-dev-login-for/quickstart.md` and confirm enabled, disabled, success, and failure scenarios
+- [X] T028 Run `bun run test:unit` for `tests/unit/auth/dev-login-*.test.ts` and `tests/unit/components/sign-in-page-*.test.tsx`
+- [X] T029 Run `bun run test:integration` for `tests/integration/auth/dev-login-*.test.ts` and `tests/integration/auth/dev-login-contract-*.test.ts`
+- [X] T030 Run `bun run test:e2e` for `tests/e2e/auth/dev-login.spec.ts`
+- [X] T031 Run `bun run type-check` and `bun run lint` and fix issues in `app/lib/auth/dev-login.ts`, `lib/auth.ts`, `app/auth/signin/page.tsx`, `app/auth/error/page.tsx`, and the new auth test files
+- [X] T032 Run the verification steps from `specs/AIB-313-dev-login-for/quickstart.md` and confirm enabled, disabled, success, and failure scenarios
 
 ---
 

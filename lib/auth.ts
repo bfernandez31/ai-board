@@ -1,6 +1,9 @@
 import NextAuth from "next-auth"
+import { AuthError } from "next-auth"
 import type { Adapter } from "next-auth/adapters"
+import Credentials from "next-auth/providers/credentials"
 import GitHub from "next-auth/providers/github"
+import { authorizeDevLogin } from "@/app/lib/auth/dev-login"
 import { createOrUpdateUser, validateGitHubProfile } from "@/app/lib/auth/user-service"
 
 // Conditional imports to reduce Edge Runtime bundle size
@@ -31,6 +34,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
     }),
+    Credentials({
+      id: "credentials",
+      name: "Preview Login",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        secret: { label: "Shared Secret", type: "password" },
+        redirectTo: { label: "Redirect", type: "text" },
+      },
+      authorize: async (credentials) => {
+        if (!credentials?.email || !credentials?.secret) {
+          return null
+        }
+
+        return authorizeDevLogin({
+          email: String(credentials.email),
+          secret: String(credentials.secret),
+          redirectTo: credentials.redirectTo ? String(credentials.redirectTo) : undefined,
+        })
+      },
+    }),
   ],
 
   callbacks: {
@@ -38,6 +61,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Skip database persistence in test mode (uses PrismaAdapter)
       if (process.env.NODE_ENV === 'test') {
         return true;
+      }
+
+      if (account?.provider === 'credentials') {
+        return true
       }
 
       // Validate provider
@@ -115,3 +142,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 })
+
+export { AuthError }

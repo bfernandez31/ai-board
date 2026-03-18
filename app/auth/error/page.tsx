@@ -15,6 +15,7 @@ export default async function AuthErrorPage({
     Configuration: "There is a problem with the server configuration.",
     AccessDenied: "You do not have permission to sign in.",
     Verification: "The verification token has expired or has already been used.",
+    "dev-login": "Sign-in failed. Check your email and shared secret.",
     Default: "An error occurred during authentication.",
   }
 
