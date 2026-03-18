@@ -2,6 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
+import {
+  TEST_AUTH_OVERRIDE_HEADER,
+  TEST_USER_HEADER,
+} from './lib/auth/test-user-override';
 
 // Load .env.test.local for test environment (contains test tokens)
 // This ensures tests use the same tokens as the test server
@@ -37,7 +41,8 @@ const config = defineConfig({
     navigationTimeout: 30000, // 30 seconds for navigation
     // Global auth header for all tests (bypasses NextAuth)
     extraHTTPHeaders: {
-      'x-test-user-id': testUserId, // Set by global-setup.ts
+      [TEST_USER_HEADER]: testUserId, // Set by global-setup.ts
+      [TEST_AUTH_OVERRIDE_HEADER]: 'true',
     },
   },
   projects: [

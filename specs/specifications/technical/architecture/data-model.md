@@ -49,7 +49,7 @@ model User {
 **Business Rules**:
 - Every project must have a user (required userId)
 - Email uniquely identifies users across system
-- Mock authentication uses `test@e2e.local` in development
+- Seeded test users such as `test@e2e.local` exist for automated validation, but runtime auth accepts them only through the explicit test override flow
 - Users can have multiple push subscriptions (different browsers/devices)
 - `stripeCustomerId` is set on first subscription checkout and is immutable thereafter
 - Each user has at most one Subscription record (one-to-one)

@@ -6,9 +6,16 @@ Complete REST API documentation with authentication, request/response formats, a
 
 All API endpoints require authentication via NextAuth.js session cookies except where noted.
 
-**Authentication Header**: Session cookie (set automatically by NextAuth.js)
+**Primary Authentication**: Session cookie (set automatically by NextAuth.js)
+**Optional API Authentication**: Bearer PAT on request-aware endpoints
 **Unauthenticated**: 401 Unauthorized
 **Unauthorized Access**: 403 Forbidden (user is neither project owner nor member)
+
+**Guarded Test Override**:
+- `x-test-user-id` is a test-only override header
+- It is honored only when `TEST_MODE=true` or `NODE_ENV=test` and the request also includes `x-ai-board-test-auth-override: true`
+- Outside explicit test runs, the header never authenticates a caller
+- Protected API routes may reject blocked header-only requests before route code runs
 
 **Authorization Pattern**:
 - All project-scoped endpoints validate "owner OR member" access
@@ -1200,6 +1207,11 @@ Fetch notifications for authenticated user with unread count.
 **Authentication**: Required (session)
 **Authorization**: User can only access their own notifications
 
+**Auth Guard Behavior**:
+- Requests without a valid session return `401`
+- `x-test-user-id` does not create a notification identity outside explicit test runs
+- If a valid session is present, any conflicting `x-test-user-id` is ignored
+
 **Query Parameters**:
 - `limit` (optional): Maximum notifications to return (default: 5, max: 50)
 
@@ -2051,8 +2063,14 @@ Fetch content of a specific comparison report.
 
 Fetch all job statuses for a project (polling endpoint).
 
-**Authentication**: Required (session)
+**Authentication**: Required (session) or Bearer PAT
 **Authorization**: Must be project owner or member
+
+**Auth Guard Behavior**:
+- Browser callers can authenticate with a session
+- Programmatic callers can authenticate with a PAT
+- In explicit test runs, seeded test users can be resolved through the guarded override headers
+- In non-test contexts, `x-test-user-id` never bypasses authentication
 
 **Path Parameters**:
 - `projectId` (number, required): Project ID

@@ -9,6 +9,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { createAPIClient, type APIClient } from '@/tests/fixtures/vitest/api-client';
+import { createToken } from '@/lib/db/tokens';
+import { generatePersonalAccessToken } from '@/lib/tokens/generate';
 
 // Workflow token for PATCH /api/jobs/:id/status endpoint
 const WORKFLOW_TOKEN = process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
@@ -80,6 +82,46 @@ describe('Jobs Status', () => {
       const response = await ctx.api.get('/api/projects/999999/jobs/status');
 
       expect(response.status).toBe(404);
+    });
+
+    it('should preserve PAT identity when a conflicting x-test-user-id header is present', async () => {
+      const otherUser = await ctx.createUser('jobs-conflict@e2e.local');
+      const pat = generatePersonalAccessToken();
+
+      await createToken(
+        'test-user-id',
+        '[e2e] Jobs Status PAT',
+        pat.hash,
+        pat.salt,
+        pat.preview
+      );
+
+      const patClient = createAPIClient({
+        testUserId: otherUser.id,
+        enableTestAuthOverride: false,
+        defaultHeaders: {
+          Authorization: `Bearer ${pat.token}`,
+        },
+      });
+
+      const response = await patClient.get<{ jobs: Array<{ id: number }> }>(
+        `/api/projects/${ctx.projectId}/jobs/status`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.jobs.some((job) => job.id === jobId)).toBe(true);
+    });
+
+    it('should continue to allow explicit test override requests for the seeded test user', async () => {
+      const response = await ctx.api.get<{ jobs: Array<{ id: number }> }>(
+        `/api/projects/${ctx.projectId}/jobs/status`,
+        {
+          enableTestAuthOverride: true,
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.jobs.some((job) => job.id === jobId)).toBe(true);
     });
   });
 

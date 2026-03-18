@@ -188,7 +188,7 @@
 ### NextAuth.js
 - **Version**: Latest stable (v4)
 - **Strategy**: Session-based authentication
-- **Providers**: GitHub OAuth (production), mock (dev/test)
+- **Providers**: GitHub OAuth
 - **Storage**: Database sessions (PostgreSQL)
 - **Features Used**:
   - OAuth integration
@@ -198,10 +198,11 @@
   - Middleware for protected routes
 
 ### Test Authentication
-- **Mode**: Mock authentication when `NODE_ENV !== 'production'`
+- **Mode**: Guarded test override when `TEST_MODE=true` or `NODE_ENV=test`
 - **Test User**: `test@e2e.local`
-- **Pattern**: Auto-login in development and E2E tests
-- **Security Model**: Same validation, simplified auth flow
+- **Headers**: `x-test-user-id` plus `x-ai-board-test-auth-override: true`
+- **Pattern**: Explicit opt-in impersonation for seeded automated-test users
+- **Security Model**: No header-based authentication in normal development, preview, or production traffic
 
 ## Drag & Drop
 

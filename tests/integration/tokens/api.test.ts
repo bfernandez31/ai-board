@@ -13,7 +13,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import { createToken } from '@/lib/db/tokens';
 import { generatePersonalAccessToken } from '@/lib/tokens/generate';
+import { createAPIClient } from '@/tests/fixtures/vitest/api-client';
 
 describe('Personal Access Tokens API', () => {
   let ctx: TestContext;
@@ -187,6 +189,53 @@ describe('Personal Access Tokens API', () => {
       expect(response.data.tokens[0].name).toBe('[e2e] Token 3');
       expect(response.data.tokens[1].name).toBe('[e2e] Token 2');
       expect(response.data.tokens[2].name).toBe('[e2e] Token 1');
+    });
+
+    it('should preserve PAT identity when a conflicting x-test-user-id header is present', async () => {
+      const otherUser = await ctx.createUser('pat-conflict@e2e.local');
+
+      const sessionOwnerPat = generatePersonalAccessToken();
+      await createToken(
+        'test-user-id',
+        '[e2e] PAT Identity Token',
+        sessionOwnerPat.hash,
+        sessionOwnerPat.salt,
+        sessionOwnerPat.preview
+      );
+
+      const otherUserPat = generatePersonalAccessToken();
+      await createToken(
+        otherUser.id,
+        '[e2e] Other User PAT Token',
+        otherUserPat.hash,
+        otherUserPat.salt,
+        otherUserPat.preview
+      );
+
+      const patClient = createAPIClient({
+        testUserId: otherUser.id,
+        enableTestAuthOverride: false,
+        defaultHeaders: {
+          Authorization: `Bearer ${sessionOwnerPat.token}`,
+        },
+      });
+
+      const response = await patClient.get<{
+        tokens: Array<{ name: string }>;
+      }>('/api/tokens');
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokens).toHaveLength(1);
+      expect(response.data.tokens[0]?.name).toBe('[e2e] PAT Identity Token');
+    });
+
+    it('should continue to allow explicit test override requests for the seeded test user', async () => {
+      const response = await ctx.api.get<{ tokens: unknown[] }>('/api/tokens', {
+        enableTestAuthOverride: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.tokens).toEqual([]);
     });
 
     // Note: Unauthenticated test skipped - test mode has auto-login enabled

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { getCurrentUser } from "@/lib/db/users";
+import { getCurrentUserOrToken } from "@/lib/db/users";
 import { createToken, listTokens } from "@/lib/db/tokens";
 import { generatePersonalAccessToken } from "@/lib/tokens/generate";
 
@@ -20,9 +20,9 @@ const createTokenSchema = z.object({
  * List all personal access tokens for the authenticated user.
  * Returns token metadata only (no sensitive data).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserOrToken(request);
 
     const tokens = await listTokens(user.id);
 
@@ -37,7 +37,10 @@ export async function GET() {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
     }
 
     console.error("Failed to list tokens:", error);
@@ -54,9 +57,9 @@ export async function GET() {
  * Create a new personal access token.
  * Returns the full token ONCE - it cannot be retrieved again.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserOrToken(request);
 
     const body = await request.json();
     const validated = createTokenSchema.parse(body);
@@ -94,7 +97,10 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
     }
 
     console.error("Failed to create token:", error);

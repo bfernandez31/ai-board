@@ -260,9 +260,10 @@ if (!project) {
 
 #### Authentication Layer
 - **NextAuth.js**: Session-based authentication
-- **OAuth Providers**: GitHub OAuth (production), mock auth (dev/test)
+- **OAuth Providers**: GitHub OAuth
 - **Session Storage**: Database-backed sessions
 - **CSRF Protection**: NextAuth built-in protection
+- **Test Override Guard**: `x-test-user-id` is accepted only in explicit test context with the dedicated override header
 
 #### Authorization Layer
 - **User-Project Ownership**: Required `userId` foreign key

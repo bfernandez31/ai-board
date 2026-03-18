@@ -55,6 +55,16 @@ The sign-in page displays a consent notice below the OAuth buttons:
 
 Links use purple accent color (`text-primary`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
 
+## Protected Access Behavior
+
+Protected pages and authenticated UI actions rely on the user's real session.
+
+- Unauthenticated visitors who open protected pages are redirected to `/auth/signin`
+- Sending `x-test-user-id` does not sign a user in during normal browser usage
+- If a signed-in user sends a conflicting `x-test-user-id`, the interface continues to use the signed-in account
+- Automated test impersonation remains available only in explicit test runs with the dedicated override header
+- Direct navigation back to a protected page after sign-in uses the stored callback URL
+
 ---
 
 ## Landing Page

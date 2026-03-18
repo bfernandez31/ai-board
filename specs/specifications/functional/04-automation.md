@@ -61,6 +61,16 @@ sequenceDiagram
 
 ## Workflow Jobs
 
+### Automated Test Authentication
+
+Automated test runs can impersonate a seeded test user only in explicit test context.
+
+- Test runs must execute with `TEST_MODE=true` or `NODE_ENV=test`
+- Requests must include both `x-test-user-id` and `x-ai-board-test-auth-override: true`
+- The override is limited to seeded test users used by automated validation
+- Preview, development, and production traffic do not gain access from `x-test-user-id` alone
+- If the override request is incomplete or references an unknown test user, the request fails instead of falling back to another identity
+
 ### Job Creation
 
 A job is created each time a ticket transitions between stages:
