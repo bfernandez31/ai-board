@@ -4,47 +4,54 @@ NextAuth.js setup, session management, Personal Access Tokens (PAT), and the gua
 
 ## NextAuth.js Configuration
 
-**Location**: `app/api/auth/[...nextauth]/route.ts`
+**Location**: `lib/auth.ts`
 
 ```typescript
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import GitHubProvider from 'next-auth/providers/github';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/app/lib/db';
+import NextAuth from "next-auth"
+import GitHub from "next-auth/providers/github"
+import Credentials from "next-auth/providers/credentials"
+import { createOrUpdateDevUser } from "@/app/lib/auth/user-service"
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GitHubProvider({
+    GitHub({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      authorization: { params: { scope: "read:user user:email" } }
     }),
+
+    // Dev login for preview environments — only active when DEV_LOGIN_SECRET is set
+    ...(process.env.DEV_LOGIN_SECRET ? [
+      Credentials({
+        id: "dev-login",
+        credentials: {
+          email: { label: "Email", type: "email" },
+          secret: { label: "Secret", type: "password" },
+        },
+        async authorize(credentials) {
+          const { email, secret } = credentials as { email?: string; secret?: string };
+          if (!email || !secret) return null;
+          if (secret !== process.env.DEV_LOGIN_SECRET) return null;
+          const { id } = await createOrUpdateDevUser(email);
+          return { id, email, name: email.split('@')[0] || email };
+        },
+      }),
+    ] : []),
   ],
 
   pages: {
     signIn: '/auth/signin',
-  },
-
-  callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
-    },
+    error: '/auth/error',
   },
 
   session: {
-    strategy: 'database',  // Store sessions in database
-    maxAge: 30 * 24 * 60 * 60,  // 30 days
+    strategy: process.env.NODE_ENV === 'test' ? "database" : "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+});
 ```
+
+**Session strategy**: JWT for production (no database round-trip per request), database adapter for the `test` environment only.
 
 ## Test User Override Guard
 
@@ -238,9 +245,9 @@ sequenceDiagram
         A->>T: Validate PAT
         T->>DB: Resolve token owner
         A-->>C: Authenticated as PAT owner
-    else Browser session
+    else Browser session (GitHub OAuth or Dev Login JWT)
         P->>A: Continue request
-        A->>S: Resolve session
+        A->>S: Resolve JWT session
         A-->>C: Authenticated as session user
     else Explicit test override
         P->>A: Continue request
@@ -503,11 +510,11 @@ DATABASE_URL=<postgresql-connection-string>
 ### Development
 
 ```env
-# NextAuth (mock mode auto-enabled)
+# NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=dev-secret
 
-# GitHub OAuth (optional for mock mode)
+# GitHub OAuth
 GITHUB_ID=
 GITHUB_SECRET=
 
@@ -515,50 +522,105 @@ GITHUB_SECRET=
 DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 ```
 
+### Preview Environments
+
+```env
+# NextAuth
+NEXTAUTH_URL=https://<deployment-url>.vercel.app
+NEXTAUTH_SECRET=<random-secret>
+
+# Dev login — enables Credentials-based login when GitHub OAuth callback URLs don't match
+DEV_LOGIN_SECRET=<shared-secret>
+NEXT_PUBLIC_DEV_LOGIN=true
+```
+
+## Dev Login for Preview Environments
+
+Vercel preview deployments get random URLs per deploy, making GitHub OAuth callback URLs unusable. The dev login provider offers a Credentials-based alternative that works on any URL.
+
+**Activation**: both environment variables must be set:
+
+| Variable | Side | Purpose |
+|---|---|---|
+| `DEV_LOGIN_SECRET` | Server | Shared secret that gates the Credentials provider. If unset, the provider is not registered. |
+| `NEXT_PUBLIC_DEV_LOGIN=true` | Client | Causes the sign-in page to render the dev login form. |
+
+### User identity
+
+`createOrUpdateDevUser(email)` in `app/lib/auth/user-service.ts` generates a deterministic user ID from a SHA-256 hash of `dev:{email}` (first 24 hex chars), ensuring the same user ID is produced on every login:
+
+```typescript
+export async function createOrUpdateDevUser(email: string): Promise<{ id: string }> {
+  const devUserId = crypto.createHash('sha256').update(`dev:${email}`).digest('hex').slice(0, 24);
+
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: { updatedAt: new Date() },
+    create: { id: devUserId, email, name: email.split('@')[0] || email, emailVerified: new Date(), updatedAt: new Date() },
+  });
+
+  return { id: user.id };
+}
+```
+
+### Sign-in flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as SignInPage
+    participant C as DevLoginForm
+    participant API as NextAuth /api/auth
+    participant DB as Database
+
+    U->>UI: GET /auth/signin
+    UI->>UI: Check NEXT_PUBLIC_DEV_LOGIN
+    UI-->>U: Render GitHub button + Dev Login form (if enabled)
+
+    U->>C: Enter email + secret, submit
+    C->>API: POST signIn("dev-login", { email, secret })
+    API->>API: authorize() — validate secret vs DEV_LOGIN_SECRET
+    API->>DB: createOrUpdateDevUser(email) — upsert with deterministic ID
+    DB-->>API: { id }
+    API-->>C: JWT session token
+    C-->>U: Redirect to callbackUrl (/projects)
+```
+
+### Components
+
+- **`app/auth/signin/page.tsx`** — Server component; renders `<DevLoginForm>` when `NEXT_PUBLIC_DEV_LOGIN === "true"`.
+- **`components/auth/dev-login-form.tsx`** — Client component with email + secret fields; calls `signIn("dev-login")` with `redirect: false`, then navigates via `window.location.href`.
+
+### Security properties
+
+- Secret is never stored; compared in-memory per request.
+- Provider not registered unless `DEV_LOGIN_SECRET` is set — no attack surface in production.
+- User ID is deterministic so sessions survive server restarts.
+- Dev users are stored in the same `User` table as OAuth users, subject to the same authorization rules.
+
 ## Sign-In Page
 
 **File**: `app/auth/signin/page.tsx`
 
+The page is a Next.js Server Component. It renders the GitHub OAuth button unconditionally, and the dev login form conditionally based on `NEXT_PUBLIC_DEV_LOGIN`:
+
 ```typescript
-'use client';
-
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-
-export default function SignInPage() {
-  const handleGitHubSignIn = async () => {
-    await signIn('github', {
-      callbackUrl: '/projects',
-    });
-  };
+export default async function SignInPage({ searchParams }) {
+  const callbackUrl = (await searchParams).callbackUrl || "/projects"
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign in to AI Board</h1>
-        </div>
+    <>
+      {/* GitHub OAuth — always shown */}
+      <form action={async () => { "use server"; await signIn("github", { redirectTo: callbackUrl }) }}>
+        <Button type="submit">Continue with GitHub</Button>
+      </form>
 
-        <div className="space-y-4">
-          <Button
-            onClick={handleGitHubSignIn}
-            className="w-full"
-            variant="outline"
-          >
-            Sign in with GitHub
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            GitLab (Coming soon)
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            BitBucket (Coming soon)
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+      {/* Dev login — shown only on preview deployments */}
+      {process.env.NEXT_PUBLIC_DEV_LOGIN === "true" && (
+        <DevLoginForm callbackUrl={callbackUrl} />
+      )}
+    </>
+  )
 }
 ```
 
