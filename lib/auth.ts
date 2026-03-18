@@ -78,7 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Validate profile
       if (!validateGitHubProfile(profile)) {
-        return false; // Reject authentication
+        return false;
       }
 
       // Create or update user in database
@@ -89,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         console.log('User created/updated successfully', {
           email: profile.email,
-          userId: userId,
+          userId,
           duration: `${duration}ms`,
           timestamp: new Date().toISOString(),
         });
@@ -99,7 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // not the OAuth provider ID which may change
         user.id = userId;
 
-        return true; // Allow authentication
+        return true;
       } catch (error) {
         const duration = Date.now() - startTime;
 
@@ -111,7 +111,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           timestamp: new Date().toISOString(),
         });
 
-        return false; // Reject authentication
+        return false;
       }
     },
 

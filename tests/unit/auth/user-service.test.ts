@@ -458,11 +458,6 @@ describe('UserService', () => {
       const mockUser = { id: 'dev-user-abc123' };
       const mockUpsert = vi.fn().mockResolvedValue(mockUser);
 
-      vi.mocked(prisma.$transaction).mockImplementation(
-        // createOrUpdateDevUser doesn't use $transaction, so we mock user.upsert directly
-        undefined as never,
-      );
-      // Mock prisma.user.upsert directly since createOrUpdateDevUser doesn't use $transaction
       (prisma as Record<string, unknown>).user = { upsert: mockUpsert };
 
       const result = await createOrUpdateDevUser('dev@example.com');
