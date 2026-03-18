@@ -260,14 +260,16 @@ if (!project) {
 
 #### Authentication Layer
 - **NextAuth.js**: Session-based authentication
-- **OAuth Providers**: GitHub OAuth
-- **Session Storage**: Database-backed sessions
+- **Providers**: GitHub OAuth plus a preview-only credentials provider
+- **Preview Login Gating**: Credentials sign-in is enabled only when `VERCEL_ENV=preview`, `DEV_LOGIN_ENABLED=true`, and `DEV_LOGIN_SECRET` is configured
+- **Session Storage**: JWT sessions in the app runtime, database sessions in test runtime
 - **CSRF Protection**: NextAuth built-in protection
+- **Route Guard**: `proxy.ts` redirects unauthenticated page requests to `/auth/signin` and preserves `callbackUrl`
 - **Test Override Guard**: `x-test-user-id` is accepted only in explicit test context with the dedicated override header
 
 #### Authorization Layer
 - **User-Project Ownership**: Required `userId` foreign key
-- **Server-Side Validation**: All API routes validate ownership
+- **Server-Side Validation**: All API routes validate owner-or-member access or owner-only access as required
 - **Project Scoping**: All operations filtered by project ID + user ID
 - **Workflow Authentication**: Bearer token for GitHub Actions workflows
 

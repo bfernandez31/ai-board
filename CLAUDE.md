@@ -101,7 +101,8 @@ For full endpoint catalog, read `specs/specifications/endpoints.md`.
 
 - Every project has an owner (`userId` foreign key)
 - Members can access projects alongside owners
-- Test mode: Auto-login as `test@e2e.local` when `NODE_ENV !== 'production'`
+- Preview deployments can enable credentials login with `DEV_LOGIN_ENABLED=true` and `DEV_LOGIN_SECRET`
+- Automated tests commonly authenticate with the `x-test-user-id` request header against seeded users such as `test@e2e.local`
 
 ### Test Environment
 

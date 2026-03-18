@@ -7,15 +7,18 @@ Complete REST API documentation with authentication, request/response formats, a
 All API endpoints require authentication via NextAuth.js session cookies except where noted.
 
 **Primary Authentication**: Session cookie (set automatically by NextAuth.js)
-**Optional API Authentication**: Bearer PAT on request-aware endpoints
+**Optional API Authentication**: Bearer PAT on request-aware endpoints that call `requireAuth(request)` or equivalent helpers
 **Unauthenticated**: 401 Unauthorized
 **Unauthorized Access**: 403 Forbidden (user is neither project owner nor member)
 
-**Guarded Test Override**:
-- `x-test-user-id` is a test-only override header
-- It is honored only when `TEST_MODE=true` or `NODE_ENV=test` and the request also includes `x-ai-board-test-auth-override: true`
-- Outside explicit test runs, the header never authenticates a caller
-- Protected API routes may reject blocked header-only requests before route code runs
+**Preview Credentials Login**:
+- Preview deployments can expose the built-in NextAuth credentials callback at `POST /api/auth/callback/credentials`
+- This flow is internal to sign-in and is available only when preview-login environment gating is enabled
+- Failed credentials submissions redirect to `/auth/signin?error=dev-login`
+
+**Test Override**:
+- `x-test-user-id` is a test-only override header for automated tests
+- Test support lives in server-side request handling, not in the public sign-in UI
 
 **Authorization Pattern**:
 - All project-scoped endpoints validate "owner OR member" access
