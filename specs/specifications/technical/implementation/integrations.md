@@ -394,9 +394,8 @@ sequenceDiagram
             RS->>CLI: codex login --api-key $OPENAI_API_KEY
         end
         RS->>RS: write ~/.codex/config.toml (OTEL telemetry)
-        RS->>RS: cp CLAUDE.md AGENTS.md (≤32KB)
         RS->>RS: read .claude/commands/COMMAND.md
-        RS->>CLI: echo prompt | codex exec --full-auto -m $CODEX_MODEL -
+        RS->>CLI: echo prompt | codex exec --dangerously-bypass-approvals-and-sandbox -m $CODEX_MODEL -
     end
     CLI-->>RS: exit code
     RS-->>WF: propagated exit code
@@ -410,15 +409,13 @@ sequenceDiagram
 | Auth secret | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64) |
 | Command invocation | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Prompt injection via stdin from `.claude/commands/COMMAND.md` |
 | Telemetry | Env vars (passed through from workflow) | `~/.codex/config.toml` with `[otel]` section |
-| Project context | `CLAUDE.md` (native) | `AGENTS.md` (generated from `CLAUDE.md`, ≤32KB) |
-| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5-codex`), `CODEX_REASONING` env var (default: `high`) |
+| Project context | `CLAUDE.md` (native) | `AGENTS.md` at project root, read automatically by Codex |
+| Model selection | `ANTHROPIC_MODEL` (workflow env) | `CODEX_MODEL` env var (default: `gpt-5.4`), `CODEX_REASONING` env var (default: `high`) |
 
-**AGENTS.md Generation** (Codex only):
-- Copies `CLAUDE.md` to `AGENTS.md` in the working directory
-- Enforces 32KB limit (Codex documented maximum)
-- If over limit: truncates at byte boundary and appends `<!-- TRUNCATED -->` notice
-- Ephemeral: not committed; regenerated on each workflow run
-- Skipped if `CLAUDE.md` does not exist
+**Repository Instructions** (Codex only):
+- Target repositories are expected to provide `AGENTS.md` at the project root
+- `run-agent.sh` does not generate, copy, truncate, or inject repository instruction files for Codex
+- In ai-board-managed repositories, `AGENTS.md` may be a symlink to `CLAUDE.md`
 
 **Codex Telemetry Mapping**:
 
@@ -446,7 +443,7 @@ sequenceDiagram
 - `CLAUDE_CODE_OAUTH_TOKEN`: Required when `AGENT_TYPE=CLAUDE`
 - `OPENAI_API_KEY`: Required when `AGENT_TYPE=CODEX` (API key auth mode)
 - `CODEX_AUTH_JSON`: Alternative to `OPENAI_API_KEY` for Codex (base64-encoded OAuth `auth.json` from `codex login`; decoded and written to `~/.codex/auth.json`)
-- `CODEX_MODEL`: Optional Codex model override (default: `gpt-5-codex`)
+- `CODEX_MODEL`: Optional Codex model override (default: `gpt-5.4`)
 - `CODEX_REASONING`: Optional Codex reasoning effort override (default: `high`)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: Optional; enables Codex telemetry when set
 - `OTEL_EXPORTER_OTLP_HEADERS`: Optional; passed to Codex telemetry config

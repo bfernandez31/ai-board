@@ -25,7 +25,12 @@ vi.mock('@octokit/rest', () => ({
 }));
 
 describe('closePRsForBranch', () => {
-  let mockOctokit: any;
+  let mockOctokit: {
+    rest: {
+      pulls: { list: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+      issues: { createComment: ReturnType<typeof vi.fn> };
+    };
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();

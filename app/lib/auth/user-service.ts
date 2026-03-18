@@ -18,10 +18,11 @@ export interface GitHubProfile {
  * @param profile - Profile data from GitHub OAuth
  * @returns True if profile is valid, false otherwise
  */
-export function validateGitHubProfile(profile: any): profile is GitHubProfile {
-  if (!profile?.email) {
+export function validateGitHubProfile(profile: unknown): profile is GitHubProfile {
+  const p = profile as Record<string, unknown> | null | undefined;
+  if (!p?.email) {
     console.error('GitHub profile missing email', {
-      providerId: profile?.id,
+      providerId: p?.id,
       timestamp: new Date().toISOString(),
     });
     return false;

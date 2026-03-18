@@ -88,12 +88,14 @@ export function DocumentationEditor({
       setIsDirty(false);
       onSaveSuccess?.();
       onCancel();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Error is already handled by mutation.onError
       // Show user-friendly toast message
       toast({
         title: 'Save Failed',
-        description: error.message || 'Failed to save changes. Please try again.',
+        description:
+          (error as { message?: string }).message ||
+          'Failed to save changes. Please try again.',
         variant: 'destructive',
       });
     }

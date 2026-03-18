@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import { useState, type ElementType } from 'react';
 import { Eye, BotMessageSquare, BotOff, Bot } from 'lucide-react';
 import { DemoTicketCard } from './demo-ticket-card';
 import type { WorkflowStage, DemoTicket } from '@/lib/utils/animation-helpers';
@@ -29,7 +29,7 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
 };
 
 // Icon configuration per stage (column index)
-const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> = {
+const STAGE_ICONS: Record<number, { icon: ElementType; label: string }[]> = {
   0: [{ icon: BotOff, label: 'No AI' }], // INBOX
   1: [
     { icon: Eye, label: 'Review' },
@@ -53,6 +53,13 @@ const STAGE_ICONS: Record<number, { icon: React.ElementType; label: string }[]> 
   5: [], // SHIP - no icons
 };
 
+function getIconColor(icon: ElementType): string {
+  if (icon === BotOff) return 'text-ctp-red';
+  if (icon === Eye) return 'text-ctp-blue';
+  if (icon === BotMessageSquare) return 'text-primary';
+  return 'text-ctp-green';
+}
+
 /**
  * Workflow column with beautiful hover effects
  * - Elevation: Column lifts up slightly on hover
@@ -73,7 +80,7 @@ export function WorkflowColumnCard({
   const icons = STAGE_ICONS[stage.index] || [];
 
   return (
-    <div className="relative group">
+    <div className="relative group" role="region" aria-label={`${stage.name} workflow stage`}>
       {/* Column Card */}
       <div
         className={`
@@ -84,7 +91,7 @@ export function WorkflowColumnCard({
           ${stage.bgColor}
           ${stage.borderColor}
           group-hover:scale-105
-          group-hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]
+          group-hover:shadow-[0_0_40px_hsl(var(--primary)/0.4)]
           group-hover:z-10
           ${!prefersReducedMotion ? 'group-hover:-translate-y-1' : ''}
         `}
@@ -98,11 +105,11 @@ export function WorkflowColumnCard({
           className={`${stage.headerBgColor} border-b ${stage.headerBorderColor} px-4 py-2.5`}
         >
           <div className="flex items-center justify-between gap-3">
-            <h2
+            <h3
               className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
             >
               {stage.label}
-            </h2>
+            </h3>
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.58rem] font-semibold shadow-[0_0_8px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${stage.badgeBgColor} ${stage.badgeTextColor}`}
             >
@@ -128,19 +135,10 @@ export function WorkflowColumnCard({
             <div className="flex items-center justify-center gap-2">
               {icons.map((iconConfig, index) => {
                 const IconComponent = iconConfig.icon;
-                // Color based on icon type
-                const iconColor =
-                  IconComponent === BotOff
-                    ? 'text-ctp-red' // Red for No AI
-                    : IconComponent === Eye
-                      ? 'text-ctp-blue' // Blue for Review
-                      : IconComponent === BotMessageSquare
-                        ? 'text-primary' // Purple for Chat
-                        : 'text-ctp-green'; // Green for AI automation
                 return (
                   <IconComponent
                     key={index}
-                    className={`w-4 h-4 ${iconColor}`}
+                    className={`w-4 h-4 ${getIconColor(IconComponent)}`}
                     strokeWidth={2}
                     aria-label={iconConfig.label}
                   />

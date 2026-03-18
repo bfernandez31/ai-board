@@ -6,6 +6,7 @@ import type { WorkflowBreakdown } from '@/lib/analytics/types';
 
 interface WorkflowDistributionChartProps {
   data: WorkflowBreakdown[];
+  emptyMessage?: string;
 }
 
 const WORKFLOW_COLORS: Record<string, string> = {
@@ -14,7 +15,10 @@ const WORKFLOW_COLORS: Record<string, string> = {
   CLEAN: 'hsl(var(--chart-5))',
 };
 
-export function WorkflowDistributionChart({ data }: WorkflowDistributionChartProps) {
+export function WorkflowDistributionChart({
+  data,
+  emptyMessage = 'No workflow data available',
+}: WorkflowDistributionChartProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -23,7 +27,7 @@ export function WorkflowDistributionChart({ data }: WorkflowDistributionChartPro
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No workflow data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>

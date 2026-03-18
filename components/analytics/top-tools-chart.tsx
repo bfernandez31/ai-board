@@ -6,9 +6,13 @@ import type { ToolUsage } from '@/lib/analytics/types';
 
 interface TopToolsChartProps {
   data: ToolUsage[];
+  emptyMessage?: string;
 }
 
-export function TopToolsChart({ data }: TopToolsChartProps) {
+export function TopToolsChart({
+  data,
+  emptyMessage = 'No tool usage data available',
+}: TopToolsChartProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -17,7 +21,7 @@ export function TopToolsChart({ data }: TopToolsChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No tool usage data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>

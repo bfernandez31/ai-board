@@ -15,6 +15,7 @@ import { formatCost } from '@/lib/analytics/aggregations';
 
 interface CostByStageChartProps {
   data: StageCost[];
+  emptyMessage?: string;
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -24,7 +25,10 @@ const STAGE_COLORS: Record<string, string> = {
   VERIFY: 'hsl(var(--chart-4))',
 };
 
-export function CostByStageChart({ data }: CostByStageChartProps) {
+export function CostByStageChart({
+  data,
+  emptyMessage = 'No stage data available',
+}: CostByStageChartProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -33,7 +37,7 @@ export function CostByStageChart({ data }: CostByStageChartProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No stage data available
+            {emptyMessage}
           </div>
         </CardContent>
       </Card>

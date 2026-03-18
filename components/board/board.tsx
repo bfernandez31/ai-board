@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -43,6 +43,11 @@ import { getWorkflowJob, getAIBoardJob, getDeployJob } from '@/lib/utils/job-fil
 import { canRollbackToInbox, canRollbackToPlan } from '@/app/lib/workflows/rollback-validator';
 import { isTicketDeletable, getDeletionBlockReason } from '@/lib/utils/trash-zone-eligibility';
 import { useDeleteTicket } from '@/lib/hooks/mutations/useDeleteTicket';
+import { useHoverCapability } from '@/lib/hooks/use-hover-capability';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { NewTicketModal } from './new-ticket-modal';
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
+import { ShortcutsHelpButton } from './shortcuts-help-button';
 
 /**
  * Convert TicketWithVersion to TicketDetailModal-compatible format
@@ -61,6 +66,11 @@ function convertTicketForModal(ticket: TicketWithVersion | null) {
   };
 }
 
+const STAGE_BY_NUMBER: Record<number, string> = {
+  1: 'INBOX', 2: 'SPECIFY', 3: 'PLAN',
+  4: 'BUILD', 5: 'VERIFY', 6: 'SHIP',
+};
+
 interface BoardProps {
   ticketsByStage: Record<Stage, TicketWithVersion[]>;
   projectId: number;
@@ -69,14 +79,15 @@ interface BoardProps {
 }
 
 /** Default merge: apply server response fields to optimistic ticket */
-function mergeTransitionFields(serverData: Record<string, any>, current: TicketWithVersion): TicketWithVersion {
+function mergeTransitionFields(serverData: Record<string, unknown>, current: TicketWithVersion): TicketWithVersion {
+  const data = serverData as Partial<TicketWithVersion>;
   return {
     ...current,
-    stage: serverData.stage || current.stage,
-    version: serverData.version || current.version,
-    branch: serverData.branch !== undefined ? serverData.branch : current.branch,
-    workflowType: serverData.workflowType || current.workflowType,
-    updatedAt: serverData.updatedAt || current.updatedAt,
+    stage: data.stage || current.stage,
+    version: data.version || current.version,
+    branch: data.branch !== undefined ? data.branch : current.branch,
+    workflowType: data.workflowType || current.workflowType,
+    updatedAt: data.updatedAt || current.updatedAt,
   };
 }
 
@@ -172,16 +183,72 @@ export function Board({
   // Delete mutation hook (T019)
   const deleteTicketMutation = useDeleteTicket(projectId);
 
+  // AIB-299: Keyboard shortcuts state
+  const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('shortcuts-hint-dismissed') !== 'true';
+    } catch { return false; }
+  });
+  const hasHover = useHoverCapability();
+
+  const isAnyModalOpen = isModalOpen || isNewTicketModalOpen || isShortcutsHelpOpen || deleteModalOpen || !!pendingTransition || !!pendingVerifyRollback || !!pendingCloseTransition;
+
+  const handleShortcutsHelpChange = useCallback((open: boolean) => {
+    setIsShortcutsHelpOpen(open);
+    if (!open) {
+      try { localStorage.setItem('shortcuts-hint-dismissed', 'true'); } catch {}
+    }
+  }, []);
+
+  const handleNewTicketShortcut = useCallback(() => setIsNewTicketModalOpen(true), []);
+  const handleFocusSearchShortcut = useCallback(() => {
+    document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
+  }, []);
+  const handleColumnNavShortcut = useCallback((columnIndex: number) => {
+    const stage = STAGE_BY_NUMBER[columnIndex];
+    if (stage) {
+      document.querySelector<HTMLElement>(`[data-column="${stage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+    }
+  }, []);
+  const handleToggleHelpShortcut = useCallback(() => {
+    handleShortcutsHelpChange(!isShortcutsHelpOpen);
+  }, [handleShortcutsHelpChange, isShortcutsHelpOpen]);
+
+  useKeyboardShortcuts({
+    enabled: hasHover && !isAnyModalOpen,
+    onNewTicket: handleNewTicketShortcut,
+    onFocusSearch: handleFocusSearchShortcut,
+    onColumnNav: handleColumnNavShortcut,
+    onToggleHelp: handleToggleHelpShortcut,
+  });
+
+  // Separate listener for ? key when help dialog is open (fix: help dialog blocks useKeyboardShortcuts)
+  useEffect(() => {
+    if (!isShortcutsHelpOpen) return;
+
+    function handleHelpClose(event: KeyboardEvent) {
+      if (event.key === '?' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        handleShortcutsHelpChange(false);
+      }
+    }
+
+    document.addEventListener('keydown', handleHelpClose);
+    return () => document.removeEventListener('keydown', handleHelpClose);
+  }, [isShortcutsHelpOpen, handleShortcutsHelpChange]);
+
   // Configure sensors for drag and drop
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8, // Prevent accidental drags
+        distance: 8, // Prevent accidental drags with mouse
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // Long-press duration for deliberate drag
+        delay: 250, // Long-press duration for deliberate drag on touch devices
         tolerance: 20, // Allow vertical scroll gestures without triggering drag (T905)
       },
     })
@@ -308,9 +375,17 @@ export function Board({
       // Get all polled jobs for this ticket
       const ticketPolledJobs = polledJobs.filter(job => job.ticketId === ticketId);
 
+      // Helper: find quality score from latest COMPLETED verify job
+      const getLatestQualityScore = (jobs: Job[]): number | null => {
+        const verifyJob = jobs
+          .filter((j) => j.command === 'verify' && j.status === 'COMPLETED' && j.qualityScore != null)
+          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
+        return verifyJob?.qualityScore ?? null;
+      };
+
       // If no jobs at all, return null state
       if (ticketInitialJobs.length === 0 && ticketPolledJobs.length === 0) {
-        return { workflow: null, aiBoard: null, deployJob: null };
+        return { workflow: null, aiBoard: null, deployJob: null, qualityScore: null };
       }
 
       // If no polled jobs yet, use initial jobs (first render)
@@ -320,6 +395,7 @@ export function Board({
           workflow: ticket ? getWorkflowJob(ticketInitialJobs, ticket.stage) : null,
           aiBoard: ticket ? getAIBoardJob(ticketInitialJobs, ticket.stage) : null,
           deployJob: getDeployJob(ticketInitialJobs),
+          qualityScore: getLatestQualityScore(ticketInitialJobs),
         };
       }
 
@@ -363,6 +439,7 @@ export function Board({
         workflow: ticket ? getWorkflowJob(fullJobs, ticket.stage) : null,
         aiBoard: ticket ? getAIBoardJob(fullJobs, ticket.stage) : null,
         deployJob: getDeployJob(fullJobs),
+        qualityScore: getLatestQualityScore(fullJobs),
       };
     },
     [polledJobs, initialJobs, projectId, allTickets]
@@ -413,8 +490,8 @@ export function Board({
       ticket: TicketWithVersion,
       targetStage: Stage,
       config: {
-        mergeServerData?: (serverData: Record<string, any>, current: TicketWithVersion) => TicketWithVersion;
-        onApiError?: (error: Record<string, any>, status: number) => void;
+        mergeServerData?: (serverData: Record<string, unknown>, current: TicketWithVersion) => TicketWithVersion;
+        onApiError?: (error: { error?: string; message?: string }, status: number) => void;
         successToast: { title: string; description: string };
         networkErrorToast: { title: string; description: string };
       }
@@ -443,7 +520,7 @@ export function Board({
         );
 
         if (!response.ok) {
-          const error = await response.json();
+          const error = (await response.json()) as { error?: string; message?: string };
           revert();
           if (config.onApiError) {
             config.onApiError(error, response.status);
@@ -706,13 +783,16 @@ export function Board({
     setPendingVerifyRollback(null);
 
     await performTransition(ticket, targetStage, {
-      mergeServerData: (serverData, current) => ({
-        ...current,
-        stage: serverData.stage || current.stage,
-        version: serverData.version || current.version,
-        previewUrl: serverData.previewUrl,
-        updatedAt: serverData.updatedAt || current.updatedAt,
-      }),
+      mergeServerData: (serverData, current): TicketWithVersion => {
+        const data = serverData as Partial<TicketWithVersion>;
+        return {
+          ...current,
+          stage: data.stage || current.stage,
+          version: data.version || current.version,
+          previewUrl: data.previewUrl ?? current.previewUrl ?? null,
+          updatedAt: data.updatedAt || current.updatedAt,
+        };
+      },
       onApiError: (error) => {
         toast({
           variant: 'destructive',
@@ -945,7 +1025,7 @@ export function Board({
     const initial = initialJobs.get(ticketId) || [];
     const polled = polledJobs.filter(job => job.ticketId === ticketId);
     const jobMap = new Map(initial.map(j => [j.id, j]));
-    polled.forEach(pj => { jobMap.set(pj.id, pj as any); });
+    polled.forEach(pj => { jobMap.set(pj.id, pj as unknown as Job); });
     return Array.from(jobMap.values());
   }, [initialJobs, polledJobs]);
 
@@ -959,7 +1039,7 @@ export function Board({
     const ticketWithJobs = {
       ...activeTicket,
       jobs: allTicketJobs.map(j => ({ status: j.status })),
-    } as any;
+    } as unknown as Parameters<typeof isTicketDeletable>[0];
 
     const isDeletable = isTicketDeletable(ticketWithJobs);
     const reason = getDeletionBlockReason(ticketWithJobs);
@@ -1135,6 +1215,20 @@ export function Board({
         onConfirm={handleCloseConfirm}
         isClosing={isClosingTicket}
       />
+
+      {/* Keyboard-triggered New Ticket Modal (AIB-299) */}
+      <NewTicketModal
+        open={isNewTicketModalOpen}
+        onOpenChange={setIsNewTicketModalOpen}
+        projectId={projectId}
+      />
+
+      {/* Keyboard Shortcuts Help (AIB-299) */}
+      <KeyboardShortcutsDialog
+        open={isShortcutsHelpOpen}
+        onOpenChange={handleShortcutsHelpChange}
+      />
+      <ShortcutsHelpButton onClick={() => handleShortcutsHelpChange(!isShortcutsHelpOpen)} />
     </div>
   );
 }

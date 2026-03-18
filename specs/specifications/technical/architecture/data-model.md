@@ -280,6 +280,10 @@ model Job {
   model               String?   @db.VarChar(50)  // Primary model used
   toolsUsed           String[]  @default([])     // List of tools used (Edit, Write, Bash, etc.)
 
+  // Quality score (FULL workflow verify jobs only)
+  qualityScore        Int?      // Final weighted quality score (0-100)
+  qualityScoreDetails String?   @db.Text  // JSON with dimension sub-scores and weights
+
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -313,6 +317,8 @@ model Job {
 - `durationMs`: Total duration of Claude API calls in milliseconds (nullable)
 - `model`: Primary Claude model used (max 50 chars, nullable)
 - `toolsUsed`: Array of Claude tools used during execution (default: empty array)
+- `qualityScore`: Final weighted code quality score 0-100 (nullable, FULL workflow verify jobs only)
+- `qualityScoreDetails`: JSON string containing all five dimension sub-scores, weights, and computed final score (nullable, populated alongside `qualityScore`)
 
 **Relationships**:
 - Belongs to Ticket (required, cascade delete)
@@ -354,6 +360,24 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Tools usage aggregated from `toolsUsed` arrays across all jobs
 - Null telemetry values treated as 0 for aggregation
 - Real-time updates via existing 2-second job polling mechanism
+
+**Quality Score Data**:
+- `qualityScore` populated only when: `command = "verify"`, `status = "COMPLETED"`, and ticket `workflowType = "FULL"`
+- `qualityScoreDetails` JSON structure:
+  ```json
+  {
+    "dimensions": {
+      "bugDetection": { "score": 90, "weight": 0.30 },
+      "compliance": { "score": 80, "weight": 0.30 },
+      "codeComments": { "score": 70, "weight": 0.20 },
+      "historicalContext": { "score": 85, "weight": 0.10 },
+      "prComments": { "score": 95, "weight": 0.10 }
+    },
+    "finalScore": 83
+  }
+  ```
+- Score is read-only after computation; no update or delete endpoints exposed
+- When multiple verify jobs exist (rollback-reset cycles), the UI displays the latest COMPLETED verify job's score
 
 ### Comment
 

@@ -39,7 +39,7 @@ AI-Board is both a web application AND a development toolchain. The `.claude-plu
 │   ├── tasks-template.md                # Tasks list template
 │   ├── checklist-template.md            # Pre-implementation checklist template
 │   ├── summary-template.md              # Implementation summary template (2300 chars max)
-│   └── agent-file-template.md           # AGENTS.md template for Codex
+│   └── agent-file-template.md           # Agent instruction file template
 ├── scripts/                             # Shell scripts and utilities
 │   ├── bash/
 │   │   ├── common.sh                    # Shared functions (logging, API calls)
@@ -243,8 +243,8 @@ The `run-agent.sh` script abstracts CLI differences:
 | Aspect | Claude Code | Codex CLI |
 |--------|------------|-----------|
 | **Command invocation** | `claude --dangerously-skip-permissions "/COMMAND ARGS"` | Reads `.claude/commands/COMMAND.md`, pipes content via stdin to `codex exec` |
-| **Project context** | Reads `CLAUDE.md` natively | Generates `AGENTS.md` from `CLAUDE.md` (max 32KB) |
-| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5-codex`) |
+| **Project context** | Reads `CLAUDE.md` natively | Reads `AGENTS.md` at project root via Codex auto-discovery |
+| **Model** | `ANTHROPIC_MODEL` env var | `CODEX_MODEL` env var (default: `gpt-5.4`) |
 | **Reasoning** | N/A (built-in) | `CODEX_REASONING` env var (default: `high`) |
 | **Auth** | `CLAUDE_CODE_OAUTH_TOKEN` | `OPENAI_API_KEY` or `CODEX_AUTH_JSON` (base64-encoded OAuth token from `codex login`) |
 
@@ -277,7 +277,7 @@ Templates provide standardized document structures used by commands during artif
 | `tasks-template.md` | `ai-board.tasks` | Task list with dependency ordering |
 | `checklist-template.md` | `ai-board.checklist` | Pre-implementation verification checklist |
 | `summary-template.md` | `ai-board.implement` | Post-implementation summary (2300 chars max) |
-| `agent-file-template.md` | `run-agent.sh` (Codex) | AGENTS.md generation template |
+| `agent-file-template.md` | `update-agent-context.sh` | Template for agent instruction files created or updated from plan data |
 
 Templates use `[PLACEHOLDER_NAME]` format for values filled by the command at runtime.
 

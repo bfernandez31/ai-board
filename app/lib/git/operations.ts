@@ -43,8 +43,8 @@ export async function commitAndPush(options: CommitAndPushOptions): Promise<Comm
       if ('sha' in data) {
         sha = data.sha;
       }
-    } catch (error: any) {
-      if (error.status !== 404) throw error;
+    } catch (error: unknown) {
+      if ((error as { status?: number }).status !== 404) throw error;
     }
 
     const { data } = await octokit.repos.createOrUpdateFileContents({
@@ -60,17 +60,18 @@ export async function commitAndPush(options: CommitAndPushOptions): Promise<Comm
     });
 
     return { commitSha: data.commit.sha || '' };
-  } catch (error: any) {
-    if (error.message?.includes('does not match') || error.message?.includes('conflict')) {
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number };
+    if (err.message?.includes('does not match') || err.message?.includes('conflict')) {
       throw new Error(
         'Unable to save: another user has modified this file. Please refresh and try again.'
       );
     }
 
-    if (error.status === 404 && error.message?.includes('branch')) {
+    if (err.status === 404 && err.message?.includes('branch')) {
       throw new Error(`Branch '${options.branch}' not found in repository`);
     }
 
-    throw new Error(`GitHub API error: ${error.message}`);
+    throw new Error(`GitHub API error: ${err.message}`);
   }
 }

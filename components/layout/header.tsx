@@ -46,6 +46,7 @@ export function Header() {
   // Fetch project info if we're on a project page
   useEffect(() => {
     if (!pathname) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears project context on route change
       setProjectInfo(null);
       return;
     }
@@ -165,6 +166,9 @@ export function Header() {
               </Link>
               <Link href="#workflow" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
                 Workflow
+              </Link>
+              <Link href="#pricing" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
+                Pricing
               </Link>
               <Link href="/auth/signin">
                 <Button variant="default">

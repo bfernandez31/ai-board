@@ -21,8 +21,8 @@ function createMockJob(
     id: 1,
     command: 'specify',
     status: 'COMPLETED',
-    startedAt: new Date('2025-01-01T10:00:00Z'),
-    completedAt: new Date('2025-01-01T10:05:00Z'),
+    startedAt: '2025-01-01T10:00:00Z',
+    completedAt: '2025-01-01T10:05:00Z',
     inputTokens: 1000,
     outputTokens: 500,
     cacheReadTokens: 200,
@@ -31,6 +31,8 @@ function createMockJob(
     durationMs: 300000, // 5 minutes
     model: 'claude-opus-4-5',
     toolsUsed: ['Read', 'Edit'],
+    qualityScore: null,
+    qualityScoreDetails: null,
     ...overrides,
   };
 }

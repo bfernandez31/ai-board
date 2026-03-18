@@ -142,6 +142,8 @@ export async function GET(
         durationMs: true,
         model: true,
         toolsUsed: true,
+        qualityScore: true,
+        qualityScoreDetails: true,
       },
       orderBy: { id: 'asc' },
     });

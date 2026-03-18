@@ -5,30 +5,39 @@
  * Tests for navigating to the activity page and basic functionality
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/worker-isolation';
+import { ensureProjectExists } from '../helpers/db-cleanup';
 
 test.describe('Activity Feed Navigation', () => {
-  test.beforeEach(async ({ page }) => {
+  // Ensure desktop viewport so the activity link in the header is visible
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test.beforeEach(async ({ page, projectId }) => {
+    // Ensure project exists with required fields (githubOwner, githubRepo)
+    await ensureProjectExists(projectId);
+
     // Navigate to the board page first
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
   });
 
-  test('should navigate to activity page from header icon', async ({ page }) => {
-    // Click the Activity icon in the header
-    const activityLink = page.locator('a[aria-label="View project activity"]');
+  test('should navigate to activity page from header icon', async ({ page, projectId }) => {
+    // Wait for the activity link — requires projectInfo to load (async fetch in header)
+    // projectInfo only sets when API returns githubOwner + githubRepo
+    const activityLink = page.locator('a[aria-label="View project activity"]').first();
+    await activityLink.waitFor({ state: 'visible', timeout: 15000 });
     await activityLink.click();
 
     // Verify we're on the activity page
-    await expect(page).toHaveURL('/projects/1/activity');
+    await expect(page).toHaveURL(`/projects/${projectId}/activity`);
 
     // Verify page title is present
     await expect(page.locator('h1')).toContainText('Activity');
   });
 
-  test('should display activity feed container', async ({ page }) => {
+  test('should display activity feed container', async ({ page, projectId }) => {
     // Navigate directly to the activity page
-    await page.goto('/projects/1/activity');
+    await page.goto(`/projects/${projectId}/activity`);
     await page.waitForLoadState('networkidle');
 
     // Check for the activity feed container
@@ -36,24 +45,22 @@ test.describe('Activity Feed Navigation', () => {
     await expect(feedContainer).toBeVisible();
   });
 
-  test('should navigate back to board from activity page', async ({ page }) => {
+  test('should navigate back to board from activity page', async ({ page, projectId }) => {
     // Navigate to activity page
-    await page.goto('/projects/1/activity');
+    await page.goto(`/projects/${projectId}/activity`);
     await page.waitForLoadState('networkidle');
 
-    // Click "Back to Board" button
-    const backButton = page.locator('button', { hasText: 'Back to Board' }).or(
-      page.locator('a', { hasText: 'Back to Board' })
-    );
+    // Click "Back to Board" — use .first() to avoid strict mode with link + button variants
+    const backButton = page.locator('a', { hasText: 'Back to Board' }).first();
     await backButton.click();
 
     // Verify we're back on the board
-    await expect(page).toHaveURL('/projects/1/board');
+    await expect(page).toHaveURL(`/projects/${projectId}/board`);
   });
 
-  test('should show empty state when no activity', async ({ page }) => {
-    // Use a project that might be empty (project 3 is typically dev/test)
-    await page.goto('/projects/3/activity');
+  test('should show empty state when no activity', async ({ page, projectId }) => {
+    // Use the worker-isolated project (cleaned before each test, so likely empty)
+    await page.goto(`/projects/${projectId}/activity`);
     await page.waitForLoadState('networkidle');
 
     // Wait for content to load
@@ -67,15 +74,13 @@ test.describe('Activity Feed Navigation', () => {
     expect(hasEvents || hasEmptyState).toBe(true);
   });
 
-  test('should have touch-friendly tap targets', async ({ page }) => {
+  test('should have touch-friendly tap targets', async ({ page, projectId }) => {
     // Navigate to activity page
-    await page.goto('/projects/1/activity');
+    await page.goto(`/projects/${projectId}/activity`);
     await page.waitForLoadState('networkidle');
 
-    // Check "Back to Board" button has minimum tap target size
-    const backButton = page.locator('button', { hasText: 'Back to Board' }).or(
-      page.locator('a', { hasText: 'Back to Board' })
-    );
+    // Check "Back to Board" button has minimum tap target size — use .first() for strict mode
+    const backButton = page.locator('a', { hasText: 'Back to Board' }).first();
 
     const boundingBox = await backButton.boundingBox();
     if (boundingBox) {
@@ -88,34 +93,38 @@ test.describe('Activity Feed Navigation', () => {
 test.describe('Activity Feed Mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE size
 
-  test('should navigate via mobile menu', async ({ page }) => {
+  test('should navigate via mobile menu', async ({ page, projectId }) => {
+    // Ensure project exists with required fields
+    await ensureProjectExists(projectId);
+
     // Navigate to board
-    await page.goto('/projects/1/board');
+    await page.goto(`/projects/${projectId}/board`);
     await page.waitForLoadState('networkidle');
 
-    // Open mobile menu
-    const menuButton = page.locator('button', { hasText: 'Toggle menu' }).or(
-      page.locator('[class*="md:hidden"]').locator('button').first()
-    );
+    // Open mobile menu — button has sr-only text "Toggle menu" as accessible name
+    const menuButton = page.getByRole('button', { name: 'Toggle menu' });
+    await menuButton.waitFor({ state: 'visible', timeout: 10000 });
     await menuButton.click();
 
-    // Click activity link in mobile menu
-    const activityLink = page.locator('a[aria-label="View project activity"]');
+    // Wait for the Sheet to open, then find activity link INSIDE the sheet content
+    const sheetContent = page.locator('[data-state="open"][role="dialog"]');
+    await sheetContent.waitFor({ state: 'visible', timeout: 5000 });
+    const activityLink = sheetContent.locator('a[aria-label="View project activity"]');
     await activityLink.click();
 
     // Verify navigation
-    await expect(page).toHaveURL('/projects/1/activity');
+    await expect(page).toHaveURL(`/projects/${projectId}/activity`);
   });
 
-  test('should have responsive layout on mobile', async ({ page }) => {
-    await page.goto('/projects/1/activity');
+  test('should have responsive layout on mobile', async ({ page, projectId }) => {
+    await page.goto(`/projects/${projectId}/activity`);
     await page.waitForLoadState('networkidle');
 
     // Check that the page title is visible
     await expect(page.locator('h1')).toContainText('Activity');
 
-    // Check that content fits within viewport
-    const feedContainer = page.locator('main');
+    // Check that content fits within viewport — use .first() since there may be nested mains
+    const feedContainer = page.locator('main').first();
     const boundingBox = await feedContainer.boundingBox();
     if (boundingBox) {
       expect(boundingBox.width).toBeLessThanOrEqual(375);

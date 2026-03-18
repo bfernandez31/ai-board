@@ -5,7 +5,14 @@
  * These functions are designed to be testable and reusable.
  */
 
-import type { StageKey, ToolUsage } from './types';
+import type {
+  AgentFilter,
+  AnalyticsFilters,
+  StageKey,
+  TicketOutcomeFilter,
+  TimeRange,
+  ToolUsage,
+} from './types';
 
 /**
  * T005: Command-to-stage mapping
@@ -26,6 +33,12 @@ export const COMMAND_TO_STAGE: Record<string, StageKey> = {
   'comment-verify': 'VERIFY',
 };
 
+export const DEFAULT_ANALYTICS_FILTERS: AnalyticsFilters = {
+  range: '30d',
+  outcome: 'shipped',
+  agent: 'all',
+};
+
 /**
  * Get stage from job command
  */
@@ -37,10 +50,7 @@ export function getStageFromCommand(command: string): StageKey | null {
  * T006: Time range date calculation
  * Calculates the start date for a given time range.
  */
-export function getDateRangeStart(
-  range: '7d' | '30d' | '90d' | 'all',
-  now: Date = new Date()
-): Date | null {
+export function getDateRangeStart(range: TimeRange, now: Date = new Date()): Date | null {
   switch (range) {
     case '7d':
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -56,10 +66,7 @@ export function getDateRangeStart(
 /**
  * Get the previous period start date for trend calculation
  */
-export function getPreviousPeriodStart(
-  range: '7d' | '30d' | '90d' | 'all',
-  now: Date = new Date()
-): Date | null {
+export function getPreviousPeriodStart(range: TimeRange, now: Date = new Date()): Date | null {
   switch (range) {
     case '7d':
       return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -76,8 +83,50 @@ export function getPreviousPeriodStart(
  * T007: Granularity auto-adjustment
  * Returns 'daily' for ranges < 30 days, 'weekly' for >= 30 days.
  */
-export function getGranularity(range: '7d' | '30d' | '90d' | 'all'): 'daily' | 'weekly' {
+export function getGranularity(range: TimeRange): 'daily' | 'weekly' {
   return range === '7d' ? 'daily' : 'weekly';
+}
+
+export function getRangeLabel(range: TimeRange): string {
+  switch (range) {
+    case '7d':
+      return 'Last 7 days';
+    case '30d':
+      return 'Last 30 days';
+    case '90d':
+      return 'Last 90 days';
+    case 'all':
+      return 'All time';
+  }
+}
+
+export function getOutcomeLabel(outcome: TicketOutcomeFilter): string {
+  switch (outcome) {
+    case 'shipped':
+      return 'Shipped';
+    case 'closed':
+      return 'Closed';
+    case 'all-completed':
+      return 'All completed';
+  }
+}
+
+export function getAgentLabel(agent: AgentFilter): string {
+  switch (agent) {
+    case 'all':
+      return 'All agents';
+    case 'CLAUDE':
+      return 'Claude';
+    case 'CODEX':
+      return 'Codex';
+  }
+}
+
+export function buildAnalyticsEmptyMessage(filters: AnalyticsFilters): string {
+  const agentLabel = getAgentLabel(filters.agent);
+  const outcomeLabel = getOutcomeLabel(filters.outcome).toLowerCase();
+  const rangeLabel = getRangeLabel(filters.range).toLowerCase();
+  return `No ${outcomeLabel} analytics for ${agentLabel} in ${rangeLabel}.`;
 }
 
 /**
@@ -86,13 +135,12 @@ export function getGranularity(range: '7d' | '30d' | '90d' | 'all'): 'daily' | '
 export function formatDateForGrouping(date: Date, granularity: 'daily' | 'weekly'): string {
   if (granularity === 'daily') {
     const parts = date.toISOString().split('T');
-    return parts[0] ?? ''; // YYYY-MM-DD
-  } else {
-    // ISO week format: YYYY-Www
-    const year = date.getFullYear();
-    const week = getISOWeek(date);
-    return `${year}-W${week.toString().padStart(2, '0')}`;
+    return parts[0] ?? '';
   }
+
+  const year = date.getFullYear();
+  const week = getISOWeek(date);
+  return `${year}-W${week.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -125,9 +173,6 @@ export function aggregateTools(toolArrays: string[][]): ToolUsage[] {
     .slice(0, 10);
 }
 
-/**
- * Job interface for hasAnalyticsData check
- */
 interface JobForDataCheck {
   status: string;
   costUsd: number | null;

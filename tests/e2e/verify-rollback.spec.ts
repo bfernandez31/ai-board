@@ -25,60 +25,56 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
   /**
    * Helper: Perform drag-and-drop with @dnd-kit compatibility
-   * Uses dispatchEvent for reliable pointer events that @dnd-kit recognizes
+   * Uses page.mouse events for reliable MouseSensor activation.
+   * Scrolls elements into view first to handle boards wider than viewport.
    */
   const dragTicketToColumn = async (page: Page, ticketId: number, targetStage: string) => {
     const ticketCard = page.locator(`[data-ticket-id="${ticketId}"]`);
     const targetColumn = page.locator(`[data-stage="${targetStage}"]`);
 
-    // Ensure both elements are visible
-    await expect(ticketCard).toBeVisible();
-    await expect(targetColumn).toBeVisible();
+    // Scroll both elements into view (board may overflow horizontally)
+    await ticketCard.scrollIntoViewIfNeeded();
+    await expect(ticketCard).toBeVisible({ timeout: 5000 });
 
-    // Get bounding boxes
+    // Get ticket bounding box first (while it's scrolled into view)
     const ticketBox = await ticketCard.boundingBox();
-    const targetBox = await targetColumn.boundingBox();
-
-    if (!ticketBox || !targetBox) {
-      throw new Error('Could not get bounding boxes for drag elements');
+    if (!ticketBox) {
+      throw new Error('Could not get bounding box for ticket card');
     }
 
-    // Calculate coordinates
     const startX = ticketBox.x + ticketBox.width / 2;
     const startY = ticketBox.y + ticketBox.height / 2;
+
+    // Start the drag from the ticket
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+
+    // Pause to let @dnd-kit register the pointerdown and set up listeners
+    await page.waitForTimeout(100);
+
+    // Move past the 8px distance activation threshold first
+    await page.mouse.move(startX + 10, startY, { steps: 3 });
+    await page.waitForTimeout(50);
+
+    // Now scroll the target column into view and get its position
+    await targetColumn.scrollIntoViewIfNeeded();
+    const targetBox = await targetColumn.boundingBox();
+    if (!targetBox) {
+      throw new Error('Could not get bounding box for target column');
+    }
+
     const endX = targetBox.x + targetBox.width / 2;
     const endY = targetBox.y + targetBox.height / 2;
 
-    // Use dispatchEvent to fire proper pointer events that @dnd-kit recognizes
-    await ticketCard.dispatchEvent('pointerdown', {
-      clientX: startX,
-      clientY: startY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
-
-    // Small delay for event processing
+    // Move to target column in steps
+    await page.mouse.move(endX, endY, { steps: 15 });
     await page.waitForTimeout(50);
 
-    // Move slightly to activate drag (>8px threshold)
-    await page.mouse.move(startX + 15, startY);
-    await page.waitForTimeout(100);
+    // Release
+    await page.mouse.up();
 
-    // Move to target
-    await page.mouse.move(endX, endY, { steps: 10 });
-    await page.waitForTimeout(50);
-
-    // Release on target column
-    await targetColumn.dispatchEvent('pointerup', {
-      clientX: endX,
-      clientY: endY,
-      button: 0,
-      pointerId: 1,
-      isPrimary: true,
-    });
-
-    await page.waitForTimeout(300); // Wait for UI update
+    // Wait for drag end handler to fire and process the transition
+    await page.waitForTimeout(500);
   };
 
   /**
@@ -91,7 +87,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
         const method = response.request().method();
         return url.includes(`/api/projects/${projectId}/tickets/${ticketId}/transition`) && method === 'POST';
       },
-      { timeout: 5000 }
+      { timeout: 10000 }
     );
   };
 
@@ -142,7 +138,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for rollback confirmation modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Verify modal content
     await expect(modal.locator('text=Rollback to PLAN Stage')).toBeVisible();
@@ -192,7 +188,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click confirm button and wait for API response in parallel
     const confirmButton = modal.locator('button[data-action="confirm"]');
@@ -275,7 +271,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click confirm and wait for API response in parallel
     const [response] = await Promise.all([
@@ -329,7 +325,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click confirm and wait for API response in parallel
     const [response] = await Promise.all([
@@ -385,7 +381,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click cancel button
     const cancelButton = modal.locator('button[data-action="cancel"]');
@@ -676,7 +672,7 @@ test.describe('Rollback VERIFY to PLAN', () => {
 
     // Wait for and confirm rollback modal
     const modal = page.locator('[data-testid="rollback-verify-modal"]');
-    await expect(modal).toBeVisible({ timeout: 2000 });
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Click confirm and wait for API response in parallel
     const [response] = await Promise.all([

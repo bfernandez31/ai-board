@@ -43,7 +43,7 @@ export async function resolveTicket(projectId: number, identifier: string) {
  * @param include - Prisma include object for relations
  * @returns The ticket with relations if found, null otherwise
  */
-export async function resolveTicketWithRelations<T extends Record<string, unknown>>(
+export async function resolveTicketWithRelations<T extends Record<string, boolean | object>>(
   projectId: number,
   identifier: string,
   include: T
@@ -56,6 +56,7 @@ export async function resolveTicketWithRelations<T extends Record<string, unknow
         id: numericId,
         projectId,
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma include types are too narrow for generic usage
       include: include as any,
     });
   }
@@ -65,6 +66,7 @@ export async function resolveTicketWithRelations<T extends Record<string, unknow
       ticketKey: identifier,
       projectId,
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma include types are too narrow for generic usage
     include: include as any,
   });
 }

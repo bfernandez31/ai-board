@@ -3,28 +3,50 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getProject } from '@/lib/db/projects';
 import { getAnalyticsData } from '@/lib/analytics/queries';
+import { DEFAULT_ANALYTICS_FILTERS } from '@/lib/analytics/aggregations';
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
 import { Button } from '@/components/ui/button';
-import type { TimeRange } from '@/lib/analytics/types';
+import type { AgentFilter, TicketOutcomeFilter, TimeRange } from '@/lib/analytics/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+const VALID_RANGES = new Set<TimeRange>(['7d', '30d', '90d', 'all']);
+const VALID_OUTCOMES = new Set<TicketOutcomeFilter>(['shipped', 'closed', 'all-completed']);
+const VALID_AGENTS = new Set<AgentFilter>(['all', 'CLAUDE', 'CODEX']);
+
+function parseProjectId(projectIdString: string): number {
+  const projectId = parseInt(projectIdString, 10);
+
+  if (isNaN(projectId) || projectId <= 0) {
+    notFound();
+  }
+
+  return projectId;
+}
+
+function getSearchParamValue<T extends string>(
+  value: string | undefined,
+  validValues: Set<T>,
+  fallback: T
+): T {
+  if (!value) {
+    return fallback;
+  }
+
+  return validValues.has(value as T) ? (value as T) : fallback;
+}
 
 export default async function AnalyticsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; outcome?: string; agent?: string }>;
 }) {
   const { projectId: projectIdString } = await params;
-  const { range = '30d' } = await searchParams;
-
-  const projectId = parseInt(projectIdString, 10);
-
-  if (isNaN(projectId) || projectId <= 0) {
-    notFound();
-  }
+  const search = await searchParams;
+  const projectId = parseProjectId(projectIdString);
 
   const project = await getProject(projectId).catch((error) => {
     if (
@@ -36,8 +58,17 @@ export default async function AnalyticsPage({
     throw error;
   });
 
-  const validRange = ['7d', '30d', '90d', 'all'].includes(range) ? (range as TimeRange) : '30d';
-  const initialData = await getAnalyticsData(projectId, validRange);
+  const filters = {
+    range: getSearchParamValue(search.range, VALID_RANGES, DEFAULT_ANALYTICS_FILTERS.range),
+    outcome: getSearchParamValue(
+      search.outcome,
+      VALID_OUTCOMES,
+      DEFAULT_ANALYTICS_FILTERS.outcome
+    ),
+    agent: getSearchParamValue(search.agent, VALID_AGENTS, DEFAULT_ANALYTICS_FILTERS.agent),
+  };
+
+  const initialData = await getAnalyticsData(projectId, filters);
 
   return (
     <main className="container mx-auto py-10 max-w-7xl">

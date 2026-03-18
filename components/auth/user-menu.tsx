@@ -1,7 +1,6 @@
 "use client"
 
-import { signOut } from "next-auth/react"
-import { useSession } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -13,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { LogOut } from "lucide-react"
+import { CreditCard, Key, LogOut } from "lucide-react"
 
 export function UserMenu() {
   const { data: session } = useSession()
@@ -53,6 +52,22 @@ export function UserMenu() {
             <p className="text-xs text-muted-foreground">{session.user.email}</p>
           </div>
         </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/settings/billing">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Billing
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/settings/tokens">
+            <Key className="mr-2 h-4 w-4" />
+            API Tokens
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

@@ -29,7 +29,7 @@ export const imageFileSchema = z.object({
       `File size must be less than ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`
     )
     .refine(
-      (file) => ALLOWED_MIME_TYPES.includes(file.type as any),
+      (file) => (ALLOWED_MIME_TYPES as readonly string[]).includes(file.type),
       `File type must be one of: ${ALLOWED_MIME_TYPES.join(', ')}`
     ),
   version: z.number().int().positive(),

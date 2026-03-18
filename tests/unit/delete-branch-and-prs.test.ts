@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { deleteBranchAndPRs } from '@/lib/github/delete-branch-and-prs';
 import { Octokit } from '@octokit/rest';
 
@@ -12,8 +12,20 @@ import { Octokit } from '@octokit/rest';
  * - PR closure before branch deletion
  */
 
+interface MockOctokit {
+  rest: {
+    pulls: {
+      list: Mock;
+      update: Mock;
+    };
+    git: {
+      deleteRef: Mock;
+    };
+  };
+}
+
 describe('deleteBranchAndPRs', () => {
-  let mockOctokit: Octokit;
+  let mockOctokit: MockOctokit;
 
   beforeEach(() => {
     mockOctokit = {
@@ -26,7 +38,7 @@ describe('deleteBranchAndPRs', () => {
           deleteRef: vi.fn(),
         },
       },
-    } as unknown as Octokit;
+    };
   });
 
   it('should successfully delete branch and close PRs', async () => {
@@ -35,18 +47,18 @@ describe('deleteBranchAndPRs', () => {
       { number: 1, title: 'Test PR 1' },
       { number: 2, title: 'Test PR 2' },
     ];
-    (mockOctokit.rest.pulls.list as any).mockResolvedValue({
+    mockOctokit.rest.pulls.list.mockResolvedValue({
       data: mockPRs,
-    } as any);
+    });
 
     // Mock PR update responses
-    (mockOctokit.rest.pulls.update as any).mockResolvedValue({} as any);
+    mockOctokit.rest.pulls.update.mockResolvedValue({});
 
     // Mock successful branch deletion
-    (mockOctokit.rest.git.deleteRef as any).mockResolvedValue({} as any);
+    mockOctokit.rest.git.deleteRef.mockResolvedValue({});
 
     const result = await deleteBranchAndPRs(
-      mockOctokit,
+      mockOctokit as unknown as Octokit,
       'testowner',
       'testrepo',
       '084-feature'
@@ -78,17 +90,16 @@ describe('deleteBranchAndPRs', () => {
 
   it('should handle 404 error when branch already deleted', async () => {
     // Mock empty PR list
-    (mockOctokit.rest.pulls.list as any).mockResolvedValue({
+    mockOctokit.rest.pulls.list.mockResolvedValue({
       data: [],
-    } as any);
+    });
 
     // Mock 404 error for branch deletion
-    const error404 = new Error('Not Found');
-    (error404 as any).status = 404;
-    (mockOctokit.rest.git.deleteRef as any).mockRejectedValue(error404);
+    const error404 = Object.assign(new Error('Not Found'), { status: 404 });
+    mockOctokit.rest.git.deleteRef.mockRejectedValue(error404);
 
     const result = await deleteBranchAndPRs(
-      mockOctokit,
+      mockOctokit as unknown as Octokit,
       'testowner',
       'testrepo',
       '084-feature'
@@ -103,15 +114,14 @@ describe('deleteBranchAndPRs', () => {
 
   it('should handle 404 error from pulls.list when branch does not exist', async () => {
     // Mock 404 error from pulls.list (branch doesn't exist)
-    const error404 = new Error('Not Found');
-    (error404 as any).status = 404;
-    (mockOctokit.rest.pulls.list as any).mockRejectedValue(error404);
+    const error404 = Object.assign(new Error('Not Found'), { status: 404 });
+    mockOctokit.rest.pulls.list.mockRejectedValue(error404);
 
     // Mock 404 error for branch deletion (branch doesn't exist)
-    (mockOctokit.rest.git.deleteRef as any).mockRejectedValue(error404);
+    mockOctokit.rest.git.deleteRef.mockRejectedValue(error404);
 
     const result = await deleteBranchAndPRs(
-      mockOctokit,
+      mockOctokit as unknown as Octokit,
       'testowner',
       'testrepo',
       'non-existent-branch'
@@ -126,17 +136,16 @@ describe('deleteBranchAndPRs', () => {
 
   it('should handle "reference does not exist" error gracefully', async () => {
     // Mock empty PR list
-    (mockOctokit.rest.pulls.list as any).mockResolvedValue({
+    mockOctokit.rest.pulls.list.mockResolvedValue({
       data: [],
-    } as any);
+    });
 
     // Mock error with "reference does not exist" message
-    const referenceError = new Error('Reference does not exist');
-    (referenceError as any).status = 422;
-    (mockOctokit.rest.git.deleteRef as any).mockRejectedValue(referenceError);
+    const referenceError = Object.assign(new Error('Reference does not exist'), { status: 422 });
+    mockOctokit.rest.git.deleteRef.mockRejectedValue(referenceError);
 
     const result = await deleteBranchAndPRs(
-      mockOctokit,
+      mockOctokit as unknown as Octokit,
       'testowner',
       'testrepo',
       '084-feature'
@@ -151,44 +160,43 @@ describe('deleteBranchAndPRs', () => {
 
   it('should handle rate limit errors', async () => {
     // Mock rate limit error
-    const rateLimitError = new Error('Rate limit exceeded');
-    (rateLimitError as any).status = 429;
-    (rateLimitError as any).response = {
-      headers: {
-        'x-ratelimit-reset': '1609459200',
+    const rateLimitError = Object.assign(new Error('Rate limit exceeded'), {
+      status: 429,
+      response: {
+        headers: {
+          'x-ratelimit-reset': '1609459200',
+        },
       },
-    };
-    (mockOctokit.rest.pulls.list as any).mockRejectedValue(rateLimitError);
+    });
+    mockOctokit.rest.pulls.list.mockRejectedValue(rateLimitError);
 
     await expect(
-      deleteBranchAndPRs(mockOctokit, 'testowner', 'testrepo', '084-feature')
+      deleteBranchAndPRs(mockOctokit as unknown as Octokit, 'testowner', 'testrepo', '084-feature')
     ).rejects.toThrow(/rate limit/i);
   });
 
   it('should handle permission errors', async () => {
     // Mock permission denied error
-    const permissionError = new Error('Permission denied');
-    (permissionError as any).status = 403;
-    (mockOctokit.rest.pulls.list as any).mockRejectedValue(permissionError);
+    const permissionError = Object.assign(new Error('Permission denied'), { status: 403 });
+    mockOctokit.rest.pulls.list.mockRejectedValue(permissionError);
 
     await expect(
-      deleteBranchAndPRs(mockOctokit, 'testowner', 'testrepo', '084-feature')
+      deleteBranchAndPRs(mockOctokit as unknown as Octokit, 'testowner', 'testrepo', '084-feature')
     ).rejects.toThrow(/permission denied/i);
   });
 
   it('should handle protected branch errors', async () => {
     // Mock empty PR list
-    (mockOctokit.rest.pulls.list as any).mockResolvedValue({
+    mockOctokit.rest.pulls.list.mockResolvedValue({
       data: [],
-    } as any);
+    });
 
     // Mock 422 error for protected branch
-    const protectedError = new Error('Cannot delete protected branch');
-    (protectedError as any).status = 422;
-    (mockOctokit.rest.git.deleteRef as any).mockRejectedValue(protectedError);
+    const protectedError = Object.assign(new Error('Cannot delete protected branch'), { status: 422 });
+    mockOctokit.rest.git.deleteRef.mockRejectedValue(protectedError);
 
     await expect(
-      deleteBranchAndPRs(mockOctokit, 'testowner', 'testrepo', '084-feature')
+      deleteBranchAndPRs(mockOctokit as unknown as Octokit, 'testowner', 'testrepo', '084-feature')
     ).rejects.toThrow(/protected branch/i);
   });
 
@@ -196,25 +204,25 @@ describe('deleteBranchAndPRs', () => {
     const callOrder: string[] = [];
 
     // Mock PR list
-    (mockOctokit.rest.pulls.list as any).mockImplementation(async () => {
+    mockOctokit.rest.pulls.list.mockImplementation(async () => {
       callOrder.push('list');
-      return { data: [{ number: 1 }] } as any;
+      return { data: [{ number: 1 }] };
     });
 
     // Mock PR update
-    (mockOctokit.rest.pulls.update as any).mockImplementation(async () => {
+    mockOctokit.rest.pulls.update.mockImplementation(async () => {
       callOrder.push('update');
-      return {} as any;
+      return {};
     });
 
     // Mock branch deletion
-    (mockOctokit.rest.git.deleteRef as any).mockImplementation(async () => {
+    mockOctokit.rest.git.deleteRef.mockImplementation(async () => {
       callOrder.push('delete');
-      return {} as any;
+      return {};
     });
 
     await deleteBranchAndPRs(
-      mockOctokit,
+      mockOctokit as unknown as Octokit,
       'testowner',
       'testrepo',
       '084-feature'

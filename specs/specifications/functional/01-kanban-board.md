@@ -78,6 +78,12 @@ Each ticket appears as a card within its current stage column. Cards display:
 - **Ticket ID**: Unique identifier (format: #1, #2, etc.)
 - **Stage Badge**: Current workflow stage with appropriate color
 - **Timestamp**: Last updated time in relative format ("2 hours ago") for recent updates or absolute format ("2025-09-30 14:30") for older updates
+- **Quality Score Badge** (conditional): Small colored badge showing the integer score (0-100), shown only for FULL workflow tickets with a COMPLETED verify job that has a quality score
+  - Green: Excellent (90-100)
+  - Blue: Good (70-89)
+  - Amber: Fair (50-69)
+  - Red: Poor (0-49)
+  - Not shown for QUICK/CLEAN workflows or failed/cancelled verify jobs
 
 ### Ticket Ordering
 
@@ -188,6 +194,40 @@ The board automatically updates when workflow-initiated stage transitions occur:
 - TanStack Query deduplicates concurrent refetch requests
 - Single API call fetches all updated tickets
 - All affected tickets update simultaneously
+
+## Keyboard Shortcuts
+
+Keyboard shortcuts are available on the board page for desktop and tablet users with a physical keyboard. Shortcuts are automatically disabled on touch-only devices.
+
+### Device Detection
+
+Shortcuts are enabled only when the CSS media query `(hover: hover)` matches, indicating a device with fine pointer input (mouse or trackpad). Touch-only devices do not register shortcuts.
+
+### Available Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `N` | Open new ticket creation modal |
+| `S` or `/` | Focus the search input |
+| `1` – `6` | Scroll board to column (1=INBOX, 2=SPECIFY, 3=PLAN, 4=BUILD, 5=VERIFY, 6=SHIP) |
+| `?` | Toggle keyboard shortcuts help overlay |
+| `Esc` | Close the topmost open modal or overlay |
+
+### Shortcut Suppression
+
+All shortcuts (except `Escape`) are suppressed when the focused element is an `<input>`, `<textarea>`, `<select>`, or `contenteditable` element. This prevents accidental activations while typing.
+
+Shortcuts are completely inactive when the ticket detail modal is open. `Escape` continues to work to close modals via the native shadcn/ui Dialog behavior.
+
+### Column Navigation
+
+Number keys `1`–`6` smoothly scroll the board container horizontally to bring the target stage column into view. The scroll is idempotent — pressing the same key when the column is already visible re-scrolls to ensure it is fully in frame.
+
+### Help Overlay
+
+A floating keyboard icon button is visible at the bottom-right of the board on hover-capable devices. Clicking it or pressing `?` toggles a centered dialog listing all shortcuts in a Key | Action format.
+
+**First-visit behavior**: The help overlay is shown automatically on a user's first board visit. A `shortcuts-hint-dismissed` localStorage flag is set on dismiss to prevent it from appearing again. If localStorage is unavailable, the dialog degrades gracefully without errors.
 
 ## Performance Expectations
 

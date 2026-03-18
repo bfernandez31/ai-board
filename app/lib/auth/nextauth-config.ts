@@ -1,4 +1,4 @@
-import type { Account, Profile, User } from 'next-auth';
+import type { Account, Profile, Session, User } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import GithubProvider from 'next-auth/providers/github';
 import { createOrUpdateUser, validateGitHubProfile } from './user-service';
@@ -67,7 +67,7 @@ export const authOptions = {
       return token;
     },
 
-    async session({ session, token }: { session: any; token: JWT }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       // Add userId from JWT to session
       if (session.user && token.userId) {
         session.user.id = token.userId as string;

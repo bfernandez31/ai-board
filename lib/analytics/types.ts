@@ -5,6 +5,29 @@
  * These types match the API contract defined in contracts/analytics-api.yaml.
  */
 
+export type TimeRange = '7d' | '30d' | '90d' | 'all';
+export type TicketOutcomeFilter = 'shipped' | 'closed' | 'all-completed';
+export type NamedAgent = 'CLAUDE' | 'CODEX';
+export type AgentFilter = 'all' | NamedAgent;
+
+export interface AnalyticsFilters {
+  range: TimeRange;
+  outcome: TicketOutcomeFilter;
+  agent: AgentFilter;
+}
+
+export interface CompletionMetric {
+  count: number;
+  label: string;
+}
+
+export interface AgentOption {
+  value: AgentFilter;
+  label: string;
+  jobCount: number;
+  isDefault: boolean;
+}
+
 export interface OverviewMetrics {
   /** Total cost in USD for the period */
   totalCost: number;
@@ -14,8 +37,10 @@ export interface OverviewMetrics {
   successRate: number;
   /** Average job duration in milliseconds */
   avgDuration: number;
-  /** Number of tickets shipped in current month */
-  ticketsShipped: number;
+  /** Number of shipped tickets for the active filters */
+  ticketsShipped: CompletionMetric;
+  /** Number of closed tickets for the active filters */
+  ticketsClosed: CompletionMetric;
 }
 
 export interface CostDataPoint {
@@ -77,7 +102,24 @@ export interface WeeklyVelocity {
   ticketsShipped: number;
 }
 
-export type TimeRange = '7d' | '30d' | '90d' | 'all';
+export interface QualityScoreDataPoint {
+  date: string;
+  averageScore: number;
+  count: number;
+}
+
+export interface DimensionComparison {
+  dimension: string;
+  averageScore: number;
+  weight: number;
+}
+
+export interface QualityScoreAnalytics {
+  scoreTrend: QualityScoreDataPoint[];
+  dimensionComparison: DimensionComparison[];
+  overallAverage: number | null;
+  totalScoredJobs: number;
+}
 
 export interface AnalyticsData {
   overview: OverviewMetrics;
@@ -88,11 +130,13 @@ export interface AnalyticsData {
   topTools: ToolUsage[];
   workflowDistribution: WorkflowBreakdown[];
   velocity: WeeklyVelocity[];
-  timeRange: TimeRange;
+  qualityScore?: QualityScoreAnalytics | null;
+  filters: AnalyticsFilters;
+  availableAgents: AgentOption[];
   /** ISO timestamp of when data was generated */
   generatedAt: string;
-  /** Total jobs in range */
+  /** Total filtered jobs in range */
   jobCount: number;
-  /** False if no completed jobs with telemetry data */
+  /** False if no filtered completed jobs with telemetry data */
   hasData: boolean;
 }

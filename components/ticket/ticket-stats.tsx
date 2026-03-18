@@ -14,6 +14,7 @@ import {
   formatAbbreviatedNumber,
 } from '@/lib/analytics/aggregations';
 import { JobsTimeline } from './jobs-timeline';
+import { QualityScoreSection } from './quality-score-section';
 
 /**
  * Props for TicketStats component
@@ -148,23 +149,12 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
   // This ensures status is always up-to-date while preserving telemetry data
   const mergedJobs = useMemo<TicketJobWithTelemetry[]>(() => {
     return jobs.map((job) => {
-      // Find matching polled job for latest status
       const polledJob = polledJobs.find((p) => p.id === job.id);
-
       return {
-        id: job.id,
-        command: job.command,
+        ...job,
         status: polledJob?.status ?? job.status,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        inputTokens: job.inputTokens,
-        outputTokens: job.outputTokens,
-        cacheReadTokens: job.cacheReadTokens,
-        cacheCreationTokens: job.cacheCreationTokens,
-        costUsd: job.costUsd,
-        durationMs: job.durationMs,
-        model: job.model,
-        toolsUsed: job.toolsUsed,
+        qualityScore: job.qualityScore ?? null,
+        qualityScoreDetails: job.qualityScoreDetails ?? null,
       };
     });
   }, [jobs, polledJobs]);
@@ -174,6 +164,9 @@ export function TicketStats({ jobs, polledJobs }: TicketStatsProps) {
 
   return (
     <div className="space-y-2" data-testid="ticket-stats">
+      {/* Quality Score Section (above summary cards) */}
+      <QualityScoreSection jobs={mergedJobs} />
+
       {/* Summary Cards */}
       <StatsSummaryCards stats={stats} />
 

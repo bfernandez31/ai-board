@@ -496,13 +496,46 @@ jobs:
 
           echo "✅ Code review completed"
 
+      # Read quality score from code review output (FULL workflow only)
+      - name: Read Quality Score
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' && inputs.workflowType == 'FULL' }}
+        id: quality-score
+        working-directory: target
+        run: |
+          if [ -f "quality-score.json" ]; then
+            echo "📊 Quality score file found"
+            QUALITY_SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('quality-score.json','utf-8')).qualityScore)")
+            QUALITY_DETAILS=$(cat quality-score.json)
+            echo "quality_score=${QUALITY_SCORE}" >> "$GITHUB_OUTPUT"
+            echo "has_score=true" >> "$GITHUB_OUTPUT"
+            # Store details as base64 to avoid multiline issues
+            echo "quality_details_b64=$(echo "$QUALITY_DETAILS" | base64 -w0)" >> "$GITHUB_OUTPUT"
+            echo "   Score: ${QUALITY_SCORE}"
+          else
+            echo "ℹ️ No quality-score.json found (code review may not have generated scores)"
+            echo "has_score=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Update Job Status - Success
         if: ${{ success() && inputs.job_id && env.SKIP_EXECUTION != 'true' }}
         run: |
+          # Build JSON payload with optional quality score
+          if [ "${{ steps.quality-score.outputs.has_score }}" = "true" ]; then
+            QUALITY_DETAILS=$(echo "${{ steps.quality-score.outputs.quality_details_b64 }}" | base64 -d)
+            # Escape the JSON string for embedding
+            ESCAPED_DETAILS=$(echo "$QUALITY_DETAILS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
+            PAYLOAD=$(cat <<EOFPAYLOAD
+          {"status": "COMPLETED", "qualityScore": ${{ steps.quality-score.outputs.quality_score }}, "qualityScoreDetails": ${ESCAPED_DETAILS}}
+          EOFPAYLOAD
+          )
+          else
+            PAYLOAD='{"status": "COMPLETED"}'
+          fi
+
           curl -X PATCH "${APP_URL}/api/jobs/${{ inputs.job_id }}/status" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-            -d '{"status": "COMPLETED"}' \
+            -d "$PAYLOAD" \
             -f -s -S || echo "⚠️ Failed to update job status to COMPLETED"
 
       - name: Update Job Status - Skipped (E2E)

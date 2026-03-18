@@ -85,9 +85,10 @@ export async function closePRsForBranch(
       });
 
       prsClosed++;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const status = (error as { status?: number }).status;
       // 404 or 422 errors mean PR is already closed or not accessible - idempotent
-      if (error.status === 404 || error.status === 422) {
+      if (status === 404 || status === 422) {
         prsAlreadyClosed++;
       } else {
         throw error;

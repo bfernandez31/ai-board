@@ -331,10 +331,8 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
       },
     });
 
-    // Delete test user subscriptions to prevent plan pollution between tests
-    await client.subscription.deleteMany({
-      where: { userId: 'test-user-id' },
-    });
+    // Note: Do NOT delete subscriptions here — userId is shared across workers,
+    // so deleting would race with other workers that just created their subscription.
 
     // Reset test project policies to AUTO for test isolation
     await client.project.updateMany({
@@ -406,6 +404,8 @@ export async function ensureProjectExists(projectId: number): Promise<void> {
     update: {
       userId: testUser.id,
       clarificationPolicy: 'AUTO',
+      githubOwner: github.owner,
+      githubRepo: github.repo,
     },
     create: {
       id: projectId,

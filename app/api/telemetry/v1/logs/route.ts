@@ -310,8 +310,7 @@ function estimateOpenAICost(model: string, inputTokens: number, outputTokens: nu
  * The Rust OTLP exporter uses snake_case (resource_logs, scope_logs, log_records, etc.)
  * while the JS OTLP exporter uses camelCase (resourceLogs, scopeLogs, logRecords, etc.)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeOtlpKeys(obj: any): any {
+function normalizeOtlpKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) {
     return obj.map(normalizeOtlpKeys);
   }
@@ -333,8 +332,7 @@ function normalizeOtlpKeys(obj: any): any {
       trace_id: 'traceId',
       span_id: 'spanId',
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = snakeToCamelMap[key] || key;
       result[camelKey] = normalizeOtlpKeys(value);

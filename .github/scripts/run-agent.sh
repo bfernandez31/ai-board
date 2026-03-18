@@ -137,31 +137,6 @@ TOML
   cat ~/.codex/config.toml
 }
 
-generate_agents_md() {
-  if [[ ! -f "CLAUDE.md" ]]; then
-    log_info "No CLAUDE.md found — skipping AGENTS.md generation"
-    return 0
-  fi
-
-  log_info "Generating AGENTS.md from CLAUDE.md..."
-  cp CLAUDE.md AGENTS.md
-
-  local file_size
-  file_size=$(wc -c < AGENTS.md)
-  local max_size=32768  # 32KB
-
-  if (( file_size > max_size )); then
-    log_info "AGENTS.md is ${file_size} bytes (> 32KB) — truncating..."
-    head -c "$max_size" AGENTS.md > AGENTS.md.tmp
-
-    # Append truncation notice
-    printf '\n\n<!-- TRUNCATED: Original file exceeded 32KB Codex limit -->\n' >> AGENTS.md.tmp
-    mv AGENTS.md.tmp AGENTS.md
-  fi
-
-  log_info "AGENTS.md generated ($(wc -c < AGENTS.md) bytes)"
-}
-
 invoke_codex() {
   local command_file=".claude/commands/${COMMAND}.md"
 
@@ -184,7 +159,7 @@ ${ARGS}"
   fi
 
   log_info "Model: $model | Reasoning: $reasoning"
-  echo "$prompt" | codex exec --full-auto -m "$model" -c "reasoning_effort=\"$reasoning\"" -
+  echo "$prompt" | codex exec --dangerously-bypass-approvals-and-sandbox -m "$model" -c "reasoning_effort=\"$reasoning\"" -
 }
 
 # --- Main dispatch ---
@@ -199,7 +174,6 @@ case "$AGENT_TYPE" in
     validate_auth
     install_codex
     setup_codex_telemetry
-    generate_agents_md
     invoke_codex
     ;;
   *)

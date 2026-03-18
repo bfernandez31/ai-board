@@ -27,6 +27,8 @@ export interface JobTypeConfig {
   ariaLabel: string; // Accessibility label template
 }
 
+import type { Job } from '@prisma/client';
+
 /**
  * DualJobState Interface
  *
@@ -37,10 +39,8 @@ export interface DualJobState {
   workflow: Job | null;
   aiBoard: Job | null;
   deployJob: Job | null;
+  qualityScore: number | null;
 }
-
-// Job type imported from Prisma schema
-import type { Job } from '@prisma/client';
 
 /**
  * TicketJobWithTelemetry Interface
@@ -62,4 +62,6 @@ export interface TicketJobWithTelemetry {
   durationMs: number | null;
   model: string | null;
   toolsUsed: string[];
+  qualityScore: number | null;
+  qualityScoreDetails: string | null;
 }

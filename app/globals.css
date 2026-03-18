@@ -131,4 +131,42 @@
   }
 
   /* Desktop (≥1024px): Show all 18 tickets (default) */
+
+  /* Landing page scroll-triggered animations */
+  .landing-fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .landing-fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Respect prefers-reduced-motion for landing animations */
+  @media (prefers-reduced-motion: reduce) {
+    .landing-fade-in {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  /* Radial gradient utility for hero glow */
+  .bg-gradient-radial {
+    background-image: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  }
+
+  /* Landing page gradient divider */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      hsl(var(--primary) / 0.4),
+      hsl(var(--ctp-blue) / 0.4),
+      transparent
+    );
+  }
 }

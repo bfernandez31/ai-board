@@ -6,7 +6,7 @@ The user interface provides an intuitive, modern experience for managing tickets
 
 ## Global Footer
 
-A global footer is rendered on all pages (public and authenticated) via the root layout.
+A global footer is rendered on most pages (public and authenticated) via the root layout. It is **hidden on full-height layouts** such as the project board (`/projects/:id/board`) where it would interfere with the scrollable kanban view.
 
 **Content**:
 - Copyright notice: "© {current year} AI Board. All rights reserved."
@@ -15,8 +15,10 @@ A global footer is rendered on all pages (public and authenticated) via the root
 **Layout**:
 - Mobile: Copyright and links stack vertically, centered
 - Desktop (≥768px): Copyright on left, links on right (horizontal nav)
-- Links use muted subtext color with purple hover transition (`hover:text-[#8B5CF6]`)
+- Links use muted subtext color with purple hover transition (`hover:text-primary`)
 - Separated from content by a top border
+
+**Visibility**: The component uses `usePathname()` to hide itself on routes matching `/projects/:id/board*`.
 
 **Component**: `components/layout/footer.tsx` — rendered after `{children}` in `app/layout.tsx`
 
@@ -51,7 +53,7 @@ The sign-in page displays a consent notice below the OAuth buttons:
 
 > "By signing in, you agree to our Terms of Service and Privacy Policy"
 
-Links use purple accent color (`text-[#8B5CF6]`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
+Links use purple accent color (`text-primary`), surrounding text uses muted subtext styling. This is informational consent (no blocking checkbox) consistent with OAuth-based sign-in conventions.
 
 ## Protected Access Behavior
 
@@ -78,7 +80,7 @@ Protected pages and authenticated UI actions rely on the user's real session.
 
 **Ticket Card Appearance**:
 - Size: 64x40px mini ticket cards
-- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber)
+- Colors: Cycles through Catppuccin color palette (purple, indigo, blue, emerald, amber) using semantic Tailwind tokens
 - Opacity: 0.10-0.15 for subtle appearance
 - Blur: 2px blur filter for enhanced depth perception
 - Rotation: Random rotation between -10° to +10° for organic feel
@@ -97,8 +99,8 @@ Protected pages and authenticated UI actions rely on the user's real session.
 - Animation does not capture or block any user interactions
 
 **Accessibility**:
-- Completely disabled when user has "prefers-reduced-motion" enabled
-- Hidden from assistive technologies (aria-hidden)
+- Completely disabled when user has "prefers-reduced-motion" enabled (`motion-reduce:` classes)
+- Hidden from assistive technologies (`aria-hidden="true"`)
 - Text remains fully legible with contrast ratio ≥4.5:1
 - No motion for users with motion sensitivity
 
@@ -107,6 +109,83 @@ Protected pages and authenticated UI actions rely on the user's real session.
 - GPU-accelerated transforms for smooth animation
 - Page load time increases by no more than 200ms
 - Browser window resize adapts gracefully without page reload
+
+### Landing Page Structure
+
+The landing page is a server-rendered page displayed to unauthenticated visitors only. It is composed of five sequential sections:
+
+1. **HeroSection** — animated hero with background ticket cards
+2. **FeaturesGrid** — product feature highlights
+3. **WorkflowSection** — workflow stage showcase (visible on all viewports)
+4. **PricingSection** — pricing cards and FAQ (`#pricing`)
+5. **CTASection** — final call-to-action
+
+All sections are server components except where client interactivity is required (e.g., PricingFAQ uses `'use client'` for the Collapsible accordion).
+
+**Skip Navigation**: A skip-to-content link is rendered at the top of the landing page (`<a href="#main-content">`) for keyboard users. It becomes visible on focus and bypasses header navigation, jumping directly to the main content area.
+
+**Scroll Animations**: Sections use scroll-triggered fade-in animations via IntersectionObserver. All animations respect `prefers-reduced-motion` — when enabled, content is visible immediately with no motion. Content is always readable even if animations are disabled or fail to load.
+
+**Color Token Compliance**: All landing page components use semantic Tailwind tokens exclusively. No hardcoded hex or rgb color values are used anywhere in landing page components.
+
+### Workflow Section
+
+The workflow section (`components/landing/workflow-section.tsx`) showcases the 6-stage ticket lifecycle (INBOX → SPECIFY → PLAN → BUILD → VERIFY → SHIP).
+
+**Desktop (≥1024px)**: Full interactive Kanban demo (`mini-kanban-demo.tsx`) with animated ticket cards and polished micro-interactions.
+
+**Mobile & Tablet (<1024px)**: An optimized workflow visualization displays all 6 stages in a scrollable, touch-friendly layout. This replaces the previous behavior of hiding the demo entirely on small screens, ensuring all visitors understand the workflow regardless of device.
+
+**Accessibility**:
+- Each workflow stage element has a descriptive `aria-label`
+- Stage icons use semantic color tokens (no hardcoded hex values)
+
+### Pricing Section
+
+The pricing section (`components/landing/pricing-section.tsx`) displays subscription plans and a FAQ to unauthenticated visitors. It is positioned after `WorkflowSection` and before `CTASection` with `id="pricing"` for anchor linking.
+
+**Layout**:
+- Section heading: "Simple, transparent pricing" (centered)
+- Sub-heading: description text (centered, `max-w-2xl`)
+- Plan cards: `grid-cols-1 md:grid-cols-3` — single column on mobile, 3 columns on `md+`
+- FAQ: below the cards, `max-w-2xl mx-auto`
+
+**Plan Cards** (`components/landing/pricing-card.tsx`):
+
+Plan data is sourced from `lib/billing/plans.ts` (`PLANS` constant) — the same source of truth used by the billing settings page. This ensures pricing shown on the landing page always matches in-app billing.
+
+| Plan | Price | CTA Label | Highlighted |
+|------|-------|-----------|-------------|
+| Free | $0 | "Get Started" | No |
+| Pro | $15/mo | "Start 14-day trial" | Yes ("Most Popular" badge, `border-primary`, elevated visual prominence) |
+| Team | $30/mo | "Start 14-day trial" | No |
+
+The "Most Popular" Pro plan receives elevated visual treatment (larger scale, more prominent border) to guide visitors toward the recommended option while keeping other plans clearly readable.
+
+Each card shows: plan name, monthly price, feature list (checkmark icons), and a CTA button. All CTA buttons link to `/auth/signin`. CTA buttons meet minimum touch target size of 44×44px on all viewports.
+
+**FAQ** (`components/landing/pricing-faq.tsx`):
+
+A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion items:
+
+1. "What does BYOK mean?" — explains Bring Your Own Key, required on Free plan
+2. "Which AI agents are supported?" — Claude (Anthropic) and Codex (OpenAI)
+3. "How does the 14-day trial work?" — Pro/Team trial, cancel anytime
+4. "Can I switch plans?" — upgrade/downgrade via billing settings
+
+**Responsive behavior**:
+- Mobile (< 768px): cards stack in single column
+- Tablet / Desktop (≥ 768px): 3-column card grid
+- Minimum supported viewport: 375px (no horizontal scroll)
+
+**Accessibility**:
+- `aria-hidden` is not needed (content is informational, not decorative)
+- Collapsible triggers are keyboard-accessible with `aria-expanded` state announced to screen readers
+- `aria-controls` links each trigger to its content panel
+- `ChevronDown` rotates 180° when open
+- Text contrast meets WCAG AA (semantic color tokens only — no hardcoded hex values)
+
+---
 
 ## Visual Design
 
@@ -270,8 +349,13 @@ Protected pages and authenticated UI actions rely on the user's real session.
 
 ### Touch Support
 
+**Sensor Configuration**:
+- **Desktop**: `MouseSensor` with 8px distance threshold prevents accidental drags
+- **Touch devices**: `TouchSensor` with 250ms long-press delay and 20px tolerance
+- `MouseSensor` is used instead of `PointerSensor` to avoid intercepting touch events, which would bypass the `TouchSensor` delay and cause accidental drags on mobile
+
 **Mobile Interaction**:
-- Long-press to initiate drag
+- Long-press (≥250ms) to initiate drag — quick swipes scroll without triggering drag
 - Touch-friendly drag targets
 - Visual feedback adapted for touch
 - Smooth performance on mobile devices
@@ -296,7 +380,7 @@ Protected pages and authenticated UI actions rely on the user's real session.
 
 **Interaction**:
 - Mouse hover states active
-- Keyboard shortcuts available
+- Keyboard shortcuts available (see [Keyboard Shortcuts](#keyboard-shortcuts-board))
 - Drag-and-drop with mouse
 - Context menus and tooltips
 
@@ -356,6 +440,26 @@ The header maintains consistent layout across all pages within a project:
 - Analytics/Settings pages: Spacer element provides flex spacing to position right-side elements
 - Landing page (no project): Spacer element ensures right-side alignment
 
+### User Menu
+
+The user menu provides authenticated account navigation via an avatar button in the header.
+
+**Trigger**: Clicking the circular avatar button (`data-testid="user-menu"`) opens a dropdown aligned to the right edge of the header.
+
+**Dropdown Contents** (authenticated):
+- User display name and email (non-interactive label)
+- **Billing** → `/settings/billing` (CreditCard icon)
+- **API Tokens** → `/settings/tokens` (Key icon)
+- **Sign out** — triggers `signOut` with redirect to `/auth/signin`
+
+**Unauthenticated State**: Replaced by a "Sign In" button linking to `/auth/signin`.
+
+**Mobile Behavior** (<768px): Avatar button is hidden; Billing and API Tokens links are surfaced inside the mobile hamburger menu instead.
+
+**Component**: `components/auth/user-menu.tsx`
+
+---
+
 ### Analytics Navigation
 
 The header provides quick access to project analytics:
@@ -377,6 +481,21 @@ The header provides quick access to project analytics:
 - Positioned below project name in mobile menu drawer
 - Clicking navigates to analytics page and closes menu
 - Part of project-specific navigation group
+
+### Mobile Menu (Hamburger)
+
+The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `Sheet` panel visible only on <768px viewports.
+
+**Authenticated User Contents**:
+1. User avatar, display name, and email
+2. **Billing** → `/settings/billing` (CreditCard icon)
+3. **API Tokens** → `/settings/tokens` (Key icon)
+4. **Sign Out** button (red text, LogOut icon)
+
+**Project-specific section** (shown when `projectId` and `projectName` are provided):
+- Project name header with icon links: Specifications (GitHub), Analytics, Activity
+
+All navigation items close the sheet on click.
 
 **Accessibility**:
 - `aria-label="View project analytics"` for screen readers
@@ -643,30 +762,69 @@ When user has no projects:
 
 ## Accessibility
 
+### Keyboard Shortcuts (Board) {#keyboard-shortcuts-board}
+
+Board-level keyboard shortcuts are active on desktop and tablet devices with a physical keyboard. Detection uses the CSS `(hover: hover)` media query. Shortcuts are suppressed when any text input, textarea, or contenteditable element is focused.
+
+| Key | Action |
+|-----|--------|
+| `N` | Open new ticket creation modal |
+| `S` / `/` | Focus search input |
+| `1` – `6` | Jump to board column (INBOX → SHIP) |
+| `?` | Toggle keyboard shortcuts help overlay |
+| `Esc` | Close topmost modal or overlay |
+
+A floating keyboard icon button is visible at the bottom-right corner of the board on hover-capable devices. Clicking it or pressing `?` opens the shortcuts reference overlay. On first board visit, the overlay appears automatically; subsequent visits skip the auto-show (tracked via `shortcuts-hint-dismissed` localStorage key).
+
 ### Keyboard Support
 
 **Navigation**:
 - Tab key navigates interactive elements
 - Arrow keys for tab switching
-- Shortcuts for common actions
+- Shortcuts for common actions (see board shortcuts above)
 - Escape to close modals/cancel actions
 
 **Focus Management**:
-- Visible focus indicators
-- Logical focus order
+- Visible focus indicators (minimum 3px solid outline meeting WCAG AA requirements)
+- Logical focus order matching visual layout
 - Focus trapped in modals
 - Auto-focus on form inputs when appropriate
 - Action buttons in modals do not auto-focus to prevent unintended activation
 - Users navigate to interactive elements via keyboard (Tab key)
 
+**Landing Page Skip Navigation**:
+- Skip-to-content link at top of landing page
+- Becomes visible on focus (hidden by default)
+- Allows keyboard users to bypass navigation and jump to `#main-content`
+
 ### Visual Accessibility
 
 **Contrast**:
-- Sufficient contrast ratios for text (WCAG AA compliance)
-- Analytics dashboard card titles displayed in white (`text-white`) for optimal contrast
-- Analytics chart titles displayed in white for improved readability against dark backgrounds
+- All text meets WCAG AA contrast ratios: 4.5:1 for normal text, 3:1 for large text and UI components
+- Analytics dashboard card titles displayed in `text-white` for optimal contrast on dark backgrounds
+- Analytics chart titles displayed in `text-white` for improved readability against dark backgrounds
 - Color not sole indicator of state
 - Icons supplement color coding
+
+**Color System**:
+- All components use semantic Tailwind tokens (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.)
+- No hardcoded hex or rgb values in any component files
+- Theming and dark mode supported through CSS custom properties in `globals.css`
+
+**Motion & Animation**:
+- All animations respect `prefers-reduced-motion` media query using `motion-safe:` / `motion-reduce:` Tailwind classes
+- Content remains fully visible and functional when animations are disabled
+- Scroll-triggered animations degrade to immediate visibility when motion is reduced
+- Decorative animated elements (e.g., hero background) are fully disabled under reduced-motion preferences
+
+**Decorative Elements**:
+- All purely decorative elements use `aria-hidden="true"` to hide from assistive technologies
+- Visual flourishes, background animations, and icon decorations do not pollute the accessibility tree
+
+**Heading Hierarchy**:
+- Pages maintain semantic heading hierarchy: `h1` for page title, `h2` for section headings, `h3` for subsections
+- Landing page sections each have a single `h2` heading
+- No heading levels are skipped
 
 **Text**:
 - Readable font sizes (minimum 14px)

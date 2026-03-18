@@ -91,13 +91,14 @@ async function parseFormData(request: NextRequest): Promise<{ fields: Fields; fi
     },
   });
 
-  // Add required properties for formidable
-  (nodeStream as any).headers = Object.fromEntries(request.headers.entries());
-  (nodeStream as any).method = request.method;
-  (nodeStream as any).url = request.url;
+  // Add required properties for formidable (it expects IncomingMessage-like object)
+  const formStream = nodeStream as Readable & { headers: Record<string, string>; method: string; url: string };
+  formStream.headers = Object.fromEntries(request.headers.entries());
+  formStream.method = request.method;
+  formStream.url = request.url;
 
   return new Promise((resolve, reject) => {
-    form.parse(nodeStream as any, (err, fields, files) => {
+    form.parse(formStream as unknown as import('http').IncomingMessage, (err, fields, files) => {
       if (err) {
         reject(err);
       } else {
@@ -153,8 +154,8 @@ export async function POST(
         const parsed = await parseFormData(request);
         fields = parsed.fields;
         files = parsed.files;
-      } catch (error: any) {
-        if (error.code === 1015) {
+      } catch (error: unknown) {
+        if ((error as { code?: number }).code === 1015) {
           return NextResponse.json(
             {
               error: 'Maximum 5 images allowed per ticket',
@@ -163,7 +164,7 @@ export async function POST(
             { status: 400 }
           );
         }
-        if (error.code === 1009) {
+        if ((error as { code?: number }).code === 1009) {
           return NextResponse.json(
             {
               error: 'Total file size exceeds 10MB limit',
@@ -386,7 +387,7 @@ export async function POST(
     if (attachments.length > 0) {
       finalTicket = await prisma.ticket.update({
         where: { id: ticket.id },
-        data: { attachments: attachments as any },
+        data: { attachments: attachments as unknown as import('@prisma/client').Prisma.InputJsonValue },
       });
     }
 
