@@ -92,3 +92,45 @@ export async function createOrUpdateUser(
     return { id: user.id };
   });
 }
+
+/**
+ * Creates or updates a user via dev login (Credentials provider).
+ * Upserts User and Account records with 'credentials' provider.
+ * Only used when DEV_LOGIN_SECRET is configured (preview environments).
+ */
+export async function createOrUpdateDevUser(email: string): Promise<{ id: string }> {
+  return await prisma.$transaction(async (tx) => {
+    const user = await tx.user.upsert({
+      where: { email },
+      update: {
+        updatedAt: new Date(),
+      },
+      create: {
+        id: crypto.randomUUID(),
+        email,
+        name: email.split('@')[0] ?? email,
+        emailVerified: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await tx.account.upsert({
+      where: {
+        provider_providerAccountId: {
+          provider: 'credentials',
+          providerAccountId: email,
+        },
+      },
+      update: {},
+      create: {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        type: 'credentials',
+        provider: 'credentials',
+        providerAccountId: email,
+      },
+    });
+
+    return { id: user.id };
+  });
+}

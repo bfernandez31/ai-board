@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
+  createOrUpdateDevUser,
   createOrUpdateUser,
   validateGitHubProfile,
   type GitHubProfile,
@@ -449,6 +450,96 @@ describe('UserService', () => {
       expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
       expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
       expect(capturedAccountUpdate.expires_at).toBe(9876543210);
+    });
+  });
+
+  describe('createOrUpdateDevUser', () => {
+    it('creates a new dev user with email-derived name', async () => {
+      const mockUser = { id: 'dev-user-uuid' };
+      let capturedUserCreate: Record<string, unknown> | null = null;
+      let capturedAccountCreate: Record<string, unknown> | null = null;
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockImplementation(({ create }) => {
+              capturedUserCreate = create;
+              return Promise.resolve(mockUser);
+            }),
+          },
+          account: {
+            upsert: vi.fn().mockImplementation(({ create }) => {
+              capturedAccountCreate = create;
+              return Promise.resolve({ id: 'acc-dev' });
+            }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await createOrUpdateDevUser('dev@example.com');
+
+      expect(result.id).toBe('dev-user-uuid');
+      expect(capturedUserCreate).toBeDefined();
+      expect(capturedUserCreate!.email).toBe('dev@example.com');
+      expect(capturedUserCreate!.name).toBe('dev');
+      expect(capturedAccountCreate).toBeDefined();
+      expect(capturedAccountCreate!.provider).toBe('credentials');
+      expect(capturedAccountCreate!.providerAccountId).toBe('dev@example.com');
+      expect(capturedAccountCreate!.type).toBe('credentials');
+    });
+
+    it('returns existing user id when user already exists', async () => {
+      const existingUser = { id: 'existing-user-id' };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockResolvedValue(existingUser),
+          },
+          account: {
+            upsert: vi.fn().mockResolvedValue({ id: 'acc-dev' }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await createOrUpdateDevUser('dev@example.com');
+
+      expect(result.id).toBe('existing-user-id');
+    });
+
+    it('uses credentials provider for account record', async () => {
+      let capturedAccountWhere: Record<string, unknown> | null = null;
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          user: {
+            upsert: vi.fn().mockResolvedValue({ id: 'user-1' }),
+          },
+          account: {
+            upsert: vi.fn().mockImplementation(({ where }) => {
+              capturedAccountWhere = where;
+              return Promise.resolve({ id: 'acc-dev' });
+            }),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await createOrUpdateDevUser('test@dev.com');
+
+      expect(capturedAccountWhere).toBeDefined();
+      expect(capturedAccountWhere!.provider_providerAccountId).toEqual({
+        provider: 'credentials',
+        providerAccountId: 'test@dev.com',
+      });
+    });
+
+    it('throws error when transaction fails', async () => {
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('DB error'));
+
+      await expect(createOrUpdateDevUser('dev@example.com')).rejects.toThrow('DB error');
     });
   });
 });

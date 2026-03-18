@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Github } from "lucide-react"
 import { SiGitlab, SiBitbucket } from "react-icons/si"
 import Link from "next/link"
+import { DevLoginForm } from "@/components/auth/dev-login-form"
 
 export default async function SignInPage({
   searchParams,
@@ -67,6 +68,10 @@ export default async function SignInPage({
               Coming soon
             </p>
           </div>
+          {process.env.NEXT_PUBLIC_DEV_LOGIN === "true" && (
+            <DevLoginForm callbackUrl={callbackUrl} />
+          )}
+
           <p className="text-sm text-center text-muted-foreground">
             By signing in, you agree to our{' '}
             <Link href="/legal/terms" className="text-primary hover:underline">
