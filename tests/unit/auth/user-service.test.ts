@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createOrUpdateUser,
+  createOrUpdateDevUser,
   validateGitHubProfile,
   type GitHubProfile,
 } from '@/app/lib/auth/user-service';
@@ -449,6 +450,61 @@ describe('UserService', () => {
       expect(capturedAccountUpdate.access_token).toBe('gho_newtoken999');
       expect(capturedAccountUpdate.refresh_token).toBe('ghr_newrefresh111');
       expect(capturedAccountUpdate.expires_at).toBe(9876543210);
+    });
+  });
+
+  describe('createOrUpdateDevUser', () => {
+    it('creates a new dev user with deterministic ID from email', async () => {
+      const mockUser = { id: 'dev-user-abc123' };
+      const mockUpsert = vi.fn().mockResolvedValue(mockUser);
+
+      vi.mocked(prisma.$transaction).mockImplementation(
+        // createOrUpdateDevUser doesn't use $transaction, so we mock user.upsert directly
+        undefined as never,
+      );
+      // Mock prisma.user.upsert directly since createOrUpdateDevUser doesn't use $transaction
+      (prisma as Record<string, unknown>).user = { upsert: mockUpsert };
+
+      const result = await createOrUpdateDevUser('dev@example.com');
+
+      expect(result.id).toBe('dev-user-abc123');
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'dev@example.com' },
+          create: expect.objectContaining({
+            email: 'dev@example.com',
+            name: 'dev',
+          }),
+        }),
+      );
+    });
+
+    it('generates consistent ID for same email', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({ id: 'consistent-id' });
+      (prisma as Record<string, unknown>).user = { upsert: mockUpsert };
+
+      await createOrUpdateDevUser('test@example.com');
+      const firstCallArgs = mockUpsert.mock.calls[0][0];
+
+      await createOrUpdateDevUser('test@example.com');
+      const secondCallArgs = mockUpsert.mock.calls[1][0];
+
+      expect(firstCallArgs.create.id).toBe(secondCallArgs.create.id);
+    });
+
+    it('uses email prefix as display name', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({ id: 'user-id' });
+      (prisma as Record<string, unknown>).user = { upsert: mockUpsert };
+
+      await createOrUpdateDevUser('alice@company.com');
+
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            name: 'alice',
+          }),
+        }),
+      );
     });
   });
 });
