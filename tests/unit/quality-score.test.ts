@@ -29,28 +29,28 @@ describe('getScoreThreshold', () => {
 });
 
 describe('getScoreColor', () => {
-  it('returns emerald classes for Excellent range', () => {
+  it('returns ctp-green classes for Excellent range', () => {
     const colors = getScoreColor(95);
-    expect(colors.text).toContain('emerald');
-    expect(colors.bg).toContain('emerald');
+    expect(colors.text).toBe('text-ctp-green');
+    expect(colors.bg).toBe('bg-ctp-green/10');
   });
 
-  it('returns blue classes for Good range', () => {
+  it('returns ctp-blue classes for Good range', () => {
     const colors = getScoreColor(75);
-    expect(colors.text).toContain('blue');
-    expect(colors.bg).toContain('blue');
+    expect(colors.text).toBe('text-ctp-blue');
+    expect(colors.bg).toBe('bg-ctp-blue/10');
   });
 
-  it('returns amber classes for Fair range', () => {
+  it('returns ctp-yellow classes for Fair range', () => {
     const colors = getScoreColor(55);
-    expect(colors.text).toContain('amber');
-    expect(colors.bg).toContain('amber');
+    expect(colors.text).toBe('text-ctp-yellow');
+    expect(colors.bg).toBe('bg-ctp-yellow/10');
   });
 
-  it('returns red classes for Poor range', () => {
+  it('returns ctp-red classes for Poor range', () => {
     const colors = getScoreColor(25);
-    expect(colors.text).toContain('red');
-    expect(colors.bg).toContain('red');
+    expect(colors.text).toBe('text-ctp-red');
+    expect(colors.bg).toBe('bg-ctp-red/10');
   });
 });
 

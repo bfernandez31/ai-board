@@ -44,31 +44,19 @@ export function getScoreThreshold(score: number): ScoreThreshold {
 
 /**
  * Returns Tailwind CSS classes for the score's threshold color.
- * Includes both light and dark mode variants.
+ * Uses semantic ctp-* tokens defined in globals.css / tailwind.config.ts.
  */
 export function getScoreColor(score: number): { text: string; bg: string } {
   if (score >= 90) {
-    return {
-      text: 'text-emerald-700 dark:text-emerald-400',
-      bg: 'bg-emerald-100 dark:bg-emerald-950',
-    };
+    return { text: 'text-ctp-green', bg: 'bg-ctp-green/10' };
   }
   if (score >= 70) {
-    return {
-      text: 'text-blue-700 dark:text-blue-400',
-      bg: 'bg-blue-100 dark:bg-blue-950',
-    };
+    return { text: 'text-ctp-blue', bg: 'bg-ctp-blue/10' };
   }
   if (score >= 50) {
-    return {
-      text: 'text-amber-700 dark:text-amber-400',
-      bg: 'bg-amber-100 dark:bg-amber-950',
-    };
+    return { text: 'text-ctp-yellow', bg: 'bg-ctp-yellow/10' };
   }
-  return {
-    text: 'text-red-700 dark:text-red-400',
-    bg: 'bg-red-100 dark:bg-red-950',
-  };
+  return { text: 'text-ctp-red', bg: 'bg-ctp-red/10' };
 }
 
 /**
