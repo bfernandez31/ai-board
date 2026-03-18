@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: AI Board Preview Dev Login Contract
+  version: 1.0.0
+  description: >
+    Contract for the preview-only credentials sign-in flow implemented through
+    NextAuth. This feature reuses the existing NextAuth route surface and does
+    not introduce a new custom API namespace.
+servers:
+  - url: https://preview.example.vercel.app
+paths:
+  /auth/signin:
+    get:
+      summary: Render sign-in page
+      description: >
+        Returns the sign-in page. When preview dev login is enabled, the page
+        includes a credentials form in addition to the standard GitHub sign-in
+        action. When disabled, only standard sign-in is shown.
+      parameters:
+        - in: query
+          name: callbackUrl
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: error
+          schema:
+            type: string
+            enum: [dev-login]
+          required: false
+      responses:
+        '200':
+          description: Sign-in page rendered
+  /api/auth/callback/credentials:
+    post:
+      summary: Submit preview dev-login credentials
+      description: >
+        NextAuth credentials callback used by the preview-only dev-login flow.
+        Availability is restricted to preview deployments with explicit
+        configuration.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DevLoginRequest'
+      responses:
+        '302':
+          description: >
+            Authentication outcome redirect. Successful sign-in redirects to the
+            requested callback URL or `/projects`. Failed sign-in redirects back
+            to `/auth/signin?error=dev-login`.
+        '401':
+          description: Credentials rejected before session creation
+  /api/auth/session:
+    get:
+      summary: Read authenticated session
+      description: >
+        Returns the current session after successful sign-in. Dev-login sessions
+        must be indistinguishable from standard authenticated sessions for
+        downstream authorization.
+      responses:
+        '200':
+          description: Active session returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: No active session
+components:
+  schemas:
+    DevLoginRequest:
+      type: object
+      required:
+        - email
+        - secret
+      properties:
+        email:
+          type: string
+          format: email
+        secret:
+          type: string
+          minLength: 1
+        redirectTo:
+          type: string
+          default: /projects
+    SessionResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+              nullable: true
+            image:
+              type: string
+              nullable: true
