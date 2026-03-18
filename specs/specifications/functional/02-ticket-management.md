@@ -280,7 +280,7 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 
 **Quality Score Section**:
 
-For FULL workflow tickets with a COMPLETED verify job that has a quality score, a quality score section appears at the top of the Stats tab:
+For tickets with a COMPLETED verify job that has a quality score, a quality score section appears at the top of the Stats tab:
 
 - **Overall Score**: Integer 0-100 displayed prominently
 - **Threshold Label**: Human-readable classification with color coding:

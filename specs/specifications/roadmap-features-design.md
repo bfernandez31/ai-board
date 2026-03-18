@@ -269,7 +269,7 @@
 - Final score: weighted sum of dimension scores, rounded to integer
 - The code review command prints the quality score JSON to stdout with a `QUALITY_SCORE_JSON:` prefix marker. The workflow captures the agent output and parses the marker to extract the score (with file fallback). The score is sent via the existing job status update endpoint.
 - Stored on Job model: `qualityScore` integer field (nullable, only for VERIFY jobs)
-- No score for: QUICK workflow, CLEAN workflow, failed/cancelled VERIFY jobs
+- No score for: failed/cancelled VERIFY jobs, or if the code review command fails to output the score marker
 - When multiple VERIFY jobs exist (after rollback-reset), the displayed score is from the latest COMPLETED verify job. Rollback-reset supersedes previous scores.
 - Thresholds: Excellent (90+, green), Good (70-89, blue), Fair (50-69, amber), Poor (<50, red)
 - Displayed on: ticket card (small colored badge), ticket detail (Stats tab), analytics dashboard

@@ -2170,7 +2170,7 @@ Update job status (workflow-only endpoint).
 
 **Validation**:
 - `status`: Required, enum (RUNNING|COMPLETED|FAILED|CANCELLED)
-- `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for FULL workflow verify jobs; ignored otherwise
+- `qualityScore`: Optional, integer 0-100 inclusive; only accepted when `status = "COMPLETED"` for verify jobs; ignored otherwise
 - `qualityScoreDetails`: Optional, JSON string with dimension sub-scores; stored alongside `qualityScore`
 - State machine transitions enforced
 
@@ -2515,7 +2515,7 @@ sequenceDiagram
     - `label`: Human-readable dimension name
     - `weight`: Dimension weight in final score computation
     - `averageScore`: Average dimension score across all scored jobs in range
-  - `hasData`: False if no FULL workflow COMPLETED verify jobs with quality scores exist in range
+  - `hasData`: False if no COMPLETED verify jobs with quality scores exist in range
 - `generatedAt`: Timestamp when analytics were generated
 - `jobCount`: Total filtered jobs in range, including completed and failed jobs
 - `hasData`: False if the filtered selection contains no completed jobs with telemetry data

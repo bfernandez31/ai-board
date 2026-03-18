@@ -497,11 +497,11 @@ jobs:
 
           echo "✅ Code review completed"
 
-      # Read quality score from code review output (FULL workflow only)
+      # Read quality score from code review output (all workflow types)
       # Strategy 1: Parse QUALITY_SCORE_JSON: marker from agent stdout (primary)
       # Strategy 2: Read quality-score.json file (fallback)
       - name: Read Quality Score
-        if: ${{ success() && env.SKIP_EXECUTION != 'true' && inputs.workflowType == 'FULL' }}
+        if: ${{ success() && env.SKIP_EXECUTION != 'true' }}
         id: quality-score
         working-directory: target
         run: |

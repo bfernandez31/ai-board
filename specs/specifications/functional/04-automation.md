@@ -160,9 +160,9 @@ Each workflow job captures agent usage metrics via OTLP telemetry. Both Claude C
 - Multiple OTLP batches from the same job accumulate correctly
 - Provides total resource usage for the complete workflow execution
 
-### Quality Score Computation (FULL Workflow VERIFY Only)
+### Quality Score Computation (All Workflow Types)
 
-For FULL workflow verify jobs, the code review step produces a quality score alongside its findings.
+For all verify jobs that complete successfully, the code review step produces a quality score alongside its findings. The score reflects code quality (bugs, compliance, comments) independently of the workflow type — it does not depend on spec/plan artifacts.
 
 **How it works**:
 1. The `/code-review` command runs 5 parallel review agents, each covering a scoring dimension:
@@ -186,7 +186,6 @@ For FULL workflow verify jobs, the code review step produces a quality score alo
 | 0-49 | Poor | Red |
 
 **Conditions where no score is produced**:
-- QUICK or CLEAN workflow tickets
 - Verify job that fails or is cancelled
 - Code review command fails to print `QUALITY_SCORE_JSON:` marker to stdout
 

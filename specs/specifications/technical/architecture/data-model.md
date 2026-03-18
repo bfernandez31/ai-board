@@ -362,7 +362,7 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
 - Real-time updates via existing 2-second job polling mechanism
 
 **Quality Score Data**:
-- `qualityScore` populated only when: `command = "verify"`, `status = "COMPLETED"`, and ticket `workflowType = "FULL"`
+- `qualityScore` populated only when: `command = "verify"` and `status = "COMPLETED"` (all workflow types)
 - `qualityScoreDetails` JSON structure:
   ```json
   {
