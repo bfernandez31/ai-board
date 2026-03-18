@@ -1,739 +1,303 @@
 # Authentication Implementation
 
-NextAuth.js setup, session management, Personal Access Tokens (PAT), and the guarded test-only override path used by automated tests.
+NextAuth.js configuration, preview-only credentials sign-in, session handling, Personal Access Token (PAT) authentication, and test-only request overrides.
 
 ## NextAuth.js Configuration
 
-**Location**: `app/api/auth/[...nextauth]/route.ts`
+**Primary files**:
+- `lib/auth.ts`
+- `app/api/auth/[...nextauth]/route.ts`
+- `proxy.ts`
+
+The application uses NextAuth v5-style exports from `NextAuth(...)`:
 
 ```typescript
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import GitHubProvider from 'next-auth/providers/github';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/app/lib/db';
-
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GitHubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
+    GitHub({ /* OAuth config */ }),
+    Credentials({ /* preview login config */ }),
   ],
-
-  pages: {
-    signIn: '/auth/signin',
-  },
-
   callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
+    async signIn({ user, account, profile }) { /* provider-specific handling */ },
+    async jwt({ token, user }) {
+      if (user?.id) token.id = user.id
+      return token
+    },
+    async session({ session, token, user }) {
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = (user?.id || token?.id || token?.userId) as string
       }
-      return session;
+      return session
     },
   },
-
-  session: {
-    strategy: 'database',  // Store sessions in database
-    maxAge: 30 * 24 * 60 * 60,  // 30 days
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+  session: {
+    strategy: process.env.NODE_ENV === "test" ? "database" : "jwt",
+    maxAge: 30 * 24 * 60 * 60,
+  },
+})
 ```
 
-## Test User Override Guard
+### Active Providers
 
-**Locations**: `lib/auth/test-user-override.ts`, `lib/db/users.ts`, `proxy.ts`
+- **GitHub OAuth**: standard production sign-in path
+- **Credentials / Preview Login**: available only when preview dev-login gating passes
 
-Automated tests can impersonate a seeded test user only through an explicit opt-in override. The override uses:
+GitHub sign-in persists or updates the user through `app/lib/auth/user-service.ts`. Credentials sign-in delegates to `app/lib/auth/dev-login.ts`.
 
-- `x-test-user-id`: requested test user ID
-- `x-ai-board-test-auth-override: true`: explicit opt-in signal
+## Preview Dev Login
 
-The override is accepted only when the runtime is an explicit test context:
+**Primary files**:
+- `app/lib/auth/dev-login.ts`
+- `app/auth/signin/page.tsx`
+- `app/api/auth/[...nextauth]/route.ts`
 
-- `TEST_MODE=true`, or
-- `NODE_ENV=test`
+Preview deployments can expose a credentials-based sign-in form for internal testing. The form accepts:
 
-Any other use of `x-test-user-id` is blocked and never authenticates a caller.
+- `email`
+- `secret`
 
-```typescript
-export const TEST_USER_HEADER = "x-test-user-id"
-export const TEST_AUTH_OVERRIDE_HEADER = "x-ai-board-test-auth-override"
+### Availability Rules
 
-export function isRuntimeTestEnvironment(): boolean {
-  return process.env.TEST_MODE === "true" || process.env.NODE_ENV === "test"
-}
+Preview login is enabled only when all of the following are true:
 
-export function isExplicitTestOverrideRequest(headers: Headers): boolean {
-  return (
-    isRuntimeTestEnvironment() &&
-    headers.get(TEST_AUTH_OVERRIDE_HEADER)?.toLowerCase() === "true"
-  )
-}
+- `VERCEL_ENV === "preview"`
+- `DEV_LOGIN_ENABLED === "true"`
+- `DEV_LOGIN_SECRET` is set and non-empty
+
+If any condition fails, the sign-in page shows only the standard GitHub button and direct credentials callbacks are rejected.
+
+### Credentials Validation and Provisioning
+
+`authorizeDevLogin()` performs the full credentials flow:
+
+1. Checks environment gating
+2. Validates and normalizes the submitted email with Zod
+3. Compares the submitted secret to `DEV_LOGIN_SECRET` with `timingSafeEqual`
+4. Reuses an existing `User` by email or creates one
+5. Upserts an `Account` row with `provider: "credentials"`
+6. Returns a normal auth user payload for session creation
+
+Successful preview logins behave like normal signed-in sessions. Authorization rules for projects, tickets, jobs, and comments do not change.
+
+### Failure Handling
+
+Failed credentials sign-ins do not create a session and do not disclose whether the failure came from:
+
+- an invalid email
+- a wrong secret
+- a disabled preview-login environment
+
+The auth callback route rewrites NextAuth's default credentials error redirect to:
+
+```text
+/auth/signin?error=dev-login
 ```
 
-### Override Rules
+The sign-in page and `/auth/error` map that error to a generic user-facing message:
 
-- Valid browser sessions stay authoritative even if `x-test-user-id` is present
-- Valid PATs stay authoritative even if `x-test-user-id` is present
-- Header-only requests fail closed outside explicit test runs
-- The requested override user must exist and be a seeded test user
-- Blocked attempts are logged with route, requested user ID, and rejection reason
-
-## Personal Access Token (PAT) Authentication
-
-**Purpose**: Programmatic API access for MCP server and external integrations
-
-**Token Format**: `pat_` + 64 hexadecimal characters (68 characters total)
-
-**Location**: `lib/db/users.ts`, `lib/tokens/validate.ts`
-
-### Token Validation Flow
-
-```typescript
-import { extractBearerToken, validateToken } from '@/lib/tokens/validate';
-
-export async function getCurrentUserOrToken(request: NextRequest) {
-  // Extract Bearer token from Authorization header
-  const authHeader = request.headers.get('authorization');
-  const token = extractBearerToken(authHeader);
-
-  if (token) {
-    // Get client IP for rate limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-               request.headers.get('x-real-ip') || 'unknown';
-
-    const result = await validateToken(token, ip);
-
-    if (result.valid && result.userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: result.userId },
-        select: { id: true, email: true, name: true }
-      });
-
-      if (user?.email) {
-        return { id: user.id, email: user.email, name: user.name };
-      }
-    }
-
-    // Token provided but invalid - throw immediately
-    throw new Error(result.error || 'Unauthorized');
-  }
-
-  // Fall back to session auth or explicit test override
-  return getCurrentUser();
-}
+```text
+Sign-in failed. Check your email and shared secret.
 ```
 
-### Dual Authentication Pattern
-
-API routes support both session and PAT authentication via `requireAuth(request?)`:
-
-```typescript
-// lib/db/users.ts
-export async function requireAuth(request?: NextRequest): Promise<string> {
-  if (request) {
-    // Use dual auth (Bearer token OR session) when request is provided
-    const user = await getCurrentUserOrToken(request);
-    return user.id;
-  }
-  // Fall back to session-only auth
-  const user = await getCurrentUser();
-  return user.id;
-}
-```
-
-### Authorization Helpers with PAT Support
-
-```typescript
-// lib/db/auth-helpers.ts
-export async function verifyProjectAccess(
-  projectId: number,
-  request?: NextRequest
-): Promise<AuthorizedProject> {
-  const userId = await requireAuth(request);
-  // ... project access validation
-}
-
-export async function verifyTicketAccess(
-  ticketId: number,
-  request?: NextRequest
-): Promise<Ticket> {
-  const userId = await requireAuth(request);
-  // ... ticket access validation
-}
-```
-
-### API Route with PAT Support
-
-```typescript
-// Pass request to enable PAT authentication
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
-) {
-  const projectId = parseInt((await context.params).projectId, 10);
-
-  // Supports both session and PAT authentication
-  await verifyProjectAccess(projectId, request);
-
-  // ... perform operation
-}
-```
-
-### MCP Server Integration
-
-The MCP server uses PAT authentication to access AI-Board API:
-
-**Configuration**: `~/.aiboard/config.json`
-
-```json
-{
-  "apiUrl": "https://ai-board-three.vercel.app",
-  "token": "pat_<64-hex-characters>"
-}
-```
-
-**Supported Endpoints**:
-- `GET /api/projects` - List user's projects
-- `GET /api/projects/:id` - Get project details
-- `GET /api/projects/:id/tickets` - List project tickets
-- `GET /api/projects/:id/tickets/:key` - Get ticket details
-- `POST /api/projects/:id/tickets` - Create ticket
-- `POST /api/projects/:id/tickets/:key/transition` - Move ticket
-
-### Token Security
-
-- Tokens are hashed (SHA-256) before storage
-- Rate limiting per IP address
-- Tokens can be revoked by user
-- No token expiration (user-managed lifecycle)
-- Tokens never logged or exposed in error messages
-- Conflicting `x-test-user-id` headers do not change PAT identity
-
-## Protected Request Enforcement
-
-### Request Sequence
+### Preview Login Sequence
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant P as Proxy
-    participant A as Auth Helper
-    participant T as Token Validator
-    participant S as Session Auth
+    participant U as User
+    participant UI as /auth/signin
+    participant NA as NextAuth Credentials
+    participant DL as app/lib/auth/dev-login.ts
     participant DB as Database
 
-    C->>P: Request protected page or API
-    alt Header-only x-test-user-id outside explicit test mode
-        P-->>C: 401 API response or sign-in redirect
-    else Bearer PAT
-        P->>A: Continue request
-        A->>T: Validate PAT
-        T->>DB: Resolve token owner
-        A-->>C: Authenticated as PAT owner
-    else Browser session
-        P->>A: Continue request
-        A->>S: Resolve session
-        A-->>C: Authenticated as session user
-    else Explicit test override
-        P->>A: Continue request
-        A->>DB: Resolve seeded test user
-        A-->>C: Authenticated as test user
+    U->>UI: Submit email + shared secret
+    UI->>NA: signIn("credentials")
+    NA->>DL: authorizeDevLogin(credentials)
+    DL->>DL: Check preview env flags
+    DL->>DL: Validate email + compare secret
+    alt Valid credentials
+        DL->>DB: Find or create User
+        DL->>DB: Upsert Account(provider=credentials)
+        DB-->>DL: User record
+        DL-->>NA: { id, email, name }
+        NA-->>UI: Create session and redirect
+        UI-->>U: Redirect to callbackUrl or /projects
+    else Invalid or disabled
+        DL-->>NA: null
+        NA-->>UI: CredentialsSignin redirect
+        UI->>UI: Rewrite to ?error=dev-login
+        UI-->>U: Show generic failure message
     end
-```
-
-### Proxy Behavior
-
-`proxy.ts` provides defense in depth before route handlers run:
-
-- Public routes bypass the guard
-- PAT requests continue to route handlers
-- Explicit test override requests continue only in explicit test context
-- Protected API requests with blocked `x-test-user-id` usage return `401` with `AUTH_REQUIRED`
-- Protected page requests with blocked `x-test-user-id` usage redirect to `/auth/signin`
-
-If a valid session cookie is already present, the request continues and the session identity remains authoritative.
-
-## Session Management
-
-### Server-Side Session Access
-
-```typescript
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  // Use userId for authorization checks
-}
-```
-
-### Client-Side Session Access
-
-```typescript
-'use client';
-
-import { useSession } from 'next-auth/react';
-
-export function UserProfile() {
-  const { data: session, status } = useSession();
-
-  if (status === 'loading') return <Loading />;
-  if (status === 'unauthenticated') return <SignIn />;
-
-  return <div>Hello {session.user.name}</div>;
-}
-```
-
-## Authorization Patterns
-
-### Project Access Validation (Owner OR Member)
-
-```typescript
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session) return unauthorized();
-
-  const userId = session.user.id;
-  const projectId = parseInt(params.projectId);
-
-  // Check ownership first (performance optimization - no join needed)
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId }
-  });
-
-  if (project) {
-    // User is owner - proceed with authorized operation
-    return /* ... */;
-  }
-
-  // Check membership (requires join)
-  const membership = await prisma.projectMember.findFirst({
-    where: {
-      projectId,
-      userId
-    },
-    include: { project: true }
-  });
-
-  if (!membership) {
-    // User is neither owner nor member
-    const exists = await prisma.project.findUnique({
-      where: { id: projectId }
-    });
-
-    return exists
-      ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      : NextResponse.json({ error: 'Not Found' }, { status: 404 });
-  }
-
-  // User is member - proceed with authorized operation
-  // Use membership.project for project data
-}
-```
-
-**Authorization Helper Pattern**:
-
-```typescript
-// Helper function for reusable authorization logic
-async function verifyProjectAccess(projectId: number, userId: string) {
-  // Check ownership first
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId }
-  });
-
-  if (project) {
-    return { hasAccess: true, isOwner: true, project };
-  }
-
-  // Check membership
-  const membership = await prisma.projectMember.findFirst({
-    where: { projectId, userId },
-    include: { project: true }
-  });
-
-  if (membership) {
-    return { hasAccess: true, isOwner: false, project: membership.project };
-  }
-
-  return { hasAccess: false, isOwner: false, project: null };
-}
-```
-
-### Comment Author Validation (With Project Access Check)
-
-```typescript
-// Delete comment - only author can delete, and user must have project access
-const comment = await prisma.comment.findUnique({
-  where: { id: commentId },
-  include: { ticket: { include: { project: true } } }
-});
-
-if (!comment) {
-  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
-}
-
-// Check project access (owner OR member)
-const { hasAccess } = await verifyProjectAccess(
-  comment.ticket.project.id,
-  session.user.id
-);
-
-if (!hasAccess) {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-}
-
-// Check comment authorship
-if (comment.userId !== session.user.id) {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-}
-
-await prisma.comment.delete({ where: { id: commentId } });
-```
-
-## Test User Management
-
-Seeded test users exist for automated validation, but they are not implicitly trusted by runtime auth. Tests must run in explicit test context and send the override opt-in header for `x-test-user-id` to take effect.
-
-### Global Test Setup
-
-**File**: `tests/global-setup.ts`
-
-```typescript
-import { prisma } from '@/app/lib/db';
-
-export default async function globalSetup() {
-  // Create test user
-  const testUser = await prisma.user.upsert({
-    where: { email: 'test@e2e.local' },
-    update: {},
-    create: {
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-      emailVerified: new Date(),
-    },
-  });
-
-  // Create test projects with userId
-  await prisma.project.upsert({
-    where: { id: 1 },
-    update: { userId: testUser.id },
-    create: {
-      id: 1,
-      name: '[e2e] Test Project',
-      githubOwner: 'test',
-      githubRepo: 'test',
-      userId: testUser.id,
-    },
-  });
-
-  // Store for other tests
-  process.env.TEST_USER_ID = testUser.id;
-}
-```
-
-### Test Helper Pattern
-
-**File**: `tests/helpers/db-setup.ts`
-
-```typescript
-export async function ensureTestUser() {
-  return await prisma.user.upsert({
-    where: { email: 'test@e2e.local' },
-    update: {},
-    create: {
-      email: 'test@e2e.local',
-      name: 'E2E Test User',
-      emailVerified: new Date(),
-    },
-  });
-}
-
-export async function createTestTicket(data: Partial<Ticket>) {
-  const testUser = await ensureTestUser();
-
-  const project = await prisma.project.findFirst({
-    where: { userId: testUser.id },
-  });
-
-  return await prisma.ticket.create({
-    data: {
-      title: data.title || '[e2e] Test Ticket',
-      description: data.description || 'Test description',
-      projectId: project!.id,
-      ...data,
-    },
-  });
-}
-```
-
-## Environment Variables
-
-### Production
-
-```env
-# NextAuth
-NEXTAUTH_URL=https://ai-board.vercel.app
-NEXTAUTH_SECRET=<random-secret>
-
-# GitHub OAuth
-GITHUB_ID=<github-oauth-client-id>
-GITHUB_SECRET=<github-oauth-client-secret>
-
-# Database
-DATABASE_URL=<postgresql-connection-string>
-```
-
-### Development
-
-```env
-# NextAuth (mock mode auto-enabled)
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=dev-secret
-
-# GitHub OAuth (optional for mock mode)
-GITHUB_ID=
-GITHUB_SECRET=
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/ai_board_dev
 ```
 
 ## Sign-In Page
 
 **File**: `app/auth/signin/page.tsx`
 
+The sign-in page is a Server Component that renders:
+
+- the preview-login form when preview login is enabled
+- the GitHub sign-in button in all environments
+- disabled GitLab and Bitbucket placeholders
+- Terms of Service and Privacy Policy consent links
+
+The page preserves `callbackUrl` across both GitHub and preview-login submissions. Successful sign-in defaults to `/projects`.
+
+## Auth Callback Route Behavior
+
+**File**: `app/api/auth/[...nextauth]/route.ts`
+
+The route re-exports `handlers.GET` and wraps `handlers.POST` only for the credentials callback path. When NextAuth returns a redirect containing `error=CredentialsSignin`, the route replaces the destination with the preview-login-specific failure URL so the UI can show the correct generic message.
+
+## Protected Route Enforcement
+
+**File**: `proxy.ts`
+
+Route protection is handled by `auth(...)` in `proxy.ts`, not by the older `next-auth/middleware` export pattern.
+
+### Public Routes
+
+The proxy allows these through without a session redirect:
+
+- `/`
+- `/auth/*`
+- `/api/auth/*`
+- `/api/health`
+- `/api/push/*`
+- `/api/telemetry/*`
+- selected workflow and ticket API routes matched by explicit regex patterns
+
+### Protected Routes
+
+For non-public routes:
+
+- requests with a valid session continue
+- requests without a session redirect to `/auth/signin`
+- the original path is preserved in `callbackUrl`
+
+### Pre-Auth Bypasses
+
+Before the auth proxy runs:
+
+- `Authorization: Bearer pat_...` requests continue so route handlers can validate PATs
+- requests with `x-test-user-id` continue so tests can impersonate seeded users in route code
+
+The proxy bypass does not itself authenticate the caller. Route handlers still need to resolve identity through `requireAuth()` or equivalent helpers.
+
+## Session Management
+
+### Runtime Session Strategy
+
+- **Application runtime**: JWT sessions
+- **Test runtime (`NODE_ENV === "test"`)**: database sessions via Prisma adapter
+
+JWT and session callbacks copy the canonical database user ID onto `session.user.id` so authorization helpers can treat GitHub and credentials sign-ins the same way.
+
+### Server-Side Session Access
+
 ```typescript
-'use client';
+import { auth } from "@/lib/auth"
 
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-
-export default function SignInPage() {
-  const handleGitHubSignIn = async () => {
-    await signIn('github', {
-      callbackUrl: '/projects',
-    });
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign in to AI Board</h1>
-        </div>
-
-        <div className="space-y-4">
-          <Button
-            onClick={handleGitHubSignIn}
-            className="w-full"
-            variant="outline"
-          >
-            Sign in with GitHub
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            GitLab (Coming soon)
-          </Button>
-
-          <Button disabled className="w-full" variant="outline">
-            BitBucket (Coming soon)
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+export async function getCurrentUser() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized")
+  }
+  return session.user
 }
 ```
 
-## Middleware Protection
+## PAT Authentication
 
-**File**: `middleware.ts`
+**Primary files**:
+- `lib/db/users.ts`
+- `lib/tokens/validate.ts`
+- `lib/db/auth-helpers.ts`
 
-```typescript
-export { default } from 'next-auth/middleware';
+Some request-aware API routes support either:
 
-export const config = {
-  matcher: [
-    '/projects/:path*',
-    '/api/projects/:path*',
-  ],
-};
-```
+- session authentication
+- Bearer PAT authentication
 
-**Effect**:
-- Redirects unauthenticated users to `/auth/signin`
-- Preserves original URL in `callbackUrl` parameter
-- Protected routes: `/projects/*` and `/api/projects/*`
-
-**Public Routes** (no authentication required):
-- `/` — Landing page
-- `/auth/signin` — Sign-in page
-- `/legal/terms` — Terms of Service
-- `/legal/privacy` — Privacy Policy
-
-## Security Considerations
-
-### Session Security
-- Database-backed sessions (no JWT vulnerabilities)
-- 30-day max age with sliding window
-- CSRF protection via NextAuth
-- Secure cookies (httpOnly, sameSite)
-
-### Authorization Checks
-- Server-side validation on ALL API routes
-- User ID extracted from session (not client)
-- Project ownership verified before operations
-- No client-side authorization logic
-
-### OAuth Security
-- State parameter prevents CSRF attacks
-- PKCE flow for additional security (GitHub default)
-- Refresh tokens handled by NextAuth
-- Token expiration managed automatically
-
-## AI-BOARD System User
-
-**Purpose**: AI-powered ticket assistance via comment mentions
-
-**Creation**: Auto-added to all projects on creation
+`getCurrentUserOrToken(request)` checks for a bearer token first. When a valid PAT is present, the token owner becomes the authenticated user. Otherwise the helper falls back to session auth.
 
 ```typescript
-export async function getAIBoardUserId(): Promise<string> {
-  const cached = aiBoard User IdCache;
-  if (cached) return cached;
+export async function requireAuth(request?: NextRequest): Promise<string> {
+  if (request) {
+    const user = await getCurrentUserOrToken(request)
+    return user.id
+  }
 
-  const user = await prisma.user.upsert({
-    where: { email: 'ai-board@system.local' },
-    update: {},
-    create: {
-      email: 'ai-board@system.local',
-      name: 'AI-BOARD',
-      emailVerified: new Date(),
-    },
-  });
-
-  aiBoardUserIdCache = user.id;
-  return user.id;
+  const user = await getCurrentUser()
+  return user.id
 }
 ```
 
-**Auto-Membership Pattern**:
+### PAT Security
 
-```typescript
-await prisma.$transaction([
-  // Create project
-  prisma.project.create({ data: { ... } }),
+- Tokens are hashed before storage
+- Validation is rate-limited by client IP
+- Revoked tokens stop working immediately
+- Token contents are never returned after creation
 
-  // Add AI-BOARD as member
-  prisma.projectMember.create({
-    data: {
-      projectId: newProject.id,
-      userId: await getAIBoardUserId(),
-      role: 'member',
-    },
-  }),
-]);
+## Authorization Helpers
+
+**File**: `lib/db/auth-helpers.ts`
+
+Shared authorization helpers enforce the standard access rules:
+
+- `verifyProjectAccess(projectId, request?)`: owner or member
+- `verifyTicketAccess(ticketId, request?)`: access inherited from parent project
+- `verifyProjectOwnership(projectId, request?)`: owner only
+
+These helpers accept an optional `NextRequest` so routes that support PATs can resolve identity from either session or token.
+
+## Test Authentication
+
+**Primary files**:
+- `tests/helpers/db-setup.ts`
+- `tests/fixtures/vitest/api-client.ts`
+- `lib/db/users.ts`
+- `proxy.ts`
+
+Automated tests use seeded users such as `test@e2e.local`. Test requests can impersonate a seeded user by sending:
+
+```text
+x-test-user-id: <user-id>
 ```
 
-## Common Patterns
+`getCurrentUser()` checks that header before calling `auth()`. If the header matches a real user, that user is treated as the current user for the request.
 
-### Authenticated API Route with Project Access
+This is a test-support mechanism for local and CI automation, not a user-facing login flow.
 
-```typescript
-export async function GET(request: NextRequest) {
-  // 1. Check authentication
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+## Environment Variables
 
-  // 2. Extract user ID
-  const userId = session.user.id;
+### Required for Standard Auth
 
-  // 3. Verify authorization (owner OR member)
-  const { hasAccess, project } = await verifyProjectAccess(projectId, userId);
-
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // 4. Perform operation
-  const data = await prisma.ticket.findMany({
-    where: { projectId }
-  });
-
-  return NextResponse.json({ data });
-}
+```env
+NEXTAUTH_SECRET=<random-secret>
+NEXTAUTH_URL=<base-url>
+GITHUB_ID=<github-oauth-client-id>
+GITHUB_SECRET=<github-oauth-client-secret>
 ```
 
-### Owner-Only API Route
+### Required for Preview Login
 
-```typescript
-export async function PATCH(request: NextRequest) {
-  // 1. Check authentication
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // 2. Extract user ID
-  const userId = session.user.id;
-
-  // 3. Verify ownership (NOT membership - owner-only action)
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId }
-  });
-
-  if (!project) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // 4. Perform owner-only operation (e.g., update project settings)
-  const updatedProject = await prisma.project.update({
-    where: { id: projectId },
-    data: { name: newName }
-  });
-
-  return NextResponse.json({ project: updatedProject });
-}
+```env
+VERCEL_ENV=preview
+DEV_LOGIN_ENABLED=true
+DEV_LOGIN_SECRET=<shared-preview-secret>
 ```
 
-### Client Component with Auth
+If preview-login variables are absent or the environment is not a Vercel preview deployment, credentials sign-in remains hidden and unusable.
 
-```typescript
-'use client';
+## Security Notes
 
-import { useSession } from 'next-auth/react';
-
-export function ProtectedComponent() {
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      redirect('/auth/signin');
-    },
-  });
-
-  if (status === 'loading') {
-    return <LoadingSpinner />;
-  }
-
-  return <div>Hello {session.user.name}</div>;
-}
-```
+- Preview login is excluded from production by environment gating
+- Secret comparison uses `timingSafeEqual`
+- Failed credentials attempts return a generic error
+- Authorization stays server-side after sign-in
+- PAT validation and browser-session validation are separate code paths

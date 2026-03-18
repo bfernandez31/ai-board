@@ -186,23 +186,24 @@
 ## Authentication
 
 ### NextAuth.js
-- **Version**: Latest stable (v4)
+- **Version**: `next-auth` ^5.0.0-beta.29
 - **Strategy**: Session-based authentication
-- **Providers**: GitHub OAuth
-- **Storage**: Database sessions (PostgreSQL)
+- **Providers**: GitHub OAuth and a preview-only Credentials provider
+- **Storage**: JWT sessions in normal runtime, database sessions in `NODE_ENV=test`
 - **Features Used**:
   - OAuth integration
+  - Credentials provider authorization
   - Session callbacks
   - JWT callbacks
   - Custom pages (`/auth/signin`)
-  - Middleware for protected routes
+  - `auth(...)` route protection in `proxy.ts`
 
 ### Test Authentication
-- **Mode**: Guarded test override when `TEST_MODE=true` or `NODE_ENV=test`
+- **Mode**: Request header override for seeded users during automated tests
 - **Test User**: `test@e2e.local`
-- **Headers**: `x-test-user-id` plus `x-ai-board-test-auth-override: true`
-- **Pattern**: Explicit opt-in impersonation for seeded automated-test users
-- **Security Model**: No header-based authentication in normal development, preview, or production traffic
+- **Header**: `x-test-user-id`
+- **Pattern**: Proxy allows the request through, then `getCurrentUser()` resolves the seeded user from the header before falling back to `auth()`
+- **Security Model**: Test support lives in server-side request handling, not in the public sign-in UI
 
 ## Drag & Drop
 
@@ -397,6 +398,8 @@
   - `NEXTAUTH_URL`: Application URL
   - `GITHUB_ID`: GitHub OAuth app ID
   - `GITHUB_SECRET`: GitHub OAuth app secret
+  - `DEV_LOGIN_ENABLED`: Enables preview credentials login when set to `true`
+  - `DEV_LOGIN_SECRET`: Shared secret for preview credentials login
   - `ANTHROPIC_API_KEY`: Claude API key
   - `WORKFLOW_API_TOKEN`: GitHub Actions authentication
   - `CLOUDINARY_CLOUD_NAME`: Cloudinary account
@@ -433,7 +436,7 @@
 | Prisma | 6.x | ORM |
 | TanStack Query | 5.90.5 | State management |
 | TailwindCSS | 3.4 | Styling |
-| Recharts | 2.x | Chart library |
+| Recharts | 3.5.1 | Chart library |
 | Zod | 4.x | Validation |
 | Playwright | Latest | E2E testing |
 | Vitest | Latest | Unit testing |

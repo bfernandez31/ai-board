@@ -84,7 +84,8 @@ Core implementation patterns and code organization.
 
 **[authentication.md](implementation/authentication.md)**
 - NextAuth.js configuration
-- Session management (database-backed)
+- Preview-only credentials login
+- Session management (JWT in app runtime, database in tests)
 - Guarded test-user override for automated tests
 - Authorization patterns (project ownership)
 - Test user management

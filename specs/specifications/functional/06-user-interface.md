@@ -49,7 +49,7 @@ Two public static pages accessible without authentication:
 
 ## Sign-In Page Consent Notice
 
-The sign-in page displays a consent notice below the OAuth buttons:
+The sign-in page displays a consent notice below the available sign-in actions:
 
 > "By signing in, you agree to our Terms of Service and Privacy Policy"
 
@@ -64,6 +64,25 @@ Protected pages and authenticated UI actions rely on the user's real session.
 - If a signed-in user sends a conflicting `x-test-user-id`, the interface continues to use the signed-in account
 - Automated test impersonation remains available only in explicit test runs with the dedicated override header
 - Direct navigation back to a protected page after sign-in uses the stored callback URL
+
+## Preview Sign-In Experience
+
+When preview login is enabled for a deployment, the sign-in page shows an additional form above the GitHub button.
+
+**Fields**:
+- Email
+- Shared secret
+
+**Behavior**:
+- Successful preview sign-in redirects the user to the requested callback URL or `/projects`
+- The GitHub sign-in button remains available alongside preview login
+- GitLab and Bitbucket remain visible but disabled as coming-soon options
+- The preview-login form is hidden entirely outside enabled preview deployments
+
+**Failure state**:
+- Invalid preview credentials keep the user signed out
+- The page shows a generic inline error message: "Sign-in failed. Check your email and shared secret."
+- The message does not reveal whether the email, secret, or deployment configuration caused the failure
 
 ---
 

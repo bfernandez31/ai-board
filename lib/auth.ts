@@ -1,25 +1,91 @@
-import NextAuth from "next-auth"
-import type { Adapter } from "next-auth/adapters"
-import GitHub from "next-auth/providers/github"
-import { createOrUpdateUser, validateGitHubProfile } from "@/app/lib/auth/user-service"
+import NextAuth from 'next-auth';
+import { AuthError } from 'next-auth';
+import type { Adapter } from 'next-auth/adapters';
+import Credentials from 'next-auth/providers/credentials';
+import GitHub from 'next-auth/providers/github';
+import { authorizeDevLogin } from '@/app/lib/auth/dev-login';
+import {
+  createOrUpdateUser,
+  validateGitHubProfile,
+} from '@/app/lib/auth/user-service';
 
-// Conditional imports to reduce Edge Runtime bundle size
-// Only import Prisma in test mode (database sessions)
-// Production uses JWT strategy which doesn't need database adapter
-let adapter: Adapter | undefined
+let adapter: Adapter | undefined;
 if (process.env.NODE_ENV === 'test') {
-  const { PrismaAdapter } = await import("@auth/prisma-adapter")
-  const { prisma } = await import("@/lib/db/client")
-  adapter = PrismaAdapter(prisma)
+  const { PrismaAdapter } = await import('@auth/prisma-adapter');
+  const { prisma } = await import('@/lib/db/client');
+  adapter = PrismaAdapter(prisma);
+}
+
+const isTestEnvironment = process.env.NODE_ENV === 'test';
+const credentialsProviderId = 'credentials';
+const githubProviderId = 'github';
+const testNextAuthSecret = 'test-secret-min-32-chars-long-for-nextauth';
+const nextAuthSecret = getNextAuthSecret();
+
+function getNextAuthSecret(): string | undefined {
+  if (process.env.NEXTAUTH_SECRET) {
+    return process.env.NEXTAUTH_SECRET;
+  }
+
+  return isTestEnvironment ? testNextAuthSecret : undefined;
+}
+
+async function authorizeCredentials(
+  credentials:
+    | Partial<Record<'email' | 'secret' | 'redirectTo', unknown>>
+    | undefined
+): Promise<Awaited<ReturnType<typeof authorizeDevLogin>>> {
+  if (!credentials?.email || !credentials?.secret) {
+    return null;
+  }
+
+  return authorizeDevLogin({
+    email: String(credentials.email),
+    secret: String(credentials.secret),
+    redirectTo: credentials.redirectTo
+      ? String(credentials.redirectTo)
+      : undefined,
+  });
+}
+
+function logUnsupportedProvider(provider: string | undefined): void {
+  console.error('Unsupported provider', {
+    provider,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function logUserPersistenceSuccess(
+  email: string | null | undefined,
+  userId: string,
+  duration: number
+): void {
+  console.log('User created/updated successfully', {
+    email,
+    userId,
+    duration: `${duration}ms`,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function logUserPersistenceFailure(
+  email: string | null | undefined,
+  provider: string,
+  duration: number,
+  error: unknown
+): void {
+  console.error('Failed to create/update user during sign-in', {
+    email,
+    provider,
+    duration: `${duration}ms`,
+    error: error instanceof Error ? error.message : String(error),
+    timestamp: new Date().toISOString(),
+  });
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...(adapter ? { adapter } : {}),
-
-  // Use test secret in test environment
-  ...(process.env.NEXTAUTH_SECRET || process.env.NODE_ENV === 'test'
-    ? { secret: process.env.NEXTAUTH_SECRET || 'test-secret-min-32-chars-long-for-nextauth' }
-    : {}),
+  ...(nextAuthSecret ? { secret: nextAuthSecret } : {}),
 
   providers: [
     GitHub({
@@ -27,81 +93,75 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GITHUB_SECRET!,
       authorization: {
         params: {
-          scope: "read:user user:email"
-        }
-      }
+          scope: 'read:user user:email',
+        },
+      },
+    }),
+    Credentials({
+      id: credentialsProviderId,
+      name: 'Preview Login',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        secret: { label: 'Shared Secret', type: 'password' },
+        redirectTo: { label: 'Redirect', type: 'text' },
+      },
+      authorize: authorizeCredentials,
     }),
   ],
 
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Skip database persistence in test mode (uses PrismaAdapter)
-      if (process.env.NODE_ENV === 'test') {
+      if (isTestEnvironment) {
         return true;
       }
 
-      // Validate provider
-      if (account?.provider !== 'github') {
-        console.error('Unsupported provider', {
-          provider: account?.provider,
-          timestamp: new Date().toISOString(),
-        });
+      if (account?.provider === credentialsProviderId) {
+        return true;
+      }
+
+      if (account?.provider !== githubProviderId) {
+        logUnsupportedProvider(account?.provider);
         return false;
       }
 
-      // Validate profile
       if (!validateGitHubProfile(profile)) {
-        return false; // Reject authentication
+        return false;
       }
 
-      // Create or update user in database
       const startTime = Date.now();
+
       try {
         const { id: userId } = await createOrUpdateUser(profile, account);
         const duration = Date.now() - startTime;
 
-        console.log('User created/updated successfully', {
-          email: profile.email,
-          userId: userId,
-          duration: `${duration}ms`,
-          timestamp: new Date().toISOString(),
-        });
-
-        // CRITICAL: Override user.id with database ID
-        // This ensures the JWT token gets the correct database user ID,
-        // not the OAuth provider ID which may change
+        logUserPersistenceSuccess(profile.email, userId, duration);
         user.id = userId;
 
-        return true; // Allow authentication
+        return true;
       } catch (error) {
         const duration = Date.now() - startTime;
-
-        console.error('Failed to create/update user during sign-in', {
-          email: profile.email,
-          provider: account.provider,
-          duration: `${duration}ms`,
-          error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString(),
-        });
-
-        return false; // Reject authentication
+        logUserPersistenceFailure(
+          profile.email,
+          account.provider,
+          duration,
+          error
+        );
+        return false;
       }
     },
 
     async jwt({ token, user }) {
       if (user?.id) {
-        token.id = user.id
-        token.userId = user.id
+        token.id = user.id;
+        token.userId = user.id;
       }
-      return token
+      return token;
     },
     async session({ session, token, user }) {
-      // In test mode with database sessions, user comes from database
-      // In production with JWT, user.id comes from token
       if (session.user) {
-        session.user.id = (user?.id || token?.id || token?.userId) as string
+        session.user.id = (user?.id || token?.id || token?.userId) as string;
       }
-      return session
+      return session;
     },
   },
 
@@ -111,7 +171,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   session: {
-    strategy: process.env.NODE_ENV === 'test' ? "database" : "jwt", // Use database for tests, JWT for production
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    strategy: isTestEnvironment ? 'database' : 'jwt',
+    maxAge: 30 * 24 * 60 * 60,
   },
-})
+});
+
+export { AuthError };
