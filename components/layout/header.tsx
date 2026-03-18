@@ -46,6 +46,7 @@ export function Header() {
   // Fetch project info if we're on a project page
   useEffect(() => {
     if (!pathname) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears project context on route change
       setProjectInfo(null);
       return;
     }

@@ -81,17 +81,19 @@ export default function ConstitutionViewer({
     selectedCommitSha
   );
 
-  // Initialize edit content when data loads or tab changes to edit
+  // Initialize edit content when data loads or tab changes to edit — syncs fetched data to local editor state
   useEffect(() => {
     if (data?.content && activeTab === 'edit') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditContent(data.content);
       setIsDirty(false);
     }
   }, [data?.content, activeTab]);
 
-  // Track dirty state
+  // Track dirty state — derives from external fetched content vs local edits
   useEffect(() => {
     if (data?.content && activeTab === 'edit') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsDirty(editContent !== data.content);
     }
   }, [editContent, data?.content, activeTab]);

@@ -36,8 +36,9 @@ export function TicketSearch({ projectId }: TicketSearchProps) {
   const { data, isLoading, error } = useTicketSearch(projectId, debouncedTerm);
   const results = useMemo(() => data?.results ?? [], [data?.results]);
 
-  // Open dropdown when we have a query
+  // Open dropdown when we have a query — syncs debounced external input with UI state
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(debouncedTerm.length >= 2);
     setSelectedIndex(0);
   }, [debouncedTerm]);

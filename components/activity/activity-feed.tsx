@@ -66,7 +66,8 @@ export function ActivityFeed({ projectId, initialData }: ActivityFeedProps) {
         description: 'Your position was reset due to new activity.',
         variant: 'default',
       });
-      // Reset pagination state
+      // Reset pagination state — syncs polled data cursor expiration with local UI state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasPaginated(false);
     }
   }, [data, toast]);
@@ -79,6 +80,7 @@ export function ActivityFeed({ projectId, initialData }: ActivityFeedProps) {
 
     if (!hasPaginated) {
       // User hasn't paginated yet - replace with fresh data from poll
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayedEvents(fetchedEvents);
     } else {
       // User has paginated - merge new events at the top
