@@ -129,9 +129,7 @@ export const TicketCard = React.memo(
               {ticket.ticketKey}
             </span>
             <div className="flex items-center gap-2">
-              {ticket.workflowType === 'FULL' && (
-                <QualityScoreBadge score={qualityScore ?? null} />
-              )}
+              <QualityScoreBadge score={qualityScore ?? null} />
               {ticket.workflowType === 'QUICK' && (
                 <Badge
                   variant="outline"
