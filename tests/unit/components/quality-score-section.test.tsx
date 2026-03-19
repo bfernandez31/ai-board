@@ -1,12 +1,12 @@
 /**
  * Component Tests: QualityScoreSection
  *
- * Tests dimension breakdown rendering, latest score selection from multiple
- * verify jobs, and null/missing state.
+ * Tests collapsible dimension breakdown rendering, latest score selection from
+ * multiple verify jobs, and null/missing state.
  */
 
 import { describe, it, expect } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import { QualityScoreSection } from '@/components/ticket/quality-score-section';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
@@ -62,8 +62,17 @@ describe('QualityScoreSection', () => {
     expect(screen.getByTestId('quality-score-threshold')).toHaveTextContent('Good');
   });
 
-  it('renders all 5 dimension scores', () => {
+  it('hides dimension breakdown by default', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+    expect(screen.queryByTestId('dimension-breakdown')).not.toBeInTheDocument();
+  });
+
+  it('reveals dimension scores after clicking the trigger', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+
+    await user.click(screen.getByTestId('quality-score-trigger'));
+
     expect(screen.getByTestId('dimension-bug-detection')).toHaveTextContent('90');
     expect(screen.getByTestId('dimension-compliance')).toHaveTextContent('80');
     expect(screen.getByTestId('dimension-code-comments')).toHaveTextContent('70');
@@ -71,10 +80,25 @@ describe('QualityScoreSection', () => {
     expect(screen.getByTestId('dimension-pr-comments')).toHaveTextContent('95');
   });
 
-  it('shows dimension weights as percentages', () => {
+  it('shows dimension weights as percentages when expanded', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+
+    await user.click(screen.getByTestId('quality-score-trigger'));
+
     const bugDim = screen.getByTestId('dimension-bug-detection');
     expect(bugDim).toHaveTextContent('30%');
+  });
+
+  it('collapses dimensions on second click', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+
+    await user.click(screen.getByTestId('quality-score-trigger'));
+    expect(screen.getByTestId('dimension-breakdown')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('quality-score-trigger'));
+    expect(screen.queryByTestId('dimension-breakdown')).not.toBeInTheDocument();
   });
 
   it('selects latest COMPLETED verify job when multiple exist', () => {
