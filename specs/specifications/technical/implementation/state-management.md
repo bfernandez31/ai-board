@@ -400,6 +400,31 @@ function TicketDetailModal({ ticketId, projectId }: Props) {
 }
 ```
 
+**Quality Score Disclosure Behavior**:
+- `QualityScoreSection` derives its display from the same `jobs` array returned by `useTicketJobs`
+- The component performs a single pass across jobs to select the latest `verify` job whose status is `COMPLETED` and whose `qualityScore` is not null
+- Disclosure open/closed state is local UI state in the client component and does not affect query cache or server data
+- Dimension rows are hidden on first render and mount only after the user expands the section
+- If parsed `qualityScoreDetails` contains no dimensions, the trigger is disabled and the section stays in summary-only mode
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant M as Ticket Modal
+    participant Q as useTicketJobs
+    participant S as QualityScoreSection
+
+    M->>Q: Fetch jobs for ticket
+    Q-->>M: jobs[]
+    M->>S: Pass jobs into Stats tab
+    S->>S: Select latest COMPLETED verify job with qualityScore
+    S->>S: Parse qualityScoreDetails
+    S-->>U: Render summary card
+    U->>S: Click score card
+    S->>S: Toggle local isOpen state
+    S-->>U: Show or hide dimension breakdown
+```
+
 ### Constitution Hooks
 
 **Constitution Content Hook** (`lib/hooks/use-constitution.ts`):
@@ -613,6 +638,7 @@ function TicketStats({ jobs, polledJobs }: {
 - Polled job status updates merge with full job data
 - Existing 2-second job polling provides real-time status updates
 - No additional API calls required
+- The quality score disclosure re-evaluates the latest scored verify job whenever refreshed job data changes
 
 ## Mutation Hooks
 

@@ -378,7 +378,9 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   }
   ```
 - Score is read-only after computation; no update or delete endpoints exposed
-- When multiple verify jobs exist (rollback-reset cycles), the UI displays the latest COMPLETED verify job's score
+- When multiple verify jobs exist (rollback-reset cycles), the UI scans completed verify jobs and displays the score from the latest job by `startedAt`
+- The Stats tab always renders the summary score first; dimension rows are shown only when `qualityScoreDetails` contains one or more parsed dimensions and the user expands the disclosure
+- If `qualityScore` exists but `qualityScoreDetails` is absent or cannot be parsed, the UI still shows the overall score and threshold label without the expandable breakdown
 
 ### Comment
 
