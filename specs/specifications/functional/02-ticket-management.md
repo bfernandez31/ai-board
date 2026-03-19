@@ -282,18 +282,22 @@ The Stats tab displays aggregated telemetry metrics from all workflow jobs assoc
 
 For tickets with a COMPLETED verify job that has a quality score, a quality score section appears at the top of the Stats tab:
 
-- **Overall Score**: Integer 0-100 displayed prominently
-- **Threshold Label**: Human-readable classification with color coding:
-  - **Excellent** (90-100): green
-  - **Good** (70-89): blue
-  - **Fair** (50-69): amber
-  - **Poor** (0-49): red
-- **Dimension Breakdown**: All five dimensions with individual scores and weights:
+- **Collapsed State (default)**: Shows the overall score and threshold label in a single clickable row:
+  - **Overall Score**: Integer 0-100 displayed prominently with color coding
+  - **Threshold Label**: Human-readable classification badge with color coding:
+    - **Excellent** (90-100): green
+    - **Good** (70-89): blue
+    - **Fair** (50-69): amber
+    - **Poor** (0-49): red
+  - Chevron icon indicates expandability
+- **Expanded State**: Clicking the row reveals the 5-dimension breakdown below:
   - Bug Detection (30%)
   - Compliance (30%)
   - Code Comments (20%)
   - Historical Context (10%)
   - PR Comments (10%)
+  - Each dimension shows its name, weight percentage, and individual score with color coding
+- **Collapsible behavior**: Uses the same Collapsible pattern as the Jobs Timeline; trigger is disabled when no dimension data is available
 - **Score Source**: Taken from the latest COMPLETED verify job when multiple exist (rollback-reset scenarios)
 - **Absence**: No quality score section appears for QUICK or CLEAN workflow tickets, or if the verify job failed or was cancelled
 
