@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { QualityScoreSection } from '@/components/ticket/quality-score-section';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
@@ -64,17 +65,37 @@ describe('QualityScoreSection', () => {
 
   it('renders all 5 dimension scores', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
-    expect(screen.getByTestId('dimension-bug-detection')).toHaveTextContent('90');
-    expect(screen.getByTestId('dimension-compliance')).toHaveTextContent('80');
-    expect(screen.getByTestId('dimension-code-comments')).toHaveTextContent('70');
-    expect(screen.getByTestId('dimension-historical-context')).toHaveTextContent('85');
-    expect(screen.getByTestId('dimension-pr-comments')).toHaveTextContent('95');
+    expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-compliance')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-code-comments')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-historical-context')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-pr-comments')).not.toBeInTheDocument();
   });
 
-  it('shows dimension weights as percentages', () => {
+  it('shows dimension weights as percentages after expanding the section', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+
+    await user.click(screen.getByRole('button', { name: /quality score details/i }));
+
     const bugDim = screen.getByTestId('dimension-bug-detection');
     expect(bugDim).toHaveTextContent('30%');
+  });
+
+  it('toggles score breakdown details when the score card is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
+
+    expect(screen.queryByTestId('dimension-breakdown')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /quality score details/i }));
+
+    expect(screen.getByTestId('dimension-breakdown')).toBeInTheDocument();
+    expect(screen.getByTestId('dimension-bug-detection')).toHaveTextContent('90');
+
+    await user.click(screen.getByRole('button', { name: /quality score details/i }));
+
+    expect(screen.queryByTestId('dimension-breakdown')).not.toBeInTheDocument();
   });
 
   it('selects latest COMPLETED verify job when multiple exist', () => {
