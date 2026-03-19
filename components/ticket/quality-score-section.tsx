@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronDown, ChevronRight, Shield } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Shield, ChevronDown, ChevronRight } from 'lucide-react';
 import {
-  getScoreThreshold,
   getScoreColor,
+  getScoreThreshold,
   parseQualityScoreDetails,
 } from '@/lib/quality-score';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
@@ -19,23 +19,41 @@ interface QualityScoreSectionProps {
   jobs: TicketJobWithTelemetry[];
 }
 
+function getLatestScoredVerifyJob(
+  jobs: TicketJobWithTelemetry[]
+): TicketJobWithTelemetry | null {
+  let latestScoredJob: TicketJobWithTelemetry | null = null;
+
+  for (const job of jobs) {
+    if (
+      job.command !== 'verify' ||
+      job.status !== 'COMPLETED' ||
+      job.qualityScore == null
+    ) {
+      continue;
+    }
+
+    if (
+      latestScoredJob == null ||
+      new Date(job.startedAt).getTime() > new Date(latestScoredJob.startedAt).getTime()
+    ) {
+      latestScoredJob = job;
+    }
+  }
+
+  return latestScoredJob;
+}
+
 /**
  * QualityScoreSection displays the overall quality score, threshold label,
  * and breakdown of all 5 dimension scores with weights.
  * Renders only if the latest COMPLETED verify job has a quality score.
  */
-export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
+export function QualityScoreSection({
+  jobs,
+}: QualityScoreSectionProps): React.JSX.Element | null {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Find latest COMPLETED verify job with quality score
-  const latestScoredJob = jobs
-    .filter(
-      (j) =>
-        j.command === 'verify' &&
-        j.status === 'COMPLETED' &&
-        j.qualityScore != null
-    )
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0];
+  const latestScoredJob = getLatestScoredVerifyJob(jobs);
 
   if (!latestScoredJob || latestScoredJob.qualityScore == null) return null;
 
@@ -85,9 +103,8 @@ export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
                     <span className="text-xs font-medium uppercase tracking-wider hidden sm:inline">
                       {isOpen ? 'Hide details' : 'View details'}
                     </span>
-                    {isOpen ? (
-                      <ChevronDown className="w-4 h-4" aria-hidden="true" />
-                    ) : (
+                    {isOpen && <ChevronDown className="w-4 h-4" aria-hidden="true" />}
+                    {!isOpen && (
                       <ChevronRight className="w-4 h-4" aria-hidden="true" />
                     )}
                   </div>

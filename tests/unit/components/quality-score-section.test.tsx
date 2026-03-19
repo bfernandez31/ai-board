@@ -63,7 +63,7 @@ describe('QualityScoreSection', () => {
     expect(screen.getByTestId('quality-score-threshold')).toHaveTextContent('Good');
   });
 
-  it('renders all 5 dimension scores', () => {
+  it('keeps dimension scores hidden until the section is expanded', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
     expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-compliance')).not.toBeInTheDocument();
