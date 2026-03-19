@@ -42,7 +42,9 @@ export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
   const threshold = getScoreThreshold(score);
   const colors = getScoreColor(score);
   const details = parseQualityScoreDetails(latestScoredJob.qualityScoreDetails);
-  const hasDimensions = details?.dimensions && details.dimensions.length > 0;
+  const dimensions = details?.dimensions ?? [];
+  const hasDimensions = dimensions.length > 0;
+  const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
 
   return (
     <div className="mb-6" data-testid="quality-score-section">
@@ -74,11 +76,7 @@ export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
           </div>
 
           {hasDimensions && (
-            isOpen ? (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            )
+            <ChevronIcon className="w-4 h-4 text-muted-foreground" />
           )}
         </CollapsibleTrigger>
 
@@ -88,7 +86,7 @@ export function QualityScoreSection({ jobs }: QualityScoreSectionProps) {
               className="bg-card border border-border rounded-lg p-4 space-y-2"
               data-testid="dimension-breakdown"
             >
-              {details!.dimensions.map((dim) => {
+              {dimensions.map((dim) => {
                 const dimColors = getScoreColor(dim.score);
                 return (
                   <div
