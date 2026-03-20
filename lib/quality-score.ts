@@ -22,14 +22,31 @@ export interface QualityScoreDetails {
   computedAt: string;
 }
 
-/** Fixed dimension definitions with weights summing to 1.0 */
-export const DIMENSION_WEIGHTS: Record<string, number> = {
-  'bug-detection': 0.30,
-  'compliance': 0.30,
-  'code-comments': 0.20,
-  'historical-context': 0.10,
-  'pr-comments': 0.10,
-};
+/** Configuration for a single quality dimension */
+export interface DimensionConfig {
+  agentId: string;
+  name: string;
+  weight: number;
+}
+
+/**
+ * Single source of truth for all quality dimensions.
+ * Drives scoring logic, code review agents, and UI display.
+ * Active weights (weight > 0) must sum to 1.0.
+ * Dimensions with weight 0 are computed and stored but excluded from the global score.
+ */
+export const DIMENSIONS: DimensionConfig[] = [
+  { agentId: 'compliance', name: 'Compliance', weight: 0.40 },
+  { agentId: 'bug-detection', name: 'Bug Detection', weight: 0.30 },
+  { agentId: 'code-comments', name: 'Code Comments', weight: 0.20 },
+  { agentId: 'historical-context', name: 'Historical Context', weight: 0.10 },
+  { agentId: 'spec-sync', name: 'Spec Sync', weight: 0.00 },
+];
+
+/** Derived weight lookup from DIMENSIONS config */
+export const DIMENSION_WEIGHTS: Record<string, number> = Object.fromEntries(
+  DIMENSIONS.map((d) => [d.agentId, d.weight])
+);
 
 /**
  * Returns the threshold label for a given score.

@@ -23,21 +23,21 @@ describe('Analytics Route - Quality Score', () => {
 
   const qualityScoreDetails = JSON.stringify({
     dimensions: [
+      { name: 'Compliance', score: 90, weight: 0.4 },
       { name: 'Bug Detection', score: 85, weight: 0.3 },
-      { name: 'Compliance', score: 90, weight: 0.3 },
       { name: 'Code Comments', score: 70, weight: 0.2 },
       { name: 'Historical Context', score: 60, weight: 0.1 },
-      { name: 'PR Comments', score: 80, weight: 0.1 },
+      { name: 'Spec Sync', score: 80, weight: 0.0 },
     ],
   });
 
   const qualityScoreDetails2 = JSON.stringify({
     dimensions: [
+      { name: 'Compliance', score: 80, weight: 0.4 },
       { name: 'Bug Detection', score: 75, weight: 0.3 },
-      { name: 'Compliance', score: 80, weight: 0.3 },
       { name: 'Code Comments', score: 60, weight: 0.2 },
       { name: 'Historical Context', score: 50, weight: 0.1 },
-      { name: 'PR Comments', score: 70, weight: 0.1 },
+      { name: 'Spec Sync', score: 70, weight: 0.0 },
     ],
   });
 

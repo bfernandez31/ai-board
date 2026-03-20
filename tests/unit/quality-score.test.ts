@@ -10,6 +10,8 @@ import {
   getScoreColor,
   parseQualityScoreDetails,
   computeQualityScore,
+  DIMENSIONS,
+  DIMENSION_WEIGHTS,
   type DimensionScore,
 } from '@/lib/quality-score';
 
@@ -84,38 +86,62 @@ describe('parseQualityScoreDetails', () => {
   });
 });
 
-describe('computeQualityScore', () => {
-  const makeDimensions = (scores: number[]): DimensionScore[] => [
-    { name: 'Bug Detection', agentId: 'bug-detection', score: scores[0], weight: 0.3, weightedScore: scores[0] * 0.3 },
-    { name: 'Compliance', agentId: 'compliance', score: scores[1], weight: 0.3, weightedScore: scores[1] * 0.3 },
-    { name: 'Code Comments', agentId: 'code-comments', score: scores[2], weight: 0.2, weightedScore: scores[2] * 0.2 },
-    { name: 'Historical Context', agentId: 'historical-context', score: scores[3], weight: 0.1, weightedScore: scores[3] * 0.1 },
-    { name: 'PR Comments', agentId: 'pr-comments', score: scores[4], weight: 0.1, weightedScore: scores[4] * 0.1 },
-  ];
+describe('DIMENSIONS config', () => {
+  it('has active weights (weight > 0) summing to 1.0', () => {
+    const activeSum = DIMENSIONS.filter((d) => d.weight > 0).reduce((s, d) => s + d.weight, 0);
+    expect(Math.round(activeSum * 100) / 100).toBe(1.0);
+  });
 
-  it('computes weighted sum correctly', () => {
-    // 90*0.3 + 80*0.3 + 70*0.2 + 85*0.1 + 95*0.1 = 27 + 24 + 14 + 8.5 + 9.5 = 83
+  it('contains 5 dimensions', () => {
+    expect(DIMENSIONS).toHaveLength(5);
+  });
+
+  it('includes spec-sync with weight 0', () => {
+    const specSync = DIMENSIONS.find((d) => d.agentId === 'spec-sync');
+    expect(specSync).toBeDefined();
+    expect(specSync!.weight).toBe(0);
+    expect(specSync!.name).toBe('Spec Sync');
+  });
+
+  it('does not include pr-comments', () => {
+    expect(DIMENSIONS.find((d) => d.agentId === 'pr-comments')).toBeUndefined();
+  });
+
+  it('derives DIMENSION_WEIGHTS from DIMENSIONS', () => {
+    expect(DIMENSION_WEIGHTS['compliance']).toBe(0.40);
+    expect(DIMENSION_WEIGHTS['bug-detection']).toBe(0.30);
+    expect(DIMENSION_WEIGHTS['spec-sync']).toBe(0.00);
+  });
+});
+
+describe('computeQualityScore', () => {
+  /** Creates dimensions from DIMENSIONS config with given scores (in config order) */
+  const makeDimensions = (scores: number[]): DimensionScore[] =>
+    DIMENSIONS.map((d, i) => ({
+      name: d.name,
+      agentId: d.agentId,
+      score: scores[i],
+      weight: d.weight,
+      weightedScore: scores[i] * d.weight,
+    }));
+
+  it('computes weighted sum correctly (spec-sync weight 0 excluded)', () => {
+    // compliance:90*0.4 + bug-detection:80*0.3 + code-comments:70*0.2 + historical:85*0.1 + spec-sync:95*0.0
+    // = 36 + 24 + 14 + 8.5 + 0 = 82.5 → rounds to 83
     const result = computeQualityScore(makeDimensions([90, 80, 70, 85, 95]));
     expect(result).toBe(83);
   });
 
-  it('rounds 83.5 to 84', () => {
-    // Craft scores that produce 83.5: e.g., 90*0.3 + 80*0.3 + 72.5*0.2 + 85*0.1 + 95*0.1
-    // = 27 + 24 + 14.5 + 8.5 + 9.5 = 83.5
-    const dims = makeDimensions([90, 80, 72, 85, 95]);
-    // 90*0.3 + 80*0.3 + 72*0.2 + 85*0.1 + 95*0.1 = 27 + 24 + 14.4 + 8.5 + 9.5 = 83.4
-    expect(computeQualityScore(dims)).toBe(83);
-
-    // For exact 83.5: use 72.5 but since scores are integers, let's test with direct dimensions
+  it('rounds half-up correctly', () => {
     const exactDims: DimensionScore[] = [
-      { name: 'A', agentId: 'a', score: 90, weight: 0.3, weightedScore: 27 },
+      { name: 'A', agentId: 'a', score: 90, weight: 0.4, weightedScore: 36 },
       { name: 'B', agentId: 'b', score: 80, weight: 0.3, weightedScore: 24 },
       { name: 'C', agentId: 'c', score: 75, weight: 0.2, weightedScore: 15 },
       { name: 'D', agentId: 'd', score: 75, weight: 0.1, weightedScore: 7.5 },
-      { name: 'E', agentId: 'e', score: 100, weight: 0.1, weightedScore: 10 },
+      { name: 'E', agentId: 'e', score: 100, weight: 0.0, weightedScore: 0 },
     ];
-    // 27 + 24 + 15 + 7.5 + 10 = 83.5 → rounds to 84
-    expect(computeQualityScore(exactDims)).toBe(84);
+    // 36 + 24 + 15 + 7.5 + 0 = 82.5 → rounds to 83
+    expect(computeQualityScore(exactDims)).toBe(83);
   });
 
   it('returns 100 for perfect scores', () => {
