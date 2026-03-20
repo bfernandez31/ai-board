@@ -46,6 +46,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion } from '@/app/lib/types/query-types';
 import { useComparisonCheck } from '@/hooks/use-comparisons';
+import { useStoredComparisons } from '@/hooks/use-stored-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
 import {
   DropdownMenu,
@@ -200,11 +201,19 @@ export function TicketDetailModal({
     refetchInterval: false, // Don't poll when just showing count
   });
 
-  // Check if ticket has comparison reports
+  // Check if ticket has comparison reports (file-based)
   const { data: comparisonCheck } = useComparisonCheck(
     projectId,
     ticket?.id || 0,
     open && !!ticket && !!ticket.branch
+  );
+
+  // Check if ticket has stored comparisons (DB-based)
+  const { data: storedComparisonCheck } = useStoredComparisons(
+    projectId,
+    ticket?.ticketKey,
+    1,
+    open && !!ticket
   );
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
@@ -1185,17 +1194,17 @@ export function TicketDetailModal({
                         Summary
                       </Button>
                     )}
-                    {/* Compare button - visible when comparisons exist (independent of workflow type) */}
-                    {comparisonCheck?.hasComparisons && (
+                    {/* Compare button - visible when comparisons exist (file-based or stored) */}
+                    {(comparisonCheck?.hasComparisons || (storedComparisonCheck?.total ?? 0) > 0) && (
                       <Button
                         onClick={() => setComparisonViewerOpen(true)}
                         size="sm"
                         className="bg-ctp-blue hover:bg-ctp-lavender text-zinc-900 font-medium px-3 py-2 h-auto text-xs flex items-center gap-1.5"
-                        title={`View comparison reports (${comparisonCheck.count})`}
+                        title={`View comparison reports (${(comparisonCheck?.count ?? 0) + (storedComparisonCheck?.total ?? 0)})`}
                         data-testid="compare-button"
                       >
                         <GitCompare className="w-3.5 h-3.5" />
-                        Compare ({comparisonCheck.count})
+                        Compare ({(comparisonCheck?.count ?? 0) + (storedComparisonCheck?.total ?? 0)})
                       </Button>
                     )}
                   </div>
@@ -1313,6 +1322,7 @@ export function TicketDetailModal({
         <ComparisonViewer
           projectId={projectId}
           ticketId={ticket.id}
+          ticketKey={ticket.ticketKey}
           isOpen={comparisonViewerOpen}
           onClose={() => setComparisonViewerOpen(false)}
         />

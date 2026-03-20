@@ -161,6 +161,17 @@ export async function cleanupDatabase(projectId?: number): Promise<void> {
           },
     });
 
+    // Delete ticket comparisons (entries cascade via ComparisonEntry FK)
+    await client.ticketComparison.deleteMany({
+      where: projectId
+        ? { projectId }
+        : {
+            projectId: {
+              in: [1, 2, 4, 5, 6, 7],
+            },
+          },
+    });
+
     await client.ticket.deleteMany({
       where: projectId
         ? { projectId }

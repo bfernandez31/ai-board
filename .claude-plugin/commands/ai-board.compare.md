@@ -327,7 +327,69 @@ Create markdown report at:
 - [ ] **Update specs/specifications/**: [if needed - will be done in VERIFY stage]
 ```
 
-### Step 11: Create Result File
+### Step 11: Save Comparison Data via API
+
+After generating the markdown report (Step 10), save the structured comparison data to the database.
+
+**API Call**: `POST /api/projects/$PROJECT_ID/comparisons/stored`
+
+Use `curl` with the workflow API token:
+
+```bash
+curl -s -X POST \
+  "${APP_URL:-http://localhost:3000}/api/projects/$PROJECT_ID/comparisons/stored" \
+  -H "Authorization: Bearer $WORKFLOW_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceTicketKey": "'$SOURCE_KEY'",
+    "recommendation": "Ship TICKET-KEY, close others",
+    "winnerTicketKey": "BEST-TICKET-KEY",
+    "entries": [
+      {
+        "ticketKey": "AIB-125",
+        "rank": 1,
+        "score": 92,
+        "keyDifferentiator": "Proper state management, complete test coverage",
+        "linesAdded": 150,
+        "linesRemoved": 20,
+        "sourceFiles": 5,
+        "testFiles": 2,
+        "complianceScore": 95,
+        "compliancePrinciples": [
+          { "name": "TypeScript-First", "section": "I", "passed": true, "notes": "Strict types" },
+          { "name": "Component-Driven", "section": "II", "passed": true, "notes": "shadcn/ui" },
+          { "name": "Test-Driven", "section": "III", "passed": true, "notes": "2 test files" },
+          { "name": "Security-First", "section": "IV", "passed": true, "notes": "Zod validation" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Prisma migrations" }
+        ],
+        "decisionPoints": [
+          {
+            "name": "State Management",
+            "approaches": { "AIB-125": "TanStack Query", "AIB-124": "useState" },
+            "verdict": "TanStack Query provides proper caching and server state management",
+            "bestTicket": "AIB-125"
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+**Required fields per entry**:
+- `ticketKey`: Ticket key (e.g., "AIB-125")
+- `rank`: 1-based ranking (1 = best)
+- `score`: 0-100 score
+- `keyDifferentiator`: Brief reason for ranking
+- `linesAdded`, `linesRemoved`, `sourceFiles`, `testFiles`: Code metrics from Step 3
+
+**Optional fields per entry**:
+- `complianceScore`: 0-100 overall compliance
+- `compliancePrinciples`: Array of principle assessments from Step 6
+- `decisionPoints`: Array of decision point analyses from Step 7
+
+**IMPORTANT**: Build the JSON dynamically from the analysis data. Include ALL compared tickets (source AND referenced). If the API call fails, continue with the report - it's non-blocking.
+
+### Step 12: Create Result File
 
 Write result file at `specs/$BRANCH/.ai-board-result.md`:
 
@@ -348,7 +410,7 @@ Best code implementation: {best-ticket} with {score}%
 Compared on: code quality, constitution compliance, tests
 ```
 
-### Step 12: Output Summary
+### Step 13: Output Summary
 
 Output a concise comment (< 1500 chars) with:
 - **Best implementation** clearly identified

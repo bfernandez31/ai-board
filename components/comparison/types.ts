@@ -16,6 +16,9 @@ export interface ComparisonViewerProps {
   /** Ticket ID where comparison was triggered */
   ticketId: number;
 
+  /** Ticket key for fetching stored comparisons */
+  ticketKey?: string;
+
   /** Selected report filename (optional - shows latest if not provided) */
   selectedReport?: string;
 

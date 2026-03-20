@@ -340,3 +340,37 @@ model StripeEvent {
   @@index([type])
   @@index([processedAt])
 }
+
+model TicketComparison {
+  id              Int               @id @default(autoincrement())
+  projectId       Int
+  sourceTicketKey String            @db.VarChar(20)
+  recommendation  String            @db.VarChar(2000)
+  winnerTicketKey String?           @db.VarChar(20)
+  createdAt       DateTime          @default(now())
+  entries         ComparisonEntry[]
+
+  @@index([projectId])
+  @@index([sourceTicketKey])
+  @@index([createdAt])
+}
+
+model ComparisonEntry {
+  comparisonId         Int
+  ticketKey            String  @db.VarChar(20)
+  rank                 Int
+  score                Int
+  keyDifferentiator    String  @db.VarChar(500)
+  linesAdded           Int     @default(0)
+  linesRemoved         Int     @default(0)
+  sourceFiles          Int     @default(0)
+  testFiles            Int     @default(0)
+  complianceScore      Int?
+  compliancePrinciples String?
+  decisionPoints       String?
+
+  comparison TicketComparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+
+  @@id([comparisonId, ticketKey])
+  @@index([ticketKey])
+}

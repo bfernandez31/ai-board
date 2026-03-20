@@ -3,11 +3,10 @@
  *
  * Modal viewer for displaying ticket comparison reports.
  * Features:
+ * - Dashboard view for stored comparisons (rich visual)
+ * - Markdown view for file-based reports (legacy)
  * - TanStack Query for caching and state management
- * - Renders markdown comparison reports with syntax highlighting
  * - Loading and error states
- * - Scrollable content for large reports
- * - Metadata display
  */
 
 'use client';
@@ -17,7 +16,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { GitCompare, History, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { GitCompare, History, AlertTriangle, CheckCircle, XCircle, LayoutDashboard, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,11 +31,13 @@ import {
   useComparisonList,
   useComparisonReport,
 } from '@/hooks/use-comparisons';
+import {
+  useStoredComparisons,
+  useEnrichedComparison,
+} from '@/hooks/use-stored-comparisons';
+import { ComparisonDashboard } from './comparison-dashboard';
 import type { ComparisonViewerProps } from './types';
 
-/**
- * Format date for display
- */
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
@@ -48,39 +49,51 @@ function formatDate(dateString: string): string {
   });
 }
 
-/**
- * ComparisonViewer Component
- *
- * Displays comparison reports in a modal dialog.
- */
+type ViewMode = 'dashboard' | 'report' | 'history';
+
 export function ComparisonViewer({
   projectId,
   ticketId,
+  ticketKey,
   selectedReport,
   onClose,
   isOpen,
 }: ComparisonViewerProps) {
   const [reportOverride, setReportOverride] = useState<string | undefined>();
-  const [showHistory, setShowHistory] = useState(false);
+  const [viewModeOverride, setViewModeOverride] = useState<ViewMode | null>(null);
+  const [selectedStoredId, setSelectedStoredId] = useState<number | null>(null);
   const { toast } = useToast();
 
-  // Check if comparisons exist
+  // File-based comparisons
   const {
     data: checkData,
     isLoading: checkLoading,
     error: checkError,
   } = useComparisonCheck(projectId, ticketId, isOpen);
 
-  // Fetch comparison list for history
+  // Stored comparisons
+  const {
+    data: storedData,
+    isLoading: storedLoading,
+  } = useStoredComparisons(projectId, ticketKey, 20, isOpen && !!ticketKey);
+
+  // Derive view mode: user override takes precedence, then auto-select based on data
+  const defaultViewMode: ViewMode =
+    storedData?.comparisons && storedData.comparisons.length > 0
+      ? 'dashboard'
+      : checkData?.hasComparisons
+        ? 'report'
+        : 'dashboard';
+  const viewMode = viewModeOverride ?? defaultViewMode;
+  const setViewMode = setViewModeOverride;
+
   const {
     data: listData,
     isLoading: listLoading,
-  } = useComparisonList(projectId, ticketId, 10, isOpen && showHistory);
+  } = useComparisonList(projectId, ticketId, 10, isOpen && viewMode === 'history');
 
-  // Derive current report from override, prop, or API data (no effects needed)
   const currentReport = reportOverride ?? selectedReport ?? checkData?.latestReport;
 
-  // Fetch the comparison report content
   const {
     data: reportData,
     isLoading: reportLoading,
@@ -89,10 +102,20 @@ export function ComparisonViewer({
     projectId,
     ticketId,
     currentReport || '',
-    isOpen && !!currentReport
+    isOpen && !!currentReport && viewMode === 'report'
   );
 
-  // Show error toast
+  const activeStoredId = selectedStoredId ?? (storedData?.comparisons?.[0]?.id ?? null);
+
+  const {
+    data: enrichedData,
+    isLoading: enrichedLoading,
+  } = useEnrichedComparison(
+    projectId,
+    activeStoredId ?? 0,
+    isOpen && activeStoredId != null && viewMode === 'dashboard'
+  );
+
   useEffect(() => {
     if ((checkError || reportError) && isOpen) {
       toast({
@@ -103,17 +126,19 @@ export function ComparisonViewer({
     }
   }, [checkError, reportError, isOpen, toast]);
 
-  // Reset state when modal closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setShowHistory(false);
+      setViewModeOverride(null);
       setReportOverride(undefined);
+      setSelectedStoredId(null);
       onClose?.();
     }
   };
 
-  const isLoading = checkLoading || reportLoading;
-  const hasNoComparisons = checkData && !checkData.hasComparisons;
+  const hasStoredComparisons = storedData?.comparisons && storedData.comparisons.length > 0;
+  const hasFileComparisons = checkData?.hasComparisons;
+  const isLoading = checkLoading || storedLoading;
+  const hasNoComparisons = !hasStoredComparisons && checkData && !checkData.hasComparisons && !isLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -125,43 +150,82 @@ export function ComparisonViewer({
               Ticket Comparison
             </DialogTitle>
 
-            {/* History button */}
-            {reportData && !showHistory && checkData && checkData.count > 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowHistory(true)}
-                className="shrink-0"
-              >
-                <History className="h-4 w-4 mr-2" />
-                History ({checkData.count})
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* View mode toggle - show both when both types exist */}
+              {hasStoredComparisons && hasFileComparisons && viewMode !== 'history' && (
+                <>
+                  <Button
+                    variant={viewMode === 'dashboard' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('dashboard')}
+                    className="shrink-0"
+                  >
+                    <LayoutDashboard className="h-4 w-4 mr-1" />
+                    Dashboard
+                  </Button>
+                  <Button
+                    variant={viewMode === 'report' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('report')}
+                    className="shrink-0"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Report
+                  </Button>
+                </>
+              )}
 
-            {/* Back button when viewing history */}
-            {showHistory && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowHistory(false)}
-                className="shrink-0"
-              >
-                Back to Report
-              </Button>
-            )}
+              {/* History button for stored comparisons */}
+              {hasStoredComparisons && storedData!.comparisons.length > 1 && viewMode === 'dashboard' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode('history')}
+                  className="shrink-0"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  History ({storedData!.comparisons.length})
+                </Button>
+              )}
+
+              {/* History button for file comparisons */}
+              {viewMode === 'report' && reportData && checkData && checkData.count > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode('history')}
+                  className="shrink-0"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  History ({checkData.count})
+                </Button>
+              )}
+
+              {/* Back button from history */}
+              {viewMode === 'history' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode(hasStoredComparisons ? 'dashboard' : 'report')}
+                  className="shrink-0"
+                >
+                  Back
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
         <div className="mt-4">
           {/* Loading state */}
-          {isLoading && (
+          {(isLoading || (viewMode === 'dashboard' && enrichedLoading) || (viewMode === 'report' && reportLoading)) && (
             <div className="flex items-center justify-center py-8">
               <div className="text-zinc-400">Loading comparison...</div>
             </div>
           )}
 
           {/* No comparisons state */}
-          {hasNoComparisons && !isLoading && (
+          {hasNoComparisons && (
             <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
               <AlertTriangle className="h-12 w-12 mb-4 opacity-50" />
               <p className="text-lg font-medium">No Comparisons Available</p>
@@ -182,10 +246,14 @@ export function ComparisonViewer({
             </div>
           )}
 
-          {/* Report content */}
-          {reportData && !showHistory && (
+          {/* Dashboard view (stored comparisons) */}
+          {viewMode === 'dashboard' && enrichedData && !enrichedLoading && (
+            <ComparisonDashboard comparison={enrichedData} />
+          )}
+
+          {/* Report view (file-based markdown) */}
+          {viewMode === 'report' && reportData && !reportLoading && (
             <>
-              {/* Metadata bar */}
               <div className="flex flex-wrap gap-4 mb-4 text-sm text-zinc-400">
                 <div>
                   <span className="text-zinc-500">Source:</span>{' '}
@@ -205,7 +273,6 @@ export function ComparisonViewer({
                 </div>
               </div>
 
-              {/* Report markdown content */}
               <ScrollArea className="h-[60vh] w-full rounded-md pr-4">
                 <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
                   <ReactMarkdown
@@ -213,28 +280,16 @@ export function ComparisonViewer({
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ node, ...props }) => (
-                        <h1
-                          className="text-3xl font-bold mb-4 text-zinc-50"
-                          {...props}
-                        />
+                        <h1 className="text-3xl font-bold mb-4 text-zinc-50" {...props} />
                       ),
                       h2: ({ node, ...props }) => (
-                        <h2
-                          className="text-2xl font-semibold mb-3 mt-6 text-zinc-50"
-                          {...props}
-                        />
+                        <h2 className="text-2xl font-semibold mb-3 mt-6 text-zinc-50" {...props} />
                       ),
                       h3: ({ node, ...props }) => (
-                        <h3
-                          className="text-xl font-semibold mb-2 mt-4 text-zinc-100"
-                          {...props}
-                        />
+                        <h3 className="text-xl font-semibold mb-2 mt-4 text-zinc-100" {...props} />
                       ),
                       h4: ({ node, ...props }) => (
-                        <h4
-                          className="text-lg font-semibold mb-2 mt-3 text-zinc-100"
-                          {...props}
-                        />
+                        <h4 className="text-lg font-semibold mb-2 mt-3 text-zinc-100" {...props} />
                       ),
                       p: ({ node, ...props }) => (
                         <p className="mb-4 text-zinc-200 leading-relaxed" {...props} />
@@ -249,16 +304,10 @@ export function ComparisonViewer({
                         <li className="mb-1 text-zinc-200" {...props} />
                       ),
                       a: ({ node, ...props }) => (
-                        <a
-                          className="text-blue-400 hover:text-blue-300 underline"
-                          {...props}
-                        />
+                        <a className="text-blue-400 hover:text-blue-300 underline" {...props} />
                       ),
                       blockquote: ({ node, ...props }) => (
-                        <blockquote
-                          className="border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4"
-                          {...props}
-                        />
+                        <blockquote className="border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4" {...props} />
                       ),
                       code: ({ node, className, children, ...props }) => {
                         const match = /language-(\w+)/.exec(className || '');
@@ -275,10 +324,7 @@ export function ComparisonViewer({
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
                         ) : (
-                          <code
-                            className="bg-zinc-800 px-1.5 py-0.5 rounded text-sm text-zinc-100 font-mono"
-                            {...props}
-                          >
+                          <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-sm text-zinc-100 font-mono" {...props}>
                             {children}
                           </code>
                         );
@@ -318,35 +364,59 @@ export function ComparisonViewer({
             </>
           )}
 
-          {/* History view */}
-          {showHistory && (
+          {/* History view - shows both stored and file-based comparisons */}
+          {viewMode === 'history' && (
             <div className="h-[60vh] flex flex-col">
               <h3 className="text-lg font-semibold text-zinc-50 mb-4">
                 Comparison History
               </h3>
 
-              {listLoading ? (
+              {listLoading || storedLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-zinc-400">Loading history...</div>
                 </div>
-              ) : listData?.comparisons && listData.comparisons.length > 0 ? (
+              ) : (
                 <ScrollArea className="flex-1">
                   <div className="space-y-2">
-                    {listData.comparisons.map((comparison) => (
+                    {/* Stored comparisons */}
+                    {storedData?.comparisons?.map((comparison) => (
+                      <button
+                        key={`stored-${comparison.id}`}
+                        onClick={() => {
+                          setSelectedStoredId(comparison.id);
+                          setViewMode('dashboard');
+                        }}
+                        className="w-full text-left p-4 rounded-lg border transition-colors border-zinc-700 bg-zinc-900 hover:border-zinc-600"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <LayoutDashboard className="h-4 w-4 text-ctp-green" />
+                          <span className="text-zinc-200 font-medium">
+                            {comparison.entries.map((e) => e.ticketKey).join(' vs ')}
+                          </span>
+                          {comparison.winnerTicketKey && (
+                            <span className="text-xs text-ctp-green">
+                              Winner: {comparison.winnerTicketKey}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-zinc-500">
+                          {formatDate(comparison.createdAt)}
+                        </div>
+                      </button>
+                    ))}
+
+                    {/* File-based comparisons */}
+                    {listData?.comparisons?.map((comparison) => (
                       <button
                         key={comparison.filename}
                         onClick={() => {
                           setReportOverride(comparison.filename);
-                          setShowHistory(false);
+                          setViewMode('report');
                         }}
-                        className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                          currentReport === comparison.filename
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
-                        }`}
+                        className="w-full text-left p-4 rounded-lg border transition-colors border-zinc-700 bg-zinc-900 hover:border-zinc-600"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <GitCompare className="h-4 w-4 text-zinc-400" />
+                          <FileText className="h-4 w-4 text-zinc-400" />
                           <span className="text-zinc-200 font-medium">
                             vs {comparison.comparedTickets.join(', ')}
                           </span>
@@ -357,18 +427,21 @@ export function ComparisonViewer({
                         {currentReport === comparison.filename && (
                           <div className="flex items-center gap-1 mt-2 text-xs text-blue-400">
                             <CheckCircle className="h-3 w-3" />
-                            Currently viewing
+                            Last viewed
                           </div>
                         )}
                       </button>
                     ))}
+
+                    {/* Empty state */}
+                    {(!storedData?.comparisons?.length && !listData?.comparisons?.length) && (
+                      <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
+                        <History className="h-12 w-12 mb-4 opacity-50" />
+                        <p>No comparison history available</p>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
-                  <History className="h-12 w-12 mb-4 opacity-50" />
-                  <p>No comparison history available</p>
-                </div>
               )}
             </div>
           )}
