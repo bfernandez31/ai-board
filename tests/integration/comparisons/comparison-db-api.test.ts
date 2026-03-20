@@ -471,4 +471,72 @@ describe('DB-backed Comparisons API', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('Multiple comparisons per ticket (US4)', () => {
+    it('should list multiple comparisons for the same ticket ordered by most recent first', async () => {
+      // Create a third ticket for a second comparison
+      const t3 = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Comparison ticket 3', description: 'Third ticket' }
+      );
+
+      // First comparison: ticket1 vs ticket2
+      const payload1 = buildComparisonPayload(ticketId1, ticketId2);
+      await workflowApi.post(`/api/projects/${ctx.projectId}/comparisons`, payload1);
+
+      // Second comparison: ticket1 vs ticket3
+      const payload2 = {
+        ...buildComparisonPayload(ticketId1, t3.data.id),
+        recommendation: 'Second comparison result',
+      };
+      await workflowApi.post(`/api/projects/${ctx.projectId}/comparisons`, payload2);
+
+      // ticket1 participates in both comparisons
+      const response = await ctx.api.get<{
+        comparisons: Array<{ id: number; recommendation: string }>;
+        total: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.total).toBe(2);
+      expect(response.data.comparisons).toHaveLength(2);
+
+      // Most recent first
+      expect(response.data.comparisons[0]!.recommendation).toBe('Second comparison result');
+      expect(response.data.comparisons[1]!.recommendation).toBe(payload1.recommendation);
+    });
+
+    it('should return accurate count for check endpoint with multiple comparisons', async () => {
+      const t3 = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        { title: '[e2e] Comparison ticket 3b', description: 'Third ticket' }
+      );
+
+      await workflowApi.post(
+        `/api/projects/${ctx.projectId}/comparisons`,
+        buildComparisonPayload(ticketId1, ticketId2)
+      );
+      await workflowApi.post(
+        `/api/projects/${ctx.projectId}/comparisons`,
+        buildComparisonPayload(ticketId1, t3.data.id)
+      );
+
+      const response = await ctx.api.get<{
+        hasComparisons: boolean;
+        count: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db/check`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.hasComparisons).toBe(true);
+      expect(response.data.count).toBe(2);
+
+      // ticket2 only participates in 1
+      const r2 = await ctx.api.get<{
+        hasComparisons: boolean;
+        count: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId2}/comparisons/db/check`);
+
+      expect(r2.data.count).toBe(1);
+    });
+  });
 });

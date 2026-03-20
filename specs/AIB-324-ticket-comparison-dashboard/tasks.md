@@ -107,12 +107,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T029 [P] [US4] Write integration tests for multiple comparisons per ticket (two comparisons with same ticket, ordered by most recent first, correct counts) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T029 [P] [US4] Write integration tests for multiple comparisons per ticket (two comparisons with same ticket, ordered by most recent first, correct counts) in tests/integration/comparisons/comparison-db-api.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Verify GET ticket comparisons endpoint returns all comparisons ordered by createdAt desc and that the check endpoint returns accurate count for tickets in multiple comparisons in app/api/projects/[projectId]/tickets/[id]/comparisons/db/route.ts and check/route.ts
-- [ ] T031 [US4] Ensure ComparisonListItem and the Comparisons tab in ticket-detail-modal correctly render a list of multiple comparisons with navigation to each dashboard
+- [x] T030 [US4] Verify GET ticket comparisons endpoint returns all comparisons ordered by createdAt desc and that the check endpoint returns accurate count for tickets in multiple comparisons in app/api/projects/[projectId]/tickets/[id]/comparisons/db/route.ts and check/route.ts
+- [x] T031 [US4] Ensure ComparisonListItem and the Comparisons tab in ticket-detail-modal correctly render a list of multiple comparisons with navigation to each dashboard
 
 **Checkpoint**: Ticket with multiple comparisons shows all of them ordered by most recent first; no Comparisons tab when ticket has zero comparisons
 
