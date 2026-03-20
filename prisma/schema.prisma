@@ -353,8 +353,8 @@ model Comparison {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  project         Project   @relation(fields: [projectId], references: [id])
-  sourceTicket    Ticket    @relation("ComparisonSource", fields: [sourceTicketId], references: [id])
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceTicket    Ticket    @relation("ComparisonSource", fields: [sourceTicketId], references: [id], onDelete: Cascade)
   entries         ComparisonEntry[]
   decisionPoints  ComparisonDecisionPoint[]
 
@@ -379,7 +379,7 @@ model ComparisonEntry {
   createdAt           DateTime  @default(now())
 
   comparison          Comparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
-  ticket              Ticket     @relation(fields: [ticketId], references: [id])
+  ticket              Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@unique([comparisonId, ticketId])
   @@index([comparisonId])

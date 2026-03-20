@@ -35,15 +35,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T005 [P] [US2] Write integration tests for POST comparison API (save, Zod validation, auth, duplicate entries, business rules) in tests/integration/comparisons/comparison-db-api.test.ts
-- [ ] T006 [P] [US2] Write integration tests for GET list comparisons API (pagination, filtering, empty state) in tests/integration/comparisons/comparison-db-api.test.ts
-- [ ] T007 [P] [US2] Write integration tests for auth enforcement (401/403 for unauthorized access) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T005 [P] [US2] Write integration tests for POST comparison API (save, Zod validation, auth, duplicate entries, business rules) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T006 [P] [US2] Write integration tests for GET list comparisons API (pagination, filtering, empty state) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T007 [P] [US2] Write integration tests for auth enforcement (401/403 for unauthorized access) in tests/integration/comparisons/comparison-db-api.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T008 [P] [US2] Implement POST handler in app/api/projects/[projectId]/comparisons/route.ts — Bearer token auth, Zod validation, create Comparison with nested entries and decisionPoints via Prisma transaction
-- [ ] T009 [P] [US2] Implement GET handler in app/api/projects/[projectId]/comparisons/route.ts — session auth, paginated list with entryCount, winnerTicketKey, winnerScore
-- [ ] T010 [US2] Verify backward compatibility: existing file-based comparison report generation in ai-board.compare command is unchanged
+- [x] T008 [P] [US2] Implement POST handler in app/api/projects/[projectId]/comparisons/route.ts — Bearer token auth, Zod validation, create Comparison with nested entries and decisionPoints via Prisma transaction
+- [x] T009 [P] [US2] Implement GET handler in app/api/projects/[projectId]/comparisons/route.ts — session auth, paginated list with entryCount, winnerTicketKey, winnerScore
+- [x] T010 [US2] Verify backward compatibility: existing file-based comparison report generation in ai-board.compare command is unchanged
 
 **Checkpoint**: POST saves comparisons with all structured fields; GET lists them with pagination; auth enforced; tests pass
 
