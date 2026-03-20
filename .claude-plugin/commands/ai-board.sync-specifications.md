@@ -5,111 +5,121 @@ description: Synchronize branch specifications with global project documentation
 
 ## Context
 
-1. Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/check-prerequisites.sh --json --paths-only` from repo root and parse the output:
-   - Extract `BRANCH` for the current branch name
-   - Extract `FEATURE_DIR` for the feature specs directory path
+1. Run `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/scripts/bash/check-prerequisites.sh --json --paths-only` from repo root:
+   - Extract `BRANCH` → current branch name
+   - Extract `FEATURE_DIR` → feature specs directory path
+   - **On failure or missing values → STOP and report the error.**
 
-2. Get changed files by running: `git diff main --name-only`
+2. Get changed files:
+   ```bash
+   git diff main --name-only --diff-filter=ACMR
+   ```
+   - **If empty → STOP: "✅ No changes to synchronize."**
 
-3. List global specs structure by running: `find specs/specifications -type f -name "*.md" | head -20`
+3. Discover global specs:
+   ```bash
+   find specs/specifications -type f -name "*.md" -not -path "*/archive/*" | sort
+   ```
+   - **If missing → STOP: "❌ Missing specs/specifications/ directory."**
 
-## Your task
+4. Check feature specs in `FEATURE_DIR` (`spec.md`, `plan.md`, `tasks.md`):
+   - **If none exist → STOP: "⏭️ No feature specs found, skipping sync."**
 
-Synchronize the feature branch specifications to global project documentation.
+## Task
 
-### Rules
+Synchronize feature branch specifications into global project documentation.
 
-1. **Current state only**: Documentation reflects how the system works NOW
-2. **No historical markers**: Never use "Added in ticket #X" or "Updated in version Y"
-3. **Replace outdated content**: Update existing sections, don't append history
-4. **Project-agnostic**: Adapt to whatever spec structure exists in `specs/specifications/`
+### Principles
+
+| # | Rule | Detail |
+|---|------|--------|
+| 1 | **Current state only** | Docs describe how the system works NOW |
+| 2 | **No historical markers** | Never: "Added in #X", "Updated in vY", "New:", "Changed:" |
+| 3 | **Replace in-place** | Update existing sections — never append changelog-style blocks |
+| 4 | **Minimal footprint** | Only touch files directly impacted by the changes |
+| 5 | **Idempotent** | Running twice produces identical output |
+| 6 | **Match existing style** | Read the target file first — match tone, structure, heading depth |
+| 7 | **No commit** | Only write files — git operations are handled externally |
 
 ### Process
 
-1. **Read feature specs** from `FEATURE_DIR` (spec.md, plan.md, tasks.md if they exist)
+#### 1 — Build change inventory
 
-2. **Identify what changed** - new behaviors, APIs, patterns, workflows
+Read specs from `FEATURE_DIR` (`spec.md`, `plan.md`, `tasks.md`).
 
-3. **Update global functional docs** (`specs/specifications/functional/` or similar):
-   - Focus on WHAT the feature does
-   - Write from user perspective
-   - Use present tense
+Cross-reference with `git diff main --name-only` to understand the scope.
 
-4. **Update global technical docs** (`specs/specifications/technical/` or similar):
-   - Focus on HOW it's implemented
-   - Include code examples where relevant
-   - Document APIs, data models, integrations
+Build an internal change list:
+- Each new or modified **behavior** (user-facing)
+- Each new or modified **API endpoint, data model, or integration**
+- Each new **pattern, dependency, or convention**
 
-5. **Update CLAUDE.md** only if:
-   - New technologies or dependencies added
-   - New architectural patterns introduced
-   - New commands or conventions
+#### 2 — Map each change to a target file
 
-6. **Add/update mermaid sequence diagrams** when the feature involves:
-   - Multi-step workflows or state transitions
-   - API call sequences
-   - Multi-actor interactions (user, system, external services)
+For each item, find the **single best target** in `specs/specifications/`:
+- **Scan headers first** — read only the first 5-10 lines of each candidate to match by title/structure, then read the full file only for the selected target
+- Prefer updating an existing section over creating a new file
+- If no suitable file exists, create one following existing naming conventions
 
-   Place diagrams in the most relevant technical doc.
+#### 3 — Update functional docs (`specs/specifications/functional/` or equivalent)
 
-### Mermaid Sequence Diagrams
+What the feature does, from the **user's perspective**:
+- Present tense: "The system sends…"
+- Cover: behavior, inputs/outputs, edge cases, error states
+- **Before editing**: read the full target file, match its structure
 
-Generate sequence diagrams for complex flows. Examples:
+#### 4 — Update technical docs (`specs/specifications/technical/` or equivalent)
 
-**Workflow sequence** (user action → system response):
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant UI as Frontend
-    participant API as API Route
-    participant WF as Workflow
-    participant DB as Database
+How it's implemented, from the **developer's perspective**:
+- APIs: method, path, request/response shape, error codes
+- Data models: fields, relationships
+- Integrations: external services, webhooks, event flows
+- Short code examples only when they clarify usage
+- **Before editing**: read the full target file, match its structure
 
-    U->>UI: Action (drag, click)
-    UI->>API: POST /endpoint
-    API->>DB: Create record
-    API->>WF: Dispatch workflow
-    API-->>UI: 200 OK
-    WF->>API: Update status
-    UI->>API: Poll status
-    API-->>UI: Status update
-    UI->>U: Show result
-```
+#### 5 — Conditional: update CLAUDE.md
 
-**API sequence** (request → response):
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant M as Middleware
-    participant H as Handler
-    participant DB as Database
+Only if **at least one** is true:
+- New technology or dependency added
+- New architectural pattern introduced
+- New CLI command or dev convention established
 
-    C->>M: Request + auth
-    M->>M: Validate session
-    M->>H: Authorized request
-    H->>DB: Query
-    DB-->>H: Result
-    H-->>C: JSON response
-```
+Otherwise, do **not** touch CLAUDE.md.
 
-**When to add diagrams**:
-- New workflow stages or transitions
-- New API endpoints with multiple steps
-- Features involving external services (GitHub, Vercel, etc.)
-- Complex state machines
+#### 6 — Conditional: Mermaid sequence diagrams
 
-**When to update existing diagrams**:
-- New steps added to existing workflows
-- Changed interactions between components
+Add or update **only** when the feature introduces:
+- A multi-step workflow (3+ steps)
+- An API sequence with 3+ actors
+- An interaction with an external service
 
-### Output
+Place in the **most relevant technical doc**, not in a separate file.
 
-Do not commit. Report what was updated:
+Rules:
+- Max 6 participants — split if needed
+- `->>` for sync calls, `-->>` for async/responses
+- Short labels (verb + noun, max 5 words)
+- Update existing diagrams in-place — never duplicate
+
+## Output
+
+**Do not commit.** Report what was done:
 
 ```
 📚 Specifications synchronized
 
 Updated:
-- [file]: [what changed]
-- [file]: [what changed]
+- specs/specifications/functional/[file].md: [what changed]
+- specs/specifications/technical/[file].md: [what changed]
+
+Created:
+- specs/specifications/[path]/[file].md: [why new file was needed]
+
+Skipped:
+- CLAUDE.md: [reason, omit if updated]
+```
+
+Omit any section with no entries. If nothing needed synchronization:
+```
+✅ Specifications already up to date — no changes needed.
 ```
