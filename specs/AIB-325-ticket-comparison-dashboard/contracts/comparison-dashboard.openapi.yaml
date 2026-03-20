@@ -1,0 +1,421 @@
+openapi: 3.1.0
+info:
+  title: Ticket Comparison Dashboard API
+  version: 1.0.0
+  description: Structured comparison history and detail APIs for AIB-325.
+servers:
+  - url: https://example.com
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons:
+    get:
+      summary: List saved comparisons for a ticket
+      operationId: listTicketComparisons
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Structured comparison history for the requested ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - comparisons
+                  - total
+                  - limit
+                properties:
+                  comparisons:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ComparisonHistoryItem'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/check:
+    get:
+      summary: Check whether a ticket has any saved comparisons
+      operationId: checkTicketComparisons
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '200':
+          description: Lightweight comparison existence payload for ticket detail entry-point rendering
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - hasComparisons
+                  - count
+                  - latestComparisonId
+                properties:
+                  hasComparisons:
+                    type: boolean
+                  count:
+                    type: integer
+                    minimum: 0
+                  latestComparisonId:
+                    type:
+                      - integer
+                      - 'null'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      summary: Get the structured comparison dashboard payload for one saved comparison
+      operationId: getTicketComparisonDetail
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Structured comparison detail with saved analysis and live enrichments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: User lacks access to the requested project or ticket
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Project, ticket, or comparison not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type:
+            - string
+            - 'null'
+
+    ComparisonHistoryItem:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketKey
+        - participantTicketKeys
+        - winnerTicketKey
+        - summary
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketKey:
+          type: string
+        participantTicketKeys:
+          type: array
+          items:
+            type: string
+        winnerTicketKey:
+          type: string
+        summary:
+          type: string
+        recommendation:
+          type: string
+
+    ParticipantLiveEnrichment:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - agent
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - telemetry
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+        agent:
+          type:
+            - string
+            - 'null'
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+        telemetry:
+          $ref: '#/components/schemas/TelemetryEnrichment'
+
+    NullableEnrichmentValue:
+      type: object
+      required:
+        - state
+      properties:
+        state:
+          type: string
+          enum:
+            - available
+            - pending
+            - unavailable
+        value:
+          type:
+            - integer
+            - number
+            - string
+            - 'null'
+
+    TelemetryEnrichment:
+      type: object
+      required:
+        - inputTokens
+        - outputTokens
+        - durationMs
+        - costUsd
+      properties:
+        inputTokens:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+        outputTokens:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+        durationMs:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+        costUsd:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+
+    TicketMetricSnapshot:
+      type: object
+      required:
+        - ticketKey
+        - metrics
+      properties:
+        ticketKey:
+          type: string
+        metrics:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - label
+              - state
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              state:
+                type: string
+                enum:
+                  - available
+                  - pending
+                  - unavailable
+              value:
+                type:
+                  - integer
+                  - number
+                  - 'null'
+              highlight:
+                type: boolean
+
+    DecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictSummary
+        - rationale
+        - approaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        verdictTicketKey:
+          type:
+            - string
+            - 'null'
+        approaches:
+          type: array
+          items:
+            type: object
+            required:
+              - ticketKey
+              - summary
+            properties:
+              ticketKey:
+                type: string
+              summary:
+                type: string
+
+    ComplianceCell:
+      type: object
+      required:
+        - ticketKey
+        - status
+        - notes
+      properties:
+        ticketKey:
+          type: string
+        status:
+          type: string
+          enum:
+            - pass
+            - mixed
+            - fail
+        notes:
+          type: string
+
+    ComplianceRow:
+      type: object
+      required:
+        - principleKey
+        - principleName
+        - assessments
+      properties:
+        principleKey:
+          type: string
+        principleName:
+          type: string
+        assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceCell'
+
+    ComparisonDetailResponse:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketKey
+        - winnerTicketKey
+        - summary
+        - recommendation
+        - keyDifferentiators
+        - participants
+        - metrics
+        - decisionPoints
+        - compliance
+        - markdownPath
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketKey:
+          type: string
+        winnerTicketKey:
+          type: string
+        summary:
+          type: string
+        recommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        markdownPath:
+          type: string
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantLiveEnrichment'
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketMetricSnapshot'
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionPoint'
+        compliance:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceRow'
