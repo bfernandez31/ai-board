@@ -219,6 +219,7 @@ describe('Jobs Status', () => {
 
       const qualityScoreDetails = JSON.stringify({
         dimensions: [
+          { name: 'Compliance', agentId: 'compliance', score: 90, weight: 0.4, weightedScore: 36 },
           { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
         ],
         threshold: 'Good',

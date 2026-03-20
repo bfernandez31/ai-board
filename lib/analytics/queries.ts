@@ -28,7 +28,10 @@ import type {
   WeeklyVelocity,
   WorkflowBreakdown,
 } from './types';
-import { parseQualityScoreDetails } from '@/lib/quality-score';
+import {
+  getQualityScoreDimensionOrder,
+  parseQualityScoreDetails,
+} from '@/lib/quality-score';
 import {
   DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
@@ -587,7 +590,12 @@ async function getQualityScoreAnalytics(
       averageScore: Math.round(total / count),
       weight,
     }))
-    .sort((a, b) => b.weight - a.weight);
+    .sort(
+      (left, right) =>
+        getQualityScoreDimensionOrder({ name: left.dimension }) -
+          getQualityScoreDimensionOrder({ name: right.dimension }) ||
+        left.dimension.localeCompare(right.dimension)
+    );
 
   return {
     scoreTrend,

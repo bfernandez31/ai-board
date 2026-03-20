@@ -23,21 +23,21 @@ describe('Analytics Route - Quality Score', () => {
 
   const qualityScoreDetails = JSON.stringify({
     dimensions: [
+      { name: 'Compliance', score: 90, weight: 0.4 },
       { name: 'Bug Detection', score: 85, weight: 0.3 },
-      { name: 'Compliance', score: 90, weight: 0.3 },
       { name: 'Code Comments', score: 70, weight: 0.2 },
       { name: 'Historical Context', score: 60, weight: 0.1 },
-      { name: 'PR Comments', score: 80, weight: 0.1 },
+      { name: 'Spec Sync', score: 80, weight: 0.0 },
     ],
   });
 
   const qualityScoreDetails2 = JSON.stringify({
     dimensions: [
+      { name: 'Compliance', score: 80, weight: 0.4 },
       { name: 'Bug Detection', score: 75, weight: 0.3 },
-      { name: 'Compliance', score: 80, weight: 0.3 },
       { name: 'Code Comments', score: 60, weight: 0.2 },
       { name: 'Historical Context', score: 50, weight: 0.1 },
-      { name: 'PR Comments', score: 70, weight: 0.1 },
+      { name: 'Spec Sync', score: 70, weight: 0.0 },
     ],
   });
 
@@ -159,14 +159,26 @@ describe('Analytics Route - Quality Score', () => {
       expect(point.count).toBeGreaterThan(0);
     }
 
-    // Dimension comparison has all 5 dimensions
+    // Dimension comparison has all 5 dimensions, including zero-weight Spec Sync
     expect(data.qualityScore.dimensionComparison).toHaveLength(5);
+    const compliance = data.qualityScore.dimensionComparison.find(
+      (d) => d.dimension === 'Compliance'
+    );
     const bugDetection = data.qualityScore.dimensionComparison.find(
       (d) => d.dimension === 'Bug Detection'
     );
+    const specSync = data.qualityScore.dimensionComparison.find(
+      (d) => d.dimension === 'Spec Sync'
+    );
+    expect(compliance).toBeDefined();
+    expect(compliance!.averageScore).toBe(85); // (90 + 80) / 2
+    expect(compliance!.weight).toBe(0.4);
     expect(bugDetection).toBeDefined();
     expect(bugDetection!.averageScore).toBe(80); // (85 + 75) / 2
     expect(bugDetection!.weight).toBe(0.3);
+    expect(specSync).toBeDefined();
+    expect(specSync!.averageScore).toBe(75); // (80 + 70) / 2
+    expect(specSync!.weight).toBe(0);
   });
 
   it('returns empty quality score data when no scored jobs exist', async () => {

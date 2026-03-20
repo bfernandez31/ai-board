@@ -13,11 +13,11 @@ import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
 const MOCK_DETAILS = JSON.stringify({
   dimensions: [
+    { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.4, weightedScore: 32 },
     { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
-    { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.3, weightedScore: 24 },
     { name: 'Code Comments', agentId: 'code-comments', score: 70, weight: 0.2, weightedScore: 14 },
     { name: 'Historical Context', agentId: 'historical-context', score: 85, weight: 0.1, weightedScore: 8.5 },
-    { name: 'PR Comments', agentId: 'pr-comments', score: 95, weight: 0.1, weightedScore: 9.5 },
+    { name: 'Spec Sync', agentId: 'spec-sync', score: 95, weight: 0, weightedScore: 0 },
   ],
   threshold: 'Good',
   computedAt: '2026-03-17T10:30:00Z',
@@ -65,11 +65,11 @@ describe('QualityScoreSection', () => {
 
   it('keeps dimension scores hidden until the section is expanded', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
-    expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-compliance')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-code-comments')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dimension-historical-context')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-pr-comments')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dimension-spec-sync')).not.toBeInTheDocument();
   });
 
   it('shows dimension weights as percentages after expanding the section', async () => {
@@ -78,8 +78,9 @@ describe('QualityScoreSection', () => {
 
     await user.click(screen.getByRole('button', { name: /quality score details/i }));
 
-    const bugDim = screen.getByTestId('dimension-bug-detection');
-    expect(bugDim).toHaveTextContent('30%');
+    const complianceDim = screen.getByTestId('dimension-compliance');
+    expect(complianceDim).toHaveTextContent('40%');
+    expect(screen.getByTestId('dimension-spec-sync')).toHaveTextContent('0%');
   });
 
   it('toggles score breakdown details when the score card is clicked', async () => {
@@ -91,7 +92,9 @@ describe('QualityScoreSection', () => {
     await user.click(screen.getByRole('button', { name: /quality score details/i }));
 
     expect(screen.getByTestId('dimension-breakdown')).toBeInTheDocument();
+    expect(screen.getByTestId('dimension-compliance')).toHaveTextContent('80');
     expect(screen.getByTestId('dimension-bug-detection')).toHaveTextContent('90');
+    expect(screen.getByTestId('dimension-spec-sync')).toHaveTextContent('95');
 
     await user.click(screen.getByRole('button', { name: /quality score details/i }));
 
