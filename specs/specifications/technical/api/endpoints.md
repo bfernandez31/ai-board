@@ -2060,6 +2060,184 @@ Fetch content of a specific comparison report.
 
 **Note**: Report content is read-only. Comparisons cannot be edited or deleted via API.
 
+### POST /api/projects/:projectId/comparisons/stored
+
+Save structured comparison data to the database. Called by the `/compare` command after generating a markdown report.
+
+**Authentication**: Workflow token (Bearer `WORKFLOW_TOKEN`)
+**Authorization**: Workflow token only — session auth not accepted
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "sourceTicketKey": "AIB-123",
+  "recommendation": "AIB-123 is recommended because...",
+  "winnerTicketKey": "AIB-123",
+  "entries": [
+    {
+      "ticketKey": "AIB-123",
+      "rank": 1,
+      "score": 85,
+      "keyDifferentiator": "Better test coverage and cleaner architecture",
+      "linesAdded": 342,
+      "linesRemoved": 58,
+      "sourceFiles": 6,
+      "testFiles": 3,
+      "complianceScore": 90,
+      "compliancePrinciples": [
+        { "name": "Minimal footprint", "section": "3.2", "passed": true, "notes": "..." }
+      ],
+      "decisionPoints": [
+        { "name": "State management", "approaches": { "AIB-123": "hooks", "AIB-124": "zustand" }, "verdict": "hooks preferred", "bestTicket": "AIB-123" }
+      ]
+    }
+  ]
+}
+```
+
+**Fields**:
+- `sourceTicketKey`: Ticket key where the comparison was initiated (max 20 chars)
+- `recommendation`: Overall recommendation text (max 2000 chars)
+- `winnerTicketKey`: Key of the recommended winner ticket (optional, max 20 chars)
+- `entries`: 2–6 ticket entries ordered by rank
+  - `rank`: Ordinal position (1 = best)
+  - `score`: Quality score 0–100
+  - `keyDifferentiator`: One-line summary of what makes this ticket stand out (max 500 chars)
+  - `linesAdded/Removed`: Git diff line counts
+  - `sourceFiles/testFiles`: Count of source and test files changed
+  - `complianceScore`: Constitution compliance percentage 0–100 (optional)
+  - `compliancePrinciples`: Array of per-principle pass/fail results (optional)
+  - `decisionPoints`: Array of head-to-head decision comparisons (optional)
+
+**Response** (201 Created): The created `TicketComparison` record with nested entries.
+
+**Errors**:
+- `400`: Invalid project ID or validation error (entries < 2, score out of range, etc.)
+- `401`: Missing or invalid workflow token
+- `500`: Database error
+
+### GET /api/projects/:projectId/comparisons/stored
+
+List stored comparisons for a project, optionally filtered by ticket key.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Query Parameters**:
+- `ticketKey` (string, optional): Filter comparisons where this key appears as source or in entries
+- `limit` (number, optional): Maximum results (default: 20, max: 50)
+- `offset` (number, optional): Pagination offset (default: 0)
+
+**Response** (200 OK):
+```json
+{
+  "comparisons": [
+    {
+      "id": 1,
+      "projectId": 42,
+      "sourceTicketKey": "AIB-123",
+      "recommendation": "AIB-123 is recommended because...",
+      "winnerTicketKey": "AIB-123",
+      "createdAt": "2026-03-20T22:32:30.000Z",
+      "entries": [
+        {
+          "comparisonId": 1,
+          "ticketKey": "AIB-123",
+          "rank": 1,
+          "score": 85,
+          "keyDifferentiator": "Better test coverage",
+          "linesAdded": 342,
+          "linesRemoved": 58,
+          "sourceFiles": 6,
+          "testFiles": 3,
+          "complianceScore": 90,
+          "compliancePrinciples": [...],
+          "decisionPoints": [...]
+        }
+      ]
+    }
+  ],
+  "total": 1
+}
+```
+
+**Errors**:
+- `400`: Invalid project ID or query parameters
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `500`: Database error
+
+### GET /api/projects/:projectId/comparisons/stored/:id
+
+Fetch a single stored comparison enriched with live ticket metadata and aggregated job telemetry.
+
+**Authentication**: Required (session)
+**Authorization**: Must be project owner or member
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Comparison ID
+
+**Response** (200 OK):
+```json
+{
+  "id": 1,
+  "projectId": 42,
+  "sourceTicketKey": "AIB-123",
+  "recommendation": "AIB-123 is recommended because...",
+  "winnerTicketKey": "AIB-123",
+  "createdAt": "2026-03-20T22:32:30.000Z",
+  "entries": [
+    {
+      "comparisonId": 1,
+      "ticketKey": "AIB-123",
+      "rank": 1,
+      "score": 85,
+      "keyDifferentiator": "Better test coverage",
+      "linesAdded": 342,
+      "linesRemoved": 58,
+      "sourceFiles": 6,
+      "testFiles": 3,
+      "complianceScore": 90,
+      "compliancePrinciples": [...],
+      "decisionPoints": [...],
+      "title": "Ticket comparison dashboard",
+      "stage": "SHIP",
+      "workflowType": "FULL",
+      "agent": "SONNET",
+      "qualityScore": 92,
+      "costUsd": 0.42,
+      "durationMs": 185000,
+      "inputTokens": 45000,
+      "outputTokens": 12000
+    }
+  ]
+}
+```
+
+**Enrichment Fields** (added at response time from live DB data):
+- `title`: Ticket title (null if ticket not found in project)
+- `stage`: Current workflow stage
+- `workflowType`: FULL | QUICK | CLEAN
+- `agent`: Model used for implementation
+- `qualityScore`: Latest quality score from completed jobs
+- `costUsd`: Total cost across all completed jobs
+- `durationMs`: Total duration across all completed jobs
+- `inputTokens / outputTokens`: Aggregated token usage
+
+**Errors**:
+- `400`: Invalid project or comparison ID
+- `401`: Not authenticated
+- `403`: User is neither project owner nor member
+- `404`: Comparison not found in this project
+- `500`: Database error
+
 ## Job Status Endpoints
 
 ### GET /api/projects/:projectId/jobs/status

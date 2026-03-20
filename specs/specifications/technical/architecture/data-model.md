@@ -695,6 +695,80 @@ model StripeEvent {
 - Webhook handler checks for existing record before processing; duplicate events are silently ignored
 - Records are never deleted (permanent audit log of processed events)
 
+### TicketComparison
+
+Stores the result of a `/compare` command run — a head-to-head comparison of multiple ticket implementations.
+
+```prisma
+model TicketComparison {
+  id              Int               @id @default(autoincrement())
+  projectId       Int
+  sourceTicketKey String            @db.VarChar(20)
+  recommendation  String            @db.VarChar(2000)
+  winnerTicketKey String?           @db.VarChar(20)
+  createdAt       DateTime          @default(now())
+  entries         ComparisonEntry[]
+
+  @@index([projectId])
+  @@index([sourceTicketKey])
+  @@index([createdAt])
+}
+```
+
+**Purpose**: Persists structured comparison data so the UI can render a rich visual dashboard instead of raw markdown.
+
+**Fields**:
+- `projectId`: Owning project (scopes all access checks)
+- `sourceTicketKey`: The ticket key from which the `/compare` command was run
+- `recommendation`: Freeform text summarising the overall recommendation
+- `winnerTicketKey`: The recommended winning ticket key (optional — may be absent when rankings are close)
+- `entries`: Ordered list of per-ticket comparison results (2–6 entries)
+
+**Business Rules**:
+- Created by `POST /api/projects/:projectId/comparisons/stored` via workflow token auth
+- Cascade-deletes all `ComparisonEntry` rows when the parent is removed
+- Read-only after creation; no update or delete endpoints exist
+
+### ComparisonEntry
+
+One row per ticket within a `TicketComparison`.
+
+```prisma
+model ComparisonEntry {
+  comparisonId         Int
+  ticketKey            String  @db.VarChar(20)
+  rank                 Int
+  score                Int
+  keyDifferentiator    String  @db.VarChar(500)
+  linesAdded           Int     @default(0)
+  linesRemoved         Int     @default(0)
+  sourceFiles          Int     @default(0)
+  testFiles            Int     @default(0)
+  complianceScore      Int?
+  compliancePrinciples String?
+  decisionPoints       String?
+
+  comparison TicketComparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+
+  @@id([comparisonId, ticketKey])
+  @@index([ticketKey])
+}
+```
+
+**Purpose**: Captures per-ticket metrics (code size, test coverage, constitution compliance, decision outcomes) that power the comparison dashboard.
+
+**Fields**:
+- `rank`: Ordinal rank (1 = best)
+- `score`: Composite quality score 0–100
+- `keyDifferentiator`: One-line human-readable differentiator
+- `linesAdded/Removed`: Git diff stats for the ticket's branch
+- `sourceFiles/testFiles`: Number of source and test files modified
+- `complianceScore`: Constitution compliance percentage 0–100 (optional)
+- `compliancePrinciples`: JSON array of `{ name, section, passed, notes }` objects (stored as TEXT, parsed on read)
+- `decisionPoints`: JSON array of `{ name, approaches, verdict, bestTicket }` objects (stored as TEXT, parsed on read)
+
+**Primary Key**: Composite `(comparisonId, ticketKey)` — one entry per ticket per comparison.
+
 ## Enums
 
 ### Stage
@@ -838,7 +912,9 @@ User
 │   │   │   └── notifications (one-to-many) → Notification
 │   │   └── notifications (one-to-many) → Notification
 │   ├── jobs (one-to-many) → Job
-│   └── projectMembers (one-to-many) → ProjectMember
+│   ├── projectMembers (one-to-many) → ProjectMember
+│   └── comparisons (one-to-many) → TicketComparison
+│       └── entries (one-to-many) → ComparisonEntry
 ├── comments (one-to-many) → Comment
 ├── projectMembers (one-to-many) → ProjectMember
 ├── receivedNotifications (one-to-many) → Notification (as recipient)
@@ -879,6 +955,12 @@ User
 - `ProjectMember(projectId)` - Project members list
 - `ProjectMember(userId)` - User's projects
 - `ProjectMember(projectId, userId)` - Unique constraint + lookup
+
+**Comparisons**:
+- `TicketComparison(projectId)` - Project comparisons list
+- `TicketComparison(sourceTicketKey)` - Lookup by initiating ticket
+- `TicketComparison(createdAt)` - Chronological ordering
+- `ComparisonEntry(ticketKey)` - Lookup entries by ticket across comparisons
 
 ### Composite Indexes
 

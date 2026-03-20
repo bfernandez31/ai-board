@@ -235,6 +235,15 @@ The ticket detail modal provides quick access to workflow documentation files:
 - Fetches content from main branch for SHIP stage
 - Not available for QUICK or CLEAN workflow types (summary files only created during full workflow implementation)
 
+**Compare Button**:
+- Displays when the ticket has at least one comparison report — either file-based (stored in the branch) or stored (saved in the database)
+- Badge shows the combined total count of file-based and stored comparisons
+- Opens the comparison viewer modal
+- Icon: GitCompare
+- The viewer renders a visual dashboard when a stored comparison is selected, or raw markdown when a file-based report is selected
+- Stored comparisons show rankings, quality scores, code metrics, constitution compliance grid, and decision points
+- File-based comparisons display the original markdown report unchanged
+
 **Common Behaviors**:
 - All documentation modals support commit history viewing
 - Content displayed in formatted markdown
