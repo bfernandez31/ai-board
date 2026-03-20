@@ -78,14 +78,12 @@ export function ComparisonViewer({
   } = useStoredComparisons(projectId, ticketKey, 20, isOpen && !!ticketKey);
 
   // Derive view mode: user override takes precedence, then auto-select based on data
-  const defaultViewMode: ViewMode =
-    storedData?.comparisons && storedData.comparisons.length > 0
-      ? 'dashboard'
-      : checkData?.hasComparisons
-        ? 'report'
-        : 'dashboard';
-  const viewMode = viewModeOverride ?? defaultViewMode;
-  const setViewMode = setViewModeOverride;
+  function getDefaultViewMode(): ViewMode {
+    if (storedData?.comparisons && storedData.comparisons.length > 0) return 'dashboard';
+    if (checkData?.hasComparisons) return 'report';
+    return 'dashboard';
+  }
+  const viewMode = viewModeOverride ?? getDefaultViewMode();
 
   const {
     data: listData,
@@ -157,7 +155,7 @@ export function ComparisonViewer({
                   <Button
                     variant={viewMode === 'dashboard' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('dashboard')}
+                    onClick={() => setViewModeOverride('dashboard')}
                     className="shrink-0"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-1" />
@@ -166,7 +164,7 @@ export function ComparisonViewer({
                   <Button
                     variant={viewMode === 'report' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('report')}
+                    onClick={() => setViewModeOverride('report')}
                     className="shrink-0"
                   >
                     <FileText className="h-4 w-4 mr-1" />
@@ -180,7 +178,7 @@ export function ComparisonViewer({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode('history')}
+                  onClick={() => setViewModeOverride('history')}
                   className="shrink-0"
                 >
                   <History className="h-4 w-4 mr-2" />
@@ -193,7 +191,7 @@ export function ComparisonViewer({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode('history')}
+                  onClick={() => setViewModeOverride('history')}
                   className="shrink-0"
                 >
                   <History className="h-4 w-4 mr-2" />
@@ -206,7 +204,7 @@ export function ComparisonViewer({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode(hasStoredComparisons ? 'dashboard' : 'report')}
+                  onClick={() => setViewModeOverride(hasStoredComparisons ? 'dashboard' : 'report')}
                   className="shrink-0"
                 >
                   Back
@@ -384,7 +382,7 @@ export function ComparisonViewer({
                         key={`stored-${comparison.id}`}
                         onClick={() => {
                           setSelectedStoredId(comparison.id);
-                          setViewMode('dashboard');
+                          setViewModeOverride('dashboard');
                         }}
                         className="w-full text-left p-4 rounded-lg border transition-colors border-zinc-700 bg-zinc-900 hover:border-zinc-600"
                       >
@@ -411,7 +409,7 @@ export function ComparisonViewer({
                         key={comparison.filename}
                         onClick={() => {
                           setReportOverride(comparison.filename);
-                          setViewMode('report');
+                          setViewModeOverride('report');
                         }}
                         className="w-full text-left p-4 rounded-lg border transition-colors border-zinc-700 bg-zinc-900 hover:border-zinc-600"
                       >
@@ -450,5 +448,3 @@ export function ComparisonViewer({
     </Dialog>
   );
 }
-
-export default ComparisonViewer;

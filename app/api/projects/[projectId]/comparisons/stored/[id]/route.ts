@@ -98,16 +98,10 @@ export async function GET(
         }
       }
 
+      const hasJobs = !!ticket?.jobs?.length;
+
       return {
-        ticketKey: entry.ticketKey,
-        rank: entry.rank,
-        score: entry.score,
-        keyDifferentiator: entry.keyDifferentiator,
-        linesAdded: entry.linesAdded,
-        linesRemoved: entry.linesRemoved,
-        sourceFiles: entry.sourceFiles,
-        testFiles: entry.testFiles,
-        complianceScore: entry.complianceScore,
+        ...entry,
         compliancePrinciples: entry.compliancePrinciples
           ? JSON.parse(entry.compliancePrinciples)
           : null,
@@ -119,10 +113,10 @@ export async function GET(
         workflowType: ticket?.workflowType ?? null,
         agent: ticket?.agent ?? null,
         qualityScore,
-        costUsd: ticket?.jobs?.length ? totalCost : null,
-        durationMs: ticket?.jobs?.length ? totalDuration : null,
-        inputTokens: ticket?.jobs?.length ? totalInput : null,
-        outputTokens: ticket?.jobs?.length ? totalOutput : null,
+        costUsd: hasJobs ? totalCost : null,
+        durationMs: hasJobs ? totalDuration : null,
+        inputTokens: hasJobs ? totalInput : null,
+        outputTokens: hasJobs ? totalOutput : null,
       };
     });
 
