@@ -22,14 +22,34 @@ export interface QualityScoreDetails {
   computedAt: string;
 }
 
-/** Fixed dimension definitions with weights summing to 1.0 */
-export const DIMENSION_WEIGHTS: Record<string, number> = {
-  'bug-detection': 0.30,
-  'compliance': 0.30,
-  'code-comments': 0.20,
-  'historical-context': 0.10,
-  'pr-comments': 0.10,
-};
+export interface DimensionConfig {
+  agentId: string;
+  name: string;
+  weight: number;
+  order: number;
+}
+
+/** Single source of truth for all code review dimensions */
+export const DIMENSION_CONFIG: DimensionConfig[] = [
+  { agentId: 'compliance', name: 'Compliance', weight: 0.40, order: 1 },
+  { agentId: 'bug-detection', name: 'Bug Detection', weight: 0.30, order: 2 },
+  { agentId: 'code-comments', name: 'Code Comments', weight: 0.20, order: 3 },
+  { agentId: 'historical-context', name: 'Historical Context', weight: 0.10, order: 4 },
+  { agentId: 'spec-sync', name: 'Spec Sync', weight: 0.00, order: 5 },
+];
+
+/** Derived dimension weights for backward compatibility */
+export const DIMENSION_WEIGHTS: Record<string, number> = Object.fromEntries(
+  DIMENSION_CONFIG.map(d => [d.agentId, d.weight])
+);
+
+export function getDimensionName(agentId: string): string {
+  return DIMENSION_CONFIG.find(d => d.agentId === agentId)?.name ?? agentId;
+}
+
+export function getDimensionWeight(agentId: string): number {
+  return DIMENSION_CONFIG.find(d => d.agentId === agentId)?.weight ?? 0;
+}
 
 /**
  * Returns the threshold label for a given score.

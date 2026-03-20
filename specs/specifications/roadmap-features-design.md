@@ -262,10 +262,10 @@
 - Scoring is produced by the 5 existing code review agents — each agent returns a sub-score (0-100) for its dimension in addition to listing issues. The score reflects the agent's qualitative judgment, not just issue count.
 - Scoring dimensions (weighted):
   - Bug Detection: 30% (absence of bugs found by shallow scan)
-  - Compliance (CLAUDE.md + Constitution): 30% (adherence to project rules)
+  - Compliance (CLAUDE.md + Constitution): 40% (adherence to project rules)
   - Code Comments compliance: 20% (respect of inline code guidance)
   - Historical Context: 10% (consistency with git history patterns)
-  - Previous PR Comments: 10% (not repeating past mistakes)
+  - Spec Sync: 0% (consistency between modified specs and code changes)
 - Final score: weighted sum of dimension scores, rounded to integer
 - The code review command prints the quality score JSON to stdout with a `QUALITY_SCORE_JSON:` prefix marker. The workflow captures the agent output and parses the marker to extract the score (with file fallback). The score is sent via the existing job status update endpoint.
 - Stored on Job model: `qualityScore` integer field (nullable, only for VERIFY jobs)

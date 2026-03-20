@@ -369,10 +369,10 @@ Terminal states: COMPLETED, FAILED, CANCELLED (no further transitions except ide
   {
     "dimensions": {
       "bugDetection": { "score": 90, "weight": 0.30 },
-      "compliance": { "score": 80, "weight": 0.30 },
+      "compliance": { "score": 80, "weight": 0.40 },
       "codeComments": { "score": 70, "weight": 0.20 },
       "historicalContext": { "score": 85, "weight": 0.10 },
-      "prComments": { "score": 95, "weight": 0.10 }
+      "specSync": { "score": 95, "weight": 0.00 }
     },
     "finalScore": 83
   }
