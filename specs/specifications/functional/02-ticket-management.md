@@ -250,7 +250,7 @@ The detail modal:
 - Centers with appropriate sizing on desktop
 - Uses dark theme styling
 - Provides clear typography and visual hierarchy
-- Content organized in tabs (Details, Comments, Files, Stats)
+- Content organized in tabs (Details, Comments, Files, Stats, Comparisons)
 - Each tab has unified scrolling with no nested scrollbars
 - Description content flows naturally within tab scroll area
 
@@ -333,6 +333,38 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 - Metrics recalculate automatically when job data changes
 - Modal content (including Stats tab) updates automatically when jobs transition to terminal states
 - Real-time synchronization ensures branch name, documentation buttons, and job telemetry are always current
+
+### Comparisons Tab
+
+The Comparisons tab displays structured comparison results for any ticket that has participated in at least one `/compare` command run.
+
+**Visibility**:
+- The Comparisons tab only appears when the ticket has at least one DB-backed comparison record
+- Checked via a lightweight API call on modal open (cached 30s)
+- When both Stats and Comparisons tabs are present, the tab row uses a 5-column grid
+
+**Comparison List**:
+- Lists all comparisons the ticket participated in, ordered by most recent first
+- Each item shows: date, number of participants, winner ticket key, winner score
+- Clicking an item navigates to the full comparison dashboard for that record
+
+**Comparison Dashboard**:
+The dashboard renders four sections for a selected comparison:
+
+1. **Ranking** — One card per ticket showing rank, score, agent, workflow type, and key differentiators. The winning ticket is highlighted with a green border and winner badge.
+
+2. **Code Metrics** — Horizontal bar charts comparing lines added/removed, source file count, test file count, and test ratio across all tickets. The best value per metric is highlighted.
+
+3. **Decision Points** — Collapsible sections per analyzed decision: topic label, verdict, and per-ticket approach with assessment. Collapsed by default.
+
+4. **Constitution Compliance** — Grid with principles as rows and tickets as columns. Each cell shows a pass/fail badge with optional notes on hover.
+
+**Graceful Degradation**:
+- Missing quality score → displays "Pending" without layout breakage
+- Missing telemetry → displays "N/A" for affected fields
+- Deleted ticket referenced in comparison → shows captured metrics with "Ticket unavailable" label
+
+**Keyboard Shortcut**: Ctrl/Cmd+5 opens the Comparisons tab when it is visible.
 
 ### Closing the Modal
 

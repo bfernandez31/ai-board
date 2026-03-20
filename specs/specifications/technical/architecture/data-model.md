@@ -695,6 +695,132 @@ model StripeEvent {
 - Webhook handler checks for existing record before processing; duplicate events are silently ignored
 - Records are never deleted (permanent audit log of processed events)
 
+### Comparison
+
+A single point-in-time comparison event between 2 or more ticket implementations, saved when the `/compare` command completes.
+
+```prisma
+model Comparison {
+  id              Int       @id @default(autoincrement())
+  projectId       Int
+  sourceTicketId  Int
+  recommendation  String
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceTicket    Ticket    @relation("ComparisonSource", fields: [sourceTicketId], references: [id], onDelete: Cascade)
+  entries         ComparisonEntry[]
+  decisionPoints  ComparisonDecisionPoint[]
+
+  @@index([projectId])
+  @@index([sourceTicketId])
+}
+```
+
+**Purpose**: Root record for a comparison event linking all participating tickets.
+
+**Fields**:
+- `projectId`: Parent project (cascades deletes)
+- `sourceTicketId`: The ticket that initiated the `/compare` command
+- `recommendation`: AI-generated recommendation text naming the winning ticket and rationale
+- `notes`: Optional free-text context captured at comparison time (nullable)
+- `createdAt`: Immutable timestamp of when the comparison was saved
+
+**Relationships**:
+- One-to-many: `ComparisonEntry` (one per participating ticket), `ComparisonDecisionPoint`
+
+**Business Rules**:
+- Comparisons are point-in-time snapshots — never updated after creation
+- Each run of `/compare` creates a new record even for the same ticket set
+- Cascade delete removes all entries and decision points when a comparison is deleted
+
+---
+
+### ComparisonEntry
+
+One participating ticket's data within a comparison, capturing rank, score, code metrics, and constitution compliance.
+
+```prisma
+model ComparisonEntry {
+  id                  Int       @id @default(autoincrement())
+  comparisonId        Int
+  ticketId            Int
+  rank                Int
+  score               Float
+  isWinner            Boolean   @default(false)
+  keyDifferentiators  String
+  linesAdded          Int
+  linesRemoved        Int
+  sourceFileCount     Int
+  testFileCount       Int
+  testRatio           Float
+  complianceData      String
+  createdAt           DateTime  @default(now())
+
+  comparison          Comparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+  ticket              Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@unique([comparisonId, ticketId])
+  @@index([comparisonId])
+  @@index([ticketId])
+}
+```
+
+**Purpose**: Per-ticket metrics and ranking within a comparison.
+
+**Fields**:
+- `rank`: Position in ranking (1 = winner)
+- `score`: Numeric score 0–100
+- `isWinner`: Boolean flag — exactly one entry per comparison should be `true`
+- `keyDifferentiators`: Text summary of what distinguished this ticket's implementation
+- `linesAdded`, `linesRemoved`: Git diff metrics
+- `sourceFileCount`, `testFileCount`: Counts from the diff
+- `testRatio`: `testFileCount / (sourceFileCount + testFileCount)`, range 0–1
+- `complianceData`: JSON string of per-principle compliance results (name, passed, notes)
+
+**Constraints**:
+- Unique `(comparisonId, ticketId)` — a ticket appears at most once per comparison
+- Cascade delete when parent Comparison is deleted
+
+**Business Rules**:
+- If the referenced ticket is deleted, the ComparisonEntry remains; UI shows captured metrics with "Ticket unavailable" label
+- `ticketId` references Ticket with cascade delete — if ticket is force-deleted, entries cascade too
+
+---
+
+### ComparisonDecisionPoint
+
+One implementation choice analyzed across all tickets in a comparison (e.g., "Error handling approach").
+
+```prisma
+model ComparisonDecisionPoint {
+  id            Int       @id @default(autoincrement())
+  comparisonId  Int
+  topic         String
+  verdict       String
+  approaches    String
+  createdAt     DateTime  @default(now())
+
+  comparison    Comparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+
+  @@index([comparisonId])
+}
+```
+
+**Purpose**: Per-decision analysis capturing what each ticket did and which approach was judged best.
+
+**Fields**:
+- `topic`: Short label for the decision (e.g., "Error handling approach")
+- `verdict`: AI-generated verdict naming the preferred approach and why
+- `approaches`: JSON string mapping ticket key → `{ approach, assessment }`
+
+**Business Rules**:
+- Zero or more decision points per comparison (field is optional in the save payload)
+- Cascade delete when parent Comparison is deleted
+- Stored as separate rows (not a JSON blob) to support future filtering/search
+
 ## Enums
 
 ### Stage
