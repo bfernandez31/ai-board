@@ -20,9 +20,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 Define `DimensionConfig` interface and `DIMENSION_CONFIG` array with 5 dimensions (compliance 0.40, bug-detection 0.30, code-comments 0.20, historical-context 0.10, spec-sync 0.00) in `lib/quality-score.ts`
-- [ ] T002 Derive `DIMENSION_WEIGHTS` from `DIMENSION_CONFIG` for backward compatibility in `lib/quality-score.ts`
-- [ ] T003 Add `getDimensionName(agentId)` and `getDimensionWeight(agentId)` helper functions in `lib/quality-score.ts`
+- [x] T001 Define `DimensionConfig` interface and `DIMENSION_CONFIG` array with 5 dimensions (compliance 0.40, bug-detection 0.30, code-comments 0.20, historical-context 0.10, spec-sync 0.00) in `lib/quality-score.ts`
+- [x] T002 Derive `DIMENSION_WEIGHTS` from `DIMENSION_CONFIG` for backward compatibility in `lib/quality-score.ts`
+- [x] T003 Add `getDimensionName(agentId)` and `getDimensionWeight(agentId)` helper functions in `lib/quality-score.ts`
 
 **Checkpoint**: `DIMENSION_CONFIG` exported, `DIMENSION_WEIGHTS` derived, helpers available. `computeQualityScore` continues to work with the new config structure.
 
@@ -36,9 +36,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Replace Agent #4 (PR Comments) with Spec Sync agent in step 4d of `.claude-plugin/commands/ai-board.code-review.md` — agent checks `specs/specifications/**/*.md` files modified in PR, returns 100 if none modified, otherwise scores spec-code consistency
-- [ ] T005 [US1] Update step 4a Compliance weight from 0.30 to 0.40 in `.claude-plugin/commands/ai-board.code-review.md`
-- [ ] T006 [US1] Update step 5 JSON output template: replace `pr-comments` with `spec-sync`, update all dimension weights, update example `qualityScore` computation formula in `.claude-plugin/commands/ai-board.code-review.md`
+- [x] T004 [US1] Replace Agent #4 (PR Comments) with Spec Sync agent in step 4d of `.claude-plugin/commands/ai-board.code-review.md` — agent checks `specs/specifications/**/*.md` files modified in PR, returns 100 if none modified, otherwise scores spec-code consistency
+- [x] T005 [US1] Update step 4a Compliance weight from 0.30 to 0.40 in `.claude-plugin/commands/ai-board.code-review.md`
+- [x] T006 [US1] Update step 5 JSON output template: replace `pr-comments` with `spec-sync`, update all dimension weights, update example `qualityScore` computation formula in `.claude-plugin/commands/ai-board.code-review.md`
 
 **Checkpoint**: Code review command has 5 agents with Spec Sync replacing PR Comments; weights match DIMENSION_CONFIG.
 
@@ -52,11 +52,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [P] [US2] Add unit test: `DIMENSION_CONFIG` has exactly 5 entries in `tests/unit/quality-score.test.ts`
-- [ ] T008 [P] [US2] Add unit test: active weights (>0) sum to 1.00 in `tests/unit/quality-score.test.ts`
-- [ ] T009 [P] [US2] Add unit test: `DIMENSION_WEIGHTS` derived map matches config values in `tests/unit/quality-score.test.ts`
-- [ ] T010 [P] [US2] Add unit test: `getDimensionName` returns correct display names for all 5 dimensions in `tests/unit/quality-score.test.ts`
-- [ ] T011 [P] [US2] Add unit test: `getDimensionWeight` returns correct weights for all 5 dimensions in `tests/unit/quality-score.test.ts`
+- [x] T007 [P] [US2] Add unit test: `DIMENSION_CONFIG` has exactly 5 entries in `tests/unit/quality-score.test.ts`
+- [x] T008 [P] [US2] Add unit test: active weights (>0) sum to 1.00 in `tests/unit/quality-score.test.ts`
+- [x] T009 [P] [US2] Add unit test: `DIMENSION_WEIGHTS` derived map matches config values in `tests/unit/quality-score.test.ts`
+- [x] T010 [P] [US2] Add unit test: `getDimensionName` returns correct display names for all 5 dimensions in `tests/unit/quality-score.test.ts`
+- [x] T011 [P] [US2] Add unit test: `getDimensionWeight` returns correct weights for all 5 dimensions in `tests/unit/quality-score.test.ts`
 
 **Checkpoint**: Config structure is validated by tests; single source of truth confirmed.
 
@@ -70,9 +70,9 @@
 
 ### Tests for User Story 3
 
-- [ ] T012 [US3] Update `makeDimensions` helper to use new 5-dimension set (compliance 0.40, bug-detection 0.30, code-comments 0.20, historical-context 0.10, spec-sync 0.00) in `tests/unit/quality-score.test.ts`
-- [ ] T013 [US3] Update expected weighted sum computations in existing `computeQualityScore` tests to reflect new weights in `tests/unit/quality-score.test.ts`
-- [ ] T014 [P] [US3] Add unit test: Spec Sync at weight 0.00 does not affect global quality score (score 50 vs score 100 produces identical global score) in `tests/unit/quality-score.test.ts`
+- [x] T012 [US3] Update `makeDimensions` helper to use new 5-dimension set (compliance 0.40, bug-detection 0.30, code-comments 0.20, historical-context 0.10, spec-sync 0.00) in `tests/unit/quality-score.test.ts`
+- [x] T013 [US3] Update expected weighted sum computations in existing `computeQualityScore` tests to reflect new weights in `tests/unit/quality-score.test.ts`
+- [x] T014 [P] [US3] Add unit test: Spec Sync at weight 0.00 does not affect global quality score (score 50 vs score 100 produces identical global score) in `tests/unit/quality-score.test.ts`
 
 **Checkpoint**: All scoring math tests pass with new weight distribution; `bun run test:unit` passes.
 
@@ -86,14 +86,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T015 [US4] Update test fixture data in `tests/unit/components/quality-score-section.test.tsx` to use new dimension names (Spec Sync) and weights (compliance 0.40, spec-sync 0.00)
-- [ ] T016 [US4] Verify QualityScoreSection component renders both old `pr-comments` and new `spec-sync` dimension data correctly in `tests/unit/components/quality-score-section.test.tsx`
+- [x] T015 [US4] Update test fixture data in `tests/unit/components/quality-score-section.test.tsx` to use new dimension names (Spec Sync) and weights (compliance 0.40, spec-sync 0.00)
+- [x] T016 [US4] Verify QualityScoreSection component renders both old `pr-comments` and new `spec-sync` dimension data correctly in `tests/unit/components/quality-score-section.test.tsx`
 
 ### Verification for User Story 4 (no code changes expected)
 
-- [ ] T017 [US4] Verify `components/ticket/quality-score-section.tsx` renders `dim.name` from stored JSON — old records show "PR Comments", new records show "Spec Sync" (read-only verification, no code changes)
-- [ ] T018 [US4] Verify `components/analytics/dimension-comparison-chart.tsx` aggregates by `dim.name` from JSON and handles both old and new dimension names (read-only verification, no code changes)
-- [ ] T019 [US4] Verify `components/ticket/quality-score-badge.tsx` shows only the overall score integer, unaffected by dimension changes (read-only verification, no code changes)
+- [x] T017 [US4] Verify `components/ticket/quality-score-section.tsx` renders `dim.name` from stored JSON — old records show "PR Comments", new records show "Spec Sync" (read-only verification, no code changes)
+- [x] T018 [US4] Verify `components/analytics/dimension-comparison-chart.tsx` aggregates by `dim.name` from JSON and handles both old and new dimension names (read-only verification, no code changes)
+- [x] T019 [US4] Verify `components/ticket/quality-score-badge.tsx` shows only the overall score integer, unaffected by dimension changes (read-only verification, no code changes)
 
 **Checkpoint**: All component tests pass; display components confirmed to handle both old and new data.
 
@@ -103,9 +103,9 @@
 
 **Purpose**: Final validation across all user stories.
 
-- [ ] T020 Run `bun run type-check` to verify no TypeScript errors across all modified files
-- [ ] T021 Run `bun run lint` to verify no linting errors across all modified files
-- [ ] T022 Run `bun run test:unit` to verify all unit and component tests pass end-to-end
+- [x] T020 Run `bun run type-check` to verify no TypeScript errors across all modified files
+- [x] T021 Run `bun run lint` to verify no linting errors across all modified files
+- [x] T022 Run `bun run test:unit` to verify all unit and component tests pass end-to-end
 
 ---
 
