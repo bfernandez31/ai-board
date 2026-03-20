@@ -293,10 +293,10 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 - **Detail Cue**: The card shows a directional icon and a "View details" or "Hide details" label when the breakdown can be toggled
 - **Dimension Breakdown**: The expanded state shows all five dimensions with individual scores and weights:
   - Bug Detection (30%)
-  - Compliance (30%)
+  - Compliance (40%)
   - Code Comments (20%)
   - Historical Context (10%)
-  - PR Comments (10%)
+  - Spec Sync (0%)
 - **No Empty Breakdown**: If the verify job does not include dimension details, the score card remains non-expandable and only the summary is shown
 - **Score Source**: Taken from the latest COMPLETED verify job when multiple exist (rollback-reset scenarios)
 - **Absence**: No quality score section appears for QUICK or CLEAN workflow tickets, or if the verify job failed or was cancelled

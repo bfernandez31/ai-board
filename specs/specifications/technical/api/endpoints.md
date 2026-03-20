@@ -2167,7 +2167,7 @@ Update job status (workflow-only endpoint).
 {
   "status": "COMPLETED",
   "qualityScore": 83,
-  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.30},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"prComments\":{\"score\":95,\"weight\":0.10}},\"finalScore\":83}"
+  "qualityScoreDetails": "{\"dimensions\":{\"bugDetection\":{\"score\":90,\"weight\":0.30},\"compliance\":{\"score\":80,\"weight\":0.40},\"codeComments\":{\"score\":70,\"weight\":0.20},\"historicalContext\":{\"score\":85,\"weight\":0.10},\"specSync\":{\"score\":95,\"weight\":0.00}},\"finalScore\":83}"
 }
 ```
 
@@ -2459,10 +2459,10 @@ sequenceDiagram
     ],
     "dimensionAverages": [
       { "dimension": "bugDetection", "label": "Bug Detection", "weight": 0.30, "averageScore": 82 },
-      { "dimension": "compliance", "label": "Compliance", "weight": 0.30, "averageScore": 79 },
+      { "dimension": "compliance", "label": "Compliance", "weight": 0.40, "averageScore": 79 },
       { "dimension": "codeComments", "label": "Code Comments", "weight": 0.20, "averageScore": 71 },
       { "dimension": "historicalContext", "label": "Historical Context", "weight": 0.10, "averageScore": 75 },
-      { "dimension": "prComments", "label": "PR Comments", "weight": 0.10, "averageScore": 88 }
+      { "dimension": "specSync", "label": "Spec Sync", "weight": 0.00, "averageScore": 88 }
     ],
     "hasData": true
   },
@@ -2514,7 +2514,7 @@ sequenceDiagram
     - `date`: ISO date (YYYY-MM-DD) or week (YYYY-Www)
     - `score`: Average quality score for that period
   - `dimensionAverages`: Per-dimension average scores across all scored verify jobs
-    - `dimension`: Internal dimension key (bugDetection, compliance, codeComments, historicalContext, prComments)
+    - `dimension`: Internal dimension key (bugDetection, compliance, codeComments, historicalContext, specSync)
     - `label`: Human-readable dimension name
     - `weight`: Dimension weight in final score computation
     - `averageScore`: Average dimension score across all scored jobs in range
