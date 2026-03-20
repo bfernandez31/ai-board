@@ -92,6 +92,19 @@ function buildRankings(report: ComparisonReport): Array<{
 
 function buildBestValueFlags(metrics: ComparisonReport['implementation']): Record<string, Record<string, boolean>> {
   const entries = Object.values(metrics).filter((item) => item.hasData);
+  if (entries.length === 0) {
+    return Object.fromEntries(
+      Object.values(metrics).map((item) => [
+        item.ticketKey,
+        {
+          linesChanged: false,
+          filesChanged: false,
+          testFilesChanged: false,
+        },
+      ])
+    );
+  }
+
   const minima = {
     linesChanged: Math.min(...entries.map((item) => item.linesChanged)),
     filesChanged: Math.min(...entries.map((item) => item.filesChanged)),
@@ -300,21 +313,28 @@ export function normalizeMetricSnapshot(
     bestValueFlags: Prisma.JsonValue;
   } | null
 ): ComparisonMetricSnapshot {
+  const changedFiles = Array.isArray(snapshot?.changedFiles)
+    ? snapshot.changedFiles.filter((value): value is string => typeof value === 'string')
+    : [];
+  const bestValueFlagsSource =
+    snapshot?.bestValueFlags &&
+    typeof snapshot.bestValueFlags === 'object' &&
+    !Array.isArray(snapshot.bestValueFlags)
+      ? snapshot.bestValueFlags
+      : null;
+
   return {
     linesAdded: snapshot?.linesAdded ?? null,
     linesRemoved: snapshot?.linesRemoved ?? null,
     linesChanged: snapshot?.linesChanged ?? null,
     filesChanged: snapshot?.filesChanged ?? null,
     testFilesChanged: snapshot?.testFilesChanged ?? null,
-    changedFiles: Array.isArray(snapshot?.changedFiles)
-      ? snapshot.changedFiles.filter((value): value is string => typeof value === 'string')
-      : [],
-    bestValueFlags:
-      snapshot?.bestValueFlags && typeof snapshot.bestValueFlags === 'object' && !Array.isArray(snapshot.bestValueFlags)
-        ? Object.fromEntries(
-            Object.entries(snapshot.bestValueFlags).map(([key, value]) => [key, value === true])
-          )
-        : {},
+    changedFiles,
+    bestValueFlags: bestValueFlagsSource
+      ? Object.fromEntries(
+          Object.entries(bestValueFlagsSource).map(([key, value]) => [key, value === true])
+        )
+      : {},
   };
 }
 
@@ -333,8 +353,13 @@ export function normalizeTelemetryEnrichment(job: {
     };
   }
 
-  const createValue = (value: number | null) =>
-    value == null ? createPendingEnrichment<number>() : createAvailableEnrichment(value);
+  function createValue(value: number | null): ComparisonEnrichmentValue<number> {
+    if (value == null) {
+      return createPendingEnrichment<number>();
+    }
+
+    return createAvailableEnrichment(value);
+  }
 
   return {
     inputTokens: createValue(job.inputTokens),

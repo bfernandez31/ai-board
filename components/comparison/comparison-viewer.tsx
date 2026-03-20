@@ -56,11 +56,11 @@ export function ComparisonViewer({
     isOpen
   );
 
-  const selectedComparisonId =
-    selectedComparisonIdOverride ??
-    initialComparisonId ??
-    checkData?.latestComparisonId ??
-    null;
+  const selectedComparisonId = [
+    selectedComparisonIdOverride,
+    initialComparisonId,
+    checkData?.latestComparisonId ?? null,
+  ].find((comparisonId): comparisonId is number => comparisonId != null) ?? null;
 
   const {
     data: detail,
@@ -85,16 +85,17 @@ export function ComparisonViewer({
     });
   }, [checkError, detailError, isOpen, toast]);
 
-  const handleOpenChange = (open: boolean) => {
+  function handleOpenChange(open: boolean): void {
     if (!open) {
       setShowHistory(false);
       setSelectedComparisonIdOverride(null);
       onClose?.();
     }
-  };
+  }
 
   const isLoading = checkLoading || detailLoading;
   const hasNoComparisons = checkData && !checkData.hasComparisons;
+  const loadErrorMessage = checkError?.message || detailError?.message;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -143,9 +144,7 @@ export function ComparisonViewer({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <XCircle className="mb-4 h-12 w-12 text-destructive" />
               <p className="text-lg font-medium">Error loading comparison</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {checkError?.message || detailError?.message}
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{loadErrorMessage}</p>
             </div>
           )}
 

@@ -100,21 +100,23 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
   return {
     hasComparisons: participantRows.length > 0,
     count: participantRows.length,
-    latestComparisonId: participantRows[0]?.comparisonRecordId ?? null,
+    latestComparisonId: participantRows.at(0)?.comparisonRecordId ?? null,
   };
 }
 
 function deriveQualityState(
   latestVerifyJob: { qualityScore: number | null } | null,
   hasVerifyJob: boolean
-) {
+): ReturnType<typeof createAvailableEnrichment<number>> {
   if (latestVerifyJob?.qualityScore != null) {
     return createAvailableEnrichment(latestVerifyJob.qualityScore);
   }
 
-  return hasVerifyJob
-    ? createPendingEnrichment<number>()
-    : createUnavailableEnrichment<number>();
+  if (hasVerifyJob) {
+    return createPendingEnrichment<number>();
+  }
+
+  return createUnavailableEnrichment<number>();
 }
 
 export async function getComparisonDetailForTicket(

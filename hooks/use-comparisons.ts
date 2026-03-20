@@ -7,6 +7,15 @@ import type {
   ComparisonSummary,
 } from '@/lib/types/comparison';
 
+const DEFAULT_QUERY_OPTIONS = {
+  refetchOnWindowFocus: false,
+} as const;
+
+const SHORT_STALE_TIME_MS = 30_000;
+const DEFAULT_GC_TIME_MS = 5 * 60 * 1000;
+const DETAIL_STALE_TIME_MS = 5 * 60 * 1000;
+const DETAIL_GC_TIME_MS = 30 * 60 * 1000;
+
 export const comparisonKeys = {
   all: ['comparisons'] as const,
   project: (projectId: number) => ['comparisons', projectId] as const,
@@ -34,6 +43,18 @@ async function fetchJson<T>(url: string, fallbackMessage: string): Promise<T> {
   return response.json();
 }
 
+function getComparisonDetailQueryKey(
+  projectId: number,
+  ticketId: number,
+  comparisonId: number | null
+) {
+  if (comparisonId == null) {
+    return [...comparisonKeys.ticket(projectId, ticketId, 10), 'no-detail'] as const;
+  }
+
+  return comparisonKeys.detail(projectId, ticketId, comparisonId);
+}
+
 export function useComparisonCheck(
   projectId: number,
   ticketId: number,
@@ -47,9 +68,9 @@ export function useComparisonCheck(
         'Failed to check comparisons'
       ),
     enabled: enabled && projectId > 0 && ticketId > 0,
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: SHORT_STALE_TIME_MS,
+    gcTime: DEFAULT_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }
 
@@ -67,9 +88,9 @@ export function useComparisonList(
         'Failed to fetch comparison history'
       ),
     enabled: enabled && projectId > 0 && ticketId > 0,
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: SHORT_STALE_TIME_MS,
+    gcTime: DEFAULT_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }
 
@@ -80,18 +101,15 @@ export function useComparisonDetail(
   enabled: boolean = false
 ) {
   return useQuery({
-    queryKey:
-      comparisonId == null
-        ? [...comparisonKeys.ticket(projectId, ticketId, 10), 'no-detail']
-        : comparisonKeys.detail(projectId, ticketId, comparisonId),
+    queryKey: getComparisonDetailQueryKey(projectId, ticketId, comparisonId),
     queryFn: () =>
       fetchJson<ComparisonDetail>(
         `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${comparisonId}`,
         'Failed to fetch comparison detail'
       ),
     enabled: enabled && projectId > 0 && ticketId > 0 && comparisonId != null,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: DETAIL_STALE_TIME_MS,
+    gcTime: DETAIL_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }
