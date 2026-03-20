@@ -112,6 +112,7 @@ export interface DimensionComparison {
   dimension: string;
   averageScore: number;
   weight: number;
+  displayOrder?: number;
 }
 
 export interface QualityScoreAnalytics {

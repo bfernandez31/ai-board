@@ -11,7 +11,9 @@ import {
 import {
   getScoreColor,
   getScoreThreshold,
+  normalizeDimensionForDisplay,
   parseQualityScoreDetails,
+  sortDimensionsForDisplay,
 } from '@/lib/quality-score';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
@@ -61,7 +63,9 @@ export function QualityScoreSection({
   const threshold = getScoreThreshold(score);
   const colors = getScoreColor(score);
   const details = parseQualityScoreDetails(latestScoredJob.qualityScoreDetails);
-  const dimensions = details?.dimensions ?? [];
+  const dimensions = sortDimensionsForDisplay(
+    (details?.dimensions ?? []).map((dimension) => normalizeDimensionForDisplay(dimension))
+  );
   const hasDetails = dimensions.length > 0;
 
   return (

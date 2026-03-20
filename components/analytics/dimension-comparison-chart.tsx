@@ -13,6 +13,18 @@ export function DimensionComparisonChart({
   data,
   emptyMessage = 'No dimension data available',
 }: DimensionComparisonChartProps) {
+  const sortedData = [...data].sort((left, right) => {
+    const orderDiff =
+      (left.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+      (right.displayOrder ?? Number.MAX_SAFE_INTEGER);
+    if (orderDiff !== 0) return orderDiff;
+
+    const weightDiff = right.weight - left.weight;
+    if (weightDiff !== 0) return weightDiff;
+
+    return left.dimension.localeCompare(right.dimension);
+  });
+
   if (data.length === 0) {
     return (
       <Card>
@@ -36,7 +48,11 @@ export function DimensionComparisonChart({
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ left: 20, right: 10 }}>
+            <BarChart
+              data={sortedData}
+              layout="vertical"
+              margin={{ left: 20, right: 10 }}
+            >
               <XAxis
                 type="number"
                 domain={[0, 100]}

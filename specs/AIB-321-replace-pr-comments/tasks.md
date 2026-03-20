@@ -16,8 +16,8 @@
 
 **Purpose**: Load the existing producer, scoring, consumer, and test touchpoints before refactoring shared review-dimension behavior.
 
-- [ ] T001 Inventory existing `PR Comments` and `qualityScore` touchpoints in `.claude-plugin/commands/ai-board.code-review.md`, `lib/quality-score.ts`, `components/ticket/quality-score-section.tsx`, `components/analytics/dimension-comparison-chart.tsx`, `lib/analytics/queries.ts`, `tests/unit/quality-score.test.ts`, `tests/unit/components/quality-score-section.test.tsx`, `tests/integration/analytics/quality-score.test.ts`, and `tests/integration/jobs/status.test.ts`
-- [ ] T002 [P] Verify the persistence contract remains passthrough-compatible by reviewing `.github/workflows/verify.yml`, `app/api/jobs/[id]/status/route.ts`, and `app/lib/job-update-validator.ts` against `specs/AIB-321-replace-pr-comments/contracts/quality-score-dimensions.yaml`
+- [X] T001 ✅ DONE Inventory existing `PR Comments` and `qualityScore` touchpoints in `.claude-plugin/commands/ai-board.code-review.md`, `lib/quality-score.ts`, `components/ticket/quality-score-section.tsx`, `components/analytics/dimension-comparison-chart.tsx`, `lib/analytics/queries.ts`, `tests/unit/quality-score.test.ts`, `tests/unit/components/quality-score-section.test.tsx`, `tests/integration/analytics/quality-score.test.ts`, and `tests/integration/jobs/status.test.ts`
+- [X] T002 [P] ✅ DONE Verify the persistence contract remains passthrough-compatible by reviewing `.github/workflows/verify.yml`, `app/api/jobs/[id]/status/route.ts`, and `app/lib/job-update-validator.ts` against `specs/AIB-321-replace-pr-comments/contracts/quality-score-dimensions.yaml`
 
 ---
 
@@ -27,8 +27,8 @@
 
 **⚠️ CRITICAL**: Complete this phase before starting any user story tasks.
 
-- [ ] T003 Refactor shared review-dimension metadata and parsing helpers in `lib/quality-score.ts` so name, agent ID, weight, ordering, and overall-score participation are driven by one typed configuration
-- [ ] T004 [P] Align stored-review compatibility types with the shared dimension model in `lib/types/job-types.ts` and `lib/analytics/types.ts`
+- [X] T003 ✅ DONE Refactor shared review-dimension metadata and parsing helpers in `lib/quality-score.ts` so name, agent ID, weight, ordering, and overall-score participation are driven by one typed configuration
+- [X] T004 [P] ✅ DONE Align stored-review compatibility types with the shared dimension model in `lib/types/job-types.ts` and `lib/analytics/types.ts`
 
 **Checkpoint**: Shared dimension configuration exists and can drive producers, scoring, ticket views, and analytics consistently.
 
@@ -42,13 +42,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Extend shared payload/config coverage for `Spec Sync`, no-spec success behavior, and legacy `PR Comments` parsing in `tests/unit/quality-score.test.ts`
-- [ ] T006 [P] [US1] Extend completed verify-job persistence coverage for zero-weight `Spec Sync` payloads in `tests/integration/jobs/status.test.ts`
+- [X] T005 [P] [US1] ✅ DONE Extend shared payload/config coverage for `Spec Sync`, no-spec success behavior, and legacy `PR Comments` parsing in `tests/unit/quality-score.test.ts`
+- [X] T006 [P] [US1] ✅ DONE Extend completed verify-job persistence coverage for zero-weight `Spec Sync` payloads in `tests/integration/jobs/status.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Replace the `PR Comments` review agent, prompt instructions, and example `QUALITY_SCORE_JSON` payload with `Spec Sync` behavior in `.claude-plugin/commands/ai-board.code-review.md`
-- [ ] T008 [US1] Confirm the verify workflow and completed-job update path continue forwarding the new payload shape without transformation in `.github/workflows/verify.yml` and `app/api/jobs/[id]/status/route.ts`
+- [X] T007 [US1] ✅ DONE Replace the `PR Comments` review agent, prompt instructions, and example `QUALITY_SCORE_JSON` payload with `Spec Sync` behavior in `.claude-plugin/commands/ai-board.code-review.md`
+- [X] T008 [US1] ✅ DONE Confirm the verify workflow and completed-job update path continue forwarding the new payload shape without transformation in `.github/workflows/verify.yml` and `app/api/jobs/[id]/status/route.ts`
 
 **Checkpoint**: New reviews produce and persist `Spec Sync` results without breaking completed verify-job updates.
 
@@ -62,13 +62,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Add weighted-score and threshold regression coverage that excludes zero-weight `Spec Sync` from `qualityScore` in `tests/unit/quality-score.test.ts`
-- [ ] T010 [P] [US2] Extend analytics regression coverage for unchanged active-dimension scoring and mixed legacy/new review payloads in `tests/integration/analytics/quality-score.test.ts`
+- [X] T009 [P] [US2] ✅ DONE Add weighted-score and threshold regression coverage that excludes zero-weight `Spec Sync` from `qualityScore` in `tests/unit/quality-score.test.ts`
+- [X] T010 [P] [US2] ✅ DONE Extend analytics regression coverage for unchanged active-dimension scoring and mixed legacy/new review payloads in `tests/integration/analytics/quality-score.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Update weighted-score computation, threshold helpers, and active-weight validation to ignore zero-weight dimensions in `lib/quality-score.ts`
-- [ ] T012 [US2] Keep completed-job payload validation backward compatible for both new `Spec Sync` rows and historical `PR Comments` rows in `app/lib/job-update-validator.ts` and `app/api/jobs/[id]/status/route.ts`
+- [X] T011 [US2] ✅ DONE Update weighted-score computation, threshold helpers, and active-weight validation to ignore zero-weight dimensions in `lib/quality-score.ts`
+- [X] T012 [US2] ✅ DONE Keep completed-job payload validation backward compatible for both new `Spec Sync` rows and historical `PR Comments` rows in `app/lib/job-update-validator.ts` and `app/api/jobs/[id]/status/route.ts`
 
 **Checkpoint**: Overall quality gates still behave the same while `Spec Sync` remains visible but weightless.
 
@@ -82,14 +82,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T013 [P] [US3] Add component coverage for `Spec Sync` rendering, dimension ordering, and legacy `PR Comments` fallback in `tests/unit/components/quality-score-section.test.tsx`
-- [ ] T014 [P] [US3] Extend dimension-comparison analytics coverage for new `Spec Sync` rows and mixed historical datasets in `tests/integration/analytics/quality-score.test.ts`
+- [X] T013 [P] [US3] ✅ DONE Add component coverage for `Spec Sync` rendering, dimension ordering, and legacy `PR Comments` fallback in `tests/unit/components/quality-score-section.test.tsx`
+- [X] T014 [P] [US3] ✅ DONE Extend dimension-comparison analytics coverage for new `Spec Sync` rows and mixed historical datasets in `tests/integration/analytics/quality-score.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Update ticket review breakdown rendering to use the shared dimension metadata for labels, weights, ordering, and legacy fallbacks in `components/ticket/quality-score-section.tsx`
-- [ ] T016 [US3] Update analytics dimension aggregation and ordering to surface `Spec Sync` for new reviews while preserving historical `PR Comments` interpretability in `lib/analytics/queries.ts`
-- [ ] T017 [P] [US3] Align chart label and ordering behavior with the shared dimension configuration in `components/analytics/dimension-comparison-chart.tsx`
+- [X] T015 [US3] ✅ DONE Update ticket review breakdown rendering to use the shared dimension metadata for labels, weights, ordering, and legacy fallbacks in `components/ticket/quality-score-section.tsx`
+- [X] T016 [US3] ✅ DONE Update analytics dimension aggregation and ordering to surface `Spec Sync` for new reviews while preserving historical `PR Comments` interpretability in `lib/analytics/queries.ts`
+- [X] T017 [P] [US3] ✅ DONE Align chart label and ordering behavior with the shared dimension configuration in `components/analytics/dimension-comparison-chart.tsx`
 
 **Checkpoint**: All user-visible review breakdown surfaces show the replacement dimension consistently for new reviews.
 
@@ -99,8 +99,8 @@
 
 **Purpose**: Validate the integrated feature across unit, component, integration, typing, and linting workflows.
 
-- [ ] T018 [P] Run the targeted validation commands from `specs/AIB-321-replace-pr-comments/quickstart.md` for `tests/unit/quality-score.test.ts`, `tests/unit/components/quality-score-section.test.tsx`, `tests/integration/analytics/quality-score.test.ts`, and `tests/integration/jobs/status.test.ts`
-- [ ] T019 Run repository-wide validation with `bun run type-check` and `bun run lint` against `package.json`, `tsconfig.json`, and `eslint.config.mjs` from the repository root
+- [X] T018 [P] ✅ DONE Run the targeted validation commands from `specs/AIB-321-replace-pr-comments/quickstart.md` for `tests/unit/quality-score.test.ts`, `tests/unit/components/quality-score-section.test.tsx`, `tests/integration/analytics/quality-score.test.ts`, and `tests/integration/jobs/status.test.ts`
+- [X] T019 ✅ DONE Run repository-wide validation with `bun run type-check` and `bun run lint` against `package.json`, `tsconfig.json`, and `eslint.config.mjs` from the repository root
 
 ---
 

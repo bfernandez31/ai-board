@@ -28,7 +28,11 @@ import type {
   WeeklyVelocity,
   WorkflowBreakdown,
 } from './types';
-import { parseQualityScoreDetails } from '@/lib/quality-score';
+import {
+  getDimensionDisplayOrder,
+  getReviewDimensionConfig,
+  parseQualityScoreDetails,
+} from '@/lib/quality-score';
 import {
   DEFAULT_ANALYTICS_FILTERS,
   aggregateTools,
@@ -568,13 +572,22 @@ async function getQualityScoreAnalytics(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Dimension comparison
-  const dimensionTotals = new Map<string, { total: number; count: number; weight: number }>();
+  const dimensionTotals = new Map<
+    string,
+    { total: number; count: number; weight: number; displayOrder: number }
+  >();
 
   for (const job of jobs) {
     const details = parseQualityScoreDetails(job.qualityScoreDetails);
     if (!details?.dimensions) continue;
     for (const dim of details.dimensions) {
-      const entry = dimensionTotals.get(dim.name) ?? { total: 0, count: 0, weight: dim.weight };
+      const config = getReviewDimensionConfig(dim);
+      const entry = dimensionTotals.get(dim.name) ?? {
+        total: 0,
+        count: 0,
+        weight: config?.weight ?? dim.weight,
+        displayOrder: getDimensionDisplayOrder(dim),
+      };
       entry.total += dim.score;
       entry.count += 1;
       dimensionTotals.set(dim.name, entry);
@@ -582,12 +595,21 @@ async function getQualityScoreAnalytics(
   }
 
   const dimensionComparison: DimensionComparison[] = Array.from(dimensionTotals.entries())
-    .map(([dimension, { total, count, weight }]) => ({
+    .map(([dimension, { total, count, weight, displayOrder }]) => ({
       dimension,
       averageScore: Math.round(total / count),
       weight,
+      displayOrder,
     }))
-    .sort((a, b) => b.weight - a.weight);
+    .sort((a, b) => {
+      const orderDiff = (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER);
+      if (orderDiff !== 0) return orderDiff;
+
+      const weightDiff = b.weight - a.weight;
+      if (weightDiff !== 0) return weightDiff;
+
+      return a.dimension.localeCompare(b.dimension);
+    });
 
   return {
     scoreTrend,

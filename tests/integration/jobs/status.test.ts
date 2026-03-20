@@ -218,8 +218,14 @@ describe('Jobs Status', () => {
       await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
 
       const qualityScoreDetails = JSON.stringify({
+        version: 1,
+        qualityScore: 82,
         dimensions: [
           { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
+          { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.4, weightedScore: 32 },
+          { name: 'Code Comments', agentId: 'code-comments', score: 70, weight: 0.2, weightedScore: 14 },
+          { name: 'Historical Context', agentId: 'historical-context', score: 85, weight: 0.1, weightedScore: 8.5 },
+          { name: 'Spec Sync', agentId: 'spec-sync', score: 100, weight: 0, weightedScore: 0, findings: [] },
         ],
         threshold: 'Good',
         computedAt: '2026-03-17T10:30:00Z',
@@ -229,7 +235,7 @@ describe('Jobs Status', () => {
         `/api/jobs/${jobId}/status`,
         {
           status: 'COMPLETED',
-          qualityScore: 83,
+          qualityScore: 82,
           qualityScoreDetails,
         }
       );
@@ -238,8 +244,42 @@ describe('Jobs Status', () => {
       expect(response.data.status).toBe('COMPLETED');
 
       const job = await prisma.job.findUnique({ where: { id: jobId } });
-      expect(job?.qualityScore).toBe(83);
+      expect(job?.qualityScore).toBe(82);
       expect(job?.qualityScoreDetails).toBe(qualityScoreDetails);
+    });
+
+    it('should persist zero-weight Spec Sync details alongside a completed score', async () => {
+      await workflowApi.patch(`/api/jobs/${jobId}/status`, { status: 'RUNNING' });
+
+      const qualityScoreDetails = JSON.stringify({
+        version: 1,
+        qualityScore: 76,
+        threshold: 'Good',
+        computedAt: '2026-03-17T10:30:00Z',
+        dimensions: [
+          { name: 'Bug Detection', agentId: 'bug-detection', score: 80, weight: 0.3, weightedScore: 24 },
+          { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.4, weightedScore: 32 },
+          { name: 'Code Comments', agentId: 'code-comments', score: 60, weight: 0.2, weightedScore: 12 },
+          { name: 'Historical Context', agentId: 'historical-context', score: 80, weight: 0.1, weightedScore: 8 },
+          { name: 'Spec Sync', agentId: 'spec-sync', score: 0, weight: 0, weightedScore: 0, findings: [] },
+        ],
+      });
+
+      const response = await workflowApi.patch<{ id: number; status: string }>(
+        `/api/jobs/${jobId}/status`,
+        {
+          status: 'COMPLETED',
+          qualityScore: 76,
+          qualityScoreDetails,
+        }
+      );
+
+      expect(response.status).toBe(200);
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(job?.qualityScore).toBe(76);
+      expect(job?.qualityScoreDetails).toContain('"Spec Sync"');
+      expect(job?.qualityScoreDetails).toContain('"weight":0');
     });
 
     it('should silently ignore qualityScore when status is RUNNING', async () => {

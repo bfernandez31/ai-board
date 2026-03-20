@@ -22,22 +22,30 @@ describe('Analytics Route - Quality Score', () => {
   const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const qualityScoreDetails = JSON.stringify({
+    version: 1,
+    qualityScore: 82,
+    threshold: 'Good',
+    computedAt: '2026-03-17T10:30:00Z',
     dimensions: [
-      { name: 'Bug Detection', score: 85, weight: 0.3 },
-      { name: 'Compliance', score: 90, weight: 0.3 },
-      { name: 'Code Comments', score: 70, weight: 0.2 },
-      { name: 'Historical Context', score: 60, weight: 0.1 },
-      { name: 'PR Comments', score: 80, weight: 0.1 },
+      { name: 'Bug Detection', agentId: 'bug-detection', score: 85, weight: 0.3, weightedScore: 25.5 },
+      { name: 'Compliance', agentId: 'compliance', score: 90, weight: 0.4, weightedScore: 36 },
+      { name: 'Code Comments', agentId: 'code-comments', score: 70, weight: 0.2, weightedScore: 14 },
+      { name: 'Historical Context', agentId: 'historical-context', score: 60, weight: 0.1, weightedScore: 6 },
+      { name: 'Spec Sync', agentId: 'spec-sync', score: 80, weight: 0, weightedScore: 0 },
     ],
   });
 
   const qualityScoreDetails2 = JSON.stringify({
+    version: 1,
+    qualityScore: 72,
+    threshold: 'Good',
+    computedAt: '2026-03-16T10:30:00Z',
     dimensions: [
-      { name: 'Bug Detection', score: 75, weight: 0.3 },
-      { name: 'Compliance', score: 80, weight: 0.3 },
-      { name: 'Code Comments', score: 60, weight: 0.2 },
-      { name: 'Historical Context', score: 50, weight: 0.1 },
-      { name: 'PR Comments', score: 70, weight: 0.1 },
+      { name: 'Bug Detection', agentId: 'bug-detection', score: 75, weight: 0.3, weightedScore: 22.5 },
+      { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.3, weightedScore: 24 },
+      { name: 'Code Comments', agentId: 'code-comments', score: 60, weight: 0.2, weightedScore: 12 },
+      { name: 'Historical Context', agentId: 'historical-context', score: 50, weight: 0.1, weightedScore: 5 },
+      { name: 'PR Comments', agentId: 'pr-comments', score: 70, weight: 0.1, weightedScore: 7 },
     ],
   });
 
@@ -159,14 +167,37 @@ describe('Analytics Route - Quality Score', () => {
       expect(point.count).toBeGreaterThan(0);
     }
 
-    // Dimension comparison has all 5 dimensions
-    expect(data.qualityScore.dimensionComparison).toHaveLength(5);
+    // Dimension comparison keeps both new and historical fifth-dimension labels readable
+    expect(data.qualityScore.dimensionComparison).toHaveLength(6);
     const bugDetection = data.qualityScore.dimensionComparison.find(
       (d) => d.dimension === 'Bug Detection'
     );
     expect(bugDetection).toBeDefined();
     expect(bugDetection!.averageScore).toBe(80); // (85 + 75) / 2
     expect(bugDetection!.weight).toBe(0.3);
+
+    const compliance = data.qualityScore.dimensionComparison.find(
+      (d) => d.dimension === 'Compliance'
+    );
+    expect(compliance?.weight).toBe(0.4);
+
+    const specSync = data.qualityScore.dimensionComparison.find(
+      (d) => d.dimension === 'Spec Sync'
+    );
+    expect(specSync).toMatchObject({
+      averageScore: 80,
+      weight: 0,
+      displayOrder: 5,
+    });
+
+    const prComments = data.qualityScore.dimensionComparison.find(
+      (d) => d.dimension === 'PR Comments'
+    );
+    expect(prComments).toMatchObject({
+      averageScore: 70,
+      weight: 0.1,
+      displayOrder: 5,
+    });
   });
 
   it('returns empty quality score data when no scored jobs exist', async () => {

@@ -28,6 +28,7 @@ export interface JobTypeConfig {
 }
 
 import type { Job } from '@prisma/client';
+import type { QualityScoreDetails } from '@/lib/quality-score';
 
 /**
  * DualJobState Interface
@@ -64,4 +65,8 @@ export interface TicketJobWithTelemetry {
   toolsUsed: string[];
   qualityScore: number | null;
   qualityScoreDetails: string | null;
+}
+
+export interface TicketJobWithParsedQuality extends TicketJobWithTelemetry {
+  parsedQualityScoreDetails?: QualityScoreDetails | null;
 }
