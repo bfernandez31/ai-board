@@ -19,19 +19,7 @@ To do this, follow these steps precisely:
    c. Agent #3 (Historical Context, weight: 0.10): Read the git blame and history of the code modified, to identify any bugs in light of that historical context. **Return a `dimensionScore` (0-100) for historical context quality.**
    d. Agent #4 (Spec Sync, weight: 0.00): Check if the PR modifies any spec files matching `specs/specifications/**/*.md`. If no spec files are modified, return dimensionScore 100 immediately. If spec files are modified, read the spec changes and code changes, then check for: (a) contradictions between spec content and code behavior, (b) gaps where specs document behavior absent from code or code adds behavior not in specs. **Return a `dimensionScore` (0-100) reflecting spec-code consistency.**
    e. Agent #5 (Code Comments, weight: 0.20): Read code comments in the modified files, and make sure the changes in the pull request comply with any guidance in the comments. **Return a `dimensionScore` (0-100) for code comment compliance quality.**
-5. **Quality Score Consolidation**: After all 5 agents complete, collect their dimension scores and compute the weighted final quality score. **Print the quality score JSON as a single line to stdout**, prefixed with the marker `QUALITY_SCORE_JSON:`. This allows the verify workflow to parse the score from the agent's output. The JSON structure is:
-   ```json
-   {"version":1,"qualityScore":<rounded weighted sum>,"threshold":"<Excellent|Good|Fair|Poor>","dimensions":[{"name":"Compliance","agentId":"compliance","score":<agent1_score>,"weight":0.40,"weightedScore":<score*0.40>},{"name":"Bug Detection","agentId":"bug-detection","score":<agent2_score>,"weight":0.30,"weightedScore":<score*0.30>},{"name":"Code Comments","agentId":"code-comments","score":<agent5_score>,"weight":0.20,"weightedScore":<score*0.20>},{"name":"Historical Context","agentId":"historical-context","score":<agent3_score>,"weight":0.10,"weightedScore":<score*0.10>},{"name":"Spec Sync","agentId":"spec-sync","score":<agent4_score>,"weight":0.00,"weightedScore":0}],"computedAt":"<ISO8601 timestamp>"}
-   ```
-   Example output line (must be exactly this format — single line, no spaces between marker and JSON):
-   ```
-   QUALITY_SCORE_JSON:{"version":1,"qualityScore":83,"threshold":"Good","dimensions":[...],"computedAt":"2026-03-18T20:53:00.000Z"}
-   ```
-   Threshold derivation: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor".
-   The `qualityScore` is `round(sum(dimension.score * dimension.weight))` across all 5 dimensions.
-   If any agent fails to return a dimension score, default to 50 for that dimension.
-   **Important**: Do NOT attempt to write a file — this command does not have file write permissions. The stdout marker is the only mechanism for passing the score to the workflow.
-
+5. **Collect Dimension Scores**: After all 5 agents complete, collect their dimension scores. If any agent fails to return a dimension score, default to 50 for that dimension. Keep these scores available for the final step.
 6. For each issue found in #4, launch a parallel Haiku agent that takes the PR, issue description, and list of CLAUDE.md files + constitution file (from step 2), and returns a score to indicate the agent's level of confidence for whether the issue is real or false positive. To do that, the agent should score each issue on a scale from 0-100, indicating its level of confidence. For issues that were flagged due to CLAUDE.md or constitution instructions, the agent should double check that the CLAUDE.md or constitution actually calls out that issue specifically. The scale is (give this rubric to the agent verbatim):
    a. 0: Not confident at all. This is a false positive that doesn't stand up to light scrutiny, or is a pre-existing issue.
    b. 25: Somewhat confident. This might be a real issue, but may also be a false positive. The agent wasn't able to verify that it's a real issue. If the issue is stylistic, it is one that was not explicitly called out in the relevant CLAUDE.md or constitution.
@@ -105,3 +93,13 @@ No issues found. Checked for bugs, CLAUDE.md compliance, and constitution compli
   - # sign after the file name
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
+
+10. **MANDATORY — Quality Score Output (do NOT skip this step)**: After everything above is complete, launch a dedicated Haiku agent whose ONLY job is to compute and print the quality score. Pass it the 5 dimension scores collected in step 4 (agent1 through agent5 scores). The agent must:
+    - Receive the 5 dimension scores as input (use 50 as default for any missing score)
+    - Compute the weighted final score: `round(compliance*0.40 + bugDetection*0.30 + codeComments*0.20 + historicalContext*0.10 + specSync*0.00)`
+    - Derive the threshold: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor"
+    - Print exactly one line to stdout in this format (single line, no spaces between marker and JSON):
+      `QUALITY_SCORE_JSON:{"version":1,"qualityScore":<score>,"threshold":"<threshold>","dimensions":[{"name":"Compliance","agentId":"compliance","score":<s1>,"weight":0.40,"weightedScore":<s1*0.40>},{"name":"Bug Detection","agentId":"bug-detection","score":<s2>,"weight":0.30,"weightedScore":<s2*0.30>},{"name":"Code Comments","agentId":"code-comments","score":<s5>,"weight":0.20,"weightedScore":<s5*0.20>},{"name":"Historical Context","agentId":"historical-context","score":<s3>,"weight":0.10,"weightedScore":<s3*0.10>},{"name":"Spec Sync","agentId":"spec-sync","score":<s4>,"weight":0.00,"weightedScore":0}],"computedAt":"<ISO8601 timestamp>"}`
+    - The agent must return ONLY this line — nothing else
+    - **Important**: Do NOT attempt to write a file — this command does not have file write permissions. The stdout marker is the only mechanism for passing the score to the workflow.
+    - This step is critical for the verify workflow to capture the quality score. It must ALWAYS execute regardless of whether issues were found or not.
