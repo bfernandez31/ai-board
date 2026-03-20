@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: Quality Score Dimension Contract
+  version: 1.0.0
+  description: |
+    Contract for verify-job quality score payloads after replacing PR Comments
+    with Spec Sync. The payload is produced by the code review command,
+    forwarded by the VERIFY workflow, and persisted by PATCH /api/jobs/{id}/status.
+
+paths:
+  /workflow/stdout/quality-score-json:
+    post:
+      summary: Logical producer contract for QUALITY_SCORE_JSON
+      description: |
+        The code review command prints a single-line JSON payload prefixed with
+        QUALITY_SCORE_JSON:. The verify workflow extracts this payload and passes
+        it through to the job status API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityScorePayload'
+      responses:
+        '204':
+          description: Contract-only logical endpoint; no runtime HTTP handler
+
+  /api/jobs/{id}/status:
+    patch:
+      summary: Persist verify job completion and quality score details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobStatusCompletedPayload'
+      responses:
+        '200':
+          description: Job status updated
+
+components:
+  schemas:
+    JobStatusCompletedPayload:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [COMPLETED]
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Rounded weighted sum of active dimensions only
+        qualityScoreDetails:
+          type: string
+          description: Serialized QualityScorePayload JSON
+
+    QualityScorePayload:
+      type: object
+      required:
+        - version
+        - qualityScore
+        - threshold
+        - dimensions
+        - computedAt
+      properties:
+        version:
+          type: integer
+          enum: [1]
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Rounded weighted sum of dimensions where affectsOverallScore is true
+        threshold:
+          type: string
+          enum: [Excellent, Good, Fair, Poor]
+        computedAt:
+          type: string
+          format: date-time
+        dimensions:
+          type: array
+          minItems: 5
+          items:
+            $ref: '#/components/schemas/DimensionResult'
+
+    DimensionResult:
+      type: object
+      required:
+        - name
+        - agentId
+        - score
+        - weight
+        - weightedScore
+      properties:
+        name:
+          type: string
+          enum:
+            - Bug Detection
+            - Compliance
+            - Code Comments
+            - Historical Context
+            - Spec Sync
+            - PR Comments
+          description: |
+            New reviews emit Spec Sync. PR Comments remains allowed only for
+            historical compatibility in stored payloads.
+        agentId:
+          type: string
+          enum:
+            - bug-detection
+            - compliance
+            - code-comments
+            - historical-context
+            - spec-sync
+            - pr-comments
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        weightedScore:
+          type: number
+          format: float
+          description: score * weight
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecSyncFinding'
+          description: |
+            Optional structured findings, expected primarily for Spec Sync.
+
+    SpecSyncFinding:
+      type: object
+      required:
+        - type
+        - specFilePath
+        - summary
+      properties:
+        type:
+          type: string
+          enum: [contradiction, coverage-gap]
+        specFilePath:
+          type: string
+          pattern: ^specs/specifications/.+
+        summary:
+          type: string
+        evidence:
+          type: string
