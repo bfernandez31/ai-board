@@ -1,31 +1,29 @@
-/**
- * ComparisonViewer Component
- *
- * Modal viewer for displaying ticket comparison reports.
- * Features:
- * - TanStack Query for caching and state management
- * - Renders markdown comparison reports with syntax highlighting
- * - Loading and error states
- * - Scrollable content for large reports
- * - Metadata display
- */
-
 'use client';
 
-import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { GitCompare, History, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle,
+  GitCompare,
+  History,
+  Trophy,
+  XCircle,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import {
   useComparisonCheck,
@@ -33,13 +31,14 @@ import {
   useComparisonReport,
 } from '@/hooks/use-comparisons';
 import type { ComparisonViewerProps } from './types';
+import type {
+  ComparisonDetail,
+  ComparisonQualityScoreSummary,
+  ComparisonTicketView,
+} from '@/lib/types/comparison';
 
-/**
- * Format date for display
- */
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -48,11 +47,407 @@ function formatDate(dateString: string): string {
   });
 }
 
-/**
- * ComparisonViewer Component
- *
- * Displays comparison reports in a modal dialog.
- */
+function formatCurrency(value: number): string {
+  return value > 0 ? `$${value.toFixed(2)}` : 'N/A';
+}
+
+function formatDuration(durationMs: number): string {
+  if (durationMs <= 0) return 'N/A';
+  if (durationMs < 60_000) return `${Math.round(durationMs / 1000)}s`;
+  return `${(durationMs / 60_000).toFixed(1)}m`;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function renderQualityScore(qualityScore: ComparisonQualityScoreSummary): string {
+  if (qualityScore.score == null) return 'Pending';
+  return `${qualityScore.score}`;
+}
+
+function getStatusTone(status: 'pass' | 'warning' | 'fail'): string {
+  if (status === 'pass') return 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30';
+  if (status === 'warning') return 'bg-amber-500/15 text-amber-100 border-amber-400/30';
+  return 'bg-rose-500/15 text-rose-100 border-rose-400/30';
+}
+
+interface MetricDefinition {
+  key: string;
+  label: string;
+  getValue: (ticket: ComparisonTicketView) => number | null;
+  renderValue: (ticket: ComparisonTicketView) => string;
+  higherIsBetter: boolean;
+}
+
+const metricDefinitions: MetricDefinition[] = [
+  {
+    key: 'score',
+    label: 'Comparison Score',
+    getValue: (ticket) => ticket.score,
+    renderValue: (ticket) => `${ticket.score}`,
+    higherIsBetter: true,
+  },
+  {
+    key: 'quality',
+    label: 'Quality Score',
+    getValue: (ticket) => ticket.qualityScore.score,
+    renderValue: (ticket) => renderQualityScore(ticket.qualityScore),
+    higherIsBetter: true,
+  },
+  {
+    key: 'constitution',
+    label: 'Constitution',
+    getValue: (ticket) => ticket.constitution.overall,
+    renderValue: (ticket) => `${ticket.constitution.overall}%`,
+    higherIsBetter: true,
+  },
+  {
+    key: 'testRatio',
+    label: 'Test Ratio',
+    getValue: (ticket) => ticket.metrics.testRatio,
+    renderValue: (ticket) => formatPercent(ticket.metrics.testRatio),
+    higherIsBetter: true,
+  },
+  {
+    key: 'cost',
+    label: 'Cost',
+    getValue: (ticket) => (ticket.telemetry.hasData ? ticket.telemetry.costUsd : null),
+    renderValue: (ticket) => formatCurrency(ticket.telemetry.costUsd),
+    higherIsBetter: false,
+  },
+  {
+    key: 'duration',
+    label: 'Duration',
+    getValue: (ticket) => (ticket.telemetry.hasData ? ticket.telemetry.durationMs : null),
+    renderValue: (ticket) => formatDuration(ticket.telemetry.durationMs),
+    higherIsBetter: false,
+  },
+];
+
+function getBestTicketIds(
+  tickets: ComparisonTicketView[],
+  metric: MetricDefinition
+): Set<number> {
+  const values = tickets
+    .map((ticket) => ({
+      ticketId: ticket.ticketId,
+      value: metric.getValue(ticket),
+    }))
+    .filter((entry): entry is { ticketId: number; value: number } => entry.value != null);
+
+  if (values.length === 0) return new Set<number>();
+
+  const bestValue = metric.higherIsBetter
+    ? Math.max(...values.map((entry) => entry.value))
+    : Math.min(...values.map((entry) => entry.value));
+
+  return new Set(
+    values
+      .filter((entry) => entry.value === bestValue)
+      .map((entry) => entry.ticketId)
+  );
+}
+
+function MetricComparison({ comparison }: { comparison: ComparisonDetail }) {
+  const scaleMax = useMemo(() => {
+    const maxima = new Map<string, number>();
+    for (const metric of metricDefinitions) {
+      const values = comparison.tickets
+        .map((ticket) => metric.getValue(ticket))
+        .filter((value): value is number => value != null);
+      maxima.set(metric.key, values.length > 0 ? Math.max(...values) : 0);
+    }
+    return maxima;
+  }, [comparison.tickets]);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-foreground">Metrics Comparison</h3>
+        <p className="text-xs text-muted-foreground">Best values highlighted per metric.</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {metricDefinitions.map((metric) => {
+          const bestTicketIds = getBestTicketIds(comparison.tickets, metric);
+          const maxValue = scaleMax.get(metric.key) ?? 0;
+
+          return (
+            <div
+              key={metric.key}
+              className="rounded-xl border border-border bg-card/80 p-4"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-medium text-foreground">{metric.label}</h4>
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {metric.higherIsBetter ? 'Higher is better' : 'Lower is better'}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {comparison.tickets.map((ticket) => {
+                  const rawValue = metric.getValue(ticket);
+                  const width = rawValue != null && maxValue > 0 ? (rawValue / maxValue) * 100 : 0;
+                  const isBest = bestTicketIds.has(ticket.ticketId);
+
+                  return (
+                    <div key={`${metric.key}-${ticket.ticketId}`} className="space-y-1">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground">{ticket.ticketKey}</span>
+                          {isBest && (
+                            <Badge className="border-emerald-400/30 bg-emerald-500/15 text-emerald-100">
+                              Best
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-muted-foreground">{metric.renderValue(ticket)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-secondary/70">
+                        <div
+                          className={`h-2 rounded-full ${
+                            isBest ? 'bg-emerald-400' : 'bg-primary'
+                          }`}
+                          style={{ width: `${Math.max(width, rawValue != null ? 8 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function RankingSection({ comparison }: { comparison: ComparisonDetail }) {
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-secondary/40 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span>Winner</span>
+            </div>
+            <div className="text-3xl font-semibold text-foreground">
+              {comparison.winnerTicket?.ticketKey ?? 'Pending'}
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              {comparison.recommendation}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm">
+            <div className="text-muted-foreground">Generated</div>
+            <div className="font-medium text-foreground">{formatDate(comparison.generatedAt)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-foreground">Ranking</h3>
+          <p className="text-xs text-muted-foreground">{comparison.summary}</p>
+        </div>
+        <div className="grid gap-3">
+          {comparison.tickets.map((ticket) => {
+            const isWinner = comparison.winnerTicket?.id === ticket.ticketId;
+            return (
+              <div
+                key={ticket.ticketId}
+                className={`rounded-xl border p-4 ${
+                  isWinner
+                    ? 'border-primary/40 bg-primary/10'
+                    : 'border-border bg-card/80'
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-secondary text-foreground">
+                        #{ticket.rank}
+                      </Badge>
+                      <span className="text-lg font-semibold text-foreground">{ticket.ticketKey}</span>
+                      {isWinner && (
+                        <Badge className="border-primary/30 bg-primary text-primary-foreground">
+                          Winner
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{ticket.verdictSummary}</p>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span>{ticket.agent ?? 'Agent N/A'}</span>
+                      <span>{ticket.workflowType}</span>
+                      <span>{ticket.stage}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Score</div>
+                    <div className="text-3xl font-semibold text-foreground">{ticket.score}</div>
+                  </div>
+                </div>
+                {ticket.keyDifferentiators.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {ticket.keyDifferentiators.map((item) => (
+                      <Badge
+                        key={`${ticket.ticketId}-${item}`}
+                        variant="secondary"
+                        className="bg-secondary/70 text-foreground"
+                      >
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DecisionPointsSection({ comparison }: { comparison: ComparisonDetail }) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-foreground">Decision Points</h3>
+        <p className="text-xs text-muted-foreground">Collapsible implementation trade-offs.</p>
+      </div>
+      <div className="space-y-3">
+        {comparison.decisionPoints.map((decisionPoint, index) => (
+          <Collapsible
+            key={`${decisionPoint.title}-${index}`}
+            className="rounded-xl border border-border bg-card/80"
+            defaultOpen={index === 0}
+          >
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+              <div>
+                <div className="font-medium text-foreground">{decisionPoint.title}</div>
+                <div className="text-sm text-muted-foreground">{decisionPoint.verdict}</div>
+              </div>
+              <Badge variant="secondary" className="bg-secondary text-foreground">
+                {decisionPoint.approaches.length} approaches
+              </Badge>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="border-t border-border px-4 py-4">
+              <div className="space-y-3">
+                {decisionPoint.approaches.map((approach) => {
+                  const ticket = comparison.tickets.find(
+                    (candidate) => candidate.ticketId === approach.ticketId
+                  );
+                  const isBest = decisionPoint.winningTicketId === approach.ticketId;
+
+                  return (
+                    <div
+                      key={`${decisionPoint.title}-${approach.ticketId}`}
+                      className={`rounded-lg border p-3 ${
+                        isBest
+                          ? 'border-emerald-400/30 bg-emerald-500/10'
+                          : 'border-border bg-background/60'
+                      }`}
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          {ticket?.ticketKey ?? `Ticket ${approach.ticketId}`}
+                        </span>
+                        {isBest && (
+                          <Badge className="border-emerald-400/30 bg-emerald-500/15 text-emerald-100">
+                            Best
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-foreground">{approach.approach}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">{approach.rationale}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ConstitutionSection({ comparison }: { comparison: ComparisonDetail }) {
+  const principleNames = Array.from(
+    new Set(
+      comparison.tickets.flatMap((ticket) =>
+        ticket.constitution.principles.map((principle) => principle.principle)
+      )
+    )
+  );
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-foreground">Constitution Compliance</h3>
+        <p className="text-xs text-muted-foreground">Per-principle comparison across tickets.</p>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-border bg-card/80">
+        <table className="min-w-full text-sm">
+          <thead className="bg-secondary/60">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Principle</th>
+              {comparison.tickets.map((ticket) => (
+                <th
+                  key={`constitution-head-${ticket.ticketId}`}
+                  className="px-4 py-3 text-left font-medium text-foreground"
+                >
+                  {ticket.ticketKey}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {principleNames.map((principleName) => (
+              <tr key={principleName} className="border-t border-border">
+                <td className="px-4 py-3 align-top text-muted-foreground">{principleName}</td>
+                {comparison.tickets.map((ticket) => {
+                  const principle = ticket.constitution.principles.find(
+                    (candidate) => candidate.principle === principleName
+                  );
+
+                  return (
+                    <td key={`${principleName}-${ticket.ticketId}`} className="px-4 py-3 align-top">
+                      {principle ? (
+                        <div className="space-y-2">
+                          <Badge className={getStatusTone(principle.status)}>
+                            {principle.status}
+                          </Badge>
+                          <div className="text-sm text-muted-foreground">{principle.summary}</div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">N/A</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ComparisonDashboard({ comparison }: { comparison: ComparisonDetail }) {
+  return (
+    <div className="space-y-6">
+      <RankingSection comparison={comparison} />
+      <MetricComparison comparison={comparison} />
+      <DecisionPointsSection comparison={comparison} />
+      <ConstitutionSection comparison={comparison} />
+    </div>
+  );
+}
+
 export function ComparisonViewer({
   projectId,
   ticketId,
@@ -64,35 +459,25 @@ export function ComparisonViewer({
   const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
 
-  // Check if comparisons exist
   const {
     data: checkData,
     isLoading: checkLoading,
     error: checkError,
   } = useComparisonCheck(projectId, ticketId, isOpen);
 
-  // Fetch comparison list for history
   const {
     data: listData,
     isLoading: listLoading,
   } = useComparisonList(projectId, ticketId, 10, isOpen && showHistory);
 
-  // Derive current report from override, prop, or API data (no effects needed)
-  const currentReport = reportOverride ?? selectedReport ?? checkData?.latestReport;
+  const currentReport = reportOverride ?? selectedReport ?? checkData?.latestReport ?? '';
 
-  // Fetch the comparison report content
   const {
     data: reportData,
     isLoading: reportLoading,
     error: reportError,
-  } = useComparisonReport(
-    projectId,
-    ticketId,
-    currentReport || '',
-    isOpen && !!currentReport
-  );
+  } = useComparisonReport(projectId, ticketId, currentReport, isOpen && !!currentReport);
 
-  // Show error toast
   useEffect(() => {
     if ((checkError || reportError) && isOpen) {
       toast({
@@ -103,7 +488,6 @@ export function ComparisonViewer({
     }
   }, [checkError, reportError, isOpen, toast]);
 
-  // Reset state when modal closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setShowHistory(false);
@@ -117,217 +501,74 @@ export function ComparisonViewer({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-w-[90vw] bg-zinc-950">
+      <DialogContent className="max-h-[90vh] max-w-6xl border-border bg-background sm:max-w-[92vw]">
         <DialogHeader className="pr-12">
           <div className="flex items-center justify-between gap-4">
-            <DialogTitle className="text-zinc-50 flex items-center gap-2">
-              <GitCompare className="h-5 w-5" />
-              Ticket Comparison
-            </DialogTitle>
+            <div>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <GitCompare className="h-5 w-5" />
+                Ticket Comparison
+              </DialogTitle>
+              <DialogDescription>
+                Structured comparison view for ranking, metrics, implementation choices, and constitution compliance.
+              </DialogDescription>
+            </div>
 
-            {/* History button */}
-            {reportData && !showHistory && checkData && checkData.count > 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowHistory(true)}
-                className="shrink-0"
-              >
-                <History className="h-4 w-4 mr-2" />
+            {reportData?.comparison && !showHistory && checkData && checkData.count > 1 && (
+              <Button variant="outline" size="sm" onClick={() => setShowHistory(true)}>
+                <History className="mr-2 h-4 w-4" />
                 History ({checkData.count})
               </Button>
             )}
 
-            {/* Back button when viewing history */}
             {showHistory && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowHistory(false)}
-                className="shrink-0"
-              >
-                Back to Report
+              <Button variant="outline" size="sm" onClick={() => setShowHistory(false)}>
+                Back to Comparison
               </Button>
             )}
           </div>
         </DialogHeader>
 
         <div className="mt-4">
-          {/* Loading state */}
           {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-zinc-400">Loading comparison...</div>
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Loading comparison...
             </div>
           )}
 
-          {/* No comparisons state */}
           {hasNoComparisons && !isLoading && (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
-              <AlertTriangle className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium">No Comparisons Available</p>
-              <p className="text-sm mt-2 text-zinc-500">
-                Use @ai-board /compare in a comment to generate a comparison report.
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <AlertTriangle className="mb-4 h-12 w-12 opacity-50" />
+              <p className="text-lg font-medium text-foreground">No Comparisons Available</p>
+              <p className="mt-2 text-sm">
+                Use `@ai-board /compare` in a comment to generate a comparison.
               </p>
             </div>
           )}
 
-          {/* Error state */}
           {(checkError || reportError) && !reportData && !isLoading && (
-            <div className="flex flex-col items-center justify-center py-12 text-red-400">
-              <XCircle className="h-12 w-12 mb-4 opacity-50" />
+            <div className="flex flex-col items-center justify-center py-12 text-destructive">
+              <XCircle className="mb-4 h-12 w-12 opacity-50" />
               <p className="text-lg font-medium">Error Loading Comparison</p>
-              <p className="text-sm mt-2 text-zinc-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {checkError?.message || reportError?.message}
               </p>
             </div>
           )}
 
-          {/* Report content */}
-          {reportData && !showHistory && (
-            <>
-              {/* Metadata bar */}
-              <div className="flex flex-wrap gap-4 mb-4 text-sm text-zinc-400">
-                <div>
-                  <span className="text-zinc-500">Source:</span>{' '}
-                  <span className="text-zinc-200">{reportData.metadata.sourceTicket}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Compared:</span>{' '}
-                  <span className="text-zinc-200">
-                    {reportData.metadata.comparedTickets.join(', ')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Generated:</span>{' '}
-                  <span className="text-zinc-200">
-                    {formatDate(reportData.metadata.generatedAt)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Report markdown content */}
-              <ScrollArea className="h-[60vh] w-full rounded-md pr-4">
-                <div className="prose prose-invert max-w-none bg-zinc-900 p-6 rounded-lg">
-                  <ReactMarkdown
-                    className="text-zinc-100"
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ node, ...props }) => (
-                        <h1
-                          className="text-3xl font-bold mb-4 text-zinc-50"
-                          {...props}
-                        />
-                      ),
-                      h2: ({ node, ...props }) => (
-                        <h2
-                          className="text-2xl font-semibold mb-3 mt-6 text-zinc-50"
-                          {...props}
-                        />
-                      ),
-                      h3: ({ node, ...props }) => (
-                        <h3
-                          className="text-xl font-semibold mb-2 mt-4 text-zinc-100"
-                          {...props}
-                        />
-                      ),
-                      h4: ({ node, ...props }) => (
-                        <h4
-                          className="text-lg font-semibold mb-2 mt-3 text-zinc-100"
-                          {...props}
-                        />
-                      ),
-                      p: ({ node, ...props }) => (
-                        <p className="mb-4 text-zinc-200 leading-relaxed" {...props} />
-                      ),
-                      ul: ({ node, ...props }) => (
-                        <ul className="list-disc ml-6 mb-4 text-zinc-200" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol className="list-decimal ml-6 mb-4 text-zinc-200" {...props} />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="mb-1 text-zinc-200" {...props} />
-                      ),
-                      a: ({ node, ...props }) => (
-                        <a
-                          className="text-blue-400 hover:text-blue-300 underline"
-                          {...props}
-                        />
-                      ),
-                      blockquote: ({ node, ...props }) => (
-                        <blockquote
-                          className="border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4"
-                          {...props}
-                        />
-                      ),
-                      code: ({ node, className, children, ...props }) => {
-                        const match = /language-(\w+)/.exec(className || '');
-                        const inline = !className;
-                        return !inline && match ? (
-                          <SyntaxHighlighter
-                            /* @ts-expect-error - vscDarkPlus type mismatch with react-syntax-highlighter */
-                            style={vscDarkPlus}
-                            language={match[1]}
-                            PreTag="div"
-                            className="rounded-md my-4"
-                            {...props}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        ) : (
-                          <code
-                            className="bg-zinc-800 px-1.5 py-0.5 rounded text-sm text-zinc-100 font-mono"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        );
-                      },
-                      pre: ({ node, ...props }) => (
-                        <pre className="bg-zinc-900 rounded-md p-4 overflow-x-auto my-4" {...props} />
-                      ),
-                      table: ({ node, ...props }) => (
-                        <div className="overflow-x-auto my-4">
-                          <table className="min-w-full border border-zinc-700" {...props} />
-                        </div>
-                      ),
-                      thead: ({ node, ...props }) => (
-                        <thead className="bg-zinc-800" {...props} />
-                      ),
-                      tbody: ({ node, ...props }) => (
-                        <tbody {...props} />
-                      ),
-                      tr: ({ node, ...props }) => (
-                        <tr className="border-b border-zinc-700" {...props} />
-                      ),
-                      th: ({ node, ...props }) => (
-                        <th className="px-4 py-2 text-left text-zinc-50 font-semibold" {...props} />
-                      ),
-                      td: ({ node, ...props }) => (
-                        <td className="px-4 py-2 text-zinc-200" {...props} />
-                      ),
-                      hr: ({ node, ...props }) => (
-                        <hr className="border-zinc-700 my-6" {...props} />
-                      ),
-                    }}
-                  >
-                    {reportData.content}
-                  </ReactMarkdown>
-                </div>
-              </ScrollArea>
-            </>
+          {reportData?.comparison && !showHistory && (
+            <ScrollArea className="h-[68vh] pr-4">
+              <ComparisonDashboard comparison={reportData.comparison} />
+            </ScrollArea>
           )}
 
-          {/* History view */}
           {showHistory && (
-            <div className="h-[60vh] flex flex-col">
-              <h3 className="text-lg font-semibold text-zinc-50 mb-4">
-                Comparison History
-              </h3>
+            <div className="flex h-[60vh] flex-col">
+              <h3 className="mb-4 text-lg font-semibold text-foreground">Comparison History</h3>
 
               {listLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-zinc-400">Loading history...</div>
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  Loading history...
                 </div>
               ) : listData?.comparisons && listData.comparisons.length > 0 ? (
                 <ScrollArea className="flex-1">
@@ -339,23 +580,28 @@ export function ComparisonViewer({
                           setReportOverride(comparison.filename);
                           setShowHistory(false);
                         }}
-                        className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                        className={`w-full rounded-lg border p-4 text-left transition-colors ${
                           currentReport === comparison.filename
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-card hover:bg-secondary/50'
                         }`}
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <GitCompare className="h-4 w-4 text-zinc-400" />
-                          <span className="text-zinc-200 font-medium">
+                        <div className="mb-2 flex items-center gap-2">
+                          <GitCompare className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-foreground">
                             vs {comparison.comparedTickets.join(', ')}
                           </span>
+                          {comparison.winnerTicketKey && (
+                            <Badge className="border-primary/20 bg-primary/10 text-foreground">
+                              Winner {comparison.winnerTicketKey}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="text-sm text-zinc-500">
+                        <div className="text-sm text-muted-foreground">
                           {formatDate(comparison.generatedAt)}
                         </div>
                         {currentReport === comparison.filename && (
-                          <div className="flex items-center gap-1 mt-2 text-xs text-blue-400">
+                          <div className="mt-2 flex items-center gap-1 text-xs text-primary">
                             <CheckCircle className="h-3 w-3" />
                             Currently viewing
                           </div>
@@ -365,8 +611,8 @@ export function ComparisonViewer({
                   </div>
                 </ScrollArea>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
-                  <History className="h-12 w-12 mb-4 opacity-50" />
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <History className="mb-4 h-12 w-12 opacity-50" />
                   <p>No comparison history available</p>
                 </div>
               )}

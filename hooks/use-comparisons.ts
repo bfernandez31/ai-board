@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type {
+  ComparisonDetail,
   ComparisonSummary,
   ComparisonCheckResult,
 } from '@/lib/types/comparison';
@@ -25,15 +26,7 @@ interface ComparisonListResponse {
 }
 
 interface ComparisonReportResponse {
-  filename: string;
-  content: string;
-  metadata: {
-    generatedAt: string;
-    sourceTicket: string;
-    comparedTickets: string[];
-    alignmentScore: number;
-    branch: string;
-  };
+  comparison: ComparisonDetail;
 }
 
 async function fetchComparisonCheck(

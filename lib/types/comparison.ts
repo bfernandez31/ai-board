@@ -297,6 +297,12 @@ export interface ComparisonSummary {
 
   /** Whether alignment is above threshold (30%) */
   isAligned: boolean;
+
+  /** Winner ticket key when ranking data is available */
+  winnerTicketKey?: string;
+
+  /** Winner score when ranking data is available */
+  winnerScore?: number;
 }
 
 /**
@@ -313,6 +319,81 @@ export interface ComparisonCheckResult {
 
   /** Filename of most recent report (if any) */
   latestReport: string | null;
+}
+
+export type ComparisonPrincipleStatus = 'pass' | 'warning' | 'fail';
+
+export interface ComparisonStoredMetrics {
+  linesAdded: number;
+  linesRemoved: number;
+  sourceFiles: number;
+  testFiles: number;
+  testRatio: number;
+}
+
+export interface ComparisonStoredPrinciple {
+  principle: string;
+  status: ComparisonPrincipleStatus;
+  summary: string;
+}
+
+export interface ComparisonStoredConstitution {
+  overall: number;
+  principles: ComparisonStoredPrinciple[];
+}
+
+export interface ComparisonDecisionApproach {
+  ticketId: number;
+  approach: string;
+  rationale: string;
+}
+
+export interface ComparisonDecisionPoint {
+  title: string;
+  verdict: string;
+  winningTicketId: number | null;
+  approaches: ComparisonDecisionApproach[];
+}
+
+export interface ComparisonQualityScoreSummary {
+  score: number | null;
+  threshold: string | null;
+}
+
+export interface ComparisonTicketView {
+  ticketId: number;
+  ticketKey: string;
+  title: string;
+  workflowType: WorkflowType;
+  stage: Stage;
+  agent: string | null;
+  rank: number;
+  score: number;
+  verdictSummary: string;
+  keyDifferentiators: string[];
+  metrics: ComparisonStoredMetrics;
+  telemetry: TicketTelemetry;
+  qualityScore: ComparisonQualityScoreSummary;
+  constitution: ComparisonStoredConstitution;
+}
+
+export interface ComparisonTicketReference {
+  id: number;
+  ticketKey: string;
+  title: string;
+}
+
+export interface ComparisonDetail {
+  id: number;
+  filename: string;
+  reportPath: string;
+  generatedAt: string;
+  summary: string;
+  recommendation: string;
+  sourceTicket: ComparisonTicketReference;
+  winnerTicket: ComparisonTicketReference | null;
+  tickets: ComparisonTicketView[];
+  decisionPoints: ComparisonDecisionPoint[];
 }
 
 /**

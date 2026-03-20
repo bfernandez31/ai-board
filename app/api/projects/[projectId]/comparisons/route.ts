@@ -1,219 +1,78 @@
-/**
- * Project-wide Comparisons API Route
- *
- * GET /api/projects/:projectId/comparisons
- * Returns all comparison reports across all tickets in the project.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
 import { prisma } from '@/lib/db/client';
+import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import {
+  buildComparisonSummary,
+  comparisonIngestSchema,
+  comparisonWithEntriesInclude,
+} from '@/lib/comparison/view-model';
 import { z } from 'zod';
-import path from 'path';
-import fs from 'fs/promises';
 
 interface RouteParams {
   params: Promise<{ projectId: string }>;
 }
 
-interface ComparisonSummary {
-  filename: string;
-  generatedAt: string;
-  sourceTicket: string;
-  comparedTickets: string[];
-  alignmentScore: number;
-  isAligned: boolean;
-  ticketId: number;
-  ticketTitle: string;
-}
-
+const projectIdSchema = z.coerce.number().int().positive();
 const querySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   offset: z.coerce.number().int().nonnegative().default(0),
 });
 
-/**
- * Parse comparison filename to extract metadata
- * Format: YYYYMMDD-HHMMSS-vs-KEY1-KEY2.md
- */
-function parseFilename(
-  filename: string
-): { timestamp: string; comparedTickets: string[] } | null {
-  const match = filename.match(/^(\d{8}-\d{6})-vs-(.+)\.md$/);
-  if (!match) return null;
-
-  const timestamp = match[1]!;
-  const keysStr = match[2]!;
-
-  // Extract ticket keys (format: ABC-123)
-  const keyPattern = /[A-Z0-9]{3,6}-\d+/g;
-  const comparedTickets = keysStr.match(keyPattern) || [];
-
-  return { timestamp, comparedTickets };
-}
-
-/**
- * Convert timestamp string to ISO date
- */
-function timestampToDate(timestamp: string): string {
-  // YYYYMMDD-HHMMSS -> YYYY-MM-DDTHH:MM:SS
-  const dateStr = timestamp.replace(
-    /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/,
-    '$1-$2-$3T$4:$5:$6'
-  );
-  return new Date(dateStr).toISOString();
-}
-
-/**
- * Extract best implementation score from report content
- * Looks for the winner's score in various formats
- */
-function extractAlignmentScore(content: string): number {
-  // New format: "### 🏆 Best: **AIB-125** (92%)" or "🏆 1. **AIB-125** - Best overall (score: 92%)"
-  const bestMatch = content.match(/🏆.*?\((?:score:\s*)?(\d+)%\)/i);
-  if (bestMatch) {
-    return parseInt(bestMatch[1]!, 10);
-  }
-
-  // Ranking table format: "| 1 | AIB-125 | 92% |"
-  const rankingMatch = content.match(/\|\s*1\s*\|[^|]+\|\s*(\d+)%/);
-  if (rankingMatch) {
-    return parseInt(rankingMatch[1]!, 10);
-  }
-
-  // Legacy format: "Feature Alignment: XX%"
-  const legacyMatch = content.match(/Feature Alignment[:\s]+(\d+)%/i);
-  if (legacyMatch) {
-    return parseInt(legacyMatch[1]!, 10);
-  }
-
-  // Fallback: look for any "Best Implementation: TICKET (XX%)" pattern
-  const implMatch = content.match(/Best Implementation[:\s]+[^(]+\((\d+)%\)/i);
-  if (implMatch) {
-    return parseInt(implMatch[1]!, 10);
-  }
-
-  return 0;
-}
-
-/**
- * GET - List all comparisons for a project
- */
 export async function GET(
   request: NextRequest,
   context: RouteParams
 ): Promise<NextResponse> {
   try {
-    const { projectId } = await context.params;
-    const projectIdNum = parseInt(projectId, 10);
-
-    if (isNaN(projectIdNum)) {
+    const { projectId: rawProjectId } = await context.params;
+    const projectIdResult = projectIdSchema.safeParse(rawProjectId);
+    if (!projectIdResult.success) {
       return NextResponse.json(
-        { error: 'Invalid project ID' },
+        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
     }
 
-    // Verify project access (throws on unauthorized)
+    const projectId = projectIdResult.data;
+
     try {
-      await verifyProjectAccess(projectIdNum);
+      await verifyProjectAccess(projectId, request);
     } catch {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
         { status: 401 }
       );
     }
 
-    // Get tickets with branches
-    const tickets = await prisma.ticket.findMany({
-      where: {
-        projectId: projectIdNum,
-        branch: { not: null },
-      },
-      select: {
-        id: true,
-        ticketKey: true,
-        title: true,
-        branch: true,
-      },
+    const queryResult = querySchema.safeParse({
+      limit: request.nextUrl.searchParams.get('limit') ?? 20,
+      offset: request.nextUrl.searchParams.get('offset') ?? 0,
     });
 
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const parseResult = querySchema.safeParse({
-      limit: searchParams.get('limit') ?? 20,
-      offset: searchParams.get('offset') ?? 0,
-    });
-
-    if (!parseResult.success) {
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'Invalid query parameters' },
+        { error: 'Invalid query parameters', code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
     }
 
-    const { limit, offset } = parseResult.data;
+    const { limit, offset } = queryResult.data;
 
-    // Collect all comparisons from all ticket branches
-    const allComparisons: ComparisonSummary[] = [];
-
-    for (const ticket of tickets) {
-      if (!ticket.branch) continue;
-
-      const comparisonsDir = path.join(
-        process.cwd(),
-        'specs',
-        ticket.branch,
-        'comparisons'
-      );
-
-      try {
-        const files = await fs.readdir(comparisonsDir);
-        const mdFiles = files.filter((f) => f.endsWith('.md'));
-
-        for (const filename of mdFiles) {
-          const parsed = parseFilename(filename);
-          if (!parsed) continue;
-
-          // Read file content for alignment score
-          const filePath = path.join(comparisonsDir, filename);
-          let content = '';
-          try {
-            content = await fs.readFile(filePath, 'utf-8');
-          } catch {
-            continue;
-          }
-
-          const alignmentScore = extractAlignmentScore(content);
-
-          allComparisons.push({
-            filename,
-            generatedAt: timestampToDate(parsed.timestamp),
-            sourceTicket: ticket.ticketKey,
-            comparedTickets: parsed.comparedTickets,
-            alignmentScore,
-            isAligned: alignmentScore >= 30,
-            ticketId: ticket.id,
-            ticketTitle: ticket.title,
-          });
-        }
-      } catch {
-        // Directory doesn't exist, skip
-        continue;
-      }
-    }
-
-    // Sort by generation date (newest first)
-    allComparisons.sort(
-      (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
-    );
-
-    // Apply pagination
-    const total = allComparisons.length;
-    const paginatedComparisons = allComparisons.slice(offset, offset + limit);
+    const [comparisons, total] = await Promise.all([
+      prisma.ticketComparison.findMany({
+        where: { projectId },
+        include: comparisonWithEntriesInclude,
+        orderBy: { generatedAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.ticketComparison.count({
+        where: { projectId },
+      }),
+    ]);
 
     return NextResponse.json({
-      comparisons: paginatedComparisons,
+      comparisons: comparisons.map((comparison) => buildComparisonSummary(comparison)),
       total,
       limit,
       offset,
@@ -221,7 +80,159 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching project comparisons:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  context: RouteParams
+): Promise<NextResponse> {
+  try {
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
+    const { projectId: rawProjectId } = await context.params;
+    const projectIdResult = projectIdSchema.safeParse(rawProjectId);
+    if (!projectIdResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid project ID', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
+
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
+
+    const parsedPayload = comparisonIngestSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid comparison payload',
+          code: 'VALIDATION_ERROR',
+          details: parsedPayload.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const projectId = projectIdResult.data;
+    const data = parsedPayload.data;
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true },
+    });
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        id: { in: data.tickets.map((ticket) => ticket.ticketId) },
+      },
+      select: {
+        id: true,
+        projectId: true,
+      },
+    });
+
+    if (tickets.length !== data.tickets.length) {
+      return NextResponse.json(
+        { error: 'One or more tickets were not found', code: 'TICKET_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    if (tickets.some((ticket) => ticket.projectId !== projectId)) {
+      return NextResponse.json(
+        { error: 'All tickets must belong to the same project', code: 'WRONG_PROJECT' },
+        { status: 403 }
+      );
+    }
+
+    const comparison = await prisma.$transaction(async (transaction) => {
+      const upserted = await transaction.ticketComparison.upsert({
+        where: {
+          projectId_reportFilename: {
+            projectId,
+            reportFilename: data.reportFilename,
+          },
+        },
+        create: {
+          projectId,
+          sourceTicketId: data.sourceTicketId,
+          winnerTicketId: data.winnerTicketId ?? null,
+          reportFilename: data.reportFilename,
+          reportPath: data.reportPath,
+          generatedAt: data.generatedAt ?? new Date(),
+          summary: data.summary,
+          recommendation: data.recommendation,
+          decisionPoints: data.decisionPoints,
+        },
+        update: {
+          sourceTicketId: data.sourceTicketId,
+          winnerTicketId: data.winnerTicketId ?? null,
+          reportPath: data.reportPath,
+          generatedAt: data.generatedAt ?? new Date(),
+          summary: data.summary,
+          recommendation: data.recommendation,
+          decisionPoints: data.decisionPoints,
+        },
+        select: {
+          id: true,
+          reportFilename: true,
+        },
+      });
+
+      await transaction.ticketComparisonEntry.deleteMany({
+        where: { comparisonId: upserted.id },
+      });
+
+      await transaction.ticketComparisonEntry.createMany({
+        data: data.tickets.map((ticket) => ({
+          comparisonId: upserted.id,
+          ticketId: ticket.ticketId,
+          rank: ticket.rank,
+          score: ticket.score,
+          verdictSummary: ticket.verdictSummary,
+          keyDifferentiators: ticket.keyDifferentiators,
+          metrics: ticket.metrics,
+          constitution: ticket.constitution,
+        })),
+      });
+
+      return upserted;
+    });
+
+    return NextResponse.json(
+      {
+        id: comparison.id,
+        filename: comparison.reportFilename,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error storing comparison:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

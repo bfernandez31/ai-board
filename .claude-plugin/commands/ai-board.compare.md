@@ -56,6 +56,13 @@ Start IMMEDIATELY with the mention. Do NOT add any introductory text.
 Start DIRECTLY with:
 @[$USER_ID:$USER] **Comparison Complete**
 
+After the human-readable comment, append exactly one extra line for the workflow:
+`COMPARISON_RESULT_JSON:{...}`
+
+- The JSON MUST be a single compact line
+- The workflow strips this line before posting the comment
+- Use ticket keys, not ticket IDs, inside the JSON payload
+
 ## Inputs
 
 **Environment Variables**:
@@ -354,6 +361,75 @@ Output a concise comment (< 1500 chars) with:
 - **Best implementation** clearly identified
 - Key code quality differentiator
 - Link to full report
+- Final line containing `COMPARISON_RESULT_JSON:` with the structured payload
+
+## Structured Payload
+
+Append this exact JSON shape on the final line:
+
+```json
+{
+  "sourceTicketKey": "AIB-128",
+  "reportFilename": "20260102-143000-vs-AIB-124-AIB-125.md",
+  "reportPath": "specs/AIB-128-some-branch/comparisons/20260102-143000-vs-AIB-124-AIB-125.md",
+  "generatedAt": "2026-01-02T14:30:00.000Z",
+  "summary": "AIB-125 wins on cleaner state management and stronger test coverage.",
+  "recommendation": "Ship AIB-125.",
+  "winnerTicketKey": "AIB-125",
+  "decisionPoints": [
+    {
+      "title": "State Management",
+      "verdict": "AIB-125 aligns best with project patterns.",
+      "winningTicketKey": "AIB-125",
+      "approaches": [
+        {
+          "ticketKey": "AIB-128",
+          "approach": "Manual local state",
+          "rationale": "Works but duplicates loading/cache logic."
+        },
+        {
+          "ticketKey": "AIB-125",
+          "approach": "TanStack Query",
+          "rationale": "Reuses the established async data pattern."
+        }
+      ]
+    }
+  ],
+  "tickets": [
+    {
+      "ticketKey": "AIB-128",
+      "rank": 2,
+      "score": 78,
+      "verdictSummary": "Good types, but weaker test coverage.",
+      "keyDifferentiators": ["Readable code", "Lower test ratio"],
+      "metrics": {
+        "linesAdded": 150,
+        "linesRemoved": 40,
+        "sourceFiles": 5,
+        "testFiles": 1,
+        "testRatio": 0.2
+      },
+      "constitution": {
+        "overall": 80,
+        "principles": [
+          {
+            "principle": "TypeScript-First Development",
+            "status": "pass",
+            "summary": "Strong typing throughout the change set."
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Rules:
+- `tickets` MUST include the source ticket and every compared ticket
+- `winnerTicketKey` MUST match one of the tickets
+- `rank` values MUST be unique and start at 1
+- `status` for constitution principles MUST be one of `pass`, `warning`, `fail`
+- `summary` and `recommendation` should be short prose, not bullet lists
 
 ## Output Format
 
@@ -379,6 +455,7 @@ Compared CODE quality: **AIB-128** (source), **AIB-124**, **AIB-125**
 -> **Ship AIB-125**
 
 Full analysis: `comparisons/20260102-143000-vs-AIB-124-AIB-125.md`
+COMPARISON_RESULT_JSON:{"sourceTicketKey":"AIB-128","reportFilename":"20260102-143000-vs-AIB-124-AIB-125.md","reportPath":"specs/AIB-128-some-branch/comparisons/20260102-143000-vs-AIB-124-AIB-125.md","generatedAt":"2026-01-02T14:30:00.000Z","summary":"AIB-125 wins on cleaner state management and stronger test coverage.","recommendation":"Ship AIB-125.","winnerTicketKey":"AIB-125","decisionPoints":[{"title":"State Management","verdict":"AIB-125 aligns best with project patterns.","winningTicketKey":"AIB-125","approaches":[{"ticketKey":"AIB-128","approach":"Manual local state","rationale":"Works but duplicates loading/cache logic."},{"ticketKey":"AIB-125","approach":"TanStack Query","rationale":"Reuses the established async data pattern."}]}],"tickets":[{"ticketKey":"AIB-128","rank":2,"score":78,"verdictSummary":"Good types, but weaker test coverage.","keyDifferentiators":["Readable code","Lower test ratio"],"metrics":{"linesAdded":150,"linesRemoved":40,"sourceFiles":5,"testFiles":1,"testRatio":0.2},"constitution":{"overall":80,"principles":[{"principle":"TypeScript-First Development","status":"pass","summary":"Strong typing throughout the change set."}]}},{"ticketKey":"AIB-125","rank":1,"score":92,"verdictSummary":"Best overall implementation with strong tests.","keyDifferentiators":["Proper state management","Complete error handling"],"metrics":{"linesAdded":180,"linesRemoved":55,"sourceFiles":6,"testFiles":2,"testRatio":0.33},"constitution":{"overall":94,"principles":[{"principle":"Component-Driven Architecture","status":"pass","summary":"Uses existing query and component patterns."}]}}]}
 ```
 
 **Error Example**:

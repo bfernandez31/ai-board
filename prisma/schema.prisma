@@ -81,6 +81,7 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  comparisons         TicketComparison[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -136,6 +137,9 @@ model Ticket {
   jobs                Job[]
   notifications       Notification[]
   project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceComparisons   TicketComparison[]   @relation("SourceTicketComparisons")
+  winningComparisons  TicketComparison[]   @relation("WinningTicketComparisons")
+  comparisonEntries   TicketComparisonEntry[]
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -143,6 +147,49 @@ model Ticket {
   @@index([updatedAt])
   @@index([projectId, workflowType])
   @@index([ticketKey])
+}
+
+model TicketComparison {
+  id             Int                     @id @default(autoincrement())
+  projectId      Int
+  sourceTicketId Int
+  winnerTicketId Int?
+  reportFilename String                  @db.VarChar(255)
+  reportPath     String                  @db.VarChar(500)
+  generatedAt    DateTime
+  summary        String                  @db.VarChar(4000)
+  recommendation String                  @db.VarChar(4000)
+  decisionPoints Json
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  project        Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceTicket   Ticket                  @relation("SourceTicketComparisons", fields: [sourceTicketId], references: [id], onDelete: Cascade)
+  winnerTicket   Ticket?                 @relation("WinningTicketComparisons", fields: [winnerTicketId], references: [id], onDelete: SetNull)
+  tickets        TicketComparisonEntry[]
+
+  @@unique([projectId, reportFilename])
+  @@index([projectId, generatedAt])
+  @@index([sourceTicketId, generatedAt])
+  @@index([winnerTicketId])
+}
+
+model TicketComparisonEntry {
+  id                Int              @id @default(autoincrement())
+  comparisonId      Int
+  ticketId          Int
+  rank              Int
+  score             Int
+  verdictSummary    String           @db.VarChar(4000)
+  keyDifferentiators String[]        @default([])
+  metrics           Json
+  constitution      Json
+  createdAt         DateTime         @default(now())
+  comparison        TicketComparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+  ticket            Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@unique([comparisonId, ticketId])
+  @@index([ticketId, comparisonId])
+  @@index([ticketId, createdAt])
 }
 
 model User {

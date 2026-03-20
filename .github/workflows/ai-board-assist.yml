@@ -299,7 +299,15 @@ jobs:
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
           # Remove code blocks as they cause "Invalid format" errors
           BACKTICKS='```'
-          CLAUDE_MESSAGE=$(echo "$OUTPUT" | sed "/^${BACKTICKS}json$/,/^${BACKTICKS}$/d" | sed "s/${BACKTICKS}//g")
+          COMPARISON_DATA=""
+          if echo "$COMMENT" | grep -qE "/compare\b" && echo "$OUTPUT" | grep -q "COMPARISON_RESULT_JSON:"; then
+            COMPARISON_DATA=$(echo "$OUTPUT" | grep "COMPARISON_RESULT_JSON:" | tail -1 | sed 's/.*COMPARISON_RESULT_JSON://')
+            echo "comparison_data_b64=$(echo "$COMPARISON_DATA" | base64 -w0)" >> $GITHUB_OUTPUT
+          else
+            echo "comparison_data_b64=" >> $GITHUB_OUTPUT
+          fi
+
+          CLAUDE_MESSAGE=$(echo "$OUTPUT" | sed "/^${BACKTICKS}json$/,/^${BACKTICKS}$/d" | sed "s/${BACKTICKS}//g" | sed '/COMPARISON_RESULT_JSON:/d')
 
           # Also save raw output for debugging
           echo "📝 Raw Claude output (first 50 lines):"
@@ -405,6 +413,142 @@ jobs:
           # Debug: Verify outputs are set
           echo "🔍 Debug - Status output: $STATUS"
           echo "🔍 Debug - Files output: $FILES"
+
+      - name: Validate Compare Payload
+        if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') && steps.parse.outputs.status == 'success' }}
+        env:
+          COMPARISON_DATA_B64: ${{ steps.claude.outputs.comparison_data_b64 }}
+        run: |
+          if [ -z "$COMPARISON_DATA_B64" ]; then
+            echo "❌ Compare command succeeded but did not emit COMPARISON_RESULT_JSON"
+            exit 1
+          fi
+
+      - name: Store Comparison Data
+        if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') && steps.parse.outputs.status == 'success' }}
+        env:
+          APP_URL: ${{ env.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ env.WORKFLOW_API_TOKEN }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          SOURCE_TICKET_ID: ${{ inputs.ticket_id }}
+          COMPARISON_DATA_B64: ${{ steps.claude.outputs.comparison_data_b64 }}
+        run: |
+          node <<'NODE'
+          const comparisonData = JSON.parse(
+            Buffer.from(process.env.COMPARISON_DATA_B64 ?? '', 'base64').toString('utf8')
+          );
+
+          const appUrl = (process.env.APP_URL ?? '').replace(/\/$/, '');
+          const workflowToken = process.env.WORKFLOW_API_TOKEN ?? '';
+          const projectId = Number(process.env.PROJECT_ID);
+          const sourceTicketId = Number(process.env.SOURCE_TICKET_ID);
+
+          if (!appUrl || !workflowToken || !projectId || !sourceTicketId) {
+            throw new Error('Missing APP_URL, WORKFLOW_API_TOKEN, PROJECT_ID, or SOURCE_TICKET_ID');
+          }
+
+          const authHeaders = {
+            Authorization: `Bearer ${workflowToken}`,
+          };
+
+          const ticketIdByKey = new Map();
+          if (comparisonData.sourceTicketKey) {
+            ticketIdByKey.set(comparisonData.sourceTicketKey, sourceTicketId);
+          }
+
+          async function resolveTicketId(ticketKey) {
+            if (ticketIdByKey.has(ticketKey)) {
+              return ticketIdByKey.get(ticketKey);
+            }
+
+            const response = await fetch(
+              `${appUrl}/api/projects/${projectId}/tickets/search?q=${encodeURIComponent(ticketKey)}&limit=10`,
+              { headers: authHeaders }
+            );
+
+            if (!response.ok) {
+              throw new Error(`Failed to resolve ticket key ${ticketKey}: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const match = Array.isArray(data.results)
+              ? data.results.find((ticket) => ticket.ticketKey === ticketKey)
+              : null;
+
+            if (!match) {
+              throw new Error(`Ticket key ${ticketKey} was not found in project ${projectId}`);
+            }
+
+            ticketIdByKey.set(ticketKey, match.id);
+            return match.id;
+          }
+
+          const tickets = await Promise.all(
+            comparisonData.tickets.map(async (ticket) => ({
+              ticketId:
+                comparisonData.sourceTicketKey &&
+                ticket.ticketKey === comparisonData.sourceTicketKey
+                  ? sourceTicketId
+                  : await resolveTicketId(ticket.ticketKey),
+              rank: ticket.rank,
+              score: ticket.score,
+              verdictSummary: ticket.verdictSummary,
+              keyDifferentiators: ticket.keyDifferentiators ?? [],
+              metrics: ticket.metrics,
+              constitution: ticket.constitution,
+            }))
+          );
+
+          const decisionPoints = await Promise.all(
+            (comparisonData.decisionPoints ?? []).map(async (decisionPoint) => ({
+              title: decisionPoint.title,
+              verdict: decisionPoint.verdict,
+              winningTicketId: decisionPoint.winningTicketKey
+                ? await resolveTicketId(decisionPoint.winningTicketKey)
+                : null,
+              approaches: await Promise.all(
+                (decisionPoint.approaches ?? []).map(async (approach) => ({
+                  ticketId: await resolveTicketId(approach.ticketKey),
+                  approach: approach.approach,
+                  rationale: approach.rationale,
+                }))
+              ),
+            }))
+          );
+
+          const winnerTicketId = comparisonData.winnerTicketKey
+            ? await resolveTicketId(comparisonData.winnerTicketKey)
+            : null;
+
+          const payload = {
+            sourceTicketId,
+            reportFilename: comparisonData.reportFilename,
+            reportPath: comparisonData.reportPath,
+            generatedAt: comparisonData.generatedAt,
+            summary: comparisonData.summary,
+            recommendation: comparisonData.recommendation,
+            winnerTicketId,
+            decisionPoints,
+            tickets,
+          };
+
+          const storeResponse = await fetch(`${appUrl}/api/projects/${projectId}/comparisons`, {
+            method: 'POST',
+            headers: {
+              ...authHeaders,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!storeResponse.ok) {
+            const body = await storeResponse.text();
+            throw new Error(`Comparison storage failed (${storeResponse.status}): ${body}`);
+          }
+
+          const result = await storeResponse.json();
+          console.log(`Stored comparison ${result.filename}`);
+          NODE
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
