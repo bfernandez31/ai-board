@@ -28,6 +28,11 @@ export interface QualityScoreDetails {
   computedAt: string;
 }
 
+type QualityScoreDimensionLike =
+  | Pick<DimensionScore, 'name' | 'agentId'>
+  | Pick<QualityScoreDimensionDefinition, 'name' | 'agentId'>
+  | { name: string; agentId?: string };
+
 /** Shared quality score dimension config for scoring, analytics, and display ordering. */
 export const QUALITY_SCORE_DIMENSIONS: QualityScoreDimensionDefinition[] = [
   { name: 'Compliance', agentId: 'compliance', weight: 0.4 },
@@ -41,21 +46,20 @@ export const DIMENSION_WEIGHTS: Record<string, number> = Object.fromEntries(
   QUALITY_SCORE_DIMENSIONS.map((dimension) => [dimension.agentId, dimension.weight])
 );
 
-const QUALITY_SCORE_DIMENSION_ORDER = new Map(
-  QUALITY_SCORE_DIMENSIONS.flatMap((dimension, index) => [
-    [dimension.agentId, index],
-    [dimension.name, index],
-  ])
+const QUALITY_SCORE_DIMENSION_ORDER = QUALITY_SCORE_DIMENSIONS.reduce<Map<string, number>>(
+  (order, dimension, index) => {
+    order.set(dimension.agentId, index);
+    order.set(dimension.name, index);
+    return order;
+  },
+  new Map<string, number>()
 );
 
-function getDimensionOrderKey(identifier: string): number {
-  return QUALITY_SCORE_DIMENSION_ORDER.get(identifier) ?? Number.MAX_SAFE_INTEGER;
-}
-
 export function getQualityScoreDimensionOrder(
-  dimension: Pick<DimensionScore, 'name' | 'agentId'> | Pick<QualityScoreDimensionDefinition, 'name' | 'agentId'> | { name: string; agentId?: string }
+  dimension: QualityScoreDimensionLike
 ): number {
-  return getDimensionOrderKey(dimension.agentId ?? dimension.name);
+  const identifier = dimension.agentId ?? dimension.name;
+  return QUALITY_SCORE_DIMENSION_ORDER.get(identifier) ?? Number.MAX_SAFE_INTEGER;
 }
 
 export function sortQualityScoreDimensions<T extends { name: string; agentId?: string }>(
@@ -123,6 +127,9 @@ export function parseQualityScoreDetails(details: string | null | undefined): Qu
  * Returns a rounded integer (0-100).
  */
 export function computeQualityScore(dimensions: DimensionScore[]): number {
-  const total = dimensions.reduce((sum, d) => sum + d.score * d.weight, 0);
+  const total = dimensions.reduce((sum, dimension) => {
+    return sum + dimension.score * dimension.weight;
+  }, 0);
+
   return Math.round(total);
 }

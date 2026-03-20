@@ -5,6 +5,7 @@ import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup'
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { GET } from '@/app/api/projects/[projectId]/analytics/route';
 import type { QualityScoreAnalytics } from '@/lib/analytics/types';
+import { QUALITY_SCORE_DIMENSIONS } from '@/lib/quality-score';
 
 vi.mock('@/lib/db/auth-helpers', () => ({
   verifyProjectAccess: vi.fn(async () => undefined),
@@ -14,34 +15,26 @@ describe('Analytics Route - Quality Score', () => {
   let ctx: TestContext;
   const prisma = getPrismaClient();
 
+  function daysAgo(days: number): Date {
+    return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  }
+
+  function createQualityScoreDetails(scores: number[]): string {
+    return JSON.stringify({
+      dimensions: QUALITY_SCORE_DIMENSIONS.map((dimension, index) => ({
+        name: dimension.name,
+        score: scores[index] ?? 0,
+        weight: dimension.weight,
+      })),
+    });
+  }
+
   beforeEach(async () => {
     ctx = await getTestContext();
     await ctx.cleanup();
   });
 
-  const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-  const qualityScoreDetails = JSON.stringify({
-    dimensions: [
-      { name: 'Compliance', score: 90, weight: 0.4 },
-      { name: 'Bug Detection', score: 85, weight: 0.3 },
-      { name: 'Code Comments', score: 70, weight: 0.2 },
-      { name: 'Historical Context', score: 60, weight: 0.1 },
-      { name: 'Spec Sync', score: 80, weight: 0.0 },
-    ],
-  });
-
-  const qualityScoreDetails2 = JSON.stringify({
-    dimensions: [
-      { name: 'Compliance', score: 80, weight: 0.4 },
-      { name: 'Bug Detection', score: 75, weight: 0.3 },
-      { name: 'Code Comments', score: 60, weight: 0.2 },
-      { name: 'Historical Context', score: 50, weight: 0.1 },
-      { name: 'Spec Sync', score: 70, weight: 0.0 },
-    ],
-  });
-
-  async function seedQualityScoreFixtures(projectId: number) {
+  async function seedQualityScoreFixtures(projectId: number): Promise<void> {
     await prisma.project.update({
       where: { id: projectId },
       data: { defaultAgent: Agent.CLAUDE },
@@ -99,7 +92,7 @@ describe('Analytics Route - Quality Score', () => {
           inputTokens: 100,
           outputTokens: 50,
           qualityScore: 82,
-          qualityScoreDetails,
+          qualityScoreDetails: createQualityScoreDetails([90, 85, 70, 60, 80]),
         },
         {
           ticketId: idByKey.get('E2E-2')!,
@@ -114,7 +107,7 @@ describe('Analytics Route - Quality Score', () => {
           inputTokens: 200,
           outputTokens: 60,
           qualityScore: 72,
-          qualityScoreDetails: qualityScoreDetails2,
+          qualityScoreDetails: createQualityScoreDetails([80, 75, 60, 50, 70]),
         },
         {
           ticketId: idByKey.get('E2E-3')!,

@@ -9,19 +9,24 @@ import { describe, it, expect } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 import { QualityScoreSection } from '@/components/ticket/quality-score-section';
+import { QUALITY_SCORE_DIMENSIONS } from '@/lib/quality-score';
 import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 
-const MOCK_DETAILS = JSON.stringify({
-  dimensions: [
-    { name: 'Compliance', agentId: 'compliance', score: 80, weight: 0.4, weightedScore: 32 },
-    { name: 'Bug Detection', agentId: 'bug-detection', score: 90, weight: 0.3, weightedScore: 27 },
-    { name: 'Code Comments', agentId: 'code-comments', score: 70, weight: 0.2, weightedScore: 14 },
-    { name: 'Historical Context', agentId: 'historical-context', score: 85, weight: 0.1, weightedScore: 8.5 },
-    { name: 'Spec Sync', agentId: 'spec-sync', score: 95, weight: 0, weightedScore: 0 },
-  ],
-  threshold: 'Good',
-  computedAt: '2026-03-17T10:30:00Z',
-});
+function createMockDetails(scores: number[]): string {
+  return JSON.stringify({
+    dimensions: QUALITY_SCORE_DIMENSIONS.map((dimension, index) => {
+      const score = scores[index] ?? 0;
+
+      return {
+        ...dimension,
+        score,
+        weightedScore: score * dimension.weight,
+      };
+    }),
+    threshold: 'Good',
+    computedAt: '2026-03-17T10:30:00Z',
+  });
+}
 
 function createJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWithTelemetry {
   return {
@@ -39,7 +44,7 @@ function createJob(overrides: Partial<TicketJobWithTelemetry> = {}): TicketJobWi
     model: null,
     toolsUsed: [],
     qualityScore: 83,
-    qualityScoreDetails: MOCK_DETAILS,
+    qualityScoreDetails: createMockDetails([80, 90, 70, 85, 95]),
     ...overrides,
   };
 }
@@ -65,11 +70,12 @@ describe('QualityScoreSection', () => {
 
   it('keeps dimension scores hidden until the section is expanded', () => {
     renderWithProviders(<QualityScoreSection jobs={[createJob()]} />);
-    expect(screen.queryByTestId('dimension-compliance')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-bug-detection')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-code-comments')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-historical-context')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dimension-spec-sync')).not.toBeInTheDocument();
+
+    for (const dimension of QUALITY_SCORE_DIMENSIONS) {
+      expect(
+        screen.queryByTestId(`dimension-${dimension.agentId}`)
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('shows dimension weights as percentages after expanding the section', async () => {

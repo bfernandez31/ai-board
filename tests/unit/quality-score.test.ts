@@ -7,12 +7,24 @@
 import { describe, it, expect } from 'vitest';
 import {
   QUALITY_SCORE_DIMENSIONS,
-  getScoreThreshold,
-  getScoreColor,
-  parseQualityScoreDetails,
-  computeQualityScore,
   type DimensionScore,
+  computeQualityScore,
+  getScoreColor,
+  getScoreThreshold,
+  parseQualityScoreDetails,
 } from '@/lib/quality-score';
+
+function createDimensionScores(scores: number[]): DimensionScore[] {
+  return QUALITY_SCORE_DIMENSIONS.map((dimension, index) => {
+    const score = scores[index] ?? 0;
+
+    return {
+      ...dimension,
+      score,
+      weightedScore: score * dimension.weight,
+    };
+  });
+}
 
 describe('getScoreThreshold', () => {
   it.each([
@@ -98,22 +110,14 @@ describe('QUALITY_SCORE_DIMENSIONS', () => {
 });
 
 describe('computeQualityScore', () => {
-  const makeDimensions = (scores: number[]): DimensionScore[] => [
-    { name: 'Compliance', agentId: 'compliance', score: scores[0], weight: 0.4, weightedScore: scores[0] * 0.4 },
-    { name: 'Bug Detection', agentId: 'bug-detection', score: scores[1], weight: 0.3, weightedScore: scores[1] * 0.3 },
-    { name: 'Code Comments', agentId: 'code-comments', score: scores[2], weight: 0.2, weightedScore: scores[2] * 0.2 },
-    { name: 'Historical Context', agentId: 'historical-context', score: scores[3], weight: 0.1, weightedScore: scores[3] * 0.1 },
-    { name: 'Spec Sync', agentId: 'spec-sync', score: scores[4], weight: 0, weightedScore: scores[4] * 0 },
-  ];
-
   it('computes weighted sum correctly', () => {
     // 90*0.4 + 80*0.3 + 70*0.2 + 85*0.1 + 95*0 = 36 + 24 + 14 + 8.5 = 82.5
-    const result = computeQualityScore(makeDimensions([90, 80, 70, 85, 95]));
+    const result = computeQualityScore(createDimensionScores([90, 80, 70, 85, 95]));
     expect(result).toBe(83);
   });
 
   it('rounds 83.5 to 84', () => {
-    const dims = makeDimensions([89, 80, 72, 84, 95]);
+    const dims = createDimensionScores([89, 80, 72, 84, 95]);
     // 89*0.4 + 80*0.3 + 72*0.2 + 84*0.1 + 95*0 = 35.6 + 24 + 14.4 + 8.4 = 82.4
     expect(computeQualityScore(dims)).toBe(82);
 
@@ -129,29 +133,18 @@ describe('computeQualityScore', () => {
   });
 
   it('does not let zero-weight spec sync affect the overall quality score', () => {
-    const lowSpecSync = makeDimensions([90, 80, 70, 85, 0]);
-    const highSpecSync = makeDimensions([90, 80, 70, 85, 100]);
+    const lowSpecSync = createDimensionScores([90, 80, 70, 85, 0]);
+    const highSpecSync = createDimensionScores([90, 80, 70, 85, 100]);
 
     expect(computeQualityScore(lowSpecSync)).toBe(83);
     expect(computeQualityScore(highSpecSync)).toBe(83);
   });
 
   it('returns 100 for perfect active scores even when spec sync is 0', () => {
-    expect(computeQualityScore(makeDimensions([100, 100, 100, 100, 0]))).toBe(100);
+    expect(computeQualityScore(createDimensionScores([100, 100, 100, 100, 0]))).toBe(100);
   });
 
   it('returns 0 for zero scores', () => {
-    expect(computeQualityScore(makeDimensions([0, 0, 0, 0, 100]))).toBe(0);
-  });
-
-  it('rounds 82.5 to 83', () => {
-    const exactDims: DimensionScore[] = [
-      { name: 'Compliance', agentId: 'compliance', score: 90, weight: 0.4, weightedScore: 36 },
-      { name: 'Bug Detection', agentId: 'bug-detection', score: 80, weight: 0.3, weightedScore: 24 },
-      { name: 'Code Comments', agentId: 'code-comments', score: 75, weight: 0.2, weightedScore: 15 },
-      { name: 'Historical Context', agentId: 'historical-context', score: 75, weight: 0.1, weightedScore: 7.5 },
-      { name: 'Spec Sync', agentId: 'spec-sync', score: 100, weight: 0, weightedScore: 0 },
-    ];
-    expect(computeQualityScore(exactDims)).toBe(83);
+    expect(computeQualityScore(createDimensionScores([0, 0, 0, 0, 100]))).toBe(0);
   });
 });
