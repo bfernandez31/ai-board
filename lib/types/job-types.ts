@@ -1,3 +1,6 @@
+import type { Job } from '@prisma/client';
+import type { QualityScoreDetails } from '@/lib/quality-score';
+
 /**
  * JobType Enum
  *
@@ -26,9 +29,6 @@ export interface JobTypeConfig {
   bgColor: string; // TailwindCSS class
   ariaLabel: string; // Accessibility label template
 }
-
-import type { Job } from '@prisma/client';
-import type { QualityScoreDetails } from '@/lib/quality-score';
 
 /**
  * DualJobState Interface

@@ -7,6 +7,7 @@
  */
 
 export type ScoreThreshold = 'Excellent' | 'Good' | 'Fair' | 'Poor';
+type ScoreColor = { text: string; bg: string };
 
 export interface ReviewDimensionFinding {
   type: 'contradiction' | 'coverage-gap';
@@ -168,7 +169,7 @@ export function getScoreThreshold(score: number): ScoreThreshold {
  * Returns Tailwind CSS classes for the score's threshold color.
  * Uses semantic ctp-* tokens defined in globals.css / tailwind.config.ts.
  */
-export function getScoreColor(score: number): { text: string; bg: string } {
+export function getScoreColor(score: number): ScoreColor {
   if (score >= 90) {
     return { text: 'text-ctp-green', bg: 'bg-ctp-green/10' };
   }
@@ -185,8 +186,11 @@ export function getScoreColor(score: number): { text: string; bg: string } {
  * Parses the qualityScoreDetails JSON string into a typed object.
  * Returns null if the input is null, undefined, or invalid JSON.
  */
-export function parseQualityScoreDetails(details: string | null | undefined): QualityScoreDetails | null {
+export function parseQualityScoreDetails(
+  details: string | null | undefined
+): QualityScoreDetails | null {
   if (!details) return null;
+
   try {
     return JSON.parse(details) as QualityScoreDetails;
   } catch {

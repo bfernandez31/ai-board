@@ -7,6 +7,7 @@
 
 import { JobStatus } from '@prisma/client';
 import type { Prisma, Stage, WorkflowType } from '@prisma/client';
+import { sortDimensionComparisons } from '@/lib/analytics/dimension-comparison';
 import { prisma } from '@/lib/db/client';
 import type {
   AgentOption,
@@ -15,7 +16,6 @@ import type {
   CacheMetrics,
   CompletionMetric,
   CostDataPoint,
-  DimensionComparison,
   NamedAgent,
   OverviewMetrics,
   QualityScoreAnalytics,
@@ -594,22 +594,14 @@ async function getQualityScoreAnalytics(
     }
   }
 
-  const dimensionComparison: DimensionComparison[] = Array.from(dimensionTotals.entries())
-    .map(([dimension, { total, count, weight, displayOrder }]) => ({
+  const dimensionComparison = sortDimensionComparisons(
+    Array.from(dimensionTotals.entries()).map(([dimension, { total, count, weight, displayOrder }]) => ({
       dimension,
       averageScore: Math.round(total / count),
       weight,
       displayOrder,
     }))
-    .sort((a, b) => {
-      const orderDiff = (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER);
-      if (orderDiff !== 0) return orderDiff;
-
-      const weightDiff = b.weight - a.weight;
-      if (weightDiff !== 0) return weightDiff;
-
-      return a.dimension.localeCompare(b.dimension);
-    });
+  );
 
   return {
     scoreTrend,

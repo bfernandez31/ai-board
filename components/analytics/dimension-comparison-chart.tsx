@@ -1,8 +1,9 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { sortDimensionComparisons } from '@/lib/analytics/dimension-comparison';
 import type { DimensionComparison } from '@/lib/analytics/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DimensionComparisonChartProps {
   data: DimensionComparison[];
@@ -12,18 +13,8 @@ interface DimensionComparisonChartProps {
 export function DimensionComparisonChart({
   data,
   emptyMessage = 'No dimension data available',
-}: DimensionComparisonChartProps) {
-  const sortedData = [...data].sort((left, right) => {
-    const orderDiff =
-      (left.displayOrder ?? Number.MAX_SAFE_INTEGER) -
-      (right.displayOrder ?? Number.MAX_SAFE_INTEGER);
-    if (orderDiff !== 0) return orderDiff;
-
-    const weightDiff = right.weight - left.weight;
-    if (weightDiff !== 0) return weightDiff;
-
-    return left.dimension.localeCompare(right.dimension);
-  });
+}: DimensionComparisonChartProps): React.JSX.Element {
+  const sortedData = sortDimensionComparisons(data);
 
   if (data.length === 0) {
     return (
