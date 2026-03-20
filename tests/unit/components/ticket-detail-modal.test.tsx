@@ -122,7 +122,7 @@ describe('TicketDetailModal', () => {
       if (url.includes('/comparisons/check')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+          json: () => Promise.resolve({ hasComparisons: false, count: 0, latestComparisonId: null }),
         });
       }
       // Default mock for duplicate
@@ -410,7 +410,7 @@ describe('TicketDetailModal', () => {
         if (url.includes('/comparisons/check')) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+            json: () => Promise.resolve({ hasComparisons: false, count: 0, latestComparisonId: null }),
           });
         }
         return Promise.resolve({
@@ -499,7 +499,7 @@ describe('TicketDetailModal', () => {
         if (url.includes('/comparisons/check')) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+            json: () => Promise.resolve({ hasComparisons: false, count: 0, latestComparisonId: null }),
           });
         }
         return Promise.resolve({
@@ -581,7 +581,7 @@ describe('TicketDetailModal', () => {
         if (url.includes('/comparisons/check')) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ hasComparisons: false, count: 0 }),
+            json: () => Promise.resolve({ hasComparisons: false, count: 0, latestComparisonId: null }),
           });
         }
         return Promise.resolve({
@@ -808,6 +808,51 @@ describe('TicketDetailModal', () => {
       // Verify both options are visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
       expect(screen.getByText('Full clone')).toBeInTheDocument();
+    });
+  });
+
+  describe('comparison entry point', () => {
+    it('shows the compare button when structured comparison history exists', async () => {
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/comments') || url.includes('/timeline')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ comments: [] }),
+          });
+        }
+        if (url.includes('/comparisons/check')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                hasComparisons: true,
+                count: 2,
+                latestComparisonId: 99,
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const ticket = createMockTicket({ branch: null, stage: 'INBOX' });
+
+      renderWithProviders(
+        <TicketDetailModal
+          ticket={ticket}
+          open={true}
+          onOpenChange={vi.fn()}
+          onUpdate={vi.fn()}
+          projectId={1}
+          jobs={[]}
+          fullJobs={[]}
+        />
+      );
+
+      expect(await screen.findByTestId('compare-button')).toBeInTheDocument();
+      expect(screen.getByText('Compare (2)')).toBeInTheDocument();
     });
   });
 });

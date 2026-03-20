@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { getAlignmentLevel, generateAlignmentSummary } from './feature-alignment';
 import { calculateTestRatio } from './implementation-metrics';
 import { formatDurationMs } from './format-duration';
+import { persistComparisonRecord } from './comparison-record';
+import type { Agent, Stage, WorkflowType } from '@prisma/client';
 
 function formatDateForFilename(date: Date): string {
   return format(date, 'yyyyMMdd-HHmmss');
@@ -379,6 +381,53 @@ export function createComparisonReport(
     telemetry,
     recommendation,
     warnings,
+  };
+}
+
+export async function persistGeneratedComparisonArtifacts(input: {
+  projectId: number;
+  sourceTicket: {
+    id: number;
+    ticketKey: string;
+    title: string;
+    stage: Stage;
+    workflowType: WorkflowType;
+    agent: Agent | null;
+  };
+  participants: Array<{
+    id: number;
+    ticketKey: string;
+    title: string;
+    stage: Stage;
+    workflowType: WorkflowType;
+    agent: Agent | null;
+  }>;
+  branch: string;
+  report: ComparisonReport;
+}) {
+  const filename = input.report.metadata.filePath;
+  const markdownPath = generateReportPath(input.branch, filename);
+  const markdown = generateReportMarkdown({
+    ...input.report,
+    metadata: {
+      ...input.report.metadata,
+      filePath: markdownPath,
+    },
+  });
+
+  const record = await persistComparisonRecord({
+    projectId: input.projectId,
+    sourceTicket: input.sourceTicket,
+    participants: input.participants,
+    markdownPath,
+    report: input.report,
+  });
+
+  return {
+    filename,
+    markdownPath,
+    markdown,
+    record,
   };
 }
 

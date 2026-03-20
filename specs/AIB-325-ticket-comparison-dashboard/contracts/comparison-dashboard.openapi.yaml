@@ -27,6 +27,19 @@ paths:
           description: Structured comparison history for the requested ticket
           content:
             application/json:
+              example:
+                comparisons:
+                  - id: 12
+                    generatedAt: '2026-03-20T09:00:00.000Z'
+                    sourceTicketKey: AIB-101
+                    participantTicketKeys:
+                      - AIB-102
+                      - AIB-103
+                    winnerTicketKey: AIB-102
+                    summary: Winner ticket had the best test coverage and smallest diff.
+                    recommendation: Choose AIB-102 for the implementation baseline.
+                total: 1
+                limit: 10
               schema:
                 type: object
                 required:
@@ -63,6 +76,10 @@ paths:
           description: Lightweight comparison existence payload for ticket detail entry-point rendering
           content:
             application/json:
+              example:
+                hasComparisons: true
+                count: 2
+                latestComparisonId: 12
               schema:
                 type: object
                 required:
@@ -105,6 +122,75 @@ paths:
           description: Structured comparison detail with saved analysis and live enrichments
           content:
             application/json:
+              example:
+                id: 12
+                generatedAt: '2026-03-20T09:00:00.000Z'
+                sourceTicketId: 101
+                sourceTicketKey: AIB-101
+                markdownPath: specs/feature-branch/comparisons/example.md
+                summary: Winner ticket had the best test coverage and smallest diff.
+                overallRecommendation: Choose AIB-102 for the implementation baseline.
+                keyDifferentiators:
+                  - coverage
+                  - smaller diff
+                winnerTicketId: 102
+                winnerTicketKey: AIB-102
+                participants:
+                  - ticketId: 102
+                    ticketKey: AIB-102
+                    title: Winner ticket
+                    stage: VERIFY
+                    workflowType: FULL
+                    agent: null
+                    rank: 1
+                    score: 91
+                    rankRationale: Strong verify results and concise implementation.
+                    quality:
+                      state: available
+                      value: 91
+                    telemetry:
+                      inputTokens:
+                        state: available
+                        value: 1200
+                      outputTokens:
+                        state: available
+                        value: 400
+                      durationMs:
+                        state: available
+                        value: 120000
+                      costUsd:
+                        state: available
+                        value: 0.08
+                    metrics:
+                      linesAdded: 20
+                      linesRemoved: 5
+                      linesChanged: 25
+                      filesChanged: 3
+                      testFilesChanged: 2
+                      changedFiles:
+                        - app/a.ts
+                      bestValueFlags:
+                        linesChanged: true
+                decisionPoints:
+                  - id: 1
+                    title: State handling
+                    verdictTicketId: 102
+                    verdictSummary: AIB-102 handled pending states cleanly.
+                    rationale: The winner kept unavailable telemetry explicit.
+                    displayOrder: 0
+                    participantApproaches:
+                      - ticketId: 102
+                        ticketKey: AIB-102
+                        summary: Used explicit pending/unavailable states.
+                complianceRows:
+                  - principleKey: typescript-first-development
+                    principleName: TypeScript-First Development
+                    displayOrder: 0
+                    assessments:
+                      - participantTicketId: 102
+                        participantTicketKey: AIB-102
+                        status: pass
+                        notes: Strict types retained.
               schema:
                 $ref: '#/components/schemas/ComparisonDetailResponse'
         '400':
@@ -190,46 +276,6 @@ components:
         recommendation:
           type: string
 
-    ParticipantLiveEnrichment:
-      type: object
-      required:
-        - ticketId
-        - ticketKey
-        - title
-        - stage
-        - workflowType
-        - agent
-        - rank
-        - score
-        - rankRationale
-        - quality
-        - telemetry
-      properties:
-        ticketId:
-          type: integer
-        ticketKey:
-          type: string
-        title:
-          type: string
-        stage:
-          type: string
-        workflowType:
-          type: string
-        agent:
-          type:
-            - string
-            - 'null'
-        rank:
-          type: integer
-        score:
-          type: integer
-        rankRationale:
-          type: string
-        quality:
-          $ref: '#/components/schemas/NullableEnrichmentValue'
-        telemetry:
-          $ref: '#/components/schemas/TelemetryEnrichment'
-
     NullableEnrichmentValue:
       type: object
       required:
@@ -265,70 +311,120 @@ components:
         costUsd:
           $ref: '#/components/schemas/NullableEnrichmentValue'
 
-    TicketMetricSnapshot:
+    ParticipantMetrics:
       type: object
       required:
-        - ticketKey
-        - metrics
+        - changedFiles
+        - bestValueFlags
       properties:
-        ticketKey:
-          type: string
-        metrics:
+        linesAdded:
+          type:
+            - integer
+            - 'null'
+        linesRemoved:
+          type:
+            - integer
+            - 'null'
+        linesChanged:
+          type:
+            - integer
+            - 'null'
+        filesChanged:
+          type:
+            - integer
+            - 'null'
+        testFilesChanged:
+          type:
+            - integer
+            - 'null'
+        changedFiles:
           type: array
           items:
-            type: object
-            required:
-              - key
-              - label
-              - state
-            properties:
-              key:
-                type: string
-              label:
-                type: string
-              state:
-                type: string
-                enum:
-                  - available
-                  - pending
-                  - unavailable
-              value:
-                type:
-                  - integer
-                  - number
-                  - 'null'
-              highlight:
-                type: boolean
+            type: string
+        bestValueFlags:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    ParticipantLiveEnrichment:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - agent
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - telemetry
+        - metrics
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+        agent:
+          type:
+            - string
+            - 'null'
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/NullableEnrichmentValue'
+        telemetry:
+          $ref: '#/components/schemas/TelemetryEnrichment'
+        metrics:
+          $ref: '#/components/schemas/ParticipantMetrics'
 
     DecisionPoint:
       type: object
       required:
         - id
         - title
+        - verdictTicketId
         - verdictSummary
         - rationale
-        - approaches
+        - displayOrder
+        - participantApproaches
       properties:
         id:
           type: integer
         title:
           type: string
+        verdictTicketId:
+          type:
+            - integer
+            - 'null'
         verdictSummary:
           type: string
         rationale:
           type: string
-        verdictTicketKey:
-          type:
-            - string
-            - 'null'
-        approaches:
+        displayOrder:
+          type: integer
+        participantApproaches:
           type: array
           items:
             type: object
             required:
+              - ticketId
               - ticketKey
               - summary
             properties:
+              ticketId:
+                type: integer
               ticketKey:
                 type: string
               summary:
@@ -337,11 +433,14 @@ components:
     ComplianceCell:
       type: object
       required:
-        - ticketKey
+        - participantTicketId
+        - participantTicketKey
         - status
         - notes
       properties:
-        ticketKey:
+        participantTicketId:
+          type: integer
+        participantTicketKey:
           type: string
         status:
           type: string
@@ -357,12 +456,15 @@ components:
       required:
         - principleKey
         - principleName
+        - displayOrder
         - assessments
       properties:
         principleKey:
           type: string
         principleName:
           type: string
+        displayOrder:
+          type: integer
         assessments:
           type: array
           items:
@@ -373,49 +475,50 @@ components:
       required:
         - id
         - generatedAt
+        - sourceTicketId
         - sourceTicketKey
-        - winnerTicketKey
-        - summary
-        - recommendation
-        - keyDifferentiators
-        - participants
-        - metrics
-        - decisionPoints
-        - compliance
         - markdownPath
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+        - winnerTicketId
+        - winnerTicketKey
+        - participants
+        - decisionPoints
+        - complianceRows
       properties:
         id:
           type: integer
         generatedAt:
           type: string
           format: date-time
+        sourceTicketId:
+          type: integer
         sourceTicketKey:
           type: string
-        winnerTicketKey:
+        markdownPath:
           type: string
         summary:
           type: string
-        recommendation:
+        overallRecommendation:
           type: string
         keyDifferentiators:
           type: array
           items:
             type: string
-        markdownPath:
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
           type: string
         participants:
           type: array
           items:
             $ref: '#/components/schemas/ParticipantLiveEnrichment'
-        metrics:
-          type: array
-          items:
-            $ref: '#/components/schemas/TicketMetricSnapshot'
         decisionPoints:
           type: array
           items:
             $ref: '#/components/schemas/DecisionPoint'
-        compliance:
+        complianceRows:
           type: array
           items:
             $ref: '#/components/schemas/ComplianceRow'

@@ -1,42 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyTicketAccess } from '@/lib/db/auth-helpers';
-import { listTicketComparisons } from '@/lib/comparison/comparison-detail';
+import { getComparisonDetailForTicket } from '@/lib/comparison/comparison-detail';
 
 const paramsSchema = z.object({
   projectId: z.coerce.number().int().positive(),
   id: z.coerce.number().int().positive(),
-});
-
-const querySchema = z.object({
-  limit: z.coerce.number().int().positive().max(50).default(10),
+  comparisonId: z.coerce.number().int().positive(),
 });
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string; id: string }> }
+  context: {
+    params: Promise<{ projectId: string; id: string; comparisonId: string }>;
+  }
 ): Promise<NextResponse> {
   try {
     const paramsResult = paramsSchema.safeParse(await context.params);
     if (!paramsResult.success) {
       return NextResponse.json(
-        { error: 'Invalid project or ticket ID', code: 'VALIDATION_ERROR' },
+        { error: 'Invalid project, ticket, or comparison ID', code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
     }
 
-    const { projectId, id: ticketId } = paramsResult.data;
-    const queryResult = querySchema.safeParse({
-      limit: request.nextUrl.searchParams.get('limit') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid query parameters', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
-    }
-
+    const { projectId, id: ticketId, comparisonId } = paramsResult.data;
     const ticket = await verifyTicketAccess(ticketId, request);
     if (ticket.projectId !== projectId) {
       return NextResponse.json(
@@ -45,8 +33,15 @@ export async function GET(
       );
     }
 
-    const result = await listTicketComparisons(ticketId, queryResult.data.limit);
-    return NextResponse.json(result);
+    const detail = await getComparisonDetailForTicket(ticketId, comparisonId);
+    if (!detail) {
+      return NextResponse.json(
+        { error: 'Comparison not found', code: 'COMPARISON_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(detail);
   } catch (error) {
     if (error instanceof Error && error.message === 'Ticket not found') {
       return NextResponse.json(

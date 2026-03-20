@@ -1,43 +1,71 @@
-/**
- * RTL Component Tests: Markdown Table Rendering
- *
- * Tests to verify that markdown tables render correctly with remark-gfm plugin.
- * Covers ComparisonViewer, DocumentationViewer, and ConstitutionViewer components.
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
+import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 
-// Mock the hooks
 vi.mock('@/hooks/use-comparisons', () => ({
   useComparisonCheck: vi.fn(() => ({
-    data: { hasComparisons: true, latestReport: 'test-report.md', count: 1 },
+    data: { hasComparisons: true, latestComparisonId: 1, count: 1 },
     isLoading: false,
     error: null,
   })),
   useComparisonList: vi.fn(() => ({
-    data: null,
+    data: {
+      comparisons: [
+        {
+          id: 1,
+          generatedAt: '2026-03-20T00:00:00.000Z',
+          sourceTicketKey: 'ABC-123',
+          participantTicketKeys: ['ABC-456'],
+          winnerTicketKey: 'ABC-123',
+          summary: 'ABC-123 won',
+        },
+      ],
+    },
     isLoading: false,
   })),
-  useComparisonReport: vi.fn(() => ({
+  useComparisonDetail: vi.fn(() => ({
     data: {
-      content: `# Test Report
-
-## Comparison Table
-
-| Feature | Ticket A | Ticket B |
-|---------|----------|----------|
-| Status  | Done     | Pending  |
-| Priority| High     | Medium   |
-| Score   | 95%      | 75%      |
-
-This is a test report with a table.`,
-      metadata: {
-        sourceTicket: 'ABC-123',
-        comparedTickets: ['ABC-456'],
-        alignmentScore: 85,
-        generatedAt: '2024-01-01T00:00:00.000Z',
-      },
+      id: 1,
+      generatedAt: '2026-03-20T00:00:00.000Z',
+      sourceTicketId: 1,
+      sourceTicketKey: 'ABC-123',
+      markdownPath: 'specs/x/comparisons/test.md',
+      summary: 'ABC-123 won',
+      overallRecommendation: 'Use ABC-123.',
+      keyDifferentiators: ['coverage'],
+      winnerTicketId: 1,
+      winnerTicketKey: 'ABC-123',
+      participants: [
+        {
+          ticketId: 1,
+          ticketKey: 'ABC-123',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+          rank: 1,
+          score: 95,
+          rankRationale: 'Best value',
+          quality: { state: 'available', value: 95 },
+          telemetry: {
+            inputTokens: { state: 'available', value: 10 },
+            outputTokens: { state: 'available', value: 5 },
+            durationMs: { state: 'available', value: 100 },
+            costUsd: { state: 'available', value: 0.01 },
+          },
+          metrics: {
+            linesAdded: 10,
+            linesRemoved: 2,
+            linesChanged: 12,
+            filesChanged: 2,
+            testFilesChanged: 1,
+            changedFiles: [],
+            bestValueFlags: { linesChanged: true },
+          },
+        },
+      ],
+      decisionPoints: [],
+      complianceRows: [],
     },
     isLoading: false,
     error: null,
@@ -45,64 +73,27 @@ This is a test report with a table.`,
 }));
 
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: vi.fn(() => ({
-    toast: vi.fn(),
-  })),
+  useToast: vi.fn(() => ({ toast: vi.fn() })),
 }));
 
-describe('Markdown Table Rendering', () => {
+describe('ComparisonViewer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('ComparisonViewer', () => {
-    it('should render markdown tables correctly with GFM support', async () => {
-      renderWithProviders(
-        <ComparisonViewer
-          projectId={1}
-          ticketId={1}
-          isOpen={true}
-          onClose={vi.fn()}
-        />
-      );
+  it('renders the structured comparison dashboard', async () => {
+    renderWithProviders(
+      <ComparisonViewer
+        projectId={1}
+        ticketId={1}
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
 
-      // Check for table headers - this verifies GFM table parsing is working
-      expect(await screen.findByText('Feature')).toBeInTheDocument();
-      expect(screen.getByText('Ticket A')).toBeInTheDocument();
-      expect(screen.getByText('Ticket B')).toBeInTheDocument();
-
-      // Check for table data in first row
-      expect(screen.getByText('Status')).toBeInTheDocument();
-      expect(screen.getByText('Done')).toBeInTheDocument();
-      expect(screen.getByText('Pending')).toBeInTheDocument();
-
-      // Check for table data in second row
-      expect(screen.getByText('Priority')).toBeInTheDocument();
-      expect(screen.getByText('High')).toBeInTheDocument();
-      expect(screen.getByText('Medium')).toBeInTheDocument();
-
-      // Check for table data in third row
-      expect(screen.getByText('Score')).toBeInTheDocument();
-      expect(screen.getByText('95%')).toBeInTheDocument();
-      expect(screen.getByText('75%')).toBeInTheDocument();
-    });
-
-    it('should render other markdown content alongside tables', async () => {
-      renderWithProviders(
-        <ComparisonViewer
-          projectId={1}
-          ticketId={1}
-          isOpen={true}
-          onClose={vi.fn()}
-        />
-      );
-
-      // Verify markdown heading renders
-      expect(await screen.findByText('Test Report')).toBeInTheDocument();
-      expect(screen.getByText('Comparison Table')).toBeInTheDocument();
-
-      // Verify paragraph text renders
-      expect(screen.getByText(/This is a test report with a table/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
+    expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
+    expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });
 });

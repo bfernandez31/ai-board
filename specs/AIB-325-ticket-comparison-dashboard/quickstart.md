@@ -18,7 +18,7 @@ Implement a structured comparison dashboard without breaking the existing `/comp
 3. Replace ticket comparison APIs
    - Update `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts`
    - Update `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/check/route.ts`
-   - Replace filename route with `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
+   - Replace the legacy filename detail route with `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
    - Use `verifyTicketAccess()` and Zod validation on all route params and query values.
 
 4. Update `/compare` write path
@@ -60,8 +60,8 @@ Search existing tests in `/home/runner/work/ai-board/ai-board/target/tests/integ
 Run these during BUILD and before commit:
 
 ```bash
-bun run test:unit
-bun run test:integration
+bun run test:unit -- tests/unit/comparison/comparison-record.test.ts tests/unit/components/comparison-ranking.test.tsx tests/unit/components/comparison-dashboard-sections.test.tsx tests/unit/components/ticket-detail-modal.test.tsx tests/unit/components/markdown-table-rendering.test.tsx
+VITEST_INTEGRATION=1 bun vitest run tests/integration/comparisons/comparison-api.test.ts tests/integration/comparisons/comparison-detail-route.test.ts tests/integration/comparisons/comparison-dashboard-api.test.ts tests/integration/comparisons/comparison-persistence.test.ts tests/integration/comparisons/comparison-history-persistence.test.ts
 bun run type-check
 bun run lint
 ```
@@ -76,6 +76,6 @@ bunx prisma generate
 
 1. Run `/compare` for a set of tickets and verify one markdown artifact and one structured record are created for the same run.
 2. Open each participating ticket and verify the comparison appears in history from all of them.
-3. Open the dashboard and verify ranking, recommendation, metrics, decision points, and compliance all render without markdown parsing.
+3. Open the dashboard and verify ranking, recommendation, metrics, decision points, and compliance all render from the structured detail payload without markdown parsing.
 4. Remove or omit optional telemetry/quality data in test fixtures and verify the UI labels them `pending` or `unavailable`.
 5. Create multiple comparison runs with overlapping ticket sets and verify the history list distinguishes them by time, participants, and winner.
