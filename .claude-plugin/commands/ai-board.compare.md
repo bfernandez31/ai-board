@@ -163,6 +163,7 @@ This JSON file contains pre-aggregated telemetry for all referenced tickets.
 - `tickets[ticketKey].durationMs`: Total duration in milliseconds
 - `tickets[ticketKey].inputTokens` / `outputTokens`: Tokens consumed
 - `tickets[ticketKey].jobCount`: Number of completed jobs
+- `tickets[ticketKey].model`: Primary model used (e.g., opus, sonnet) — display "N/A" if null
 
 **If file doesn't exist or `hasData: false`**: Display "N/A" in metrics.
 
@@ -279,10 +280,10 @@ Create markdown report at:
 
 ## Telemetry (if available)
 
-| Ticket | Cost | Duration | Tokens | Jobs |
-|--------|------|----------|--------|------|
-| AIB-128 (source) | $0.15 | 45s | 12K | 3 |
-| AIB-124 | $0.22 | 62s | 18K | 4 |
+| Ticket | Cost | Duration | Tokens | Jobs | Model |
+|--------|------|----------|--------|------|-------|
+| AIB-128 (source) | $0.15 | 45s | 12K | 3 | opus |
+| AIB-124 | $0.22 | 62s | 18K | 4 | sonnet |
 
 ## Implementation Choices Analysis
 
