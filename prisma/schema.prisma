@@ -81,6 +81,7 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  comparisons         Comparison[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -136,6 +137,8 @@ model Ticket {
   jobs                Job[]
   notifications       Notification[]
   project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comparisonsAsSource Comparison[]         @relation("ComparisonSource")
+  comparisonEntries   ComparisonEntry[]
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -339,4 +342,59 @@ model StripeEvent {
 
   @@index([type])
   @@index([processedAt])
+}
+
+model Comparison {
+  id              Int       @id @default(autoincrement())
+  projectId       Int
+  sourceTicketId  Int
+  recommendation  String
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project         Project   @relation(fields: [projectId], references: [id])
+  sourceTicket    Ticket    @relation("ComparisonSource", fields: [sourceTicketId], references: [id])
+  entries         ComparisonEntry[]
+  decisionPoints  ComparisonDecisionPoint[]
+
+  @@index([projectId])
+  @@index([sourceTicketId])
+}
+
+model ComparisonEntry {
+  id                  Int       @id @default(autoincrement())
+  comparisonId        Int
+  ticketId            Int
+  rank                Int
+  score               Float
+  isWinner            Boolean   @default(false)
+  keyDifferentiators  String
+  linesAdded          Int
+  linesRemoved        Int
+  sourceFileCount     Int
+  testFileCount       Int
+  testRatio           Float
+  complianceData      String
+  createdAt           DateTime  @default(now())
+
+  comparison          Comparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+  ticket              Ticket     @relation(fields: [ticketId], references: [id])
+
+  @@unique([comparisonId, ticketId])
+  @@index([comparisonId])
+  @@index([ticketId])
+}
+
+model ComparisonDecisionPoint {
+  id            Int       @id @default(autoincrement())
+  comparisonId  Int
+  topic         String
+  verdict       String
+  approaches    String
+  createdAt     DateTime  @default(now())
+
+  comparison    Comparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+
+  @@index([comparisonId])
 }

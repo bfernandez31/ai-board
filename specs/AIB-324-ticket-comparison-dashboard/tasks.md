@@ -18,10 +18,10 @@
 
 **Purpose**: Prisma schema additions, migration, and Zod validation schemas
 
-- [ ] T001 Add Comparison, ComparisonEntry, and ComparisonDecisionPoint models to prisma/schema.prisma per data-model.md (include indexes, unique constraints, cascade deletes)
-- [ ] T002 Add reverse relations to existing Ticket model (comparisonsAsSource, comparisonEntries) and Project model (comparisons) in prisma/schema.prisma
-- [ ] T003 Run Prisma migration and generate client (`bunx prisma migrate dev --name add-comparison-models && bunx prisma generate`)
-- [ ] T004 [P] Create Zod validation schemas (createComparisonSchema, comparisonEntrySchema, comparisonDecisionPointSchema) in lib/schemas/comparison.ts per contracts/comparisons-api.md
+- [x] T001 Add Comparison, ComparisonEntry, and ComparisonDecisionPoint models to prisma/schema.prisma per data-model.md (include indexes, unique constraints, cascade deletes)
+- [x] T002 Add reverse relations to existing Ticket model (comparisonsAsSource, comparisonEntries) and Project model (comparisons) in prisma/schema.prisma
+- [x] T003 Run Prisma migration and generate client (`bunx prisma migrate dev --name add-comparison-models && bunx prisma generate`)
+- [x] T004 [P] Create Zod validation schemas (createComparisonSchema, comparisonEntrySchema, comparisonDecisionPointSchema) in lib/schemas/comparison.ts per contracts/comparisons-api.md
 
 **Checkpoint**: `bunx prisma generate` succeeds; Zod schemas export correctly; typed Prisma client includes new models
 
