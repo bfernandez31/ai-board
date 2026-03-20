@@ -401,4 +401,74 @@ describe('DB-backed Comparisons API', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('GET /api/projects/:projectId/comparisons/:comparisonId', () => {
+    it('should return enriched comparison detail with entries and decision points', async () => {
+      const payload = buildComparisonPayload(ticketId1, ticketId2);
+      const created = await workflowApi.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/comparisons`,
+        payload
+      );
+
+      const response = await ctx.api.get<{
+        id: number;
+        projectId: number;
+        sourceTicketKey: string;
+        recommendation: string;
+        entries: Array<{
+          id: number;
+          rank: number;
+          score: number;
+          isWinner: boolean;
+          keyDifferentiators: string;
+          metrics: { linesAdded: number; linesRemoved: number; sourceFileCount: number; testFileCount: number; testRatio: number };
+          complianceData: Array<{ name: string; passed: boolean; notes?: string }>;
+          ticket: { id: number; ticketKey: string; title: string } | null;
+          telemetry: null;
+          qualityScore: null;
+        }>;
+        decisionPoints: Array<{
+          id: number;
+          topic: string;
+          verdict: string;
+          approaches: Record<string, { approach: string; assessment: string }>;
+        }>;
+      }>(`/api/projects/${ctx.projectId}/comparisons/${created.data.id}`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.id).toBe(created.data.id);
+      expect(response.data.recommendation).toBe(payload.recommendation);
+      expect(response.data.entries).toHaveLength(2);
+
+      // Winner entry
+      const winner = response.data.entries.find((e) => e.isWinner);
+      expect(winner).toBeDefined();
+      expect(winner!.rank).toBe(1);
+      expect(winner!.score).toBe(87.5);
+      expect(winner!.metrics.linesAdded).toBe(450);
+      expect(winner!.complianceData).toHaveLength(1);
+      expect(winner!.complianceData[0]!.name).toBe('TypeScript-First');
+
+      // Ticket metadata enrichment
+      expect(winner!.ticket).not.toBeNull();
+      expect(winner!.ticket!.title).toBe('[e2e] Comparison ticket 1');
+
+      // No telemetry or quality scores (no jobs exist)
+      expect(winner!.telemetry).toBeNull();
+      expect(winner!.qualityScore).toBeNull();
+
+      // Decision points with parsed approaches
+      expect(response.data.decisionPoints).toHaveLength(1);
+      expect(response.data.decisionPoints[0]!.topic).toBe('Error handling approach');
+      expect(response.data.decisionPoints[0]!.approaches).toHaveProperty('T1');
+    });
+
+    it('should return 404 for non-existent comparison', async () => {
+      const response = await ctx.api.get<{ error: string }>(
+        `/api/projects/${ctx.projectId}/comparisons/999999`
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
 });

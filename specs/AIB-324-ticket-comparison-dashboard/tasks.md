@@ -87,13 +87,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Write integration tests for GET enriched comparison detail API (ticket metadata joins, telemetry aggregation, quality scores, null handling for missing data) in tests/integration/comparisons/comparison-db-api.test.ts
-- [ ] T026 [P] [US3] Write component tests for graceful degradation — "Pending" for missing quality scores, "N/A" for missing telemetry in tests/unit/components/comparison-dashboard.test.tsx
+- [x] T025 [P] [US3] Write integration tests for GET enriched comparison detail API (ticket metadata joins, telemetry aggregation, quality scores, null handling for missing data) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T026 [P] [US3] Write component tests for graceful degradation — "Pending" for missing quality scores, "N/A" for missing telemetry in tests/unit/components/comparison-dashboard.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement GET handler in app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts — enriched comparison detail: join Ticket table for metadata (title, stage, workflowType, branch), aggregate Job table for telemetry (sum costUsd, durationMs, tokens for COMPLETED jobs), get latest COMPLETED verify Job's qualityScore/qualityScoreDetails; return null for missing telemetry/quality scores
-- [ ] T028 [US3] Update ComparisonRanking and ComparisonMetrics components to render "Pending" for null quality scores and "N/A" for null telemetry without layout breakage
+- [x] T027 [US3] Implement GET handler in app/api/projects/[projectId]/comparisons/[comparisonId]/route.ts — enriched comparison detail: join Ticket table for metadata (title, stage, workflowType, branch), aggregate Job table for telemetry (sum costUsd, durationMs, tokens for COMPLETED jobs), get latest COMPLETED verify Job's qualityScore/qualityScoreDetails; return null for missing telemetry/quality scores
+- [x] T028 [US3] Update ComparisonRanking and ComparisonMetrics components to render "Pending" for null quality scores and "N/A" for null telemetry without layout breakage
 
 **Checkpoint**: Enriched API returns ticket metadata, telemetry, and quality scores; missing data returns null; UI shows appropriate placeholder states
 
