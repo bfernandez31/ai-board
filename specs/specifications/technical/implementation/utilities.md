@@ -2,6 +2,92 @@
 
 Shared utility functions and helpers used across the application.
 
+## Quality Score Utilities
+
+### Purpose
+
+Shared types, configuration, and helper functions for quality score computation and display. Used by code review agents, the verify workflow, and UI components.
+
+### File Location
+
+`lib/quality-score.ts`
+
+### Dimension Configuration
+
+`DIMENSIONS` is the single source of truth for all scoring dimensions. It drives the code review agent weights, scoring logic, and UI display.
+
+```typescript
+export interface DimensionConfig {
+  agentId: string;
+  name: string;
+  weight: number;
+}
+
+export const DIMENSIONS: DimensionConfig[] = [
+  { agentId: 'compliance',        name: 'Compliance',        weight: 0.40 },
+  { agentId: 'bug-detection',     name: 'Bug Detection',     weight: 0.30 },
+  { agentId: 'code-comments',     name: 'Code Comments',     weight: 0.20 },
+  { agentId: 'historical-context',name: 'Historical Context',weight: 0.10 },
+  { agentId: 'spec-sync',         name: 'Spec Sync',         weight: 0.00 },
+];
+```
+
+Active weights (weight > 0) sum to 1.0. Dimensions with weight 0 are computed and stored but excluded from the global score.
+
+`DIMENSION_WEIGHTS` is derived from `DIMENSIONS` for backward-compatible lookup:
+
+```typescript
+export const DIMENSION_WEIGHTS: Record<string, number> = Object.fromEntries(
+  DIMENSIONS.map((d) => [d.agentId, d.weight])
+);
+```
+
+### Key Types
+
+**`DimensionScore`** — Per-dimension result stored in `qualityScoreDetails`:
+```typescript
+interface DimensionScore {
+  name: string;
+  agentId: string;
+  score: number;
+  weight: number;
+  weightedScore: number;
+}
+```
+
+**`QualityScoreDetails`** — Full score payload stored as JSON on the Job record:
+```typescript
+interface QualityScoreDetails {
+  dimensions: DimensionScore[];
+  threshold: ScoreThreshold;
+  computedAt: string;
+}
+```
+
+**`ScoreThreshold`**: `'Excellent' | 'Good' | 'Fair' | 'Poor'`
+
+### Helper Functions
+
+**`computeQualityScore(dimensions: DimensionScore[]): number`**
+Computes the weighted global score from dimension scores. Returns a rounded integer (0–100). Dimensions with weight 0 contribute nothing to the total.
+
+**`getScoreThreshold(score: number): ScoreThreshold`**
+Returns the threshold label for a given score (90–100: Excellent, 70–89: Good, 50–69: Fair, 0–49: Poor).
+
+**`getScoreColor(score: number): { text: string; bg: string }`**
+Returns semantic Tailwind CSS classes for the score threshold (`text-ctp-green`, `bg-ctp-green/10`, etc.).
+
+**`parseQualityScoreDetails(details: string | null | undefined): QualityScoreDetails | null`**
+Safely parses the `qualityScoreDetails` JSON string. Returns `null` on invalid or missing input.
+
+### Testing
+
+**Unit Tests**: `tests/unit/quality-score.test.ts`, `tests/unit/components/quality-score-section.test.tsx`
+
+**Integration Tests**: `tests/integration/analytics/quality-score.test.ts`
+
+---
+
 ## Keyboard Shortcuts Hook
 
 ### Purpose

@@ -166,11 +166,11 @@ For all verify jobs that complete successfully, the code review step produces a 
 
 **How it works**:
 1. The `/code-review` command runs 5 parallel review agents, each covering a scoring dimension:
+   - Compliance (weight: 40%)
    - Bug Detection (weight: 30%)
-   - Compliance (weight: 30%)
    - Code Comments (weight: 20%)
    - Historical Context (weight: 10%)
-   - PR Comments (weight: 10%)
+   - Spec Sync (weight: 0% — computed and stored but excluded from the global score)
 2. Each agent returns a dimension score (0-100) alongside its issue list
 3. The command prints the quality score JSON to stdout with a `QUALITY_SCORE_JSON:` prefix marker (the command does not have file write permissions)
 4. The verify workflow captures the agent's stdout and parses the marker to extract the score (with `quality-score.json` file as fallback)
