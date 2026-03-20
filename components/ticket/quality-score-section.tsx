@@ -103,8 +103,9 @@ export function QualityScoreSection({
                     <span className="text-xs font-medium uppercase tracking-wider hidden sm:inline">
                       {isOpen ? 'Hide details' : 'View details'}
                     </span>
-                    {isOpen && <ChevronDown className="w-4 h-4" aria-hidden="true" />}
-                    {!isOpen && (
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                    ) : (
                       <ChevronRight className="w-4 h-4" aria-hidden="true" />
                     )}
                   </div>
