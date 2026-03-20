@@ -122,9 +122,9 @@
 
 **Purpose**: Command integration and final validation
 
-- [ ] T032 [P] Update ai-board.compare command (.claude-plugin/commands/ai-board.compare.md) to include API call step after markdown generation — structure comparison output data to match createComparisonSchema, POST to /api/projects/:projectId/comparisons with Bearer token
-- [ ] T033 [P] Run `bun run type-check` and `bun run lint` — fix all errors across new and modified files
-- [ ] T034 Run quickstart.md validation — verify implementation order matches quickstart.md layers and all key files are created/modified as specified
+- [x] T032 [P] Update ai-board.compare command (.claude-plugin/commands/ai-board.compare.md) to include API call step after markdown generation — structure comparison output data to match createComparisonSchema, POST to /api/projects/:projectId/comparisons with Bearer token
+- [x] T033 [P] Run `bun run type-check` and `bun run lint` — fix all errors across new and modified files
+- [x] T034 Run quickstart.md validation — verify implementation order matches quickstart.md layers and all key files are created/modified as specified
 
 ---
 

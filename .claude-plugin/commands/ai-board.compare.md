@@ -348,6 +348,54 @@ Best code implementation: {best-ticket} with {score}%
 Compared on: code quality, constitution compliance, tests
 ```
 
+### Step 11b: Save Comparison to Database
+
+After creating the markdown report, POST structured comparison data to the DB API.
+Use the `WORKFLOW_API_TOKEN` environment variable for Bearer token auth.
+
+```bash
+curl -X POST "${BASE_URL}/api/projects/${PROJECT_ID}/comparisons" \
+  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceTicketId": <SOURCE_TICKET_ID>,
+    "recommendation": "<winner ticket key> provides the best implementation...",
+    "notes": "Comparison of <N> implementations for <feature>.",
+    "entries": [
+      {
+        "ticketId": <TICKET_ID>,
+        "rank": 1,
+        "score": <SCORE_0_100>,
+        "isWinner": true,
+        "keyDifferentiators": "<strengths summary>",
+        "linesAdded": <N>,
+        "linesRemoved": <N>,
+        "sourceFileCount": <N>,
+        "testFileCount": <N>,
+        "testRatio": <0.0_TO_1.0>,
+        "complianceData": "{\"principles\":[{\"name\":\"TypeScript-First\",\"passed\":true,\"notes\":\"...\"}]}"
+      }
+    ],
+    "decisionPoints": [
+      {
+        "topic": "<decision topic>",
+        "verdict": "<which approach wins>",
+        "approaches": "{\"TICKET-KEY\":{\"approach\":\"...\",\"assessment\":\"...\"}}"
+      }
+    ]
+  }'
+```
+
+**Field mapping from analysis**:
+- `score`: The overall percentage score (0-100) from the ranking
+- `keyDifferentiators`: The "Why it wins/loses" bullet points concatenated
+- Code metrics from `git diff --stat` analysis (linesAdded/Removed, file counts)
+- `testRatio`: testFileCount / (sourceFileCount + testFileCount)
+- `complianceData`: JSON string from the Constitution Compliance table
+- `decisionPoints`: Key architecture/pattern differences noted during analysis
+
+**If the POST fails**, log a warning but continue (the markdown report is the primary output).
+
 ### Step 12: Output Summary
 
 Output a concise comment (< 1500 chars) with:
