@@ -306,4 +306,99 @@ describe('DB-backed Comparisons API', () => {
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
   });
+
+  describe('GET /api/projects/:projectId/tickets/:id/comparisons/db', () => {
+    it('should return empty list for ticket without comparisons', async () => {
+      const response = await ctx.api.get<{
+        comparisons: unknown[];
+        total: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.comparisons).toEqual([]);
+      expect(response.data.total).toBe(0);
+    });
+
+    it('should list comparisons for a participating ticket (bidirectional)', async () => {
+      // Create a comparison where ticketId2 is source but ticketId1 participates
+      const payload = buildComparisonPayload(ticketId1, ticketId2);
+      await workflowApi.post(`/api/projects/${ctx.projectId}/comparisons`, payload);
+
+      // ticketId1 should see the comparison (it's an entry)
+      const r1 = await ctx.api.get<{
+        comparisons: Array<{
+          id: number;
+          ticketRank: number;
+          ticketScore: number;
+          ticketIsWinner: boolean;
+          winnerTicketKey: string;
+          entryCount: number;
+        }>;
+        total: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db`);
+
+      expect(r1.status).toBe(200);
+      expect(r1.data.total).toBe(1);
+      expect(r1.data.comparisons[0]!.ticketRank).toBe(1);
+      expect(r1.data.comparisons[0]!.ticketIsWinner).toBe(true);
+      expect(r1.data.comparisons[0]!.entryCount).toBe(2);
+
+      // ticketId2 should also see it
+      const r2 = await ctx.api.get<{
+        comparisons: Array<{
+          ticketRank: number;
+          ticketIsWinner: boolean;
+        }>;
+        total: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId2}/comparisons/db`);
+
+      expect(r2.status).toBe(200);
+      expect(r2.data.total).toBe(1);
+      expect(r2.data.comparisons[0]!.ticketRank).toBe(2);
+      expect(r2.data.comparisons[0]!.ticketIsWinner).toBe(false);
+    });
+
+    it('should return 404 for non-existent ticket', async () => {
+      const response = await ctx.api.get<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/999999/comparisons/db`
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/projects/:projectId/tickets/:id/comparisons/db/check', () => {
+    it('should return false when no comparisons exist', async () => {
+      const response = await ctx.api.get<{
+        hasComparisons: boolean;
+        count: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db/check`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.hasComparisons).toBe(false);
+      expect(response.data.count).toBe(0);
+    });
+
+    it('should return true with count when comparisons exist', async () => {
+      const payload = buildComparisonPayload(ticketId1, ticketId2);
+      await workflowApi.post(`/api/projects/${ctx.projectId}/comparisons`, payload);
+
+      const response = await ctx.api.get<{
+        hasComparisons: boolean;
+        count: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${ticketId1}/comparisons/db/check`);
+
+      expect(response.status).toBe(200);
+      expect(response.data.hasComparisons).toBe(true);
+      expect(response.data.count).toBe(1);
+    });
+
+    it('should return 404 for non-existent ticket', async () => {
+      const response = await ctx.api.get<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/999999/comparisons/db/check`
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
 });

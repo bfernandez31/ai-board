@@ -45,8 +45,10 @@ import { MentionDisplay } from '@/components/comments/mention-display';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { TicketWithVersion } from '@/app/lib/types/query-types';
-import { useComparisonCheck } from '@/hooks/use-comparisons';
+import { useComparisonCheck, useDbComparisonCheck, useDbComparisonList } from '@/hooks/use-comparisons';
 import { ComparisonViewer } from '@/components/comparison/comparison-viewer';
+import { ComparisonDashboard } from '@/components/comparison/comparison-dashboard';
+import { ComparisonListItemCard } from '@/components/comparison/comparison-list-item';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,10 +189,11 @@ export function TicketDetailModal({
   const [agentEditOpen, setAgentEditOpen] = useState(false);
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [docViewerType, setDocViewerType] = useState<DocumentType>('plan');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'files' | 'stats' | 'comparisons'>(initialTab);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [comparisonViewerOpen, setComparisonViewerOpen] = useState(false);
+  const [selectedComparisonId, setSelectedComparisonId] = useState<number | null>(null);
 
   // Fetch comment count for badge
   const { data: comments } = useComments({
@@ -200,12 +203,22 @@ export function TicketDetailModal({
     refetchInterval: false, // Don't poll when just showing count
   });
 
-  // Check if ticket has comparison reports
+  // Check if ticket has comparison reports (file-based)
   const { data: comparisonCheck } = useComparisonCheck(
     projectId,
     ticket?.id || 0,
     open && !!ticket && !!ticket.branch
   );
+
+  // Check if ticket has DB-backed comparisons
+  const { data: dbComparisonCheck } = useDbComparisonCheck(
+    projectId,
+    ticket?.id || 0,
+    open && !!ticket
+  );
+
+  const hasDbComparisons = dbComparisonCheck?.hasComparisons ?? false;
+  const dbComparisonCount = dbComparisonCheck?.count ?? 0;
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
   useEffect(() => {
@@ -238,6 +251,14 @@ export function TicketDetailModal({
 
   const hasJobs = fullJobs.length > 0;
 
+  // Fetch DB comparison list when tab is active
+  const { data: dbComparisonList } = useDbComparisonList(
+    projectId,
+    ticket?.id || 0,
+    20,
+    open && !!ticket && activeTab === 'comparisons' && hasDbComparisons
+  );
+
   useEffect(() => {
     if (!open) return;
 
@@ -246,6 +267,7 @@ export function TicketDetailModal({
       '2': 'comments',
       '3': 'files',
       ...(hasJobs ? { '4': 'stats' } : {}),
+      ...(hasDbComparisons ? { '5': 'comparisons' } : {}),
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -258,7 +280,7 @@ export function TicketDetailModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, hasJobs]);
+  }, [open, hasJobs, hasDbComparisons]);
 
   const completedJobs = useMemo(() => {
     if (!localTicket?.branch || jobs.length === 0) {
@@ -967,8 +989,8 @@ export function TicketDetailModal({
         </DialogHeader>
 
         {/* Tabs for organizing modal content */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
-          <TabsList className={`flex-shrink-0 grid w-full ${hasJobs ? 'grid-cols-4' : 'grid-cols-3'} mb-0 sm:mb-4`}>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'comments' | 'files' | 'stats' | 'comparisons')} className="w-full flex-1 flex flex-col -mt-2 sm:mt-0 sm:block sm:flex-initial overflow-hidden">
+          <TabsList className={`flex-shrink-0 grid w-full ${hasJobs && hasDbComparisons ? 'grid-cols-3 md:grid-cols-5' : hasJobs || hasDbComparisons ? 'grid-cols-4' : 'grid-cols-3'} mb-0 sm:mb-4`}>
             <TabsTrigger value="details" className="text-sm">
               Details
             </TabsTrigger>
@@ -994,6 +1016,15 @@ export function TicketDetailModal({
                 Stats
                 <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
                   {fullJobs.length}
+                </Badge>
+              </TabsTrigger>
+            )}
+            {hasDbComparisons && (
+              <TabsTrigger value="comparisons" className="text-sm relative" data-testid="comparisons-tab-trigger">
+                <GitCompare className="w-4 h-4 mr-1.5" />
+                Compare
+                <Badge className="ml-2 bg-blue text-white text-xs px-1.5 py-0 h-5 min-w-[1.25rem]">
+                  {dbComparisonCount}
                 </Badge>
               </TabsTrigger>
             )}
@@ -1268,6 +1299,34 @@ export function TicketDetailModal({
           {hasJobs && (
             <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="stats-tab-content">
               <TicketStats jobs={fullJobs} polledJobs={jobs} />
+            </TabsContent>
+          )}
+
+          {/* Comparisons Tab - only rendered when DB comparisons exist */}
+          {hasDbComparisons && (
+            <TabsContent value="comparisons" className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(90vh-280px)] pr-2 pb-4" data-testid="comparisons-tab-content">
+              {selectedComparisonId ? (
+                <ComparisonDashboard
+                  projectId={projectId}
+                  comparisonId={selectedComparisonId}
+                  onBack={() => setSelectedComparisonId(null)}
+                />
+              ) : (
+                <div className="space-y-2">
+                  {dbComparisonList?.comparisons.map((item) => (
+                    <ComparisonListItemCard
+                      key={item.id}
+                      item={item}
+                      onClick={() => setSelectedComparisonId(item.id)}
+                    />
+                  ))}
+                  {(!dbComparisonList || dbComparisonList.comparisons.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No comparisons found.
+                    </p>
+                  )}
+                </div>
+              )}
             </TabsContent>
           )}
         </Tabs>

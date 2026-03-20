@@ -57,23 +57,23 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write integration tests for GET ticket comparisons DB endpoint (list, bidirectional lookup) in tests/integration/comparisons/comparison-db-api.test.ts
-- [ ] T012 [P] [US1] Write integration tests for GET ticket comparison check endpoint (hasComparisons boolean/count) in tests/integration/comparisons/comparison-db-api.test.ts
-- [ ] T013 [P] [US1] Write component tests for ComparisonDashboard, ComparisonRanking (winner highlighted, scores displayed), ComparisonMetrics (charts render, best values highlighted) in tests/unit/components/comparison-dashboard.test.tsx
+- [x] T011 [P] [US1] Write integration tests for GET ticket comparisons DB endpoint (list, bidirectional lookup) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T012 [P] [US1] Write integration tests for GET ticket comparison check endpoint (hasComparisons boolean/count) in tests/integration/comparisons/comparison-db-api.test.ts
+- [x] T013 [P] [US1] Write component tests for ComparisonDashboard, ComparisonRanking (winner highlighted, scores displayed), ComparisonMetrics (charts render, best values highlighted) in tests/unit/components/comparison-dashboard.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement GET handler in app/api/projects/[projectId]/tickets/[id]/comparisons/db/route.ts — list comparisons for a ticket (bidirectional via ComparisonEntry), session auth, paginated
-- [ ] T015 [P] [US1] Implement GET handler in app/api/projects/[projectId]/tickets/[id]/comparisons/db/check/route.ts — lightweight existence check returning { hasComparisons, count }
-- [ ] T016 [P] [US1] Add DB-backed TanStack Query hooks to hooks/use-comparisons.ts: useDbComparisonCheck (staleTime: 30s), useDbComparisonList (staleTime: 30s), useComparisonDetail (staleTime: 5m), useSaveComparison (mutation with cache invalidation)
-- [ ] T017 [P] [US1] Create ComparisonRanking component in components/comparison/comparison-ranking.tsx — cards per ticket with rank, score, agent, workflow type, winner highlight (green border/badge), key differentiators
-- [ ] T018 [P] [US1] Create ComparisonMetrics component in components/comparison/comparison-metrics.tsx — Recharts horizontal BarChart for lines added/removed, source files, test files, test ratio; best value per metric highlighted using semantic color tokens
-- [ ] T019 [P] [US1] Create ComparisonDecisions component in components/comparison/comparison-decisions.tsx — collapsible sections per decision point: topic, verdict, per-ticket approach + assessment using shadcn/ui Collapsible
-- [ ] T020 [P] [US1] Create ComparisonCompliance component in components/comparison/comparison-compliance.tsx — grid/table with rows = principles, columns = tickets; pass/fail badges with notes tooltip
-- [ ] T021 [P] [US1] Create ComparisonListItem component in components/comparison/comparison-list-item.tsx — clickable item showing date, participant count, winner ticket key, score
-- [ ] T022 [US1] Create ComparisonDashboard orchestrator in components/comparison/comparison-dashboard.tsx — fetches enriched detail via useComparisonDetail, renders ComparisonRanking, ComparisonMetrics, ComparisonDecisions, ComparisonCompliance sections
-- [ ] T023 [US1] Extend comparison types in components/comparison/types.ts with DB-backed types (EnrichedComparison, ComparisonListResponse, ComparisonCheckResponse)
-- [ ] T024 [US1] Integrate Comparisons tab into components/board/ticket-detail-modal.tsx — add useDbComparisonCheck call, extend tab grid to grid-cols-3 md:grid-cols-5 when both hasJobs and hasComparisons, add conditional TabsTrigger with comparison count badge, add TabsContent rendering comparison list → dashboard navigation, add Ctrl/Cmd+5 keyboard shortcut
+- [x] T014 [P] [US1] Implement GET handler in app/api/projects/[projectId]/tickets/[id]/comparisons/db/route.ts — list comparisons for a ticket (bidirectional via ComparisonEntry), session auth, paginated
+- [x] T015 [P] [US1] Implement GET handler in app/api/projects/[projectId]/tickets/[id]/comparisons/db/check/route.ts — lightweight existence check returning { hasComparisons, count }
+- [x] T016 [P] [US1] Add DB-backed TanStack Query hooks to hooks/use-comparisons.ts: useDbComparisonCheck (staleTime: 30s), useDbComparisonList (staleTime: 30s), useComparisonDetail (staleTime: 5m), useSaveComparison (mutation with cache invalidation)
+- [x] T017 [P] [US1] Create ComparisonRanking component in components/comparison/comparison-ranking.tsx — cards per ticket with rank, score, agent, workflow type, winner highlight (green border/badge), key differentiators
+- [x] T018 [P] [US1] Create ComparisonMetrics component in components/comparison/comparison-metrics.tsx — Recharts horizontal BarChart for lines added/removed, source files, test files, test ratio; best value per metric highlighted using semantic color tokens
+- [x] T019 [P] [US1] Create ComparisonDecisions component in components/comparison/comparison-decisions.tsx — collapsible sections per decision point: topic, verdict, per-ticket approach + assessment using shadcn/ui Collapsible
+- [x] T020 [P] [US1] Create ComparisonCompliance component in components/comparison/comparison-compliance.tsx — grid/table with rows = principles, columns = tickets; pass/fail badges with notes tooltip
+- [x] T021 [P] [US1] Create ComparisonListItem component in components/comparison/comparison-list-item.tsx — clickable item showing date, participant count, winner ticket key, score
+- [x] T022 [US1] Create ComparisonDashboard orchestrator in components/comparison/comparison-dashboard.tsx — fetches enriched detail via useComparisonDetail, renders ComparisonRanking, ComparisonMetrics, ComparisonDecisions, ComparisonCompliance sections
+- [x] T023 [US1] Extend comparison types in components/comparison/types.ts with DB-backed types (EnrichedComparison, ComparisonListResponse, ComparisonCheckResponse)
+- [x] T024 [US1] Integrate Comparisons tab into components/board/ticket-detail-modal.tsx — add useDbComparisonCheck call, extend tab grid to grid-cols-3 md:grid-cols-5 when both hasJobs and hasComparisons, add conditional TabsTrigger with comparison count badge, add TabsContent rendering comparison list → dashboard navigation, add Ctrl/Cmd+5 keyboard shortcut
 
 **Checkpoint**: Comparisons tab appears on tickets with comparisons; clicking a comparison opens the dashboard with ranking, metrics, decisions, and compliance sections; all 4 sections render correctly
 
