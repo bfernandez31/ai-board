@@ -2,9 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type {
-  ComparisonDetail,
   ComparisonSummary,
   ComparisonCheckResult,
+  ComparisonDetail,
 } from '@/lib/types/comparison';
 
 export const comparisonKeys = {
@@ -29,18 +29,24 @@ interface ComparisonReportResponse {
   comparison: ComparisonDetail;
 }
 
+async function fetchJson<T>(url: string, fallbackMessage: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || fallbackMessage);
+  }
+
+  return res.json();
+}
+
 async function fetchComparisonCheck(
   projectId: number,
   ticketId: number
 ): Promise<ComparisonCheckResult> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/check`
+  return fetchJson(
+    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/check`,
+    'Failed to check comparisons'
   );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to check comparisons');
-  }
-  return res.json();
 }
 
 async function fetchComparisonList(
@@ -48,14 +54,10 @@ async function fetchComparisonList(
   ticketId: number,
   limit: number = 10
 ): Promise<ComparisonListResponse> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons?limit=${limit}`
+  return fetchJson(
+    `/api/projects/${projectId}/tickets/${ticketId}/comparisons?limit=${limit}`,
+    'Failed to fetch comparisons'
   );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to fetch comparisons');
-  }
-  return res.json();
 }
 
 async function fetchComparisonReport(
@@ -63,14 +65,10 @@ async function fetchComparisonReport(
   ticketId: number,
   filename: string
 ): Promise<ComparisonReportResponse> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${encodeURIComponent(filename)}`
+  return fetchJson(
+    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${encodeURIComponent(filename)}`,
+    'Failed to fetch comparison report'
   );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to fetch comparison report');
-  }
-  return res.json();
 }
 
 export function useComparisonCheck(
