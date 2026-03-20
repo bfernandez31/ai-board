@@ -182,21 +182,10 @@ export async function GET(
           testRatio: entry.testRatio,
         },
         complianceData,
-        ticket: entry.ticket ? {
-          id: entry.ticket.id,
-          ticketKey: entry.ticket.ticketKey,
-          title: entry.ticket.title,
-          stage: entry.ticket.stage,
-          workflowType: entry.ticket.workflowType,
-          branch: entry.ticket.branch,
-        } : null,
-        telemetry: telemetry ? {
-          totalCostUsd: telemetry.totalCostUsd,
-          totalDurationMs: telemetry.totalDurationMs,
-          totalInputTokens: telemetry.totalInputTokens,
-          totalOutputTokens: telemetry.totalOutputTokens,
-          model: telemetry.model ?? 'unknown',
-        } : null,
+        ticket: entry.ticket,
+        telemetry: telemetry
+          ? { ...telemetry, model: telemetry.model ?? 'unknown' }
+          : null,
         qualityScore: quality ?? null,
       };
     });

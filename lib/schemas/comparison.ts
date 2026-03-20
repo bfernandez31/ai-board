@@ -25,7 +25,7 @@ export const createComparisonSchema = z.object({
   recommendation: z.string().min(1),
   notes: z.string().optional(),
   entries: z.array(comparisonEntrySchema).min(2),
-  decisionPoints: z.array(comparisonDecisionPointSchema).min(0),
+  decisionPoints: z.array(comparisonDecisionPointSchema),
 });
 
 export type CreateComparisonInput = z.infer<typeof createComparisonSchema>;

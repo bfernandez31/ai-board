@@ -26,10 +26,9 @@ export function ComparisonCompliance({ entries }: ComparisonComplianceProps) {
       const entryMap = new Map<string, { passed: boolean; notes?: string }>();
       for (const item of entry.complianceData) {
         names.add(item.name);
-        entryMap.set(item.name, {
-          passed: item.passed,
-          ...(item.notes !== undefined ? { notes: item.notes } : {}),
-        });
+        const value: { passed: boolean; notes?: string } = { passed: item.passed };
+        if (item.notes !== undefined) value.notes = item.notes;
+        entryMap.set(item.name, value);
       }
       map.set(key, entryMap);
     }

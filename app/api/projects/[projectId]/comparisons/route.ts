@@ -186,26 +186,18 @@ async function getDbComparisons(
     prisma.comparison.count({ where: { projectId } }),
   ]);
 
-  const result = comparisons.map((c) => {
+  // Collect winner ticket IDs for batch lookup
+  const winnerByComparison = new Map<number, { ticketId: number; score: number }>();
+  for (const c of comparisons) {
     const winner = c.entries.find((e) => e.isWinner);
-    // Look up winner ticket key — need a separate query or include
-    return {
-      id: c.id,
-      sourceTicketId: c.sourceTicketId,
-      sourceTicketKey: c.sourceTicket.ticketKey,
-      recommendation: c.recommendation,
-      createdAt: c.createdAt.toISOString(),
-      entryCount: c.entries.length,
-      winnerTicketKey: winner ? null : null, // Will be enriched below
-      winnerScore: winner?.score ?? null,
-      _winnerTicketId: winner?.ticketId ?? null,
-    };
-  });
+    if (winner) {
+      winnerByComparison.set(c.id, { ticketId: winner.ticketId, score: winner.score });
+    }
+  }
 
-  // Batch-fetch winner ticket keys
-  const winnerTicketIds = result
-    .map((r) => r._winnerTicketId)
-    .filter((id): id is number => id !== null);
+  const winnerTicketIds = [...new Set(
+    Array.from(winnerByComparison.values()).map((w) => w.ticketId)
+  )];
 
   const winnerTickets = winnerTicketIds.length > 0
     ? await prisma.ticket.findMany({
@@ -216,10 +208,19 @@ async function getDbComparisons(
 
   const ticketKeyMap = new Map(winnerTickets.map((t) => [t.id, t.ticketKey]));
 
-  const formatted = result.map(({ _winnerTicketId, ...rest }) => ({
-    ...rest,
-    winnerTicketKey: _winnerTicketId ? ticketKeyMap.get(_winnerTicketId) ?? null : null,
-  }));
+  const formatted = comparisons.map((c) => {
+    const winner = winnerByComparison.get(c.id);
+    return {
+      id: c.id,
+      sourceTicketId: c.sourceTicketId,
+      sourceTicketKey: c.sourceTicket.ticketKey,
+      recommendation: c.recommendation,
+      createdAt: c.createdAt.toISOString(),
+      entryCount: c.entries.length,
+      winnerTicketKey: winner ? ticketKeyMap.get(winner.ticketId) ?? null : null,
+      winnerScore: winner?.score ?? null,
+    };
+  });
 
   return NextResponse.json({
     comparisons: formatted,
