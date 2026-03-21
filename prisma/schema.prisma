@@ -42,14 +42,14 @@ model Job {
   ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   // Claude telemetry metrics (aggregated from all API calls in the job)
-  inputTokens        Int?     // Total input tokens consumed
-  outputTokens       Int?     // Total output tokens generated
-  cacheReadTokens    Int?     // Total cache read tokens
-  cacheCreationTokens Int?    // Total cache creation tokens
-  costUsd            Float?   // Total cost in USD
-  durationMs         Int?     // Total Claude API duration in milliseconds
-  model              String?  @db.VarChar(50) // Primary model used
-  toolsUsed          String[] @default([])    // List of tools used (Edit, Write, Bash, etc.)
+  inputTokens         Int? // Total input tokens consumed
+  outputTokens        Int? // Total output tokens generated
+  cacheReadTokens     Int? // Total cache read tokens
+  cacheCreationTokens Int? // Total cache creation tokens
+  costUsd             Float? // Total cost in USD
+  durationMs          Int? // Total Claude API duration in milliseconds
+  model               String?  @db.VarChar(50) // Primary model used
+  toolsUsed           String[] @default([]) // List of tools used (Edit, Write, Bash, etc.)
 
   // Quality score (0-100) computed from code review agent dimension scores
   // Only populated for COMPLETED verify jobs of FULL workflow tickets
@@ -81,6 +81,7 @@ model Project {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tickets             Ticket[]
   members             ProjectMember[]
+  comparisonRecords   ComparisonRecord[]
 
   @@unique([githubOwner, githubRepo])
   @@index([githubOwner, githubRepo])
@@ -114,28 +115,32 @@ model Session {
 }
 
 model Ticket {
-  id                  Int                  @id @default(autoincrement())
-  title               String               @db.VarChar(100)
-  description         String               @db.VarChar(10000)
-  stage               Stage                @default(INBOX)
-  version             Int                  @default(1)
-  projectId           Int
-  ticketNumber        Int
-  ticketKey           String               @unique @db.VarChar(20)
-  branch              String?              @db.VarChar(200)
-  previewUrl          String?              @db.VarChar(500)
-  autoMode            Boolean              @default(false)
-  workflowType        WorkflowType         @default(FULL)
-  attachments         Json?                @default("[]")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-  clarificationPolicy ClarificationPolicy?
-  agent               Agent?
-  closedAt            DateTime?
-  comments            Comment[]
-  jobs                Job[]
-  notifications       Notification[]
-  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                     Int                       @id @default(autoincrement())
+  title                  String                    @db.VarChar(100)
+  description            String                    @db.VarChar(10000)
+  stage                  Stage                     @default(INBOX)
+  version                Int                       @default(1)
+  projectId              Int
+  ticketNumber           Int
+  ticketKey              String                    @unique @db.VarChar(20)
+  branch                 String?                   @db.VarChar(200)
+  previewUrl             String?                   @db.VarChar(500)
+  autoMode               Boolean                   @default(false)
+  workflowType           WorkflowType              @default(FULL)
+  attachments            Json?                     @default("[]")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @default(now()) @updatedAt
+  clarificationPolicy    ClarificationPolicy?
+  agent                  Agent?
+  closedAt               DateTime?
+  comments               Comment[]
+  jobs                   Job[]
+  notifications          Notification[]
+  project                Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceComparisons      ComparisonRecord[]        @relation("ComparisonSourceTicket")
+  winnerComparisons      ComparisonRecord[]        @relation("ComparisonWinnerTicket")
+  comparisonParticipants ComparisonParticipant[]
+  decisionVerdicts       DecisionPointEvaluation[] @relation("DecisionVerdictTicket")
 
   @@unique([projectId, ticketNumber])
   @@index([projectId])
@@ -189,10 +194,10 @@ model Comment {
 // Future: Implement cleanup job to set deletedAt for old notifications
 model Notification {
   id          Int       @id @default(autoincrement())
-  recipientId String    // User receiving the notification
-  actorId     String    // User who created the mention
-  commentId   Int       // Source comment
-  ticketId    Int       // Source ticket (for navigation)
+  recipientId String // User receiving the notification
+  actorId     String // User who created the mention
+  commentId   Int // Source comment
+  ticketId    Int // Source ticket (for navigation)
   read        Boolean   @default(false)
   readAt      DateTime?
   createdAt   DateTime  @default(now())
@@ -204,8 +209,8 @@ model Notification {
   ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([recipientId, createdAt]) // List notifications for user
-  @@index([recipientId, read])      // Count unread notifications
-  @@index([createdAt])              // Cleanup job (30-day retention)
+  @@index([recipientId, read]) // Count unread notifications
+  @@index([createdAt]) // Cleanup job (30-day retention)
 }
 
 model VerificationToken {
@@ -339,4 +344,94 @@ model StripeEvent {
 
   @@index([type])
   @@index([processedAt])
+}
+
+model ComparisonRecord {
+  id                    Int                       @id @default(autoincrement())
+  projectId             Int
+  sourceTicketId        Int
+  winnerTicketId        Int
+  markdownPath          String                    @db.VarChar(500)
+  summary               String                    @db.VarChar(2000)
+  overallRecommendation String                    @db.VarChar(10000)
+  keyDifferentiators    Json
+  generatedAt           DateTime
+  createdAt             DateTime                  @default(now())
+  project               Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceTicket          Ticket                    @relation("ComparisonSourceTicket", fields: [sourceTicketId], references: [id], onDelete: Cascade)
+  winnerTicket          Ticket                    @relation("ComparisonWinnerTicket", fields: [winnerTicketId], references: [id], onDelete: Cascade)
+  participants          ComparisonParticipant[]
+  decisionPoints        DecisionPointEvaluation[]
+
+  @@index([projectId, generatedAt(sort: Desc)])
+  @@index([sourceTicketId, generatedAt(sort: Desc)])
+  @@index([winnerTicketId, generatedAt(sort: Desc)])
+}
+
+model ComparisonParticipant {
+  id                       Int                    @id @default(autoincrement())
+  comparisonRecordId       Int
+  ticketId                 Int
+  rank                     Int
+  score                    Int
+  workflowTypeAtComparison WorkflowType
+  agentAtComparison        Agent?
+  rankRationale            String                 @db.VarChar(4000)
+  createdAt                DateTime               @default(now())
+  comparisonRecord         ComparisonRecord       @relation(fields: [comparisonRecordId], references: [id], onDelete: Cascade)
+  ticket                   Ticket                 @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  metricSnapshot           TicketMetricSnapshot?
+  complianceAssessments    ComplianceAssessment[]
+
+  @@unique([comparisonRecordId, ticketId])
+  @@unique([comparisonRecordId, rank])
+  @@index([ticketId, createdAt(sort: Desc)])
+  @@index([comparisonRecordId, rank])
+}
+
+model TicketMetricSnapshot {
+  id                      Int                   @id @default(autoincrement())
+  comparisonParticipantId Int                   @unique
+  linesAdded              Int?
+  linesRemoved            Int?
+  linesChanged            Int?
+  filesChanged            Int?
+  testFilesChanged        Int?
+  changedFiles            Json
+  bestValueFlags          Json
+  createdAt               DateTime              @default(now())
+  comparisonParticipant   ComparisonParticipant @relation(fields: [comparisonParticipantId], references: [id], onDelete: Cascade)
+}
+
+model DecisionPointEvaluation {
+  id                    Int              @id @default(autoincrement())
+  comparisonRecordId    Int
+  title                 String           @db.VarChar(255)
+  verdictTicketId       Int?
+  verdictSummary        String           @db.VarChar(4000)
+  rationale             String           @db.VarChar(10000)
+  participantApproaches Json
+  displayOrder          Int
+  createdAt             DateTime         @default(now())
+  comparisonRecord      ComparisonRecord @relation(fields: [comparisonRecordId], references: [id], onDelete: Cascade)
+  verdictTicket         Ticket?          @relation("DecisionVerdictTicket", fields: [verdictTicketId], references: [id], onDelete: SetNull)
+
+  @@unique([comparisonRecordId, displayOrder])
+  @@index([comparisonRecordId, displayOrder])
+  @@index([verdictTicketId])
+}
+
+model ComplianceAssessment {
+  id                      Int                   @id @default(autoincrement())
+  comparisonParticipantId Int
+  principleKey            String                @db.VarChar(100)
+  principleName           String                @db.VarChar(255)
+  status                  String                @db.VarChar(20)
+  notes                   String                @db.VarChar(4000)
+  displayOrder            Int
+  createdAt               DateTime              @default(now())
+  comparisonParticipant   ComparisonParticipant @relation(fields: [comparisonParticipantId], references: [id], onDelete: Cascade)
+
+  @@unique([comparisonParticipantId, principleKey])
+  @@index([comparisonParticipantId, displayOrder])
 }

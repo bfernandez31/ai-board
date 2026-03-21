@@ -280,23 +280,26 @@ export interface SpecSections {
  * Maps to API ComparisonListResponse.comparisons items.
  */
 export interface ComparisonSummary {
-  /** Report filename */
-  filename: string;
+  /** Saved comparison identifier */
+  id: number;
 
   /** Report generation timestamp (ISO string from API) */
   generatedAt: string;
 
   /** Source ticket key */
-  sourceTicket: string;
+  sourceTicketKey: string;
 
-  /** Compared ticket keys */
-  comparedTickets: string[];
+  /** Participating ticket keys, ordered by rank when available */
+  participantTicketKeys: string[];
 
-  /** Overall alignment score (0-100) */
-  alignmentScore: number;
+  /** Winner ticket key */
+  winnerTicketKey: string;
 
-  /** Whether alignment is above threshold (30%) */
-  isAligned: boolean;
+  /** Saved summary for the comparison */
+  summary: string;
+
+  /** Recommendation text when available */
+  recommendation?: string;
 }
 
 /**
@@ -311,8 +314,96 @@ export interface ComparisonCheckResult {
   /** Number of comparison reports */
   count: number;
 
-  /** Filename of most recent report (if any) */
-  latestReport: string | null;
+  /** ID of the most recent comparison (if any) */
+  latestComparisonId: number | null;
+}
+
+export type ComparisonEnrichmentState =
+  | 'available'
+  | 'pending'
+  | 'unavailable';
+
+export interface ComparisonEnrichmentValue<T> {
+  state: ComparisonEnrichmentState;
+  value: T | null;
+}
+
+export interface ComparisonTelemetryEnrichment {
+  inputTokens: ComparisonEnrichmentValue<number>;
+  outputTokens: ComparisonEnrichmentValue<number>;
+  durationMs: ComparisonEnrichmentValue<number>;
+  costUsd: ComparisonEnrichmentValue<number>;
+}
+
+export interface ComparisonMetricSnapshot {
+  linesAdded: number | null;
+  linesRemoved: number | null;
+  linesChanged: number | null;
+  filesChanged: number | null;
+  testFilesChanged: number | null;
+  changedFiles: string[];
+  bestValueFlags: Record<string, boolean>;
+}
+
+export interface ComparisonParticipantDetail {
+  ticketId: number;
+  ticketKey: string;
+  title: string;
+  stage: Stage;
+  workflowType: WorkflowType;
+  agent: string | null;
+  rank: number;
+  score: number;
+  rankRationale: string;
+  quality: ComparisonEnrichmentValue<number>;
+  telemetry: ComparisonTelemetryEnrichment;
+  metrics: ComparisonMetricSnapshot;
+}
+
+export interface ComparisonDecisionPointApproach {
+  ticketId: number;
+  ticketKey: string;
+  summary: string;
+}
+
+export interface ComparisonDecisionPoint {
+  id: number;
+  title: string;
+  verdictTicketId: number | null;
+  verdictSummary: string;
+  rationale: string;
+  displayOrder: number;
+  participantApproaches: ComparisonDecisionPointApproach[];
+}
+
+export interface ComparisonComplianceCell {
+  participantTicketId: number;
+  participantTicketKey: string;
+  status: 'pass' | 'mixed' | 'fail';
+  notes: string;
+}
+
+export interface ComparisonComplianceRow {
+  principleKey: string;
+  principleName: string;
+  displayOrder: number;
+  assessments: ComparisonComplianceCell[];
+}
+
+export interface ComparisonDetail {
+  id: number;
+  generatedAt: string;
+  sourceTicketId: number;
+  sourceTicketKey: string;
+  markdownPath: string;
+  summary: string;
+  overallRecommendation: string;
+  keyDifferentiators: string[];
+  winnerTicketId: number;
+  winnerTicketKey: string;
+  participants: ComparisonParticipantDetail[];
+  decisionPoints: ComparisonDecisionPoint[];
+  complianceRows: ComparisonComplianceRow[];
 }
 
 /**

@@ -2,82 +2,57 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type {
-  ComparisonSummary,
   ComparisonCheckResult,
+  ComparisonDetail,
+  ComparisonSummary,
 } from '@/lib/types/comparison';
+
+const DEFAULT_QUERY_OPTIONS = {
+  refetchOnWindowFocus: false,
+} as const;
+
+const SHORT_STALE_TIME_MS = 30_000;
+const DEFAULT_GC_TIME_MS = 5 * 60 * 1000;
+const DETAIL_STALE_TIME_MS = 5 * 60 * 1000;
+const DETAIL_GC_TIME_MS = 30 * 60 * 1000;
 
 export const comparisonKeys = {
   all: ['comparisons'] as const,
   project: (projectId: number) => ['comparisons', projectId] as const,
-  ticket: (projectId: number, ticketId: number) =>
-    ['comparisons', projectId, ticketId] as const,
+  ticket: (projectId: number, ticketId: number, limit: number) =>
+    ['comparisons', projectId, ticketId, 'history', limit] as const,
   check: (projectId: number, ticketId: number) =>
     ['comparisons', projectId, ticketId, 'check'] as const,
-  report: (projectId: number, ticketId: number, filename: string) =>
-    ['comparisons', projectId, ticketId, 'report', filename] as const,
+  detail: (projectId: number, ticketId: number, comparisonId: number) =>
+    ['comparisons', projectId, ticketId, 'detail', comparisonId] as const,
 };
 
 interface ComparisonListResponse {
   comparisons: ComparisonSummary[];
   total: number;
   limit: number;
-  offset: number;
 }
 
-interface ComparisonReportResponse {
-  filename: string;
-  content: string;
-  metadata: {
-    generatedAt: string;
-    sourceTicket: string;
-    comparedTickets: string[];
-    alignmentScore: number;
-    branch: string;
-  };
-}
-
-async function fetchComparisonCheck(
-  projectId: number,
-  ticketId: number
-): Promise<ComparisonCheckResult> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/check`
-  );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to check comparisons');
+async function fetchJson<T>(url: string, fallbackMessage: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.error || fallbackMessage);
   }
-  return res.json();
+
+  return response.json();
 }
 
-async function fetchComparisonList(
+function getComparisonDetailQueryKey(
   projectId: number,
   ticketId: number,
-  limit: number = 10
-): Promise<ComparisonListResponse> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons?limit=${limit}`
-  );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to fetch comparisons');
+  comparisonId: number | null
+) {
+  if (comparisonId == null) {
+    return [...comparisonKeys.ticket(projectId, ticketId, 10), 'no-detail'] as const;
   }
-  return res.json();
-}
 
-async function fetchComparisonReport(
-  projectId: number,
-  ticketId: number,
-  filename: string
-): Promise<ComparisonReportResponse> {
-  const res = await fetch(
-    `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${encodeURIComponent(filename)}`
-  );
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.error || 'Failed to fetch comparison report');
-  }
-  return res.json();
+  return comparisonKeys.detail(projectId, ticketId, comparisonId);
 }
 
 export function useComparisonCheck(
@@ -87,11 +62,15 @@ export function useComparisonCheck(
 ) {
   return useQuery({
     queryKey: comparisonKeys.check(projectId, ticketId),
-    queryFn: () => fetchComparisonCheck(projectId, ticketId),
+    queryFn: () =>
+      fetchJson<ComparisonCheckResult>(
+        `/api/projects/${projectId}/tickets/${ticketId}/comparisons/check`,
+        'Failed to check comparisons'
+      ),
     enabled: enabled && projectId > 0 && ticketId > 0,
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: SHORT_STALE_TIME_MS,
+    gcTime: DEFAULT_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }
 
@@ -102,27 +81,35 @@ export function useComparisonList(
   enabled: boolean = false
 ) {
   return useQuery({
-    queryKey: comparisonKeys.ticket(projectId, ticketId),
-    queryFn: () => fetchComparisonList(projectId, ticketId, limit),
+    queryKey: comparisonKeys.ticket(projectId, ticketId, limit),
+    queryFn: () =>
+      fetchJson<ComparisonListResponse>(
+        `/api/projects/${projectId}/tickets/${ticketId}/comparisons?limit=${limit}`,
+        'Failed to fetch comparison history'
+      ),
     enabled: enabled && projectId > 0 && ticketId > 0,
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: SHORT_STALE_TIME_MS,
+    gcTime: DEFAULT_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }
 
-export function useComparisonReport(
+export function useComparisonDetail(
   projectId: number,
   ticketId: number,
-  filename: string,
+  comparisonId: number | null,
   enabled: boolean = false
 ) {
   return useQuery({
-    queryKey: comparisonKeys.report(projectId, ticketId, filename),
-    queryFn: () => fetchComparisonReport(projectId, ticketId, filename),
-    enabled: enabled && projectId > 0 && ticketId > 0 && !!filename,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    queryKey: getComparisonDetailQueryKey(projectId, ticketId, comparisonId),
+    queryFn: () =>
+      fetchJson<ComparisonDetail>(
+        `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${comparisonId}`,
+        'Failed to fetch comparison detail'
+      ),
+    enabled: enabled && projectId > 0 && ticketId > 0 && comparisonId != null,
+    staleTime: DETAIL_STALE_TIME_MS,
+    gcTime: DETAIL_GC_TIME_MS,
+    ...DEFAULT_QUERY_OPTIONS,
   });
 }

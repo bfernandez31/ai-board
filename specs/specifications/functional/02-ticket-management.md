@@ -341,6 +341,77 @@ Users can close the detail modal by:
 - Pressing the Escape key
 - Clicking outside the modal content area
 
+## Ticket Comparison Dashboard
+
+### Purpose
+
+The comparison dashboard provides a visual view of `/compare` results, replacing the raw markdown experience with a structured, interactive UI. It displays ranking, code metrics, implementation choices, and constitution compliance across competing ticket implementations.
+
+### Access Points
+
+- A "Compare" button appears in the ticket detail modal when the ticket has participated in at least one comparison (as source or participant)
+- Clicking the button opens the comparison viewer dialog
+- The check endpoint determines button visibility (cached with 30s stale time)
+
+### Comparison Viewer
+
+The viewer is a modal dialog with two sections:
+
+**History Sidebar** (left, 280px):
+- Lists saved comparisons ordered by most recent first
+- Each entry shows the winner, participant tickets, timestamp, and summary
+- Clicking an entry loads the full comparison detail
+- Toggled via a "History (N)" button in the dialog header
+- Hidden on small screens
+
+**Main Content** (right):
+- Scrollable area displaying four sections for the selected comparison:
+
+**Ranking and Recommendation**:
+- Overall recommendation text and executive summary
+- Key differentiators shown as badges
+- Participant cards ordered by rank showing:
+  - Rank number, ticket key, title
+  - Score percentage badge
+  - "Winner" badge on rank 1
+  - Rank rationale text
+
+**Implementation Metrics**:
+- Table comparing code metrics across participants
+- Metrics: lines changed, files changed, test files changed
+- "Best value" badge highlights the leading participant per metric
+- "Unavailable" shown when metrics are missing
+
+**Decision Points**:
+- Collapsible sections for each architectural decision
+- Each shows title, verdict summary, rationale, and per-participant approaches
+- First decision point expanded by default
+
+**Constitution Compliance**:
+- Table grid with principles as rows, participants as columns
+- Status badges: pass (green), mixed (outline), fail (red)
+- Assessment notes shown below each status
+
+### Data Enrichment
+
+The comparison detail view enriches stored comparison data with live data:
+- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job)
+- **Telemetry**: Input/output tokens, duration, cost from the latest job per participant
+
+### Selection Logic
+
+When the viewer opens, the selected comparison is resolved in priority order:
+1. User-selected comparison from history list
+2. `initialComparisonId` prop (deep link)
+3. `latestComparisonId` from the check endpoint
+
+### Data Fetching
+
+Three TanStack Query hooks manage data:
+- `useComparisonCheck`: Quick existence check (30s stale time)
+- `useComparisonList`: Paginated history (30s stale time)
+- `useComparisonDetail`: Full detail for selected comparison (5min stale time)
+
 ## Ticket Duplication
 
 ### Duplicate Dropdown Menu

@@ -204,7 +204,7 @@ export function TicketDetailModal({
   const { data: comparisonCheck } = useComparisonCheck(
     projectId,
     ticket?.id || 0,
-    open && !!ticket && !!ticket.branch
+    open && !!ticket
   );
 
   // Update local ticket when a different ticket is selected, version changes, or branch changes
@@ -1313,6 +1313,7 @@ export function TicketDetailModal({
         <ComparisonViewer
           projectId={projectId}
           ticketId={ticket.id}
+          initialComparisonId={comparisonCheck?.latestComparisonId ?? null}
           isOpen={comparisonViewerOpen}
           onClose={() => setComparisonViewerOpen(false)}
         />
