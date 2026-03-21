@@ -1,0 +1,225 @@
+{
+  "projectId": 3,
+  "sourceTicket": {
+    "id": 1812,
+    "ticketKey": "AIB-329",
+    "title": "Persist Comparison Data",
+    "stage": "VERIFY",
+    "workflowType": "FULL",
+    "agent": "CLAUDE"
+  },
+  "participants": [
+    {
+      "id": 0,
+      "ticketKey": "AIB-330",
+      "title": "Persist Comparison Data",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CODEX"
+    },
+    {
+      "id": 0,
+      "ticketKey": "AIB-331",
+      "title": "Copy of Persist",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CODEX"
+    },
+    {
+      "id": 0,
+      "ticketKey": "AIB-328",
+      "title": "Persist Comparison Data",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CLAUDE"
+    }
+  ],
+  "markdownPath": "specs/AIB-329-persist-comparison-data/comparisons/20260321-201557-vs-AIB-330-AIB-331-AIB-328.md",
+  "report": {
+    "metadata": {
+      "generatedAt": "2026-03-21T20:15:57.000Z",
+      "sourceTicket": "AIB-329",
+      "comparedTickets": ["AIB-330", "AIB-331", "AIB-328"],
+      "filePath": "20260321-201557-vs-AIB-330-AIB-331-AIB-328.md"
+    },
+    "summary": "AIB-331 wins with 85% — strictest Zod validation (nativeEnum), best test ratio (4 files), clean normalization helpers. AIB-329 runner-up at 78%. AIB-328 weaker at 65% (looseObject, unsafe casts). AIB-330 produced zero code.",
+    "alignment": {
+      "overall": 80,
+      "dimensions": {
+        "requirements": 85,
+        "scenarios": 75,
+        "entities": 80,
+        "keywords": 78
+      },
+      "isAligned": true,
+      "matchingRequirements": ["POST persistence endpoint", "workflow auth", "Zod validation", "integration tests"],
+      "matchingEntities": ["ComparisonRecord", "ComparisonParticipant", "Ticket"]
+    },
+    "implementation": {
+      "AIB-329": {
+        "ticketKey": "AIB-329",
+        "linesAdded": 339,
+        "linesRemoved": 0,
+        "linesChanged": 339,
+        "filesChanged": 4,
+        "changedFiles": [
+          ".claude-plugin/commands/ai-board.compare.md",
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts",
+          "proxy.ts"
+        ],
+        "testFilesChanged": 1,
+        "hasData": true
+      },
+      "AIB-330": {
+        "ticketKey": "AIB-330",
+        "linesAdded": 0,
+        "linesRemoved": 0,
+        "linesChanged": 0,
+        "filesChanged": 0,
+        "changedFiles": [],
+        "testFilesChanged": 0,
+        "hasData": false
+      },
+      "AIB-331": {
+        "ticketKey": "AIB-331",
+        "linesAdded": 286,
+        "linesRemoved": 2,
+        "linesChanged": 288,
+        "filesChanged": 4,
+        "changedFiles": [
+          ".claude-plugin/commands/ai-board.compare.md",
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts",
+          "proxy.ts"
+        ],
+        "testFilesChanged": 4,
+        "hasData": true
+      },
+      "AIB-328": {
+        "ticketKey": "AIB-328",
+        "linesAdded": 187,
+        "linesRemoved": 30,
+        "linesChanged": 217,
+        "filesChanged": 2,
+        "changedFiles": [
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/comparisons/route.ts"
+        ],
+        "testFilesChanged": 1,
+        "hasData": true
+      }
+    },
+    "compliance": {
+      "AIB-329": {
+        "overall": 78,
+        "totalPrinciples": 5,
+        "passedPrinciples": 4,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "Explicit types; minor `as` cast post-Zod validation" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "API route follows Next.js conventions" },
+          { "name": "Test-Driven Development", "section": "III", "passed": false, "notes": "Only 1 test file (25% ratio)" },
+          { "name": "Security-First Design", "section": "IV", "passed": true, "notes": "Strict Zod schemas, workflow auth, ticket ownership check" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Uses Prisma via persistGeneratedComparisonArtifacts" }
+        ]
+      },
+      "AIB-330": {
+        "overall": 0,
+        "totalPrinciples": 5,
+        "passedPrinciples": 0,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": false, "notes": "No code produced" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": false, "notes": "No code produced" },
+          { "name": "Test-Driven Development", "section": "III", "passed": false, "notes": "No code produced" },
+          { "name": "Security-First Design", "section": "IV", "passed": false, "notes": "No code produced" },
+          { "name": "Database Integrity", "section": "V", "passed": false, "notes": "No code produced" }
+        ]
+      },
+      "AIB-331": {
+        "overall": 85,
+        "totalPrinciples": 5,
+        "passedPrinciples": 5,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "z.nativeEnum for Prisma enums, clean helper functions, no unsafe casts" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "API route follows Next.js conventions" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "4 test files: integration, unit, reusable fixtures" },
+          { "name": "Security-First Design", "section": "IV", "passed": true, "notes": "Strict Zod, workflow auth, source ticket ID+key match validation" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Uses Prisma via persistGeneratedComparisonArtifacts" }
+        ]
+      },
+      "AIB-328": {
+        "overall": 65,
+        "totalPrinciples": 5,
+        "passedPrinciples": 3,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": false, "notes": "`as unknown as` double cast bypasses type system" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "API route follows Next.js conventions" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "1 comprehensive test file (358 lines)" },
+          { "name": "Security-First Design", "section": "IV", "passed": false, "notes": "z.looseObject({}) defeats validation purpose" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Prisma with FK constraint error handling" }
+        ]
+      }
+    },
+    "telemetry": {
+      "AIB-329": {
+        "ticketKey": "AIB-329",
+        "inputTokens": 6359,
+        "outputTokens": 85494,
+        "cacheReadTokens": 16732764,
+        "cacheCreationTokens": 699047,
+        "costUsd": 8.67,
+        "durationMs": 1427823,
+        "model": "claude-opus-4-6",
+        "toolsUsed": ["Agent", "Bash", "Edit", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "Write"],
+        "jobCount": 3,
+        "hasData": true
+      },
+      "AIB-330": {
+        "ticketKey": "AIB-330",
+        "inputTokens": 828799,
+        "outputTokens": 146772,
+        "cacheReadTokens": 22674280,
+        "cacheCreationTokens": 545188,
+        "costUsd": 11.76,
+        "durationMs": 3055798,
+        "model": "gpt-5.4",
+        "toolsUsed": ["Agent", "Bash", "Glob", "Grep", "Read", "Write", "apply_patch", "close_agent", "exec_command", "spawn_agent", "update_plan", "wait_agent", "write_stdin"],
+        "jobCount": 5,
+        "hasData": true
+      },
+      "AIB-331": {
+        "ticketKey": "AIB-331",
+        "inputTokens": 254984,
+        "outputTokens": 72957,
+        "cacheReadTokens": 10338494,
+        "cacheCreationTokens": 385472,
+        "costUsd": 4.92,
+        "durationMs": 1525753,
+        "model": "gpt-5.4",
+        "toolsUsed": ["Agent", "Bash", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "apply_patch", "exec_command", "write_stdin"],
+        "jobCount": 2,
+        "hasData": true
+      },
+      "AIB-328": {
+        "ticketKey": "AIB-328",
+        "inputTokens": 16840,
+        "outputTokens": 162160,
+        "cacheReadTokens": 32485769,
+        "cacheCreationTokens": 1095892,
+        "costUsd": 19.78,
+        "durationMs": 3246931,
+        "model": "claude-opus-4-6",
+        "toolsUsed": ["Agent", "Bash", "Edit", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "Write"],
+        "jobCount": 4,
+        "hasData": true
+      }
+    },
+    "recommendation": "Ship AIB-331. Best type safety (nativeEnum), best test coverage (4 files), lowest cost ($4.92). Close AIB-330 (no code) and AIB-328 (weak validation).",
+    "warnings": [
+      "AIB-330 produced zero code changes despite 5 jobs and $11.76 spent",
+      "AIB-328 uses z.looseObject({}) which weakens input validation",
+      "AIB-328 uses 'as unknown as' double cast which bypasses TypeScript safety",
+      "Participant ticket IDs set to 0 — actual DB IDs unavailable without API lookup"
+    ]
+  }
+}
