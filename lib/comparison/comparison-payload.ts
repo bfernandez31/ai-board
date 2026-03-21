@@ -14,7 +14,7 @@ const reportMetadataSchema = z.object({
 });
 
 const implementationMetricsSchema = z.object({
-  ticketKey: z.string().min(1),
+  ticketKey: z.string().min(1).optional(),
   linesAdded: z.number().int().nonnegative().default(0),
   linesRemoved: z.number().int().nonnegative().default(0),
   linesChanged: z.number().int().nonnegative().default(0),
@@ -28,9 +28,13 @@ const implementationMetricsSchema = z.object({
 const constitutionPrincipleSchema = z.object({
   name: z.string().min(1),
   section: z.string().default(''),
-  passed: z.boolean(),
+  passed: z.boolean().optional(),
+  status: z.string().optional(),
   notes: z.string().default(''),
-});
+}).transform(({ status, ...p }) => ({
+  ...p,
+  passed: p.passed ?? (status != null ? /^(pass|yes|true)$/i.test(status) : false),
+}));
 
 const complianceScoreSchema = z.object({
   overall: z.number().min(0).max(100).default(0),
@@ -40,7 +44,7 @@ const complianceScoreSchema = z.object({
 });
 
 const telemetrySchema = z.object({
-  ticketKey: z.string().min(1),
+  ticketKey: z.string().min(1).optional(),
   inputTokens: z.number().int().nonnegative().default(0),
   outputTokens: z.number().int().nonnegative().default(0),
   cacheReadTokens: z.number().int().nonnegative().default(0),
@@ -126,11 +130,36 @@ export function serializeComparisonReport(
   };
 }
 
+function injectRecordKeys(input: unknown): unknown {
+  if (!input || typeof input !== 'object') return input;
+  const obj = input as Record<string, unknown>;
+  const report = obj.report;
+  if (!report || typeof report !== 'object') return input;
+
+  const rep = report as Record<string, unknown>;
+  for (const field of ['implementation', 'telemetry'] as const) {
+    const record = rep[field];
+    if (record && typeof record === 'object' && !Array.isArray(record)) {
+      for (const [key, value] of Object.entries(record as Record<string, unknown>)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entry = value as Record<string, unknown>;
+          if (entry.ticketKey === undefined) {
+            entry.ticketKey = key;
+          }
+        }
+      }
+    }
+  }
+
+  return input;
+}
+
 export function normalizeComparisonPersistenceRequest(
   input: unknown
 ): ComparisonPersistenceRequest {
+  const preprocessed = injectRecordKeys(input);
   const parsed =
-    serializedComparisonPersistenceRequestSchema.parse(input) as SerializedComparisonPersistenceRequest;
+    serializedComparisonPersistenceRequestSchema.parse(preprocessed) as SerializedComparisonPersistenceRequest;
 
   return {
     ...parsed,
