@@ -2267,8 +2267,9 @@ env:
   OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
   OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
   OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
-  # Batch log exports — every 60s instead of default 5s (force-flushed on shutdown)
+  # Batch log exports — every 60s instead of defaults (Claude Code: 5s, Codex/Rust: 1s)
   OTEL_LOGS_EXPORT_INTERVAL: "60000"
+  OTEL_BLRP_SCHEDULE_DELAY: "60000"
 ```
 
 **Workflow Configuration** (Codex):
@@ -2279,6 +2280,8 @@ env:
   OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.APP_URL }}/api/telemetry
   OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${{ secrets.WORKFLOW_API_TOKEN }}"
   OTEL_RESOURCE_ATTRIBUTES: "job_id=${{ inputs.job_id }}"
+  # Batch log exports — Codex Rust SDK reads OTEL_BLRP_SCHEDULE_DELAY (default 1s)
+  OTEL_BLRP_SCHEDULE_DELAY: "60000"
 ```
 
 **Processing**:
