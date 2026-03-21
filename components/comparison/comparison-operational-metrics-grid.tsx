@@ -83,7 +83,25 @@ function formatQualityValue(quality: ComparisonQualityEnrichment): string {
   return `${quality.value} ${quality.threshold}`;
 }
 
-function ParticipantHeader({ participant }: { participant: ComparisonParticipantDetail }) {
+function formatPrimaryModel(
+  primaryModel: ComparisonParticipantDetail['telemetry']['primaryModel']
+): string {
+  if (primaryModel.state === 'pending') {
+    return 'pending';
+  }
+
+  if (primaryModel.state !== 'available' || !primaryModel.value) {
+    return 'N/A';
+  }
+
+  return primaryModel.value;
+}
+
+function ParticipantHeader({
+  participant,
+}: {
+  participant: ComparisonParticipantDetail;
+}): React.JSX.Element {
   return (
     <div className="min-w-[180px] space-y-1">
       <div className="font-medium text-foreground">{participant.ticketKey}</div>
@@ -92,12 +110,7 @@ function ParticipantHeader({ participant }: { participant: ComparisonParticipant
         {participant.agent ? <Badge variant="secondary">{participant.agent}</Badge> : null}
       </div>
       <div className="text-xs text-muted-foreground">
-        {participant.telemetry.primaryModel.state === 'available' &&
-        participant.telemetry.primaryModel.value
-          ? participant.telemetry.primaryModel.value
-          : participant.telemetry.primaryModel.state === 'pending'
-            ? 'pending'
-            : 'N/A'}
+        {formatPrimaryModel(participant.telemetry.primaryModel)}
       </div>
     </div>
   );
@@ -109,7 +122,7 @@ function MetricCell({
 }: {
   value: string;
   isBest: boolean;
-}) {
+}): React.JSX.Element {
   return (
     <div className="flex min-w-[140px] items-center gap-2">
       <span>{value}</span>
@@ -122,7 +135,7 @@ function QualityPopover({
   participant,
 }: {
   participant: ComparisonParticipantDetail;
-}) {
+}): React.JSX.Element {
   const { quality } = participant;
 
   if (
@@ -180,7 +193,7 @@ function QualityPopover({
 
 export function ComparisonOperationalMetricsGrid({
   participants,
-}: ComparisonSectionProps) {
+}: ComparisonSectionProps): React.JSX.Element {
   return (
     <Card>
       <CardHeader>

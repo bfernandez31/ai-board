@@ -14,13 +14,29 @@ function formatQualityBadge(
   return `${quality.value} ${quality.threshold}`;
 }
 
+function ParticipantMetadataBadges({
+  participant,
+}: {
+  participant: ComparisonRankingProps['participants'][number];
+}): React.JSX.Element {
+  const qualityBadge = formatQualityBadge(participant.quality);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="outline">{participant.workflowType}</Badge>
+      {participant.agent ? <Badge variant="secondary">{participant.agent}</Badge> : null}
+      {qualityBadge ? <Badge variant="secondary">{qualityBadge}</Badge> : null}
+    </div>
+  );
+}
+
 export function ComparisonRanking({
   participants,
   recommendation,
   summary,
   winnerTicketId,
   keyDifferentiators,
-}: ComparisonRankingProps) {
+}: ComparisonRankingProps): React.JSX.Element {
   return (
     <Card>
       <CardHeader>
@@ -54,17 +70,7 @@ export function ComparisonRanking({
                   <div className="text-sm text-muted-foreground">
                     {participant.title}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{participant.workflowType}</Badge>
-                    {participant.agent ? (
-                      <Badge variant="secondary">{participant.agent}</Badge>
-                    ) : null}
-                    {formatQualityBadge(participant.quality) ? (
-                      <Badge variant="secondary">
-                        {formatQualityBadge(participant.quality)}
-                      </Badge>
-                    ) : null}
-                  </div>
+                  <ParticipantMetadataBadges participant={participant} />
                 </div>
                 <div className="flex items-center gap-2">
                   {participant.ticketId === winnerTicketId && <Badge>Winner</Badge>}
