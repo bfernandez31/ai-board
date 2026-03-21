@@ -291,7 +291,7 @@ For tickets with a COMPLETED verify job that has a quality score, a quality scor
 - **Collapsed By Default**: The section initially shows only the summary card with the overall score and threshold label
 - **Expandable Details**: When dimension details are available, selecting the score card expands or collapses the detailed breakdown
 - **Detail Cue**: The card shows a directional icon and a "View details" or "Hide details" label when the breakdown can be toggled
-- **Dimension Breakdown**: The expanded state shows all five dimensions with individual scores and weights:
+- **Dimension Breakdown**: The expanded state shows all five dimensions with individual scores, weights, and a colored progress bar indicating the score relative to 100:
   - Bug Detection (30%)
   - Compliance (40%)
   - Code Comments (20%)

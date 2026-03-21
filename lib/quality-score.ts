@@ -66,17 +66,17 @@ export function getScoreThreshold(score: number): ScoreThreshold {
  * Returns Tailwind CSS classes for the score's threshold color.
  * Uses semantic ctp-* tokens defined in globals.css / tailwind.config.ts.
  */
-export function getScoreColor(score: number): { text: string; bg: string } {
+export function getScoreColor(score: number): { text: string; bg: string; fill: string } {
   if (score >= 90) {
-    return { text: 'text-ctp-green', bg: 'bg-ctp-green/10' };
+    return { text: 'text-ctp-green', bg: 'bg-ctp-green/10', fill: 'bg-ctp-green' };
   }
   if (score >= 70) {
-    return { text: 'text-ctp-blue', bg: 'bg-ctp-blue/10' };
+    return { text: 'text-ctp-blue', bg: 'bg-ctp-blue/10', fill: 'bg-ctp-blue' };
   }
   if (score >= 50) {
-    return { text: 'text-ctp-yellow', bg: 'bg-ctp-yellow/10' };
+    return { text: 'text-ctp-yellow', bg: 'bg-ctp-yellow/10', fill: 'bg-ctp-yellow' };
   }
-  return { text: 'text-ctp-red', bg: 'bg-ctp-red/10' };
+  return { text: 'text-ctp-red', bg: 'bg-ctp-red/10', fill: 'bg-ctp-red' };
 }
 
 /**

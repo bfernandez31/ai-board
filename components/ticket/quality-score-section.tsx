@@ -66,19 +66,18 @@ export function QualityScoreSection({
 
   return (
     <div className="mb-6" data-testid="quality-score-section">
-      <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
-        <Shield className="w-4 h-4" />
-        Quality Score
-      </h3>
-
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger
-          className="w-full text-left"
-          aria-label="Quality score details"
-          disabled={!hasDetails}
-        >
-          <Card className="bg-background border-border mb-3 transition-colors hover:bg-secondary/50">
+        <Card className="bg-background border-border">
+          <CollapsibleTrigger
+            className="w-full text-left"
+            aria-label="Quality score details"
+            disabled={!hasDetails}
+          >
             <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <Shield className="w-4 h-4" />
+                <span className="text-xs font-medium uppercase tracking-wider">Quality Score</span>
+              </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div>
@@ -112,35 +111,44 @@ export function QualityScoreSection({
                 )}
               </div>
             </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+          </CollapsibleTrigger>
 
-        {hasDetails && (
-          <CollapsibleContent className="pt-1">
-            <div className="space-y-2" data-testid="dimension-breakdown">
-              {dimensions.map((dim) => {
-                const dimColors = getScoreColor(dim.score);
-                return (
-                  <div
-                    key={dim.agentId}
-                    className="flex items-center justify-between text-sm rounded-lg border border-border bg-card px-3 py-2"
-                    data-testid={`dimension-${dim.agentId}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-foreground">{dim.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        ({Math.round(dim.weight * 100)}%)
-                      </span>
-                    </div>
-                    <span className={`font-semibold ${dimColors.text}`}>
-                      {dim.score}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CollapsibleContent>
-        )}
+          {hasDetails && (
+            <CollapsibleContent>
+              <div className="border-t border-border px-4 py-3" data-testid="dimension-breakdown">
+                <div className="space-y-3">
+                  {dimensions.map((dim) => {
+                    const dimColors = getScoreColor(dim.score);
+                    return (
+                      <div
+                        key={dim.agentId}
+                        data-testid={`dimension-${dim.agentId}`}
+                      >
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-foreground">{dim.name}</span>
+                            <span className="text-muted-foreground text-xs">
+                              ({Math.round(dim.weight * 100)}%)
+                            </span>
+                          </div>
+                          <span className={`font-semibold ${dimColors.text}`}>
+                            {dim.score}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${dimColors.fill}`}
+                            style={{ width: `${dim.score}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </CollapsibleContent>
+          )}
+        </Card>
       </Collapsible>
     </div>
   );

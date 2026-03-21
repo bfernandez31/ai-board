@@ -32,6 +32,8 @@ This project is developed **100% via ai-board automated workflows**. ai-board is
 
 **Colors**: NEVER hardcode hex/rgb colors (`text-[#...]`, `bg-[#...]`). Use Tailwind semantic tokens only (`text-foreground`, `bg-card`, `text-muted-foreground`, etc.). All text must be readable (WCAG AA 4.5:1 contrast). See `globals.css` and `tailwind.config.ts` for available tokens.
 
+**Tailwind Classes**: NEVER construct Tailwind class names dynamically (e.g., `.replace('text-', 'bg-')`, `` `bg-${color}` ``). Tailwind's purger only detects classes that appear as complete literal strings in source code. Always return full static class strings from helper functions.
+
 ## Commands
 
 ```bash

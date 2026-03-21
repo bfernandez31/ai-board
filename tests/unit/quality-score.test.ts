@@ -37,24 +37,28 @@ describe('getScoreColor', () => {
     const colors = getScoreColor(95);
     expect(colors.text).toBe('text-ctp-green');
     expect(colors.bg).toBe('bg-ctp-green/10');
+    expect(colors.fill).toBe('bg-ctp-green');
   });
 
   it('returns ctp-blue classes for Good range', () => {
     const colors = getScoreColor(75);
     expect(colors.text).toBe('text-ctp-blue');
     expect(colors.bg).toBe('bg-ctp-blue/10');
+    expect(colors.fill).toBe('bg-ctp-blue');
   });
 
   it('returns ctp-yellow classes for Fair range', () => {
     const colors = getScoreColor(55);
     expect(colors.text).toBe('text-ctp-yellow');
     expect(colors.bg).toBe('bg-ctp-yellow/10');
+    expect(colors.fill).toBe('bg-ctp-yellow');
   });
 
   it('returns ctp-red classes for Poor range', () => {
     const colors = getScoreColor(25);
     expect(colors.text).toBe('text-ctp-red');
     expect(colors.bg).toBe('bg-ctp-red/10');
+    expect(colors.fill).toBe('bg-ctp-red');
   });
 });
 
