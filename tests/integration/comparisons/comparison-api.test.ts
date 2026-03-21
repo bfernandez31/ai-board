@@ -8,6 +8,32 @@ import {
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 import { getWorkflowHeaders } from '@/tests/helpers/workflow-auth';
 
+type ComparisonFixture = Awaited<ReturnType<typeof createStructuredComparisonFixture>>;
+
+function buildPersistencePayload(
+  fixture: ComparisonFixture
+): ReturnType<typeof buildGeneratedComparisonArtifactPayload> {
+  return buildGeneratedComparisonArtifactPayload({
+    branch: 'AIB-331-copy-of-persist',
+    sourceTicket: {
+      id: fixture.sourceTicket.id,
+      ticketKey: fixture.sourceTicket.ticketKey ?? 'TE2-101',
+      title: fixture.sourceTicket.title,
+      stage: fixture.sourceTicket.stage,
+      workflowType: fixture.sourceTicket.workflowType,
+      agent: fixture.sourceTicket.agent,
+    },
+    participants: [fixture.winnerTicket, fixture.otherTicket].map((ticket) => ({
+      id: ticket.id,
+      ticketKey: ticket.ticketKey ?? '',
+      title: ticket.title,
+      stage: ticket.stage,
+      workflowType: ticket.workflowType,
+      agent: ticket.agent,
+    })),
+  });
+}
+
 describe('Comparisons API', () => {
   let ctx: TestContext;
   let workflowApi: APIClient;
@@ -115,25 +141,7 @@ describe('Comparisons API', () => {
   describe('POST /api/projects/:projectId/tickets/:id/comparisons', () => {
     it('persists generated comparison artifacts via workflow token', async () => {
       const fixture = await createStructuredComparisonFixture(ctx.projectId);
-      const payload = buildGeneratedComparisonArtifactPayload({
-        branch: 'AIB-331-copy-of-persist',
-        sourceTicket: {
-          id: fixture.sourceTicket.id,
-          ticketKey: fixture.sourceTicket.ticketKey ?? 'TE2-101',
-          title: fixture.sourceTicket.title,
-          stage: fixture.sourceTicket.stage,
-          workflowType: fixture.sourceTicket.workflowType,
-          agent: fixture.sourceTicket.agent,
-        },
-        participants: [fixture.winnerTicket, fixture.otherTicket].map((ticket) => ({
-          id: ticket.id,
-          ticketKey: ticket.ticketKey ?? '',
-          title: ticket.title,
-          stage: ticket.stage,
-          workflowType: ticket.workflowType,
-          agent: ticket.agent,
-        })),
-      });
+      const payload = buildPersistencePayload(fixture);
 
       const response = await workflowApi.post<{ id: number; markdownPath: string }>(
         `/api/projects/${ctx.projectId}/tickets/${fixture.sourceTicket.id}/comparisons`,
@@ -172,25 +180,7 @@ describe('Comparisons API', () => {
 
     it('rejects unauthenticated persistence requests', async () => {
       const fixture = await createStructuredComparisonFixture(ctx.projectId);
-      const payload = buildGeneratedComparisonArtifactPayload({
-        branch: 'AIB-331-copy-of-persist',
-        sourceTicket: {
-          id: fixture.sourceTicket.id,
-          ticketKey: fixture.sourceTicket.ticketKey ?? 'TE2-101',
-          title: fixture.sourceTicket.title,
-          stage: fixture.sourceTicket.stage,
-          workflowType: fixture.sourceTicket.workflowType,
-          agent: fixture.sourceTicket.agent,
-        },
-        participants: [fixture.winnerTicket, fixture.otherTicket].map((ticket) => ({
-          id: ticket.id,
-          ticketKey: ticket.ticketKey ?? '',
-          title: ticket.title,
-          stage: ticket.stage,
-          workflowType: ticket.workflowType,
-          agent: ticket.agent,
-        })),
-      });
+      const payload = buildPersistencePayload(fixture);
 
       const response = await ctx.api.post<{ error: string }>(
         `/api/projects/${ctx.projectId}/tickets/${fixture.sourceTicket.id}/comparisons`,

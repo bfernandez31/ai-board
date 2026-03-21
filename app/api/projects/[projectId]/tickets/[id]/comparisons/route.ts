@@ -103,6 +103,50 @@ const comparisonPayloadSchema = z.object({
   }),
 });
 
+type ComparisonPayload = z.infer<typeof comparisonPayloadSchema>;
+type ParsedImplementationMetrics = ComparisonPayload['report']['implementation'][string];
+
+function createValidationErrorDetails(
+  issues: z.ZodIssue[]
+): Array<{ field: string; message: string }> {
+  return issues.map((issue) => ({
+    field: issue.path.join('.'),
+    message: issue.message,
+  }));
+}
+
+function normalizeImplementationMetrics(
+  metrics: ParsedImplementationMetrics
+): ImplementationMetrics {
+  const normalizedMetrics: ImplementationMetrics = {
+    ticketKey: metrics.ticketKey,
+    linesAdded: metrics.linesAdded,
+    linesRemoved: metrics.linesRemoved,
+    linesChanged: metrics.linesChanged,
+    filesChanged: metrics.filesChanged,
+    changedFiles: metrics.changedFiles,
+    testFilesChanged: metrics.testFilesChanged,
+    hasData: metrics.hasData,
+  };
+
+  if (metrics.testCoverage !== undefined) {
+    normalizedMetrics.testCoverage = metrics.testCoverage;
+  }
+
+  return normalizedMetrics;
+}
+
+function normalizeImplementationReport(
+  implementation: ComparisonPayload['report']['implementation']
+): Record<string, ImplementationMetrics> {
+  return Object.fromEntries(
+    Object.entries(implementation).map(([ticketKey, metrics]) => [
+      ticketKey,
+      normalizeImplementationMetrics(metrics),
+    ])
+  );
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ projectId: string; id: string }> }
@@ -199,10 +243,7 @@ export async function POST(
         {
           error: 'Validation error',
           code: 'VALIDATION_ERROR',
-          details: payloadResult.error.issues.map((issue) => ({
-            field: issue.path.join('.'),
-            message: issue.message,
-          })),
+          details: createValidationErrorDetails(payloadResult.error.issues),
         },
         { status: 400 }
       );
@@ -229,39 +270,9 @@ export async function POST(
       );
     }
 
-    const implementation: Record<string, ImplementationMetrics> = Object.fromEntries(
-      Object.entries(payload.report.implementation).map(([ticketKey, metrics]) => {
-        const normalizedMetrics: ImplementationMetrics =
-          metrics.testCoverage === undefined
-            ? {
-                ticketKey: metrics.ticketKey,
-                linesAdded: metrics.linesAdded,
-                linesRemoved: metrics.linesRemoved,
-                linesChanged: metrics.linesChanged,
-                filesChanged: metrics.filesChanged,
-                changedFiles: metrics.changedFiles,
-                testFilesChanged: metrics.testFilesChanged,
-                hasData: metrics.hasData,
-              }
-            : {
-                ticketKey: metrics.ticketKey,
-                linesAdded: metrics.linesAdded,
-                linesRemoved: metrics.linesRemoved,
-                linesChanged: metrics.linesChanged,
-                filesChanged: metrics.filesChanged,
-                changedFiles: metrics.changedFiles,
-                testFilesChanged: metrics.testFilesChanged,
-                testCoverage: metrics.testCoverage,
-                hasData: metrics.hasData,
-              };
-
-        return [ticketKey, normalizedMetrics];
-      })
-    );
-
     const normalizedReport: ComparisonReport = {
       ...payload.report,
-      implementation,
+      implementation: normalizeImplementationReport(payload.report.implementation),
     };
 
     const result = await persistGeneratedComparisonArtifacts({
