@@ -1997,8 +1997,31 @@ Fetch full comparison detail with enriched data.
       "rankRationale": "Best constitution compliance, highest test ratio",
       "workflowType": "FULL",
       "agent": "CLAUDE",
+      "model": "claude-sonnet-4-6",
       "quality": { "state": "available", "value": 85 },
-      "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "qualityScoreDetails": {
+        "dimensions": [
+          { "name": "Compliance", "score": 90, "weight": 0.35 },
+          { "name": "Bug Detection", "score": 80, "weight": 0.30 },
+          { "name": "Code Comments", "score": 75, "weight": 0.20 },
+          { "name": "Historical Context", "score": 85, "weight": 0.15 },
+          { "name": "Spec Sync", "score": 0, "weight": 0.00 }
+        ],
+        "overall": 85,
+        "threshold": "Good"
+      },
+      "telemetry": {
+        "state": "available",
+        "value": {
+          "totalTokens": 17000,
+          "inputTokens": 12000,
+          "outputTokens": 5000,
+          "durationMs": 45000,
+          "costUsd": 0.15,
+          "jobCount": 2,
+          "hasPartialData": false
+        }
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2040,6 +2063,13 @@ Fetch full comparison detail with enriched data.
 - `available`: Data exists with a `value`
 - `pending`: Job exists but data not yet computed (e.g., verify job running)
 - `unavailable`: No relevant job exists
+
+**Participant fields**:
+- `model`: Primary AI model used across the participant's jobs (most-used model by job count); `null` if no model data
+- `qualityScoreDetails`: Full dimension breakdown for FULL workflow participants that have passed VERIFY; `null` otherwise. Contains `dimensions[]` (name, score, weight), `overall` score, and `threshold` label
+- `telemetry.value.totalTokens`: Computed sum of `inputTokens + outputTokens` across all completed jobs
+- `telemetry.value.jobCount`: Count of all jobs (completed and otherwise) for the participant
+- `telemetry.value.hasPartialData`: `true` when at least one job is still in progress; aggregated values reflect completed jobs only
 
 **Errors**:
 - `400`: Invalid project, ticket, or comparison ID

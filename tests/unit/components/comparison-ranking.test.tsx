@@ -14,11 +14,15 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityScoreDetails: null,
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 1 },
+      hasPartialData: false,
     },
     metrics: {
       linesAdded: 10,
@@ -29,6 +33,7 @@ const participants = [
       changedFiles: [],
       bestValueFlags: {},
     },
+    model: null,
   },
   {
     ticketId: 2,
@@ -41,11 +46,15 @@ const participants = [
     score: 75,
     rankRationale: 'More churn',
     quality: { state: 'pending' as const, value: null },
+    qualityScoreDetails: null,
     telemetry: {
       inputTokens: { state: 'pending' as const, value: null },
       outputTokens: { state: 'pending' as const, value: null },
+      totalTokens: { state: 'pending' as const, value: null },
       durationMs: { state: 'pending' as const, value: null },
       costUsd: { state: 'pending' as const, value: null },
+      jobCount: { state: 'pending' as const, value: null },
+      hasPartialData: false,
     },
     metrics: {
       linesAdded: 30,
@@ -56,6 +65,7 @@ const participants = [
       changedFiles: [],
       bestValueFlags: {},
     },
+    model: null,
   },
 ];
 

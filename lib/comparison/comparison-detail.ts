@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/client';
-import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import { parseQualityScoreDetails } from '@/lib/quality-score';
+import type { ComparisonDetail, ComparisonEnrichmentValue, ComparisonSummary } from '@/lib/types/comparison';
 import {
   buildComparisonDetail,
   createAvailableEnrichment,
@@ -102,9 +103,9 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 }
 
 function deriveQualityState(
-  latestVerifyJob: { qualityScore: number | null } | null,
+  latestVerifyJob: { qualityScore: number | null; qualityScoreDetails: string | null } | null,
   hasVerifyJob: boolean
-): ReturnType<typeof createAvailableEnrichment<number>> {
+): ComparisonEnrichmentValue<number> {
   if (latestVerifyJob?.qualityScore != null) {
     return createAvailableEnrichment(latestVerifyJob.qualityScore);
   }
@@ -168,28 +169,41 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
-    prisma.job.findMany({
+  const [aggregatedJobs, modelGroups, latestVerifyJobs, inProgressCounts, complianceRows] = await Promise.all([
+    prisma.job.groupBy({
+      by: ['ticketId'],
       where: {
-        ticketId: {
-          in: participantIds,
-        },
+        ticketId: { in: participantIds },
+        status: 'COMPLETED',
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
-      select: {
-        ticketId: true,
+      _sum: {
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
       },
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.job.groupBy({
+      by: ['ticketId', 'model'],
+      where: {
+        ticketId: { in: participantIds },
+        model: { not: null },
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
     }),
     prisma.job.findMany({
       where: {
-        ticketId: {
-          in: participantIds,
-        },
+        ticketId: { in: participantIds },
         command: 'verify',
       },
       orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
@@ -197,6 +211,17 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
+      },
+    }),
+    prisma.job.groupBy({
+      by: ['ticketId'],
+      where: {
+        ticketId: { in: participantIds },
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
+      _count: {
+        id: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,24 +246,39 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  const aggregatedByTicketId = new Map(
+    aggregatedJobs.map((job) => [job.ticketId, job])
+  );
+  const primaryModelByTicketId = new Map<number, string | null>();
+  for (const group of modelGroups) {
+    if (!primaryModelByTicketId.has(group.ticketId)) {
+      primaryModelByTicketId.set(group.ticketId, group.model);
+    }
+  }
+  const inProgressByTicketId = new Set(
+    inProgressCounts.map((row) => row.ticketId)
+  );
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
+  const participants = record.participants.map((participant) => {
+    const aggregated = aggregatedByTicketId.get(participant.ticketId) ?? null;
+    const hasInProgress = inProgressByTicketId.has(participant.ticketId);
+    const verifyJob = latestVerifyJobByTicketId.get(participant.ticketId) ?? null;
 
-  const participants = record.participants.map((participant) =>
-    normalizeParticipantDetail({
+    return normalizeParticipantDetail({
       participant,
       quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
-        verifyJobTicketIds.has(participant.ticketId)
+        verifyJob,
+        latestVerifyJobByTicketId.has(participant.ticketId)
       ),
-      telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
-      ),
-    })
-  );
+      qualityScoreDetails: verifyJob?.qualityScoreDetails
+        ? parseQualityScoreDetails(verifyJob.qualityScoreDetails)
+        : null,
+      telemetry: normalizeTelemetryEnrichment(aggregated, hasInProgress),
+      model: primaryModelByTicketId.get(participant.ticketId) ?? null,
+    });
+  });
 
   const groupedCompliance = new Map<
     string,

@@ -135,16 +135,22 @@ describe('comparison-record helpers', () => {
     });
     expect(
       normalizeTelemetryEnrichment({
-        inputTokens: 10,
-        outputTokens: null,
-        durationMs: 30,
-        costUsd: null,
+        _sum: {
+          inputTokens: 10,
+          outputTokens: null,
+          durationMs: 30,
+          costUsd: null,
+        },
+        _count: { id: 2 },
       })
     ).toEqual({
       inputTokens: { state: 'available', value: 10 },
       outputTokens: { state: 'pending', value: null },
+      totalTokens: { state: 'pending', value: null },
       durationMs: { state: 'available', value: 30 },
       costUsd: { state: 'pending', value: null },
+      jobCount: { state: 'available', value: 2 },
+      hasPartialData: false,
     });
   });
 

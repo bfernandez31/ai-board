@@ -59,3 +59,11 @@ export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
   participants: ComparisonParticipantDetail[];
 }
+
+export type ComparisonOperationalMetricsProps = ComparisonSectionProps;
+
+export interface ComparisonQualityPopoverProps {
+  score: number;
+  details: import('@/lib/quality-score').QualityScoreDetails | null;
+  workflowType: import('@prisma/client').WorkflowType;
+}

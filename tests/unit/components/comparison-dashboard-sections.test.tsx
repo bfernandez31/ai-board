@@ -15,12 +15,17 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityScoreDetails: null,
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 1 },
+      hasPartialData: false,
     },
+    model: null,
     metrics: {
       linesAdded: 10,
       linesRemoved: 2,
