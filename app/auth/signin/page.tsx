@@ -147,11 +147,11 @@ export default async function SignInPage({
 
           <p className="text-center text-sm text-muted-foreground">
             By signing in, you agree to our{' '}
-            <Link href="/legal/terms" className={legalLinkClassName}>
+            <Link href="/legal/terms" prefetch={false} className={legalLinkClassName}>
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/legal/privacy" className={legalLinkClassName}>
+            <Link href="/legal/privacy" prefetch={false} className={legalLinkClassName}>
               Privacy Policy
             </Link>
             .

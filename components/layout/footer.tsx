@@ -23,12 +23,14 @@ export function Footer() {
           <nav className="flex gap-6">
             <Link
               href="/legal/terms"
+              prefetch={false}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Terms of Service
             </Link>
             <Link
               href="/legal/privacy"
+              prefetch={false}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Privacy Policy
