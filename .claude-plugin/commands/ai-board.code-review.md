@@ -27,7 +27,7 @@ To do this, follow these steps precisely:
    e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
 6. Filter out any issues with a score less than 80. If there are no issues that meet this criteria, do not proceed.
 7. Use a Haiku agent to repeat the eligibility check from #1, to make sure that the pull request is still eligible for code review.
-8. Finally, use the gh bash command to comment back on the pull request with the result. When writing your comment, keep in mind to:
+8. Use the gh bash command to comment back on the pull request with the result. When writing your comment, keep in mind to:
    a. Keep your output brief
    b. Avoid emojis
    c. Link and cite relevant code, files, and URLs
@@ -93,7 +93,7 @@ No issues found. Checked for bugs, CLAUDE.md compliance, and constitution compli
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
 
-9. **MANDATORY — Quality Score Output (do NOT skip this step)**: After everything above is complete, YOU (the parent agent) must directly compute and print the quality score. Using the 5 dimension scores collected in step 4 (use 50 as default for any missing score):
+9. **MANDATORY — Quality Score Output (do NOT skip this step)**: After everything above is complete, YOU must directly compute and print the quality score. Using the 5 dimension scores collected in step 4 (use 50 as default for any missing score):
     - Compute the weighted final score: `round(compliance*0.40 + bugDetection*0.30 + codeComments*0.20 + historicalContext*0.10 + specSync*0.00)`
     - Derive the threshold: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor"
     - Use the Bash tool to `echo` exactly one line to stdout in this format (single line, no spaces between marker and JSON):
