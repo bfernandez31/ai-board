@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Comparison Persistence API
+  description: Endpoint for persisting comparison data from workflow to database
+  version: 1.0.0
+
+paths:
+  /api/projects/{projectId}/comparisons:
+    post:
+      summary: Persist comparison data
+      description: |
+        Accepts structured comparison data from the workflow and persists it
+        to the database using the existing comparison record persistence layer.
+        Authenticated via workflow token (Bearer).
+      operationId: persistComparison
+      security:
+        - workflowToken: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersistComparisonRequest'
+      responses:
+        '201':
+          description: Comparison record created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersistComparisonResponse'
+        '400':
+          description: Invalid payload or referenced entities not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid workflow token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    workflowToken:
+      type: http
+      scheme: bearer
+      description: Workflow API token (WORKFLOW_API_TOKEN secret)
+
+  schemas:
+    PersistableTicket:
+      type: object
+      required: [id, ticketKey, title, stage, workflowType]
+      properties:
+        id:
+          type: integer
+          description: Ticket database ID
+        ticketKey:
+          type: string
+          description: "Ticket key (e.g., AIB-123)"
+        title:
+          type: string
+          description: Ticket title
+        stage:
+          type: string
+          enum: [INBOX, SPECIFY, PLAN, BUILD, VERIFY, SHIP, CLOSED]
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        agent:
+          type: string
+          enum: [CLAUDE, CODEX]
+          nullable: true
+
+    ComparisonReportMetadata:
+      type: object
+      required: [generatedAt, sourceTicket, comparedTickets, filePath]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicket:
+          type: string
+        comparedTickets:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        filePath:
+          type: string
+
+    ComparisonReport:
+      type: object
+      required: [metadata, summary, alignment, implementation, compliance, telemetry, recommendation, warnings]
+      properties:
+        metadata:
+          $ref: '#/components/schemas/ComparisonReportMetadata'
+        summary:
+          type: string
+        alignment:
+          type: object
+          description: FeatureAlignmentScore object
+        implementation:
+          type: object
+          additionalProperties:
+            type: object
+            description: ImplementationMetrics per ticket key
+        compliance:
+          type: object
+          additionalProperties:
+            type: object
+            description: ConstitutionComplianceScore per ticket key
+        telemetry:
+          type: object
+          additionalProperties:
+            type: object
+            description: TicketTelemetry per ticket key
+        recommendation:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    PersistComparisonRequest:
+      type: object
+      required: [projectId, sourceTicket, participants, markdownPath, report]
+      properties:
+        projectId:
+          type: integer
+          description: Must match the projectId in the URL path
+        sourceTicket:
+          $ref: '#/components/schemas/PersistableTicket'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersistableTicket'
+        markdownPath:
+          type: string
+          description: Path to the markdown report file
+        report:
+          $ref: '#/components/schemas/ComparisonReport'
+
+    PersistComparisonResponse:
+      type: object
+      required: [id, generatedAt]
+      properties:
+        id:
+          type: integer
+          description: Created comparison record ID
+        generatedAt:
+          type: string
+          format: date-time
+          description: Comparison generation timestamp
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: object
+          description: Additional error details (validation errors, etc.)
