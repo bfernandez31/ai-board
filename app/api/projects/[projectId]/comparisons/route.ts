@@ -3,11 +3,17 @@
  *
  * GET /api/projects/:projectId/comparisons
  * Returns all comparison reports across all tickets in the project.
+ *
+ * POST /api/projects/:projectId/comparisons
+ * Persists comparison data from workflow to database.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
+import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
+import { persistComparisonRecord } from '@/lib/comparison/comparison-record';
 import { prisma } from '@/lib/db/client';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs/promises';
@@ -220,6 +226,131 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching project comparisons:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Zod schema for POST /api/projects/:projectId/comparisons
+ * Validates PersistComparisonInput shape from workflow JSON payload.
+ */
+const persistableTicketSchema = z.object({
+  id: z.number().int().positive(),
+  ticketKey: z.string().min(1),
+  title: z.string().min(1),
+  stage: z.enum(['INBOX', 'SPECIFY', 'PLAN', 'BUILD', 'VERIFY', 'SHIP', 'CLOSED']),
+  workflowType: z.enum(['FULL', 'QUICK', 'CLEAN']),
+  agent: z.enum(['CLAUDE', 'CODEX']).nullable(),
+});
+
+const persistComparisonSchema = z.object({
+  projectId: z.number().int().positive(),
+  sourceTicket: persistableTicketSchema,
+  participants: z.array(persistableTicketSchema).min(1),
+  markdownPath: z.string().min(1),
+  report: z.object({
+    metadata: z.object({
+      generatedAt: z.string().or(z.date()),
+      sourceTicket: z.string(),
+      comparedTickets: z.array(z.string()).min(1),
+      filePath: z.string(),
+    }),
+    summary: z.string(),
+    alignment: z.looseObject({}),
+    implementation: z.record(z.string(), z.looseObject({})),
+    compliance: z.record(z.string(), z.looseObject({})),
+    telemetry: z.record(z.string(), z.looseObject({})),
+    recommendation: z.string(),
+    warnings: z.array(z.string()),
+  }),
+});
+
+/**
+ * POST - Persist comparison data from workflow
+ */
+export async function POST(
+  request: NextRequest,
+  context: RouteParams
+): Promise<NextResponse> {
+  try {
+    // Step 1: Workflow token auth
+    const authResult = validateWorkflowAuth(request);
+    if (!authResult.isValid) {
+      return NextResponse.json(
+        { error: authResult.error ?? 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Step 2: Parse projectId from URL
+    const { projectId } = await context.params;
+    const projectIdNum = parseInt(projectId, 10);
+
+    if (isNaN(projectIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid project ID' },
+        { status: 400 }
+      );
+    }
+
+    // Step 3: Parse and validate request body
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      );
+    }
+
+    const parseResult = persistComparisonSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parseResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const data = parseResult.data;
+
+    // Step 4: Verify projectId matches URL
+    if (data.projectId !== projectIdNum) {
+      return NextResponse.json(
+        { error: 'Project ID in body does not match URL parameter' },
+        { status: 400 }
+      );
+    }
+
+    // Step 5: Persist using existing comparison record function
+    const record = await persistComparisonRecord({
+      projectId: data.projectId,
+      sourceTicket: data.sourceTicket,
+      participants: data.participants,
+      markdownPath: data.markdownPath,
+      report: data.report as unknown as Parameters<typeof persistComparisonRecord>[0]['report'],
+    });
+
+    return NextResponse.json(
+      { id: record.id, generatedAt: record.generatedAt },
+      { status: 201 }
+    );
+  } catch (error) {
+    // Handle Prisma foreign key constraint violations
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === 'P2003' || error.code === 'P2025')
+    ) {
+      return NextResponse.json(
+        { error: 'Referenced entity not found (invalid ticket or project ID)' },
+        { status: 400 }
+      );
+    }
+
+    console.error('Error persisting comparison:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

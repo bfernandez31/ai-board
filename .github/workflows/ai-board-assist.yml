@@ -408,6 +408,52 @@ jobs:
           echo "🔍 Debug - Status output: $STATUS"
           echo "🔍 Debug - Files output: $FILES"
 
+      - name: Persist Comparison Data
+        if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') }}
+        working-directory: target
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          WORKFLOW_API_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          echo "📊 Checking for comparison data JSON..."
+          COMPARISONS_DIR="specs/$BRANCH/comparisons"
+
+          if [ ! -d "$COMPARISONS_DIR" ]; then
+            echo "⚠️ No comparisons directory found, skipping persistence"
+            exit 0
+          fi
+
+          # Find the newest JSON file
+          JSON_FILE=$(ls -t "$COMPARISONS_DIR"/*.json 2>/dev/null | head -1)
+
+          if [ -z "$JSON_FILE" ]; then
+            echo "⚠️ No comparison JSON file found, skipping persistence"
+            exit 0
+          fi
+
+          echo "📄 Found comparison data: $JSON_FILE"
+
+          # POST to persistence endpoint
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${APP_URL}/api/projects/${PROJECT_ID}/comparisons" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            -d @"$JSON_FILE")
+
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+          RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" = "201" ]; then
+            echo "✅ Comparison data persisted successfully"
+            echo "   Response: $RESPONSE_BODY"
+          else
+            echo "⚠️ Comparison persistence failed (HTTP $HTTP_CODE)"
+            echo "   Response: $RESPONSE_BODY"
+            echo "   Continuing workflow — markdown report is the primary artifact"
+          fi
+
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
         working-directory: target

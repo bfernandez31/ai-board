@@ -18,8 +18,8 @@
 
 **Purpose**: No new project scaffolding needed — this feature is additive to an existing codebase. Setup verifies existing dependencies are available.
 
-- [ ] T001 Verify existing comparison persistence function signature in lib/comparison/comparison-record.ts matches PersistComparisonInput from data-model.md
-- [ ] T002 Verify existing workflow auth helper validateWorkflowAuth() in app/lib/workflow-auth.ts is importable and returns expected shape
+- [x] T001 Verify existing comparison persistence function signature in lib/comparison/comparison-record.ts matches PersistComparisonInput from data-model.md
+- [x] T002 Verify existing workflow auth helper validateWorkflowAuth() in app/lib/workflow-auth.ts is importable and returns expected shape
 
 ---
 
@@ -29,7 +29,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create Zod validation schema for PersistComparisonRequest in app/api/projects/[projectId]/comparisons/route.ts (or co-located validator file), matching the contract in contracts/comparison-persistence.openapi.yaml and the PersistComparisonInput type from lib/comparison/comparison-record.ts
+- [x] T003 Create Zod validation schema for PersistComparisonRequest in app/api/projects/[projectId]/comparisons/route.ts (or co-located validator file), matching the contract in contracts/comparison-persistence.openapi.yaml and the PersistComparisonInput type from lib/comparison/comparison-record.ts
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -45,21 +45,21 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T004 [P] [US1] Create integration test file tests/integration/comparisons/comparison-persistence-endpoint.test.ts with test scaffolding (describe block, test database setup, test ticket creation via Prisma)
-- [ ] T005 [P] [US1] Write integration test: POST with valid payload creates comparison record and returns 201 with { id, generatedAt } in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T006 [P] [US1] Write integration test: POST creates all related entities (participants, metric snapshots, compliance assessments, decision point evaluations) in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T007 [P] [US1] Write integration test: POST with missing auth header returns 401 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T008 [P] [US1] Write integration test: POST with invalid token returns 401 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T009 [P] [US1] Write integration test: POST with invalid payload (missing required fields, wrong types) returns 400 with Zod error details in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T010 [P] [US1] Write integration test: POST with projectId mismatch between body and URL returns 400 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T011 [P] [US1] Write integration test: POST with non-existent ticket IDs returns 400 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
-- [ ] T012 [P] [US1] Write integration test: Multiple POSTs for same tickets create separate comparison records (point-in-time snapshots) in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T004 [P] [US1] Create integration test file tests/integration/comparisons/comparison-persistence-endpoint.test.ts with test scaffolding (describe block, test database setup, test ticket creation via Prisma)
+- [x] T005 [P] [US1] Write integration test: POST with valid payload creates comparison record and returns 201 with { id, generatedAt } in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T006 [P] [US1] Write integration test: POST creates all related entities (participants, metric snapshots, compliance assessments, decision point evaluations) in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T007 [P] [US1] Write integration test: POST with missing auth header returns 401 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T008 [P] [US1] Write integration test: POST with invalid token returns 401 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T009 [P] [US1] Write integration test: POST with invalid payload (missing required fields, wrong types) returns 400 with Zod error details in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T010 [P] [US1] Write integration test: POST with projectId mismatch between body and URL returns 400 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T011 [P] [US1] Write integration test: POST with non-existent ticket IDs returns 400 in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
+- [x] T012 [P] [US1] Write integration test: Multiple POSTs for same tickets create separate comparison records (point-in-time snapshots) in tests/integration/comparisons/comparison-persistence-endpoint.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement POST handler in app/api/projects/[projectId]/comparisons/route.ts: workflow token auth via validateWorkflowAuth(), Zod validation using schema from T003, call persistComparisonRecord(), return 201 with { id, generatedAt }, handle 400/401/500 errors per contract
-- [ ] T014 [US1] Add JSON data file write step to .claude/commands/ai-board.compare.md after markdown report generation (Step 10.5): construct PersistComparisonInput payload, write to specs/{branch}/comparisons/{timestamp}-vs-{keys}.json, wrap in try-catch for failure isolation
-- [ ] T015 [US1] Add "Persist Comparison Data" step to .github/workflows/ai-board-assist.yml after Claude command execution and before commit step: find newest .json in specs/{branch}/comparisons/, POST to ${APP_URL}/api/projects/${PROJECT_ID}/comparisons with Bearer auth, log success/failure, exit 0 on all paths
+- [x] T013 [US1] Implement POST handler in app/api/projects/[projectId]/comparisons/route.ts: workflow token auth via validateWorkflowAuth(), Zod validation using schema from T003, call persistComparisonRecord(), return 201 with { id, generatedAt }, handle 400/401/500 errors per contract
+- [x] T014 [US1] Add JSON data file write step to .claude/commands/ai-board.compare.md after markdown report generation (Step 10.5): construct PersistComparisonInput payload, write to specs/{branch}/comparisons/{timestamp}-vs-{keys}.json, wrap in try-catch for failure isolation
+- [x] T015 [US1] Add "Persist Comparison Data" step to .github/workflows/ai-board-assist.yml after Claude command execution and before commit step: find newest .json in specs/{branch}/comparisons/, POST to ${APP_URL}/api/projects/${PROJECT_ID}/comparisons with Bearer auth, log success/failure, exit 0 on all paths
 
 **Checkpoint**: At this point, User Story 1 should be fully functional — a `/compare` run produces JSON, the workflow POSTs it, and the data appears in the database
 
@@ -73,8 +73,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Verify try-catch isolation in .claude/commands/ai-board.compare.md: confirm JSON write failure (Step 10.5) logs a warning and does NOT prevent markdown report generation or command completion — adjust if needed
-- [ ] T017 [US2] Verify the JSON write step in .claude/commands/ai-board.compare.md is placed AFTER the markdown report write (Step 10) so markdown is always produced first, regardless of JSON outcome
+- [x] T016 [US2] Verify try-catch isolation in .claude/commands/ai-board.compare.md: confirm JSON write failure (Step 10.5) logs a warning and does NOT prevent markdown report generation or command completion — adjust if needed
+- [x] T017 [US2] Verify the JSON write step in .claude/commands/ai-board.compare.md is placed AFTER the markdown report write (Step 10) so markdown is always produced first, regardless of JSON outcome
 
 **Checkpoint**: Markdown report generation is confirmed to be fully independent of JSON file generation
 
@@ -88,9 +88,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Verify workflow step in .github/workflows/ai-board-assist.yml uses exit 0 on all code paths: no comparisons directory, no JSON file found, POST returns non-201, curl network error
-- [ ] T019 [US3] Verify workflow step logs the failure reason (HTTP status code, response body) for observability when persistence fails in .github/workflows/ai-board-assist.yml
-- [ ] T020 [US3] Verify workflow step only runs for /compare commands via the if condition: contains(inputs.comment, '/compare') in .github/workflows/ai-board-assist.yml
+- [x] T018 [US3] Verify workflow step in .github/workflows/ai-board-assist.yml uses exit 0 on all code paths: no comparisons directory, no JSON file found, POST returns non-201, curl network error
+- [x] T019 [US3] Verify workflow step logs the failure reason (HTTP status code, response body) for observability when persistence fails in .github/workflows/ai-board-assist.yml
+- [x] T020 [US3] Verify workflow step only runs for /compare commands via the if condition: contains(inputs.comment, '/compare') in .github/workflows/ai-board-assist.yml
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -100,10 +100,10 @@
 
 **Purpose**: Final validation across all changes
 
-- [ ] T021 Run bun run type-check to verify no TypeScript errors in new/modified files
-- [ ] T022 Run bun run lint to verify no linting issues in new/modified files
-- [ ] T023 Run integration tests: bun run test:integration -- tests/integration/comparisons/comparison-persistence-endpoint.test.ts to verify all tests pass
-- [ ] T024 Run quickstart.md validation: verify the three changes match quickstart.md summary
+- [x] T021 Run bun run type-check to verify no TypeScript errors in new/modified files
+- [x] T022 Run bun run lint to verify no linting issues in new/modified files
+- [x] T023 Run integration tests: bun run test:integration -- tests/integration/comparisons/comparison-persistence-endpoint.test.ts to verify all tests pass
+- [x] T024 Run quickstart.md validation: verify the three changes match quickstart.md summary
 
 ---
 
