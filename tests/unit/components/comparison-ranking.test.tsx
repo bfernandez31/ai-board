@@ -9,16 +9,20 @@ const participants = [
     title: 'Winner',
     stage: 'VERIFY' as const,
     workflowType: 'FULL' as const,
-    agent: null,
+    agent: 'CLAUDE' as const,
     rank: 1,
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityDetails: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 2 },
+      model: { state: 'available' as const, value: 'claude-sonnet-4-6' },
     },
     metrics: {
       linesAdded: 10,
@@ -35,17 +39,21 @@ const participants = [
     ticketKey: 'AIB-2',
     title: 'Runner up',
     stage: 'PLAN' as const,
-    workflowType: 'FULL' as const,
+    workflowType: 'QUICK' as const,
     agent: null,
     rank: 2,
     score: 75,
     rankRationale: 'More churn',
     quality: { state: 'pending' as const, value: null },
+    qualityDetails: { state: 'pending' as const, value: null },
     telemetry: {
       inputTokens: { state: 'pending' as const, value: null },
       outputTokens: { state: 'pending' as const, value: null },
+      totalTokens: { state: 'pending' as const, value: null },
       durationMs: { state: 'pending' as const, value: null },
       costUsd: { state: 'pending' as const, value: null },
+      jobCount: { state: 'unavailable' as const, value: null },
+      model: { state: 'unavailable' as const, value: null },
     },
     metrics: {
       linesAdded: 30,
@@ -76,5 +84,48 @@ describe('ComparisonRanking', () => {
     expect(screen.getByText('#2 AIB-2')).toBeInTheDocument();
     expect(screen.getAllByText('Winner').length).toBeGreaterThan(0);
     expect(screen.getByText('coverage')).toBeInTheDocument();
+  });
+
+  it('renders workflow type badges on each card', () => {
+    renderWithProviders(
+      <ComparisonRanking
+        participants={participants}
+        recommendation="Use AIB-1."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    expect(screen.getByText('FULL')).toBeInTheDocument();
+    expect(screen.getByText('QUICK')).toBeInTheDocument();
+  });
+
+  it('renders agent badge when available', () => {
+    renderWithProviders(
+      <ComparisonRanking
+        participants={participants}
+        recommendation="Use AIB-1."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    expect(screen.getByText('CLAUDE')).toBeInTheDocument();
+  });
+
+  it('renders quality score badge with label when available', () => {
+    renderWithProviders(
+      <ComparisonRanking
+        participants={participants}
+        recommendation="Use AIB-1."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    expect(screen.getByText('92 Excellent')).toBeInTheDocument();
   });
 });

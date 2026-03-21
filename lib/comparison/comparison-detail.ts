@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db/client';
+import { parseQualityScoreDetails } from '@/lib/quality-score';
 import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
 import {
+  type AggregatedTelemetryInput,
   buildComparisonDetail,
   createAvailableEnrichment,
   createPendingEnrichment,
@@ -168,21 +170,20 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [allJobs, latestVerifyJobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
         ticketId: {
           in: participantIds,
         },
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
+        model: true,
       },
     }),
     prisma.job.findMany({
@@ -197,6 +198,7 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,24 +223,71 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  // Aggregate telemetry across all jobs per ticket
+  const aggregatedTelemetryByTicketId = new Map<number, AggregatedTelemetryInput>();
+  for (const job of allJobs) {
+    const existing = aggregatedTelemetryByTicketId.get(job.ticketId);
+    if (!existing) {
+      aggregatedTelemetryByTicketId.set(job.ticketId, {
+        inputTokens: job.inputTokens,
+        outputTokens: job.outputTokens,
+        durationMs: job.durationMs,
+        costUsd: job.costUsd,
+        jobCount: 1,
+        model: job.model,
+      });
+      continue;
+    }
+    existing.inputTokens =
+      existing.inputTokens != null || job.inputTokens != null
+        ? (existing.inputTokens ?? 0) + (job.inputTokens ?? 0)
+        : null;
+    existing.outputTokens =
+      existing.outputTokens != null || job.outputTokens != null
+        ? (existing.outputTokens ?? 0) + (job.outputTokens ?? 0)
+        : null;
+    existing.durationMs =
+      existing.durationMs != null || job.durationMs != null
+        ? (existing.durationMs ?? 0) + (job.durationMs ?? 0)
+        : null;
+    existing.costUsd =
+      existing.costUsd != null || job.costUsd != null
+        ? (existing.costUsd ?? 0) + (job.costUsd ?? 0)
+        : null;
+    existing.jobCount += 1;
+    // Keep the model from the first job (most common pattern)
+    if (!existing.model && job.model) {
+      existing.model = job.model;
+    }
+  }
+
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
   const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
-  const participants = record.participants.map((participant) =>
-    normalizeParticipantDetail({
+  const participants = record.participants.map((participant) => {
+    const verifyJob = latestVerifyJobByTicketId.get(participant.ticketId) ?? null;
+    const qualityDetails = verifyJob?.qualityScoreDetails
+      ? parseQualityScoreDetails(verifyJob.qualityScoreDetails)
+      : null;
+
+    return normalizeParticipantDetail({
       participant,
       quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
+        verifyJob,
         verifyJobTicketIds.has(participant.ticketId)
       ),
+      qualityDetails: qualityDetails
+        ? createAvailableEnrichment(qualityDetails)
+        : verifyJobTicketIds.has(participant.ticketId)
+          ? createPendingEnrichment()
+          : createUnavailableEnrichment(),
       telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
+        aggregatedTelemetryByTicketId.get(participant.ticketId) ?? null
       ),
-    })
-  );
+    });
+  });
 
   const groupedCompliance = new Map<
     string,
