@@ -334,34 +334,94 @@ After writing the markdown report, write a JSON data file for workflow persisten
 
 **IMPORTANT**: Wrap this entire step in a try-catch. If JSON writing fails, log a warning and continue to Step 11. The markdown report is the primary artifact — JSON is secondary.
 
-**What to write**: A JSON file containing the comparison persistence payload:
+**What to write**: A JSON file containing the comparison persistence payload. **Every field shown below is required** — copy this structure exactly, replacing placeholders with actual values:
 
 ```json
 {
-  "projectId": <PROJECT_ID as number>,
-  "sourceTicketKey": "<SOURCE_KEY>",
-  "participantTicketKeys": ["<SOURCE_KEY>", "<KEY-1>", "<KEY-2>"],
-  "compareRunKey": "cmp_<timestamp>_<SOURCE_KEY>_<KEY-1>-<KEY-2>",
-  "markdownPath": "<path to the markdown report written in Step 10>",
+  "projectId": 3,
+  "sourceTicketKey": "AIB-123",
+  "participantTicketKeys": ["AIB-123", "AIB-124", "AIB-125"],
+  "compareRunKey": "cmp_20260321T143000000Z_AIB-123_AIB-124-AIB-125",
+  "markdownPath": "specs/AIB-123-feature/comparisons/20260321-143000-vs-AIB-124-AIB-125.md",
   "report": {
     "metadata": {
-      "generatedAt": "<ISO timestamp>",
-      "sourceTicket": "<SOURCE_KEY>",
-      "comparedTickets": ["<SOURCE_KEY>", "<KEY-1>", "<KEY-2>"],
-      "filePath": "<markdown report path>"
+      "generatedAt": "2026-03-21T14:30:00.000Z",
+      "sourceTicket": "AIB-123",
+      "comparedTickets": ["AIB-123", "AIB-124", "AIB-125"],
+      "filePath": "specs/AIB-123-feature/comparisons/20260321-143000-vs-AIB-124-AIB-125.md"
     },
-    "summary": "<executive summary text>",
-    "alignment": { <FeatureAlignmentScore object> },
-    "implementation": { "<ticketKey>": { <ImplementationMetrics object> } },
-    "compliance": { "<ticketKey>": { <ConstitutionComplianceScore object> } },
-    "telemetry": { "<ticketKey>": { <TicketTelemetry object> } },
-    "recommendation": "<recommendation text>",
-    "warnings": ["<warning strings>"]
+    "summary": "Executive summary text here",
+    "alignment": {
+      "overall": 75,
+      "dimensions": {
+        "requirements": 80,
+        "scenarios": 70,
+        "entities": 60,
+        "keywords": 50
+      },
+      "isAligned": true,
+      "matchingRequirements": ["API endpoints", "Data model"],
+      "matchingEntities": ["Ticket", "Project"]
+    },
+    "implementation": {
+      "AIB-123": {
+        "ticketKey": "AIB-123",
+        "linesAdded": 150,
+        "linesRemoved": 20,
+        "linesChanged": 170,
+        "filesChanged": 5,
+        "changedFiles": ["app/api/route.ts", "lib/utils.ts"],
+        "testFilesChanged": 1,
+        "hasData": true
+      }
+    },
+    "compliance": {
+      "AIB-123": {
+        "overall": 85,
+        "totalPrinciples": 5,
+        "passedPrinciples": 4,
+        "principles": [
+          {
+            "name": "TypeScript-First Development",
+            "section": "I",
+            "passed": true,
+            "notes": "All types properly annotated"
+          }
+        ]
+      }
+    },
+    "telemetry": {
+      "AIB-123": {
+        "ticketKey": "AIB-123",
+        "inputTokens": 5000,
+        "outputTokens": 3000,
+        "cacheReadTokens": 0,
+        "cacheCreationTokens": 0,
+        "costUsd": 0.15,
+        "durationMs": 45000,
+        "model": "opus",
+        "toolsUsed": ["Read", "Edit", "Bash"],
+        "jobCount": 3,
+        "hasData": true
+      }
+    },
+    "recommendation": "Ship AIB-124",
+    "warnings": []
   }
 }
 ```
 
-**Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload. The `PROJECT_ID` environment variable provides the project ID.
+**Field rules**:
+- `projectId`: Use `PROJECT_ID` env var, cast to number (not string)
+- `generatedAt`: Must be ISO 8601 with timezone (e.g., `"2026-03-21T14:30:00.000Z"`)
+- `filePath` in metadata: Must equal `markdownPath`
+- `comparedTickets` and `participantTicketKeys`: Must include source ticket, same order
+- `ticketKey` inside each `implementation` and `telemetry` entry: Must match the record key
+- `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
+- If telemetry data is unavailable, set `hasData: false` and use `0` for all numeric fields
+- If no telemetry file exists, use an empty object `{}` for `telemetry`
+
+**Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.
 
 **File naming**: Same timestamp and keys as the markdown report, but with `.json` extension.
 - Example: `specs/$BRANCH/comparisons/20260102-143052-vs-AIB-124-AIB-125.json`
