@@ -80,16 +80,18 @@ install_codex() {
     exit 1
   fi
   log_info "Codex CLI installed successfully"
+}
 
-  log_info "Authenticating Codex CLI..."
+auth_codex() {
+  # Reset auth from secret on every call to avoid refresh token expiry
+  # Codex consumes the refresh token on each invocation, so the auth.json
+  # written by a previous call may contain an already-used refresh token.
   if [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
-    # OAuth token flow: restore auth.json from base64-encoded secret
     mkdir -p ~/.codex
     echo "$CODEX_AUTH_JSON" | base64 -d > ~/.codex/auth.json
     chmod 600 ~/.codex/auth.json
-    log_info "Codex authenticated via OAuth token (auth.json)"
+    log_info "Codex authenticated via OAuth token (auth.json reset from secret)"
   else
-    # API key flow
     codex login --api-key "$OPENAI_API_KEY"
     log_info "Codex authenticated via API key"
   fi
@@ -173,6 +175,7 @@ case "$AGENT_TYPE" in
   CODEX)
     validate_auth
     install_codex
+    auth_codex
     setup_codex_telemetry
     invoke_codex
     ;;
