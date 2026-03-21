@@ -35,11 +35,12 @@ describe('Comparison dashboard API', () => {
     expect(response.status).toBe(200);
     expect(response.data.summary).toContain('best test coverage');
     expect(response.data.overallRecommendation).toContain('TE2-102');
-    expect(response.data.participants.map((participant) => participant.rank)).toEqual([1, 2]);
+    expect(response.data.participants.map((participant) => participant.rank)).toEqual([1, 2, 3]);
     expect(response.data.participants[0]?.metrics.bestValueFlags.linesChanged).toBe(true);
     expect(response.data.decisionPoints[0]?.participantApproaches).toHaveLength(2);
     expect(response.data.complianceRows[0]?.assessments.map((entry) => entry.status)).toEqual([
       'pass',
+      'mixed',
       'mixed',
     ]);
   });

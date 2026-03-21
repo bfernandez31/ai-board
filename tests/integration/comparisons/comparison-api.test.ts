@@ -40,6 +40,7 @@ describe('Comparisons API', () => {
       expect(response.data.comparisons[0]?.participantTicketKeys).toEqual([
         fixture.winnerTicket.ticketKey,
         fixture.otherTicket.ticketKey,
+        fixture.quickTicket.ticketKey,
       ]);
     });
 

@@ -1,8 +1,23 @@
 'use client';
 
+import { getAgentLabel } from '@/app/lib/utils/agent-icons';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonRankingProps } from './types';
+
+function getQualityContextLabel(participant: ComparisonRankingProps['participants'][number]): string {
+  if (participant.quality.state === 'pending') {
+    return 'Quality pending';
+  }
+
+  if (participant.quality.state === 'unavailable' || participant.quality.score == null) {
+    return 'Quality unavailable';
+  }
+
+  return participant.quality.threshold
+    ? `Quality ${participant.quality.score} · ${participant.quality.threshold}`
+    : `Quality ${participant.quality.score}`;
+}
 
 export function ComparisonRanking({
   participants,
@@ -43,6 +58,13 @@ export function ComparisonRanking({
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {participant.title}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant="outline">{participant.workflowType}</Badge>
+                    {participant.agent && (
+                      <Badge variant="outline">{getAgentLabel(participant.agent)}</Badge>
+                    )}
+                    <Badge variant="secondary">{getQualityContextLabel(participant)}</Badge>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

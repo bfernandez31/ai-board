@@ -102,7 +102,7 @@ export function useComparisonDetail(
 ) {
   return useQuery({
     queryKey: getComparisonDetailQueryKey(projectId, ticketId, comparisonId),
-    queryFn: () =>
+    queryFn: async (): Promise<ComparisonDetail> =>
       fetchJson<ComparisonDetail>(
         `/api/projects/${projectId}/tickets/${ticketId}/comparisons/${comparisonId}`,
         'Failed to fetch comparison detail'

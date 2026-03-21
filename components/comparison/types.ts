@@ -7,6 +7,7 @@
 import type {
   ComparisonComplianceRow,
   ComparisonDecisionPoint,
+  ComparisonQualityDetail,
   ComparisonParticipantDetail,
   ComparisonSummary,
 } from '@/lib/types/comparison';
@@ -44,6 +45,11 @@ export interface ComparisonSectionProps {
   participants: ComparisonParticipantDetail[];
 }
 
+export interface ComparisonOperationalMetricsProps extends ComparisonSectionProps {
+  selectedQualityTicketId: number | null;
+  onQualityDetailSelect: (ticketId: number | null) => void;
+}
+
 export interface ComparisonRankingProps extends ComparisonSectionProps {
   recommendation: string;
   summary: string;
@@ -58,4 +64,9 @@ export interface ComparisonDecisionPointsProps {
 export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
   participants: ComparisonParticipantDetail[];
+}
+
+export interface ComparisonQualityDetailTrayProps {
+  detail: ComparisonQualityDetail;
+  onClose: () => void;
 }

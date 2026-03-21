@@ -18,9 +18,18 @@ describe('Comparison detail route', () => {
       winnerTicketKey: string;
       participants: Array<{
         ticketKey: string;
-        quality: { state: string; value: number | null };
-        telemetry: {
-          inputTokens: { state: string; value: number | null };
+        workflowType: string;
+        agent: string | null;
+        quality: {
+          state: string;
+          score: number | null;
+          threshold: string | null;
+          detailsState: string;
+          details: { ticketKey: string } | null;
+        };
+        operational: {
+          totalTokens: { state: string; value: number | null; isBest: boolean };
+          model: { label: string | null; mixedModels: boolean };
         };
       }>;
       decisionPoints: Array<{ title: string }>;
@@ -32,11 +41,25 @@ describe('Comparison detail route', () => {
     expect(response.status).toBe(200);
     expect(response.data.id).toBe(fixture.comparison.id);
     expect(response.data.winnerTicketKey).toBe(fixture.winnerTicket.ticketKey);
-    expect(response.data.participants[0]?.quality).toEqual({
-      state: 'available',
-      value: 91,
-    });
-    expect(response.data.participants[1]?.telemetry.inputTokens.state).toBe('pending');
+    expect(response.data.participants[0]?.quality).toEqual(
+      expect.objectContaining({
+        state: 'available',
+        score: 91,
+        threshold: 'Excellent',
+        detailsState: 'available',
+        details: expect.objectContaining({ ticketKey: fixture.winnerTicket.ticketKey }),
+      })
+    );
+    expect(response.data.participants[0]?.operational.totalTokens).toEqual(
+      expect.objectContaining({ state: 'available', value: 2400, isBest: false })
+    );
+    expect(response.data.participants[1]?.operational.totalTokens.state).toBe('pending');
+    expect(response.data.participants[2]?.workflowType).toBe('QUICK');
+    expect(response.data.participants[2]?.agent).toBe('CLAUDE');
+    expect(response.data.participants[2]?.quality.detailsState).toBe('summary_only');
+    expect(response.data.participants[2]?.operational.model).toEqual(
+      expect.objectContaining({ label: 'Multiple models', mixedModels: true })
+    );
     expect(response.data.decisionPoints[0]?.title).toBe('State handling');
     expect(response.data.complianceRows[0]?.principleKey).toBe(
       'typescript-first-development'

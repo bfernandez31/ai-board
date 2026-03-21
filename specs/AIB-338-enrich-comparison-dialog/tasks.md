@@ -14,7 +14,7 @@
 
 **Purpose**: Initialize feature-specific implementation context before shared code changes.
 
-- [ ] T001 Refresh the agent context for this feature with `./.claude-plugin/scripts/bash/update-agent-context.sh` and validate the target docs in `specs/AIB-338-enrich-comparison-dialog/plan.md`
+- [X] T001 Refresh the agent context for this feature with `./.claude-plugin/scripts/bash/update-agent-context.sh` and validate the target docs in `specs/AIB-338-enrich-comparison-dialog/plan.md`
 
 ---
 
@@ -24,11 +24,11 @@
 
 **⚠️ CRITICAL**: Complete this phase before starting user story work.
 
-- [ ] T002 [P] Extend comparison DTOs for operational metrics, model summaries, and quality detail payloads in `lib/types/comparison.ts`
-- [ ] T003 [P] Update comparison component prop types for enriched participant data and inline tray state in `components/comparison/types.ts`
-- [ ] T004 [P] Create the shared aggregation and best-value helper module in `lib/comparison/comparison-operational-metrics.ts`
-- [ ] T005 Update participant normalization to attach operational aggregates and quality-detail eligibility in `lib/comparison/comparison-record.ts`
-- [ ] T006 Update the comparison detail read path to fetch participant jobs, compute enriched aggregates, and return the new DTO shape in `lib/comparison/comparison-detail.ts`
+- [X] T002 [P] Extend comparison DTOs for operational metrics, model summaries, and quality detail payloads in `lib/types/comparison.ts`
+- [X] T003 [P] Update comparison component prop types for enriched participant data and inline tray state in `components/comparison/types.ts`
+- [X] T004 [P] Create the shared aggregation and best-value helper module in `lib/comparison/comparison-operational-metrics.ts`
+- [X] T005 Update participant normalization to attach operational aggregates and quality-detail eligibility in `lib/comparison/comparison-record.ts`
+- [X] T006 Update the comparison detail read path to fetch participant jobs, compute enriched aggregates, and return the new DTO shape in `lib/comparison/comparison-detail.ts`
 
 **Checkpoint**: The API read model can now supply all enriched comparison data needed by the UI.
 
@@ -44,16 +44,16 @@
 
 **NOTE**: Write these tests first and confirm they fail before implementation.
 
-- [ ] T007 [P] [US1] Add aggregation and dominance edge-case coverage for totals, ties, and pending/unavailable classification in `tests/unit/comparison/comparison-detail-aggregation.test.ts`
-- [ ] T008 [P] [US1] Extend the enriched comparison detail API expectations for operational aggregates in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T009 [P] [US1] Add component coverage for the Operational Metrics grid rows, best badges, and pending/not-available labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [X] T007 [P] [US1] Add aggregation and dominance edge-case coverage for totals, ties, and pending/unavailable classification in `tests/unit/comparison/comparison-detail-aggregation.test.ts`
+- [X] T008 [P] [US1] Extend the enriched comparison detail API expectations for operational aggregates in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [X] T009 [P] [US1] Add component coverage for the Operational Metrics grid rows, best badges, and pending/not-available labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Return the enriched comparison detail contract from `GET /api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]` in `app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
-- [ ] T011 [US1] Carry the enriched comparison detail payload through the client query layer in `hooks/use-comparisons.ts`
-- [ ] T012 [US1] Implement the Operational Metrics section with metric rows, best-value rendering, and quality summary cells in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T013 [US1] Insert the new `Operational Metrics` section after `Implementation Metrics` while preserving the remaining section order in `components/comparison/comparison-viewer.tsx`
+- [X] T010 [US1] Return the enriched comparison detail contract from `GET /api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]` in `app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
+- [X] T011 [US1] Carry the enriched comparison detail payload through the client query layer in `hooks/use-comparisons.ts`
+- [X] T012 [US1] Implement the Operational Metrics section with metric rows, best-value rendering, and quality summary cells in `components/comparison/comparison-operational-metrics.tsx`
+- [X] T013 [US1] Insert the new `Operational Metrics` section after `Implementation Metrics` while preserving the remaining section order in `components/comparison/comparison-viewer.tsx`
 
 **Checkpoint**: User Story 1 is complete when operational efficiency can be compared side by side without leaving the dialog.
 
@@ -67,13 +67,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Extend ranking-card component coverage for workflow badges, agent labels, and compact quality context in `tests/unit/components/comparison-ranking.test.tsx`
-- [ ] T015 [P] [US2] Extend Operational Metrics header coverage for ticket key, workflow type, agent, and model context in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [X] T014 [P] [US2] Extend ranking-card component coverage for workflow badges, agent labels, and compact quality context in `tests/unit/components/comparison-ranking.test.tsx`
+- [X] T015 [P] [US2] Extend Operational Metrics header coverage for ticket key, workflow type, agent, and model context in `tests/unit/components/comparison-operational-metrics.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Render workflow type, agent context, and quality threshold badges in ranking cards in `components/comparison/comparison-ranking.tsx`
-- [ ] T017 [US2] Render ticket key, workflow type, agent context, and dominant-model/multi-model labels in the Operational Metrics column headers in `components/comparison/comparison-operational-metrics.tsx`
+- [X] T016 [US2] Render workflow type, agent context, and quality threshold badges in ranking cards in `components/comparison/comparison-ranking.tsx`
+- [X] T017 [US2] Render ticket key, workflow type, agent context, and dominant-model/multi-model labels in the Operational Metrics column headers in `components/comparison/comparison-operational-metrics.tsx`
 
 **Checkpoint**: User Story 2 is complete when ranking context is visible in the dialog without opening any secondary surfaces.
 
@@ -87,14 +87,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Extend the comparison detail API coverage for quality-detail eligibility and summary-only states in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T019 [P] [US3] Add component coverage for inline quality-detail tray behavior and non-interactive cells in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T020 [P] [US3] Add a focused browser scenario for comparison-dialog horizontal scrolling and inline quality inspection in `tests/e2e/comparison-dialog.spec.ts`
+- [X] T018 [P] [US3] Extend the comparison detail API coverage for quality-detail eligibility and summary-only states in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [X] T019 [P] [US3] Add component coverage for inline quality-detail tray behavior and non-interactive cells in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [X] T020 [P] [US3] Add a focused browser scenario for comparison-dialog horizontal scrolling and inline quality inspection in `tests/e2e/comparison-dialog.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Add inline quality-detail tray interactions, eligibility gating, and detail rendering in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T022 [US3] Manage the selected quality-detail state inside the dialog without nested modals in `components/comparison/comparison-viewer.tsx`
+- [X] T021 [US3] Add inline quality-detail tray interactions, eligibility gating, and detail rendering in `components/comparison/comparison-operational-metrics.tsx`
+- [X] T022 [US3] Manage the selected quality-detail state inside the dialog without nested modals in `components/comparison/comparison-viewer.tsx`
 
 **Checkpoint**: User Story 3 is complete when eligible tickets expose in-place quality details and the dialog remains readable across supported viewport sizes.
 
@@ -104,9 +104,9 @@
 
 **Purpose**: Final regression coverage, validation, and repository gates across all stories.
 
-- [ ] T023 [P] Extend dashboard regression coverage for section order and coexistence of comparison sections in `tests/unit/components/comparison-dashboard-sections.test.tsx`
-- [ ] T024 [P] Execute the feature validation checklist from `specs/AIB-338-enrich-comparison-dialog/quickstart.md` and fix any issues in `components/comparison/`, `lib/comparison/`, `hooks/use-comparisons.ts`, and `app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
-- [ ] T025 Resolve final type and lint issues in `components/comparison/comparison-ranking.tsx`, `components/comparison/comparison-viewer.tsx`, `components/comparison/comparison-operational-metrics.tsx`, `lib/comparison/comparison-detail.ts`, and `lib/types/comparison.ts`
+- [X] T023 [P] Extend dashboard regression coverage for section order and coexistence of comparison sections in `tests/unit/components/comparison-dashboard-sections.test.tsx`
+- [X] T024 [P] Execute the feature validation checklist from `specs/AIB-338-enrich-comparison-dialog/quickstart.md` and fix any issues in `components/comparison/`, `lib/comparison/`, `hooks/use-comparisons.ts`, and `app/api/projects/[projectId]/tickets/[id]/comparisons/[comparisonId]/route.ts`
+- [X] T025 Resolve final type and lint issues in `components/comparison/comparison-ranking.tsx`, `components/comparison/comparison-viewer.tsx`, `components/comparison/comparison-operational-metrics.tsx`, `lib/comparison/comparison-detail.ts`, and `lib/types/comparison.ts`
 
 ---
 

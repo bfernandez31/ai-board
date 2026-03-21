@@ -46,12 +46,28 @@ vi.mock('@/hooks/use-comparisons', () => ({
           rank: 1,
           score: 95,
           rankRationale: 'Best value',
-          quality: { state: 'available', value: 95 },
-          telemetry: {
-            inputTokens: { state: 'available', value: 10 },
-            outputTokens: { state: 'available', value: 5 },
-            durationMs: { state: 'available', value: 100 },
-            costUsd: { state: 'available', value: 0.01 },
+          quality: {
+            state: 'available',
+            score: 95,
+            threshold: 'Excellent',
+            detailsState: 'summary_only',
+            details: null,
+            isBest: true,
+          },
+          operational: {
+            totalTokens: { state: 'available', value: 15, isBest: true },
+            inputTokens: { state: 'available', value: 10, isBest: true },
+            outputTokens: { state: 'available', value: 5, isBest: true },
+            durationMs: { state: 'available', value: 100, isBest: true },
+            costUsd: { state: 'available', value: 0.01, isBest: true },
+            jobCount: { state: 'available', value: 1, isBest: true },
+            model: {
+              state: 'available',
+              label: 'gpt-5.4',
+              dominantModel: 'gpt-5.4',
+              completedJobCount: 1,
+              mixedModels: false,
+            },
           },
           metrics: {
             linesAdded: 10,
@@ -93,6 +109,7 @@ describe('ComparisonViewer', () => {
 
     expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
     expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Operational Metrics')).toBeInTheDocument();
     expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
     expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });
