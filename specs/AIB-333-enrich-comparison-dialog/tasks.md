@@ -41,15 +41,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Component test: renders workflow type badge on each card in `tests/unit/components/comparison-ranking-badges.test.tsx`
-- [ ] T010 [P] [US1] Component test: renders agent badge when agent is present, omits when null in `tests/unit/components/comparison-ranking-badges.test.tsx`
-- [ ] T011 [P] [US1] Component test: renders quality badge with score and threshold, omits when unavailable in `tests/unit/components/comparison-ranking-badges.test.tsx`
+- [x] T009 [P] [US1] Component test: renders workflow type badge on each card in `tests/unit/components/comparison-ranking-badges.test.tsx`
+- [x] T010 [P] [US1] Component test: renders agent badge when agent is present, omits when null in `tests/unit/components/comparison-ranking-badges.test.tsx`
+- [x] T011 [P] [US1] Component test: renders quality badge with score and threshold, omits when unavailable in `tests/unit/components/comparison-ranking-badges.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add workflow type badge (`Badge variant="outline"`, color-coded FULL/QUICK/CLEAN) to each participant card in `components/comparison/comparison-ranking.tsx`
-- [ ] T013 [US1] Add agent badge (`Badge variant="secondary"`) when `agent` is not null in `components/comparison/comparison-ranking.tsx`
-- [ ] T014 [US1] Add quality score badge with numeric score + threshold label using `getScoreColor()` in `components/comparison/comparison-ranking.tsx`
+- [x] T012 [US1] Add workflow type badge (`Badge variant="outline"`, color-coded FULL/QUICK/CLEAN) to each participant card in `components/comparison/comparison-ranking.tsx`
+- [x] T013 [US1] Add agent badge (`Badge variant="secondary"`) when `agent` is not null in `components/comparison/comparison-ranking.tsx`
+- [x] T014 [US1] Add quality score badge with numeric score + threshold label using `getScoreColor()` in `components/comparison/comparison-ranking.tsx`
 
 **Checkpoint**: Ranking cards show workflow type, agent, and quality badges. Story 1 fully testable.
 
