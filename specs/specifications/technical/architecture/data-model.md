@@ -709,6 +709,7 @@ Root model for a comparison analysis.
 - `projectId`: Parent project
 - `sourceTicketId`: Ticket that triggered the `/compare` command
 - `winnerTicketId`: Ticket recommended as best implementation
+- `compareRunKey`: Optional idempotency key for workflow-driven persistence (max 255 chars). Prevents duplicate records on workflow retry.
 - `markdownPath`: Path to the markdown report file on the branch
 - `summary`: Executive summary (max 2000 chars)
 - `overallRecommendation`: Full recommendation text (max 10000 chars)
@@ -724,6 +725,9 @@ Root model for a comparison analysis.
 - `(projectId, generatedAt DESC)`: List comparisons for a project
 - `(sourceTicketId, generatedAt DESC)`: Find comparisons by source ticket
 - `(winnerTicketId, generatedAt DESC)`: Find comparisons by winner
+
+**Constraints**:
+- Unique `(projectId, sourceTicketId, compareRunKey)`: One record per compare run per source ticket
 
 ### ComparisonParticipant
 

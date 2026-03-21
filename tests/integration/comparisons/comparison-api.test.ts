@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
-import { createStructuredComparisonFixture } from '@/tests/helpers/comparison-fixtures';
+import {
+  createStructuredComparisonFixture,
+  createWorkflowComparisonPayloadFixture,
+} from '@/tests/helpers/comparison-fixtures';
+import { createTestTicket } from '@/tests/helpers/db-setup';
+import { getPrismaClient } from '@/tests/helpers/db-cleanup';
 
 describe('Comparisons API', () => {
   let ctx: TestContext;
@@ -57,6 +62,54 @@ describe('Comparisons API', () => {
 
       expect(response.status).toBe(400);
       expect(response.data.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects workflow persistence writes without workflow auth and leaves history untouched', async () => {
+      const prisma = getPrismaClient();
+      const sourceTicket = await createTestTicket(ctx.projectId, {
+        title: '[e2e] Source',
+        description: 'Source',
+        ticketNumber: 241,
+        ticketKey: 'TE2-241',
+        stage: 'BUILD',
+        branch: 'AIB-330-persist-comparison-data',
+      });
+      const candidate = await createTestTicket(ctx.projectId, {
+        title: '[e2e] Candidate',
+        description: 'Candidate',
+        ticketNumber: 242,
+        ticketKey: 'TE2-242',
+        stage: 'VERIFY',
+      });
+
+      const payload = createWorkflowComparisonPayloadFixture({
+        projectId: ctx.projectId,
+        branch: 'AIB-330-persist-comparison-data',
+        sourceTicket: {
+          id: sourceTicket.id,
+          ticketKey: sourceTicket.ticketKey ?? 'TE2-241',
+        },
+        participants: [
+          { id: candidate.id, ticketKey: candidate.ticketKey ?? 'TE2-242' },
+        ],
+      });
+
+      const response = await ctx.api.post<{ code: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+        payload,
+        {
+          includeTestUserHeader: false,
+          enableTestAuthOverride: false,
+        }
+      );
+
+      expect(response.status).toBe(401);
+      expect(response.data.code).toBe('UNAUTHORIZED');
+      expect(
+        await prisma.comparisonRecord.count({
+          where: { sourceTicketId: sourceTicket.id },
+        })
+      ).toBe(0);
     });
   });
 

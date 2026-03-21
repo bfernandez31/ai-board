@@ -13,6 +13,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
+const SERVER_CHECK_URL = process.env.TEST_SERVER_CHECK_URL || BASE_URL;
 
 /**
  * Worker to project mapping
@@ -37,7 +38,7 @@ export function getProjectId(workerId: number): number {
 async function checkServerRunning(): Promise<boolean> {
   try {
     // Try to fetch the root page - any 2xx or 3xx response means server is running
-    const response = await fetch(BASE_URL, {
+    const response = await fetch(SERVER_CHECK_URL, {
       signal: AbortSignal.timeout(5000),
     });
     return response.status < 500;

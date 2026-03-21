@@ -2045,6 +2045,78 @@ Fetch full comparison detail with enriched data.
 - `400`: Invalid project, ticket, or comparison ID
 - `404`: Ticket not found, user has no access, or comparison not associated with this ticket
 
+### POST /api/projects/:projectId/tickets/:id/comparisons
+
+Persist a structured comparison record from a workflow-generated JSON artifact.
+
+**Authentication**: Workflow token (Bearer)
+**Authorization**: Workflow-only — same pattern as job status updates
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+- `id` (number, required): Source ticket ID (the ticket that triggered `/compare`)
+
+**Request Body**:
+```json
+{
+  "compareRunKey": "cmp_AIB-123_AIB-124-AIB-125_20260321T143000Z",
+  "projectId": 3,
+  "sourceTicketId": 42,
+  "sourceTicketKey": "AIB-123",
+  "participantTicketIds": [43, 44],
+  "markdownPath": "specs/AIB-123-feature/comparisons/20260321-143000-vs-AIB-124-AIB-125.md",
+  "report": {
+    "metadata": {
+      "generatedAt": "2026-03-21T14:30:00.000Z",
+      "sourceTicket": "AIB-123",
+      "comparedTickets": ["AIB-124", "AIB-125"],
+      "filePath": "20260321-143000-vs-AIB-124-AIB-125.md"
+    },
+    "summary": "AIB-125 demonstrates stronger implementation...",
+    "recommendation": "Ship AIB-125",
+    "alignment": { "overall": 88, "dimensions": {}, "isAligned": true },
+    "implementation": { "AIB-124": { "..." : "..." }, "AIB-125": { "..." : "..." } },
+    "compliance": { "AIB-124": { "..." : "..." }, "AIB-125": { "..." : "..." } },
+    "telemetry": {},
+    "warnings": []
+  }
+}
+```
+
+**Validation**:
+- `projectId` and `sourceTicketId` must match route parameters
+- `sourceTicketKey` must match the resolved ticket's key
+- `markdownPath` must end with `report.metadata.filePath` and start with `specs/{branch}/comparisons/`
+- `participantTicketIds` must be unique and resolve to tickets in the same project
+- Source ticket cannot appear in participant list
+- `report.metadata.comparedTickets` order must match resolved participant ticket keys
+
+**Response** (201 Created):
+```json
+{
+  "comparisonId": 1,
+  "compareRunKey": "cmp_AIB-123_AIB-124-AIB-125_20260321T143000Z",
+  "status": "created"
+}
+```
+
+**Response** (200 OK — duplicate):
+```json
+{
+  "comparisonId": 1,
+  "compareRunKey": "cmp_AIB-123_AIB-124-AIB-125_20260321T143000Z",
+  "status": "duplicate"
+}
+```
+
+Idempotency is handled inside a database transaction: if a record with the same `(projectId, sourceTicketId, compareRunKey)` already exists, the existing record is returned with `status: "duplicate"`.
+
+**Errors**:
+- `400`: Validation failure (mismatched scope, invalid participants, malformed payload)
+- `401`: Missing or invalid workflow token
+- `404`: Source ticket or participant not found in project
+- `500`: Internal persistence error
+
 ## Job Status Endpoints
 
 ### GET /api/projects/:projectId/jobs/status

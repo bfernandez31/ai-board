@@ -1,5 +1,10 @@
 import { getPrismaClient } from './db-cleanup';
 import { createTestTicket } from './db-setup';
+import { createComparisonReport, generateReportPath } from '@/lib/comparison/comparison-generator';
+import {
+  createCompareRunKey,
+  createComparisonPersistenceRequest,
+} from '@/lib/comparison/comparison-payload';
 
 export async function createStructuredComparisonFixture(projectId: number) {
   const prisma = getPrismaClient();
@@ -62,6 +67,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
       projectId,
       sourceTicketId: sourceTicket.id,
       winnerTicketId: winnerTicket.id,
+      compareRunKey: 'cmp_fixture_te2_101_102_103',
       markdownPath: `specs/${sourceTicket.ticketKey}/comparisons/example.md`,
       summary: 'Winner ticket had the best test coverage and smallest diff.',
       overallRecommendation: 'Choose TE2-102 for the implementation baseline.',
@@ -169,4 +175,92 @@ export async function createStructuredComparisonFixture(projectId: number) {
     otherTicket,
     comparison,
   };
+}
+
+export function createWorkflowComparisonReportFixture(sourceTicketKey: string, comparedTickets: string[]) {
+  return createComparisonReport(
+    sourceTicketKey,
+    comparedTickets,
+    {
+      overall: 80,
+      dimensions: {
+        requirements: 80,
+        scenarios: 80,
+        entities: 80,
+        keywords: 80,
+      },
+      isAligned: true,
+      matchingRequirements: ['FR-001'],
+      matchingEntities: ['Ticket'],
+    },
+    Object.fromEntries(
+      comparedTickets.map((ticketKey, index) => [
+        ticketKey,
+        {
+          ticketKey,
+          linesAdded: 10 + index * 10,
+          linesRemoved: 2 + index * 2,
+          linesChanged: 12 + index * 12,
+          filesChanged: 2 + index,
+          changedFiles: [`app/${ticketKey.toLowerCase()}.ts`],
+          testFilesChanged: index === 0 ? 1 : 0,
+          hasData: true,
+        },
+      ])
+    ),
+    Object.fromEntries(
+      comparedTickets.map((ticketKey, index) => [
+        ticketKey,
+        {
+          overall: index === 0 ? 90 : 50,
+          totalPrinciples: 1,
+          passedPrinciples: index === 0 ? 1 : 0,
+          principles: [
+            {
+              name: 'TypeScript-First Development',
+              section: 'I',
+              passed: index === 0,
+              notes: index === 0 ? '' : 'Gap',
+            },
+          ],
+        },
+      ])
+    ),
+    {},
+    `Choose ${comparedTickets[0]}.`
+  );
+}
+
+export function createWorkflowComparisonPayloadFixture(input: {
+  projectId: number;
+  branch: string;
+  sourceTicket: { id: number; ticketKey: string };
+  participants: Array<{ id: number; ticketKey: string }>;
+}) {
+  const report = createWorkflowComparisonReportFixture(
+    input.sourceTicket.ticketKey,
+    input.participants.map((participant) => participant.ticketKey)
+  );
+  const markdownPath = generateReportPath(input.branch, report.metadata.filePath);
+  const hydratedReport = {
+    ...report,
+    metadata: {
+      ...report.metadata,
+      filePath: markdownPath,
+    },
+  };
+
+  return createComparisonPersistenceRequest({
+    compareRunKey: createCompareRunKey(
+      input.sourceTicket.ticketKey,
+      hydratedReport.metadata.comparedTickets,
+      hydratedReport.metadata.generatedAt
+    ),
+    projectId: input.projectId,
+    sourceTicketId: input.sourceTicket.id,
+    sourceTicketKey: input.sourceTicket.ticketKey,
+    participantTicketIds: input.participants.map((participant) => participant.id),
+    markdownPath,
+    report: hydratedReport,
+  });
 }

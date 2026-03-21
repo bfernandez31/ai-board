@@ -1,11 +1,31 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createComparisonReport } from '@/lib/comparison/comparison-generator';
-import { persistComparisonRecord } from '@/lib/comparison/comparison-record';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
 import { createTestTicket } from '@/tests/helpers/db-setup';
-import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+import {
+  createWorkflowComparisonPayloadFixture,
+} from '@/tests/helpers/comparison-fixtures';
+import { ensureProjectExists, getPrismaClient } from '@/tests/helpers/db-cleanup';
 
-describe('comparison persistence', () => {
+const WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
+
+async function postWorkflow<T>(path: string, body: unknown) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${WORKFLOW_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  return {
+    status: response.status,
+    data: (await response.json()) as T,
+  };
+}
+
+describe('comparison persistence workflow route', () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
@@ -13,7 +33,7 @@ describe('comparison persistence', () => {
     await ctx.cleanup();
   });
 
-  it('persists one structured record alongside markdown metadata', async () => {
+  it('persists one structured record from a workflow-authenticated POST', async () => {
     const prisma = getPrismaClient();
     const sourceTicket = await createTestTicket(ctx.projectId, {
       title: '[e2e] Source',
@@ -21,6 +41,7 @@ describe('comparison persistence', () => {
       ticketNumber: 201,
       ticketKey: 'TE2-201',
       stage: 'BUILD',
+      branch: 'AIB-330-persist-comparison-data',
     });
     const candidateA = await createTestTicket(ctx.projectId, {
       title: '[e2e] Candidate A',
@@ -37,85 +58,181 @@ describe('comparison persistence', () => {
       stage: 'PLAN',
     });
 
-    const report = createComparisonReport(
-      sourceTicket.ticketKey ?? 'TE2-201',
-      [candidateA.ticketKey ?? 'TE2-202', candidateB.ticketKey ?? 'TE2-203'],
-      {
-        overall: 80,
-        dimensions: { requirements: 80, scenarios: 80, entities: 80, keywords: 80 },
-        isAligned: true,
-        matchingRequirements: ['FR-001'],
-        matchingEntities: ['Ticket'],
-      },
-      {
-        'TE2-202': {
-          ticketKey: 'TE2-202',
-          linesAdded: 10,
-          linesRemoved: 2,
-          linesChanged: 12,
-          filesChanged: 2,
-          changedFiles: ['app/a.ts'],
-          testFilesChanged: 1,
-          hasData: true,
-        },
-        'TE2-203': {
-          ticketKey: 'TE2-203',
-          linesAdded: 20,
-          linesRemoved: 4,
-          linesChanged: 24,
-          filesChanged: 3,
-          changedFiles: ['app/b.ts'],
-          testFilesChanged: 0,
-          hasData: true,
-        },
-      },
-      {
-        'TE2-202': {
-          overall: 90,
-          totalPrinciples: 1,
-          passedPrinciples: 1,
-          principles: [{ name: 'TypeScript-First Development', section: 'I', passed: true, notes: '' }],
-        },
-        'TE2-203': {
-          overall: 50,
-          totalPrinciples: 1,
-          passedPrinciples: 0,
-          principles: [{ name: 'TypeScript-First Development', section: 'I', passed: false, notes: 'Gap' }],
-        },
-      },
-      {},
-      'Choose TE2-202.'
-    );
-
-    const record = await persistComparisonRecord({
+    const payload = createWorkflowComparisonPayloadFixture({
       projectId: ctx.projectId,
+      branch: 'AIB-330-persist-comparison-data',
       sourceTicket: {
         id: sourceTicket.id,
         ticketKey: sourceTicket.ticketKey ?? 'TE2-201',
-        title: sourceTicket.title,
-        stage: sourceTicket.stage,
-        workflowType: sourceTicket.workflowType,
-        agent: sourceTicket.agent,
       },
-      participants: [candidateA, candidateB].map((ticket) => ({
-        id: ticket.id,
-        ticketKey: ticket.ticketKey ?? '',
-        title: ticket.title,
-        stage: ticket.stage,
-        workflowType: ticket.workflowType,
-        agent: ticket.agent,
-      })),
-      markdownPath: `specs/${sourceTicket.ticketKey}/comparisons/${report.metadata.filePath}`,
-      report,
+      participants: [
+        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-202' },
+        { id: candidateB.id, ticketKey: candidateB.ticketKey ?? 'TE2-203' },
+      ],
     });
 
+    const response = await postWorkflow<{
+      comparisonId: number;
+      compareRunKey: string;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.data.status).toBe('created');
+
     const persisted = await prisma.comparisonRecord.findUnique({
-      where: { id: record.id },
+      where: { id: response.data.comparisonId },
       include: { participants: true, decisionPoints: true },
     });
 
-    expect(persisted?.markdownPath).toContain('.md');
+    expect(persisted?.compareRunKey).toBe(payload.compareRunKey);
+    expect(persisted?.markdownPath).toBe(payload.markdownPath);
     expect(persisted?.participants).toHaveLength(2);
     expect(persisted?.decisionPoints).toHaveLength(1);
+  });
+
+  it('treats duplicate compare-run submissions as idempotent', async () => {
+    const prisma = getPrismaClient();
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source',
+      description: 'Source',
+      ticketNumber: 211,
+      ticketKey: 'TE2-211',
+      stage: 'BUILD',
+      branch: 'AIB-330-persist-comparison-data',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A',
+      description: 'A',
+      ticketNumber: 212,
+      ticketKey: 'TE2-212',
+      stage: 'VERIFY',
+    });
+    const candidateB = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate B',
+      description: 'B',
+      ticketNumber: 213,
+      ticketKey: 'TE2-213',
+      stage: 'PLAN',
+    });
+
+    const payload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-330-persist-comparison-data',
+      sourceTicket: {
+        id: sourceTicket.id,
+        ticketKey: sourceTicket.ticketKey ?? 'TE2-211',
+      },
+      participants: [
+        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-212' },
+        { id: candidateB.id, ticketKey: candidateB.ticketKey ?? 'TE2-213' },
+      ],
+    });
+
+    const first = await postWorkflow<{ comparisonId: number }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+    const second = await postWorkflow<{
+      comparisonId: number;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(200);
+    expect(second.data.status).toBe('duplicate');
+    expect(second.data.comparisonId).toBe(first.data.comparisonId);
+
+    const records = await prisma.comparisonRecord.findMany({
+      where: {
+        projectId: ctx.projectId,
+        sourceTicketId: sourceTicket.id,
+      },
+    });
+
+    expect(records).toHaveLength(1);
+  });
+
+  it('rejects malformed payloads and wrong-scope participants without writes', async () => {
+    const prisma = getPrismaClient();
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source',
+      description: 'Source',
+      ticketNumber: 221,
+      ticketKey: 'TE2-221',
+      stage: 'BUILD',
+      branch: 'AIB-330-persist-comparison-data',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A',
+      description: 'A',
+      ticketNumber: 222,
+      ticketKey: 'TE2-222',
+      stage: 'VERIFY',
+    });
+    await ensureProjectExists(3);
+    const foreignSuffix = Date.now() % 1000000;
+    const foreignTicket = await createTestTicket(3, {
+      title: '[e2e] Foreign ticket',
+      description: 'Foreign',
+      ticketNumber: foreignSuffix,
+      ticketKey: `TFR-${foreignSuffix}`,
+      stage: 'PLAN',
+    });
+
+    const payload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-330-persist-comparison-data',
+      sourceTicket: {
+        id: sourceTicket.id,
+        ticketKey: sourceTicket.ticketKey ?? 'TE2-221',
+      },
+      participants: [
+        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-222' },
+      ],
+    });
+
+    const malformedResponse = await postWorkflow<{ code: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      {
+        ...payload,
+        markdownPath: 'bad-path.md',
+      }
+    );
+
+    const wrongScopeResponse = await postWorkflow<{ code: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      {
+        ...payload,
+        participantTicketIds: [foreignTicket.id],
+        report: {
+          ...payload.report,
+          metadata: {
+            ...payload.report.metadata,
+            comparedTickets: [foreignTicket.ticketKey ?? `TFR-${foreignSuffix}`],
+          },
+        },
+      }
+    );
+
+    expect(malformedResponse.status).toBe(400);
+    expect(malformedResponse.data.code).toBe('VALIDATION_ERROR');
+    expect(wrongScopeResponse.status).toBe(404);
+    expect(wrongScopeResponse.data.code).toBe('PARTICIPANT_NOT_FOUND');
+
+    const count = await prisma.comparisonRecord.count({
+      where: {
+        projectId: ctx.projectId,
+        sourceTicketId: sourceTicket.id,
+      },
+    });
+
+    expect(count).toBe(0);
   });
 });

@@ -29,6 +29,7 @@ type PersistComparisonInput = {
   projectId: number;
   sourceTicket: PersistableTicket;
   participants: PersistableTicket[];
+  compareRunKey?: string | null;
   markdownPath: string;
   report: ComparisonReport;
 };
@@ -41,6 +42,17 @@ const DEFAULT_PRINCIPLES = [
   'Database Integrity',
   'AI-First Development Model',
 ] as const;
+
+const comparisonRecordInclude = {
+  participants: {
+    include: {
+      metricSnapshot: true,
+      complianceAssessments: true,
+      ticket: true,
+    },
+  },
+  decisionPoints: true,
+} satisfies Prisma.ComparisonRecordInclude;
 
 function getWinnerTicketKey(report: ComparisonReport): string {
   const complianceScores = Object.entries(report.compliance).sort(
@@ -58,6 +70,10 @@ function getWinnerTicketKey(report: ComparisonReport): string {
   }
 
   return report.metadata.comparedTickets[0] ?? report.metadata.sourceTicket;
+}
+
+function createPrincipleKey(principleName: string): string {
+  return principleName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
 function buildRankings(report: ComparisonReport): Array<{
@@ -161,14 +177,14 @@ function buildComplianceCreates(
   const compliance = report.compliance[participantTicketKey];
   const principles =
     compliance?.principles.map((principle, index) => ({
-      principleKey: principle.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      principleKey: createPrincipleKey(principle.name),
       principleName: principle.name,
       status: principle.passed ? 'pass' : 'fail',
       notes: principle.notes || 'No notes provided',
       displayOrder: index,
     })) ??
     DEFAULT_PRINCIPLES.map((principleName, index) => ({
-      principleKey: principleName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      principleKey: createPrincipleKey(principleName),
       principleName,
       status: 'mixed',
       notes: 'No saved assessment for this principle.',
@@ -193,6 +209,7 @@ export function createComparisonRecordInput(
     project: { connect: { id: input.projectId } },
     sourceTicket: { connect: { id: input.sourceTicket.id } },
     winnerTicket: { connect: { id: winnerTicket.id } },
+    compareRunKey: input.compareRunKey ?? null,
     markdownPath: input.markdownPath,
     summary: input.report.summary,
     overallRecommendation: input.report.recommendation || input.report.summary,
@@ -244,20 +261,27 @@ export async function persistComparisonRecord(
   input: PersistComparisonInput
 ) {
   return prisma.$transaction(async (tx) => {
-    const recordInput = createComparisonRecordInput(input);
-    return tx.comparisonRecord.create({
-      data: recordInput,
-      include: {
-        participants: {
-          include: {
-            metricSnapshot: true,
-            complianceAssessments: true,
-            ticket: true,
-          },
+    if (input.compareRunKey) {
+      const existingRecord = await tx.comparisonRecord.findFirst({
+        where: {
+          projectId: input.projectId,
+          sourceTicketId: input.sourceTicket.id,
+          compareRunKey: input.compareRunKey,
         },
-        decisionPoints: true,
-      },
+        include: comparisonRecordInclude,
+      });
+
+      if (existingRecord) {
+        return { record: existingRecord, isDuplicate: true };
+      }
+    }
+
+    const recordInput = createComparisonRecordInput(input);
+    const record = await tx.comparisonRecord.create({
+      data: recordInput,
+      include: comparisonRecordInclude,
     });
+    return { record, isDuplicate: false };
   });
 }
 

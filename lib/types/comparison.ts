@@ -250,6 +250,47 @@ export interface ComparisonReport {
   warnings: string[];
 }
 
+export interface SerializedComparisonReportMetadata {
+  /** Report generation timestamp */
+  generatedAt: string;
+
+  /** Source ticket where comparison was triggered */
+  sourceTicket: string;
+
+  /** Compared ticket keys */
+  comparedTickets: string[];
+
+  /** Report file path */
+  filePath: string;
+}
+
+export interface SerializedComparisonReport
+  extends Omit<ComparisonReport, 'metadata'> {
+  /** JSON-safe report metadata */
+  metadata: SerializedComparisonReportMetadata;
+}
+
+export interface ComparisonPersistenceRequest {
+  compareRunKey: string;
+  projectId: number;
+  sourceTicketId: number;
+  sourceTicketKey: string;
+  markdownPath: string;
+  participantTicketIds: number[];
+  report: ComparisonReport;
+}
+
+export interface SerializedComparisonPersistenceRequest
+  extends Omit<ComparisonPersistenceRequest, 'report'> {
+  report: SerializedComparisonReport;
+}
+
+export interface ComparisonPersistenceResponse {
+  comparisonId: number;
+  compareRunKey: string;
+  status: 'created' | 'duplicate';
+}
+
 /**
  * SpecSections
  *

@@ -23,6 +23,7 @@ export interface TestTicket {
   version: number;
   ticketNumber?: number;
   ticketKey?: string;
+  branch?: string | null;
 }
 
 /**
@@ -87,7 +88,7 @@ export async function createTestProject(
  */
 export async function createTestTicket(
   projectId: number,
-  data?: Partial<Pick<TestTicket, 'title' | 'description' | 'stage' | 'ticketNumber' | 'ticketKey'>>
+  data?: Partial<Pick<TestTicket, 'title' | 'description' | 'stage' | 'ticketNumber' | 'ticketKey' | 'branch'>>
 ): Promise<TestTicket> {
   // If ticketNumber and ticketKey provided, use direct creation
   if (data?.ticketNumber !== undefined && data?.ticketKey !== undefined) {
@@ -100,6 +101,7 @@ export async function createTestTicket(
         projectId,
         ticketNumber: data.ticketNumber,
         ticketKey: data.ticketKey,
+        branch: data.branch,
         updatedAt: new Date(),
       },
     });
@@ -119,7 +121,10 @@ export async function createTestTicket(
   if (data?.stage && data.stage !== 'INBOX') {
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticket.id },
-      data: { stage: data.stage as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP' },
+      data: {
+        stage: data.stage as 'INBOX' | 'SPECIFY' | 'PLAN' | 'BUILD' | 'VERIFY' | 'SHIP',
+        ...(data.branch !== undefined ? { branch: data.branch } : {}),
+      },
     });
     return updatedTicket as TestTicket;
   }
