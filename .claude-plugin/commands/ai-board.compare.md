@@ -339,14 +339,14 @@ After writing the markdown report, write a JSON data file for workflow persisten
 {
   "projectId": <PROJECT_ID as number>,
   "sourceTicketKey": "<SOURCE_KEY>",
-  "participantTicketKeys": ["<KEY-1>", "<KEY-2>"],
+  "participantTicketKeys": ["<SOURCE_KEY>", "<KEY-1>", "<KEY-2>"],
   "compareRunKey": "cmp_<timestamp>_<SOURCE_KEY>_<KEY-1>-<KEY-2>",
   "markdownPath": "<path to the markdown report written in Step 10>",
   "report": {
     "metadata": {
       "generatedAt": "<ISO timestamp>",
       "sourceTicket": "<SOURCE_KEY>",
-      "comparedTickets": ["<KEY-1>", "<KEY-2>"],
+      "comparedTickets": ["<SOURCE_KEY>", "<KEY-1>", "<KEY-2>"],
       "filePath": "<markdown report path>"
     },
     "summary": "<executive summary text>",

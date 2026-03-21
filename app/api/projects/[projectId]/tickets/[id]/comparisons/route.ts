@@ -155,10 +155,6 @@ export async function POST(
       return jsonError(404, 'Participant ticket not found for project', 'PARTICIPANT_NOT_FOUND');
     }
 
-    if (participants.some((participant) => participant.id === sourceTicket.id)) {
-      return jsonError(400, 'Source ticket cannot be a comparison participant', 'VALIDATION_ERROR');
-    }
-
     if (payload.report.metadata.comparedTickets.length !== payload.participantTicketKeys.length) {
       return jsonError(400, 'Compared ticket count does not match participant keys', 'VALIDATION_ERROR');
     }
