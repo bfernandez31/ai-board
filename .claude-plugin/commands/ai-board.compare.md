@@ -258,6 +258,24 @@ If the feature introduces new behaviors, APIs, or patterns, check if `specs/spec
 Create markdown report at:
 `specs/$BRANCH/comparisons/{timestamp}-vs-{keys}.md`
 
+After writing the markdown report, also write `comparison-data.json` in the same `specs/$BRANCH/comparisons/` directory.
+
+This JSON artifact must contain the structured comparison payload for persistence:
+- `sourceTicket` with `id`, `ticketKey`, `title`, `stage`, `workflowType`, `agent`
+- `participants` with the same fields for every compared ticket
+- `branch`
+- `report` using the same structure expected by `persistGeneratedComparisonArtifacts()`:
+  - `metadata.generatedAt`, `metadata.sourceTicket`, `metadata.comparedTickets`, `metadata.filePath`
+  - `summary`, `recommendation`, `warnings`
+  - `alignment`
+  - `implementation`
+  - `compliance`
+  - `telemetry`
+
+`report.metadata.filePath` should remain the markdown filename so the workflow can derive the saved path.
+
+If JSON writing fails, continue successfully after writing the markdown report. Markdown remains the primary artifact.
+
 **IMPORTANT**: Timestamp format `YYYYMMDD-HHMMSS` (e.g., `20260102-143052`).
 
 **Report Structure**:
@@ -342,6 +360,7 @@ SUCCESS
 
 ## Files Modified
 - specs/$BRANCH/comparisons/{filename}.md
+- specs/$BRANCH/comparisons/comparison-data.json
 
 ## Summary
 Best code implementation: {best-ticket} with {score}%
@@ -401,6 +420,8 @@ Please verify tickets have branches.
 6. **Source competes**: Source ticket may win or lose based on code quality
 7. **Keep output brief**: Under 1500 characters
 8. **Include disclaimer**: "Specs/workflow type NOT evaluated"
+9. **Persistable JSON**: Always emit `comparison-data.json` next to the markdown report
+10. **Graceful degradation**: If JSON writing fails, continue successfully and mention only the markdown artifact
 
 ## Error Handling
 

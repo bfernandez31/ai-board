@@ -9,7 +9,7 @@
  * Get workflow authentication token for testing
  */
 export function getWorkflowToken(): string {
-  return process.env.WORKFLOW_API_TOKEN || 'test-workflow-token-for-e2e-tests-only';
+  return 'test-workflow-token-for-e2e-tests-only';
 }
 
 /**

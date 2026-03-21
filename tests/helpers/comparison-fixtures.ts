@@ -1,5 +1,7 @@
 import { getPrismaClient } from './db-cleanup';
 import { createTestTicket } from './db-setup';
+import type { Agent, Stage, WorkflowType } from '@prisma/client';
+import type { ComparisonReport } from '@/lib/types/comparison';
 
 export async function createStructuredComparisonFixture(projectId: number) {
   const prisma = getPrismaClient();
@@ -168,5 +170,147 @@ export async function createStructuredComparisonFixture(projectId: number) {
     winnerTicket,
     otherTicket,
     comparison,
+  };
+}
+
+type PersistedTicketFixture = {
+  id: number;
+  ticketKey: string;
+  title: string;
+  stage: Stage;
+  workflowType: WorkflowType;
+  agent: Agent | null;
+};
+
+export function buildGeneratedComparisonArtifactPayload(input: {
+  branch: string;
+  sourceTicket: PersistedTicketFixture;
+  participants: PersistedTicketFixture[];
+  report?: ComparisonReport;
+}): {
+  sourceTicket: PersistedTicketFixture;
+  participants: PersistedTicketFixture[];
+  branch: string;
+  report: ComparisonReport;
+} {
+  const report: ComparisonReport = input.report ?? {
+    metadata: {
+      generatedAt: new Date('2026-03-20T09:00:00.000Z'),
+      sourceTicket: input.sourceTicket.ticketKey,
+      comparedTickets: input.participants.map((ticket) => ticket.ticketKey),
+      filePath: '20260320-090000-vs-TE2-102-TE2-103.md',
+    },
+    summary: 'Winner ticket had the best test coverage and smallest diff.',
+    recommendation: 'Choose TE2-102 for the implementation baseline.',
+    warnings: [],
+    alignment: {
+      overall: 88,
+      dimensions: {
+        requirements: 90,
+        scenarios: 85,
+        entities: 80,
+        keywords: 92,
+      },
+      isAligned: true,
+      matchingRequirements: ['coverage', 'smaller diff'],
+      matchingEntities: ['Ticket', 'ComparisonRecord'],
+    },
+    implementation: {
+      'TE2-102': {
+        ticketKey: 'TE2-102',
+        linesAdded: 20,
+        linesRemoved: 5,
+        linesChanged: 25,
+        filesChanged: 3,
+        changedFiles: ['app/a.ts', 'tests/a.test.ts'],
+        testFilesChanged: 2,
+        hasData: true,
+      },
+      'TE2-103': {
+        ticketKey: 'TE2-103',
+        linesAdded: 50,
+        linesRemoved: 15,
+        linesChanged: 65,
+        filesChanged: 5,
+        changedFiles: ['app/b.ts'],
+        testFilesChanged: 1,
+        hasData: true,
+      },
+    },
+    compliance: {
+      'TE2-102': {
+        overall: 91,
+        totalPrinciples: 2,
+        passedPrinciples: 2,
+        principles: [
+          {
+            name: 'TypeScript-First Development',
+            section: 'I',
+            passed: true,
+            notes: 'Strict types retained.',
+          },
+          {
+            name: 'Test-Driven Development',
+            section: 'III',
+            passed: true,
+            notes: 'Integration coverage present.',
+          },
+        ],
+      },
+      'TE2-103': {
+        overall: 75,
+        totalPrinciples: 2,
+        passedPrinciples: 1,
+        principles: [
+          {
+            name: 'TypeScript-First Development',
+            section: 'I',
+            passed: true,
+            notes: 'Types mostly present.',
+          },
+          {
+            name: 'Test-Driven Development',
+            section: 'III',
+            passed: false,
+            notes: 'Lower test coverage.',
+          },
+        ],
+      },
+    },
+    telemetry: {
+      'TE2-102': {
+        ticketKey: 'TE2-102',
+        inputTokens: 1200,
+        outputTokens: 400,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+        costUsd: 0.08,
+        durationMs: 120000,
+        model: 'gpt-5.4',
+        toolsUsed: ['read', 'write'],
+        jobCount: 1,
+        hasData: true,
+      },
+      'TE2-103': {
+        ticketKey: 'TE2-103',
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+        costUsd: 0,
+        durationMs: 0,
+        model: null,
+        toolsUsed: [],
+        jobCount: 1,
+        hasData: false,
+      },
+    },
+  };
+
+  return {
+    sourceTicket: input.sourceTicket,
+    participants: input.participants,
+    branch: input.branch,
+    report,
   };
 }
