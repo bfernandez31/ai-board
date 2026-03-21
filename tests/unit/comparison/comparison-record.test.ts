@@ -205,6 +205,6 @@ describe('comparison-record helpers', () => {
 
     expect(findFirst).toHaveBeenCalledOnce();
     expect(create).not.toHaveBeenCalled();
-    expect(result).toBe(existingRecord);
+    expect(result).toEqual({ record: existingRecord, isDuplicate: true });
   });
 });

@@ -272,15 +272,16 @@ export async function persistComparisonRecord(
       });
 
       if (existingRecord) {
-        return existingRecord;
+        return { record: existingRecord, isDuplicate: true };
       }
     }
 
     const recordInput = createComparisonRecordInput(input);
-    return tx.comparisonRecord.create({
+    const record = await tx.comparisonRecord.create({
       data: recordInput,
       include: comparisonRecordInclude,
     });
+    return { record, isDuplicate: false };
   });
 }
 

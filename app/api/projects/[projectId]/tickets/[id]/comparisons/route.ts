@@ -128,7 +128,7 @@ export async function POST(
       return jsonError(400, 'Source ticket key does not match report metadata', 'VALIDATION_ERROR');
     }
 
-    if (payload.report.metadata.filePath !== payload.markdownPath) {
+    if (!payload.markdownPath.endsWith(payload.report.metadata.filePath)) {
       return jsonError(400, 'Markdown path does not match report metadata', 'VALIDATION_ERROR');
     }
 
@@ -211,16 +211,7 @@ export async function POST(
       return jsonError(400, 'Participant tickets do not match report ordering', 'VALIDATION_ERROR');
     }
 
-    const existingRecord = await prisma.comparisonRecord.findFirst({
-      where: {
-        projectId,
-        sourceTicketId: sourceTicket.id,
-        compareRunKey: payload.compareRunKey,
-      },
-      select: { id: true },
-    });
-
-    const record = await persistComparisonRecord({
+    const { record, isDuplicate } = await persistComparisonRecord({
       projectId,
       sourceTicket,
       participants: orderedParticipants,
@@ -233,9 +224,9 @@ export async function POST(
       {
         comparisonId: record.id,
         compareRunKey: payload.compareRunKey,
-        status: existingRecord ? 'duplicate' : 'created',
+        status: isDuplicate ? 'duplicate' : 'created',
       },
-      { status: existingRecord ? 200 : 201 }
+      { status: isDuplicate ? 200 : 201 }
     );
   } catch (error) {
     if (error instanceof ZodError) {
