@@ -1,0 +1,438 @@
+openapi: 3.1.0
+info:
+  title: Enriched Comparison Detail API
+  version: 1.0.0
+  description: >
+    Contract for the enriched comparison dialog detail response used by
+    AIB-338. This extends the existing structured comparison detail endpoint
+    with ranking context, aggregated operational metrics, model attribution,
+    and in-place quality detail data.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      operationId: getComparisonDetail
+      summary: Fetch structured comparison detail for a ticket
+      tags:
+        - comparisons
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Comparison detail loaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetail'
+        '400':
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidParams:
+                  value:
+                    error: Invalid project, ticket, or comparison ID
+                    code: VALIDATION_ERROR
+        '403':
+          description: Ticket does not belong to the supplied project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrongProject:
+                  value:
+                    error: Forbidden
+                    code: WRONG_PROJECT
+        '404':
+          description: Ticket or comparison not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                comparisonMissing:
+                  value:
+                    error: Comparison not found
+                    code: COMPARISON_NOT_FOUND
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+    ComparisonDetail:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketId
+        - sourceTicketKey
+        - markdownPath
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+        - winnerTicketId
+        - winnerTicketKey
+        - participants
+        - decisionPoints
+        - complianceRows
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        markdownPath:
+          type: string
+        summary:
+          type: string
+        overallRecommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
+          type: string
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonParticipantDetail'
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionPoint'
+        complianceRows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceRow'
+
+    ComparisonParticipantDetail:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - agent
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - metrics
+        - operational
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        agent:
+          type: string
+          nullable: true
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/QualitySummary'
+        metrics:
+          $ref: '#/components/schemas/MetricSnapshot'
+        operational:
+          $ref: '#/components/schemas/OperationalAggregate'
+
+    OperationalAggregate:
+      type: object
+      required:
+        - totalTokens
+        - inputTokens
+        - outputTokens
+        - durationMs
+        - costUsd
+        - jobCount
+        - model
+      properties:
+        totalTokens:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        inputTokens:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        outputTokens:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        durationMs:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        costUsd:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        jobCount:
+          $ref: '#/components/schemas/OperationalMetricValue'
+        model:
+          $ref: '#/components/schemas/ModelSummary'
+
+    OperationalMetricValue:
+      type: object
+      required:
+        - state
+        - value
+        - isBest
+      properties:
+        state:
+          type: string
+          enum: [available, pending, unavailable]
+        value:
+          type: number
+          nullable: true
+        isBest:
+          type: boolean
+        displayLabel:
+          type: string
+          nullable: true
+
+    ModelSummary:
+      type: object
+      required:
+        - state
+        - label
+        - dominantModel
+        - completedJobCount
+        - mixedModels
+      properties:
+        state:
+          type: string
+          enum: [available, pending, unavailable]
+        label:
+          type: string
+          nullable: true
+        dominantModel:
+          type: string
+          nullable: true
+        completedJobCount:
+          type: integer
+          minimum: 0
+        mixedModels:
+          type: boolean
+
+    QualitySummary:
+      type: object
+      required:
+        - state
+        - score
+        - threshold
+        - detailsState
+      properties:
+        state:
+          type: string
+          enum: [available, pending, unavailable]
+        score:
+          type: integer
+          nullable: true
+        threshold:
+          type: string
+          nullable: true
+          enum: [Excellent, Good, Fair, Poor, null]
+        detailsState:
+          type: string
+          enum: [available, summary_only, unavailable]
+        details:
+          allOf:
+            - $ref: '#/components/schemas/QualityDetail'
+          nullable: true
+
+    QualityDetail:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - score
+        - threshold
+        - dimensions
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        score:
+          type: integer
+        threshold:
+          type: string
+          enum: [Excellent, Good, Fair, Poor]
+        dimensions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityDimension'
+
+    QualityDimension:
+      type: object
+      required:
+        - agentId
+        - name
+        - score
+        - weight
+      properties:
+        agentId:
+          type: string
+        name:
+          type: string
+        score:
+          type: integer
+        weight:
+          type: number
+
+    MetricSnapshot:
+      type: object
+      required:
+        - linesAdded
+        - linesRemoved
+        - linesChanged
+        - filesChanged
+        - testFilesChanged
+        - changedFiles
+        - bestValueFlags
+      properties:
+        linesAdded:
+          type: integer
+          nullable: true
+        linesRemoved:
+          type: integer
+          nullable: true
+        linesChanged:
+          type: integer
+          nullable: true
+        filesChanged:
+          type: integer
+          nullable: true
+        testFilesChanged:
+          type: integer
+          nullable: true
+        changedFiles:
+          type: array
+          items:
+            type: string
+        bestValueFlags:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    DecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictTicketId
+        - verdictSummary
+        - rationale
+        - displayOrder
+        - participantApproaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictTicketId:
+          type: integer
+          nullable: true
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        displayOrder:
+          type: integer
+        participantApproaches:
+          type: array
+          items:
+            type: object
+            required:
+              - ticketId
+              - ticketKey
+              - summary
+            properties:
+              ticketId:
+                type: integer
+              ticketKey:
+                type: string
+              summary:
+                type: string
+
+    ComplianceRow:
+      type: object
+      required:
+        - principleKey
+        - principleName
+        - displayOrder
+        - assessments
+      properties:
+        principleKey:
+          type: string
+        principleName:
+          type: string
+        displayOrder:
+          type: integer
+        assessments:
+          type: array
+          items:
+            type: object
+            required:
+              - participantTicketId
+              - participantTicketKey
+              - status
+              - notes
+            properties:
+              participantTicketId:
+                type: integer
+              participantTicketKey:
+                type: string
+              status:
+                type: string
+                enum: [pass, mixed, fail]
+              notes:
+                type: string
