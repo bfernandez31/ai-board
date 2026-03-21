@@ -20,14 +20,30 @@ export async function createStructuredComparisonFixture(projectId: number) {
     description: 'Winner comparison ticket',
     ticketNumber: 102,
     ticketKey: 'TE2-102',
-    stage: 'VERIFY',
+    stage: 'SHIP',
   });
   const otherTicket = await createTestTicket(projectId, {
     title: '[e2e] Other ticket',
     description: 'Another comparison ticket',
     ticketNumber: 103,
     ticketKey: 'TE2-103',
-    stage: 'PLAN',
+    stage: 'BUILD',
+  });
+
+  await prisma.ticket.update({
+    where: { id: winnerTicket.id },
+    data: {
+      workflowType: 'FULL',
+      agent: 'CODEX',
+    },
+  });
+
+  await prisma.ticket.update({
+    where: { id: otherTicket.id },
+    data: {
+      workflowType: 'QUICK',
+      agent: 'CLAUDE',
+    },
   });
 
   await prisma.job.createMany({
@@ -35,13 +51,69 @@ export async function createStructuredComparisonFixture(projectId: number) {
       {
         ticketId: winnerTicket.id,
         projectId,
+        command: 'plan',
+        status: 'COMPLETED',
+        inputTokens: 500,
+        outputTokens: 100,
+        costUsd: 0.02,
+        durationMs: 60000,
+        model: 'gpt-5.4',
+        startedAt: new Date('2026-03-19T09:00:00.000Z'),
+        completedAt: new Date('2026-03-19T09:01:00.000Z'),
+        updatedAt: new Date('2026-03-19T09:01:00.000Z'),
+      },
+      {
+        ticketId: winnerTicket.id,
+        projectId,
         command: 'verify',
         status: 'COMPLETED',
         qualityScore: 91,
+        qualityScoreDetails: JSON.stringify({
+          dimensions: [
+            {
+              name: 'Compliance',
+              agentId: 'compliance',
+              score: 94,
+              weight: 0.4,
+              weightedScore: 37.6,
+            },
+            {
+              name: 'Bug Detection',
+              agentId: 'bug-detection',
+              score: 88,
+              weight: 0.3,
+              weightedScore: 26.4,
+            },
+            {
+              name: 'Code Comments',
+              agentId: 'code-comments',
+              score: 82,
+              weight: 0.2,
+              weightedScore: 16.4,
+            },
+            {
+              name: 'Historical Context',
+              agentId: 'historical-context',
+              score: 80,
+              weight: 0.1,
+              weightedScore: 8,
+            },
+            {
+              name: 'Spec Sync',
+              agentId: 'spec-sync',
+              score: 76,
+              weight: 0,
+              weightedScore: 0,
+            },
+          ],
+          threshold: 'Excellent',
+          computedAt: '2026-03-19T10:02:00.000Z',
+        }),
         inputTokens: 1200,
         outputTokens: 400,
         costUsd: 0.08,
         durationMs: 120000,
+        model: 'gpt-5.4',
         startedAt: new Date('2026-03-19T10:00:00.000Z'),
         completedAt: new Date('2026-03-19T10:02:00.000Z'),
         updatedAt: new Date('2026-03-19T10:02:00.000Z'),
@@ -50,13 +122,14 @@ export async function createStructuredComparisonFixture(projectId: number) {
         ticketId: otherTicket.id,
         projectId,
         command: 'implement',
-        status: 'COMPLETED',
+        status: 'RUNNING',
         inputTokens: null,
         outputTokens: null,
         costUsd: null,
         durationMs: null,
+        model: 'claude-3-7-sonnet',
         startedAt: new Date('2026-03-19T11:00:00.000Z'),
-        completedAt: new Date('2026-03-19T11:05:00.000Z'),
+        completedAt: null,
         updatedAt: new Date('2026-03-19T11:05:00.000Z'),
       },
     ],

@@ -4,6 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonRankingProps } from './types';
 
+function formatQualityBadge(
+  quality: ComparisonRankingProps['participants'][number]['quality']
+): string | null {
+  if (quality.state !== 'available' || quality.value == null || quality.threshold == null) {
+    return null;
+  }
+
+  return `${quality.value} ${quality.threshold}`;
+}
+
 export function ComparisonRanking({
   participants,
   recommendation,
@@ -37,12 +47,23 @@ export function ComparisonRanking({
               className="rounded-lg border border-border bg-background px-4 py-3"
             >
               <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0 space-y-2">
                   <div className="font-medium text-foreground">
                     #{participant.rank} {participant.ticketKey}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {participant.title}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">{participant.workflowType}</Badge>
+                    {participant.agent ? (
+                      <Badge variant="secondary">{participant.agent}</Badge>
+                    ) : null}
+                    {formatQualityBadge(participant.quality) ? (
+                      <Badge variant="secondary">
+                        {formatQualityBadge(participant.quality)}
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

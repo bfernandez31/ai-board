@@ -42,16 +42,37 @@ vi.mock('@/hooks/use-comparisons', () => ({
           title: 'Winner',
           stage: 'VERIFY',
           workflowType: 'FULL',
-          agent: null,
+          agent: 'CODEX',
           rank: 1,
           score: 95,
           rankRationale: 'Best value',
-          quality: { state: 'available', value: 95 },
+          quality: {
+            state: 'available',
+            value: 95,
+            threshold: 'Excellent',
+            details: {
+              dimensions: [
+                {
+                  name: 'Compliance',
+                  agentId: 'compliance',
+                  score: 95,
+                  weight: 0.4,
+                  weightedScore: 38,
+                },
+              ],
+              threshold: 'Excellent',
+              computedAt: '2026-03-20T00:00:00.000Z',
+            },
+          },
           telemetry: {
+            totalTokens: { state: 'available', value: 15 },
             inputTokens: { state: 'available', value: 10 },
             outputTokens: { state: 'available', value: 5 },
             durationMs: { state: 'available', value: 100 },
             costUsd: { state: 'available', value: 0.01 },
+            jobCount: { state: 'available', value: 1 },
+            primaryModel: { state: 'available', value: 'gpt-5.4' },
+            bestValueFlags: { totalTokens: true, quality: true },
           },
           metrics: {
             linesAdded: 10,
@@ -93,6 +114,7 @@ describe('ComparisonViewer', () => {
 
     expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
     expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Operational Metrics')).toBeInTheDocument();
     expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
     expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });
