@@ -28,8 +28,8 @@ interface SignInPageProps {
 }
 
 async function signInWithPreviewLogin(
-  formData: FormData,
-  callbackUrl: string
+  callbackUrl: string,
+  formData: FormData
 ): Promise<void> {
   'use server';
 
@@ -87,9 +87,7 @@ export default async function SignInPage({
 
           {devLoginEnabled ? (
             <form
-              action={async (formData) =>
-                signInWithPreviewLogin(formData, callbackUrl)
-              }
+              action={signInWithPreviewLogin.bind(null, callbackUrl)}
               className="space-y-3 rounded-lg border border-border p-4"
             >
               <div className="space-y-2">
@@ -112,7 +110,7 @@ export default async function SignInPage({
             </form>
           ) : null}
 
-          <form action={async () => signInWithGitHub(callbackUrl)}>
+          <form action={signInWithGitHub.bind(null, callbackUrl)}>
             <Button type="submit" className="w-full" size="lg">
               <Github className="mr-2 h-5 w-5" />
               Continue with GitHub
