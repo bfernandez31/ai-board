@@ -327,6 +327,63 @@ Create markdown report at:
 - [ ] **Update specs/specifications/**: [if needed - will be done in VERIFY stage]
 ```
 
+### Step 10.5: Write Comparison Data JSON
+
+After writing the markdown report, write a JSON data file for workflow persistence. This enables automated database persistence via the workflow.
+
+**IMPORTANT**: Wrap this entire step in a try-catch. If JSON writing fails, log a warning and continue to Step 11. The markdown report is the primary artifact — JSON is secondary.
+
+**What to write**: A JSON file containing the `PersistComparisonInput` payload:
+
+```json
+{
+  "projectId": <PROJECT_ID as number>,
+  "sourceTicket": {
+    "id": <source ticket database ID>,
+    "ticketKey": "<SOURCE_KEY>",
+    "title": "<source ticket title>",
+    "stage": "<current stage>",
+    "workflowType": "<FULL|QUICK|CLEAN>",
+    "agent": "<CLAUDE|CODEX|null>"
+  },
+  "participants": [
+    {
+      "id": <participant ticket database ID>,
+      "ticketKey": "<TICKET_KEY>",
+      "title": "<ticket title>",
+      "stage": "<current stage>",
+      "workflowType": "<FULL|QUICK|CLEAN>",
+      "agent": "<CLAUDE|CODEX|null>"
+    }
+  ],
+  "markdownPath": "<path to the markdown report written in Step 10>",
+  "report": {
+    "metadata": {
+      "generatedAt": "<ISO timestamp>",
+      "sourceTicket": "<SOURCE_KEY>",
+      "comparedTickets": ["<KEY-1>", "<KEY-2>"],
+      "filePath": "<markdown report path>"
+    },
+    "summary": "<executive summary text>",
+    "alignment": { <FeatureAlignmentScore object> },
+    "implementation": { "<ticketKey>": { <ImplementationMetrics object> } },
+    "compliance": { "<ticketKey>": { <ConstitutionComplianceScore object> } },
+    "telemetry": { "<ticketKey>": { <TicketTelemetry object> } },
+    "recommendation": "<recommendation text>",
+    "warnings": ["<warning strings>"]
+  }
+}
+```
+
+**How to get ticket metadata**: Look up each ticket's database ID, stage, workflowType, and agent from the ticket data already fetched during Steps 1-3. The `PROJECT_ID` environment variable provides the project ID.
+
+**File naming**: Same timestamp and keys as the markdown report, but with `.json` extension.
+- Example: `specs/$BRANCH/comparisons/20260102-143052-vs-AIB-124-AIB-125.json`
+
+**File location**: Same directory as the markdown report: `specs/$BRANCH/comparisons/`
+
+**On failure**: Log `"⚠️ Failed to write comparison JSON: <error>"` and continue to Step 11. Do NOT throw or exit.
+
 ### Step 11: Create Result File
 
 Write result file at `specs/$BRANCH/.ai-board-result.md`:
