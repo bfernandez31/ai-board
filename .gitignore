@@ -74,7 +74,7 @@ ticket-assets/
 
 # telemetry context (runtime artifact for /compare commands)
 specs/**/.telemetry-context.json
-specs/**/comparisons/comparison-data.json
+specs/**/comparisons/*.json
 
 # mcp-server build output and dependencies
 mcp-server/dist/
