@@ -7,6 +7,7 @@ import type {
   ComparisonEnrichmentValue,
   ComparisonParticipantDetail,
 } from '@/lib/types/comparison';
+import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { ComparisonOperationalMetricsProps } from './types';
 
 type MetricKey =
@@ -105,6 +106,33 @@ function renderValue(
   );
 }
 
+function renderQualityCell(
+  participant: ComparisonParticipantDetail,
+  isBest: boolean
+) {
+  const { quality, qualityScoreDetails, workflowType } = participant;
+  if (quality.state === 'pending') {
+    return <span className="text-muted-foreground">Pending</span>;
+  }
+  if (quality.state === 'unavailable' || quality.value == null) {
+    return <span className="text-muted-foreground">N/A</span>;
+  }
+  return (
+    <span className="flex items-center gap-1.5">
+      <ComparisonQualityPopover
+        score={quality.value}
+        details={qualityScoreDetails}
+        workflowType={workflowType}
+      />
+      {isBest && (
+        <Badge variant="outline" className="text-ctp-green text-xs px-1 py-0">
+          Best
+        </Badge>
+      )}
+    </span>
+  );
+}
+
 export function ComparisonOperationalMetrics({
   participants,
 }: ComparisonOperationalMetricsProps) {
@@ -152,8 +180,15 @@ export function ComparisonOperationalMetrics({
                     {metric.label}
                   </td>
                   {participants.map((p) => {
-                    const enrichment = getEnrichmentValue(p, metric.key);
                     const isBest = bestSets[metricIndex]?.has(p.ticketId) ?? false;
+                    if (metric.key === 'quality') {
+                      return (
+                        <td key={p.ticketId} className="px-3 py-2">
+                          {renderQualityCell(p, isBest)}
+                        </td>
+                      );
+                    }
+                    const enrichment = getEnrichmentValue(p, metric.key);
                     return (
                       <td key={p.ticketId} className="px-3 py-2">
                         {renderValue(enrichment, metric.format, isBest)}

@@ -61,3 +61,9 @@ export interface ComparisonComplianceGridProps {
 }
 
 export interface ComparisonOperationalMetricsProps extends ComparisonSectionProps {}
+
+export interface ComparisonQualityPopoverProps {
+  score: number;
+  details: import('@/lib/quality-score').QualityScoreDetails | null;
+  workflowType: import('@prisma/client').WorkflowType;
+}

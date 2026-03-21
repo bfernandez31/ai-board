@@ -282,6 +282,48 @@ describe('Comparison detail route', () => {
     expect(participant?.telemetry.hasPartialData).toBe(false);
   });
 
+  it('returns qualityScoreDetails for FULL+VERIFY tickets, null for QUICK tickets', async () => {
+    const prisma = getPrismaClient();
+    const fixture = await createStructuredComparisonFixture(ctx.projectId);
+
+    const details = JSON.stringify({
+      dimensions: [
+        { name: 'Compliance', agentId: 'compliance', score: 95, weight: 0.4, weightedScore: 38 },
+        { name: 'Bug Detection', agentId: 'bug-detection', score: 88, weight: 0.3, weightedScore: 26.4 },
+      ],
+      threshold: 'Excellent',
+      computedAt: '2026-03-19T10:00:00.000Z',
+    });
+    // Update the winner's verify job with qualityScoreDetails
+    await prisma.job.updateMany({
+      where: { ticketId: fixture.winnerTicket.id, command: 'verify' },
+      data: { qualityScoreDetails: details },
+    });
+
+    const response = await ctx.api.get<{
+      participants: Array<{
+        ticketKey: string;
+        qualityScoreDetails: { dimensions: Array<{ name: string }> } | null;
+      }>;
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${fixture.winnerTicket.id}/comparisons/${fixture.comparison.id}`
+    );
+
+    expect(response.status).toBe(200);
+    const winner = response.data.participants.find(
+      (p) => p.ticketKey === fixture.winnerTicket.ticketKey
+    );
+    expect(winner?.qualityScoreDetails).not.toBeNull();
+    expect(winner?.qualityScoreDetails?.dimensions).toHaveLength(2);
+    expect(winner?.qualityScoreDetails?.dimensions[0]?.name).toBe('Compliance');
+
+    // Other ticket has no verify job → null qualityScoreDetails
+    const other = response.data.participants.find(
+      (p) => p.ticketKey === fixture.otherTicket.ticketKey
+    );
+    expect(other?.qualityScoreDetails).toBeNull();
+  });
+
   it('returns 404 when the ticket is not a participant in the comparison', async () => {
     const fixture = await createStructuredComparisonFixture(ctx.projectId);
     const unrelated = await ctx.createTicket({

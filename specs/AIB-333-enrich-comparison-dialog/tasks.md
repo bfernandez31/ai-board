@@ -97,17 +97,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Component test: opens popover on click showing 5 dimensions with name, score, weight, and progress bar in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T034 [P] [US3] Component test: shows overall score with threshold label in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T035 [P] [US3] Component test: not clickable for non-FULL workflow tickets in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T036 [P] [US3] Component test: closes on Escape key in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T037 [P] [US3] Integration test: returns qualityScoreDetails for FULL+VERIFY tickets, null for QUICK tickets in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T033 [P] [US3] Component test: opens popover on click showing 5 dimensions with name, score, weight, and progress bar in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T034 [P] [US3] Component test: shows overall score with threshold label in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T035 [P] [US3] Component test: not clickable for non-FULL workflow tickets in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T036 [P] [US3] Component test: closes on Escape key in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T037 [P] [US3] Integration test: returns qualityScoreDetails for FULL+VERIFY tickets, null for QUICK tickets in `tests/integration/comparisons/comparison-detail-route.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T038 [P] [US3] Add props interface for `ComparisonQualityPopover` in `components/comparison/types.ts`
-- [ ] T039 [US3] Create `ComparisonQualityPopover` component with shadcn Popover, overall score + threshold, and 5 dimension rows (name, score, progress bar, weight) in `components/comparison/comparison-quality-popover.tsx`
-- [ ] T040 [US3] Wire `ComparisonQualityPopover` into quality row of operational metrics grid — clickable for FULL workflow, plain text otherwise in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T038 [P] [US3] Add props interface for `ComparisonQualityPopover` in `components/comparison/types.ts`
+- [x] T039 [US3] Create `ComparisonQualityPopover` component with shadcn Popover, overall score + threshold, and 5 dimension rows (name, score, progress bar, weight) in `components/comparison/comparison-quality-popover.tsx`
+- [x] T040 [US3] Wire `ComparisonQualityPopover` into quality row of operational metrics grid — clickable for FULL workflow, plain text otherwise in `components/comparison/comparison-operational-metrics.tsx`
 
 **Checkpoint**: Quality score popover works for FULL workflow tickets; non-FULL tickets show plain score.
 
