@@ -248,10 +248,11 @@ If the feature introduces new behaviors, APIs, or patterns, check if `specs/spec
 | Implementation Choices | 20% | Architectural decisions, patterns |
 | Test Coverage | 15% | Presence and quality of tests |
 
-**NOT EVALUATED**:
+**NOT EVALUATED** (never use these as ranking criteria or differentiators):
 - Spec completeness (0%)
 - Workflow type (0%)
 - Documentation in specs/ (0%)
+- Cost / telemetry (0%) — cost data is displayed for information only, never as a quality signal
 
 ### Step 10: Generate Comparison Report
 
