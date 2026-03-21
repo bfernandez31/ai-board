@@ -327,6 +327,107 @@ Create markdown report at:
 - [ ] **Update specs/specifications/**: [if needed - will be done in VERIFY stage]
 ```
 
+### Step 10b: Write Structured JSON for Database Persistence
+
+After writing the markdown report, also write a `comparison-data.json` file in the same `specs/$BRANCH/comparisons/` directory. This JSON is consumed by the workflow to persist comparison data to the database.
+
+**IMPORTANT**: If writing the JSON fails for any reason, continue with the remaining steps. The markdown report is the primary artifact.
+
+The JSON file must match this structure exactly (it maps to the `persistGeneratedComparisonArtifacts()` input):
+
+```json
+{
+  "sourceTicket": {
+    "id": <ticket-db-id>,
+    "ticketKey": "AIB-123",
+    "title": "Ticket title",
+    "stage": "VERIFY",
+    "workflowType": "FULL",
+    "agent": "CLAUDE"
+  },
+  "participants": [
+    {
+      "id": <ticket-db-id>,
+      "ticketKey": "AIB-124",
+      "title": "Compared ticket title",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CLAUDE"
+    }
+  ],
+  "branch": "$BRANCH",
+  "report": {
+    "metadata": {
+      "generatedAt": "2026-03-21T12:00:00.000Z",
+      "sourceTicket": "AIB-123",
+      "comparedTickets": ["AIB-124", "AIB-125"],
+      "filePath": "<markdown-filename>"
+    },
+    "summary": "Executive summary text",
+    "alignment": {
+      "overall": 75,
+      "dimensions": { "requirements": 80, "scenarios": 70, "entities": 60, "keywords": 50 },
+      "isAligned": true,
+      "matchingRequirements": ["requirement-1"],
+      "matchingEntities": ["entity-1"]
+    },
+    "implementation": {
+      "AIB-124": {
+        "ticketKey": "AIB-124",
+        "linesAdded": 150,
+        "linesRemoved": 20,
+        "linesChanged": 170,
+        "filesChanged": 5,
+        "changedFiles": ["app/file.ts"],
+        "testFilesChanged": 1,
+        "hasData": true
+      }
+    },
+    "compliance": {
+      "AIB-124": {
+        "overall": 85,
+        "totalPrinciples": 5,
+        "passedPrinciples": 4,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "..." }
+        ]
+      }
+    },
+    "telemetry": {
+      "AIB-124": {
+        "ticketKey": "AIB-124",
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheCreationTokens": 0,
+        "costUsd": 0,
+        "durationMs": 0,
+        "model": null,
+        "toolsUsed": [],
+        "jobCount": 0,
+        "hasData": false
+      }
+    },
+    "recommendation": "Ship AIB-124",
+    "warnings": []
+  }
+}
+```
+
+**How to get ticket IDs**: Use the API to look up ticket IDs:
+```bash
+# Get ticket by key
+curl -s "${APP_URL}/api/projects/${PROJECT_ID}/tickets?search=${TICKET_KEY}" \
+  -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}"
+```
+
+If ticket IDs are not available, **skip writing the JSON file** (the workflow will handle the missing file gracefully).
+
+Write the file:
+```bash
+# Write to specs/$BRANCH/comparisons/comparison-data.json
+```
+
 ### Step 11: Create Result File
 
 Write result file at `specs/$BRANCH/.ai-board-result.md`:
@@ -342,6 +443,7 @@ SUCCESS
 
 ## Files Modified
 - specs/$BRANCH/comparisons/{filename}.md
+- specs/$BRANCH/comparisons/comparison-data.json
 
 ## Summary
 Best code implementation: {best-ticket} with {score}%

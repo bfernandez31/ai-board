@@ -460,6 +460,36 @@ jobs:
           git push origin "$BRANCH"
           echo "✅ Changes pushed to branch: $BRANCH"
 
+      - name: Persist Comparison Data to Database
+        if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') && steps.parse.outputs.status == 'success' }}
+        working-directory: target
+        env:
+          BRANCH: ${{ inputs.branch }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          TICKET_ID: ${{ inputs.ticket_id }}
+        run: |
+          JSON_FILE="specs/$BRANCH/comparisons/comparison-data.json"
+          if [ -f "$JSON_FILE" ]; then
+            echo "📊 Found comparison-data.json, persisting to database..."
+            HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+              "${APP_URL}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comparisons" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+              --data-binary @"$JSON_FILE")
+
+            HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -1)
+            RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              RECORD_ID=$(echo "$RESPONSE_BODY" | jq -r '.id // empty')
+              echo "✅ Comparison persisted to database (record ID: $RECORD_ID)"
+            else
+              echo "⚠️ Failed to persist comparison data (HTTP $HTTP_STATUS): $RESPONSE_BODY"
+            fi
+          else
+            echo "ℹ️ No comparison-data.json found, skipping database persistence"
+          fi
+
       - name: Post AI-BOARD Response Comment
         if: ${{ env.SKIP_CLAUDE != 'true' }}
         env:
