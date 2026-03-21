@@ -2045,6 +2045,81 @@ Fetch full comparison detail with enriched data.
 - `400`: Invalid project, ticket, or comparison ID
 - `404`: Ticket not found, user has no access, or comparison not associated with this ticket
 
+### POST /api/projects/:projectId/comparisons
+
+Persist comparison data from workflow to database. Called by the `ai-board-assist.yml` workflow after a `/compare` command completes.
+
+**Authentication**: Required (workflow Bearer token via `WORKFLOW_API_TOKEN`)
+**Authorization**: Workflow token only — no session auth
+
+**Path Parameters**:
+- `projectId` (number, required): Project ID
+
+**Request Body**:
+```json
+{
+  "projectId": 1,
+  "sourceTicket": {
+    "id": 10,
+    "ticketKey": "AIB-123",
+    "title": "Feature A",
+    "stage": "BUILD",
+    "workflowType": "FULL",
+    "agent": "CLAUDE"
+  },
+  "participants": [
+    {
+      "id": 11,
+      "ticketKey": "AIB-124",
+      "title": "Feature B",
+      "stage": "BUILD",
+      "workflowType": "FULL",
+      "agent": "CODEX"
+    }
+  ],
+  "markdownPath": "specs/branch/comparisons/20260321-120000-vs-AIB-123-AIB-124.md",
+  "report": {
+    "metadata": {
+      "generatedAt": "2026-03-21T12:00:00.000Z",
+      "sourceTicket": "AIB-123",
+      "comparedTickets": ["AIB-124"],
+      "filePath": "specs/branch/comparisons/20260321-120000-vs-AIB-123-AIB-124.md"
+    },
+    "summary": "AIB-124 demonstrates superior code quality...",
+    "alignment": {},
+    "implementation": {},
+    "compliance": {},
+    "telemetry": {},
+    "recommendation": "Ship AIB-124",
+    "warnings": []
+  }
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "id": 42,
+  "generatedAt": "2026-03-21T12:00:00.000Z"
+}
+```
+
+**Validation**:
+- `projectId` in body must match URL path parameter
+- `participants` must contain at least one entry
+- All ticket `stage` values must be one of: `INBOX`, `SPECIFY`, `PLAN`, `BUILD`, `VERIFY`, `SHIP`, `CLOSED`
+- All ticket `workflowType` values must be one of: `FULL`, `QUICK`, `CLEAN`
+- `agent` is nullable (allows `null`, `"CLAUDE"`, or `"CODEX"`)
+
+**Errors**:
+- `400`: Invalid JSON, Zod validation failure (with `details`), `projectId` mismatch, or referenced ticket/project not found (Prisma foreign key violation)
+- `401`: Missing or invalid workflow token
+- `500`: Unexpected server error
+
+**Side Effects**: Creates a full `ComparisonRecord` with all related entities (participants, metric snapshots, decision point evaluations, compliance assessments) in a single Prisma transaction via `persistComparisonRecord()`.
+
+**Behavior**: Each POST creates a new, independent comparison record. Comparisons are point-in-time snapshots — duplicate POSTs for the same tickets create separate records.
+
 ## Job Status Endpoints
 
 ### GET /api/projects/:projectId/jobs/status

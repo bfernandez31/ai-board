@@ -128,6 +128,25 @@ Stage Transition
   → Client Polls for Status Updates
 ```
 
+#### Comparison Data Persistence Flow
+```
+/compare Comment Trigger
+  → ai-board-assist.yml Dispatched
+  → Claude executes /compare command:
+    → Fetches telemetry (fetch-telemetry.sh)
+    → Generates markdown report → specs/{branch}/comparisons/*.md
+    → Writes JSON data file → specs/{branch}/comparisons/*.json
+  → Workflow reads newest JSON file
+  → POST /api/projects/{projectId}/comparisons (Bearer token auth)
+    → Validates payload (Zod schema)
+    → persistComparisonRecord() creates DB record (transaction)
+    → Returns { id, generatedAt }
+  → Workflow logs outcome and continues (exit 0 on all paths)
+  → Commit and push changes
+```
+
+JSON write failures and POST failures are non-blocking — the markdown report is the primary artifact and the workflow always completes successfully.
+
 **Sparse Checkout Pattern**:
 - ai-board is always checked out from `main` branch (stable commands)
 - Only `.claude-plugin/` and `.github/scripts/` directories are fetched (~1MB vs ~100MB)
