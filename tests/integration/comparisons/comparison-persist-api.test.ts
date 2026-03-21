@@ -100,6 +100,12 @@ function buildComparisonPayload(opts: {
   };
 }
 
+const workflowClient = createAPIClient({
+  defaultHeaders: getWorkflowHeaders(),
+  includeTestUserHeader: false,
+  enableTestAuthOverride: false,
+});
+
 describe('POST /api/projects/:projectId/tickets/:id/comparisons', () => {
   let ctx: TestContext;
 
@@ -130,12 +136,6 @@ describe('POST /api/projects/:projectId/tickets/:id/comparisons', () => {
         { id: participant.id, ticketKey: 'TE2-302', title: '[e2e] Persist Participant' },
       ],
       branch: 'TE2-301-test-branch',
-    });
-
-    const workflowClient = createAPIClient({
-      defaultHeaders: getWorkflowHeaders(),
-      includeTestUserHeader: false,
-      enableTestAuthOverride: false,
     });
 
     const response = await workflowClient.post<{ id: number; markdownPath: string }>(
@@ -194,12 +194,6 @@ describe('POST /api/projects/:projectId/tickets/:id/comparisons', () => {
       stage: 'BUILD',
     });
 
-    const workflowClient = createAPIClient({
-      defaultHeaders: getWorkflowHeaders(),
-      includeTestUserHeader: false,
-      enableTestAuthOverride: false,
-    });
-
     const response = await workflowClient.post<{ code: string }>(
       `/api/projects/${ctx.projectId}/tickets/${source.id}/comparisons`,
       { invalid: 'data' }
@@ -210,12 +204,6 @@ describe('POST /api/projects/:projectId/tickets/:id/comparisons', () => {
   });
 
   it('returns 404 for non-existent ticket', async () => {
-    const workflowClient = createAPIClient({
-      defaultHeaders: getWorkflowHeaders(),
-      includeTestUserHeader: false,
-      enableTestAuthOverride: false,
-    });
-
     const response = await workflowClient.post<{ code: string }>(
       `/api/projects/${ctx.projectId}/tickets/999999/comparisons`,
       { sourceTicket: {} }

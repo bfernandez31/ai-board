@@ -5,6 +5,7 @@ import { listTicketComparisons } from '@/lib/comparison/comparison-detail';
 import { validateWorkflowAuth } from '@/app/lib/workflow-auth';
 import { persistGeneratedComparisonArtifacts } from '@/lib/comparison/comparison-generator';
 import { prisma } from '@/lib/db/client';
+import type { ImplementationMetrics } from '@/lib/types/comparison';
 import type { Agent, Stage, WorkflowType } from '@prisma/client';
 
 const paramsSchema = z.object({
@@ -222,46 +223,27 @@ export async function POST(
 
     const data = validationResult.data;
 
-    // Transform implementation records to match ImplementationMetrics type
-    // (exactOptionalPropertyTypes requires explicit undefined removal)
-    const implementation: Record<string, import('@/lib/types/comparison').ImplementationMetrics> =
-      Object.fromEntries(
-        Object.entries(data.report.implementation).map(([key, val]) => {
-          const base: import('@/lib/types/comparison').ImplementationMetrics = {
-            ticketKey: val.ticketKey,
-            linesAdded: val.linesAdded,
-            linesRemoved: val.linesRemoved,
-            linesChanged: val.linesChanged,
-            filesChanged: val.filesChanged,
-            changedFiles: val.changedFiles,
-            testFilesChanged: val.testFilesChanged,
-            hasData: val.hasData,
-          };
-          if (val.testCoverage != null) {
-            base.testCoverage = val.testCoverage;
-          }
-          return [key, base];
-        })
-      );
+    // Transform implementation records: strip undefined testCoverage for exactOptionalPropertyTypes
+    const implementation: Record<string, ImplementationMetrics> = Object.fromEntries(
+      Object.entries(data.report.implementation).map(([key, { testCoverage, ...rest }]) => [
+        key,
+        testCoverage != null ? { ...rest, testCoverage } : rest,
+      ])
+    );
+
+    type TicketRef = {
+      id: number;
+      ticketKey: string;
+      title: string;
+      stage: Stage;
+      workflowType: WorkflowType;
+      agent: Agent | null;
+    };
 
     const result = await persistGeneratedComparisonArtifacts({
       projectId,
-      sourceTicket: data.sourceTicket as {
-        id: number;
-        ticketKey: string;
-        title: string;
-        stage: Stage;
-        workflowType: WorkflowType;
-        agent: Agent | null;
-      },
-      participants: data.participants as Array<{
-        id: number;
-        ticketKey: string;
-        title: string;
-        stage: Stage;
-        workflowType: WorkflowType;
-        agent: Agent | null;
-      }>,
+      sourceTicket: data.sourceTicket as TicketRef,
+      participants: data.participants as TicketRef[],
       branch: data.branch,
       report: {
         ...data.report,
