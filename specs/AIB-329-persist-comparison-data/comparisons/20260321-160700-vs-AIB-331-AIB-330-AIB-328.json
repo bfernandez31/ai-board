@@ -1,0 +1,250 @@
+{
+  "projectId": 3,
+  "sourceTicket": {
+    "id": 1812,
+    "ticketKey": "AIB-329",
+    "title": "Persist comparison data",
+    "stage": "VERIFY",
+    "workflowType": "FULL",
+    "agent": "CLAUDE"
+  },
+  "participants": [
+    {
+      "id": 0,
+      "ticketKey": "AIB-331",
+      "title": "Copy of persist comparison data",
+      "stage": "VERIFY",
+      "workflowType": "QUICK",
+      "agent": "CODEX"
+    },
+    {
+      "id": 0,
+      "ticketKey": "AIB-330",
+      "title": "Persist comparison data",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CODEX"
+    },
+    {
+      "id": 0,
+      "ticketKey": "AIB-328",
+      "title": "Persist comparison data",
+      "stage": "VERIFY",
+      "workflowType": "FULL",
+      "agent": "CLAUDE"
+    }
+  ],
+  "markdownPath": "specs/AIB-329-persist-comparison-data/comparisons/20260321-160700-vs-AIB-331-AIB-330-AIB-328.md",
+  "report": {
+    "metadata": {
+      "generatedAt": "2026-03-21T16:07:00.000Z",
+      "sourceTicket": "AIB-329",
+      "comparedTickets": ["AIB-331", "AIB-330", "AIB-328"],
+      "filePath": "specs/AIB-329-persist-comparison-data/comparisons/20260321-160700-vs-AIB-331-AIB-330-AIB-328.md"
+    },
+    "summary": "AIB-330 is the best implementation with 88%. It has the strongest architecture with a dedicated payload module, idempotency via compareRunKey, Prisma migration, and 6 test files. Ship AIB-330; close others.",
+    "alignment": {
+      "overall": 85,
+      "dimensions": {
+        "requirements": 90,
+        "scenarios": 80,
+        "entities": 85,
+        "keywords": 80
+      },
+      "isAligned": true,
+      "matchingRequirements": ["POST persistence endpoint", "workflow integration", "Zod validation"],
+      "matchingEntities": ["ComparisonRecord", "ComparisonParticipant", "ComparisonReport"]
+    },
+    "implementation": {
+      "AIB-329": {
+        "ticketKey": "AIB-329",
+        "linesAdded": 554,
+        "linesRemoved": 0,
+        "linesChanged": 554,
+        "filesChanged": 5,
+        "changedFiles": [
+          ".claude-plugin/commands/ai-board.compare.md",
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts",
+          "proxy.ts",
+          "tests/integration/comparisons/comparison-persist-api.test.ts"
+        ],
+        "testFilesChanged": 1,
+        "hasData": true
+      },
+      "AIB-331": {
+        "ticketKey": "AIB-331",
+        "linesAdded": 570,
+        "linesRemoved": 2,
+        "linesChanged": 572,
+        "filesChanged": 8,
+        "changedFiles": [
+          ".claude-plugin/commands/ai-board.compare.md",
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts",
+          "proxy.ts",
+          "tests/helpers/comparison-fixtures.ts",
+          "tests/helpers/workflow-auth.ts",
+          "tests/integration/comparisons/comparison-api.test.ts",
+          "tests/unit/commands/compare-persistence-command.test.ts"
+        ],
+        "testFilesChanged": 2,
+        "hasData": true
+      },
+      "AIB-330": {
+        "ticketKey": "AIB-330",
+        "linesAdded": 1366,
+        "linesRemoved": 128,
+        "linesChanged": 1494,
+        "filesChanged": 19,
+        "changedFiles": [
+          ".github/workflows/ai-board-assist.yml",
+          ".gitignore",
+          "app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts",
+          "lib/comparison/comparison-generator.ts",
+          "lib/comparison/comparison-payload.ts",
+          "lib/comparison/comparison-record.ts",
+          "lib/types/comparison.ts",
+          "prisma/migrations/20260321093000_comparison_compare_run_key/migration.sql",
+          "prisma/schema.prisma",
+          "proxy.ts",
+          "tests/fixtures/vitest/global-setup.ts",
+          "tests/helpers/comparison-fixtures.ts",
+          "tests/helpers/db-setup.ts",
+          "tests/integration/comparisons/comparison-api.test.ts",
+          "tests/integration/comparisons/comparison-history-persistence.test.ts",
+          "tests/integration/comparisons/comparison-persistence.test.ts",
+          "tests/unit/comparison/comparison-generator.test.ts",
+          "tests/unit/comparison/comparison-payload.test.ts",
+          "tests/unit/comparison/comparison-record.test.ts"
+        ],
+        "testFilesChanged": 6,
+        "hasData": true
+      },
+      "AIB-328": {
+        "ticketKey": "AIB-328",
+        "linesAdded": 545,
+        "linesRemoved": 30,
+        "linesChanged": 575,
+        "filesChanged": 3,
+        "changedFiles": [
+          ".github/workflows/ai-board-assist.yml",
+          "app/api/projects/[projectId]/comparisons/route.ts",
+          "tests/integration/comparisons/comparison-persistence-endpoint.test.ts"
+        ],
+        "testFilesChanged": 1,
+        "hasData": true
+      }
+    },
+    "compliance": {
+      "AIB-329": {
+        "overall": 78,
+        "totalPrinciples": 5,
+        "passedPrinciples": 4,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "Minor enum `as` casts but overall good type safety" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "Proper route structure" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "1 integration test file" },
+          { "name": "Security-First Design", "section": "IV", "passed": true, "notes": "Zod validation, workflow token auth" },
+          { "name": "Database Integrity", "section": "V", "passed": false, "notes": "No migration, no idempotency handling" }
+        ]
+      },
+      "AIB-331": {
+        "overall": 80,
+        "totalPrinciples": 5,
+        "passedPrinciples": 4,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "z.nativeEnum for proper enum handling" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "Proper route structure with helper functions" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "2 test files with fixture builder" },
+          { "name": "Security-First Design", "section": "IV", "passed": true, "notes": "Zod validation, workflow auth" },
+          { "name": "Database Integrity", "section": "V", "passed": false, "notes": "No idempotency, no migration" }
+        ]
+      },
+      "AIB-330": {
+        "overall": 88,
+        "totalPrinciples": 5,
+        "passedPrinciples": 5,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": true, "notes": "Strict types with serialization/deserialization boundary, no unsafe casts" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "Dedicated payload module, clean separation of concerns" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "6 test files covering unit and integration layers" },
+          { "name": "Security-First Design", "section": "IV", "passed": true, "notes": "Strict Zod schemas with min/max constraints, workflow auth" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Prisma migration for compareRunKey, transaction-level dedup" }
+        ]
+      },
+      "AIB-328": {
+        "overall": 65,
+        "totalPrinciples": 5,
+        "passedPrinciples": 3,
+        "principles": [
+          { "name": "TypeScript-First Development", "section": "I", "passed": false, "notes": "`as unknown as` unsafe cast bypasses type safety" },
+          { "name": "Component-Driven Architecture", "section": "II", "passed": true, "notes": "Project-level route (less RESTful but functional)" },
+          { "name": "Test-Driven Development", "section": "III", "passed": true, "notes": "1 comprehensive test file with 358 lines" },
+          { "name": "Security-First Design", "section": "IV", "passed": false, "notes": "`z.looseObject({})` allows malformed nested data" },
+          { "name": "Database Integrity", "section": "V", "passed": true, "notes": "Uses Prisma transactions via persistComparisonRecord" }
+        ]
+      }
+    },
+    "telemetry": {
+      "AIB-329": {
+        "ticketKey": "AIB-329",
+        "inputTokens": 6340,
+        "outputTokens": 75525,
+        "cacheReadTokens": 16039437,
+        "cacheCreationTokens": 640271,
+        "costUsd": 7.70,
+        "durationMs": 1228152,
+        "model": "claude-opus-4-6",
+        "toolsUsed": ["Agent", "Bash", "Edit", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "Write"],
+        "jobCount": 2,
+        "hasData": true
+      },
+      "AIB-331": {
+        "ticketKey": "AIB-331",
+        "inputTokens": 254984,
+        "outputTokens": 72957,
+        "cacheReadTokens": 10338494,
+        "cacheCreationTokens": 385472,
+        "costUsd": 4.92,
+        "durationMs": 1525753,
+        "model": "gpt-5.4",
+        "toolsUsed": ["Agent", "Bash", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "apply_patch", "exec_command", "write_stdin"],
+        "jobCount": 2,
+        "hasData": true
+      },
+      "AIB-330": {
+        "ticketKey": "AIB-330",
+        "inputTokens": 828674,
+        "outputTokens": 130288,
+        "cacheReadTokens": 21240696,
+        "cacheCreationTokens": 415077,
+        "costUsd": 10.51,
+        "durationMs": 2756955,
+        "model": "gpt-5.4",
+        "toolsUsed": ["Agent", "Bash", "Grep", "Read", "apply_patch", "close_agent", "exec_command", "spawn_agent", "update_plan", "wait_agent", "write_stdin"],
+        "jobCount": 4,
+        "hasData": true
+      },
+      "AIB-328": {
+        "ticketKey": "AIB-328",
+        "inputTokens": 16840,
+        "outputTokens": 162160,
+        "cacheReadTokens": 32485769,
+        "cacheCreationTokens": 1095892,
+        "costUsd": 19.78,
+        "durationMs": 3246931,
+        "model": "claude-opus-4-6",
+        "toolsUsed": ["Agent", "Bash", "Edit", "Glob", "Grep", "Read", "TodoWrite", "ToolSearch", "Write"],
+        "jobCount": 4,
+        "hasData": true
+      }
+    },
+    "recommendation": "Ship AIB-330. Best architecture (dedicated payload module, idempotency, strict validation), strongest test coverage (6 files), and clean separation of concerns. Close AIB-329, AIB-331, AIB-328.",
+    "warnings": [
+      "AIB-328 uses z.looseObject({}) which allows malformed nested data through validation",
+      "AIB-328 uses unsafe `as unknown as` type cast",
+      "AIB-329 and AIB-331 lack idempotency — workflow retries would create duplicate records"
+    ]
+  }
+}
