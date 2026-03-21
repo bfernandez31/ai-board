@@ -1,0 +1,173 @@
+# API Contract Extension: Comparison Detail Enrichment
+# Ticket: AIB-333
+# Extends: GET /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}
+#
+# No new endpoints are introduced. The existing comparison detail endpoint
+# returns an enriched ComparisonParticipantDetail with additional fields.
+
+openapi: 3.1.0
+info:
+  title: Comparison Detail Enrichment
+  version: 1.0.0
+  description: >
+    Extended response schema for the comparison detail endpoint.
+    Adds operational metrics (aggregated telemetry), primary model,
+    and quality score dimension details to each participant.
+
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      summary: Get enriched comparison detail
+      description: >
+        Returns the full comparison detail with enriched participant data
+        including aggregated telemetry, primary model, and quality score
+        dimension breakdown.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Enriched comparison detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetail'
+
+components:
+  schemas:
+    ComparisonEnrichmentValue:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [available, pending, unavailable]
+        value:
+          nullable: true
+      required: [state, value]
+
+    ComparisonTelemetryEnrichment:
+      type: object
+      description: >
+        Aggregated telemetry across ALL completed jobs for a ticket.
+        Previously returned only latest-job values; now sums across all jobs.
+      properties:
+        inputTokens:
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        outputTokens:
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        totalTokens:
+          description: "NEW - Computed: inputTokens + outputTokens"
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        durationMs:
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        costUsd:
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        jobCount:
+          description: "NEW - Count of completed jobs"
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        hasPartialData:
+          description: "NEW - True when some jobs are still in progress"
+          type: boolean
+      required:
+        - inputTokens
+        - outputTokens
+        - totalTokens
+        - durationMs
+        - costUsd
+        - jobCount
+        - hasPartialData
+
+    QualityScoreDetails:
+      type: object
+      nullable: true
+      properties:
+        dimensions:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              agentId:
+                type: string
+              score:
+                type: number
+              weight:
+                type: number
+              weightedScore:
+                type: number
+            required: [name, agentId, score, weight, weightedScore]
+        threshold:
+          type: string
+          enum: [Excellent, Good, Fair, Poor]
+        computedAt:
+          type: string
+          format: date-time
+      required: [dimensions, threshold, computedAt]
+
+    ComparisonParticipantDetail:
+      type: object
+      description: >
+        Extended participant detail with operational metrics.
+        New fields: model, qualityScoreDetails.
+        Extended: telemetry (aggregated + totalTokens + jobCount + hasPartialData).
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+          enum: [FULL, QUICK, CLEAN]
+        agent:
+          type: string
+          nullable: true
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/ComparisonEnrichmentValue'
+        qualityScoreDetails:
+          description: "NEW - Dimension breakdown for quality score popover"
+          $ref: '#/components/schemas/QualityScoreDetails'
+        model:
+          description: "NEW - Primary AI model used across jobs"
+          type: string
+          nullable: true
+        telemetry:
+          $ref: '#/components/schemas/ComparisonTelemetryEnrichment'
+        metrics:
+          type: object
+          description: Implementation metrics (unchanged)
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - telemetry
+        - metrics
