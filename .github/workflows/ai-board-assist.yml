@@ -265,7 +265,7 @@ jobs:
             echo "📌 Detected /compare command - routing to ai-board.compare"
             # Extract arguments after /compare (e.g., "#AIB-133 #AIB-134")
             ARGS=$(echo "$COMMENT" | sed -n 's/.*\/compare[[:space:]]*\(.*\)/\1/p')
-            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.compare" "\"$ARGS\"" || true)
+            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.compare" "\"$ARGS\"" || true)
           elif echo "$COMMENT" | grep -qE "/review\b"; then
             echo "📌 Detected /review command - routing to code-review with --force"
 
@@ -296,7 +296,7 @@ jobs:
             fi
           else
             echo "📌 Using ai-board.assist for general request"
-            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.assist" "\"$COMMENT\"" || true)
+            OUTPUT=$(../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.assist" "\"$COMMENT\"" || true)
           fi
 
           # Clean Claude's output - remove any JSON blocks that might break GitHub Actions
@@ -580,7 +580,7 @@ jobs:
                 \"branch\": \"${BRANCH}\",
                 \"issues_to_fix\": $(echo "$ISSUES_JSON" | jq -c 'tojson'),
                 \"githubRepository\": \"${GITHUB_REPOSITORY_INPUT}\",
-                \"agent\": \"${{ inputs.agent }}\"
+                \"agent\": \"CLAUDE\"
               }
             }")
 
