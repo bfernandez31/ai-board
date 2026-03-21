@@ -205,5 +205,3 @@ export function ComparisonViewer({
     </Dialog>
   );
 }
-
-export default ComparisonViewer;

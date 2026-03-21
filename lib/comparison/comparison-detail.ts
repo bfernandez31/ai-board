@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import { parseQualityScoreDetails } from '@/lib/quality-score';
-import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import type { ComparisonDetail, ComparisonEnrichmentValue, ComparisonSummary } from '@/lib/types/comparison';
 import {
   buildComparisonDetail,
   createAvailableEnrichment,
@@ -105,7 +105,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 function deriveQualityState(
   latestVerifyJob: { qualityScore: number | null; qualityScoreDetails: string | null } | null,
   hasVerifyJob: boolean
-): ReturnType<typeof createAvailableEnrichment<number>> {
+): ComparisonEnrichmentValue<number> {
   if (latestVerifyJob?.qualityScore != null) {
     return createAvailableEnrichment(latestVerifyJob.qualityScore);
   }
@@ -261,8 +261,6 @@ export async function getComparisonDetailForTicket(
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
-
   const participants = record.participants.map((participant) => {
     const aggregated = aggregatedByTicketId.get(participant.ticketId) ?? null;
     const hasInProgress = inProgressByTicketId.has(participant.ticketId);
@@ -272,7 +270,7 @@ export async function getComparisonDetailForTicket(
       participant,
       quality: deriveQualityState(
         verifyJob,
-        verifyJobTicketIds.has(participant.ticketId)
+        latestVerifyJobByTicketId.has(participant.ticketId)
       ),
       qualityScoreDetails: verifyJob?.qualityScoreDetails
         ? parseQualityScoreDetails(verifyJob.qualityScoreDetails)

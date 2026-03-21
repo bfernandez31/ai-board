@@ -60,7 +60,7 @@ export interface ComparisonComplianceGridProps {
   participants: ComparisonParticipantDetail[];
 }
 
-export interface ComparisonOperationalMetricsProps extends ComparisonSectionProps {}
+export type ComparisonOperationalMetricsProps = ComparisonSectionProps;
 
 export interface ComparisonQualityPopoverProps {
   score: number;
