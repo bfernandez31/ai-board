@@ -40,6 +40,19 @@ export function generateReportPath(branch: string, filename: string): string {
   return `specs/${branch}/comparisons/${filename}`;
 }
 
+function withPersistedReportPath(
+  report: ComparisonReport,
+  markdownPath: string
+): ComparisonReport {
+  return {
+    ...report,
+    metadata: {
+      ...report.metadata,
+      filePath: markdownPath,
+    },
+  };
+}
+
 function generateExecutiveSummary(
   alignment: FeatureAlignmentScore,
   targets: ComparisonTarget[]
@@ -408,7 +421,15 @@ export async function persistGeneratedComparisonArtifacts(input: {
   }>;
   branch: string;
   report: ComparisonReport;
-}) {
+}): Promise<{
+  filename: string;
+  markdownPath: string;
+  compareRunKey: string;
+  markdown: string;
+  artifactPath: string;
+  comparisonDataJson: string | null;
+  requestPayload: ReturnType<typeof createComparisonPersistenceRequest>;
+}> {
   const filename = input.report.metadata.filePath;
   const markdownPath = generateReportPath(input.branch, filename);
   const compareRunKey = createCompareRunKey(
@@ -416,13 +437,8 @@ export async function persistGeneratedComparisonArtifacts(input: {
     input.report.metadata.comparedTickets,
     input.report.metadata.generatedAt
   );
-  const markdown = generateReportMarkdown({
-    ...input.report,
-    metadata: {
-      ...input.report.metadata,
-      filePath: markdownPath,
-    },
-  });
+  const persistedReport = withPersistedReportPath(input.report, markdownPath);
+  const markdown = generateReportMarkdown(persistedReport);
   const requestPayload = createComparisonPersistenceRequest({
     compareRunKey,
     projectId: input.projectId,
@@ -430,13 +446,7 @@ export async function persistGeneratedComparisonArtifacts(input: {
     sourceTicketKey: input.sourceTicket.ticketKey,
     participantTicketIds: input.participants.map((participant) => participant.id),
     markdownPath,
-    report: {
-      ...input.report,
-      metadata: {
-        ...input.report.metadata,
-        filePath: markdownPath,
-      },
-    },
+    report: persistedReport,
   });
   let comparisonDataJson: string | null = null;
 

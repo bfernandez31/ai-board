@@ -85,11 +85,11 @@ export const serializedComparisonPersistenceRequestSchema = z.object({
   report: serializedComparisonReportSchema,
 });
 
-function deserializeComparisonReport(
-  report: SerializedComparisonReport
-): ComparisonReport {
-  const implementation = Object.fromEntries(
-    Object.entries(report.implementation).map(([ticketKey, metrics]) => [
+function copyImplementationMetrics(
+  implementation: SerializedComparisonReport['implementation']
+): SerializedComparisonReport['implementation'] {
+  return Object.fromEntries(
+    Object.entries(implementation).map(([ticketKey, metrics]) => [
       ticketKey,
       {
         ...metrics,
@@ -99,39 +99,31 @@ function deserializeComparisonReport(
       },
     ])
   );
+}
 
+function deserializeComparisonReport(
+  report: SerializedComparisonReport
+): ComparisonReport {
   return {
     ...report,
     metadata: {
       ...report.metadata,
       generatedAt: new Date(report.metadata.generatedAt),
     },
-    implementation,
+    implementation: copyImplementationMetrics(report.implementation),
   };
 }
 
 export function serializeComparisonReport(
   report: ComparisonReport
 ): SerializedComparisonReport {
-  const implementation = Object.fromEntries(
-    Object.entries(report.implementation).map(([ticketKey, metrics]) => [
-      ticketKey,
-      {
-        ...metrics,
-        ...(metrics.testCoverage !== undefined
-          ? { testCoverage: metrics.testCoverage }
-          : {}),
-      },
-    ])
-  );
-
   return {
     ...report,
     metadata: {
       ...report.metadata,
       generatedAt: report.metadata.generatedAt.toISOString(),
     },
-    implementation,
+    implementation: copyImplementationMetrics(report.implementation),
   };
 }
 
@@ -169,13 +161,23 @@ export function createComparisonPersistenceRequest(input: {
   compareRunKey: string;
   report: ComparisonReport;
 }): SerializedComparisonPersistenceRequest {
+  const {
+    compareRunKey,
+    projectId,
+    sourceTicketId,
+    sourceTicketKey,
+    markdownPath,
+    participantTicketIds,
+    report,
+  } = input;
+
   return {
-    compareRunKey: input.compareRunKey,
-    projectId: input.projectId,
-    sourceTicketId: input.sourceTicketId,
-    sourceTicketKey: input.sourceTicketKey,
-    markdownPath: input.markdownPath,
-    participantTicketIds: input.participantTicketIds,
-    report: serializeComparisonReport(input.report),
+    compareRunKey,
+    projectId,
+    sourceTicketId,
+    sourceTicketKey,
+    markdownPath,
+    participantTicketIds,
+    report: serializeComparisonReport(report),
   };
 }

@@ -1,3 +1,4 @@
+import type { Agent, Stage, WorkflowType } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
@@ -16,67 +17,94 @@ const querySchema = z.object({
   limit: z.coerce.number().int().positive().max(50).default(10),
 });
 
-function jsonError(
-  status: number,
-  error: string,
-  code: string
-): NextResponse {
+type RouteParams = { projectId: string; id: string };
+
+type ParticipantRecord = {
+  id: number;
+  ticketKey: string;
+  title: string;
+  stage: Stage;
+  workflowType: WorkflowType;
+  agent: Agent | null;
+};
+
+function jsonError(status: number, error: string, code: string): NextResponse {
   return NextResponse.json({ error, code }, { status });
+}
+
+async function parseRouteParams(
+  context: { params: Promise<RouteParams> }
+): Promise<{ projectId: number; ticketId: number } | null> {
+  const paramsResult = paramsSchema.safeParse(await context.params);
+  if (!paramsResult.success) {
+    return null;
+  }
+
+  return {
+    projectId: paramsResult.data.projectId,
+    ticketId: paramsResult.data.id,
+  };
+}
+
+function orderParticipantsByPayload(
+  participants: ParticipantRecord[],
+  participantTicketIds: number[]
+): ParticipantRecord[] | null {
+  const participantById = new Map(
+    participants.map((participant) => [participant.id, participant] as const)
+  );
+  const orderedParticipants: ParticipantRecord[] = [];
+
+  for (const participantId of participantTicketIds) {
+    const participant = participantById.get(participantId);
+    if (!participant) {
+      return null;
+    }
+
+    orderedParticipants.push(participant);
+  }
+
+  return orderedParticipants;
 }
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string; id: string }> }
+  context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
-    const paramsResult = paramsSchema.safeParse(await context.params);
-    if (!paramsResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid project or ticket ID', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+    const params = await parseRouteParams(context);
+    if (!params) {
+      return jsonError(400, 'Invalid project or ticket ID', 'VALIDATION_ERROR');
     }
 
-    const { projectId, id: ticketId } = paramsResult.data;
+    const { projectId, ticketId } = params;
     const queryResult = querySchema.safeParse({
       limit: request.nextUrl.searchParams.get('limit') ?? undefined,
     });
 
     if (!queryResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid query parameters', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
+      return jsonError(400, 'Invalid query parameters', 'VALIDATION_ERROR');
     }
 
     const ticket = await verifyTicketAccess(ticketId, request);
     if (ticket.projectId !== projectId) {
-      return NextResponse.json(
-        { error: 'Forbidden', code: 'WRONG_PROJECT' },
-        { status: 403 }
-      );
+      return jsonError(403, 'Forbidden', 'WRONG_PROJECT');
     }
 
     const result = await listTicketComparisons(ticketId, queryResult.data.limit);
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof Error && error.message === 'Ticket not found') {
-      return NextResponse.json(
-        { error: 'Ticket not found', code: 'TICKET_NOT_FOUND' },
-        { status: 404 }
-      );
+      return jsonError(404, 'Ticket not found', 'TICKET_NOT_FOUND');
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    return jsonError(500, 'Internal server error', 'INTERNAL_ERROR');
   }
 }
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string; id: string }> }
+  context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
     const isAuthorized = await verifyWorkflowToken(request);
@@ -84,12 +112,12 @@ export async function POST(
       return jsonError(401, 'Unauthorized: Invalid workflow token', 'UNAUTHORIZED');
     }
 
-    const paramsResult = paramsSchema.safeParse(await context.params);
-    if (!paramsResult.success) {
+    const params = await parseRouteParams(context);
+    if (!params) {
       return jsonError(400, 'Invalid project or ticket ID', 'VALIDATION_ERROR');
     }
 
-    const { projectId, id: ticketId } = paramsResult.data;
+    const { projectId, ticketId } = params;
     const payload = normalizeComparisonPersistenceRequest(await request.json());
 
     if (payload.projectId !== projectId || payload.sourceTicketId !== ticketId) {
@@ -168,18 +196,15 @@ export async function POST(
       return jsonError(400, 'Compared ticket count does not match participant IDs', 'VALIDATION_ERROR');
     }
 
-    const participantById = new Map(
-      participants.map((participant) => [participant.id, participant] as const)
+    const orderedParticipants = orderParticipantsByPayload(
+      participants,
+      payload.participantTicketIds
     );
-    const orderedParticipants = payload.participantTicketIds.map((participantId) =>
-      participantById.get(participantId)
-    );
-
-    if (orderedParticipants.some((participant) => !participant)) {
+    if (!orderedParticipants) {
       return jsonError(404, 'Participant ticket not found for project', 'PARTICIPANT_NOT_FOUND');
     }
 
-    const participantKeys = orderedParticipants.map((participant) => participant!.ticketKey ?? '');
+    const participantKeys = orderedParticipants.map((participant) => participant.ticketKey);
     const reportKeys = payload.report.metadata.comparedTickets;
 
     if (participantKeys.some((key, index) => key !== reportKeys[index])) {
@@ -198,7 +223,7 @@ export async function POST(
     const record = await persistComparisonRecord({
       projectId,
       sourceTicket,
-      participants: orderedParticipants.filter((participant): participant is NonNullable<typeof participant> => Boolean(participant)),
+      participants: orderedParticipants,
       compareRunKey: payload.compareRunKey,
       markdownPath: payload.markdownPath,
       report: payload.report,

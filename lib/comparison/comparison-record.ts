@@ -43,6 +43,17 @@ const DEFAULT_PRINCIPLES = [
   'AI-First Development Model',
 ] as const;
 
+const comparisonRecordInclude = {
+  participants: {
+    include: {
+      metricSnapshot: true,
+      complianceAssessments: true,
+      ticket: true,
+    },
+  },
+  decisionPoints: true,
+} satisfies Prisma.ComparisonRecordInclude;
+
 function getWinnerTicketKey(report: ComparisonReport): string {
   const complianceScores = Object.entries(report.compliance).sort(
     (a, b) => b[1].overall - a[1].overall
@@ -59,6 +70,10 @@ function getWinnerTicketKey(report: ComparisonReport): string {
   }
 
   return report.metadata.comparedTickets[0] ?? report.metadata.sourceTicket;
+}
+
+function createPrincipleKey(principleName: string): string {
+  return principleName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
 function buildRankings(report: ComparisonReport): Array<{
@@ -162,14 +177,14 @@ function buildComplianceCreates(
   const compliance = report.compliance[participantTicketKey];
   const principles =
     compliance?.principles.map((principle, index) => ({
-      principleKey: principle.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      principleKey: createPrincipleKey(principle.name),
       principleName: principle.name,
       status: principle.passed ? 'pass' : 'fail',
       notes: principle.notes || 'No notes provided',
       displayOrder: index,
     })) ??
     DEFAULT_PRINCIPLES.map((principleName, index) => ({
-      principleKey: principleName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      principleKey: createPrincipleKey(principleName),
       principleName,
       status: 'mixed',
       notes: 'No saved assessment for this principle.',
@@ -253,16 +268,7 @@ export async function persistComparisonRecord(
           sourceTicketId: input.sourceTicket.id,
           compareRunKey: input.compareRunKey,
         },
-        include: {
-          participants: {
-            include: {
-              metricSnapshot: true,
-              complianceAssessments: true,
-              ticket: true,
-            },
-          },
-          decisionPoints: true,
-        },
+        include: comparisonRecordInclude,
       });
 
       if (existingRecord) {
@@ -273,16 +279,7 @@ export async function persistComparisonRecord(
     const recordInput = createComparisonRecordInput(input);
     return tx.comparisonRecord.create({
       data: recordInput,
-      include: {
-        participants: {
-          include: {
-            metricSnapshot: true,
-            complianceAssessments: true,
-            ticket: true,
-          },
-        },
-        decisionPoints: true,
-      },
+      include: comparisonRecordInclude,
     });
   });
 }
