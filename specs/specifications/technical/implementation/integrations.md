@@ -125,6 +125,7 @@ export async function dispatchWorkflow(params: {
 - **Repository Checkout**: Checks out external project repository
 - **Telemetry Pre-Fetch**: Executes `fetch-telemetry.sh` for `/compare` commands
 - **Command**: Claude updates spec/plan based on comment request
+- **Comparison Persistence**: After `/compare` completes, checks for `comparison-data.json` in `specs/$BRANCH/comparisons/`. If found, POSTs the JSON payload to `POST /api/projects/:projectId/tickets/:ticketId/comparisons` using the workflow token. Logs success or failure but does not fail the workflow if persistence fails (markdown is the primary artifact). Deletes the JSON file before committing to keep it ephemeral.
 - **Response**: Posts summary comment via API
 - **Note**: At exactly the 10-input GitHub Actions limit. Forwards `agent` when dispatching iterate.yml for minor VERIFY fixes.
 
