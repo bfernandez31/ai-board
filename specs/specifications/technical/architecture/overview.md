@@ -330,7 +330,7 @@ if (!project) {
 - **Metrics per Job**: Input/output/cached tokens, cost, duration, model, tools used
 - **Cost Tracking**: Real cost reported by Claude agent; estimated from OpenAI API pricing for Codex
 - **Configuration**: Agent runner script (`run-agent.sh`) configures OTLP endpoints and env vars per agent type
-- **Batching**: Claude Code uses `OTEL_BLRP_*` env vars to batch log exports and flush once at process shutdown (reduces API calls from N to 1-2 per job)
+- **Batching**: Claude Code uses `OTEL_LOGS_EXPORT_INTERVAL=60000` to batch log exports every 60s instead of default 5s (force-flushed on shutdown)
 
 ### Testing Strategy
 
