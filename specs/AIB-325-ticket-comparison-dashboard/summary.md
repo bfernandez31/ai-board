@@ -7,6 +7,8 @@
 
 Implemented a Prisma-backed comparison dashboard with immutable comparison records, participant-scoped history/detail APIs, structured React viewer sections for ranking/metrics/decisions/compliance, comparison persistence helpers for `/compare`, and focused unit/integration coverage for history, detail, dashboard rendering, and repeated-run persistence.
 
+Added a saved implementation comparison report against AIB-324, AIB-327, and AIB-326 under `comparisons/` so VERIFY review has an in-branch ranking and recommendation artifact.
+
 ## Key Decisions
 
 Replaced filename-based markdown reads with ticket-authorized comparison ID routes, kept markdown generation while adding structured persistence from the same in-memory report, embedded participant metrics directly in detail payloads, and treated missing quality/telemetry as explicit `pending` or `unavailable` enrichments instead of blocking the dashboard.
