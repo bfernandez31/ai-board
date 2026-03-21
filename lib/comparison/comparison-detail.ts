@@ -22,11 +22,10 @@ export async function listTicketComparisons(
   const [records, total] = await prisma.$transaction([
     prisma.comparisonRecord.findMany({
       where: {
-        participants: {
-          some: {
-            ticketId,
-          },
-        },
+        OR: [
+          { participants: { some: { ticketId } } },
+          { sourceTicketId: ticketId },
+        ],
       },
       orderBy: {
         generatedAt: 'desc',
@@ -59,11 +58,10 @@ export async function listTicketComparisons(
     }),
     prisma.comparisonRecord.count({
       where: {
-        participants: {
-          some: {
-            ticketId,
-          },
-        },
+        OR: [
+          { participants: { some: { ticketId } } },
+          { sourceTicketId: ticketId },
+        ],
       },
     }),
   ]);
@@ -80,27 +78,26 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
   count: number;
   latestComparisonId: number | null;
 }> {
-  const participantRows = await prisma.comparisonParticipant.findMany({
-    where: { ticketId },
+  const records = await prisma.comparisonRecord.findMany({
+    where: {
+      OR: [
+        { participants: { some: { ticketId } } },
+        { sourceTicketId: ticketId },
+      ],
+    },
     select: {
-      comparisonRecordId: true,
-      comparisonRecord: {
-        select: {
-          generatedAt: true,
-        },
-      },
+      id: true,
+      generatedAt: true,
     },
     orderBy: {
-      comparisonRecord: {
-        generatedAt: 'desc',
-      },
+      generatedAt: 'desc',
     },
   });
 
   return {
-    hasComparisons: participantRows.length > 0,
-    count: participantRows.length,
-    latestComparisonId: participantRows.at(0)?.comparisonRecordId ?? null,
+    hasComparisons: records.length > 0,
+    count: records.length,
+    latestComparisonId: records.at(0)?.id ?? null,
   };
 }
 
@@ -126,11 +123,10 @@ export async function getComparisonDetailForTicket(
   const record = await prisma.comparisonRecord.findFirst({
     where: {
       id: comparisonId,
-      participants: {
-        some: {
-          ticketId,
-        },
-      },
+      OR: [
+        { participants: { some: { ticketId } } },
+        { sourceTicketId: ticketId },
+      ],
     },
     include: {
       sourceTicket: {
