@@ -417,16 +417,21 @@ jobs:
           PROJECT_ID: ${{ inputs.project_id }}
           TICKET_ID: ${{ inputs.ticket_id }}
         run: |
-          ARTIFACT_PATH="specs/$BRANCH/comparisons/comparison-data.json"
+          COMPARE_DIR="specs/$BRANCH/comparisons"
           API_URL="${APP_URL%/}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comparisons"
 
-          if [ ! -f "$ARTIFACT_PATH" ]; then
-            echo "ℹ️ Compare persistence skipped: comparison-data.json not found"
+          # Find the JSON artifact (timestamp-based or legacy fixed name)
+          ARTIFACT_PATH=$(find "$COMPARE_DIR" -maxdepth 1 -name '*.json' -type f 2>/dev/null | head -1)
+
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "ℹ️ Compare persistence skipped: no JSON artifact found in $COMPARE_DIR"
             exit 0
           fi
 
+          echo "📦 Found artifact: $ARTIFACT_PATH"
+
           if ! jq empty "$ARTIFACT_PATH" >/dev/null 2>&1; then
-            echo "⚠️ Compare persistence skipped: malformed comparison-data.json"
+            echo "⚠️ Compare persistence skipped: malformed JSON in $ARTIFACT_PATH"
             rm -f "$ARTIFACT_PATH"
             exit 0
           fi
