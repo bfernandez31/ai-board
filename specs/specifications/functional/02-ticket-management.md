@@ -345,7 +345,7 @@ Users can close the detail modal by:
 
 ### Purpose
 
-The comparison dashboard provides a visual view of `/compare` results, replacing the raw markdown experience with a structured, interactive UI. It displays ranking, code metrics, implementation choices, and constitution compliance across competing ticket implementations.
+The comparison dashboard provides a visual view of `/compare` results, replacing the raw markdown experience with a structured, interactive UI. It displays ranking, code metrics, operational metrics (tokens, duration, cost), implementation choices, and constitution compliance across competing ticket implementations.
 
 ### Access Points
 
@@ -365,7 +365,7 @@ The viewer is a modal dialog with two sections:
 - Hidden on small screens
 
 **Main Content** (right):
-- Scrollable area displaying four sections for the selected comparison:
+- Scrollable area displaying five sections for the selected comparison:
 
 **Ranking and Recommendation**:
 - Overall recommendation text and executive summary
@@ -374,6 +374,9 @@ The viewer is a modal dialog with two sections:
   - Rank number, ticket key, title
   - Score percentage badge
   - "Winner" badge on rank 1
+  - Workflow type badge (FULL / QUICK)
+  - Agent badge (e.g., CLAUDE)
+  - Quality score badge (clickable — opens quality popover)
   - Rank rationale text
 
 **Implementation Metrics**:
@@ -381,6 +384,13 @@ The viewer is a modal dialog with two sections:
 - Metrics: lines changed, files changed, test files changed
 - "Best value" badge highlights the leading participant per metric
 - "Unavailable" shown when metrics are missing
+
+**Operational Metrics**:
+- Table comparing resource usage across participants
+- Metrics: total tokens, duration, cost, job count, quality score
+- "Best value" cell highlighted per metric row
+- First column is sticky for horizontal scroll support on narrow screens
+- "Unavailable" shown when enrichment data is missing
 
 **Decision Points**:
 - Collapsible sections for each architectural decision
@@ -392,11 +402,18 @@ The viewer is a modal dialog with two sections:
 - Status badges: pass (green), mixed (outline), fail (red)
 - Assessment notes shown below each status
 
+### Quality Popover
+
+Clicking a quality score badge on a ranking card or in the Operational Metrics table opens a popover with a per-dimension breakdown:
+- Each scored dimension shown with a label and progress bar
+- Overall score displayed in the popover header
+- Renders only when quality detail data is `available`; no popover when `pending` or `unavailable`
+
 ### Data Enrichment
 
 The comparison detail view enriches stored comparison data with live data:
-- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job)
-- **Telemetry**: Input/output tokens, duration, cost from the latest job per participant
+- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job); per-dimension breakdown (`qualityDetails`) also fetched for popover display
+- **Telemetry**: Aggregated across all completed jobs per participant — includes input tokens, output tokens, total tokens, duration, cost, job count, and primary model used
 
 ### Selection Logic
 
