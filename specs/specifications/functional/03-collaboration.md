@@ -482,11 +482,14 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 **Ranking Criteria** (Weighted - applied to ALL tickets including source):
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Feature Completeness | 30% | How complete is the implementation |
-| Implementation Choices | 30% | Architectural decisions aligned with constitution and best practices |
-| Constitution Compliance | 20% | Adherence to project standards |
-| Test Coverage | 10% | Presence and quality of tests |
-| Efficiency | 10% | Cost, duration, lines of code |
+| Code Quality | 35% | Clean code, readability, maintainability |
+| Constitution Compliance | 30% | Adherence to project standards in actual code |
+| Implementation Choices | 20% | Architectural decisions, patterns |
+| Test Coverage | 15% | Presence and quality of tests |
+
+**NOT evaluated** (informational only, never influences ranking):
+- Spec completeness, workflow type, documentation in specs/
+- Cost / telemetry data (displayed for reference, not a quality signal)
 
 **Low Relevance Handling**:
 - Alignment < 30% triggers warning

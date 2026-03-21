@@ -2086,8 +2086,7 @@ Persist a structured comparison record from a workflow-generated JSON artifact.
 - `projectId` must match route parameter
 - `sourceTicketKey` is resolved to its database ID server-side
 - `markdownPath` must end with `report.metadata.filePath` and start with `specs/{branch}/comparisons/`
-- `participantTicketKeys` must be unique and resolve to tickets in the same project
-- Source ticket cannot appear in participant list
+- `participantTicketKeys` must be unique and resolve to tickets in the same project (source ticket may be included as a participant)
 - `report.metadata.comparedTickets` order must match resolved participant ticket keys
 
 **Response** (201 Created):
