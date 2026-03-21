@@ -119,7 +119,7 @@
 
 **Independent Test**: Open any comparison dialog and verify 5 sections appear in the specified order.
 
-- [ ] T041 [US5] Import `ComparisonOperationalMetrics` and insert between `ComparisonMetricsGrid` and `ComparisonDecisionPoints` in `components/comparison/comparison-viewer.tsx`
+- [x] T041 [US5] Import `ComparisonOperationalMetrics` and insert between `ComparisonMetricsGrid` and `ComparisonDecisionPoints` in `components/comparison/comparison-viewer.tsx`
 
 **Checkpoint**: All sections render in correct order per FR-014.
 
@@ -129,9 +129,9 @@
 
 **Purpose**: Final validation and cleanup across all stories.
 
-- [ ] T042 Run `bun run type-check` and fix any type errors across all modified files
-- [ ] T043 Run `bun run lint` and fix any lint issues across all modified files
-- [ ] T044 Run quickstart.md validation scenarios to verify end-to-end behavior
+- [x] T042 Run `bun run type-check` and fix any type errors across all modified files
+- [x] T043 Run `bun run lint` and fix any lint issues across all modified files
+- [x] T044 Run quickstart.md validation scenarios to verify end-to-end behavior
 
 ---
 
