@@ -2061,9 +2061,8 @@ Persist a structured comparison record from a workflow-generated JSON artifact.
 {
   "compareRunKey": "cmp_AIB-123_AIB-124-AIB-125_20260321T143000Z",
   "projectId": 3,
-  "sourceTicketId": 42,
   "sourceTicketKey": "AIB-123",
-  "participantTicketIds": [43, 44],
+  "participantTicketKeys": ["AIB-124", "AIB-125"],
   "markdownPath": "specs/AIB-123-feature/comparisons/20260321-143000-vs-AIB-124-AIB-125.md",
   "report": {
     "metadata": {
@@ -2084,10 +2083,10 @@ Persist a structured comparison record from a workflow-generated JSON artifact.
 ```
 
 **Validation**:
-- `projectId` and `sourceTicketId` must match route parameters
-- `sourceTicketKey` must match the resolved ticket's key
+- `projectId` must match route parameter
+- `sourceTicketKey` is resolved to its database ID server-side
 - `markdownPath` must end with `report.metadata.filePath` and start with `specs/{branch}/comparisons/`
-- `participantTicketIds` must be unique and resolve to tickets in the same project
+- `participantTicketKeys` must be unique and resolve to tickets in the same project
 - Source ticket cannot appear in participant list
 - `report.metadata.comparedTickets` order must match resolved participant ticket keys
 
@@ -2109,7 +2108,7 @@ Persist a structured comparison record from a workflow-generated JSON artifact.
 }
 ```
 
-Idempotency is handled inside a database transaction: if a record with the same `(projectId, sourceTicketId, compareRunKey)` already exists, the existing record is returned with `status: "duplicate"`.
+Idempotency is handled inside a database transaction: if a record with the same `(projectId, sourceTicketKey, compareRunKey)` already exists, the existing record is returned with `status: "duplicate"`.
 
 **Errors**:
 - `400`: Validation failure (mismatched scope, invalid participants, malformed payload)

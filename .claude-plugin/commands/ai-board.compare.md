@@ -333,29 +333,14 @@ After writing the markdown report, write a JSON data file for workflow persisten
 
 **IMPORTANT**: Wrap this entire step in a try-catch. If JSON writing fails, log a warning and continue to Step 11. The markdown report is the primary artifact — JSON is secondary.
 
-**What to write**: A JSON file containing the `PersistComparisonInput` payload:
+**What to write**: A JSON file containing the comparison persistence payload:
 
 ```json
 {
   "projectId": <PROJECT_ID as number>,
-  "sourceTicket": {
-    "id": <source ticket database ID>,
-    "ticketKey": "<SOURCE_KEY>",
-    "title": "<source ticket title>",
-    "stage": "<current stage>",
-    "workflowType": "<FULL|QUICK|CLEAN>",
-    "agent": "<CLAUDE|CODEX|null>"
-  },
-  "participants": [
-    {
-      "id": <participant ticket database ID>,
-      "ticketKey": "<TICKET_KEY>",
-      "title": "<ticket title>",
-      "stage": "<current stage>",
-      "workflowType": "<FULL|QUICK|CLEAN>",
-      "agent": "<CLAUDE|CODEX|null>"
-    }
-  ],
+  "sourceTicketKey": "<SOURCE_KEY>",
+  "participantTicketKeys": ["<KEY-1>", "<KEY-2>"],
+  "compareRunKey": "cmp_<timestamp>_<SOURCE_KEY>_<KEY-1>-<KEY-2>",
   "markdownPath": "<path to the markdown report written in Step 10>",
   "report": {
     "metadata": {
@@ -375,7 +360,7 @@ After writing the markdown report, write a JSON data file for workflow persisten
 }
 ```
 
-**How to get ticket metadata**: Look up each ticket's database ID, stage, workflowType, and agent from the ticket data already fetched during Steps 1-3. The `PROJECT_ID` environment variable provides the project ID.
+**Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload. The `PROJECT_ID` environment variable provides the project ID.
 
 **File naming**: Same timestamp and keys as the markdown report, but with `.json` extension.
 - Example: `specs/$BRANCH/comparisons/20260102-143052-vs-AIB-124-AIB-125.json`

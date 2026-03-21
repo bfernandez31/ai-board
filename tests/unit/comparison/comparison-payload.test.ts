@@ -88,9 +88,8 @@ describe('comparison-payload helpers', () => {
     const payload = createComparisonPersistenceRequest({
       compareRunKey,
       projectId: 3,
-      sourceTicketId: 330,
       sourceTicketKey: 'AIB-330',
-      participantTicketIds: [325, 327],
+      participantTicketKeys: ['AIB-325', 'AIB-327'],
       markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
       report: {
         ...report,
@@ -106,7 +105,8 @@ describe('comparison-payload helpers', () => {
     expect(payload.report.metadata.generatedAt).toBe(report.metadata.generatedAt.toISOString());
     expect(normalized.report.metadata.generatedAt).toBeInstanceOf(Date);
     expect(normalized.compareRunKey).toBe(compareRunKey);
-    expect(normalized.sourceTicketId).toBe(330);
+    expect(normalized.sourceTicketKey).toBe('AIB-330');
+    expect(normalized.participantTicketKeys).toEqual(['AIB-325', 'AIB-327']);
   });
 
   it('detects missing and malformed payload fields', () => {
@@ -120,10 +120,9 @@ describe('comparison-payload helpers', () => {
       normalizeComparisonPersistenceRequest({
         compareRunKey: 'cmp_bad',
         projectId: 3,
-        sourceTicketId: 330,
         sourceTicketKey: 'AIB-330',
+        participantTicketKeys: [],
         markdownPath: 'invalid-path.md',
-        participantTicketIds: [],
         report: {
           ...serializeComparisonReport(report),
           metadata: {

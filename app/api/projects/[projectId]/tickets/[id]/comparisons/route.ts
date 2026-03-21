@@ -1,4 +1,3 @@
-import type { Agent, Stage, WorkflowType } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { verifyWorkflowToken } from '@/app/lib/auth/workflow-auth';
@@ -19,15 +18,6 @@ const querySchema = z.object({
 
 type RouteParams = { projectId: string; id: string };
 
-type ParticipantRecord = {
-  id: number;
-  ticketKey: string;
-  title: string;
-  stage: Stage;
-  workflowType: WorkflowType;
-  agent: Agent | null;
-};
-
 function jsonError(status: number, error: string, code: string): NextResponse {
   return NextResponse.json({ error, code }, { status });
 }
@@ -44,27 +34,6 @@ async function parseRouteParams(
     projectId: paramsResult.data.projectId,
     ticketId: paramsResult.data.id,
   };
-}
-
-function orderParticipantsByPayload(
-  participants: ParticipantRecord[],
-  participantTicketIds: number[]
-): ParticipantRecord[] | null {
-  const participantById = new Map(
-    participants.map((participant) => [participant.id, participant] as const)
-  );
-  const orderedParticipants: ParticipantRecord[] = [];
-
-  for (const participantId of participantTicketIds) {
-    const participant = participantById.get(participantId);
-    if (!participant) {
-      return null;
-    }
-
-    orderedParticipants.push(participant);
-  }
-
-  return orderedParticipants;
 }
 
 export async function GET(
@@ -117,10 +86,10 @@ export async function POST(
       return jsonError(400, 'Invalid project or ticket ID', 'VALIDATION_ERROR');
     }
 
-    const { projectId, ticketId } = params;
+    const { projectId } = params;
     const payload = normalizeComparisonPersistenceRequest(await request.json());
 
-    if (payload.projectId !== projectId || payload.sourceTicketId !== ticketId) {
+    if (payload.projectId !== projectId) {
       return jsonError(400, 'Payload scope does not match route parameters', 'VALIDATION_ERROR');
     }
 
@@ -132,9 +101,10 @@ export async function POST(
       return jsonError(400, 'Markdown path does not match report metadata', 'VALIDATION_ERROR');
     }
 
+    // Resolve source ticket from key
     const sourceTicket = await prisma.ticket.findFirst({
       where: {
-        id: ticketId,
+        ticketKey: payload.sourceTicketKey,
         projectId,
       },
       select: {
@@ -149,7 +119,7 @@ export async function POST(
     });
 
     if (!sourceTicket) {
-      return jsonError(404, 'Ticket not found for project', 'TICKET_NOT_FOUND');
+      return jsonError(404, 'Source ticket not found for project', 'TICKET_NOT_FOUND');
     }
 
     const expectedMarkdownPrefix = sourceTicket.branch
@@ -160,18 +130,15 @@ export async function POST(
       return jsonError(400, 'Markdown path is outside the source ticket branch scope', 'VALIDATION_ERROR');
     }
 
-    if (sourceTicket.ticketKey !== payload.sourceTicketKey) {
-      return jsonError(400, 'Source ticket key does not match source ticket', 'VALIDATION_ERROR');
+    const uniqueParticipantKeys = [...new Set(payload.participantTicketKeys)];
+    if (uniqueParticipantKeys.length !== payload.participantTicketKeys.length) {
+      return jsonError(400, 'Participant ticket keys must be unique', 'VALIDATION_ERROR');
     }
 
-    const uniqueParticipantIds = [...new Set(payload.participantTicketIds)];
-    if (uniqueParticipantIds.length !== payload.participantTicketIds.length) {
-      return jsonError(400, 'Participant ticket IDs must be unique', 'VALIDATION_ERROR');
-    }
-
+    // Resolve participant tickets from keys
     const participants = await prisma.ticket.findMany({
       where: {
-        id: { in: payload.participantTicketIds },
+        ticketKey: { in: payload.participantTicketKeys },
         projectId,
       },
       select: {
@@ -184,7 +151,7 @@ export async function POST(
       },
     });
 
-    if (participants.length !== payload.participantTicketIds.length) {
+    if (participants.length !== payload.participantTicketKeys.length) {
       return jsonError(404, 'Participant ticket not found for project', 'PARTICIPANT_NOT_FOUND');
     }
 
@@ -192,22 +159,20 @@ export async function POST(
       return jsonError(400, 'Source ticket cannot be a comparison participant', 'VALIDATION_ERROR');
     }
 
-    if (payload.report.metadata.comparedTickets.length !== payload.participantTicketIds.length) {
-      return jsonError(400, 'Compared ticket count does not match participant IDs', 'VALIDATION_ERROR');
+    if (payload.report.metadata.comparedTickets.length !== payload.participantTicketKeys.length) {
+      return jsonError(400, 'Compared ticket count does not match participant keys', 'VALIDATION_ERROR');
     }
 
-    const orderedParticipants = orderParticipantsByPayload(
-      participants,
-      payload.participantTicketIds
+    // Order participants to match payload ordering
+    const participantByKey = new Map(
+      participants.map((participant) => [participant.ticketKey, participant] as const)
     );
-    if (!orderedParticipants) {
-      return jsonError(404, 'Participant ticket not found for project', 'PARTICIPANT_NOT_FOUND');
-    }
+    const orderedParticipants = payload.participantTicketKeys.map(
+      (key) => participantByKey.get(key)!
+    );
 
-    const participantKeys = orderedParticipants.map((participant) => participant.ticketKey);
     const reportKeys = payload.report.metadata.comparedTickets;
-
-    if (participantKeys.some((key, index) => key !== reportKeys[index])) {
+    if (payload.participantTicketKeys.some((key, index) => key !== reportKeys[index])) {
       return jsonError(400, 'Participant tickets do not match report ordering', 'VALIDATION_ERROR');
     }
 

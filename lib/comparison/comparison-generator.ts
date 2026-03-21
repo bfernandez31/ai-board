@@ -442,9 +442,8 @@ export async function persistGeneratedComparisonArtifacts(input: {
   const requestPayload = createComparisonPersistenceRequest({
     compareRunKey,
     projectId: input.projectId,
-    sourceTicketId: input.sourceTicket.id,
     sourceTicketKey: input.sourceTicket.ticketKey,
-    participantTicketIds: input.participants.map((participant) => participant.id),
+    participantTicketKeys: input.participants.map((participant) => participant.ticketKey),
     markdownPath,
     report: persistedReport,
   });

@@ -62,12 +62,11 @@ describe('comparison persistence workflow route', () => {
       projectId: ctx.projectId,
       branch: 'AIB-330-persist-comparison-data',
       sourceTicket: {
-        id: sourceTicket.id,
         ticketKey: sourceTicket.ticketKey ?? 'TE2-201',
       },
       participants: [
-        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-202' },
-        { id: candidateB.id, ticketKey: candidateB.ticketKey ?? 'TE2-203' },
+        { ticketKey: candidateA.ticketKey ?? 'TE2-202' },
+        { ticketKey: candidateB.ticketKey ?? 'TE2-203' },
       ],
     });
 
@@ -123,12 +122,11 @@ describe('comparison persistence workflow route', () => {
       projectId: ctx.projectId,
       branch: 'AIB-330-persist-comparison-data',
       sourceTicket: {
-        id: sourceTicket.id,
         ticketKey: sourceTicket.ticketKey ?? 'TE2-211',
       },
       participants: [
-        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-212' },
-        { id: candidateB.id, ticketKey: candidateB.ticketKey ?? 'TE2-213' },
+        { ticketKey: candidateA.ticketKey ?? 'TE2-212' },
+        { ticketKey: candidateB.ticketKey ?? 'TE2-213' },
       ],
     });
 
@@ -190,11 +188,10 @@ describe('comparison persistence workflow route', () => {
       projectId: ctx.projectId,
       branch: 'AIB-330-persist-comparison-data',
       sourceTicket: {
-        id: sourceTicket.id,
         ticketKey: sourceTicket.ticketKey ?? 'TE2-221',
       },
       participants: [
-        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-222' },
+        { ticketKey: candidateA.ticketKey ?? 'TE2-222' },
       ],
     });
 
@@ -210,7 +207,7 @@ describe('comparison persistence workflow route', () => {
       `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
       {
         ...payload,
-        participantTicketIds: [foreignTicket.id],
+        participantTicketKeys: [foreignTicket.ticketKey ?? `TFR-${foreignSuffix}`],
         report: {
           ...payload.report,
           metadata: {

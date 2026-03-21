@@ -234,8 +234,8 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
 export function createWorkflowComparisonPayloadFixture(input: {
   projectId: number;
   branch: string;
-  sourceTicket: { id: number; ticketKey: string };
-  participants: Array<{ id: number; ticketKey: string }>;
+  sourceTicket: { ticketKey: string };
+  participants: Array<{ ticketKey: string }>;
 }) {
   const report = createWorkflowComparisonReportFixture(
     input.sourceTicket.ticketKey,
@@ -257,9 +257,8 @@ export function createWorkflowComparisonPayloadFixture(input: {
       hydratedReport.metadata.generatedAt
     ),
     projectId: input.projectId,
-    sourceTicketId: input.sourceTicket.id,
     sourceTicketKey: input.sourceTicket.ticketKey,
-    participantTicketIds: input.participants.map((participant) => participant.id),
+    participantTicketKeys: input.participants.map((participant) => participant.ticketKey),
     markdownPath,
     report: hydratedReport,
   });

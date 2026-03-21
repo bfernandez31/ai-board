@@ -78,10 +78,9 @@ export const serializedComparisonReportSchema = z.object({
 export const serializedComparisonPersistenceRequestSchema = z.object({
   compareRunKey: z.string().min(1),
   projectId: z.number().int().positive(),
-  sourceTicketId: z.number().int().positive(),
   sourceTicketKey: z.string().min(1),
+  participantTicketKeys: z.array(z.string().min(1)).min(1).max(5),
   markdownPath: z.string().regex(/^specs\/[^/]+\/comparisons\/.+\.md$/),
-  participantTicketIds: z.array(z.number().int().positive()).min(1).max(5),
   report: serializedComparisonReportSchema,
 });
 
@@ -154,30 +153,18 @@ export function getComparisonDataArtifactPath(markdownPath: string): string {
 
 export function createComparisonPersistenceRequest(input: {
   projectId: number;
-  sourceTicketId: number;
   sourceTicketKey: string;
-  participantTicketIds: number[];
+  participantTicketKeys: string[];
   markdownPath: string;
   compareRunKey: string;
   report: ComparisonReport;
 }): SerializedComparisonPersistenceRequest {
-  const {
-    compareRunKey,
-    projectId,
-    sourceTicketId,
-    sourceTicketKey,
-    markdownPath,
-    participantTicketIds,
-    report,
-  } = input;
-
   return {
-    compareRunKey,
-    projectId,
-    sourceTicketId,
-    sourceTicketKey,
-    markdownPath,
-    participantTicketIds,
-    report: serializeComparisonReport(report),
+    compareRunKey: input.compareRunKey,
+    projectId: input.projectId,
+    sourceTicketKey: input.sourceTicketKey,
+    participantTicketKeys: input.participantTicketKeys,
+    markdownPath: input.markdownPath,
+    report: serializeComparisonReport(input.report),
   };
 }

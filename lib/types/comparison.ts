@@ -273,10 +273,9 @@ export interface SerializedComparisonReport
 export interface ComparisonPersistenceRequest {
   compareRunKey: string;
   projectId: number;
-  sourceTicketId: number;
   sourceTicketKey: string;
+  participantTicketKeys: string[];
   markdownPath: string;
-  participantTicketIds: number[];
   report: ComparisonReport;
 }
 

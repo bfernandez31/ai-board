@@ -86,11 +86,10 @@ describe('Comparisons API', () => {
         projectId: ctx.projectId,
         branch: 'AIB-330-persist-comparison-data',
         sourceTicket: {
-          id: sourceTicket.id,
           ticketKey: sourceTicket.ticketKey ?? 'TE2-241',
         },
         participants: [
-          { id: candidate.id, ticketKey: candidate.ticketKey ?? 'TE2-242' },
+          { ticketKey: candidate.ticketKey ?? 'TE2-242' },
         ],
       });
 
