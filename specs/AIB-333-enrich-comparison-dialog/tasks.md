@@ -63,27 +63,27 @@
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Component test: renders 7 metric rows with correct labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T016 [P] [US2] Component test: displays formatted token values (compact notation) in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T017 [P] [US2] Component test: highlights best value per row (lowest for cost/tokens/duration, highest for quality) in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T018 [P] [US2] Component test: shows "Pending" for pending telemetry and "N/A" for unavailable in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T019 [P] [US2] Component test: renders column headers with ticket key + workflow type badge + agent + model in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T020 [P] [US2] Component test: handles 6 participants without truncation in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T021 [P] [US2] Integration test: returns aggregated telemetry across multiple jobs in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T022 [P] [US2] Integration test: returns totalTokens as computed sum and jobCount per participant in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T023 [P] [US2] Integration test: returns primary model per participant in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T024 [P] [US2] Integration test: marks hasPartialData when jobs in progress in `tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T025 [P] [US2] Integration test: returns unavailable telemetry when no jobs in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T015 [P] [US2] Component test: renders 7 metric rows with correct labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T016 [P] [US2] Component test: displays formatted token values (compact notation) in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T017 [P] [US2] Component test: highlights best value per row (lowest for cost/tokens/duration, highest for quality) in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T018 [P] [US2] Component test: shows "Pending" for pending telemetry and "N/A" for unavailable in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T019 [P] [US2] Component test: renders column headers with ticket key + workflow type badge + agent + model in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T020 [P] [US2] Component test: handles 6 participants without truncation in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T021 [P] [US2] Integration test: returns aggregated telemetry across multiple jobs in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T022 [P] [US2] Integration test: returns totalTokens as computed sum and jobCount per participant in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T023 [P] [US2] Integration test: returns primary model per participant in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T024 [P] [US2] Integration test: marks hasPartialData when jobs in progress in `tests/integration/comparisons/comparison-detail-route.test.ts`
+- [x] T025 [P] [US2] Integration test: returns unavailable telemetry when no jobs in `tests/integration/comparisons/comparison-detail-route.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T026 [P] [US2] Add props interface for `ComparisonOperationalMetrics` in `components/comparison/types.ts`
-- [ ] T027 [US2] Create `ComparisonOperationalMetrics` component with Card layout, table structure, and 7 metric rows in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T028 [US2] Implement value formatting: tokens (Intl.NumberFormat compact), duration (ms → human-readable), cost ($X.XX), quality (score + threshold) in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T029 [US2] Implement enrichment state handling: `available` → formatted value, `pending` → "Pending" muted, `unavailable` → "N/A" muted in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T030 [US2] Implement client-side best-value computation and highlighting (lowest wins: tokens/cost/duration/job count; highest wins: quality; ties highlight all) in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T031 [US2] Implement horizontal scroll with `overflow-x-auto` wrapper and CSS sticky `left-0 z-10 bg-card` on metric label column in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T032 [US2] Render column headers with ticket key, workflow type badge, agent badge, and model sub-label in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T026 [P] [US2] Add props interface for `ComparisonOperationalMetrics` in `components/comparison/types.ts`
+- [x] T027 [US2] Create `ComparisonOperationalMetrics` component with Card layout, table structure, and 7 metric rows in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T028 [US2] Implement value formatting: tokens (Intl.NumberFormat compact), duration (ms → human-readable), cost ($X.XX), quality (score + threshold) in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T029 [US2] Implement enrichment state handling: `available` → formatted value, `pending` → "Pending" muted, `unavailable` → "N/A" muted in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T030 [US2] Implement client-side best-value computation and highlighting (lowest wins: tokens/cost/duration/job count; highest wins: quality; ties highlight all) in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T031 [US2] Implement horizontal scroll with `overflow-x-auto` wrapper and CSS sticky `left-0 z-10 bg-card` on metric label column in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T032 [US2] Render column headers with ticket key, workflow type badge, agent badge, and model sub-label in `components/comparison/comparison-operational-metrics.tsx`
 
 **Checkpoint**: Operational metrics grid renders all 7 rows with formatting, best-value highlighting, and horizontal scroll for up to 6 participants.
 
