@@ -43,6 +43,17 @@ type ParticipantAggregationResult = {
 
 const NON_TERMINAL_JOB_STATUSES = new Set<JobStatus>([JobStatus.PENDING, JobStatus.RUNNING]);
 
+function createUnavailableQualitySummary(): ComparisonQualitySummary {
+  return {
+    state: 'unavailable',
+    score: null,
+    threshold: null,
+    detailsState: 'unavailable',
+    details: null,
+    isBest: false,
+  };
+}
+
 function createOperationalMetricValue(
   state: ComparisonOperationalMetricValue['state'],
   value: number | null,
@@ -62,6 +73,18 @@ function getLatestJobTime(job: ComparisonJobRecord): number {
 
 function hasPendingJobs(jobs: ComparisonJobRecord[]): boolean {
   return jobs.some((job) => NON_TERMINAL_JOB_STATUSES.has(job.status));
+}
+
+function createJobCountValue(jobs: ComparisonJobRecord[]): ComparisonOperationalMetricValue {
+  if (jobs.length === 0) {
+    return createOperationalMetricValue('unavailable', null);
+  }
+
+  if (hasPendingJobs(jobs)) {
+    return createOperationalMetricValue('pending', null);
+  }
+
+  return createOperationalMetricValue('available', jobs.length);
 }
 
 function sumMetric(
@@ -194,6 +217,24 @@ function summarizeModel(jobs: ComparisonJobRecord[]): ComparisonOperationalAggre
   };
 }
 
+export function createUnavailableOperationalAggregate(): ComparisonOperationalAggregate {
+  return {
+    totalTokens: createOperationalMetricValue('unavailable', null),
+    inputTokens: createOperationalMetricValue('unavailable', null),
+    outputTokens: createOperationalMetricValue('unavailable', null),
+    durationMs: createOperationalMetricValue('unavailable', null),
+    costUsd: createOperationalMetricValue('unavailable', null),
+    jobCount: createOperationalMetricValue('unavailable', null),
+    model: {
+      state: 'unavailable',
+      label: null,
+      dominantModel: null,
+      completedJobCount: 0,
+      mixedModels: false,
+    },
+  };
+}
+
 function normalizeQualityDimensions(
   details: NonNullable<ReturnType<typeof parseQualityScoreDetails>>
 ): ComparisonQualityDimension[] {
@@ -283,39 +324,27 @@ function summarizeQuality(input: ParticipantAggregationInput): ComparisonQuality
     };
   }
 
-  return {
-    state: 'unavailable',
-    score: null,
-    threshold: null,
-    detailsState: 'unavailable',
-    details: null,
-    isBest: false,
-  };
+  return createUnavailableQualitySummary();
+}
+
+function getTotalTokens(job: ComparisonJobRecord): number | null {
+  if (job.inputTokens == null && job.outputTokens == null) {
+    return null;
+  }
+
+  return (job.inputTokens ?? 0) + (job.outputTokens ?? 0);
 }
 
 function buildParticipantAggregation(input: ParticipantAggregationInput): ParticipantAggregationResult {
-  const totalTokens = sumMetric(
-    input.jobs,
-    (job) =>
-      job.inputTokens != null || job.outputTokens != null
-        ? (job.inputTokens ?? 0) + (job.outputTokens ?? 0)
-        : null
-  );
-
   return {
     quality: summarizeQuality(input),
     operational: {
-      totalTokens,
+      totalTokens: sumMetric(input.jobs, getTotalTokens),
       inputTokens: sumMetric(input.jobs, (job) => job.inputTokens),
       outputTokens: sumMetric(input.jobs, (job) => job.outputTokens),
       durationMs: sumMetric(input.jobs, (job) => job.durationMs),
       costUsd: sumMetric(input.jobs, (job) => job.costUsd),
-      jobCount:
-        input.jobs.length === 0
-          ? createOperationalMetricValue('unavailable', null)
-          : hasPendingJobs(input.jobs)
-            ? createOperationalMetricValue('pending', null)
-            : createOperationalMetricValue('available', input.jobs.length),
+      jobCount: createJobCountValue(input.jobs),
       model: summarizeModel(input.jobs),
     },
   };

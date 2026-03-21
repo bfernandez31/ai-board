@@ -6,7 +6,19 @@ import {
   normalizeParticipantDetail,
   toComparisonHistorySummary,
 } from './comparison-record';
-import { buildComparisonOperationalData } from './comparison-operational-metrics';
+import {
+  buildComparisonOperationalData,
+  createUnavailableOperationalAggregate,
+} from './comparison-operational-metrics';
+
+const unavailableQualitySummary = {
+  state: 'unavailable',
+  score: null,
+  threshold: null,
+  detailsState: 'unavailable',
+  details: null,
+  isBest: false,
+} as const;
 
 export async function listTicketComparisons(
   ticketId: number,
@@ -217,29 +229,10 @@ export async function getComparisonDetailForTicket(
   const participants = record.participants.map((participant) =>
     normalizeParticipantDetail({
       participant,
-      quality: aggregationByTicketId.get(participant.ticketId)?.quality ?? {
-        state: 'unavailable',
-        score: null,
-        threshold: null,
-        detailsState: 'unavailable',
-        details: null,
-        isBest: false,
-      },
-      operational: aggregationByTicketId.get(participant.ticketId)?.operational ?? {
-        totalTokens: { state: 'unavailable', value: null, isBest: false },
-        inputTokens: { state: 'unavailable', value: null, isBest: false },
-        outputTokens: { state: 'unavailable', value: null, isBest: false },
-        durationMs: { state: 'unavailable', value: null, isBest: false },
-        costUsd: { state: 'unavailable', value: null, isBest: false },
-        jobCount: { state: 'unavailable', value: null, isBest: false },
-        model: {
-          state: 'unavailable',
-          label: null,
-          dominantModel: null,
-          completedJobCount: 0,
-          mixedModels: false,
-        },
-      },
+      quality: aggregationByTicketId.get(participant.ticketId)?.quality ?? unavailableQualitySummary,
+      operational:
+        aggregationByTicketId.get(participant.ticketId)?.operational ??
+        createUnavailableOperationalAggregate(),
     })
   );
 

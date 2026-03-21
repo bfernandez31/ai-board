@@ -7,7 +7,6 @@
 import type {
   ComparisonComplianceRow,
   ComparisonDecisionPoint,
-  ComparisonQualityDetail,
   ComparisonParticipantDetail,
   ComparisonSummary,
 } from '@/lib/types/comparison';
@@ -64,9 +63,4 @@ export interface ComparisonDecisionPointsProps {
 export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
   participants: ComparisonParticipantDetail[];
-}
-
-export interface ComparisonQualityDetailTrayProps {
-  detail: ComparisonQualityDetail;
-  onClose: () => void;
 }

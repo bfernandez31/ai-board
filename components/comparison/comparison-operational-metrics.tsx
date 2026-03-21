@@ -27,6 +27,18 @@ const metricRows: Array<{ key: OperationalMetricKey; label: string }> = [
   { key: 'jobCount', label: 'Jobs' },
 ];
 
+function getModelLabel(participant: ComparisonParticipantDetail): string {
+  if (participant.operational.model.label) {
+    return participant.operational.model.label;
+  }
+
+  if (participant.operational.model.state === 'pending') {
+    return 'Model pending';
+  }
+
+  return 'Model unavailable';
+}
+
 function formatDuration(durationMs: number): string {
   if (durationMs < 1000) {
     return `${durationMs} ms`;
@@ -127,12 +139,13 @@ export function ComparisonOperationalMetrics({
   selectedQualityTicketId,
   onQualityDetailSelect,
 }: ComparisonOperationalMetricsProps) {
-  const selectedParticipant = participants.find(
-    (participant) =>
-      participant.ticketId === selectedQualityTicketId &&
-      participant.quality.detailsState === 'available' &&
-      participant.quality.details
-  );
+  const selectedQualityDetail =
+    participants.find(
+      (participant) =>
+        participant.ticketId === selectedQualityTicketId &&
+        participant.quality.detailsState === 'available' &&
+        participant.quality.details
+    )?.quality.details ?? null;
 
   return (
     <Card className="min-w-0">
@@ -162,12 +175,7 @@ export function ComparisonOperationalMetrics({
                         {participant.agent && (
                           <Badge variant="outline">{getAgentLabel(participant.agent)}</Badge>
                         )}
-                        <Badge variant="secondary">
-                          {participant.operational.model.label ??
-                            (participant.operational.model.state === 'pending'
-                              ? 'Model pending'
-                              : 'Model unavailable')}
-                        </Badge>
+                        <Badge variant="secondary">{getModelLabel(participant)}</Badge>
                       </div>
                     </div>
                   </th>
@@ -208,7 +216,7 @@ export function ComparisonOperationalMetrics({
           </table>
         </div>
 
-        {selectedParticipant?.quality.details && (
+        {selectedQualityDetail && (
           <div
             className="rounded-lg border border-border bg-background p-4"
             data-testid="comparison-quality-detail-tray"
@@ -216,11 +224,10 @@ export function ComparisonOperationalMetrics({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-medium text-foreground">
-                  {selectedParticipant.quality.details.ticketKey} quality details
+                  {selectedQualityDetail.ticketKey} quality details
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  Score {selectedParticipant.quality.details.score} ·{' '}
-                  {selectedParticipant.quality.details.threshold}
+                  Score {selectedQualityDetail.score} · {selectedQualityDetail.threshold}
                 </div>
               </div>
               <Button
@@ -233,7 +240,7 @@ export function ComparisonOperationalMetrics({
               </Button>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {selectedParticipant.quality.details.dimensions.map((dimension) => (
+              {selectedQualityDetail.dimensions.map((dimension) => (
                 <div
                   key={dimension.agentId}
                   className="rounded-md border border-border bg-card px-3 py-2"
