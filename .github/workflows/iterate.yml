@@ -169,7 +169,7 @@ jobs:
         run: |
           echo "📚 Updating global specifications..."
 
-          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.sync-specifications"
+          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
 
       - name: Commit and Push Changes
         if: steps.iterate.outputs.no_changes != 'true'
