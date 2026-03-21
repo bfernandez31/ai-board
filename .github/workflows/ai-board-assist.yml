@@ -420,49 +420,48 @@ jobs:
           COMPARE_DIR="specs/$BRANCH/comparisons"
           API_URL="${APP_URL%/}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comparisons"
 
-          JSON_FILES=$(find "$COMPARE_DIR" -maxdepth 1 -name '*.json' -type f 2>/dev/null | sort)
+          # Find the latest JSON artifact (most recent by name, timestamp-prefixed)
+          ARTIFACT_PATH=$(find "$COMPARE_DIR" -maxdepth 1 -name '*.json' -type f 2>/dev/null | sort -r | head -1)
 
-          if [ -z "$JSON_FILES" ]; then
-            echo "ℹ️ Compare persistence skipped: no JSON artifacts found in $COMPARE_DIR"
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "ℹ️ Compare persistence skipped: no JSON artifact found in $COMPARE_DIR"
             exit 0
           fi
 
-          for ARTIFACT_PATH in $JSON_FILES; do
-            echo "📦 Processing: $ARTIFACT_PATH"
+          echo "📦 Found artifact: $ARTIFACT_PATH"
 
-            if ! jq empty "$ARTIFACT_PATH" >/dev/null 2>&1; then
-              echo "⚠️ Skipped malformed JSON: $ARTIFACT_PATH"
-              rm -f "$ARTIFACT_PATH"
-              continue
-            fi
-
-            HTTP_RESPONSE=$(curl -s -S -X POST "$API_URL" \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
-              --data-binary "@$ARTIFACT_PATH" \
-              -w "\n%{http_code}" || true)
-
-            HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -1)
-            RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
-            RESPONSE_STATUS=$(echo "$RESPONSE_BODY" | jq -r '.status // empty' 2>/dev/null || true)
-            RESPONSE_CODE=$(echo "$RESPONSE_BODY" | jq -r '.code // empty' 2>/dev/null || true)
-
-            if [ "$HTTP_STATUS" = "201" ] && [ "$RESPONSE_STATUS" = "created" ]; then
-              echo "✅ Created durable record for $ARTIFACT_PATH"
-            elif [ "$HTTP_STATUS" = "200" ] && [ "$RESPONSE_STATUS" = "duplicate" ]; then
-              echo "ℹ️ Duplicate detected for $ARTIFACT_PATH"
-            elif [ "$HTTP_STATUS" = "400" ] || [ "$HTTP_STATUS" = "404" ]; then
-              echo "⚠️ Rejected: ${RESPONSE_CODE:-VALIDATION_ERROR} for $ARTIFACT_PATH"
-            elif [ "$HTTP_STATUS" = "401" ]; then
-              echo "⚠️ Unauthorized workflow token for $ARTIFACT_PATH"
-            elif [ "$HTTP_STATUS" = "500" ]; then
-              echo "⚠️ Server failure for $ARTIFACT_PATH"
-            else
-              echo "⚠️ Request failed (HTTP ${HTTP_STATUS:-unknown}) for $ARTIFACT_PATH"
-            fi
-
+          if ! jq empty "$ARTIFACT_PATH" >/dev/null 2>&1; then
+            echo "⚠️ Compare persistence skipped: malformed JSON in $ARTIFACT_PATH"
             rm -f "$ARTIFACT_PATH"
-          done
+            exit 0
+          fi
+
+          HTTP_RESPONSE=$(curl -s -S -X POST "$API_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            --data-binary "@$ARTIFACT_PATH" \
+            -w "\n%{http_code}" || true)
+
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -1)
+          RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+          RESPONSE_STATUS=$(echo "$RESPONSE_BODY" | jq -r '.status // empty' 2>/dev/null || true)
+          RESPONSE_CODE=$(echo "$RESPONSE_BODY" | jq -r '.code // empty' 2>/dev/null || true)
+
+          if [ "$HTTP_STATUS" = "201" ] && [ "$RESPONSE_STATUS" = "created" ]; then
+            echo "✅ Compare persistence created durable record"
+          elif [ "$HTTP_STATUS" = "200" ] && [ "$RESPONSE_STATUS" = "duplicate" ]; then
+            echo "ℹ️ Compare persistence duplicate retry detected"
+          elif [ "$HTTP_STATUS" = "400" ] || [ "$HTTP_STATUS" = "404" ]; then
+            echo "⚠️ Compare persistence rejected: ${RESPONSE_CODE:-VALIDATION_ERROR}"
+          elif [ "$HTTP_STATUS" = "401" ]; then
+            echo "⚠️ Compare persistence rejected: unauthorized workflow token"
+          elif [ "$HTTP_STATUS" = "500" ]; then
+            echo "⚠️ Compare persistence server failure"
+          else
+            echo "⚠️ Compare persistence request failed (HTTP ${HTTP_STATUS:-unknown})"
+          fi
+
+          rm -f "$ARTIFACT_PATH"
 
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
