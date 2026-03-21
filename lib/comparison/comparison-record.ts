@@ -5,6 +5,7 @@ import type {
   WorkflowType,
 } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import type { QualityScoreDetails } from '@/lib/quality-score';
 import type {
   ComparisonDecisionPoint,
   ComparisonDetail,
@@ -362,18 +363,29 @@ export function normalizeMetricSnapshot(
   };
 }
 
-export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
-} | null): ComparisonTelemetryEnrichment {
-  if (!job) {
+export function normalizeTelemetryEnrichment(
+  aggregated: {
+    _sum: {
+      inputTokens: number | null;
+      outputTokens: number | null;
+      durationMs: number | null;
+      costUsd: number | null;
+    };
+    _count: {
+      id: number;
+    };
+  } | null,
+  hasInProgress: boolean = false
+): ComparisonTelemetryEnrichment {
+  if (!aggregated) {
     return {
       inputTokens: createUnavailableEnrichment<number>(),
       outputTokens: createUnavailableEnrichment<number>(),
+      totalTokens: createUnavailableEnrichment<number>(),
       durationMs: createUnavailableEnrichment<number>(),
       costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      hasPartialData: hasInProgress,
     };
   }
 
@@ -385,11 +397,21 @@ export function normalizeTelemetryEnrichment(job: {
     return createAvailableEnrichment(value);
   }
 
+  const inputTokens = aggregated._sum.inputTokens;
+  const outputTokens = aggregated._sum.outputTokens;
+  const totalTokens =
+    inputTokens != null && outputTokens != null
+      ? inputTokens + outputTokens
+      : null;
+
   return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
+    inputTokens: createValue(inputTokens),
+    outputTokens: createValue(outputTokens),
+    totalTokens: createValue(totalTokens),
+    durationMs: createValue(aggregated._sum.durationMs),
+    costUsd: createValue(aggregated._sum.costUsd),
+    jobCount: createAvailableEnrichment(aggregated._count.id),
+    hasPartialData: hasInProgress,
   };
 }
 
@@ -417,7 +439,9 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
+  qualityScoreDetails?: QualityScoreDetails | null;
   telemetry: ComparisonTelemetryEnrichment;
+  model?: string | null;
 }): ComparisonParticipantDetail {
   return {
     ticketId: input.participant.ticketId,
@@ -430,8 +454,10 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
+    qualityScoreDetails: input.qualityScoreDetails ?? null,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
+    model: input.model ?? null,
   };
 }
 

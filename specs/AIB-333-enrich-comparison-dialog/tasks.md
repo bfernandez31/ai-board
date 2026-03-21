@@ -20,14 +20,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 Extend `ComparisonTelemetryEnrichment` with `totalTokens`, `jobCount`, `hasPartialData` fields in `lib/types/comparison.ts`
-- [ ] T002 Extend `ComparisonParticipantDetail` with `qualityScoreDetails` and `model` fields in `lib/types/comparison.ts`
-- [ ] T003 Replace single-job `distinct` query with `prisma.job.groupBy()` aggregation (sum tokens/cost/duration, count jobs) in `lib/comparison/comparison-detail.ts`
-- [ ] T004 Add primary model resolution query grouping by `[ticketId, model]` ordered by count desc in `lib/comparison/comparison-detail.ts`
-- [ ] T005 Add `qualityScoreDetails` to verify job select clause in `lib/comparison/comparison-detail.ts`
-- [ ] T006 Add in-progress job check per ticket for `hasPartialData` flag in `lib/comparison/comparison-detail.ts`
-- [ ] T007 Update `normalizeTelemetryEnrichment()` to accept aggregated data and compute `totalTokens`, `jobCount`, `hasPartialData` in `lib/comparison/comparison-record.ts`
-- [ ] T008 Update `normalizeParticipantDetail()` to include `model` and `qualityScoreDetails` in `lib/comparison/comparison-record.ts`
+- [x] T001 Extend `ComparisonTelemetryEnrichment` with `totalTokens`, `jobCount`, `hasPartialData` fields in `lib/types/comparison.ts`
+- [x] T002 Extend `ComparisonParticipantDetail` with `qualityScoreDetails` and `model` fields in `lib/types/comparison.ts`
+- [x] T003 Replace single-job `distinct` query with `prisma.job.groupBy()` aggregation (sum tokens/cost/duration, count jobs) in `lib/comparison/comparison-detail.ts`
+- [x] T004 Add primary model resolution query grouping by `[ticketId, model]` ordered by count desc in `lib/comparison/comparison-detail.ts`
+- [x] T005 Add `qualityScoreDetails` to verify job select clause in `lib/comparison/comparison-detail.ts`
+- [x] T006 Add in-progress job check per ticket for `hasPartialData` flag in `lib/comparison/comparison-detail.ts`
+- [x] T007 Update `normalizeTelemetryEnrichment()` to accept aggregated data and compute `totalTokens`, `jobCount`, `hasPartialData` in `lib/comparison/comparison-record.ts`
+- [x] T008 Update `normalizeParticipantDetail()` to include `model` and `qualityScoreDetails` in `lib/comparison/comparison-record.ts`
 
 **Checkpoint**: All types and backend enrichment ready — UI tasks can now begin.
 
