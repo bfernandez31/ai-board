@@ -25,6 +25,9 @@ paths:
               $ref: '#/components/schemas/ComparisonPersistenceRequest'
             example:
               compareRunKey: cmp_20260321T133600Z_AIB-330_AIB-325-AIB-327
+              projectId: 3
+              sourceTicketId: 330
+              sourceTicketKey: AIB-330
               markdownPath: specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md
               participantTicketIds:
                 - 325
@@ -172,11 +175,23 @@ components:
       type: object
       required:
         - compareRunKey
+        - projectId
+        - sourceTicketId
+        - sourceTicketKey
         - markdownPath
         - participantTicketIds
         - report
       properties:
         compareRunKey:
+          type: string
+          minLength: 1
+        projectId:
+          type: integer
+          minimum: 1
+        sourceTicketId:
+          type: integer
+          minimum: 1
+        sourceTicketKey:
           type: string
           minLength: 1
         markdownPath:

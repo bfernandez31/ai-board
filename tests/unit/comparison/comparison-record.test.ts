@@ -1,12 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComparisonReport } from '@/lib/types/comparison';
+import { prisma } from '@/lib/db/client';
 import {
   createAvailableEnrichment,
   createComparisonRecordInput,
   createPendingEnrichment,
   createUnavailableEnrichment,
   normalizeTelemetryEnrichment,
+  persistComparisonRecord,
 } from '@/lib/comparison/comparison-record';
+
+vi.mock('@/lib/db/client', () => ({
+  prisma: {
+    $transaction: vi.fn(),
+  },
+}));
 
 const report: ComparisonReport = {
   metadata: {
@@ -70,6 +78,10 @@ const report: ComparisonReport = {
 };
 
 describe('comparison-record helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('maps a comparison report into Prisma create input', () => {
     const input = createComparisonRecordInput({
       projectId: 1,
@@ -99,10 +111,12 @@ describe('comparison-record helpers', () => {
           agent: null,
         },
       ],
+      compareRunKey: 'cmp_existing_run',
       markdownPath: 'specs/feature/comparisons/test.md',
       report,
     });
 
+    expect(input.compareRunKey).toBe('cmp_existing_run');
     expect(input.markdownPath).toBe('specs/feature/comparisons/test.md');
     expect(input.participants?.create).toHaveLength(2);
     const participants = input.participants?.create;
@@ -132,5 +146,65 @@ describe('comparison-record helpers', () => {
       durationMs: { state: 'available', value: 30 },
       costUsd: { state: 'pending', value: null },
     });
+  });
+
+  it('reuses the existing record for a duplicate compare-run key', async () => {
+    const existingRecord = {
+      id: 42,
+      participants: [],
+      decisionPoints: [],
+    };
+    const findFirst = vi.fn().mockResolvedValue(existingRecord);
+    const create = vi.fn();
+
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
+      callback({
+        comparisonRecord: {
+          findFirst,
+          create,
+        },
+      } as never)
+    );
+
+    const result = await persistComparisonRecord({
+      projectId: 1,
+      sourceTicket: {
+        id: 1,
+        ticketKey: 'AIB-1',
+        title: 'Source',
+        stage: 'BUILD',
+        workflowType: 'FULL',
+        agent: null,
+      },
+      participants: [
+        {
+          id: 2,
+          ticketKey: 'AIB-2',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+        },
+      ],
+      compareRunKey: 'cmp_existing_run',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        metadata: {
+          ...report.metadata,
+          comparedTickets: ['AIB-2'],
+        },
+        compliance: {
+          'AIB-2': report.compliance['AIB-2'],
+        },
+        implementation: {
+          'AIB-2': report.implementation['AIB-2'],
+        },
+      },
+    });
+
+    expect(findFirst).toHaveBeenCalledOnce();
+    expect(create).not.toHaveBeenCalled();
+    expect(result).toBe(existingRecord);
   });
 });

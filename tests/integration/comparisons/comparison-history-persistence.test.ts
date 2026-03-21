@@ -1,7 +1,30 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
-import { createStructuredComparisonFixture } from '@/tests/helpers/comparison-fixtures';
+import {
+  createStructuredComparisonFixture,
+  createWorkflowComparisonPayloadFixture,
+} from '@/tests/helpers/comparison-fixtures';
+import { createTestTicket } from '@/tests/helpers/db-setup';
 import { getPrismaClient } from '@/tests/helpers/db-cleanup';
+
+const WORKFLOW_TOKEN = 'test-workflow-token-for-e2e-tests-only';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
+
+async function postWorkflow<T>(path: string, body: unknown) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${WORKFLOW_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  return {
+    status: response.status,
+    data: (await response.json()) as T,
+  };
+}
 
 describe('comparison history persistence', () => {
   let ctx: TestContext;
@@ -81,5 +104,83 @@ describe('comparison history persistence', () => {
       fixture.otherTicket.ticketKey,
       fixture.winnerTicket.ticketKey,
     ]);
+  });
+
+  it('preserves persisted report fidelity and duplicate retry handling', async () => {
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source',
+      description: 'Source',
+      ticketNumber: 301,
+      ticketKey: 'TE2-301',
+      stage: 'BUILD',
+      branch: 'AIB-330-persist-comparison-data',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A',
+      description: 'A',
+      ticketNumber: 302,
+      ticketKey: 'TE2-302',
+      stage: 'VERIFY',
+    });
+    const candidateB = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate B',
+      description: 'B',
+      ticketNumber: 303,
+      ticketKey: 'TE2-303',
+      stage: 'PLAN',
+    });
+
+    const payload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-330-persist-comparison-data',
+      sourceTicket: {
+        id: sourceTicket.id,
+        ticketKey: sourceTicket.ticketKey ?? 'TE2-301',
+      },
+      participants: [
+        { id: candidateA.id, ticketKey: candidateA.ticketKey ?? 'TE2-302' },
+        { id: candidateB.id, ticketKey: candidateB.ticketKey ?? 'TE2-303' },
+      ],
+    });
+
+    const created = await postWorkflow<{
+      comparisonId: number;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+    const retried = await postWorkflow<{
+      comparisonId: number;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+    const detail = await ctx.api.get<{
+      winnerTicketKey: string;
+      markdownPath: string;
+      overallRecommendation: string;
+      decisionPoints: Array<{ title: string }>;
+      complianceRows: Array<{ principleName: string }>;
+      participants: Array<{ ticketKey: string; rank: number }>;
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${candidateA.id}/comparisons/${created.data.comparisonId}`
+    );
+
+    expect(created.status).toBe(201);
+    expect(retried.status).toBe(200);
+    expect(retried.data.status).toBe('duplicate');
+    expect(retried.data.comparisonId).toBe(created.data.comparisonId);
+    expect(detail.status).toBe(200);
+    expect(detail.data.winnerTicketKey).toBe(payload.report.metadata.comparedTickets[0]);
+    expect(detail.data.markdownPath).toBe(payload.markdownPath);
+    expect(detail.data.overallRecommendation).toContain(payload.report.metadata.comparedTickets[0]);
+    expect(detail.data.participants.map((participant) => participant.ticketKey)).toEqual(
+      payload.report.metadata.comparedTickets
+    );
+    expect(detail.data.participants.map((participant) => participant.rank)).toEqual([1, 2]);
+    expect(detail.data.decisionPoints[0]?.title).toBe('FR-001');
+    expect(detail.data.complianceRows[0]?.principleName).toBe('TypeScript-First Development');
   });
 });

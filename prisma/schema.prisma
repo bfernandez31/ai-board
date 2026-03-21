@@ -351,6 +351,7 @@ model ComparisonRecord {
   projectId             Int
   sourceTicketId        Int
   winnerTicketId        Int
+  compareRunKey         String?                   @db.VarChar(255)
   markdownPath          String                    @db.VarChar(500)
   summary               String                    @db.VarChar(2000)
   overallRecommendation String                    @db.VarChar(10000)
@@ -366,6 +367,7 @@ model ComparisonRecord {
   @@index([projectId, generatedAt(sort: Desc)])
   @@index([sourceTicketId, generatedAt(sort: Desc)])
   @@index([winnerTicketId, generatedAt(sort: Desc)])
+  @@unique([projectId, sourceTicketId, compareRunKey])
 }
 
 model ComparisonParticipant {

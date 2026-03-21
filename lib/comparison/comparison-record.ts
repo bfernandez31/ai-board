@@ -29,6 +29,7 @@ type PersistComparisonInput = {
   projectId: number;
   sourceTicket: PersistableTicket;
   participants: PersistableTicket[];
+  compareRunKey?: string | null;
   markdownPath: string;
   report: ComparisonReport;
 };
@@ -193,6 +194,7 @@ export function createComparisonRecordInput(
     project: { connect: { id: input.projectId } },
     sourceTicket: { connect: { id: input.sourceTicket.id } },
     winnerTicket: { connect: { id: winnerTicket.id } },
+    compareRunKey: input.compareRunKey ?? null,
     markdownPath: input.markdownPath,
     summary: input.report.summary,
     overallRecommendation: input.report.recommendation || input.report.summary,
@@ -244,6 +246,30 @@ export async function persistComparisonRecord(
   input: PersistComparisonInput
 ) {
   return prisma.$transaction(async (tx) => {
+    if (input.compareRunKey) {
+      const existingRecord = await tx.comparisonRecord.findFirst({
+        where: {
+          projectId: input.projectId,
+          sourceTicketId: input.sourceTicket.id,
+          compareRunKey: input.compareRunKey,
+        },
+        include: {
+          participants: {
+            include: {
+              metricSnapshot: true,
+              complianceAssessments: true,
+              ticket: true,
+            },
+          },
+          decisionPoints: true,
+        },
+      });
+
+      if (existingRecord) {
+        return existingRecord;
+      }
+    }
+
     const recordInput = createComparisonRecordInput(input);
     return tx.comparisonRecord.create({
       data: recordInput,

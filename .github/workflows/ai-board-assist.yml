@@ -408,6 +408,55 @@ jobs:
           echo "🔍 Debug - Status output: $STATUS"
           echo "🔍 Debug - Files output: $FILES"
 
+      - name: Persist Compare JSON Artifact
+        if: ${{ env.SKIP_CLAUDE != 'true' && contains(inputs.comment, '/compare') && steps.parse.outputs.status == 'success' }}
+        working-directory: target
+        env:
+          BRANCH: ${{ inputs.branch }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          TICKET_ID: ${{ inputs.ticket_id }}
+        run: |
+          ARTIFACT_PATH="specs/$BRANCH/comparisons/comparison-data.json"
+          API_URL="${APP_URL%/}/api/projects/${PROJECT_ID}/tickets/${TICKET_ID}/comparisons"
+
+          if [ ! -f "$ARTIFACT_PATH" ]; then
+            echo "ℹ️ Compare persistence skipped: comparison-data.json not found"
+            exit 0
+          fi
+
+          if ! jq empty "$ARTIFACT_PATH" >/dev/null 2>&1; then
+            echo "⚠️ Compare persistence skipped: malformed comparison-data.json"
+            rm -f "$ARTIFACT_PATH"
+            exit 0
+          fi
+
+          HTTP_RESPONSE=$(curl -s -S -X POST "$API_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WORKFLOW_API_TOKEN}" \
+            --data-binary "@$ARTIFACT_PATH" \
+            -w "\n%{http_code}" || true)
+
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -1)
+          RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+          RESPONSE_STATUS=$(echo "$RESPONSE_BODY" | jq -r '.status // empty' 2>/dev/null || true)
+          RESPONSE_CODE=$(echo "$RESPONSE_BODY" | jq -r '.code // empty' 2>/dev/null || true)
+
+          if [ "$HTTP_STATUS" = "201" ] && [ "$RESPONSE_STATUS" = "created" ]; then
+            echo "✅ Compare persistence created durable record"
+          elif [ "$HTTP_STATUS" = "200" ] && [ "$RESPONSE_STATUS" = "duplicate" ]; then
+            echo "ℹ️ Compare persistence duplicate retry detected"
+          elif [ "$HTTP_STATUS" = "400" ] || [ "$HTTP_STATUS" = "404" ]; then
+            echo "⚠️ Compare persistence rejected: ${RESPONSE_CODE:-VALIDATION_ERROR}"
+          elif [ "$HTTP_STATUS" = "401" ]; then
+            echo "⚠️ Compare persistence rejected: unauthorized workflow token"
+          elif [ "$HTTP_STATUS" = "500" ]; then
+            echo "⚠️ Compare persistence server failure"
+          else
+            echo "⚠️ Compare persistence request failed (HTTP ${HTTP_STATUS:-unknown})"
+          fi
+
+          rm -f "$ARTIFACT_PATH"
+
       - name: Commit and Push Changes
         if: ${{ env.SKIP_CLAUDE != 'true' && steps.parse.outputs.status == 'success' }}
         working-directory: target

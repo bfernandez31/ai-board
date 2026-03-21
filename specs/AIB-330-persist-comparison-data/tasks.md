@@ -11,9 +11,9 @@
 
 **Purpose**: Establish the shared artifact and request contract used by the compare generator, workflow bridge, and persistence route.
 
-- [ ] T001 Extend comparison artifact/request types in /home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts
-- [ ] T002 [P] Add shared comparison persistence schema and normalization helpers in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-payload.ts
-- [ ] T003 [P] Extend reusable workflow persistence fixtures in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts
+- [X] T001 Extend comparison artifact/request types in /home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts
+- [X] T002 [P] Add shared comparison persistence schema and normalization helpers in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-payload.ts
+- [X] T003 [P] Extend reusable workflow persistence fixtures in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts
 
 ---
 
@@ -23,9 +23,9 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Add compare-run idempotency support to the persistence service in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts
-- [ ] T005 [P] Add workflow-auth request parsing and scoped validation helpers in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
-- [ ] T006 [P] Add shared unit coverage for artifact schema parsing and idempotency helpers in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts and /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts
+- [X] T004 Add compare-run idempotency support to the persistence service in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts
+- [X] T005 [P] Add workflow-auth request parsing and scoped validation helpers in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
+- [X] T006 [P] Add shared unit coverage for artifact schema parsing and idempotency helpers in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts and /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts
 
 **Checkpoint**: Shared artifact, validation, and idempotent persistence primitives are ready for story implementation.
 
@@ -39,15 +39,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Add unit coverage for JSON artifact generation in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-generator.test.ts
-- [ ] T008 [P] [US1] Add integration coverage for successful workflow POST persistence in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts
-- [ ] T009 [P] [US1] Extend dashboard retrieval coverage for newly persisted records in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
+- [X] T007 [P] [US1] Add unit coverage for JSON artifact generation in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-generator.test.ts
+- [X] T008 [P] [US1] Add integration coverage for successful workflow POST persistence in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts
+- [X] T009 [P] [US1] Extend dashboard retrieval coverage for newly persisted records in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Emit markdown-linked comparison JSON artifacts from /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts
-- [ ] T011 [US1] Add the workflow-only `POST /api/projects/{projectId}/tickets/{ticketId}/comparisons` handler in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
-- [ ] T012 [US1] Wire workflow compare persistence submission and success logging in /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
+- [X] T010 [US1] Emit markdown-linked comparison JSON artifacts from /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts
+- [X] T011 [US1] Add the workflow-only `POST /api/projects/{projectId}/tickets/{ticketId}/comparisons` handler in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
+- [X] T012 [US1] Wire workflow compare persistence submission and success logging in /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
 
 **Checkpoint**: `/compare` can create a durable comparison record that the dashboard can read, while markdown remains the primary artifact.
 
@@ -61,15 +61,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add unit coverage for missing, malformed, and incomplete artifact detection in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts
-- [ ] T014 [P] [US2] Add integration coverage for invalid payload and wrong-scope rejection with no writes in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts
-- [ ] T015 [P] [US2] Add workflow-side regression coverage for non-fatal persistence failures in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-api.test.ts
+- [X] T013 [P] [US2] Add unit coverage for missing, malformed, and incomplete artifact detection in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts
+- [X] T014 [P] [US2] Add integration coverage for invalid payload and wrong-scope rejection with no writes in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts
+- [X] T015 [P] [US2] Add workflow-side regression coverage for non-fatal persistence failures in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-api.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Make JSON serialization failures non-fatal while preserving markdown success in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts
-- [ ] T017 [US2] Return categorized validation, auth, not-found, and internal errors from /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
-- [ ] T018 [US2] Log skip and failure categories and continue successfully after compare persistence issues in /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
+- [X] T016 [US2] Make JSON serialization failures non-fatal while preserving markdown success in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts
+- [X] T017 [US2] Return categorized validation, auth, not-found, and internal errors from /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
+- [X] T018 [US2] Log skip and failure categories and continue successfully after compare persistence issues in /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
 
 **Checkpoint**: Persistence failures no longer threaten compare completion, and operators can diagnose which failure mode occurred.
 
@@ -83,13 +83,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Add unit coverage for compare-run retry idempotency in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts
-- [ ] T020 [P] [US3] Add integration coverage for persisted report fidelity and duplicate retry handling in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-history-persistence.test.ts
+- [X] T019 [P] [US3] Add unit coverage for compare-run retry idempotency in /home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts
+- [X] T020 [P] [US3] Add integration coverage for persisted report fidelity and duplicate retry handling in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-history-persistence.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Persist compare-run provenance, duplicate detection, and report fidelity mappings in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts
-- [ ] T022 [US3] Enforce markdown-path, ticket-scope, and participant consistency checks before writes in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
+- [X] T021 [US3] Persist compare-run provenance, duplicate detection, and report fidelity mappings in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts
+- [X] T022 [US3] Enforce markdown-path, ticket-scope, and participant consistency checks before writes in /home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts
 
 **Checkpoint**: Persisted comparison history is retry-safe and auditably consistent with the original markdown report.
 
@@ -99,9 +99,9 @@
 
 **Purpose**: Final validation, contract alignment, and cross-story cleanup.
 
-- [ ] T023 [P] Align the workflow persistence contract examples with the final payload shape in /home/runner/work/ai-board/ai-board/target/specs/AIB-330-persist-comparison-data/contracts/comparison-persistence.openapi.yaml
-- [ ] T024 Run quickstart verification commands against the finished implementation from /home/runner/work/ai-board/ai-board/target/specs/AIB-330-persist-comparison-data/quickstart.md
-- [ ] T025 [P] Perform final comparison-fixture cleanup and remove transient JSON commit leakage paths in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts and /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
+- [X] T023 [P] Align the workflow persistence contract examples with the final payload shape in /home/runner/work/ai-board/ai-board/target/specs/AIB-330-persist-comparison-data/contracts/comparison-persistence.openapi.yaml
+- [X] T024 Run quickstart verification commands against the finished implementation from /home/runner/work/ai-board/ai-board/target/specs/AIB-330-persist-comparison-data/quickstart.md
+- [X] T025 [P] Perform final comparison-fixture cleanup and remove transient JSON commit leakage paths in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts and /home/runner/work/ai-board/ai-board/target/.github/workflows/ai-board-assist.yml
 
 ---
 
@@ -194,4 +194,3 @@ Task: "T020 [US3] Add integration coverage for persisted report fidelity and dup
 1. Preserve markdown-first compare behavior.
 2. Prevent orphaned or duplicate records.
 3. Keep workflow logging explicit enough to diagnose missing JSON vs rejected payload vs service failure.
-

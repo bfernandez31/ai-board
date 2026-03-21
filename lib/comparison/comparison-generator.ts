@@ -11,7 +11,11 @@ import { format } from 'date-fns';
 import { getAlignmentLevel, generateAlignmentSummary } from './feature-alignment';
 import { calculateTestRatio } from './implementation-metrics';
 import { formatDurationMs } from './format-duration';
-import { persistComparisonRecord } from './comparison-record';
+import {
+  createCompareRunKey,
+  createComparisonPersistenceRequest,
+  getComparisonDataArtifactPath,
+} from './comparison-payload';
 import type { Agent, Stage, WorkflowType } from '@prisma/client';
 
 function formatDateForFilename(date: Date): string {
@@ -407,6 +411,11 @@ export async function persistGeneratedComparisonArtifacts(input: {
 }) {
   const filename = input.report.metadata.filePath;
   const markdownPath = generateReportPath(input.branch, filename);
+  const compareRunKey = createCompareRunKey(
+    input.sourceTicket.ticketKey,
+    input.report.metadata.comparedTickets,
+    input.report.metadata.generatedAt
+  );
   const markdown = generateReportMarkdown({
     ...input.report,
     metadata: {
@@ -414,20 +423,37 @@ export async function persistGeneratedComparisonArtifacts(input: {
       filePath: markdownPath,
     },
   });
-
-  const record = await persistComparisonRecord({
+  const requestPayload = createComparisonPersistenceRequest({
+    compareRunKey,
     projectId: input.projectId,
-    sourceTicket: input.sourceTicket,
-    participants: input.participants,
+    sourceTicketId: input.sourceTicket.id,
+    sourceTicketKey: input.sourceTicket.ticketKey,
+    participantTicketIds: input.participants.map((participant) => participant.id),
     markdownPath,
-    report: input.report,
+    report: {
+      ...input.report,
+      metadata: {
+        ...input.report.metadata,
+        filePath: markdownPath,
+      },
+    },
   });
+  let comparisonDataJson: string | null = null;
+
+  try {
+    comparisonDataJson = JSON.stringify(requestPayload, null, 2);
+  } catch (error) {
+    console.error('[comparison-generator] Failed to serialize comparison-data.json:', error);
+  }
 
   return {
     filename,
     markdownPath,
+    compareRunKey,
     markdown,
-    record,
+    artifactPath: getComparisonDataArtifactPath(markdownPath),
+    comparisonDataJson,
+    requestPayload,
   };
 }
 
