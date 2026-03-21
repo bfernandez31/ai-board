@@ -390,21 +390,6 @@ After writing the markdown report, write a JSON data file for workflow persisten
         ]
       }
     },
-    "telemetry": {
-      "AIB-123": {
-        "ticketKey": "AIB-123",
-        "inputTokens": 5000,
-        "outputTokens": 3000,
-        "cacheReadTokens": 0,
-        "cacheCreationTokens": 0,
-        "costUsd": 0.15,
-        "durationMs": 45000,
-        "model": "opus",
-        "toolsUsed": ["Read", "Edit", "Bash"],
-        "jobCount": 3,
-        "hasData": true
-      }
-    },
     "recommendation": "Ship AIB-124",
     "warnings": []
   }
@@ -416,10 +401,9 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `generatedAt`: Must be ISO 8601 with timezone (e.g., `"2026-03-21T14:30:00.000Z"`)
 - `filePath` in metadata: Must equal `markdownPath`
 - `comparedTickets` and `participantTicketKeys`: Must include source ticket, same order
-- `ticketKey` inside each `implementation` and `telemetry` entry: Must match the record key
+- `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
-- If telemetry data is unavailable, set `hasData: false` and use `0` for all numeric fields
-- If no telemetry file exists, use an empty object `{}` for `telemetry`
+- **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.
 

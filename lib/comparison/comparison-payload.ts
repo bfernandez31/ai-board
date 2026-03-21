@@ -74,7 +74,7 @@ export const serializedComparisonReportSchema = z.object({
   }),
   implementation: z.record(z.string(), implementationMetricsSchema),
   compliance: z.record(z.string(), complianceScoreSchema),
-  telemetry: z.record(z.string(), telemetrySchema),
+  telemetry: z.record(z.string(), telemetrySchema).default({}),
   recommendation: z.string().default(''),
   warnings: z.array(z.string()).default([]),
 });
