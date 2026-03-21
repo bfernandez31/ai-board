@@ -22,7 +22,7 @@ interface RouteParams {
   params: Promise<{ projectId: string }>;
 }
 
-interface ComparisonSummary {
+interface FileComparisonEntry {
   filename: string;
   generatedAt: string;
   sourceTicket: string;
@@ -71,34 +71,21 @@ function timestampToDate(timestamp: string): string {
 }
 
 /**
- * Extract best implementation score from report content
- * Looks for the winner's score in various formats
+ * Extract best implementation score from report content.
+ * Tries multiple known formats in priority order.
  */
+const SCORE_PATTERNS = [
+  /🏆.*?\((?:score:\s*)?(\d+)%\)/i,         // "🏆 Best: **AIB-125** (92%)"
+  /\|\s*1\s*\|[^|]+\|\s*(\d+)%/,             // "| 1 | AIB-125 | 92% |"
+  /Feature Alignment[:\s]+(\d+)%/i,           // "Feature Alignment: 92%"
+  /Best Implementation[:\s]+[^(]+\((\d+)%\)/i // "Best Implementation: TICKET (92%)"
+] as const;
+
 function extractAlignmentScore(content: string): number {
-  // New format: "### 🏆 Best: **AIB-125** (92%)" or "🏆 1. **AIB-125** - Best overall (score: 92%)"
-  const bestMatch = content.match(/🏆.*?\((?:score:\s*)?(\d+)%\)/i);
-  if (bestMatch) {
-    return parseInt(bestMatch[1]!, 10);
+  for (const pattern of SCORE_PATTERNS) {
+    const match = content.match(pattern);
+    if (match) return parseInt(match[1]!, 10);
   }
-
-  // Ranking table format: "| 1 | AIB-125 | 92% |"
-  const rankingMatch = content.match(/\|\s*1\s*\|[^|]+\|\s*(\d+)%/);
-  if (rankingMatch) {
-    return parseInt(rankingMatch[1]!, 10);
-  }
-
-  // Legacy format: "Feature Alignment: XX%"
-  const legacyMatch = content.match(/Feature Alignment[:\s]+(\d+)%/i);
-  if (legacyMatch) {
-    return parseInt(legacyMatch[1]!, 10);
-  }
-
-  // Fallback: look for any "Best Implementation: TICKET (XX%)" pattern
-  const implMatch = content.match(/Best Implementation[:\s]+[^(]+\((\d+)%\)/i);
-  if (implMatch) {
-    return parseInt(implMatch[1]!, 10);
-  }
-
   return 0;
 }
 
@@ -113,14 +100,13 @@ export async function GET(
     const { projectId } = await context.params;
     const projectIdNum = parseInt(projectId, 10);
 
-    if (isNaN(projectIdNum)) {
+    if (isNaN(projectIdNum) || projectIdNum <= 0) {
       return NextResponse.json(
         { error: 'Invalid project ID' },
         { status: 400 }
       );
     }
 
-    // Verify project access (throws on unauthorized)
     try {
       await verifyProjectAccess(projectIdNum);
     } catch {
@@ -160,8 +146,7 @@ export async function GET(
 
     const { limit, offset } = parseResult.data;
 
-    // Collect all comparisons from all ticket branches
-    const allComparisons: ComparisonSummary[] = [];
+    const allComparisons: FileComparisonEntry[] = [];
 
     for (const ticket of tickets) {
       if (!ticket.branch) continue;
@@ -276,7 +261,6 @@ export async function POST(
   context: RouteParams
 ): Promise<NextResponse> {
   try {
-    // Step 1: Workflow token auth
     const authResult = validateWorkflowAuth(request);
     if (!authResult.isValid) {
       return NextResponse.json(
@@ -285,18 +269,16 @@ export async function POST(
       );
     }
 
-    // Step 2: Parse projectId from URL
     const { projectId } = await context.params;
     const projectIdNum = parseInt(projectId, 10);
 
-    if (isNaN(projectIdNum)) {
+    if (isNaN(projectIdNum) || projectIdNum <= 0) {
       return NextResponse.json(
         { error: 'Invalid project ID' },
         { status: 400 }
       );
     }
 
-    // Step 3: Parse and validate request body
     let body: unknown;
     try {
       body = await request.json();
@@ -317,7 +299,6 @@ export async function POST(
 
     const data = parseResult.data;
 
-    // Step 4: Verify projectId matches URL
     if (data.projectId !== projectIdNum) {
       return NextResponse.json(
         { error: 'Project ID in body does not match URL parameter' },
@@ -325,7 +306,6 @@ export async function POST(
       );
     }
 
-    // Step 5: Persist using existing comparison record function
     const record = await persistComparisonRecord({
       projectId: data.projectId,
       sourceTicket: data.sourceTicket,
