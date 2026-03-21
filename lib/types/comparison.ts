@@ -5,7 +5,7 @@
  * These types define the data structures for parsing, analysis, and reporting.
  */
 
-import type { Stage, WorkflowType } from '@prisma/client';
+import type { Agent, Stage, WorkflowType } from '@prisma/client';
 
 /**
  * TicketReference
@@ -368,11 +368,58 @@ export interface ComparisonEnrichmentValue<T> {
   value: T | null;
 }
 
-export interface ComparisonTelemetryEnrichment {
-  inputTokens: ComparisonEnrichmentValue<number>;
-  outputTokens: ComparisonEnrichmentValue<number>;
-  durationMs: ComparisonEnrichmentValue<number>;
-  costUsd: ComparisonEnrichmentValue<number>;
+export interface ComparisonOperationalMetricValue {
+  state: ComparisonEnrichmentState;
+  value: number | null;
+  isBest: boolean;
+  displayLabel?: string | null;
+}
+
+export interface ComparisonModelSummary {
+  state: ComparisonEnrichmentState;
+  label: string | null;
+  dominantModel: string | null;
+  completedJobCount: number;
+  mixedModels: boolean;
+}
+
+export interface ComparisonQualityDimension {
+  agentId: string;
+  name: string;
+  score: number;
+  weight: number;
+}
+
+export type ComparisonQualityDetailsState =
+  | 'available'
+  | 'summary_only'
+  | 'unavailable';
+
+export interface ComparisonQualityDetail {
+  ticketId: number;
+  ticketKey: string;
+  score: number;
+  threshold: import('@/lib/quality-score').ScoreThreshold;
+  dimensions: ComparisonQualityDimension[];
+}
+
+export interface ComparisonQualitySummary {
+  state: ComparisonEnrichmentState;
+  score: number | null;
+  threshold: import('@/lib/quality-score').ScoreThreshold | null;
+  detailsState: ComparisonQualityDetailsState;
+  details: ComparisonQualityDetail | null;
+  isBest: boolean;
+}
+
+export interface ComparisonOperationalAggregate {
+  totalTokens: ComparisonOperationalMetricValue;
+  inputTokens: ComparisonOperationalMetricValue;
+  outputTokens: ComparisonOperationalMetricValue;
+  durationMs: ComparisonOperationalMetricValue;
+  costUsd: ComparisonOperationalMetricValue;
+  jobCount: ComparisonOperationalMetricValue;
+  model: ComparisonModelSummary;
 }
 
 export interface ComparisonMetricSnapshot {
@@ -391,12 +438,12 @@ export interface ComparisonParticipantDetail {
   title: string;
   stage: Stage;
   workflowType: WorkflowType;
-  agent: string | null;
+  agent: Agent | null;
   rank: number;
   score: number;
   rankRationale: string;
-  quality: ComparisonEnrichmentValue<number>;
-  telemetry: ComparisonTelemetryEnrichment;
+  quality: ComparisonQualitySummary;
+  operational: ComparisonOperationalAggregate;
   metrics: ComparisonMetricSnapshot;
 }
 

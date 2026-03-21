@@ -29,15 +29,48 @@ export async function createStructuredComparisonFixture(projectId: number) {
     ticketKey: 'TE2-103',
     stage: 'PLAN',
   });
+  const quickTicket = await createTestTicket(projectId, {
+    title: '[e2e] Quick ticket',
+    description: 'Quick workflow comparison ticket',
+    ticketNumber: 104,
+    ticketKey: 'TE2-104',
+    stage: 'BUILD',
+  });
 
   await prisma.job.createMany({
     data: [
       {
         ticketId: winnerTicket.id,
         projectId,
+        command: 'implement',
+        status: 'COMPLETED',
+        model: 'gpt-5.4',
+        inputTokens: 600,
+        outputTokens: 200,
+        costUsd: 0.03,
+        durationMs: 60000,
+        startedAt: new Date('2026-03-19T09:00:00.000Z'),
+        completedAt: new Date('2026-03-19T09:01:00.000Z'),
+        updatedAt: new Date('2026-03-19T09:01:00.000Z'),
+      },
+      {
+        ticketId: winnerTicket.id,
+        projectId,
         command: 'verify',
         status: 'COMPLETED',
+        model: 'gpt-5.4',
         qualityScore: 91,
+        qualityScoreDetails: JSON.stringify({
+          threshold: 'Excellent',
+          computedAt: '2026-03-19T10:02:00.000Z',
+          dimensions: [
+            { agentId: 'compliance', name: 'Compliance', score: 95, weight: 0.4, weightedScore: 38 },
+            { agentId: 'bug-detection', name: 'Bug Detection', score: 92, weight: 0.3, weightedScore: 27.6 },
+            { agentId: 'code-comments', name: 'Code Comments', score: 88, weight: 0.2, weightedScore: 17.6 },
+            { agentId: 'historical-context', name: 'Historical Context', score: 90, weight: 0.1, weightedScore: 9 },
+            { agentId: 'spec-sync', name: 'Spec Sync', score: 96, weight: 0, weightedScore: 0 },
+          ],
+        }),
         inputTokens: 1200,
         outputTokens: 400,
         costUsd: 0.08,
@@ -50,14 +83,55 @@ export async function createStructuredComparisonFixture(projectId: number) {
         ticketId: otherTicket.id,
         projectId,
         command: 'implement',
-        status: 'COMPLETED',
+        status: 'RUNNING',
         inputTokens: null,
         outputTokens: null,
         costUsd: null,
         durationMs: null,
+        model: null,
         startedAt: new Date('2026-03-19T11:00:00.000Z'),
-        completedAt: new Date('2026-03-19T11:05:00.000Z'),
+        completedAt: null,
         updatedAt: new Date('2026-03-19T11:05:00.000Z'),
+      },
+      {
+        ticketId: quickTicket.id,
+        projectId,
+        command: 'implement',
+        status: 'COMPLETED',
+        model: 'gpt-4.1',
+        inputTokens: 100,
+        outputTokens: 100,
+        costUsd: 0.02,
+        durationMs: 30000,
+        startedAt: new Date('2026-03-19T12:00:00.000Z'),
+        completedAt: new Date('2026-03-19T12:01:00.000Z'),
+        updatedAt: new Date('2026-03-19T12:01:00.000Z'),
+      },
+      {
+        ticketId: quickTicket.id,
+        projectId,
+        command: 'verify',
+        status: 'COMPLETED',
+        model: 'claude-3.7',
+        qualityScore: 75,
+        qualityScoreDetails: JSON.stringify({
+          threshold: 'Good',
+          computedAt: '2026-03-19T12:32:00.000Z',
+          dimensions: [
+            { agentId: 'compliance', name: 'Compliance', score: 80, weight: 0.4, weightedScore: 32 },
+            { agentId: 'bug-detection', name: 'Bug Detection', score: 74, weight: 0.3, weightedScore: 22.2 },
+            { agentId: 'code-comments', name: 'Code Comments', score: 73, weight: 0.2, weightedScore: 14.6 },
+            { agentId: 'historical-context', name: 'Historical Context', score: 70, weight: 0.1, weightedScore: 7 },
+            { agentId: 'spec-sync', name: 'Spec Sync', score: 90, weight: 0, weightedScore: 0 },
+          ],
+        }),
+        inputTokens: 100,
+        outputTokens: 100,
+        costUsd: 0.02,
+        durationMs: 30000,
+        startedAt: new Date('2026-03-19T12:30:00.000Z'),
+        completedAt: new Date('2026-03-19T12:32:00.000Z'),
+        updatedAt: new Date('2026-03-19T12:32:00.000Z'),
       },
     ],
   });
@@ -71,7 +145,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
       markdownPath: `specs/${sourceTicket.ticketKey}/comparisons/example.md`,
       summary: 'Winner ticket had the best test coverage and smallest diff.',
       overallRecommendation: 'Choose TE2-102 for the implementation baseline.',
-      keyDifferentiators: ['coverage', 'smaller diff'],
+      keyDifferentiators: ['coverage', 'smaller diff', 'operational efficiency'],
       generatedAt: new Date('2026-03-20T09:00:00.000Z'),
       participants: {
         create: [
@@ -80,6 +154,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
             rank: 1,
             score: 91,
             workflowTypeAtComparison: 'FULL',
+            agentAtComparison: 'CODEX',
             rankRationale: 'Strong verify results and concise implementation.',
             metricSnapshot: {
               create: {
@@ -113,6 +188,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
             rank: 2,
             score: 75,
             workflowTypeAtComparison: 'FULL',
+            agentAtComparison: 'CLAUDE',
             rankRationale: 'Good direction but less complete test coverage.',
             metricSnapshot: {
               create: {
@@ -136,6 +212,40 @@ export async function createStructuredComparisonFixture(projectId: number) {
                   principleName: 'TypeScript-First Development',
                   status: 'mixed',
                   notes: 'Some typing gaps remain.',
+                  displayOrder: 0,
+                },
+              ],
+            },
+          },
+          {
+            ticketId: quickTicket.id,
+            rank: 3,
+            score: 68,
+            workflowTypeAtComparison: 'QUICK',
+            agentAtComparison: 'CLAUDE',
+            rankRationale: 'Fast path with less reliable verification context.',
+            metricSnapshot: {
+              create: {
+                linesAdded: 30,
+                linesRemoved: 10,
+                linesChanged: 40,
+                filesChanged: 4,
+                testFilesChanged: 0,
+                changedFiles: ['app/c.ts'],
+                bestValueFlags: {
+                  linesChanged: false,
+                  filesChanged: false,
+                  testFilesChanged: false,
+                },
+              },
+            },
+            complianceAssessments: {
+              create: [
+                {
+                  principleKey: 'typescript-first-development',
+                  principleName: 'TypeScript-First Development',
+                  status: 'mixed',
+                  notes: 'Quick workflow tradeoffs remain.',
                   displayOrder: 0,
                 },
               ],
@@ -173,6 +283,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
     sourceTicket,
     winnerTicket,
     otherTicket,
+    quickTicket,
     comparison,
   };
 }

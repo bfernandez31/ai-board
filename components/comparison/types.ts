@@ -44,6 +44,11 @@ export interface ComparisonSectionProps {
   participants: ComparisonParticipantDetail[];
 }
 
+export interface ComparisonOperationalMetricsProps extends ComparisonSectionProps {
+  selectedQualityTicketId: number | null;
+  onQualityDetailSelect: (ticketId: number | null) => void;
+}
+
 export interface ComparisonRankingProps extends ComparisonSectionProps {
   recommendation: string;
   summary: string;

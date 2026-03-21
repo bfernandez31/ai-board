@@ -10,10 +10,11 @@ import type {
   ComparisonDetail,
   ComparisonEnrichmentValue,
   ComparisonMetricSnapshot,
+  ComparisonOperationalAggregate,
   ComparisonParticipantDetail,
+  ComparisonQualitySummary,
   ComparisonReport,
   ComparisonSummary,
-  ComparisonTelemetryEnrichment,
 } from '@/lib/types/comparison';
 
 type PersistableTicket = {
@@ -362,37 +363,6 @@ export function normalizeMetricSnapshot(
   };
 }
 
-export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
-} | null): ComparisonTelemetryEnrichment {
-  if (!job) {
-    return {
-      inputTokens: createUnavailableEnrichment<number>(),
-      outputTokens: createUnavailableEnrichment<number>(),
-      durationMs: createUnavailableEnrichment<number>(),
-      costUsd: createUnavailableEnrichment<number>(),
-    };
-  }
-
-  function createValue(value: number | null): ComparisonEnrichmentValue<number> {
-    if (value == null) {
-      return createPendingEnrichment<number>();
-    }
-
-    return createAvailableEnrichment(value);
-  }
-
-  return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
-  };
-}
-
 export function normalizeParticipantDetail(input: {
   participant: {
     ticketId: number;
@@ -416,8 +386,8 @@ export function normalizeParticipantDetail(input: {
       stage: Stage;
     };
   };
-  quality: ComparisonEnrichmentValue<number>;
-  telemetry: ComparisonTelemetryEnrichment;
+  quality: ComparisonQualitySummary;
+  operational: ComparisonOperationalAggregate;
 }): ComparisonParticipantDetail {
   return {
     ticketId: input.participant.ticketId,
@@ -430,7 +400,7 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
-    telemetry: input.telemetry,
+    operational: input.operational,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };
 }

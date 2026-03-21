@@ -2,14 +2,23 @@ import { prisma } from '@/lib/db/client';
 import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
 import {
   buildComparisonDetail,
-  createAvailableEnrichment,
-  createPendingEnrichment,
-  createUnavailableEnrichment,
   normalizeDecisionPoints,
   normalizeParticipantDetail,
-  normalizeTelemetryEnrichment,
   toComparisonHistorySummary,
 } from './comparison-record';
+import {
+  buildComparisonOperationalData,
+  createUnavailableOperationalAggregate,
+} from './comparison-operational-metrics';
+
+const unavailableQualitySummary = {
+  state: 'unavailable',
+  score: null,
+  threshold: null,
+  detailsState: 'unavailable',
+  details: null,
+  isBest: false,
+} as const;
 
 export async function listTicketComparisons(
   ticketId: number,
@@ -101,21 +110,6 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
   };
 }
 
-function deriveQualityState(
-  latestVerifyJob: { qualityScore: number | null } | null,
-  hasVerifyJob: boolean
-): ReturnType<typeof createAvailableEnrichment<number>> {
-  if (latestVerifyJob?.qualityScore != null) {
-    return createAvailableEnrichment(latestVerifyJob.qualityScore);
-  }
-
-  if (hasVerifyJob) {
-    return createPendingEnrichment<number>();
-  }
-
-  return createUnavailableEnrichment<number>();
-}
-
 export async function getComparisonDetailForTicket(
   ticketId: number,
   comparisonId: number
@@ -168,35 +162,26 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [jobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
         ticketId: {
           in: participantIds,
         },
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
+        status: true,
+        command: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
-      },
-    }),
-    prisma.job.findMany({
-      where: {
-        ticketId: {
-          in: participantIds,
-        },
-        command: 'verify',
-      },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
-      select: {
-        ticketId: true,
+        model: true,
         qualityScore: true,
+        qualityScoreDetails: true,
+        startedAt: true,
+        completedAt: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,22 +206,33 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
-  const latestVerifyJobByTicketId = new Map(
-    latestVerifyJobs.map((job) => [job.ticketId, job])
+  const jobsByTicketId = new Map<number, typeof jobs>();
+  for (const job of jobs) {
+    const existing = jobsByTicketId.get(job.ticketId);
+    if (existing) {
+      existing.push(job);
+      continue;
+    }
+
+    jobsByTicketId.set(job.ticketId, [job]);
+  }
+
+  const aggregationByTicketId = buildComparisonOperationalData(
+    record.participants.map((participant) => ({
+      ticketId: participant.ticketId,
+      ticketKey: participant.ticket.ticketKey,
+      workflowType: participant.workflowTypeAtComparison,
+      jobs: jobsByTicketId.get(participant.ticketId) ?? [],
+    }))
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
   const participants = record.participants.map((participant) =>
     normalizeParticipantDetail({
       participant,
-      quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
-        verifyJobTicketIds.has(participant.ticketId)
-      ),
-      telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
-      ),
+      quality: aggregationByTicketId.get(participant.ticketId)?.quality ?? unavailableQualitySummary,
+      operational:
+        aggregationByTicketId.get(participant.ticketId)?.operational ??
+        createUnavailableOperationalAggregate(),
     })
   );
 

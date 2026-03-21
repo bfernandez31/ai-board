@@ -21,6 +21,7 @@ import { ComparisonComplianceGrid } from './comparison-compliance-grid';
 import { ComparisonDecisionPoints } from './comparison-decision-points';
 import { ComparisonHistoryList } from './comparison-history-list';
 import { ComparisonMetricsGrid } from './comparison-metrics-grid';
+import { ComparisonOperationalMetrics } from './comparison-operational-metrics';
 import { ComparisonRanking } from './comparison-ranking';
 import type { ComparisonViewerProps } from './types';
 
@@ -45,6 +46,7 @@ export function ComparisonViewer({
     number | null
   >(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedQualityTicketId, setSelectedQualityTicketId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const { data: checkData, isLoading: checkLoading, error: checkError } =
@@ -89,6 +91,7 @@ export function ComparisonViewer({
     if (!open) {
       setShowHistory(false);
       setSelectedComparisonIdOverride(null);
+      setSelectedQualityTicketId(null);
       onClose?.();
     }
   }
@@ -99,7 +102,7 @@ export function ComparisonViewer({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-5xl bg-card text-card-foreground sm:max-w-[90vw]">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-2rem)] bg-card text-card-foreground sm:max-w-[90vw] lg:max-w-5xl">
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">
             Review saved comparison history and structured dashboard details for this ticket.
@@ -158,6 +161,7 @@ export function ComparisonViewer({
                   onSelect={(comparisonId) => {
                     setSelectedComparisonIdOverride(comparisonId);
                     setShowHistory(false);
+                    setSelectedQualityTicketId(null);
                   }}
                 />
               </div>
@@ -165,7 +169,7 @@ export function ComparisonViewer({
               <div>
                 {detail ? (
                   <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
+                    <div className="min-w-0 space-y-4">
                       <div className="rounded-lg border border-border bg-background px-4 py-3">
                         <div className="text-sm text-muted-foreground">
                           Generated {formatDate(detail.generatedAt)}
@@ -183,6 +187,11 @@ export function ComparisonViewer({
                         keyDifferentiators={detail.keyDifferentiators}
                       />
                       <ComparisonMetricsGrid participants={detail.participants} />
+                      <ComparisonOperationalMetrics
+                        participants={detail.participants}
+                        selectedQualityTicketId={selectedQualityTicketId}
+                        onQualityDetailSelect={setSelectedQualityTicketId}
+                      />
                       <ComparisonDecisionPoints decisionPoints={detail.decisionPoints} />
                       <ComparisonComplianceGrid
                         rows={detail.complianceRows}
