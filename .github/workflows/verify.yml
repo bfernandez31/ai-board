@@ -413,7 +413,7 @@ jobs:
         run: |
           echo "🧹 Running code simplifier on recently modified code..."
 
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.code-simplifier"
+          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.code-simplifier"
 
           git add .
           if ! git diff --staged --quiet; then
@@ -439,7 +439,7 @@ jobs:
           echo "   Feature specs: $(ls specs/$(git branch --show-current)/ 2>/dev/null | head -5 || echo 'None found')"
           echo "   Global specs: $(ls specs/specifications/ 2>/dev/null | head -5 || echo 'None found')"
 
-          ../ai-board/.github/scripts/run-agent.sh "${{ inputs.agent }}" "ai-board.sync-specifications"
+          ../ai-board/.github/scripts/run-agent.sh "CLAUDE" "ai-board.sync-specifications"
 
           git add specs/specifications/ CLAUDE.md 2>/dev/null || echo "   Warning: specs/specifications/ or CLAUDE.md not found"
           if ! git diff --staged --quiet; then
