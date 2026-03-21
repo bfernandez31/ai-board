@@ -1,0 +1,312 @@
+openapi: 3.1.0
+info:
+  title: Comparison Persistence Workflow API
+  version: 1.0.0
+  description: Workflow-authenticated persistence contract for compare artifacts in AIB-330.
+servers:
+  - url: https://example.com
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons:
+    post:
+      summary: Persist one compare run from workflow-generated JSON
+      operationId: persistComparisonFromWorkflow
+      tags:
+        - Comparisons
+      security:
+        - workflowBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComparisonPersistenceRequest'
+            example:
+              compareRunKey: cmp_20260321T133600Z_AIB-330_AIB-325-AIB-327
+              markdownPath: specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md
+              participantTicketIds:
+                - 325
+                - 327
+              report:
+                metadata:
+                  generatedAt: '2026-03-21T13:36:00.000Z'
+                  sourceTicket: AIB-330
+                  comparedTickets:
+                    - AIB-325
+                    - AIB-327
+                  filePath: 20260321-133600-vs-AIB-325-AIB-327.md
+                summary: AIB-325 wins on code quality and compliance.
+                alignment:
+                  overall: 86
+                  dimensions:
+                    requirements: 90
+                    scenarios: 80
+                    entities: 85
+                    keywords: 75
+                  isAligned: true
+                  matchingRequirements:
+                    - FR-001
+                    - FR-014
+                  matchingEntities:
+                    - ComparisonRecord
+                implementation:
+                  AIB-325:
+                    ticketKey: AIB-325
+                    linesAdded: 20
+                    linesRemoved: 4
+                    linesChanged: 24
+                    filesChanged: 3
+                    changedFiles:
+                      - lib/comparison/comparison-record.ts
+                    testFilesChanged: 1
+                    hasData: true
+                compliance:
+                  AIB-325:
+                    overall: 92
+                    totalPrinciples: 6
+                    passedPrinciples: 6
+                    principles:
+                      - name: TypeScript-First Development
+                        section: I
+                        passed: true
+                        notes: Explicit typed route schema
+                telemetry: {}
+                recommendation: Ship AIB-325.
+                warnings: []
+      responses:
+        '201':
+          description: Durable comparison record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonPersistenceResponse'
+              example:
+                comparisonId: 18
+                compareRunKey: cmp_20260321T133600Z_AIB-330_AIB-325-AIB-327
+                status: created
+        '200':
+          description: Compare run already persisted for this compare-run key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonPersistenceResponse'
+              example:
+                comparisonId: 18
+                compareRunKey: cmp_20260321T133600Z_AIB-330_AIB-325-AIB-327
+                status: duplicate
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    workflowBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: WORKFLOW_API_TOKEN
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      description: Source ticket numeric ID
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    ValidationError:
+      description: Invalid params or malformed/mismatched comparison payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Invalid comparison persistence payload
+            code: VALIDATION_ERROR
+    UnauthorizedError:
+      description: Missing or invalid workflow token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized: Invalid workflow token
+            code: UNAUTHORIZED
+    NotFoundError:
+      description: Project or ticket context not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Ticket not found for project
+            code: TICKET_NOT_FOUND
+    InternalError:
+      description: Persistence service failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Failed to persist comparison payload
+            code: INTERNAL_ERROR
+
+  schemas:
+    ComparisonPersistenceRequest:
+      type: object
+      required:
+        - compareRunKey
+        - markdownPath
+        - participantTicketIds
+        - report
+      properties:
+        compareRunKey:
+          type: string
+          minLength: 1
+        markdownPath:
+          type: string
+          pattern: ^specs\/[^/]+\/comparisons\/.+\.md$
+        participantTicketIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 1
+        report:
+          $ref: '#/components/schemas/ComparisonReport'
+
+    ComparisonPersistenceResponse:
+      type: object
+      required:
+        - comparisonId
+        - compareRunKey
+        - status
+      properties:
+        comparisonId:
+          type: integer
+          minimum: 1
+        compareRunKey:
+          type: string
+        status:
+          type: string
+          enum:
+            - created
+            - duplicate
+
+    ComparisonReport:
+      type: object
+      required:
+        - metadata
+        - summary
+        - alignment
+        - implementation
+        - compliance
+        - telemetry
+        - recommendation
+        - warnings
+      properties:
+        metadata:
+          type: object
+          required:
+            - generatedAt
+            - sourceTicket
+            - comparedTickets
+            - filePath
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            sourceTicket:
+              type: string
+            comparedTickets:
+              type: array
+              minItems: 1
+              items:
+                type: string
+            filePath:
+              type: string
+        summary:
+          type: string
+        alignment:
+          type: object
+          required:
+            - overall
+            - dimensions
+            - isAligned
+            - matchingRequirements
+            - matchingEntities
+          properties:
+            overall:
+              type: integer
+            dimensions:
+              type: object
+              required:
+                - requirements
+                - scenarios
+                - entities
+                - keywords
+              properties:
+                requirements:
+                  type: integer
+                scenarios:
+                  type: integer
+                entities:
+                  type: integer
+                keywords:
+                  type: integer
+            isAligned:
+              type: boolean
+            matchingRequirements:
+              type: array
+              items:
+                type: string
+            matchingEntities:
+              type: array
+              items:
+                type: string
+        implementation:
+          type: object
+          additionalProperties:
+            type: object
+        compliance:
+          type: object
+          additionalProperties:
+            type: object
+        telemetry:
+          type: object
+          additionalProperties:
+            type: object
+        recommendation:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          type: string
