@@ -5,12 +5,17 @@ import type {
   WorkflowType,
 } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import {
+  getScoreThreshold,
+  parseQualityScoreDetails,
+} from '@/lib/quality-score';
 import type {
   ComparisonDecisionPoint,
   ComparisonDetail,
   ComparisonEnrichmentValue,
   ComparisonMetricSnapshot,
   ComparisonParticipantDetail,
+  ComparisonQualityEnrichment,
   ComparisonReport,
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
@@ -326,6 +331,20 @@ export function createAvailableEnrichment<T>(value: T): ComparisonEnrichmentValu
   };
 }
 
+type ComparisonJobSnapshot = {
+  ticketId: number;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  command: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  durationMs: number | null;
+  costUsd: number | null;
+  model: string | null;
+  qualityScore: number | null;
+  qualityScoreDetails: string | null;
+  startedAt: Date;
+};
+
 export function normalizeMetricSnapshot(
   snapshot: {
     linesAdded: number | null;
@@ -363,34 +382,178 @@ export function normalizeMetricSnapshot(
 }
 
 export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
-} | null): ComparisonTelemetryEnrichment {
-  if (!job) {
+  jobs: ComparisonJobSnapshot[];
+}): ComparisonTelemetryEnrichment {
+  if (job.jobs.length === 0) {
     return {
+      totalTokens: createUnavailableEnrichment<number>(),
       inputTokens: createUnavailableEnrichment<number>(),
       outputTokens: createUnavailableEnrichment<number>(),
       durationMs: createUnavailableEnrichment<number>(),
       costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      primaryModel: createUnavailableEnrichment<string>(),
+      bestValueFlags: {},
     };
   }
 
+  const jobs = job.jobs;
+  const completedJobs = jobs.filter((entry) => entry.status === 'COMPLETED');
+  const hasPendingJob = jobs.some(
+    (entry) => entry.status === 'PENDING' || entry.status === 'RUNNING'
+  );
+  const modelCounts = new Map<string, number>();
+
+  for (const entry of jobs) {
+    if (!entry.model) {
+      continue;
+    }
+
+    modelCounts.set(entry.model, (modelCounts.get(entry.model) ?? 0) + 1);
+  }
+
+  const primaryModel =
+    [...modelCounts.entries()].sort((left, right) => {
+      if (right[1] !== left[1]) {
+        return right[1] - left[1];
+      }
+
+      return left[0].localeCompare(right[0]);
+    })[0]?.[0] ?? null;
+
   function createValue(value: number | null): ComparisonEnrichmentValue<number> {
-    if (value == null) {
+    if (hasPendingJob) {
       return createPendingEnrichment<number>();
+    }
+
+    if (value == null) {
+      return createUnavailableEnrichment<number>();
     }
 
     return createAvailableEnrichment(value);
   }
 
+  const inputTokens = completedJobs.reduce((sum, entry) => sum + (entry.inputTokens ?? 0), 0);
+  const outputTokens = completedJobs.reduce((sum, entry) => sum + (entry.outputTokens ?? 0), 0);
+  const durationMs = completedJobs.reduce((sum, entry) => sum + (entry.durationMs ?? 0), 0);
+  const costUsd = completedJobs.reduce((sum, entry) => sum + (entry.costUsd ?? 0), 0);
+  const hasCompletedTelemetry = completedJobs.some(
+    (entry) =>
+      entry.inputTokens != null ||
+      entry.outputTokens != null ||
+      entry.durationMs != null ||
+      entry.costUsd != null
+  );
+
   return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
+    totalTokens: createValue(hasCompletedTelemetry ? inputTokens + outputTokens : null),
+    inputTokens: createValue(hasCompletedTelemetry ? inputTokens : null),
+    outputTokens: createValue(hasCompletedTelemetry ? outputTokens : null),
+    durationMs: createValue(hasCompletedTelemetry ? durationMs : null),
+    costUsd: createValue(hasCompletedTelemetry ? costUsd : null),
+    jobCount: createAvailableEnrichment(jobs.length),
+    primaryModel:
+      primaryModel != null
+        ? createAvailableEnrichment(primaryModel)
+        : hasPendingJob
+          ? createPendingEnrichment<string>()
+          : createUnavailableEnrichment<string>(),
+    bestValueFlags: {},
   };
+}
+
+export function normalizeQualityEnrichment(input: {
+  latestVerifyJob: ComparisonJobSnapshot | null;
+  workflowType: WorkflowType;
+  stage: Stage;
+}): ComparisonQualityEnrichment {
+  if (input.latestVerifyJob?.qualityScore != null) {
+    const details = parseQualityScoreDetails(input.latestVerifyJob.qualityScoreDetails);
+
+    return {
+      state: 'available',
+      value: input.latestVerifyJob.qualityScore,
+      threshold: details?.threshold ?? getScoreThreshold(input.latestVerifyJob.qualityScore),
+      details,
+    };
+  }
+
+  if (input.workflowType === 'FULL' && input.stage === 'VERIFY') {
+    return {
+      state: 'pending',
+      value: null,
+      threshold: null,
+      details: null,
+    };
+  }
+
+  return {
+    state: 'unavailable',
+    value: null,
+    threshold: null,
+    details: null,
+  };
+}
+
+function getMetricComparableValue(
+  metric: ComparisonEnrichmentValue<number> | ComparisonQualityEnrichment
+): number | null {
+  return metric.state === 'available' ? metric.value : null;
+}
+
+export function buildOperationalBestValueFlags(
+  telemetryByTicketKey: Record<string, ComparisonTelemetryEnrichment>,
+  qualityByTicketKey: Record<string, ComparisonQualityEnrichment>
+): Record<string, Record<string, boolean>> {
+  const metricKeys = [
+    'totalTokens',
+    'inputTokens',
+    'outputTokens',
+    'durationMs',
+    'costUsd',
+    'jobCount',
+  ] as const;
+
+  const results = Object.fromEntries(
+    Object.keys(telemetryByTicketKey).map((ticketKey) => [ticketKey, {} as Record<string, boolean>])
+  );
+
+  for (const metricKey of metricKeys) {
+    const candidates = Object.entries(telemetryByTicketKey)
+      .map(([ticketKey, telemetry]) => ({
+        ticketKey,
+        value: getMetricComparableValue(telemetry[metricKey]),
+      }))
+      .filter(
+        (entry): entry is { ticketKey: string; value: number } => entry.value != null
+      );
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    const bestValue = Math.min(...candidates.map((entry) => entry.value));
+
+    for (const candidate of candidates) {
+      results[candidate.ticketKey]![metricKey] = candidate.value === bestValue;
+    }
+  }
+
+  const qualityCandidates = Object.entries(qualityByTicketKey)
+    .map(([ticketKey, quality]) => ({
+      ticketKey,
+      value: getMetricComparableValue(quality),
+    }))
+    .filter((entry): entry is { ticketKey: string; value: number } => entry.value != null);
+
+  if (qualityCandidates.length > 0) {
+    const bestQuality = Math.max(...qualityCandidates.map((entry) => entry.value));
+    for (const candidate of qualityCandidates) {
+      results[candidate.ticketKey]!.quality = candidate.value === bestQuality;
+    }
+  }
+
+  return results;
 }
 
 export function normalizeParticipantDetail(input: {
@@ -414,9 +577,10 @@ export function normalizeParticipantDetail(input: {
       ticketKey: string;
       title: string;
       stage: Stage;
+      agent: Agent | null;
     };
   };
-  quality: ComparisonEnrichmentValue<number>;
+  quality: ComparisonQualityEnrichment;
   telemetry: ComparisonTelemetryEnrichment;
 }): ComparisonParticipantDetail {
   return {
@@ -425,7 +589,7 @@ export function normalizeParticipantDetail(input: {
     title: input.participant.ticket.title,
     stage: input.participant.ticket.stage,
     workflowType: input.participant.workflowTypeAtComparison,
-    agent: input.participant.agentAtComparison,
+    agent: input.participant.agentAtComparison ?? input.participant.ticket.agent,
     rank: input.participant.rank,
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,

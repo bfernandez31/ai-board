@@ -10,13 +10,31 @@ describe('Comparison dashboard API', () => {
     await ctx.cleanup();
   });
 
-  it('returns ranking, metrics, decision points, and compliance rows', async () => {
+  it('returns ranking, metrics, operational metrics, decision points, and compliance rows', async () => {
     const fixture = await createStructuredComparisonFixture(ctx.projectId);
 
     const response = await ctx.api.get<{
       summary: string;
       overallRecommendation: string;
       participants: Array<{
+        workflowType: string;
+        agent: string | null;
+        quality: {
+          state: string;
+          value: number | null;
+          threshold: string | null;
+          details: { dimensions: Array<{ agentId: string; weight: number }> } | null;
+        };
+        telemetry: {
+          totalTokens: { state: string; value: number | null };
+          inputTokens: { state: string; value: number | null };
+          outputTokens: { state: string; value: number | null };
+          durationMs: { state: string; value: number | null };
+          costUsd: { state: string; value: number | null };
+          jobCount: { state: string; value: number | null };
+          primaryModel: { state: string; value: string | null };
+          bestValueFlags: Record<string, boolean>;
+        };
         rank: number;
         metrics: {
           bestValueFlags: Record<string, boolean>;
@@ -36,6 +54,41 @@ describe('Comparison dashboard API', () => {
     expect(response.data.summary).toContain('best test coverage');
     expect(response.data.overallRecommendation).toContain('TE2-102');
     expect(response.data.participants.map((participant) => participant.rank)).toEqual([1, 2]);
+    expect(response.data.participants[0]?.workflowType).toBe('FULL');
+    expect(response.data.participants[0]?.agent).toBe('CODEX');
+    expect(response.data.participants[0]?.quality).toMatchObject({
+      state: 'available',
+      value: 91,
+      threshold: 'Excellent',
+    });
+    expect(response.data.participants[0]?.quality.details?.dimensions).toHaveLength(5);
+    expect(response.data.participants[0]?.telemetry.totalTokens).toMatchObject({
+      state: 'available',
+      value: 2200,
+    });
+    expect(response.data.participants[0]?.telemetry.jobCount).toMatchObject({
+      state: 'available',
+      value: 2,
+    });
+    expect(response.data.participants[0]?.telemetry.primaryModel).toMatchObject({
+      state: 'available',
+      value: 'gpt-5.4',
+    });
+    expect(response.data.participants[0]?.telemetry.bestValueFlags).toMatchObject({
+      totalTokens: true,
+      durationMs: true,
+      costUsd: true,
+      jobCount: false,
+      quality: true,
+    });
+    expect(response.data.participants[1]?.telemetry.totalTokens).toMatchObject({
+      state: 'pending',
+      value: null,
+    });
+    expect(response.data.participants[1]?.telemetry.primaryModel).toMatchObject({
+      state: 'available',
+      value: 'claude-3-7-sonnet',
+    });
     expect(response.data.participants[0]?.metrics.bestValueFlags.linesChanged).toBe(true);
     expect(response.data.decisionPoints[0]?.participantApproaches).toHaveLength(2);
     expect(response.data.complianceRows[0]?.assessments.map((entry) => entry.status)).toEqual([
