@@ -41,12 +41,12 @@ export function ComparisonHistoryList({
           )}
           onClick={() => onSelect(comparison.id)}
         >
-          <div className="space-y-1">
-            <div className="font-medium text-foreground">
+          <div className="min-w-0 space-y-1">
+            <div className="truncate font-medium text-foreground">
               {comparison.winnerTicketKey} won over {comparison.participantTicketKeys.join(', ')}
             </div>
             <div className="text-xs text-muted-foreground">{formatDate(comparison.generatedAt)}</div>
-            <div className="text-sm text-muted-foreground">{comparison.summary}</div>
+            <div className="line-clamp-2 text-sm text-muted-foreground">{comparison.summary}</div>
           </div>
         </Button>
       ))}
