@@ -15,64 +15,64 @@ const reportMetadataSchema = z.object({
 
 const implementationMetricsSchema = z.object({
   ticketKey: z.string().min(1),
-  linesAdded: z.number().int().nonnegative(),
-  linesRemoved: z.number().int().nonnegative(),
-  linesChanged: z.number().int().nonnegative(),
-  filesChanged: z.number().int().nonnegative(),
-  changedFiles: z.array(z.string()),
-  testFilesChanged: z.number().int().nonnegative(),
+  linesAdded: z.number().int().nonnegative().default(0),
+  linesRemoved: z.number().int().nonnegative().default(0),
+  linesChanged: z.number().int().nonnegative().default(0),
+  filesChanged: z.number().int().nonnegative().default(0),
+  changedFiles: z.array(z.string()).default([]),
+  testFilesChanged: z.number().int().nonnegative().default(0),
   testCoverage: z.number().min(0).max(100).optional(),
-  hasData: z.boolean(),
+  hasData: z.boolean().default(false),
 });
 
 const constitutionPrincipleSchema = z.object({
   name: z.string().min(1),
-  section: z.string().min(1),
+  section: z.string().default(''),
   passed: z.boolean(),
-  notes: z.string(),
+  notes: z.string().default(''),
 });
 
 const complianceScoreSchema = z.object({
-  overall: z.number().min(0).max(100),
-  totalPrinciples: z.number().int().nonnegative(),
-  passedPrinciples: z.number().int().nonnegative(),
-  principles: z.array(constitutionPrincipleSchema),
+  overall: z.number().min(0).max(100).default(0),
+  totalPrinciples: z.number().int().nonnegative().default(0),
+  passedPrinciples: z.number().int().nonnegative().default(0),
+  principles: z.array(constitutionPrincipleSchema).default([]),
 });
 
 const telemetrySchema = z.object({
   ticketKey: z.string().min(1),
-  inputTokens: z.number().int().nonnegative(),
-  outputTokens: z.number().int().nonnegative(),
-  cacheReadTokens: z.number().int().nonnegative(),
-  cacheCreationTokens: z.number().int().nonnegative(),
-  costUsd: z.number().nonnegative(),
-  durationMs: z.number().int().nonnegative(),
-  model: z.string().nullable(),
-  toolsUsed: z.array(z.string()),
-  jobCount: z.number().int().nonnegative(),
-  hasData: z.boolean(),
+  inputTokens: z.number().int().nonnegative().default(0),
+  outputTokens: z.number().int().nonnegative().default(0),
+  cacheReadTokens: z.number().int().nonnegative().default(0),
+  cacheCreationTokens: z.number().int().nonnegative().default(0),
+  costUsd: z.number().nonnegative().default(0),
+  durationMs: z.number().int().nonnegative().default(0),
+  model: z.string().nullable().default(null),
+  toolsUsed: z.array(z.string()).default([]),
+  jobCount: z.number().int().nonnegative().default(0),
+  hasData: z.boolean().default(false),
 });
 
 export const serializedComparisonReportSchema = z.object({
   metadata: reportMetadataSchema,
   summary: z.string(),
   alignment: z.object({
-    overall: z.number().min(0).max(100),
+    overall: z.number().min(0).max(100).default(0),
     dimensions: z.object({
-      requirements: z.number().min(0).max(100),
-      scenarios: z.number().min(0).max(100),
-      entities: z.number().min(0).max(100),
-      keywords: z.number().min(0).max(100),
-    }),
-    isAligned: z.boolean(),
-    matchingRequirements: z.array(z.string()),
-    matchingEntities: z.array(z.string()),
+      requirements: z.number().min(0).max(100).default(0),
+      scenarios: z.number().min(0).max(100).default(0),
+      entities: z.number().min(0).max(100).default(0),
+      keywords: z.number().min(0).max(100).default(0),
+    }).default({ requirements: 0, scenarios: 0, entities: 0, keywords: 0 }),
+    isAligned: z.boolean().default(false),
+    matchingRequirements: z.array(z.string()).default([]),
+    matchingEntities: z.array(z.string()).default([]),
   }),
   implementation: z.record(z.string(), implementationMetricsSchema),
   compliance: z.record(z.string(), complianceScoreSchema),
   telemetry: z.record(z.string(), telemetrySchema),
-  recommendation: z.string(),
-  warnings: z.array(z.string()),
+  recommendation: z.string().default(''),
+  warnings: z.array(z.string()).default([]),
 });
 
 export const serializedComparisonPersistenceRequestSchema = z.object({

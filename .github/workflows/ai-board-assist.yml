@@ -452,7 +452,9 @@ jobs:
           elif [ "$HTTP_STATUS" = "200" ] && [ "$RESPONSE_STATUS" = "duplicate" ]; then
             echo "ℹ️ Compare persistence duplicate retry detected"
           elif [ "$HTTP_STATUS" = "400" ] || [ "$HTTP_STATUS" = "404" ]; then
+            RESPONSE_ERROR=$(echo "$RESPONSE_BODY" | jq -r '.error // empty' 2>/dev/null || true)
             echo "⚠️ Compare persistence rejected: ${RESPONSE_CODE:-VALIDATION_ERROR}"
+            echo "   Detail: ${RESPONSE_ERROR:-no detail}"
           elif [ "$HTTP_STATUS" = "401" ]; then
             echo "⚠️ Compare persistence rejected: unauthorized workflow token"
           elif [ "$HTTP_STATUS" = "500" ]; then

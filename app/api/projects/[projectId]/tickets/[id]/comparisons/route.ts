@@ -191,7 +191,9 @@ export async function POST(
     );
   } catch (error) {
     if (error instanceof ZodError) {
-      return jsonError(400, 'Invalid comparison persistence payload', 'VALIDATION_ERROR');
+      const issues = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      console.error('[comparisons-route] Zod validation failed:', issues);
+      return jsonError(400, `Invalid comparison persistence payload: ${issues.join('; ')}`, 'VALIDATION_ERROR');
     }
 
     console.error('[comparisons-route] Failed to persist comparison payload:', error);

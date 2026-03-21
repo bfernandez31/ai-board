@@ -2109,8 +2109,10 @@ Persist a structured comparison record from a workflow-generated JSON artifact.
 
 Idempotency is handled inside a database transaction: if a record with the same `(projectId, sourceTicketKey, compareRunKey)` already exists, the existing record is returned with `status: "duplicate"`.
 
+**Lenient Parsing**: The `report` sub-objects apply sensible defaults for missing fields (e.g., `changedFiles` defaults to `[]`, numeric metrics default to `0`, `hasData` defaults to `false`). This allows workflow-generated payloads to omit fields that have no data without triggering validation errors.
+
 **Errors**:
-- `400`: Validation failure (mismatched scope, invalid participants, malformed payload)
+- `400`: Validation failure (mismatched scope, invalid participants, malformed payload). Zod validation errors include field-level detail in the `error` field (e.g., `"report.telemetry.AIB-123.cacheReadTokens: Required"`)
 - `401`: Missing or invalid workflow token
 - `404`: Source ticket or participant not found in project
 - `500`: Internal persistence error
