@@ -93,9 +93,8 @@ No issues found. Checked for bugs, CLAUDE.md compliance, and constitution compli
   - Line range format is L[start]-L[end]
   - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
 
-9. **MANDATORY — Quality Score Output (do NOT skip this step)**: After everything above is complete, YOU must directly compute and print the quality score. Using the 5 dimension scores collected in step 4 (use 50 as default for any missing score):
-    - Compute the weighted final score: `round(compliance*0.40 + bugDetection*0.30 + codeComments*0.20 + historicalContext*0.10 + specSync*0.00)`
-    - Derive the threshold: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor"
-    - Use the Bash tool to `echo` exactly one line to stdout in this format (single line, no spaces between marker and JSON):
-      `echo 'QUALITY_SCORE_JSON:{"version":1,"qualityScore":<score>,"threshold":"<threshold>","dimensions":[{"name":"Compliance","agentId":"compliance","score":<s1>,"weight":0.40,"weightedScore":<s1*0.40>},{"name":"Bug Detection","agentId":"bug-detection","score":<s2>,"weight":0.30,"weightedScore":<s2*0.30>},{"name":"Code Comments","agentId":"code-comments","score":<s5>,"weight":0.20,"weightedScore":<s5*0.20>},{"name":"Historical Context","agentId":"historical-context","score":<s3>,"weight":0.10,"weightedScore":<s3*0.10>},{"name":"Spec Sync","agentId":"spec-sync","score":<s4>,"weight":0.00,"weightedScore":0}],"computedAt":"<ISO8601 timestamp>"}'`
-    - This step is critical for the verify workflow to capture the quality score. It must ALWAYS execute regardless of whether issues were found or not.
+**MANDATORY final step — Quality Score Output**: After all steps above are complete, compute and output the quality score as your **absolute last output** (no text, summary, or commentary after it). Using the 5 dimension scores from step 4 (default 50 for any missing score):
+- Weighted score: `round(compliance*0.40 + bugDetection*0.30 + codeComments*0.20 + historicalContext*0.10 + specSync*0.00)`
+- Threshold: 90-100 = "Excellent", 70-89 = "Good", 50-69 = "Fair", 0-49 = "Poor"
+- Output exactly one line of plain text (no tool calls, no Bash — just text):
+  `QUALITY_SCORE_JSON:{"version":1,"qualityScore":<score>,"threshold":"<threshold>","dimensions":[{"name":"Compliance","agentId":"compliance","score":<s1>,"weight":0.40,"weightedScore":<s1*0.40>},{"name":"Bug Detection","agentId":"bug-detection","score":<s2>,"weight":0.30,"weightedScore":<s2*0.30>},{"name":"Code Comments","agentId":"code-comments","score":<s5>,"weight":0.20,"weightedScore":<s5*0.20>},{"name":"Historical Context","agentId":"historical-context","score":<s3>,"weight":0.10,"weightedScore":<s3*0.10>},{"name":"Spec Sync","agentId":"spec-sync","score":<s4>,"weight":0.00,"weightedScore":0}],"computedAt":"<ISO8601>"}`
