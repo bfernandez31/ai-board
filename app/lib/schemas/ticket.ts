@@ -5,25 +5,6 @@
 import { z } from 'zod';
 
 /**
- * Ticket key validation schema
- * Format: {PROJECT_KEY}-{TICKET_NUMBER} (e.g., "ABC-123" or "MOBILE-5")
- * - Project key: 3-6 uppercase alphanumeric characters
- * - Ticket number: positive integer
- */
-export const ticketKeySchema = z
-  .string()
-  .regex(
-    /^[A-Z0-9]{3,6}-\d+$/,
-    'Ticket key must be in format KEY-NUM (e.g., ABC-123 or MOBILE-5)'
-  );
-
-/**
- * Ticket number validation schema
- * Positive integer representing sequential number within project
- */
-export const ticketNumberSchema = z.number().positive('Ticket number must be positive');
-
-/**
  * Allowed image MIME types
  */
 const ALLOWED_IMAGE_MIME_TYPES = [
@@ -84,8 +65,3 @@ export const TicketAttachmentsArraySchema = z
   .max(MAX_ATTACHMENTS_PER_TICKET, {
     message: `Maximum ${MAX_ATTACHMENTS_PER_TICKET} images per ticket`
   });
-
-/**
- * TypeScript type inferred from TicketAttachmentSchema
- */
-export type TicketAttachment = z.infer<typeof TicketAttachmentSchema>;

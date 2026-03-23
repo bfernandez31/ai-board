@@ -6,7 +6,6 @@ import {
   type TestUserOverrideAttempt,
   type TestUserOverrideRejectionReason,
 } from "@/lib/auth/test-user-override"
-import { stripe } from "@/lib/billing/stripe"
 import { prisma } from "@/lib/db/client"
 import { headers } from "next/headers"
 import { extractBearerToken, validateToken } from "@/lib/tokens/validate"
@@ -59,7 +58,7 @@ function toAuthenticatedUser(
   }
 }
 
-export function logBlockedTestUserOverrideAttempt(
+function logBlockedTestUserOverrideAttempt(
   attempt: TestUserOverrideAttempt
 ): void {
   console.warn("[auth] blocked x-test-user-id override", {
@@ -261,33 +260,4 @@ export async function getCurrentUserOrToken(
 
   // Fall back to session auth
   return getCurrentUser(request)
-}
-
-/**
- * Delete a user account, canceling any active Stripe subscription first.
- * @param userId - The user ID to delete
- * @throws Error if Stripe cancellation fails (blocks account deletion)
- */
-export async function deleteUserAccount(userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { stripeCustomerId: true, subscription: true },
-  })
-
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  // Cancel Stripe subscription before deleting account
-  if (user.subscription?.stripeSubscriptionId) {
-    try {
-      await stripe.subscriptions.cancel(user.subscription.stripeSubscriptionId)
-    } catch (error) {
-      console.error("Failed to cancel Stripe subscription:", error)
-      throw new Error("Failed to cancel subscription. Account deletion blocked.")
-    }
-  }
-
-  // Prisma cascade will handle Subscription record deletion
-  await prisma.user.delete({ where: { id: userId } })
 }

@@ -16,15 +16,6 @@ async function fetchTickets(projectId: number): Promise<TicketWithVersion[]> {
   return Object.values(data).flat() as TicketWithVersion[];
 }
 
-export function useProjectTickets(projectId: number) {
-  return useQuery({
-    queryKey: queryKeys.projects.tickets(projectId),
-    queryFn: () => fetchTickets(projectId),
-    staleTime: 5000,
-    gcTime: 10 * 60 * 1000,
-  });
-}
-
 export function useTicketsByStage(projectId: number) {
   return useQuery({
     queryKey: queryKeys.projects.tickets(projectId),

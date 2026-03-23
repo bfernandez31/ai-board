@@ -7,12 +7,6 @@ export async function findSubscriptionByUserId(userId: string) {
   });
 }
 
-export async function findSubscriptionByStripeId(stripeSubscriptionId: string) {
-  return prisma.subscription.findUnique({
-    where: { stripeSubscriptionId },
-  });
-}
-
 export interface UpsertSubscriptionData {
   userId: string;
   stripeSubscriptionId: string;

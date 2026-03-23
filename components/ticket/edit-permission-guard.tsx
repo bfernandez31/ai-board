@@ -52,7 +52,7 @@ export function canEdit(ticketStage: Stage, docType: DocType): boolean {
  * @param ticketStage - Current stage of the ticket
  * @returns Array of allowed document types
  */
-export function getAllowedDocTypes(ticketStage: Stage): DocType[] {
+function getAllowedDocTypes(ticketStage: Stage): DocType[] {
   const permission = EDIT_PERMISSIONS.find((p) => p.stage === ticketStage);
   return permission?.allowedDocTypes ?? [];
 }

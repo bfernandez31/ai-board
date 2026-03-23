@@ -32,33 +32,12 @@ export const editDocumentationResponseSchema = z.object({
 export type EditDocumentationResponse = z.infer<typeof editDocumentationResponseSchema>;
 
 /**
- * Error response schema
- */
-export const editDocumentationErrorSchema = z.object({
-  success: z.literal(false),
-  error: z.string(),
-  code: z.enum([
-    'PERMISSION_DENIED',
-    'BRANCH_NOT_FOUND',
-    'VALIDATION_ERROR',
-    'MERGE_CONFLICT',
-    'NETWORK_ERROR',
-    'TIMEOUT',
-  ]).optional(),
-  details: z.unknown().optional(),
-});
-
-export type EditDocumentationError = z.infer<typeof editDocumentationErrorSchema>;
-
-/**
  * Query parameters schema for GET /api/projects/:projectId/docs/history
  */
 export const getDocumentationHistorySchema = z.object({
   ticketId: z.coerce.number().int().positive('Ticket ID must be a positive integer'),
   docType: z.enum(['spec', 'plan', 'tasks']),
 });
-
-export type GetDocumentationHistoryRequest = z.infer<typeof getDocumentationHistorySchema>;
 
 /**
  * Response schema for GET /api/projects/:projectId/docs/history

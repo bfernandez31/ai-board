@@ -94,31 +94,9 @@ export function checkRateLimit(
 }
 
 /**
- * Clear rate limit for an identifier.
- * Useful for testing or admin operations.
- */
-export function clearRateLimit(identifier: string): void {
-  rateLimitStore.delete(identifier);
-}
-
-/**
  * Clear all rate limits.
  * Useful for testing.
  */
 export function clearAllRateLimits(): void {
   rateLimitStore.clear();
-}
-
-/**
- * Get rate limit headers for HTTP response.
- */
-export function getRateLimitHeaders(result: RateLimitResult): HeadersInit {
-  return {
-    "X-RateLimit-Limit": result.limit.toString(),
-    "X-RateLimit-Remaining": result.remaining.toString(),
-    "X-RateLimit-Reset": result.resetAt.toString(),
-    ...(result.retryAfter > 0 && {
-      "Retry-After": result.retryAfter.toString(),
-    }),
-  };
 }

@@ -120,34 +120,3 @@ export async function updateLastUsed(id: number): Promise<void> {
     console.error("Failed to update token lastUsedAt:", error);
   }
 }
-
-/**
- * Get a token by ID (for admin/testing purposes).
- * @param id - Token ID
- * @param userId - Owner's user ID (for authorization)
- */
-export async function getTokenById(
-  id: number,
-  userId: string
-): Promise<TokenListItem | null> {
-  return prisma.personalAccessToken.findFirst({
-    where: { id, userId },
-    select: {
-      id: true,
-      name: true,
-      preview: true,
-      lastUsedAt: true,
-      createdAt: true,
-    },
-  });
-}
-
-/**
- * Count tokens for a user (for limits/validation).
- * @param userId - The ID of the user
- */
-export async function countUserTokens(userId: string): Promise<number> {
-  return prisma.personalAccessToken.count({
-    where: { userId },
-  });
-}

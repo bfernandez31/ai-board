@@ -70,38 +70,8 @@ export async function deletePushSubscriptionById(id: number) {
   });
 }
 
-export async function deletePushSubscriptionByEndpoint(endpoint: string) {
-  return prisma.pushSubscription.deleteMany({
-    where: { endpoint },
-  });
-}
-
-export async function hasActiveSubscription(userId: string): Promise<boolean> {
-  const count = await prisma.pushSubscription.count({
-    where: { userId },
-  });
-  return count > 0;
-}
-
-export async function getSubscriptionByEndpoint(endpoint: string) {
-  return prisma.pushSubscription.findUnique({
-    where: { endpoint },
-  });
-}
-
 export async function getSubscriptionById(id: number) {
   return prisma.pushSubscription.findUnique({
     where: { id },
   });
-}
-
-export async function cleanupExpiredSubscriptions(): Promise<number> {
-  const result = await prisma.pushSubscription.deleteMany({
-    where: {
-      expirationTime: {
-        lt: new Date(),
-      },
-    },
-  });
-  return result.count;
 }

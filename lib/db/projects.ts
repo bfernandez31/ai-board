@@ -183,24 +183,3 @@ export async function updateProject(
     data: updateData,
   });
 }
-
-/**
- * Delete a project
- * Ensures the project belongs to the current user
- */
-export async function deleteProject(projectId: number) {
-  const userId = await requireAuth();
-
-  // Verify ownership first
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId },
-  });
-
-  if (!project) {
-    throw new Error('Project not found');
-  }
-
-  return prisma.project.delete({
-    where: { id: projectId },
-  });
-}

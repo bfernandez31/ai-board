@@ -115,13 +115,3 @@ export function isValidTransition(
 export function getAllStages(): Stage[] {
   return [...STAGE_ORDER];
 }
-
-/**
- * Check if a stage is a terminal stage (no further transitions possible).
- *
- * @param stage - The stage to check
- * @returns true if stage is SHIP or CLOSED (terminal), false otherwise
- */
-export function isTerminalStage(stage: Stage): boolean {
-  return stage === Stage.SHIP || stage === Stage.CLOSED;
-}
