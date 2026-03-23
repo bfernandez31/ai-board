@@ -69,20 +69,9 @@ function getBaseBranch(cwd?: string): string {
 }
 
 /**
- * Extract implementation metrics from a git branch (async wrapper)
+ * Extract implementation metrics from a git branch
  */
-export async function extractImplementationMetrics(
-  ticketKey: string,
-  branch?: string,
-  cwd?: string
-): Promise<ImplementationMetrics> {
-  return extractImplementationMetricsSync(ticketKey, branch, cwd);
-}
-
-/**
- * Extract implementation metrics from a git branch (synchronous)
- */
-export function extractImplementationMetricsSync(
+export function extractImplementationMetrics(
   ticketKey: string,
   branch?: string,
   cwd?: string

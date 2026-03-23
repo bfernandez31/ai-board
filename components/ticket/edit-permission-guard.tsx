@@ -47,17 +47,6 @@ export function canEdit(ticketStage: Stage, docType: DocType): boolean {
 }
 
 /**
- * Gets all allowed document types for a given stage
- *
- * @param ticketStage - Current stage of the ticket
- * @returns Array of allowed document types
- */
-function getAllowedDocTypes(ticketStage: Stage): DocType[] {
-  const permission = EDIT_PERMISSIONS.find((p) => p.stage === ticketStage);
-  return permission?.allowedDocTypes ?? [];
-}
-
-/**
  * Gets a human-readable error message when editing is not allowed
  *
  * @param ticketStage - Current stage of the ticket
@@ -65,7 +54,7 @@ function getAllowedDocTypes(ticketStage: Stage): DocType[] {
  * @returns Error message explaining why editing is not allowed
  */
 export function getPermissionErrorMessage(ticketStage: Stage, docType: DocType): string {
-  const allowedTypes = getAllowedDocTypes(ticketStage);
+  const allowedTypes = EDIT_PERMISSIONS.find((p) => p.stage === ticketStage)?.allowedDocTypes ?? [];
 
   if (allowedTypes.length === 0) {
     return `Documents cannot be edited in ${ticketStage} stage`;
