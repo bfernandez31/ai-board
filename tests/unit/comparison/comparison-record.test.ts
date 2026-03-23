@@ -139,12 +139,17 @@ describe('comparison-record helpers', () => {
         outputTokens: null,
         durationMs: 30,
         costUsd: null,
+        jobCount: 2,
+        model: 'claude-sonnet-4-6',
       })
     ).toEqual({
       inputTokens: { state: 'available', value: 10 },
       outputTokens: { state: 'pending', value: null },
+      totalTokens: { state: 'pending', value: null },
       durationMs: { state: 'available', value: 30 },
       costUsd: { state: 'pending', value: null },
+      jobCount: { state: 'available', value: 2 },
+      model: { state: 'available', value: 'claude-sonnet-4-6' },
     });
   });
 

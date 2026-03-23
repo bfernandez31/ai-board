@@ -47,11 +47,15 @@ vi.mock('@/hooks/use-comparisons', () => ({
           score: 95,
           rankRationale: 'Best value',
           quality: { state: 'available', value: 95 },
+          qualityDetails: { state: 'unavailable', value: null },
           telemetry: {
             inputTokens: { state: 'available', value: 10 },
             outputTokens: { state: 'available', value: 5 },
+            totalTokens: { state: 'available', value: 15 },
             durationMs: { state: 'available', value: 100 },
             costUsd: { state: 'available', value: 0.01 },
+            jobCount: { state: 'available', value: 1 },
+            model: { state: 'available', value: 'claude-sonnet-4-6' },
           },
           metrics: {
             linesAdded: 10,

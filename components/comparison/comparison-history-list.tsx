@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ComparisonHistoryListProps } from './types';
 
-function formatDate(value: string) {
+function formatDate(value: string): string {
   return new Date(value).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
