@@ -69,26 +69,6 @@ export function calculateAlignment(
   };
 }
 
-export function compareMultipleSpecs(
-  sourceSpec: SpecSections,
-  targetSpecs: SpecSections[]
-): FeatureAlignmentScore[] {
-  return targetSpecs.map((target) => calculateAlignment(sourceSpec, target));
-}
-
-export function calculateAverageAlignment(
-  scores: FeatureAlignmentScore[]
-): number {
-  if (scores.length === 0) return 0;
-
-  const sum = scores.reduce((acc, score) => acc + score.overall, 0);
-  return Math.round(sum / scores.length);
-}
-
-export function isComparisonMeaningful(score: FeatureAlignmentScore): boolean {
-  return score.isAligned;
-}
-
 export function getAlignmentLevel(
   score: number
 ): 'high' | 'medium' | 'low' | 'none' {

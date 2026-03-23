@@ -465,19 +465,3 @@ export async function persistGeneratedComparisonArtifacts(input: {
     requestPayload,
   };
 }
-
-export function parseReportFilename(filename: string): {
-  timestamp: string;
-  comparedTickets: string[];
-} | null {
-  const match = filename.match(/^(\d{8}(?:-\d{6})?)-vs-(.+)\.md$/);
-  if (!match) return null;
-
-  const timestamp = match[1]!;
-  const keysStr = match[2]!;
-
-  const keyPattern = /[A-Z0-9]{3,6}-\d+/g;
-  const comparedTickets = keysStr.match(keyPattern) || [];
-
-  return { timestamp, comparedTickets };
-}

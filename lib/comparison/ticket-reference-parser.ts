@@ -111,79 +111,7 @@ export function parseAndValidateProjectScope(
   return { validRefs, crossProjectRefs };
 }
 
-export interface CrossProjectValidationResult {
-  valid: boolean;
-  expectedProject: string;
-  validTicketKeys: string[];
-  crossProjectKeys: string[];
-  error?: string;
-}
-
-/** Validate all ticket references belong to the same project */
-export function validateCrossProjectReferences(
-  content: string,
-  sourceProjectKey: string
-): CrossProjectValidationResult {
-  const { validRefs, crossProjectRefs } = parseAndValidateProjectScope(
-    content,
-    sourceProjectKey
-  );
-
-  const validTicketKeys = validRefs.map((r) => r.ticketKey);
-  const crossProjectKeys = crossProjectRefs.map((r) => r.ticketKey);
-
-  if (crossProjectRefs.length > 0) {
-    const uniqueCrossProjects = [
-      ...new Set(crossProjectKeys.map((k) => k.split('-')[0])),
-    ];
-
-    return {
-      valid: false,
-      expectedProject: sourceProjectKey,
-      validTicketKeys,
-      crossProjectKeys,
-      error: `Cross-project comparison not supported. Ticket${crossProjectKeys.length > 1 ? 's' : ''} ${crossProjectKeys.join(', ')} belong${crossProjectKeys.length === 1 ? 's' : ''} to project${uniqueCrossProjects.length > 1 ? 's' : ''} ${uniqueCrossProjects.join(', ')}, but comparison is for project ${sourceProjectKey}.`,
-    };
-  }
-
-  return {
-    valid: true,
-    expectedProject: sourceProjectKey,
-    validTicketKeys,
-    crossProjectKeys: [],
-  };
-}
-
 export function extractProjectKey(ticketKey: string): string {
   return ticketKey.split('-')[0] ?? '';
 }
 
-export function validateSameProjectTickets(ticketKeys: string[]): {
-  valid: boolean;
-  projectKey?: string;
-  error?: string;
-} {
-  if (ticketKeys.length === 0) {
-    return { valid: false, error: 'No ticket keys provided' };
-  }
-
-  const projectKeys = ticketKeys.map(extractProjectKey);
-  const uniqueProjects = [...new Set(projectKeys)];
-
-  if (uniqueProjects.length > 1) {
-    return {
-      valid: false,
-      error: `Cross-project comparison not supported. Found tickets from multiple projects: ${uniqueProjects.join(', ')}`,
-    };
-  }
-
-  const projectKey = uniqueProjects[0];
-  if (!projectKey) {
-    return { valid: false, error: 'Could not determine project key' };
-  }
-
-  return {
-    valid: true,
-    projectKey,
-  };
-}
