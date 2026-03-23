@@ -657,7 +657,7 @@ When a user is mentioned in a comment:
 - AI-BOARD as actor appears in notification (shows "AI-BOARD mentioned you")
 
 **Notification Delivery**:
-- In-app notifications appear within 15 seconds via polling
+- In-app notifications appear within 15–30 seconds via dynamic polling (15s when unread notifications exist, 30s otherwise)
 - Bell badge updates automatically to show unread count
 - Dropdown content refreshes to show new notifications
 - Polling continues while user is authenticated
@@ -684,7 +684,7 @@ When a user is mentioned in a comment:
 - Click notification to mark as read and navigate to comment
 - Click "Mark all as read" button to clear all unread notifications
 - Read status updates immediately with optimistic UI
-- Changes sync across devices within 15 seconds
+- Changes sync across devices within 30 seconds
 
 **Navigation**:
 - Clicking notification navigates to the ticket's conversation tab
