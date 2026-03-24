@@ -510,7 +510,7 @@ jobs:
         run: |
           if grep -q "QUALITY_SCORE_JSON:" code-review-output.log 2>/dev/null; then
             echo "📊 Quality score found in agent output"
-            QUALITY_DETAILS=$(grep "QUALITY_SCORE_JSON:" code-review-output.log | tail -1 | sed 's/.*QUALITY_SCORE_JSON://')
+            QUALITY_DETAILS=$(grep "QUALITY_SCORE_JSON:" code-review-output.log | tail -1 | sed 's/.*QUALITY_SCORE_JSON://' | sed 's/[^}]*$//' | sed 's/^[^{]*//')
             QUALITY_SCORE=$(echo "$QUALITY_DETAILS" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).qualityScore))")
             echo "quality_score=${QUALITY_SCORE}" >> "$GITHUB_OUTPUT"
             echo "has_score=true" >> "$GITHUB_OUTPUT"
