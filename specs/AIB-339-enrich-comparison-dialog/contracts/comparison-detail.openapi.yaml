@@ -1,0 +1,403 @@
+openapi: 3.1.0
+info:
+  title: Comparison Detail API
+  version: 1.0.0
+  description: Expanded read contract for the ticket comparison dialog including operational metrics and quality breakdown metadata.
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      summary: Get enriched comparison detail
+      operationId: getComparisonDetail
+      tags:
+        - Comparisons
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Enriched comparison detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetail'
+        '400':
+          description: Invalid route parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ticket belongs to a different project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Ticket or comparison not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+    EnrichmentValueNumber:
+      type: object
+      required:
+        - state
+        - value
+      properties:
+        state:
+          type: string
+          enum:
+            - available
+            - pending
+            - unavailable
+        value:
+          type:
+            - number
+            - 'null'
+    ComparisonMetricSnapshot:
+      type: object
+      required:
+        - linesAdded
+        - linesRemoved
+        - linesChanged
+        - filesChanged
+        - testFilesChanged
+        - changedFiles
+        - bestValueFlags
+      properties:
+        linesAdded:
+          type:
+            - integer
+            - 'null'
+        linesRemoved:
+          type:
+            - integer
+            - 'null'
+        linesChanged:
+          type:
+            - integer
+            - 'null'
+        filesChanged:
+          type:
+            - integer
+            - 'null'
+        testFilesChanged:
+          type:
+            - integer
+            - 'null'
+        changedFiles:
+          type: array
+          items:
+            type: string
+        bestValueFlags:
+          type: object
+          additionalProperties:
+            type: boolean
+    ComparisonOperationalMetrics:
+      type: object
+      required:
+        - totalTokens
+        - inputTokens
+        - outputTokens
+        - durationMs
+        - costUsd
+        - jobCount
+        - primaryModel
+        - bestValueFlags
+      properties:
+        totalTokens:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        inputTokens:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        outputTokens:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        durationMs:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        costUsd:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        jobCount:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        primaryModel:
+          type:
+            - string
+            - 'null'
+        bestValueFlags:
+          type: object
+          additionalProperties:
+            type: boolean
+    ComparisonQualityDimension:
+      type: object
+      required:
+        - agentId
+        - name
+        - score
+        - weight
+      properties:
+        agentId:
+          type: string
+        name:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        weight:
+          type: number
+          minimum: 0
+          maximum: 1
+    ComparisonQualityBreakdown:
+      type: object
+      required:
+        - overallScore
+        - thresholdLabel
+        - dimensions
+      properties:
+        overallScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        thresholdLabel:
+          type: string
+        dimensions:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/ComparisonQualityDimension'
+    ComparisonQualitySummary:
+      type: object
+      required:
+        - score
+        - thresholdLabel
+        - detailAvailable
+        - breakdown
+        - isBestValue
+      properties:
+        score:
+          $ref: '#/components/schemas/EnrichmentValueNumber'
+        thresholdLabel:
+          type:
+            - string
+            - 'null'
+        detailAvailable:
+          type: boolean
+        breakdown:
+          oneOf:
+            - $ref: '#/components/schemas/ComparisonQualityBreakdown'
+            - type: 'null'
+        isBestValue:
+          type: boolean
+    ComparisonParticipantDetail:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - agent
+        - rank
+        - score
+        - rankRationale
+        - metrics
+        - operational
+        - quality
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+          enum:
+            - FULL
+            - QUICK
+            - CLEAN
+        agent:
+          type:
+            - string
+            - 'null'
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        metrics:
+          $ref: '#/components/schemas/ComparisonMetricSnapshot'
+        operational:
+          $ref: '#/components/schemas/ComparisonOperationalMetrics'
+        quality:
+          $ref: '#/components/schemas/ComparisonQualitySummary'
+    ComparisonDecisionPointApproach:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - summary
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        summary:
+          type: string
+    ComparisonDecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictTicketId
+        - verdictSummary
+        - rationale
+        - displayOrder
+        - participantApproaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictTicketId:
+          type:
+            - integer
+            - 'null'
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        displayOrder:
+          type: integer
+        participantApproaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPointApproach'
+    ComparisonComplianceCell:
+      type: object
+      required:
+        - participantTicketId
+        - participantTicketKey
+        - status
+        - notes
+      properties:
+        participantTicketId:
+          type: integer
+        participantTicketKey:
+          type: string
+        status:
+          type: string
+          enum:
+            - pass
+            - mixed
+            - fail
+        notes:
+          type: string
+    ComparisonComplianceRow:
+      type: object
+      required:
+        - principleKey
+        - principleName
+        - displayOrder
+        - assessments
+      properties:
+        principleKey:
+          type: string
+        principleName:
+          type: string
+        displayOrder:
+          type: integer
+        assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonComplianceCell'
+    ComparisonDetail:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketId
+        - sourceTicketKey
+        - markdownPath
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+        - winnerTicketId
+        - winnerTicketKey
+        - participants
+        - decisionPoints
+        - complianceRows
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        markdownPath:
+          type: string
+        summary:
+          type: string
+        overallRecommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
+          type: string
+        participants:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ComparisonParticipantDetail'
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPoint'
+        complianceRows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonComplianceRow'
