@@ -95,7 +95,7 @@ function JobRow({ job }: { job: TicketJobWithTelemetry }) {
 
           {/* Model Badge */}
           {job.model && (
-            <span className="text-xs text-ctp-overlay0 bg-secondary px-2 py-0.5 rounded hidden sm:inline">
+            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded hidden sm:inline">
               {job.model}
             </span>
           )}
