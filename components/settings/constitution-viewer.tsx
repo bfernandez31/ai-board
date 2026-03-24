@@ -242,7 +242,7 @@ export default function ConstitutionViewer({
             )}
 
             {isNotFound && (
-              <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Scroll className="h-16 w-16 mb-4 opacity-50" />
                 <p className="text-lg font-medium mb-2">No Constitution Found</p>
                 <p className="text-sm text-zinc-500 text-center max-w-md">
@@ -300,7 +300,7 @@ export default function ConstitutionViewer({
                       ),
                       blockquote: ({ ...props }) => (
                         <blockquote
-                          className="border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4"
+                          className="border-l-4 border-zinc-600 pl-4 italic text-muted-foreground my-4"
                           {...props}
                         />
                       ),
@@ -414,7 +414,7 @@ export default function ConstitutionViewer({
                 ) : historyError ? (
                   <div className="text-red-400 py-8 text-center">
                     <p className="font-semibold mb-2">Error loading commit history</p>
-                    <p className="text-sm text-zinc-400">{historyError.message}</p>
+                    <p className="text-sm text-muted-foreground">{historyError.message}</p>
                   </div>
                 ) : historyData?.commits && historyData.commits.length > 0 ? (
                   <ScrollArea className="h-[25vh]">
@@ -425,7 +425,7 @@ export default function ConstitutionViewer({
                     />
                   </ScrollArea>
                 ) : (
-                  <div className="text-zinc-400 py-8 text-center">
+                  <div className="text-muted-foreground py-8 text-center">
                     <p>No commit history available</p>
                     <p className="text-sm mt-2 text-zinc-500">
                       This file may not have any commits yet.
@@ -450,7 +450,7 @@ export default function ConstitutionViewer({
                       <DiffViewer diff={diffData} />
                     </ScrollArea>
                   ) : (
-                    <div className="text-zinc-400 py-8 text-center">
+                    <div className="text-muted-foreground py-8 text-center">
                       No diff available for this commit
                     </div>
                   )}

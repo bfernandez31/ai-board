@@ -37,7 +37,7 @@ export function CommitHistoryViewer({
   if (commits.length === 0) {
     return (
       <div
-        className="flex flex-col items-center justify-center py-12 text-zinc-400"
+        className="flex flex-col items-center justify-center py-12 text-muted-foreground"
         data-testid="commit-history-empty"
       >
         <GitCommit className="h-12 w-12 mb-4 opacity-50" />
@@ -75,7 +75,7 @@ export function CommitHistoryViewer({
             >
               {/* Commit header */}
               <div className="flex items-start gap-3 mb-2">
-                <GitCommit className="h-4 w-4 mt-1 text-zinc-400 shrink-0" />
+                <GitCommit className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-50 line-clamp-2">
                     {commit.message.split('\n')[0]}
@@ -84,7 +84,7 @@ export function CommitHistoryViewer({
               </div>
 
               {/* Author and timestamp */}
-              <div className="flex items-center gap-4 ml-7 text-xs text-zinc-400">
+              <div className="flex items-center gap-4 ml-7 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <User className="h-3 w-3" />
                   <span>{commit.author.name}</span>

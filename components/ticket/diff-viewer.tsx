@@ -26,7 +26,7 @@ interface DiffViewerProps {
 export function DiffViewer({ diff }: DiffViewerProps) {
   if (!diff.files || diff.files.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <FileCode className="h-12 w-12 mb-4 opacity-50" />
         <p className="text-sm">No changes in this commit</p>
       </div>
@@ -41,7 +41,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
             <div className="bg-zinc-800 px-4 py-3 border-b border-zinc-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileCode className="h-4 w-4 text-zinc-400" />
+                  <FileCode className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-mono text-zinc-50">{file.filename}</span>
                 </div>
 

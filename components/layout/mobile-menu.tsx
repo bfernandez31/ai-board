@@ -59,7 +59,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="View project specifications on GitHub"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setOpen(false)}
                     >
                       <FileText className="w-5 h-5" />
@@ -69,7 +69,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                     <Link
                       href={`/projects/${projectId}/analytics`}
                       aria-label="View project analytics"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setOpen(false)}
                     >
                       <BarChart3 className="w-5 h-5" />
@@ -79,7 +79,7 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
                     <Link
                       href={`/projects/${projectId}/activity`}
                       aria-label="View project activity"
-                      className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setOpen(false)}
                     >
                       <Activity className="w-5 h-5" />

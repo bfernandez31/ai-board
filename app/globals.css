@@ -16,7 +16,7 @@
     --ctp-text: 226 64% 88%;      /* #cdd6f4 */
     --ctp-subtext-0: 227 27% 72%; /* #a6adc8 */
     --ctp-subtext-1: 227 35% 80%; /* #bac2de */
-    --ctp-overlay-0: 230 18% 44%; /* #6c7086 */
+    --ctp-overlay-0: 230 18% 56%; /* #8790ab - boosted from 44% for WCAG AA contrast */
 
     /* Catppuccin Mocha - Accent Colors */
     --ctp-lavender: 250 60% 87%;  /* #b4befe */

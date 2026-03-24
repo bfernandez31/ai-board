@@ -198,7 +198,7 @@ export default function DocumentationViewer({
         <div className="mt-4">
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <div className="text-zinc-400">
+              <div className="text-muted-foreground">
                 Loading {docType}...
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function DocumentationViewer({
                     ),
                     blockquote: ({ node, ...props }) => (
                       <blockquote
-                        className="border-l-4 border-zinc-600 pl-4 italic text-zinc-400 my-4"
+                        className="border-l-4 border-zinc-600 pl-4 italic text-muted-foreground my-4"
                         {...props}
                       />
                     ),
@@ -356,12 +356,12 @@ export default function DocumentationViewer({
                 <h3 className="text-lg font-semibold text-zinc-50 mb-4">Commit History</h3>
                 {historyLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-zinc-400">Loading commit history...</div>
+                    <div className="text-muted-foreground">Loading commit history...</div>
                   </div>
                 ) : historyError ? (
                   <div className="text-red-400 py-8 text-center">
                     <p className="font-semibold mb-2">Error loading commit history</p>
-                    <p className="text-sm text-zinc-400">{historyError.message}</p>
+                    <p className="text-sm text-muted-foreground">{historyError.message}</p>
                   </div>
                 ) : historyData?.commits && historyData.commits.length > 0 ? (
                   <ScrollArea className="h-[25vh]">
@@ -372,7 +372,7 @@ export default function DocumentationViewer({
                     />
                   </ScrollArea>
                 ) : (
-                  <div className="text-zinc-400 py-8 text-center">
+                  <div className="text-muted-foreground py-8 text-center">
                     <p>No commit history available</p>
                     <p className="text-sm mt-2 text-zinc-500">
                       This file may not have any commits yet, or the branch may not exist in the repository.
@@ -389,14 +389,14 @@ export default function DocumentationViewer({
                   </h3>
                   {diffLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="text-zinc-400">Loading diff...</div>
+                      <div className="text-muted-foreground">Loading diff...</div>
                     </div>
                   ) : diffData ? (
                     <ScrollArea className="flex-1">
                       <DiffViewer diff={diffData} />
                     </ScrollArea>
                   ) : (
-                    <div className="text-zinc-400 py-8 text-center">
+                    <div className="text-muted-foreground py-8 text-center">
                       No diff available for this commit
                     </div>
                   )}

@@ -115,7 +115,7 @@ export function ActivityFeed({ projectId, initialData }: ActivityFeedProps) {
   if (isLoading && displayedEvents.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }

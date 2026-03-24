@@ -301,7 +301,7 @@ export const ActivityItem = React.memo(function ActivityItem({
           <span className="font-medium text-zinc-200">{event.actor.name}</span>
 
           {/* Event Message */}
-          <span className="text-zinc-400">
+          <span className="text-muted-foreground">
             <EventMessage event={event} projectId={projectId} />
           </span>
         </div>

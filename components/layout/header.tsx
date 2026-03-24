@@ -108,28 +108,28 @@ export function Header() {
           <>
             {/* Desktop: Full layout with separator and icon */}
             <div className="hidden md:flex items-center gap-3 ml-8">
-              <span className="text-zinc-400">|</span>
+              <span className="text-muted-foreground">|</span>
               <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
               <a
                 href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="View project specifications on GitHub"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <FileText className="w-5 h-5" />
               </a>
               <Link
                 href={`/projects/${projectInfo.id}/analytics`}
                 aria-label="View project analytics"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <BarChart3 className="w-5 h-5" />
               </Link>
               <Link
                 href={`/projects/${projectInfo.id}/activity`}
                 aria-label="View project activity"
-                className="text-zinc-400 hover:text-zinc-50 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Activity className="w-5 h-5" />
               </Link>
@@ -137,7 +137,7 @@ export function Header() {
 
             {/* Mobile: Compact with ellipsis */}
             <div className="flex md:hidden items-center gap-2 ml-2 flex-1 overflow-hidden">
-              <span className="text-zinc-400 shrink-0">|</span>
+              <span className="text-muted-foreground shrink-0">|</span>
               <span className="text-sm font-semibold text-zinc-50 truncate flex-1">
                 {projectInfo.name}
               </span>

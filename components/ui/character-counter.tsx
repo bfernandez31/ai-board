@@ -35,7 +35,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
           ? 'text-red-400'
           : state.isWarning
             ? 'text-yellow-400'
-            : 'text-zinc-400'
+            : 'text-muted-foreground'
       }`}
     >
       <span className="sr-only">

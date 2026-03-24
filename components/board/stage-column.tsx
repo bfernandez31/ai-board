@@ -270,7 +270,7 @@ export const StageColumn = React.memo(
                 );
               })
             ) : (
-              <div className="text-center text-sm text-zinc-400/90 py-12 font-medium">
+              <div className="text-center text-sm text-muted-foreground py-12 font-medium">
                 No tickets
               </div>
             )}
@@ -296,12 +296,12 @@ export const StageColumn = React.memo(
             {blockReason === 'cleanup' ? (
               <>
                 <p className="text-red-300 font-semibold text-sm">Cleanup in progress</p>
-                <p className="text-zinc-400 text-xs mt-1">Wait for cleanup completion</p>
+                <p className="text-muted-foreground text-xs mt-1">Wait for cleanup completion</p>
               </>
             ) : (
               <>
                 <p className="text-red-300 font-semibold text-sm">Workflow in progress</p>
-                <p className="text-zinc-400 text-xs mt-1">Wait for job completion</p>
+                <p className="text-muted-foreground text-xs mt-1">Wait for job completion</p>
               </>
             )}
           </div>
