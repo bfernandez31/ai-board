@@ -22,7 +22,7 @@ export function HeroSection() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Serif Display Title */}
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl mb-6 tracking-tight">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl mb-6 tracking-tight">
             <span className="bg-gradient-to-r from-ctp-mauve via-primary to-ctp-blue bg-clip-text text-transparent">
               From ticket to production.
             </span>
@@ -39,7 +39,7 @@ export function HeroSection() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/signin">
-              <Button size="lg" className="w-full sm:w-auto min-h-[44px] px-8 text-base transform hover:scale-105 transition-transform">
+              <Button size="lg" className="w-full sm:w-auto min-h-[44px] px-8 text-base transform hover:scale-105 transition-all hover:shadow-lg hover:shadow-primary/40">
                 Start building
               </Button>
             </Link>

@@ -17,7 +17,7 @@ export function WorkflowStep({ stage, title, description, isLast = false }: Work
   const bgClass = stageBgClasses[stage] || 'bg-ctp-overlay0';
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-4" data-testid="workflow-step" aria-label={`${stage} stage: ${title}`}>
+    <div className="stagger-item flex flex-col md:flex-row items-start md:items-center gap-4" data-testid="workflow-step" aria-label={`${stage} stage: ${title}`}>
       {/* Stage badge */}
       <div className="flex-shrink-0">
         <div

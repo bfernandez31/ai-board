@@ -22,6 +22,7 @@ export function Header() {
   const pathname = usePathname();
   const { status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
 
   // Determine if we should show marketing variant
@@ -37,11 +38,25 @@ export function Header() {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
+
+      // Track active section for marketing nav highlight
+      if (isMarketingVariant) {
+        const sections = ['pricing', 'workflow', 'features'];
+        let current = '';
+        for (const id of sections) {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top <= 120) {
+            current = id;
+            break;
+          }
+        }
+        setActiveSection(current);
+      }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isMarketingVariant]);
 
   // Fetch project info if we're on a project page
   useEffect(() => {
@@ -161,15 +176,19 @@ export function Header() {
           {/* Marketing variant: Show navigation links + Sign In button */}
           {isMarketingVariant && (
             <div className="hidden md:flex items-center gap-3">
-              <Link href="#features" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Features
-              </Link>
-              <Link href="#workflow" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Workflow
-              </Link>
-              <Link href="#pricing" className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1">
-                Pricing
-              </Link>
+              {(['features', 'workflow', 'pricing'] as const).map((section) => (
+                <Link
+                  key={section}
+                  href={`#${section}`}
+                  className={`transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-2 py-1 text-sm ${
+                    activeSection === section
+                      ? 'text-primary font-medium'
+                      : 'text-foreground hover:text-primary'
+                  }`}
+                >
+                  {section.charAt(0).toUpperCase() + section.slice(1)}
+                </Link>
+              ))}
               <Link href="/auth/signin">
                 <Button variant="default">
                   Sign In
