@@ -2,19 +2,24 @@ import { Sparkles, LayoutGrid, GitBranch, Zap, Image, RefreshCw } from 'lucide-r
 import { FeatureCard } from './feature-card';
 
 export function FeaturesGrid() {
-  const features = [
+  const heroFeatures = [
     {
       icon: Sparkles,
       iconColorClass: 'text-ctp-mauve',
       title: 'AI-Powered Specifications',
-      description: 'Automatically generate detailed specifications from tickets with intelligent clarification.',
+      description: 'Automatically generate detailed specifications from tickets with intelligent clarification. The AI asks follow-up questions, resolves ambiguities, and produces complete technical specs.',
+      featured: true,
     },
     {
       icon: LayoutGrid,
       iconColorClass: 'text-ctp-blue',
       title: 'Visual Kanban Board',
-      description: 'Track tasks through INBOX → SPECIFY → PLAN → BUILD → VERIFY stages with drag-and-drop interface.',
+      description: 'Track tasks through INBOX, SPECIFY, PLAN, BUILD, VERIFY, and SHIP stages. Drag-and-drop interface with real-time status updates and workflow automation.',
+      featured: true,
     },
+  ];
+
+  const standardFeatures = [
     {
       icon: GitBranch,
       iconColorClass: 'text-ctp-green',
@@ -45,15 +50,23 @@ export function FeaturesGrid() {
     <section id="features" className="py-16 md:py-24 lg:py-32 bg-ctp-mantle">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-4">
+          <h2 className="font-display text-4xl md:text-5xl text-center text-foreground mb-4">
             Everything You Need
           </h2>
           <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Powerful features to streamline your development workflow from idea to production.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
+          {/* Hero features - 2 large cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {heroFeatures.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
+            ))}
+          </div>
+
+          {/* Standard features - 4 smaller cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {standardFeatures.map((feature) => (
               <FeatureCard key={feature.title} {...feature} />
             ))}
           </div>

@@ -106,7 +106,7 @@ export function WorkflowColumnCard({
         >
           <div className="flex items-center justify-between gap-3">
             <h3
-              className={`text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
+              className={`font-mono text-[0.65rem] font-semibold uppercase tracking-[0.28em] ${stage.textColor}`}
             >
               {stage.label}
             </h3>

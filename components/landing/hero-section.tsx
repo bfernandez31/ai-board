@@ -4,35 +4,48 @@ import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-b
 
 export function HeroSection() {
   return (
-    <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
+    <section className="relative py-20 md:py-28 lg:py-36 overflow-hidden">
       {/* Animated background layer (behind content) */}
       <AnimatedTicketBackground className="absolute inset-0 -z-10" />
 
-      {/* Decorative gradient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-radial from-primary/10 via-ctp-blue/5 to-transparent rounded-full blur-3xl -z-[5]" aria-hidden="true" />
+      {/* Subtle noise grain overlay */}
+      <div
+        className="absolute inset-0 -z-[5] opacity-[0.03] pointer-events-none"
+        aria-hidden="true"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '256px 256px',
+        }}
+      />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Gradient Title */}
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight bg-gradient-to-r from-ctp-mauve via-primary to-ctp-blue bg-clip-text text-transparent">
-            Build Better Software with AI-Powered Workflows
+          {/* Serif Display Title */}
+          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl mb-6 tracking-tight">
+            <span className="bg-gradient-to-r from-ctp-mauve via-primary to-ctp-blue bg-clip-text text-transparent">
+              From ticket to production.
+            </span>
+            <br />
+            <span className="text-foreground">Automatically.</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            Transform tickets into production-ready features with AI-powered workflows. Streamline development from specification to deployment.
+          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+            Write a ticket. AI generates the spec, plans the architecture,
+            writes the code, and opens a PR. You review and ship.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/signin">
-              <Button size="lg" className="w-full sm:w-auto min-h-[44px] transform hover:scale-105 transition-transform">
-                Get Started Free
+              <Button size="lg" className="w-full sm:w-auto min-h-[44px] px-8 text-base transform hover:scale-105 transition-transform">
+                Start building
               </Button>
             </Link>
-            <Link href="#features">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto min-h-[44px]">
-                View Demo
+            <Link href="#workflow">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto min-h-[44px] px-8 text-base">
+                See how it works
               </Button>
             </Link>
           </div>

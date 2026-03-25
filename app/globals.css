@@ -135,18 +135,38 @@
   /* Landing page scroll-triggered animations */
   .landing-fade-in {
     opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transform: translateY(32px) scale(0.98);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .landing-fade-in.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
+
+  /* Stagger children inside visible fade-in sections */
+  .landing-fade-in.visible .stagger-item {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .stagger-item {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .stagger-item:nth-child(1) { transition-delay: 0.05s; }
+  .stagger-item:nth-child(2) { transition-delay: 0.1s; }
+  .stagger-item:nth-child(3) { transition-delay: 0.15s; }
+  .stagger-item:nth-child(4) { transition-delay: 0.2s; }
+  .stagger-item:nth-child(5) { transition-delay: 0.25s; }
+  .stagger-item:nth-child(6) { transition-delay: 0.3s; }
 
   /* Respect prefers-reduced-motion for landing animations */
   @media (prefers-reduced-motion: reduce) {
-    .landing-fade-in {
+    .landing-fade-in,
+    .stagger-item {
       opacity: 1;
       transform: none;
       transition: none;
@@ -156,6 +176,23 @@
   /* Radial gradient utility for hero glow */
   .bg-gradient-radial {
     background-image: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  }
+
+  /* Animated gradient border for popular pricing card */
+  .animate-gradient-border {
+    background-size: 100% 200%;
+    animation: gradient-shift 4s ease-in-out infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 0% 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-gradient-border {
+      animation: none;
+    }
   }
 
   /* Landing page gradient divider */

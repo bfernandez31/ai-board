@@ -9,6 +9,11 @@ const config: Config = {
     './lib/utils.ts',
   ],
   theme: {
+    fontFamily: {
+      sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+      display: ['var(--font-display)', 'Georgia', 'serif'],
+      mono: ['var(--font-mono)', 'monospace'],
+    },
     extend: {
       keyframes: {
         'ticket-drift': {
