@@ -1,4 +1,5 @@
 import { HeroSection } from '@/components/landing/hero-section';
+import { SocialProofSection } from '@/components/landing/social-proof-section';
 import { FeaturesGrid } from '@/components/landing/features-grid';
 import { WorkflowSection } from '@/components/landing/workflow-section';
 import { PricingSection } from '@/components/landing/pricing-section';
@@ -22,6 +23,10 @@ export default function LandingPage() {
       </a>
       <div id="main-content">
         <HeroSection />
+        <div className="section-divider mx-auto max-w-4xl" />
+        <FadeInSection>
+          <SocialProofSection />
+        </FadeInSection>
         <div className="section-divider mx-auto max-w-4xl" />
         <FadeInSection>
           <FeaturesGrid />

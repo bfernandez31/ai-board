@@ -9,7 +9,7 @@ import { TicketCard } from './ticket-card';
 import { NewTicketButton } from './new-ticket-button';
 import { MobileScrollButton } from './mobile-scroll-button';
 import { TicketWithVersion } from '@/lib/types';
-import { Ban } from 'lucide-react';
+import { Ban, Inbox } from 'lucide-react';
 import type { DualJobState } from '@/lib/types/job-types';
 
 interface StageColumnProps {
@@ -36,6 +36,7 @@ const STAGE_CONFIG: Record<
     bgColor: string;
     headerBgColor: string;
     headerBorderColor: string;
+    headerGlow: string;
     textColor: string;
     borderColor: string;
     badgeBgColor: string;
@@ -49,6 +50,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-overlay0/10',
     headerBgColor: 'bg-ctp-overlay0/30',
     headerBorderColor: 'border-ctp-overlay0/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(135,144,171,0.08)]',
     textColor: 'text-zinc-100',
     borderColor: 'border-ctp-overlay0/40',
     badgeBgColor: 'bg-ctp-overlay0/70',
@@ -61,6 +63,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-lavender/10',
     headerBgColor: 'bg-ctp-lavender/30',
     headerBorderColor: 'border-ctp-lavender/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(180,190,254,0.12)]',
     textColor: 'text-ctp-lavender',
     borderColor: 'border-ctp-lavender/40',
     badgeBgColor: 'bg-ctp-lavender/70',
@@ -73,6 +76,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-blue/10',
     headerBgColor: 'bg-ctp-blue/30',
     headerBorderColor: 'border-ctp-blue/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(137,180,250,0.12)]',
     textColor: 'text-ctp-blue',
     borderColor: 'border-ctp-blue/40',
     badgeBgColor: 'bg-ctp-blue/70',
@@ -85,6 +89,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-peach-light/10',
     headerBgColor: 'bg-ctp-peach-light/30',
     headerBorderColor: 'border-ctp-peach-light/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(249,203,152,0.12)]',
     textColor: 'text-ctp-peach-light',
     borderColor: 'border-ctp-peach-light/40',
     badgeBgColor: 'bg-ctp-peach-light/70',
@@ -97,6 +102,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-flamingo/10',
     headerBgColor: 'bg-ctp-flamingo/30',
     headerBorderColor: 'border-ctp-flamingo/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(242,205,205,0.12)]',
     textColor: 'text-ctp-flamingo',
     borderColor: 'border-ctp-flamingo/40',
     badgeBgColor: 'bg-ctp-flamingo/70',
@@ -109,6 +115,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-ctp-green/10',
     headerBgColor: 'bg-ctp-green/30',
     headerBorderColor: 'border-ctp-green/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(166,227,161,0.12)]',
     textColor: 'text-ctp-green',
     borderColor: 'border-ctp-green/40',
     badgeBgColor: 'bg-ctp-green/70',
@@ -121,6 +128,7 @@ const STAGE_CONFIG: Record<
     bgColor: 'bg-accent/10',
     headerBgColor: 'bg-accent/30',
     headerBorderColor: 'border-accent/40',
+    headerGlow: 'shadow-[0_2px_12px_rgba(135,144,171,0.08)]',
     textColor: 'text-accent',
     borderColor: 'border-accent/40',
     badgeBgColor: 'bg-accent/70',
@@ -224,7 +232,7 @@ export const StageColumn = React.memo(
       >
         {/* Column Header */}
         <div
-          className={`${stageConfig.headerBgColor} border-b ${stageConfig.headerBorderColor} px-4 py-2.5`}
+          className={`${stageConfig.headerBgColor} border-b ${stageConfig.headerBorderColor} ${stageConfig.headerGlow} px-4 py-2.5`}
         >
           <div className="flex items-center justify-between gap-3">
             {/* Stage name */}
@@ -270,8 +278,9 @@ export const StageColumn = React.memo(
                 );
               })
             ) : (
-              <div className="text-center text-sm text-muted-foreground py-12 font-medium">
-                No tickets
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <Inbox className="w-8 h-8 text-muted-foreground/30" strokeWidth={1.5} />
+                <span className="text-sm text-muted-foreground/50 font-medium">No tickets</span>
               </div>
             )}
           </div>

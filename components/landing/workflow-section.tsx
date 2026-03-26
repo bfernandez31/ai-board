@@ -1,5 +1,6 @@
 import { WorkflowStep } from './workflow-step';
 import { MiniKanbanDemo } from './mini-kanban-demo';
+import { TerminalSimulation } from './terminal-simulation';
 
 export function WorkflowSection() {
   const steps = [
@@ -44,6 +45,11 @@ export function WorkflowSection() {
           {/* Animated Mini-Kanban Demo - All viewports */}
           <div className="mb-12 lg:mb-16">
             <MiniKanbanDemo className="max-w-7xl mx-auto" />
+          </div>
+
+          {/* Terminal simulation — AI in action */}
+          <div className="mb-12 lg:mb-16">
+            <TerminalSimulation />
           </div>
 
           {/* Detailed step descriptions - Mobile/Tablet supplementary view */}

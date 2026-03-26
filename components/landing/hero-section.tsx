@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import AnimatedTicketBackground from '@/app/landing/components/animated-ticket-background';
+import { HeroBadge } from './hero-badge';
+import { TypewriterText } from './typewriter-text';
 
 export function HeroSection() {
   return (
@@ -21,13 +23,21 @@ export function HeroSection() {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
+          {/* Animated badge */}
+          <HeroBadge />
+
           {/* Serif Display Title */}
           <h1 className="font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl mb-6 tracking-tight">
             <span className="bg-gradient-to-r from-ctp-mauve via-primary to-ctp-blue bg-clip-text text-transparent">
               From ticket to production.
             </span>
             <br />
-            <span className="text-foreground">Automatically.</span>
+            <TypewriterText
+              text="Automatically."
+              className="text-foreground"
+              delay={800}
+              speed={90}
+            />
           </h1>
 
           {/* Subheadline */}
