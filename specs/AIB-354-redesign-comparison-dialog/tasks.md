@@ -148,10 +148,10 @@
 
 **Purpose**: Wire all new components into the viewer, remove deprecated components, and validate
 
-- [ ] T017 Update ComparisonViewer to compute winner/nonWinners from participants, replace old component tree with ComparisonHeroCard → ComparisonParticipantGrid → ComparisonStatCards → ComparisonUnifiedMetrics → ComparisonDecisionPoints (with winnerTicketId) → ComparisonComplianceHeatmap, remove standalone metadata block and old component imports in `components/comparison/comparison-viewer.tsx`
-- [ ] T018 Delete deprecated components: `components/comparison/comparison-ranking.tsx`, `components/comparison/comparison-metrics-grid.tsx`, `components/comparison/comparison-operational-metrics.tsx`, `components/comparison/comparison-compliance-grid.tsx` after verifying no other imports reference them
-- [ ] T019 Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations across all changed files
-- [ ] T020 Run quickstart.md validation — verify all components render correctly with test data
+- [x] T017 Update ComparisonViewer to compute winner/nonWinners from participants, replace old component tree with ComparisonHeroCard → ComparisonParticipantGrid → ComparisonStatCards → ComparisonUnifiedMetrics → ComparisonDecisionPoints (with winnerTicketId) → ComparisonComplianceHeatmap, remove standalone metadata block and old component imports in `components/comparison/comparison-viewer.tsx`
+- [x] T018 Delete deprecated components: `components/comparison/comparison-ranking.tsx`, `components/comparison/comparison-metrics-grid.tsx`, `components/comparison/comparison-operational-metrics.tsx`, `components/comparison/comparison-compliance-grid.tsx` after verifying no other imports reference them
+- [x] T019 Run `bun run type-check` and `bun run lint` to verify no type errors or lint violations across all changed files
+- [x] T020 Run quickstart.md validation — verify all components render correctly with test data
 
 ---
 

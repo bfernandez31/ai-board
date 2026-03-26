@@ -17,23 +17,14 @@ import {
   useComparisonDetail,
   useComparisonList,
 } from '@/hooks/use-comparisons';
-import { ComparisonComplianceGrid } from './comparison-compliance-grid';
+import { ComparisonComplianceHeatmap } from './comparison-compliance-heatmap';
 import { ComparisonDecisionPoints } from './comparison-decision-points';
+import { ComparisonHeroCard } from './comparison-hero-card';
 import { ComparisonHistoryList } from './comparison-history-list';
-import { ComparisonMetricsGrid } from './comparison-metrics-grid';
-import { ComparisonOperationalMetrics } from './comparison-operational-metrics';
-import { ComparisonRanking } from './comparison-ranking';
+import { ComparisonParticipantGrid } from './comparison-participant-grid';
+import { ComparisonStatCards } from './comparison-stat-cards';
+import { ComparisonUnifiedMetrics } from './comparison-unified-metrics';
 import type { ComparisonViewerProps } from './types';
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export function ComparisonViewer({
   projectId,
@@ -94,6 +85,9 @@ export function ComparisonViewer({
   const isLoading = checkLoading || detailLoading;
   const hasNoComparisons = checkData && !checkData.hasComparisons;
   const loadErrorMessage = checkError?.message || detailError?.message;
+
+  const winner = detail?.participants.find((p) => p.ticketId === detail.winnerTicketId);
+  const nonWinners = detail?.participants.filter((p) => p.ticketId !== detail.winnerTicketId) ?? [];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -161,29 +155,27 @@ export function ComparisonViewer({
               </div>
 
               <div>
-                {detail ? (
+                {detail && winner ? (
                   <ScrollArea className="h-[68vh] pr-4">
                     <div className="space-y-4">
-                      <div className="rounded-lg border border-border bg-background px-4 py-3">
-                        <div className="text-sm text-muted-foreground">
-                          Generated {formatDate(detail.generatedAt)}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          Source: {detail.sourceTicketKey} · Winner: {detail.winnerTicketKey}
-                        </div>
-                      </div>
-
-                      <ComparisonRanking
-                        participants={detail.participants}
+                      <ComparisonHeroCard
+                        winner={winner}
                         recommendation={detail.overallRecommendation}
-                        summary={detail.summary}
-                        winnerTicketId={detail.winnerTicketId}
                         keyDifferentiators={detail.keyDifferentiators}
+                        generatedAt={detail.generatedAt}
+                        sourceTicketKey={detail.sourceTicketKey}
                       />
-                      <ComparisonMetricsGrid participants={detail.participants} />
-                      <ComparisonOperationalMetrics participants={detail.participants} />
-                      <ComparisonDecisionPoints decisionPoints={detail.decisionPoints} />
-                      <ComparisonComplianceGrid
+                      <ComparisonParticipantGrid participants={nonWinners} />
+                      <ComparisonStatCards
+                        winner={winner}
+                        participants={detail.participants}
+                      />
+                      <ComparisonUnifiedMetrics participants={detail.participants} />
+                      <ComparisonDecisionPoints
+                        decisionPoints={detail.decisionPoints}
+                        winnerTicketId={detail.winnerTicketId}
+                      />
+                      <ComparisonComplianceHeatmap
                         rows={detail.complianceRows}
                         participants={detail.participants}
                       />
