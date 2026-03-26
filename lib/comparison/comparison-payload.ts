@@ -62,6 +62,18 @@ const decisionPointApproachSchema = z.object({
   summary: z.string(),
 });
 
+function addCustomIssue(
+  ctx: z.RefinementCtx,
+  path: Array<string | number>,
+  message: string
+): void {
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path,
+    message,
+  });
+}
+
 const decisionPointSchema = z
   .object({
     title: z.string().min(1),
@@ -75,11 +87,11 @@ const decisionPointSchema = z
 
     for (const [index, approach] of point.participantApproaches.entries()) {
       if (participantKeys.has(approach.ticketKey)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['participantApproaches', index, 'ticketKey'],
-          message: 'Duplicate participant ticket keys are not allowed within a decision point',
-        });
+        addCustomIssue(
+          ctx,
+          ['participantApproaches', index, 'ticketKey'],
+          'Duplicate participant ticket keys are not allowed within a decision point'
+        );
       }
 
       participantKeys.add(approach.ticketKey);
@@ -112,20 +124,20 @@ export const serializedComparisonReportSchema = z.object({
 
   for (const [index, point] of report.decisionPoints.entries()) {
     if (point.verdictTicketKey && !comparedTickets.has(point.verdictTicketKey)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['decisionPoints', index, 'verdictTicketKey'],
-        message: 'Verdict ticket key must match a compared ticket',
-      });
+      addCustomIssue(
+        ctx,
+        ['decisionPoints', index, 'verdictTicketKey'],
+        'Verdict ticket key must match a compared ticket'
+      );
     }
 
     for (const [approachIndex, approach] of point.participantApproaches.entries()) {
       if (!comparedTickets.has(approach.ticketKey)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['decisionPoints', index, 'participantApproaches', approachIndex, 'ticketKey'],
-          message: 'Participant approach ticket key must match a compared ticket',
-        });
+        addCustomIssue(
+          ctx,
+          ['decisionPoints', index, 'participantApproaches', approachIndex, 'ticketKey'],
+          'Participant approach ticket key must match a compared ticket'
+        );
       }
     }
   }
