@@ -92,10 +92,7 @@ export function buildOperationalMetricRows(
       ...getMetricValue(participant, definition.key),
     }));
 
-    const bestIndices = determineBestValues(
-      extractedValues.map((v) => ({ index: v.index, value: v.value })),
-      definition.direction
-    );
+    const bestIndices = determineBestValues(extractedValues, definition.direction);
 
     const cells: OperationalMetricCell[] = extractedValues.map((extracted, index) => ({
       ticketId: participants[index]!.ticketId,

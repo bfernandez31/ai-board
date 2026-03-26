@@ -4,8 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buildOperationalMetricRows } from '@/lib/comparison/operational-metrics';
 import { ComparisonQualityPopover } from './comparison-quality-popover';
-import type { ComparisonOperationalMetricsGridProps } from './types';
-import type { OperationalMetricCell } from './types';
+import type { ComparisonOperationalMetricsGridProps, OperationalMetricCell } from './types';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
 function CellContent({

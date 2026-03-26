@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db/client';
-import type { AggregatedTelemetry, ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import type { AggregatedTelemetry, ComparisonDetail, ComparisonEnrichmentValue, ComparisonSummary } from '@/lib/types/comparison';
 import { parseQualityScoreDetails } from '@/lib/quality-score';
 import { aggregateJobTelemetry } from './telemetry-extractor';
 import {
@@ -106,7 +106,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 function deriveQualityState(
   latestVerifyJob: { qualityScore: number | null } | null,
   hasVerifyJob: boolean
-): ReturnType<typeof createAvailableEnrichment<number>> {
+): ComparisonEnrichmentValue<number> {
   if (latestVerifyJob?.qualityScore != null) {
     return createAvailableEnrichment(latestVerifyJob.qualityScore);
   }

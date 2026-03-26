@@ -149,7 +149,7 @@ function buildDecisionPoints(
     ? report.alignment.matchingRequirements
     : [];
 
-  const points = (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
+  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
     (title, index) => ({
       title,
       verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
@@ -166,8 +166,6 @@ function buildDecisionPoints(
       displayOrder: index,
     })
   );
-
-  return points;
 }
 
 function buildComplianceCreates(
