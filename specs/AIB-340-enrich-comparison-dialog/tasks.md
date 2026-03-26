@@ -34,11 +34,11 @@
 - [x] T005 Replace `distinct: ['ticketId']` latest-job query with `findMany` of all COMPLETED jobs per participant in `lib/comparison/comparison-detail.ts`
 - [x] T006 Update `normalizeTelemetryEnrichment()` to accept aggregated data and produce `totalTokens`, `jobCount`, `primaryModel` enrichment values in `lib/comparison/comparison-detail.ts`
 - [x] T007 Add quality breakdown enrichment: fetch latest verify job's `qualityScoreDetails` JSON, parse as `QualityScoreDetails`, wrap in `ComparisonEnrichmentValue` in `lib/comparison/comparison-detail.ts`
-- [ ] T008 Write integration test: aggregation sums across multiple completed jobs correctly in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
-- [ ] T009 Write integration test: primary model is from highest-token job in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
-- [ ] T010 Write integration test: ticket with no completed jobs returns unavailable enrichments in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
-- [ ] T011 Write integration test: ticket with in-progress jobs returns pending enrichments in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
-- [ ] T012 Write integration test: quality breakdown available only for FULL workflow with completed verify in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
+- [x] T008 Write integration test: aggregation sums across multiple completed jobs correctly in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
+- [x] T009 Write integration test: primary model is from highest-token job in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
+- [x] T010 Write integration test: ticket with no completed jobs returns unavailable enrichments in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
+- [x] T011 Write integration test: ticket with in-progress jobs returns pending enrichments in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
+- [x] T012 Write integration test: quality breakdown available only for FULL workflow with completed verify in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
 
 **Checkpoint**: Service layer returns enriched aggregated telemetry + quality breakdown — all downstream UI work unblocked
 
