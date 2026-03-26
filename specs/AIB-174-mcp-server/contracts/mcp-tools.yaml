@@ -108,6 +108,10 @@ tools:
       Create a new ticket in a project's INBOX stage.
       The ticket will be created with FULL workflow type and can then be
       moved through the workflow stages (SPECIFY → PLAN → BUILD → VERIFY → SHIP).
+      IMPORTANT: Tickets are functional descriptions of WHAT the user needs, not
+      HOW to implement it. Do NOT include implementation details, file paths, code
+      snippets, or technical plans — those are generated automatically by later
+      workflow stages (SPECIFY → PLAN → BUILD).
     inputSchema:
       type: object
       properties:
@@ -123,7 +127,10 @@ tools:
           type: string
           minLength: 1
           maxLength: 10000
-          description: Ticket description in Markdown (1-10000 characters)
+          description: >
+            Functional description in Markdown. Describe the problem, the expected
+            behavior, and acceptance criteria. Do NOT include implementation plans,
+            file paths, or code — the SPECIFY and PLAN stages handle that.
       required:
         - projectId
         - title

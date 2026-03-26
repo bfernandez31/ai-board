@@ -74,7 +74,7 @@ export function createServer(config: Config): McpServer {
 
   server.tool(
     "create_ticket",
-    "Create a new ticket in a project's INBOX stage. The ticket will be created with FULL workflow type.",
+    "Create a new ticket in a project's INBOX stage. The ticket will be created with FULL workflow type. IMPORTANT: Tickets are functional descriptions of WHAT the user needs, not HOW to implement it. Do NOT include implementation details, file paths, code snippets, or technical plans — those are generated automatically by later workflow stages (SPECIFY → PLAN → BUILD).",
     {
       projectId: z.number().int().positive().describe("Project ID to create the ticket in"),
       title: z
@@ -86,7 +86,7 @@ export function createServer(config: Config): McpServer {
         .string()
         .min(1, "Description must be at least 1 character")
         .max(10000, "Description must be at most 10000 characters")
-        .describe("Ticket description in Markdown (1-10000 characters)"),
+        .describe("Functional description in Markdown. Describe the problem, the expected behavior, and acceptance criteria. Do NOT include implementation plans, file paths, or code — the SPECIFY and PLAN stages handle that."),
     },
     ({ projectId, title, description }) =>
       handleToolCall(
