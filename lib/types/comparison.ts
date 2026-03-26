@@ -385,6 +385,17 @@ export interface ComparisonMetricSnapshot {
   bestValueFlags: Record<string, boolean>;
 }
 
+export interface AggregatedTelemetry {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  durationMs: number;
+  jobCount: number;
+  model: string | null;
+  hasData: boolean;
+}
+
 export interface ComparisonParticipantDetail {
   ticketId: number;
   ticketKey: string;
@@ -398,6 +409,8 @@ export interface ComparisonParticipantDetail {
   quality: ComparisonEnrichmentValue<number>;
   telemetry: ComparisonTelemetryEnrichment;
   metrics: ComparisonMetricSnapshot;
+  aggregatedTelemetry: AggregatedTelemetry | null;
+  qualityDetails: import('@/lib/quality-score').QualityScoreDetails | null;
 }
 
 export interface ComparisonDecisionPointApproach {

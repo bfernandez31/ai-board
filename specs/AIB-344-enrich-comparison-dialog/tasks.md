@@ -16,8 +16,8 @@
 
 **Purpose**: Define new TypeScript types needed by all subsequent phases
 
-- [ ] T001 Extend ComparisonParticipantDetail with AggregatedTelemetry interface and qualityDetails field in lib/types/comparison.ts
-- [ ] T002 [P] Define OperationalMetricDefinition, OperationalMetricRow, OperationalMetricCell, and ComparisonQualityBreakdown interfaces in components/comparison/types.ts
+- [x] T001 Extend ComparisonParticipantDetail with AggregatedTelemetry interface and qualityDetails field in lib/types/comparison.ts
+- [x] T002 [P] Define OperationalMetricDefinition, OperationalMetricRow, OperationalMetricCell, and ComparisonQualityBreakdown interfaces in components/comparison/types.ts
 
 ---
 
@@ -27,8 +27,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Modify getComparisonDetailForTicket() to fetch all COMPLETED jobs per ticket, aggregate with aggregateJobTelemetry(), include qualityScoreDetails from latest VERIFY job parsed via parseQualityScoreDetails(), and return aggregatedTelemetry + qualityDetails on each participant in lib/comparison/comparison-detail.ts
-- [ ] T004 [P] Create buildOperationalMetricRows() with 7 metric definitions (Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score) and determineBestValues() with tie handling in lib/comparison/operational-metrics.ts
+- [x] T003 Modify getComparisonDetailForTicket() to fetch all COMPLETED jobs per ticket, aggregate with aggregateJobTelemetry(), include qualityScoreDetails from latest VERIFY job parsed via parseQualityScoreDetails(), and return aggregatedTelemetry + qualityDetails on each participant in lib/comparison/comparison-detail.ts
+- [x] T004 [P] Create buildOperationalMetricRows() with 7 metric definitions (Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score) and determineBestValues() with tie handling in lib/comparison/operational-metrics.ts
 - [ ] T005 [P] Integration test for aggregated telemetry query verifying sums across multiple completed jobs per ticket in tests/integration/comparison-detail-telemetry.test.ts
 
 **Checkpoint**: Backend enrichment and utility functions ready — user story implementation can now begin

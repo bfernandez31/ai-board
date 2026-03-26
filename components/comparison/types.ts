@@ -7,6 +7,7 @@
 import type {
   ComparisonComplianceRow,
   ComparisonDecisionPoint,
+  ComparisonEnrichmentState,
   ComparisonParticipantDetail,
   ComparisonSummary,
 } from '@/lib/types/comparison';
@@ -58,4 +59,31 @@ export interface ComparisonDecisionPointsProps {
 export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
   participants: ComparisonParticipantDetail[];
+}
+
+export interface OperationalMetricDefinition {
+  key: string;
+  label: string;
+  direction: 'lowest' | 'highest';
+  format: (value: number) => string;
+}
+
+export interface OperationalMetricCell {
+  ticketId: number;
+  state: ComparisonEnrichmentState;
+  value: number | null;
+  formattedValue: string | null;
+  isBest: boolean;
+}
+
+export interface OperationalMetricRow {
+  definition: OperationalMetricDefinition;
+  cells: OperationalMetricCell[];
+}
+
+export interface ComparisonOperationalMetricsGridProps extends ComparisonSectionProps {}
+
+export interface ComparisonQualityPopoverProps {
+  qualityDetails: import('@/lib/quality-score').QualityScoreDetails | null;
+  qualityScore: number | null;
 }

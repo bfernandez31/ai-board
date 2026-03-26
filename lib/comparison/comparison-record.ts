@@ -418,6 +418,8 @@ export function normalizeParticipantDetail(input: {
   };
   quality: ComparisonEnrichmentValue<number>;
   telemetry: ComparisonTelemetryEnrichment;
+  aggregatedTelemetry?: import('@/lib/types/comparison').AggregatedTelemetry | null;
+  qualityDetails?: import('@/lib/quality-score').QualityScoreDetails | null;
 }): ComparisonParticipantDetail {
   return {
     ticketId: input.participant.ticketId,
@@ -432,6 +434,8 @@ export function normalizeParticipantDetail(input: {
     quality: input.quality,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
+    aggregatedTelemetry: input.aggregatedTelemetry ?? null,
+    qualityDetails: input.qualityDetails ?? null,
   };
 }
 
