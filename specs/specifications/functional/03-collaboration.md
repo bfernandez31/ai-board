@@ -429,11 +429,12 @@ Before Claude executes the `/compare` command, the workflow automatically fetche
 
 When comparison runs, AI analyzes **ALL tickets** (source AND compared) across multiple dimensions:
 
-**Feature Completeness**:
-- How complete is each ticket's implementation
-- Compares specification requirements (FR-XXX), scenarios (US-XXX), and entities
-- Identifies which tickets cover edge cases better
-- High similarity is positive (indicates solving same problem)
+**Spec Fulfillment** (25% of ranking):
+- Reads `specs/{branch}/spec.md` to extract acceptance criteria (exists for both FULL and QUICK workflows)
+- For each acceptance criterion, checks whether each ticket's code implements it (met/partial/not-met)
+- Each criterion becomes a `[Spec]`-prefixed decision point in the report
+- Does NOT compare spec document quality between tickets — only whether code delivers the spec
+- Calculates a fulfillment percentage per ticket (met=1, partial=0.5, not-met=0)
 
 **Implementation Choices Analysis**:
 - Identifies key architectural decisions in each ticket (including source)
@@ -473,8 +474,8 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 
 **Report Sections**:
 1. Executive Summary: Best implementation identified with key differentiator
-2. Requirements Analysis: Coverage comparison per ticket
-3. Implementation Choices Analysis: Decision points with trade-offs and best practice recommendations
+2. Spec Fulfillment: Acceptance criteria checklist per ticket (met/partial/not-met) with score
+3. Implementation Choices Analysis: `[Spec]`-prefixed decision points for each acceptance criterion, plus architectural decision points
 4. Constitution Compliance: Dynamic evaluation against project-specific principles
 5. Metrics Comparison: Code changes, tests, cost, duration
 6. Ranking & Recommendation: Ordered list with strengths/weaknesses and actionable next steps
@@ -482,13 +483,15 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 **Ranking Criteria** (Weighted - applied to ALL tickets including source):
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Code Quality | 35% | Clean code, readability, maintainability |
-| Constitution Compliance | 30% | Adherence to project standards in actual code |
-| Implementation Choices | 20% | Architectural decisions, patterns |
-| Test Coverage | 15% | Presence and quality of tests |
+| Spec Fulfillment | 25% | Does the code deliver what the ticket spec requested? |
+| Code Quality | 25% | Clean code, readability, maintainability |
+| Constitution Compliance | 25% | Adherence to project standards in actual code |
+| Implementation Choices | 15% | Architectural decisions, patterns |
+| Test Coverage | 10% | Presence and quality of tests |
 
 **NOT evaluated** (informational only, never influences ranking):
-- Spec completeness, workflow type, documentation in specs/
+- Spec document quality (don't compare spec writing quality between tickets)
+- Workflow type, documentation in specs/
 - Cost / telemetry data (displayed for reference, not a quality signal)
 
 **Low Relevance Handling**:

@@ -1,7 +1,7 @@
 ---
 command: "/ai-board.compare"
 category: "Ticket Comparison"
-purpose: "Evaluate which ticket implementation has the best CODE quality"
+purpose: "Evaluate which ticket implementation best delivers the spec AND has the best code quality"
 ---
 
 # /ai-board.compare - Ticket Comparison Command
@@ -24,21 +24,23 @@ If you find yourself thinking "this comparison was already done", STOP and do it
 
 ## Core Philosophy
 
-**THIS COMMAND COMPARES CODE, NOT SPECIFICATIONS.**
+**THIS COMMAND COMPARES CODE QUALITY AND SPEC FULFILLMENT.**
 
 Key principles:
-1. **Code-Only Analysis**: Only evaluate actual source code (`.ts`, `.tsx`, `.js`, etc.)
-2. **Workflow-Agnostic**: Quick-impl vs full workflow is NOT a quality criteria
-3. **No Spec Penalty**: Missing specs doesn't affect score - specs are process, not quality
-4. **Constitution Compliance**: Check code against constitution, not spec completeness
-5. **Consolidated Specs Freshness**: Verify `specs/specifications/` is updated if needed
+1. **Code Analysis**: Evaluate actual source code (`.ts`, `.tsx`, `.js`, etc.)
+2. **Spec Fulfillment**: Verify that code delivers what the ticket spec requested (acceptance criteria)
+3. **Workflow-Agnostic**: Quick-impl vs full workflow is NOT a quality criteria
+4. **No Spec Quality Penalty**: Don't compare spec quality between tickets - only check if code meets the spec
+5. **Constitution Compliance**: Check code against constitution
+6. **Consolidated Specs Freshness**: Verify `specs/specifications/` is updated if needed
 
 **What we DON'T care about**:
-- Whether the ticket has a `spec.md`, `plan.md`, or `tasks.md`
+- Quality or completeness of `spec.md`, `plan.md`, or `tasks.md` documents themselves
 - Whether it went through full workflow or quick-impl
 - Lines of documentation in ticket-specific `specs/{branch}/` folder
 
 **What we DO care about**:
+- **Does the code deliver what was requested?** (spec fulfillment)
 - Code quality, architecture, patterns
 - Constitution compliance in actual code
 - Test coverage for the feature
@@ -195,6 +197,52 @@ For **EACH ticket**, evaluate:
 
 **IMPORTANT**: The source ticket is a COMPETITOR. Analyze it with the same rigor as compared tickets.
 
+### Step 5.5: Evaluate Spec Fulfillment
+
+**This step checks whether each ticket's code delivers what the spec requested.**
+
+#### 5.5a: Read the shared spec
+
+All compared tickets share the same feature description. Read the spec from the **source ticket branch**:
+
+```bash
+# Read the spec (exists for both FULL and QUICK workflows)
+cat specs/$BRANCH/spec.md
+```
+
+If `spec.md` doesn't exist, fall back to reading the ticket description from the environment variable `TICKET_TITLE` and any available context. If no spec is available at all, skip this step and set spec fulfillment to N/A for all tickets.
+
+#### 5.5b: Extract acceptance criteria
+
+From the spec, extract the **Acceptance Criteria** section (or "Expected Behavior" numbered items if no AC section exists). Each criterion becomes a decision point to evaluate.
+
+#### 5.5c: Evaluate each criterion against each ticket's code
+
+For **EACH acceptance criterion**, check the code diff of **EACH ticket** to determine:
+- **met**: The criterion is clearly implemented in the code
+- **partial**: Some aspects are implemented but key parts are missing
+- **not-met**: The criterion is not implemented at all
+
+#### 5.5d: Generate spec fulfillment decision points
+
+For each acceptance criterion, create a **decision point** (these will be included in the report's Decision Points section alongside architectural decision points):
+
+- **title**: `[Spec] {acceptance criterion summary}` (prefix with `[Spec]` to distinguish from architectural decision points)
+- **verdictTicketKey**: The ticket that best fulfills this criterion (or null if none meet it)
+- **verdictSummary**: Brief assessment (e.g., "AIB-354 fully implements SVG score gauge with animation; AIB-355 uses text badges only")
+- **rationale**: What evidence in the code supports this verdict
+- **participantApproaches**: For each ticket, describe what they implemented (or didn't) for this criterion
+
+#### 5.5e: Calculate spec fulfillment score
+
+For each ticket, calculate a spec fulfillment percentage:
+- **met** = 1 point per criterion
+- **partial** = 0.5 points per criterion
+- **not-met** = 0 points
+- Score = (total points / number of criteria) × 100
+
+This score feeds into the overall ranking (Step 9).
+
 ### Step 6: Evaluate Constitution Compliance (Code Only)
 
 Read `${CLAUDE_PLUGIN_ROOT:-./.claude-plugin}/memory/constitution.md` and evaluate **ACTUAL CODE** against principles:
@@ -239,17 +287,18 @@ If the feature introduces new behaviors, APIs, or patterns, check if `specs/spec
 
 ### Step 9: Rank Implementations
 
-**Weighted evaluation** (CODE-focused):
+**Weighted evaluation**:
 
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Code Quality | 35% | Clean code, readability, maintainability |
-| Constitution Compliance | 30% | Adherence to project standards in actual code |
-| Implementation Choices | 20% | Architectural decisions, patterns |
-| Test Coverage | 15% | Presence and quality of tests |
+| Spec Fulfillment | 25% | Does the code deliver what the ticket spec requested? (from Step 5.5) |
+| Code Quality | 25% | Clean code, readability, maintainability |
+| Constitution Compliance | 25% | Adherence to project standards in actual code |
+| Implementation Choices | 15% | Architectural decisions, patterns |
+| Test Coverage | 10% | Presence and quality of tests |
 
 **NOT EVALUATED** (never use these as ranking criteria or differentiators):
-- Spec completeness (0%)
+- Spec document quality (0%) — don't compare spec writing quality between tickets
 - Workflow type (0%)
 - Documentation in specs/ (0%)
 - Cost / telemetry (0%) — cost data is displayed for information only, never as a quality signal
@@ -286,7 +335,31 @@ Create markdown report at:
 | AIB-128 (source) | $0.15 | 45s | 12K | 3 | opus |
 | AIB-124 | $0.22 | 62s | 18K | 4 | sonnet |
 
+## Spec Fulfillment
+
+| Acceptance Criterion | AIB-128 | AIB-124 | Best |
+|---------------------|---------|---------|------|
+| Hero card with SVG gauge | met | not-met | AIB-128 |
+| Participant grid with score rings | met | partial | AIB-128 |
+| ... | ... | ... | ... |
+
+| Ticket | Spec Score |
+|--------|-----------|
+| AIB-128 | 92% |
+| AIB-124 | 45% |
+
 ## Implementation Choices Analysis
+
+### [Spec] Hero card with SVG score gauge
+| Ticket | Approach |
+|--------|----------|
+| AIB-128 | Custom SVG ScoreGauge component with animation |
+| AIB-124 | Text badges only, no visual gauge |
+
+**Best**: AIB-128 - Fully implements the spec requirement.
+
+### [Spec] Participant grid with score rings
+...
 
 ### Decision Point 1: [e.g., State Management]
 | Ticket | Approach | Constitution | Trade-offs |
@@ -501,14 +574,16 @@ Please verify tickets have branches.
 
 ## Important Rules
 
-1. **CODE ONLY**: Never evaluate spec completeness or workflow type
-2. **Exclude specs/**: All metrics exclude `specs/**/*` folder (both ticket specs and consolidated)
-3. **Constitution = Code**: Evaluate constitution compliance in actual code, not docs
-4. **Quick-impl is valid**: A quick-impl with great code beats full-workflow with bad code
-5. **Consolidated specs awareness**: Note if `specs/specifications/` needs updating
-6. **Source competes**: Source ticket may win or lose based on code quality
-7. **Keep output brief**: Under 1500 characters
-8. **Include disclaimer**: "Specs/workflow type NOT evaluated"
+1. **SPEC FULFILLMENT MATTERS**: Always read `specs/{branch}/spec.md` and evaluate acceptance criteria as decision points
+2. **Don't compare spec quality**: Never penalize for how the spec is written — only check if code meets the spec
+3. **Exclude specs/ from metrics**: All code metrics exclude `specs/**/*` folder
+4. **Constitution = Code**: Evaluate constitution compliance in actual code, not docs
+5. **Quick-impl is valid**: A quick-impl with great code beats full-workflow with bad code
+6. **Consolidated specs awareness**: Note if `specs/specifications/` needs updating
+7. **Source competes**: Source ticket may win or lose based on code quality and spec fulfillment
+8. **Keep output brief**: Under 1500 characters
+9. **Include disclaimer**: "Spec document quality NOT evaluated — only whether code delivers the spec"
+10. **[Spec] prefix**: Decision points from acceptance criteria MUST be prefixed with `[Spec]` to distinguish from architectural decision points
 
 ## Error Handling
 
