@@ -321,6 +321,19 @@ A `'use client'` component using `Collapsible` from shadcn/ui. Four accordion it
 - Escape key press
 - Click outside modal (configurable)
 
+**Comparison Dialog**:
+- Opened from a ticket's Stats tab when comparison data is available
+- Displays a ranked view of competing ticket implementations from a `/compare` run
+- Section order: **Ranking**, **Implementation Metrics**, **Operational Metrics**, **Decision Points**, **Compliance Grid**
+
+*Ranking Cards*: Each compared ticket has a ranking card showing its position, score, and rationale. Each card always displays a workflow type badge (FULL / QUICK / CLEAN). When agent data is available, an agent badge is shown. When a quality score exists, a badge with the numeric score and threshold label (e.g., "87 Good") is shown. QUICK and CLEAN workflow tickets do not show a quality score badge.
+
+*Operational Metrics Grid*: A comparison grid between Implementation Metrics and Decision Points. Columns correspond to each compared ticket (up to 6); rows cover 7 metrics: Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, and Quality Score. Values are aggregated across all completed jobs for each ticket. The best value in each row is highlighted — lowest wins for tokens, duration, cost, and job count; highest wins for quality score. Ties show the indicator on all tied tickets. When a ticket has an in-progress job, its cells show a "Pending" state; when it has no jobs, its cells show "N/A". Column headers repeat the ticket key, workflow type, and agent name.
+
+*Horizontal Scroll (6-participant support)*: With 3–6 compared tickets the grid enables horizontal scrolling. The metric labels column (leftmost) is fixed while data columns scroll. Native touch scrolling is supported on mobile. With 2 tickets the grid fits without scrolling.
+
+*Quality Score Breakdown Popover*: Clicking a quality score cell for a FULL workflow ticket that has passed VERIFY opens a popover showing the 5-dimension breakdown — Compliance (40%), Bug Detection (30%), Code Comments (20%), Historical Context (10%), and Spec Sync (0%) — with individual scores, progress bars, weights, and the overall score with its threshold label (Excellent / Good / Fair / Poor). The popover is not available for QUICK/CLEAN tickets or when quality details are absent; those cells show "N/A" and are not clickable. Clicking outside the popover closes it.
+
 **Confirmation Modals**:
 - Clear title explaining action
 - Warning message for destructive operations

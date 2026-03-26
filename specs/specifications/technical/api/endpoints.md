@@ -1999,6 +1999,27 @@ Fetch full comparison detail with enriched data.
       "agent": "CLAUDE",
       "quality": { "state": "available", "value": 85 },
       "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "aggregatedTelemetry": {
+        "inputTokens": 24000,
+        "outputTokens": 9800,
+        "totalTokens": 33800,
+        "costUsd": 0.29,
+        "durationMs": 87000,
+        "jobCount": 2,
+        "model": "claude-sonnet-4-6",
+        "hasData": true
+      },
+      "qualityDetails": {
+        "dimensions": [
+          { "name": "Compliance", "agentId": "compliance", "score": 90, "weight": 0.4, "weightedScore": 36 },
+          { "name": "Bug Detection", "agentId": "bug-detection", "score": 80, "weight": 0.3, "weightedScore": 24 },
+          { "name": "Code Comments", "agentId": "code-comments", "score": 85, "weight": 0.2, "weightedScore": 17 },
+          { "name": "Historical Context", "agentId": "historical-context", "score": 80, "weight": 0.1, "weightedScore": 8 },
+          { "name": "Spec Sync", "agentId": "spec-sync", "score": 0, "weight": 0, "weightedScore": 0 }
+        ],
+        "threshold": "Good",
+        "computedAt": "2026-01-02T14:30:00.000Z"
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2040,6 +2061,10 @@ Fetch full comparison detail with enriched data.
 - `available`: Data exists with a `value`
 - `pending`: Job exists but data not yet computed (e.g., verify job running)
 - `unavailable`: No relevant job exists
+
+**Aggregated Telemetry** (`aggregatedTelemetry`): Sums `inputTokens`, `outputTokens`, `costUsd`, and `durationMs` across all `COMPLETED` jobs for the ticket. `model` is the model reported by the most recent completed job. `hasData` is `false` and all numeric fields are `0` when no completed jobs exist. This field is `null` if any in-progress job exists (participant is in `pending` state).
+
+**Quality Details** (`qualityDetails`): Parsed from the `qualityScoreDetails` JSON field of the latest VERIFY job. Contains the 5-dimension breakdown (Compliance 40%, Bug Detection 30%, Code Comments 20%, Historical Context 10%, Spec Sync 0%) with individual scores and weighted contributions. `null` when the ticket has no VERIFY job or the job's `qualityScoreDetails` is absent/malformed.
 
 **Errors**:
 - `400`: Invalid project, ticket, or comparison ID
