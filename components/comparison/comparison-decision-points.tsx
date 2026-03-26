@@ -37,18 +37,24 @@ export function ComparisonDecisionPoints({
               </CollapsibleTrigger>
               <CollapsibleContent className="border-t border-border px-4 py-3">
                 <p className="text-sm text-muted-foreground">{point.rationale}</p>
-                <div className="mt-3 space-y-2">
-                  {point.participantApproaches.map((approach) => (
-                    <div key={approach.ticketId}>
-                      <div className="text-sm font-medium text-foreground">
-                        {approach.ticketKey}
+                {point.participantApproaches.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {point.participantApproaches.map((approach) => (
+                      <div key={approach.ticketId}>
+                        <div className="text-sm font-medium text-foreground">
+                          {approach.ticketKey}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {approach.summary}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {approach.summary}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    No saved participant approaches for this decision point.
+                  </div>
+                )}
               </CollapsibleContent>
             </div>
           </Collapsible>

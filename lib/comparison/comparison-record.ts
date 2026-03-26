@@ -11,6 +11,7 @@ import type {
   ComparisonEnrichmentValue,
   ComparisonMetricSnapshot,
   ComparisonParticipantDetail,
+  ComparisonReportDecisionPointApproach,
   ComparisonReport,
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
@@ -140,32 +141,50 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
   );
 }
 
+function buildDecisionPointApproaches(
+  participantApproaches: ComparisonReportDecisionPointApproach[],
+  ticketKeyToId: Map<string, number>
+): Array<{
+  ticketId: number;
+  ticketKey: string;
+  summary: string;
+}> {
+  const approaches = [];
+
+  for (const approach of participantApproaches) {
+    const ticketId = ticketKeyToId.get(approach.ticketKey);
+    if (ticketId == null) {
+      continue;
+    }
+
+    approaches.push({
+      ticketId,
+      ticketKey: approach.ticketKey,
+      summary: approach.summary,
+    });
+  }
+
+  return approaches;
+}
+
 function buildDecisionPoints(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
-  const winnerTicketKey = getWinnerTicketKey(report);
-  const differentiators = Array.isArray(report.alignment.matchingRequirements)
-    ? report.alignment.matchingRequirements
-    : [];
-
-  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
-    (title, index) => ({
-      title,
-      verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
-      verdictSummary: report.recommendation || report.summary || 'See saved summary',
-      rationale: report.summary || 'Derived from the saved comparison report.',
-      participantApproaches: report.metadata.comparedTickets.map((ticketKey) => ({
-        ticketId: ticketKeyToId.get(ticketKey),
-        ticketKey,
-        summary:
-          report.implementation[ticketKey]?.hasData
-            ? `${report.implementation[ticketKey]?.filesChanged ?? 0} files changed`
-            : 'Metrics unavailable',
-      })),
-      displayOrder: index,
-    })
-  );
+  return report.decisionPoints.map((point, index) => ({
+    title: point.title,
+    verdictTicketId:
+      point.verdictTicketKey != null
+        ? ticketKeyToId.get(point.verdictTicketKey) ?? null
+        : null,
+    verdictSummary: point.verdictSummary,
+    rationale: point.rationale,
+    participantApproaches: buildDecisionPointApproaches(
+      point.participantApproaches,
+      ticketKeyToId
+    ),
+    displayOrder: index,
+  }));
 }
 
 function buildComplianceCreates(
@@ -196,6 +215,9 @@ export function createComparisonRecordInput(
 ): Prisma.ComparisonRecordCreateInput {
   const ticketKeyToTicket = new Map(
     input.participants.map((ticket) => [ticket.ticketKey, ticket] as const)
+  );
+  const ticketKeyToId = new Map(
+    input.participants.map((ticket) => [ticket.ticketKey, ticket.id] as const)
   );
   const rankings = buildRankings(input.report);
   const bestValueFlags = buildBestValueFlags(input.report.implementation);
@@ -246,12 +268,44 @@ export function createComparisonRecordInput(
       }),
     },
     decisionPoints: {
-      create: buildDecisionPoints(
-        input.report,
-        new Map(input.participants.map((ticket) => [ticket.ticketKey, ticket.id] as const))
-      ),
+      create: buildDecisionPoints(input.report, ticketKeyToId),
     },
   };
+}
+
+function normalizeDecisionPointApproaches(
+  participantApproaches: Prisma.JsonValue
+): ComparisonDecisionPoint['participantApproaches'] {
+  if (!Array.isArray(participantApproaches)) {
+    return [];
+  }
+
+  const normalizedApproaches = [];
+
+  for (const approach of participantApproaches) {
+    if (!approach || typeof approach !== 'object' || Array.isArray(approach)) {
+      continue;
+    }
+
+    const ticketId =
+      typeof approach.ticketId === 'number' ? approach.ticketId : null;
+    const ticketKey =
+      typeof approach.ticketKey === 'string' ? approach.ticketKey : null;
+    const summary =
+      typeof approach.summary === 'string' ? approach.summary : '';
+
+    if (ticketId == null || ticketKey == null) {
+      continue;
+    }
+
+    normalizedApproaches.push({
+      ticketId,
+      ticketKey,
+      summary,
+    });
+  }
+
+  return normalizedApproaches;
 }
 
 export async function persistComparisonRecord(
@@ -514,26 +568,9 @@ export function normalizeDecisionPoints(
     verdictSummary: point.verdictSummary,
     rationale: point.rationale,
     displayOrder: point.displayOrder,
-    participantApproaches: Array.isArray(point.participantApproaches)
-      ? point.participantApproaches.flatMap((approach) => {
-          if (!approach || typeof approach !== 'object' || Array.isArray(approach)) {
-            return [];
-          }
-
-          const ticketId =
-            typeof approach.ticketId === 'number' ? approach.ticketId : null;
-          const ticketKey =
-            typeof approach.ticketKey === 'string' ? approach.ticketKey : null;
-          const summary =
-            typeof approach.summary === 'string' ? approach.summary : '';
-
-          if (ticketId == null || ticketKey == null) {
-            return [];
-          }
-
-          return [{ ticketId, ticketKey, summary }];
-        })
-      : [],
+    participantApproaches: normalizeDecisionPointApproaches(
+      point.participantApproaches
+    ),
   }));
 }
 

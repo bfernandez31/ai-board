@@ -172,6 +172,16 @@ export async function POST(
       return jsonError(400, 'Participant tickets do not match report ordering', 'VALIDATION_ERROR');
     }
 
+    const participantKeySet = new Set(payload.participantTicketKeys);
+    for (const point of payload.report.decisionPoints) {
+      if (
+        point.verdictTicketKey != null &&
+        !participantKeySet.has(point.verdictTicketKey)
+      ) {
+        return jsonError(400, 'Decision point verdict must reference a participant ticket', 'VALIDATION_ERROR');
+      }
+    }
+
     const { record, isDuplicate } = await persistComparisonRecord({
       projectId,
       sourceTicket,

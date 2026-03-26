@@ -318,7 +318,9 @@ export async function getComparisonDetailForTicket(
   return buildComparisonDetail({
     record,
     participants,
-    decisionPoints: normalizeDecisionPoints(record.decisionPoints),
+    decisionPoints: normalizeDecisionPoints(record.decisionPoints).sort(
+      (a, b) => a.displayOrder - b.displayOrder
+    ),
     complianceRows: [...groupedCompliance.values()].sort(
       (a, b) => a.displayOrder - b.displayOrder
     ),

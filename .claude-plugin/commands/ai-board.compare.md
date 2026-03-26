@@ -391,6 +391,24 @@ After writing the markdown report, write a JSON data file for workflow persisten
       }
     },
     "recommendation": "Ship AIB-124",
+    "decisionPoints": [
+      {
+        "title": "Persistence source of truth",
+        "verdictTicketKey": "AIB-124",
+        "verdictSummary": "AIB-124 persists decision-point data directly from structured output.",
+        "rationale": "It keeps saved decision points aligned with the generated report instead of cloning global summary fields.",
+        "participantApproaches": [
+          {
+            "ticketKey": "AIB-123",
+            "summary": "Continues to rely on report-level summary fields."
+          },
+          {
+            "ticketKey": "AIB-124",
+            "summary": "Maps structured decision points directly into saved rows."
+          }
+        ]
+      }
+    ],
     "warnings": []
   }
 }
@@ -403,6 +421,9 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `comparedTickets` and `participantTicketKeys`: Must include source ticket, same order
 - `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
+- `decisionPoints`: Must be an ordered array. Each item must include `title`, `verdictSummary`, `rationale`, and `participantApproaches`
+- `decisionPoints[].verdictTicketKey`: Must be `null` or one of `participantTicketKeys`
+- `decisionPoints[].participantApproaches[].ticketKey`: Must be one of `participantTicketKeys` with no duplicates inside the same decision point
 - **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.

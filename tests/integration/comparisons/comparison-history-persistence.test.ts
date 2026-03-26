@@ -180,7 +180,10 @@ describe('comparison history persistence', () => {
       payload.report.metadata.comparedTickets
     );
     expect(detail.data.participants.map((participant) => participant.rank)).toEqual([1, 2]);
-    expect(detail.data.decisionPoints[0]?.title).toBe('FR-001');
+    expect(detail.data.decisionPoints.map((point) => point.title)).toEqual([
+      'Persistence source of truth',
+      'Historical comparison compatibility',
+    ]);
     expect(detail.data.complianceRows[0]?.principleName).toBe('TypeScript-First Development');
   });
 });

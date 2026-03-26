@@ -90,7 +90,29 @@ describe('comparison persistence workflow route', () => {
     expect(persisted?.compareRunKey).toBe(payload.compareRunKey);
     expect(persisted?.markdownPath).toBe(payload.markdownPath);
     expect(persisted?.participants).toHaveLength(2);
-    expect(persisted?.decisionPoints).toHaveLength(1);
+    expect(persisted?.decisionPoints).toHaveLength(2);
+    expect(persisted?.decisionPoints[0]).toMatchObject({
+      title: 'Persistence source of truth',
+      verdictSummary: `${candidateA.ticketKey} persists structured decision points directly.`,
+      displayOrder: 0,
+    });
+    expect(persisted?.decisionPoints[0]?.participantApproaches).toEqual([
+      {
+        ticketId: candidateA.id,
+        ticketKey: candidateA.ticketKey,
+        summary: 'Maps structured decision points directly into saved rows.',
+      },
+      {
+        ticketId: candidateB.id,
+        ticketKey: candidateB.ticketKey,
+        summary: 'Relies more on report-level summary fields.',
+      },
+    ]);
+    expect(persisted?.decisionPoints[1]).toMatchObject({
+      title: 'Historical comparison compatibility',
+      verdictTicketId: null,
+      displayOrder: 1,
+    });
   });
 
   it('treats duplicate compare-run submissions as idempotent', async () => {
@@ -220,8 +242,8 @@ describe('comparison persistence workflow route', () => {
 
     expect(malformedResponse.status).toBe(400);
     expect(malformedResponse.data.code).toBe('VALIDATION_ERROR');
-    expect(wrongScopeResponse.status).toBe(404);
-    expect(wrongScopeResponse.data.code).toBe('PARTICIPANT_NOT_FOUND');
+    expect(wrongScopeResponse.status).toBe(400);
+    expect(wrongScopeResponse.data.code).toBe('VALIDATION_ERROR');
 
     const count = await prisma.comparisonRecord.count({
       where: {
@@ -231,5 +253,61 @@ describe('comparison persistence workflow route', () => {
     });
 
     expect(count).toBe(0);
+  });
+
+  it('rejects decision-point verdict keys outside the participant set', async () => {
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source',
+      description: 'Source',
+      ticketNumber: 231,
+      ticketKey: 'TE2-231',
+      stage: 'BUILD',
+      branch: 'AIB-330-persist-comparison-data',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A',
+      description: 'A',
+      ticketNumber: 232,
+      ticketKey: 'TE2-232',
+      stage: 'VERIFY',
+    });
+    const candidateB = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate B',
+      description: 'B',
+      ticketNumber: 233,
+      ticketKey: 'TE2-233',
+      stage: 'PLAN',
+    });
+
+    const payload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-330-persist-comparison-data',
+      sourceTicket: {
+        ticketKey: sourceTicket.ticketKey ?? 'TE2-231',
+      },
+      participants: [
+        { ticketKey: candidateA.ticketKey ?? 'TE2-232' },
+        { ticketKey: candidateB.ticketKey ?? 'TE2-233' },
+      ],
+    });
+
+    const response = await postWorkflow<{ code: string }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      {
+        ...payload,
+        report: {
+          ...payload.report,
+          decisionPoints: [
+            {
+              ...payload.report.decisionPoints[0]!,
+              verdictTicketKey: 'TE2-999',
+            },
+          ],
+        },
+      }
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.data.code).toBe('VALIDATION_ERROR');
   });
 });
