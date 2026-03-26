@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: AI Board Project Command Palette API
+  version: 1.0.0
+  description: Grouped search contract for desktop project navigation and ticket lookup.
+paths:
+  /api/projects/{projectId}/command-palette:
+    get:
+      summary: Search project destinations and tickets for the command palette
+      operationId: searchProjectCommandPalette
+      tags:
+        - Navigation
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: q
+          in: query
+          required: false
+          description: Trimmed user query. Empty query returns default destination shortcuts and recent ticket matches if implemented.
+          schema:
+            type: string
+            minLength: 0
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of ticket results to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        '200':
+          description: Grouped command palette results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandPaletteResponse'
+        '400':
+          description: Invalid project id or query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied for the requested project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CommandPaletteResponse:
+      type: object
+      required:
+        - query
+        - groups
+        - totalCount
+      properties:
+        query:
+          type: string
+        groups:
+          type: object
+          required:
+            - destinations
+            - tickets
+          properties:
+            destinations:
+              type: array
+              items:
+                $ref: '#/components/schemas/CommandPaletteResult'
+            tickets:
+              type: array
+              items:
+                $ref: '#/components/schemas/CommandPaletteResult'
+        totalCount:
+          type: object
+          required:
+            - destinations
+            - tickets
+          properties:
+            destinations:
+              type: integer
+              minimum: 0
+            tickets:
+              type: integer
+              minimum: 0
+    CommandPaletteResult:
+      type: object
+      required:
+        - id
+        - type
+        - label
+        - href
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - destination
+            - ticket
+        label:
+          type: string
+        description:
+          type: string
+        href:
+          type: string
+        ticketKey:
+          type: string
+        stage:
+          type: string
+        matchScore:
+          type: number
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type: string
