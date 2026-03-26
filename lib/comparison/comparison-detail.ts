@@ -235,7 +235,6 @@ export async function getComparisonDetailForTicket(
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
   const participants = record.participants.map((participant) => {
     const verifyJob = latestVerifyJobByTicketId.get(participant.ticketId) ?? null;
@@ -243,7 +242,7 @@ export async function getComparisonDetailForTicket(
       participant,
       quality: deriveQualityState(
         verifyJob,
-        verifyJobTicketIds.has(participant.ticketId)
+        latestVerifyJobByTicketId.has(participant.ticketId)
       ),
       qualityScoreDetails: verifyJob?.qualityScoreDetails ?? null,
       telemetry: normalizeAggregatedTelemetry(

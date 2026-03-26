@@ -149,7 +149,7 @@ function buildDecisionPoints(
     ? report.alignment.matchingRequirements
     : [];
 
-  const points = (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
+  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
     (title, index) => ({
       title,
       verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
@@ -166,8 +166,6 @@ function buildDecisionPoints(
       displayOrder: index,
     })
   );
-
-  return points;
 }
 
 function buildComplianceCreates(
@@ -432,10 +430,22 @@ export function normalizeAggregatedTelemetry(jobs: Array<{
   let hasAnyData = false;
 
   for (const job of jobs) {
-    if (job.inputTokens != null) { inputTokens += job.inputTokens; hasAnyData = true; }
-    if (job.outputTokens != null) { outputTokens += job.outputTokens; hasAnyData = true; }
-    if (job.durationMs != null) { durationMs += job.durationMs; hasAnyData = true; }
-    if (job.costUsd != null) { costUsd += job.costUsd; hasAnyData = true; }
+    if (job.inputTokens != null) {
+      inputTokens += job.inputTokens;
+      hasAnyData = true;
+    }
+    if (job.outputTokens != null) {
+      outputTokens += job.outputTokens;
+      hasAnyData = true;
+    }
+    if (job.durationMs != null) {
+      durationMs += job.durationMs;
+      hasAnyData = true;
+    }
+    if (job.costUsd != null) {
+      costUsd += job.costUsd;
+      hasAnyData = true;
+    }
     if (job.model) {
       modelCounts.set(job.model, (modelCounts.get(job.model) ?? 0) + 1);
     }

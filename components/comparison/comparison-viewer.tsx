@@ -57,11 +57,8 @@ export function ComparisonViewer({
     isOpen
   );
 
-  const selectedComparisonId = [
-    selectedComparisonIdOverride,
-    initialComparisonId,
-    checkData?.latestComparisonId ?? null,
-  ].find((comparisonId): comparisonId is number => comparisonId != null) ?? null;
+  const selectedComparisonId =
+    selectedComparisonIdOverride ?? initialComparisonId ?? checkData?.latestComparisonId ?? null;
 
   const {
     data: detail,
