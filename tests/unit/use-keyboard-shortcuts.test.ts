@@ -14,6 +14,7 @@ function fireKey(key: string, target?: EventTarget | null, modifiers?: { metaKey
 describe('useKeyboardShortcuts', () => {
   const defaultCallbacks = () => ({
     enabled: true,
+    blocked: false,
     onNewTicket: vi.fn(),
     onFocusSearch: vi.fn(),
     onColumnNav: vi.fn(),
@@ -93,6 +94,15 @@ describe('useKeyboardShortcuts', () => {
     expect(callbacks.onFocusSearch).not.toHaveBeenCalled();
     expect(callbacks.onColumnNav).not.toHaveBeenCalled();
     expect(callbacks.onToggleHelp).not.toHaveBeenCalled();
+  });
+
+  it('does not fire callbacks when blocked is true', () => {
+    callbacks.blocked = true;
+    renderHook(() => useKeyboardShortcuts(callbacks));
+    fireKey('n');
+    fireKey('s');
+    expect(callbacks.onNewTicket).not.toHaveBeenCalled();
+    expect(callbacks.onFocusSearch).not.toHaveBeenCalled();
   });
 
   it('does not fire callbacks when target is an INPUT element', () => {

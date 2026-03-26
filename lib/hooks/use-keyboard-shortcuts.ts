@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 interface UseKeyboardShortcutsOptions {
   enabled: boolean;
+  blocked?: boolean;
   onNewTicket: () => void;
   onFocusSearch: () => void;
   onColumnNav: (columnIndex: number) => void;
@@ -19,6 +20,7 @@ function isEditableElement(target: EventTarget | null): boolean {
 
 export function useKeyboardShortcuts({
   enabled,
+  blocked = false,
   onNewTicket,
   onFocusSearch,
   onColumnNav,
@@ -28,6 +30,7 @@ export function useKeyboardShortcuts({
     if (!enabled) return;
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (blocked) return;
       if (isEditableElement(event.target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
@@ -63,5 +66,5 @@ export function useKeyboardShortcuts({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, onNewTicket, onFocusSearch, onColumnNav, onToggleHelp]);
+  }, [blocked, enabled, onNewTicket, onFocusSearch, onColumnNav, onToggleHelp]);
 }

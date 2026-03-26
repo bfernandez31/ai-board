@@ -23,6 +23,7 @@ export function TypewriterText({
     // Check reduced motion preference
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayed(text);
       setStarted(true);
       setDone(true);
@@ -37,6 +38,7 @@ export function TypewriterText({
     if (!started || done) return;
 
     if (displayed.length >= text.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDone(true);
       return;
     }

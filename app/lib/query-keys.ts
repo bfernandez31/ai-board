@@ -22,6 +22,8 @@ export const queryKeys = {
       ['projects', projectId, 'constitution', 'diff', sha] as const,
     ticketSearch: (projectId: number, query: string) =>
       ['projects', projectId, 'tickets', 'search', query] as const,
+    commandPalette: (projectId: number, query: string) =>
+      ['projects', projectId, 'command-palette', query] as const,
     ticketJobs: (projectId: number, ticketId: number) =>
       ['projects', projectId, 'tickets', ticketId, 'jobs'] as const,
     ticketByKey: (projectId: number, ticketKey: string) =>

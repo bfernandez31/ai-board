@@ -11,9 +11,9 @@
 
 **Purpose**: Create the shared typed contracts and metadata that every later phase depends on.
 
-- [ ] T001 Define command-palette query validation and response types in `/home/runner/work/ai-board/ai-board/target/lib/schemas/command-palette.ts` and `/home/runner/work/ai-board/ai-board/target/lib/types.ts`
-- [ ] T002 [P] Create project destination metadata and pathname matching helpers in `/home/runner/work/ai-board/ai-board/target/components/navigation/project-destinations.ts`
-- [ ] T003 [P] Implement deterministic destination and ticket ranking helpers in `/home/runner/work/ai-board/ai-board/target/lib/search/command-palette-ranking.ts`
+- [X] T001 Define command-palette query validation and response types in `/home/runner/work/ai-board/ai-board/target/lib/schemas/command-palette.ts` and `/home/runner/work/ai-board/ai-board/target/lib/types.ts`
+- [X] T002 [P] Create project destination metadata and pathname matching helpers in `/home/runner/work/ai-board/ai-board/target/components/navigation/project-destinations.ts`
+- [X] T003 [P] Implement deterministic destination and ticket ranking helpers in `/home/runner/work/ai-board/ai-board/target/lib/search/command-palette-ranking.ts`
 
 ---
 
@@ -23,10 +23,10 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T004 Create the fixed-width desktop rail component and tooltip wrapper in `/home/runner/work/ai-board/ai-board/target/components/navigation/desktop-project-rail.tsx` and `/home/runner/work/ai-board/ai-board/target/components/navigation/project-rail-tooltips.tsx`
-- [ ] T005 Create the shared responsive project shell in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx`
-- [ ] T006 [P] Wrap the supported project pages with the shared shell in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx`, `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/activity/page.tsx`, `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx`, and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx`
-- [ ] T007 [P] Add command-palette query keys and client fetch hook in `/home/runner/work/ai-board/ai-board/target/lib/query-keys.ts` and `/home/runner/work/ai-board/ai-board/target/lib/hooks/queries/use-command-palette.ts`
+- [X] T004 Create the fixed-width desktop rail component and tooltip wrapper in `/home/runner/work/ai-board/ai-board/target/components/navigation/desktop-project-rail.tsx` and `/home/runner/work/ai-board/ai-board/target/components/navigation/project-rail-tooltips.tsx`
+- [X] T005 Create the shared responsive project shell in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx`
+- [X] T006 [P] Wrap the supported project pages with the shared shell in `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx`, `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/activity/page.tsx`, `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/analytics/page.tsx`, and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/settings/page.tsx`
+- [X] T007 [P] Add command-palette query keys and client fetch hook in `/home/runner/work/ai-board/ai-board/target/lib/query-keys.ts` and `/home/runner/work/ai-board/ai-board/target/lib/hooks/queries/use-command-palette.ts`
 
 **Checkpoint**: Shared navigation infrastructure is ready and user stories can proceed.
 
@@ -40,14 +40,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Extend rail active-state and tooltip coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/navigation-utils.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx`
-- [ ] T009 [P] [US1] Add desktop rail navigation and viewport behavior coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-navigation-shell.spec.ts`
+- [X] T008 [P] [US1] Extend rail active-state and tooltip coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/navigation-utils.test.ts` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx`
+- [X] T009 [P] [US1] Add desktop rail navigation and viewport behavior coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-navigation-shell.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement grouped rail rendering, active destination styling, and footer-anchored Settings placement in `/home/runner/work/ai-board/ai-board/target/components/navigation/desktop-project-rail.tsx`
-- [ ] T011 [P] [US1] Wire hover and focus labels for rail icons in `/home/runner/work/ai-board/ai-board/target/components/navigation/project-rail-tooltips.tsx`
-- [ ] T012 [US1] Apply the desktop rail layout without shrinking board usability below the planned 56px offset in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx`
+- [X] T010 [US1] Implement grouped rail rendering, active destination styling, and footer-anchored Settings placement in `/home/runner/work/ai-board/ai-board/target/components/navigation/desktop-project-rail.tsx`
+- [X] T011 [P] [US1] Wire hover and focus labels for rail icons in `/home/runner/work/ai-board/ai-board/target/components/navigation/project-rail-tooltips.tsx`
+- [X] T012 [US1] Apply the desktop rail layout without shrinking board usability below the planned 56px offset in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/app/projects/[projectId]/board/page.tsx`
 
 **Checkpoint**: User Story 1 is independently functional and validates the MVP desktop navigation redesign.
 
@@ -61,15 +61,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add grouped command-palette API coverage for auth, query validation, grouping, and empty states in `/home/runner/work/ai-board/ai-board/target/tests/integration/navigation/command-palette.test.ts`
-- [ ] T014 [P] [US2] Extend command-palette rendering and keyboard interaction coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/command-autocomplete.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-keyboard-shortcuts.test.ts`
+- [X] T013 [P] [US2] Add grouped command-palette API coverage for auth, query validation, grouping, and empty states in `/home/runner/work/ai-board/ai-board/target/tests/integration/navigation/command-palette.test.ts`
+- [X] T014 [P] [US2] Extend command-palette rendering and keyboard interaction coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/command-autocomplete.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-keyboard-shortcuts.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Implement `GET /api/projects/[projectId]/command-palette` with project access checks and grouped response mapping in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/command-palette/route.ts`
-- [ ] T016 [P] [US2] Build the palette trigger, dialog, and grouped result list components in `/home/runner/work/ai-board/ai-board/target/components/search/command-palette-trigger.tsx`, `/home/runner/work/ai-board/ai-board/target/components/search/command-palette.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/search/command-palette-results.tsx`
-- [ ] T017 [US2] Integrate project-wide `Meta+K` and `Ctrl+K` handling, focus management, and result selection into `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/components/search/command-palette.tsx`
-- [ ] T018 [US2] Reuse ticket lookup data and fuzzy ranking logic across `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/command-palette/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/search/route.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/search/command-palette-ranking.ts`
+- [X] T015 [US2] Implement `GET /api/projects/[projectId]/command-palette` with project access checks and grouped response mapping in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/command-palette/route.ts`
+- [X] T016 [P] [US2] Build the palette trigger, dialog, and grouped result list components in `/home/runner/work/ai-board/ai-board/target/components/search/command-palette-trigger.tsx`, `/home/runner/work/ai-board/ai-board/target/components/search/command-palette.tsx`, and `/home/runner/work/ai-board/ai-board/target/components/search/command-palette-results.tsx`
+- [X] T017 [US2] Integrate project-wide `Meta+K` and `Ctrl+K` handling, focus management, and result selection into `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/components/search/command-palette.tsx`
+- [X] T018 [US2] Reuse ticket lookup data and fuzzy ranking logic across `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/command-palette/route.ts`, `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/search/route.ts`, and `/home/runner/work/ai-board/ai-board/target/lib/search/command-palette-ranking.ts`
 
 **Checkpoint**: User Story 2 is independently functional with grouped, keyboard-driven project navigation and ticket search.
 
@@ -83,14 +83,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Extend header simplification and mobile fallback coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ticket-search.test.tsx`
-- [ ] T020 [P] [US3] Extend responsive and shortcut-suppression browser coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-navigation-shell.spec.ts`
+- [X] T019 [P] [US3] Extend header simplification and mobile fallback coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/header.test.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/components/ticket-search.test.tsx`
+- [X] T020 [P] [US3] Extend responsive and shortcut-suppression browser coverage in `/home/runner/work/ai-board/ai-board/target/tests/e2e/project-navigation-shell.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Replace desktop header navigation icons and inline ticket search with the palette entry point in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx`
-- [ ] T022 [US3] Preserve hamburger-only navigation below `1024px` in `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx`
-- [ ] T023 [US3] Suppress conflicting project shortcuts while the palette is open and preserve existing shortcuts when closed in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-keyboard-shortcuts.test.ts`
+- [X] T021 [US3] Replace desktop header navigation icons and inline ticket search with the palette entry point in `/home/runner/work/ai-board/ai-board/target/components/layout/header.tsx`
+- [X] T022 [US3] Preserve hamburger-only navigation below `1024px` in `/home/runner/work/ai-board/ai-board/target/components/layout/mobile-menu.tsx` and `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx`
+- [X] T023 [US3] Suppress conflicting project shortcuts while the palette is open and preserve existing shortcuts when closed in `/home/runner/work/ai-board/ai-board/target/components/layout/project-shell.tsx` and `/home/runner/work/ai-board/ai-board/target/tests/unit/use-keyboard-shortcuts.test.ts`
 
 **Checkpoint**: User Story 3 completes the responsive cleanup without regressing mobile navigation or shortcut behavior.
 
@@ -100,8 +100,8 @@
 
 **Purpose**: Validate the full feature against the documented scenarios and repo quality gates.
 
-- [ ] T024 [P] Validate the manual acceptance scenarios documented in `/home/runner/work/ai-board/ai-board/target/specs/AIB-357-replace-header-navigation/quickstart.md`
-- [ ] T025 Run `bun run test:unit`, `bun run test:integration`, `bun run test:e2e`, `bun run type-check`, and `bun run lint` from `/home/runner/work/ai-board/ai-board/target` using the commands listed in `/home/runner/work/ai-board/ai-board/target/specs/AIB-357-replace-header-navigation/quickstart.md`
+- [X] T024 [P] Validate the manual acceptance scenarios documented in `/home/runner/work/ai-board/ai-board/target/specs/AIB-357-replace-header-navigation/quickstart.md`
+- [X] T025 Run `bun run test:unit`, `bun run test:integration`, `bun run test:e2e`, `bun run type-check`, and `bun run lint` from `/home/runner/work/ai-board/ai-board/target` using the commands listed in `/home/runner/work/ai-board/ai-board/target/specs/AIB-357-replace-header-navigation/quickstart.md`
 
 ---
 

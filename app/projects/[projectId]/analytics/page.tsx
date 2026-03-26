@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { ProjectShell } from '@/components/layout/project-shell';
 import { getProject } from '@/lib/db/projects';
 import { getAnalyticsData } from '@/lib/analytics/queries';
 import { DEFAULT_ANALYTICS_FILTERS } from '@/lib/analytics/aggregations';
@@ -71,23 +72,27 @@ export default async function AnalyticsPage({
   const initialData = await getAnalyticsData(projectId, filters);
 
   return (
-    <main className="container mx-auto py-10 max-w-7xl">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-            <p className="text-muted-foreground mt-2">AI workflow metrics for {project.name}</p>
+    <ProjectShell projectId={projectId}>
+      <main className="container mx-auto max-w-7xl py-10">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+              <p className="mt-2 text-muted-foreground">
+                AI workflow metrics for {project.name}
+              </p>
+            </div>
+            <Link href={`/projects/${projectId}/board`}>
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Board
+              </Button>
+            </Link>
           </div>
-          <Link href={`/projects/${projectId}/board`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Board
-            </Button>
-          </Link>
-        </div>
 
-        <AnalyticsDashboard projectId={projectId} initialData={initialData} />
-      </div>
-    </main>
+          <AnalyticsDashboard projectId={projectId} initialData={initialData} />
+        </div>
+      </main>
+    </ProjectShell>
   );
 }

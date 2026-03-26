@@ -80,6 +80,7 @@ export function TerminalSimulation() {
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLines(LOG_SEQUENCES.flat());
       return;
     }

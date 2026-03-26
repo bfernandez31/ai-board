@@ -7,7 +7,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 import { CommandAutocomplete } from '@/components/comments/command-autocomplete';
+import { CommandPalette } from '@/components/search/command-palette';
+import { CommandPaletteTrigger } from '@/components/search/command-palette-trigger';
 import type { AIBoardCommand } from '@/app/lib/data/ai-board-commands';
+import { useCommandPalette } from '@/lib/hooks/queries/use-command-palette';
+
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+vi.mock('@/lib/hooks/queries/use-command-palette', () => ({
+  useCommandPalette: vi.fn(() => ({
+    data: {
+      query: 'boa',
+      groups: {
+        destinations: [
+          {
+            id: 'destination:board',
+            type: 'destination',
+            label: 'Board',
+            description: 'Project board',
+            href: '/projects/1/board',
+            matchScore: 900,
+          },
+        ],
+        tickets: [
+          {
+            id: 'ticket:7',
+            type: 'ticket',
+            label: '[e2e] Palette ticket',
+            description: 'E2E-7 • INBOX',
+            href: '/projects/1/board?ticket=E2E-7&modal=open',
+            ticketKey: 'E2E-7',
+            stage: 'INBOX',
+            matchType: 'prefix',
+            matchScore: 700,
+          },
+        ],
+      },
+      totalCount: { destinations: 1, tickets: 1 },
+    },
+    isLoading: false,
+    error: null,
+  })),
+}));
+
+const mockUseCommandPalette = vi.mocked(useCommandPalette);
 
 const mockCommands: AIBoardCommand[] = [
   { name: '/compare', description: 'Compare ticket implementations for best code quality' },
@@ -24,6 +71,40 @@ describe('CommandAutocomplete', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.mockReset();
+    mockUseCommandPalette.mockReturnValue({
+      data: {
+        query: 'boa',
+        groups: {
+          destinations: [
+            {
+              id: 'destination:board',
+              type: 'destination',
+              label: 'Board',
+              description: 'Project board',
+              href: '/projects/1/board',
+              matchScore: 900,
+            },
+          ],
+          tickets: [
+            {
+              id: 'ticket:7',
+              type: 'ticket',
+              label: '[e2e] Palette ticket',
+              description: 'E2E-7 • INBOX',
+              href: '/projects/1/board?ticket=E2E-7&modal=open',
+              ticketKey: 'E2E-7',
+              stage: 'INBOX',
+              matchType: 'prefix',
+              matchScore: 700,
+            },
+          ],
+        },
+        totalCount: { destinations: 1, tickets: 1 },
+      },
+      isLoading: false,
+      error: null,
+    });
   });
 
   describe('Rendering', () => {
@@ -155,6 +236,39 @@ describe('CommandAutocomplete', () => {
       buttons.forEach((button) => {
         expect(button.tagName.toLowerCase()).toBe('button');
       });
+    });
+  });
+
+  describe('Command Palette', () => {
+    it('renders the command palette trigger affordance', () => {
+      renderWithProviders(<CommandPaletteTrigger onClick={vi.fn()} />);
+
+      expect(screen.getByTestId('command-palette-trigger')).toBeInTheDocument();
+    });
+
+    it('renders grouped destination and ticket results', () => {
+      renderWithProviders(
+        <CommandPalette projectId={1} open onOpenChange={vi.fn()} />
+      );
+
+      expect(screen.getByText('Destinations')).toBeInTheDocument();
+      expect(screen.getByText('Tickets')).toBeInTheDocument();
+      expect(screen.getByText('Board')).toBeInTheDocument();
+      expect(screen.getByText('[e2e] Palette ticket')).toBeInTheDocument();
+    });
+
+    it('navigates with keyboard selection', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <CommandPalette projectId={1} open onOpenChange={vi.fn()} />
+      );
+
+      const input = screen.getByLabelText(/search destinations and tickets/i);
+      await user.type(input, '{ArrowDown}{Enter}');
+
+      expect(mockPush).toHaveBeenCalledWith(
+        '/projects/1/board?ticket=E2E-7&modal=open'
+      );
     });
   });
 });

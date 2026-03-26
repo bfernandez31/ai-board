@@ -19,8 +19,8 @@ vi.mock('next/navigation', () => ({
 // Mock the search hook
 const mockSearchResults = {
   results: [
-    { ticketKey: 'TEST-1', title: 'First Ticket', stage: 'INBOX' },
-    { ticketKey: 'TEST-2', title: 'Second Ticket', stage: 'BUILD' },
+    { id: 1, ticketKey: 'TEST-1', title: 'First Ticket', stage: 'INBOX' },
+    { id: 2, ticketKey: 'TEST-2', title: 'Second Ticket', stage: 'BUILD' },
   ],
 };
 
@@ -65,6 +65,12 @@ describe('TicketSearch', () => {
       // The input should be visible (it's hidden on mobile via CSS classes)
       const input = screen.getByLabelText(/search tickets/i);
       expect(input).toBeInTheDocument();
+    });
+
+    it('should expose the board shortcut target test id', () => {
+      renderWithProviders(<TicketSearch {...defaultProps} />);
+
+      expect(screen.getByTestId('ticket-search-input')).toBeInTheDocument();
     });
   });
 

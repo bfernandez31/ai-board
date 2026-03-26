@@ -11,6 +11,10 @@ import {
   isValidNotificationForNavigation,
   parseProjectIdFromRoute,
 } from '../../lib/utils/navigation-utils';
+import {
+  getProjectDestinationIdForPathname,
+  getProjectDestinations,
+} from '../../components/navigation/project-destinations';
 import type { NotificationWithNavData } from '../../lib/types/notification-navigation';
 
 describe('isSameProject', () => {
@@ -277,6 +281,29 @@ describe('isValidNotificationForNavigation', () => {
   it('should return false for invalid commentId', () => {
     expect(isValidNotificationForNavigation({ ...validNotification, commentId: 0 })).toBe(false);
     expect(isValidNotificationForNavigation({ ...validNotification, commentId: -1 })).toBe(false);
+  });
+});
+
+describe('project destination helpers', () => {
+  it('detects supported project destinations from pathname', () => {
+    expect(getProjectDestinationIdForPathname('/projects/1/board')).toBe('board');
+    expect(getProjectDestinationIdForPathname('/projects/1/activity')).toBe('activity');
+    expect(getProjectDestinationIdForPathname('/projects/1/settings')).toBe('settings');
+  });
+
+  it('returns null for unsupported nested routes', () => {
+    expect(getProjectDestinationIdForPathname('/projects/1/board/ticket')).toBeNull();
+    expect(getProjectDestinationIdForPathname('/projects')).toBeNull();
+  });
+
+  it('marks the active destination when building project metadata', () => {
+    const destinations = getProjectDestinations(42, '/projects/42/analytics');
+    const activeDestination = destinations.find((destination) => destination.isActive);
+
+    expect(activeDestination?.id).toBe('analytics');
+    expect(destinations.find((destination) => destination.id === 'settings')?.href).toBe(
+      '/projects/42/settings'
+    );
   });
 });
 

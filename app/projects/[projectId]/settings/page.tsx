@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { ProjectShell } from '@/components/layout/project-shell';
 import { getProject } from '@/lib/db/projects';
 import { ClarificationPolicyCard } from '@/components/settings/clarification-policy-card';
 import { DefaultAgentCard } from '@/components/settings/default-agent-card';
@@ -45,46 +46,48 @@ export default async function ProjectSettingsPage({
   });
 
   return (
-    <main className="container mx-auto py-10 max-w-4xl">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
-            <p className="text-muted-foreground mt-2">
-              Configure default behavior for {project.name}
-            </p>
-          </div>
-          <Link href={`/projects/${projectId}/board`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Board
-            </Button>
-          </Link>
-        </div>
-
+    <ProjectShell projectId={projectId}>
+      <main className="container mx-auto max-w-4xl py-10">
         <div className="space-y-6">
-          <ClarificationPolicyCard
-            project={{
-              id: project.id,
-              clarificationPolicy: project.clarificationPolicy,
-            }}
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Project Settings</h1>
+              <p className="mt-2 text-muted-foreground">
+                Configure default behavior for {project.name}
+              </p>
+            </div>
+            <Link href={`/projects/${projectId}/board`}>
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Board
+              </Button>
+            </Link>
+          </div>
 
-          <DefaultAgentCard
-            project={{
-              id: project.id,
-              defaultAgent: project.defaultAgent,
-            }}
-          />
+          <div className="space-y-6">
+            <ClarificationPolicyCard
+              project={{
+                id: project.id,
+                clarificationPolicy: project.clarificationPolicy,
+              }}
+            />
 
-          <ConstitutionCard
-            project={{
-              id: project.id,
-              name: project.name,
-            }}
-          />
+            <DefaultAgentCard
+              project={{
+                id: project.id,
+                defaultAgent: project.defaultAgent,
+              }}
+            />
+
+            <ConstitutionCard
+              project={{
+                id: project.id,
+                name: project.name,
+              }}
+            />
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </ProjectShell>
   );
 }

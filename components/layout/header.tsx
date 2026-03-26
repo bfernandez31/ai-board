@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { FileText, BarChart3, Activity } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
-import { TicketSearch } from '@/components/search/ticket-search';
+import { CommandPalette } from '@/components/search/command-palette';
+import { CommandPaletteTrigger } from '@/components/search/command-palette-trigger';
 
 interface ProjectInfo {
   id: number;
@@ -24,28 +25,24 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  // Determine if we should show marketing variant
-  // Show marketing variant on landing page (/) when user is NOT authenticated
-  // Include loading state to avoid layout shift - better to show marketing variant
-  // during loading than empty header
   const isLandingPage = pathname === '/';
   const isSignInPage = pathname === '/auth/signin';
   const isMarketingVariant = isLandingPage && status !== 'authenticated';
-  // Search should only be visible on the board page
-  const isBoardPage = pathname?.match(/^\/projects\/\d+\/board$/) !== null;
+  const isProjectPage =
+    pathname?.match(/^\/projects\/\d+\/(board|activity|analytics|settings)$/) !== null;
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
 
-      // Track active section for marketing nav highlight
       if (isMarketingVariant) {
         const sections = ['pricing', 'workflow', 'features'];
         let current = '';
         for (const id of sections) {
-          const el = document.getElementById(id);
-          if (el && el.getBoundingClientRect().top <= 120) {
+          const element = document.getElementById(id);
+          if (element && element.getBoundingClientRect().top <= 120) {
             current = id;
             break;
           }
@@ -58,42 +55,47 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMarketingVariant]);
 
-  // Fetch project info if we're on a project page
   useEffect(() => {
     if (!pathname) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears project context on route change
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProjectInfo(null);
       return;
     }
 
     const projectMatch = pathname.match(/^\/projects\/(\d+)/);
 
-    if (projectMatch && projectMatch[1]) {
-      const projectId = parseInt(projectMatch[1], 10);
-
-      // Fetch project info
-      fetch(`/api/projects/${projectId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.id && data.name && data.githubOwner && data.githubRepo) {
-            setProjectInfo({
-              id: data.id,
-              name: data.name,
-              githubOwner: data.githubOwner,
-              githubRepo: data.githubRepo,
-            });
-          }
-        })
-        .catch(() => {
-          // Silently fail - project info is optional
-          setProjectInfo(null);
-        });
-    } else {
+    if (!projectMatch?.[1]) {
       setProjectInfo(null);
+      return;
     }
+
+    const projectId = parseInt(projectMatch[1], 10);
+
+    fetch(`/api/projects/${projectId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.id && data.name && data.githubOwner && data.githubRepo) {
+          setProjectInfo({
+            id: data.id,
+            name: data.name,
+            githubOwner: data.githubOwner,
+            githubRepo: data.githubRepo,
+          });
+        }
+      })
+      .catch(() => {
+        setProjectInfo(null);
+      });
   }, [pathname]);
 
-  // Don't render header on auth pages except /auth/signin
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('project-command-palette:state-change', {
+        detail: { open: commandPaletteOpen },
+      })
+    );
+  }, [commandPaletteOpen]);
+
   if (pathname?.startsWith('/auth') && pathname !== '/auth/signin') {
     return null;
   }
@@ -105,84 +107,66 @@ export function Header() {
       }`}
     >
       <div className="flex h-16 items-center px-6">
-        {/* Left: Logo + Title */}
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.svg"
             alt="AI-BOARD Logo"
             width={32}
             height={32}
-            className="w-8 h-8"
+            className="h-8 w-8"
           />
-          <span className="hidden md:inline text-xl font-bold">AI-BOARD</span>
+          <span className="hidden text-xl font-bold md:inline">AI-BOARD</span>
         </Link>
 
-        {/* Center: Project Info (if available) */}
         {projectInfo && (
           <>
-            {/* Desktop: Full layout with separator and icon */}
-            <div className="hidden md:flex items-center gap-3 ml-8">
+            <div className="ml-8 hidden items-center gap-3 lg:flex">
               <span className="text-muted-foreground">|</span>
-              <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
+              <span className="text-lg font-semibold text-foreground">
+                {projectInfo.name}
+              </span>
               <a
                 href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="View project specifications on GitHub"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
-                <FileText className="w-5 h-5" />
+                <FileText className="h-5 w-5" />
               </a>
-              <Link
-                href={`/projects/${projectInfo.id}/analytics`}
-                aria-label="View project analytics"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <BarChart3 className="w-5 h-5" />
-              </Link>
-              <Link
-                href={`/projects/${projectInfo.id}/activity`}
-                aria-label="View project activity"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Activity className="w-5 h-5" />
-              </Link>
             </div>
 
-            {/* Mobile: Compact with ellipsis */}
-            <div className="flex md:hidden items-center gap-2 ml-2 flex-1 overflow-hidden">
-              <span className="text-muted-foreground shrink-0">|</span>
-              <span className="text-sm font-semibold text-zinc-50 truncate flex-1">
+            <div className="ml-2 flex flex-1 items-center gap-2 overflow-hidden lg:hidden">
+              <span className="shrink-0 text-muted-foreground">|</span>
+              <span className="flex-1 truncate text-sm font-semibold text-foreground">
                 {projectInfo.name}
               </span>
             </div>
           </>
         )}
 
-        {/* Center: Search (only on board page) - hidden on mobile */}
-        {projectInfo && isBoardPage && (
-          <div className="hidden md:flex flex-1 justify-center">
-            <TicketSearch projectId={projectInfo.id} />
+        {projectInfo && isProjectPage && (
+          <div className="hidden flex-1 justify-center px-6 lg:flex">
+            <CommandPaletteTrigger onClick={() => setCommandPaletteOpen(true)} />
           </div>
         )}
 
-        {/* Spacer to push buttons to the right */}
-        {/* Show spacer when: no project info, OR on non-board pages (analytics, settings, etc.) */}
-        <div className={!projectInfo || !isBoardPage ? "flex-1" : "hidden"} />
+        <div className={!projectInfo || !isProjectPage ? 'flex-1' : 'hidden'} />
 
-        {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">
-          {/* Marketing variant: Show navigation links + Sign In button */}
           {isMarketingVariant && (
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden items-center gap-3 md:flex">
               {(['features', 'workflow', 'pricing'] as const).map((section) => (
                 <Link
                   key={section}
                   href={`#${section}`}
-                  className={`transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-2 py-1 text-sm ${
+                  className={`rounded-sm px-2 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     activeSection === section
-                      ? 'text-primary font-medium'
+                      ? 'font-medium text-primary'
                       : 'text-foreground hover:text-primary'
                   }`}
                 >
@@ -190,26 +174,20 @@ export function Header() {
                 </Link>
               ))}
               <Link href="/auth/signin">
-                <Button variant="default">
-                  Sign In
-                </Button>
+                <Button variant="default">Sign In</Button>
               </Link>
             </div>
           )}
 
-          {/* Application variant: Show Notification Bell + User Menu */}
           {!isMarketingVariant && !isSignInPage && (
             <>
-              {/* Notification Bell - visible on all screen sizes */}
               <NotificationBell />
-              {/* User Menu - desktop only, mobile uses hamburger menu */}
-              <div className="hidden md:flex">
+              <div className="hidden lg:flex">
                 <UserMenu />
               </div>
             </>
           )}
 
-          {/* Mobile menu (visible below md breakpoint) */}
           <MobileMenu
             projectId={projectInfo?.id}
             projectName={projectInfo?.name}
@@ -218,6 +196,14 @@ export function Header() {
           />
         </div>
       </div>
+
+      {projectInfo && (
+        <CommandPalette
+          projectId={projectInfo.id}
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+        />
+      )}
     </header>
   );
 }

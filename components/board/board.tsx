@@ -185,6 +185,7 @@ export function Board({
 
   // AIB-299: Keyboard shortcuts state
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
@@ -204,7 +205,7 @@ export function Board({
 
   const handleNewTicketShortcut = useCallback(() => setIsNewTicketModalOpen(true), []);
   const handleFocusSearchShortcut = useCallback(() => {
-    document.querySelector<HTMLInputElement>('[data-testid="ticket-search-input"]')?.focus();
+    window.dispatchEvent(new Event('project-command-palette:open'));
   }, []);
   const handleColumnNavShortcut = useCallback((columnIndex: number) => {
     const stage = STAGE_BY_NUMBER[columnIndex];
@@ -218,11 +219,31 @@ export function Board({
 
   useKeyboardShortcuts({
     enabled: hasHover && !isAnyModalOpen,
+    blocked: isCommandPaletteOpen,
     onNewTicket: handleNewTicketShortcut,
     onFocusSearch: handleFocusSearchShortcut,
     onColumnNav: handleColumnNavShortcut,
     onToggleHelp: handleToggleHelpShortcut,
   });
+
+  useEffect(() => {
+    function handlePaletteStateChange(event: Event) {
+      const customEvent = event as CustomEvent<{ open?: boolean }>;
+      setIsCommandPaletteOpen(Boolean(customEvent.detail?.open));
+    }
+
+    window.addEventListener(
+      'project-command-palette:state-change',
+      handlePaletteStateChange as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'project-command-palette:state-change',
+        handlePaletteStateChange as EventListener
+      );
+    };
+  }, []);
 
   // Separate listener for ? key when help dialog is open (fix: help dialog blocks useKeyboardShortcuts)
   useEffect(() => {
@@ -1232,4 +1253,3 @@ export function Board({
     </div>
   );
 }
-

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Board } from '@/components/board/board';
+import { ProjectShell } from '@/components/layout/project-shell';
 import { getTicketsWithJobs } from '@/lib/db/tickets';
 import { getProject } from '@/lib/db/projects';
 
@@ -54,13 +55,15 @@ export default async function ProjectBoardPage({
   );
 
   return (
-    <main className="h-[calc(100vh-4rem)] bg-black overflow-hidden">
-      <Board
-        ticketsByStage={ticketsByStage}
-        projectId={projectId}
-        initialJobs={initialJobs}
-        activeCleanupJobId={project.activeCleanupJobId}
-      />
-    </main>
+    <ProjectShell projectId={projectId}>
+      <main className="h-[calc(100vh-4rem)] overflow-hidden bg-background">
+        <Board
+          ticketsByStage={ticketsByStage}
+          projectId={projectId}
+          initialJobs={initialJobs}
+          activeCleanupJobId={project.activeCleanupJobId}
+        />
+      </main>
+    </ProjectShell>
   );
 }

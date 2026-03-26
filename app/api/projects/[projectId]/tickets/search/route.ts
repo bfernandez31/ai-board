@@ -5,6 +5,8 @@ import {
   hasWorkflowToken,
   verifyWorkflowToken,
 } from '@/app/lib/auth/workflow-auth';
+import { getRankedTickets } from '@/lib/search/command-palette-ranking';
+import type { CommandPaletteTicketResult } from '@/lib/types';
 import type { SearchResponse, SearchResult } from '@/app/lib/types/search';
 
 /**
@@ -63,36 +65,28 @@ export async function GET(
       );
     }
 
-    // Search tickets
     const tickets = await prisma.ticket.findMany({
-      where: {
-        projectId,
-        OR: [
-          { ticketKey: { contains: query, mode: 'insensitive' } },
-          { title: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+      where: { projectId },
       select: {
         id: true,
+        projectId: true,
         ticketKey: true,
         title: true,
         stage: true,
       },
-      take: limit,
+      take: 100,
       orderBy: { updatedAt: 'desc' },
     });
 
-    // Sort by relevance (key exact match > key contains > title contains > description)
-    const queryLower = query.toLowerCase();
-    const sortedTickets = [...tickets].sort((a, b) => {
-      const scoreA = getRelevanceScore(a, queryLower);
-      const scoreB = getRelevanceScore(b, queryLower);
-      return scoreB - scoreA;
-    });
+    const sortedTickets = getRankedTickets(tickets, query, limit).map((ticket: CommandPaletteTicketResult) => ({
+      id: Number(ticket.id.replace('ticket:', '')),
+      ticketKey: ticket.ticketKey,
+      title: ticket.label,
+      stage: ticket.stage,
+    })) as SearchResult[];
 
     const response: SearchResponse = {
-      results: sortedTickets as SearchResult[],
+      results: sortedTickets,
       totalCount: sortedTickets.length,
     };
 
@@ -119,33 +113,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-/**
- * Calculate relevance score for sorting
- * Higher score = more relevant
- *
- * Priority order:
- * 1. Exact key match (score: 4)
- * 2. Key contains query (score: 3)
- * 3. Title contains query (score: 2)
- * 4. Description match only (score: 1)
- */
-function getRelevanceScore(
-  ticket: { ticketKey: string; title: string },
-  queryLower: string
-): number {
-  const keyLower = ticket.ticketKey.toLowerCase();
-  const titleLower = ticket.title.toLowerCase();
-
-  if (keyLower === queryLower) {
-    return 4; // Exact key match
-  }
-  if (keyLower.includes(queryLower)) {
-    return 3; // Key contains query
-  }
-  if (titleLower.includes(queryLower)) {
-    return 2; // Title contains query
-  }
-  return 1; // Description match (default - still matched by Prisma query)
 }
