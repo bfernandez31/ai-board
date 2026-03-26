@@ -18,8 +18,8 @@
 
 **Purpose**: Create the foundational ScoreGauge component and comparison score utility used across multiple user stories
 
-- [ ] T001 Create comparison score color helper with `getComparisonScoreColor` function (green >=85, blue 70-84, yellow 50-69, red <50) in `components/comparison/score-gauge.tsx`
-- [ ] T002 Implement ScoreGauge SVG circular gauge component with `stroke-dasharray`/`stroke-dashoffset` animation, `prefers-reduced-motion` support, and configurable `score`/`size`/`strokeWidth` props in `components/comparison/score-gauge.tsx`
+- [x] T001 Create comparison score color helper with `getComparisonScoreColor` function (green >=85, blue 70-84, yellow 50-69, red <50) in `components/comparison/score-gauge.tsx`
+- [x] T002 Implement ScoreGauge SVG circular gauge component with `stroke-dasharray`/`stroke-dashoffset` animation, `prefers-reduced-motion` support, and configurable `score`/`size`/`strokeWidth` props in `components/comparison/score-gauge.tsx`
 
 ---
 
@@ -29,7 +29,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add prop interfaces for all new components (`ComparisonHeroCardProps`, `ComparisonParticipantGridProps`, `ComparisonStatCardsProps`, `ComparisonUnifiedMetricsProps`, `ComparisonComplianceHeatmapProps`) in `components/comparison/types.ts`
+- [x] T003 Add prop interfaces for all new components (`ComparisonHeroCardProps`, `ComparisonParticipantGridProps`, `ComparisonStatCardsProps`, `ComparisonUnifiedMetricsProps`, `ComparisonComplianceHeatmapProps`) in `components/comparison/types.ts`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel
 
