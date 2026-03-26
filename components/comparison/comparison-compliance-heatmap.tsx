@@ -7,13 +7,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { getComplianceTheme } from './comparison-theme';
 import type { ComparisonComplianceHeatmapProps } from './types';
-
-const statusColors: Record<string, string> = {
-  pass: 'bg-ctp-green/20',
-  mixed: 'bg-ctp-yellow/20',
-  fail: 'bg-ctp-red/20',
-};
 
 export function ComparisonComplianceHeatmap({
   rows,
@@ -78,7 +74,14 @@ export function ComparisonComplianceHeatmap({
                       );
                     }
 
-                    const colorClass = statusColors[assessment.status] ?? 'bg-muted';
+                    const label =
+                      assessment.status === 'pass'
+                        ? 'Pass'
+                        : assessment.status === 'mixed'
+                          ? 'Mixed'
+                          : assessment.status === 'fail'
+                            ? 'Fail'
+                            : 'N/A';
 
                     return (
                       <td key={p.ticketId} className="px-3 py-2">
@@ -86,8 +89,13 @@ export function ComparisonComplianceHeatmap({
                           <TooltipTrigger asChild>
                             <div
                               data-testid="heatmap-cell"
-                              className={`h-8 w-full cursor-pointer rounded ${colorClass}`}
-                            />
+                              className={cn(
+                                'flex h-10 w-full cursor-pointer items-center justify-center rounded-lg border text-[11px] font-semibold uppercase tracking-[0.22em]',
+                                getComplianceTheme(assessment.status)
+                              )}
+                            >
+                              {label}
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="max-w-xs text-sm">{assessment.notes}</p>

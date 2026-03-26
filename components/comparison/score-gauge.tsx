@@ -1,5 +1,8 @@
 'use client';
 
+import { useId } from 'react';
+import type { ComparisonAccentTheme } from './comparison-theme';
+
 /**
  * Comparison-specific score color helper.
  * Thresholds: green (>=85), blue (70-84), yellow (50-69), red (<50).
@@ -47,6 +50,10 @@ interface ScoreGaugeProps {
   strokeWidth?: number;
   /** Whether to animate on mount */
   animated?: boolean;
+  /** Optional accent theme override for participant-rank styling */
+  theme?: ComparisonAccentTheme;
+  /** Optional stable gradient id for snapshots/tests */
+  gradientId?: string;
 }
 
 export function ScoreGauge({
@@ -54,12 +61,19 @@ export function ScoreGauge({
   size = 120,
   strokeWidth = 8,
   animated = true,
+  theme,
+  gradientId,
 }: ScoreGaugeProps) {
+  const reactId = useId();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedScore = Math.max(0, Math.min(100, score));
   const offset = circumference - (clampedScore / 100) * circumference;
   const colors = getComparisonScoreColor(clampedScore);
+  const gaugeId = gradientId ?? `score-gauge-${reactId.replace(/:/g, '')}`;
+  const glowId = `${gaugeId}-glow`;
+  const stroke = theme ? `url(#${gaugeId})` : colors.stroke;
+  const textClass = theme?.text ?? colors.text;
 
   return (
     <svg
@@ -69,6 +83,17 @@ export function ScoreGauge({
       aria-label={`Score: ${clampedScore}`}
       role="img"
     >
+      {theme && (
+        <defs>
+          <linearGradient id={gaugeId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={theme.ringFrom} />
+            <stop offset="100%" stopColor={theme.ringTo} />
+          </linearGradient>
+          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation={size * 0.04} floodColor={theme.glow} floodOpacity="0.55" />
+          </filter>
+        </defs>
+      )}
       {/* Background track */}
       <circle
         cx={size / 2}
@@ -84,12 +109,13 @@ export function ScoreGauge({
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke={colors.stroke}
+        stroke={stroke}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        filter={theme ? `url(#${glowId})` : undefined}
         className={animated ? 'motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700 motion-safe:ease-out' : undefined}
         style={animated ? { '--initial-offset': `${circumference}` } as React.CSSProperties : undefined}
       />
@@ -99,9 +125,10 @@ export function ScoreGauge({
         y={size / 2}
         textAnchor="middle"
         dominantBaseline="central"
-        className={`fill-current ${colors.text}`}
+        className={`fill-current ${textClass}`}
         fontSize={size * 0.28}
-        fontWeight="bold"
+        fontWeight="800"
+        letterSpacing="-0.04em"
       >
         {clampedScore}
       </text>

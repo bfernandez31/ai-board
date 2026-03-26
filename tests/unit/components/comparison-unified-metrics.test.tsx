@@ -81,11 +81,11 @@ describe('ComparisonUnifiedMetrics', () => {
   it('renders participant column headers', () => {
     renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
 
-    expect(screen.getByText('AIB-101')).toBeInTheDocument();
-    expect(screen.getByText('AIB-102')).toBeInTheDocument();
+    expect(screen.getAllByText('AIB-101').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('AIB-102').length).toBeGreaterThan(0);
   });
 
-  it('renders inline bars with proportional widths', () => {
+  it('renders stacked participant bars for metrics', () => {
     const { container } = renderWithProviders(
       <ComparisonUnifiedMetrics participants={[p1, p2]} />
     );
@@ -94,13 +94,10 @@ describe('ComparisonUnifiedMetrics', () => {
     expect(bars.length).toBeGreaterThan(0);
   });
 
-  it('highlights best value with primary color', () => {
-    const { container } = renderWithProviders(
-      <ComparisonUnifiedMetrics participants={[p1, p2]} />
-    );
+  it('renders a participant color legend', () => {
+    renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
 
-    const primaryBars = container.querySelectorAll('.bg-primary');
-    expect(primaryBars.length).toBeGreaterThan(0);
+    expect(screen.getByTestId('metrics-legend')).toBeInTheDocument();
   });
 
   it('handles pending enrichment state', () => {
@@ -144,11 +141,15 @@ describe('ComparisonUnifiedMetrics', () => {
   });
 
   it('has sticky first column', () => {
-    const { container } = renderWithProviders(
-      <ComparisonUnifiedMetrics participants={[p1, p2]} />
-    );
+    const { container } = renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
 
     const stickyHeaders = container.querySelectorAll('.sticky.left-0');
-    expect(stickyHeaders.length).toBeGreaterThan(0);
+    expect(stickyHeaders.length).toBe(0);
+  });
+
+  it('highlights best metric values with participant accent text', () => {
+    renderWithProviders(<ComparisonUnifiedMetrics participants={[p1, p2]} />);
+
+    expect(screen.getByTestId('metric-value-linesChanged-1').className).toContain('text-ctp-green');
   });
 });

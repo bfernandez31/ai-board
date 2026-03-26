@@ -1,9 +1,12 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { getScoreThreshold } from '@/lib/quality-score';
+import { getParticipantTheme } from './comparison-theme';
 import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { ComparisonUnifiedMetricsProps } from './types';
 
@@ -52,59 +55,66 @@ function getMetricValue(
 }
 
 export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetricsProps) {
+  const participantThemes = participants.map((participant) => ({
+    participant,
+    theme: getParticipantTheme(participant.rank),
+  }));
+
   return (
-    <Card>
+    <Card className="border-white/10 bg-ctp-mantle/80 shadow-xl backdrop-blur-sm">
       <CardHeader>
         <CardTitle>Metrics Comparison</CardTitle>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium text-muted-foreground">
-                Metric
-              </th>
-              {participants.map((p) => (
-                <th key={p.ticketId} className="px-3 py-2 text-left font-medium text-muted-foreground">
-                  {p.ticketKey}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {metricRows.map((config) => {
-              const values = participants.map((p) => {
-                const ev = getMetricValue(p, config);
-                return { ticketId: p.ticketId, state: ev.state, value: ev.value };
-              });
+      <CardContent className="space-y-5">
+        <div data-testid="metrics-legend" className="flex flex-wrap gap-2">
+          {participantThemes.map(({ participant, theme }) => (
+            <Badge
+              key={participant.ticketId}
+              variant="outline"
+              className={cn('rounded-full px-3 py-1 text-xs', theme.border, theme.surface, theme.text)}
+            >
+              {participant.ticketKey}
+            </Badge>
+          ))}
+        </div>
 
-              const availableValues = values
-                .filter((v) => v.state === 'available' && v.value != null)
-                .map((v) => v.value!);
-              const maxValue = availableValues.length > 0 ? Math.max(...availableValues) : 1;
-              const bestValue = availableValues.length > 0 ? Math.min(...availableValues) : null;
+        <div className="space-y-4">
+          {metricRows.map((config) => {
+            const values = participants.map((p) => {
+              const ev = getMetricValue(p, config);
+              return { ticketId: p.ticketId, state: ev.state, value: ev.value };
+            });
 
-              return (
-                <tr key={config.key} className="border-b border-border last:border-0">
-                  <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
-                    {config.label}
-                  </td>
-                  {participants.map((p) => {
-                    const ev = getMetricValue(p, config);
+            const availableValues = values
+              .filter((v) => v.state === 'available' && v.value != null)
+              .map((v) => v.value!);
+            const maxValue = availableValues.length > 0 ? Math.max(...availableValues) : 1;
+            const bestValue = availableValues.length > 0 ? Math.min(...availableValues) : null;
+
+            return (
+              <div key={config.key} className="rounded-2xl border border-white/10 bg-background/20 p-4">
+                <div className="mb-3 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+                  {config.label}
+                </div>
+                <div className="space-y-3">
+                  {participantThemes.map(({ participant, theme }) => {
+                    const ev = getMetricValue(participant, config);
 
                     if (ev.state === 'pending') {
                       return (
-                        <td key={p.ticketId} className="px-3 py-2 text-muted-foreground">
-                          Pending
-                        </td>
+                        <div key={participant.ticketId} className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-muted-foreground">{participant.ticketKey}</span>
+                          <span className="text-muted-foreground">Pending</span>
+                        </div>
                       );
                     }
 
                     if (ev.state === 'unavailable' || ev.value == null) {
                       return (
-                        <td key={p.ticketId} className="px-3 py-2 text-muted-foreground">
-                          —
-                        </td>
+                        <div key={participant.ticketId} className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-muted-foreground">{participant.ticketKey}</span>
+                          <span className="text-muted-foreground">—</span>
+                        </div>
                       );
                     }
 
@@ -113,60 +123,68 @@ export function ComparisonUnifiedMetrics({ participants }: ComparisonUnifiedMetr
                     const formatted = config.format(ev.value);
 
                     return (
-                      <td key={p.ticketId} className="px-3 py-2">
-                        <div className="space-y-1">
-                          <span className="text-foreground">{formatted}</span>
-                          <div className="h-1.5 w-full rounded-full bg-muted">
-                            <div
-                              data-testid="metric-bar"
-                              className={`h-1.5 rounded-full ${isBest ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                              style={{ width: `${barWidth}%` }}
-                            />
-                          </div>
+                      <div key={participant.ticketId} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-muted-foreground">{participant.ticketKey}</span>
+                          <span
+                            data-testid={`metric-value-${config.key}-${participant.ticketId}`}
+                            className={cn('font-medium text-foreground', isBest && 'font-bold', isBest && theme.text)}
+                          >
+                            {formatted}
+                          </span>
                         </div>
-                      </td>
+                        <div className={cn('h-2.5 w-full rounded-full', theme.barTrack)}>
+                          <div
+                            data-testid="metric-bar"
+                            className={cn('h-2.5 rounded-full', theme.barFill)}
+                            style={{ width: `${Math.max(barWidth, 12)}%` }}
+                          />
+                        </div>
+                      </div>
                     );
                   })}
-                </tr>
-              );
-            })}
+                </div>
+              </div>
+            );
+          })}
 
-            {/* Quality Score row - special handling with popover */}
-            <tr className="border-b border-border last:border-0">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
-                Quality Score
-              </td>
-              {participants.map((p) => {
-                if (p.quality.state === 'pending') {
+          <div className="rounded-2xl border border-white/10 bg-background/20 p-4">
+            <div className="mb-3 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+              Quality Score
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {participantThemes.map(({ participant, theme }) => {
+                if (participant.quality.state === 'pending') {
                   return (
-                    <td key={p.ticketId} className="px-3 py-2 text-muted-foreground">
-                      Pending
-                    </td>
+                    <div key={participant.ticketId} className="rounded-xl border border-white/10 bg-background/20 p-3 text-sm text-muted-foreground">
+                      {participant.ticketKey}: Pending
+                    </div>
                   );
                 }
-                if (p.quality.state === 'unavailable' || p.quality.value == null) {
+                if (participant.quality.state === 'unavailable' || participant.quality.value == null) {
                   return (
-                    <td key={p.ticketId} className="px-3 py-2 text-muted-foreground">
-                      —
-                    </td>
+                    <div key={participant.ticketId} className="rounded-xl border border-white/10 bg-background/20 p-3 text-sm text-muted-foreground">
+                      {participant.ticketKey}: —
+                    </div>
                   );
                 }
 
-                const formatted = `${p.quality.value} ${getScoreThreshold(p.quality.value)}`;
+                const formatted = `${participant.quality.value} ${getScoreThreshold(participant.quality.value)}`;
 
                 return (
-                  <td key={p.ticketId} className="px-3 py-2">
+                  <div key={participant.ticketId} className={cn('rounded-xl border p-3', theme.border, theme.surface)}>
+                    <div className={cn('mb-2 text-xs font-medium', theme.text)}>{participant.ticketKey}</div>
                     <ComparisonQualityPopover
-                      qualityBreakdown={p.qualityBreakdown}
-                      qualityScore={p.quality}
+                      qualityBreakdown={participant.qualityBreakdown}
+                      qualityScore={participant.quality}
                       formattedScore={formatted}
                     />
-                  </td>
+                  </div>
                 );
               })}
-            </tr>
-          </tbody>
-        </table>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

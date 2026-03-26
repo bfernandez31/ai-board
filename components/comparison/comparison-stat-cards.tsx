@@ -1,8 +1,10 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { formatDurationMs } from '@/lib/comparison/format-duration';
+import { getStatTheme } from './comparison-theme';
 import type { ComparisonStatCardsProps } from './types';
 
 interface StatCardConfig {
@@ -48,15 +50,18 @@ function getDisplayValue(
   return 'N/A';
 }
 
-function MicroBar({
+function ProgressBar({
   participants,
   getValue,
+  label,
   winnerId,
 }: {
   participants: ComparisonParticipantDetail[];
   getValue: (p: ComparisonParticipantDetail) => { state: string; value: number | null };
+  label: string;
   winnerId: number;
 }) {
+  const theme = getStatTheme(label);
   const availableValues = participants
     .map((p) => {
       const ev = getValue(p);
@@ -65,21 +70,16 @@ function MicroBar({
     .filter((e): e is { ticketId: number; value: number } => e.value !== null);
 
   const maxValue = Math.max(...availableValues.map((e) => e.value), 1);
+  const winnerValue = availableValues.find((entry) => entry.ticketId === winnerId)?.value ?? 0;
+  const width = maxValue > 0 ? (winnerValue / maxValue) * 100 : 0;
 
   return (
-    <div className="relative mt-2 h-2 w-full rounded-full bg-muted">
-      {availableValues.map((entry) => {
-        const position = (entry.value / maxValue) * 100;
-        const isWinner = entry.ticketId === winnerId;
-        return (
-          <div
-            key={entry.ticketId}
-            data-testid="micro-bar-marker"
-            className={`absolute top-0 h-2 w-2 rounded-full ${isWinner ? 'bg-primary' : 'bg-muted-foreground/50'}`}
-            style={{ left: `calc(${Math.min(position, 100)}% - 4px)` }}
-          />
-        );
-      })}
+    <div className={cn('mt-4 h-2.5 w-full rounded-full', theme.barTrack)}>
+      <div
+        data-testid="stat-progress-bar"
+        className={cn('h-2.5 rounded-full', theme.barFill)}
+        style={{ width: `${Math.max(width, availableValues.length > 0 ? 14 : 0)}%` }}
+      />
     </div>
   );
 }
@@ -90,15 +90,22 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
       {statCardConfigs.map((config) => {
         const enrichment = config.getValue(winner);
         const displayValue = getDisplayValue(enrichment, config.format);
+        const theme = getStatTheme(config.label);
+        const cardId = config.label.toLowerCase().replace(/\s+/g, '-');
 
         return (
-          <Card key={config.label}>
-            <CardContent className="pt-4">
-              <div className="text-xs text-muted-foreground">{config.label}</div>
-              <div className="mt-1 text-xl font-bold text-foreground">{displayValue}</div>
-              <MicroBar
+          <Card
+            key={config.label}
+            data-testid={`stat-card-${cardId}`}
+            className={cn('border bg-ctp-mantle/75 shadow-lg backdrop-blur-sm', theme.border, theme.surface)}
+          >
+            <CardContent className="pt-5">
+              <div className={cn('text-[11px] uppercase tracking-[0.22em]', theme.label)}>{config.label}</div>
+              <div className="mt-2 text-[18px] font-extrabold tracking-[-0.05em] text-foreground">{displayValue}</div>
+              <ProgressBar
                 participants={participants}
                 getValue={config.getValue}
+                label={config.label}
                 winnerId={winner.ticketId}
               />
             </CardContent>

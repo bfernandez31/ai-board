@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ScoreGauge, getComparisonScoreColor } from '@/components/comparison/score-gauge';
+import { getParticipantTheme } from '@/components/comparison/comparison-theme';
 import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
 
 describe('getComparisonScoreColor', () => {
@@ -69,6 +70,21 @@ describe('ScoreGauge', () => {
     const { container } = renderWithProviders(<ScoreGauge score={90} />);
     const scoreCircle = container.querySelectorAll('circle')[1];
     expect(scoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-green))');
+  });
+
+  it('supports participant theme gradients and glow treatment', () => {
+    const { container } = renderWithProviders(
+      <ScoreGauge score={90} theme={getParticipantTheme(3)} gradientId="rank-3-gauge" />
+    );
+
+    const scoreCircle = container.querySelectorAll('circle')[1];
+    const defs = container.querySelector('defs');
+    const filter = container.querySelector('filter');
+
+    expect(scoreCircle.getAttribute('stroke')).toBe('url(#rank-3-gauge)');
+    expect(scoreCircle.getAttribute('filter')).toBe('url(#rank-3-gauge-glow)');
+    expect(defs).not.toBeNull();
+    expect(filter).not.toBeNull();
   });
 
   it('respects custom size prop', () => {

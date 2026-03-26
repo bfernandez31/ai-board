@@ -88,24 +88,23 @@ describe('ComparisonComplianceHeatmap', () => {
       <ComparisonComplianceHeatmap rows={complianceRows} participants={participants} />
     );
 
-    const greenCells = container.querySelectorAll('.bg-ctp-green\\/20');
-    const redCells = container.querySelectorAll('.bg-ctp-red\\/20');
-    const yellowCells = container.querySelectorAll('.bg-ctp-yellow\\/20');
+    const greenCells = container.querySelectorAll('.border-ctp-green\\/30');
+    const redCells = container.querySelectorAll('.border-ctp-red\\/30');
+    const yellowCells = container.querySelectorAll('.border-ctp-yellow\\/30');
 
     expect(greenCells.length).toBe(2); // pass cells
     expect(redCells.length).toBe(1); // fail cell
     expect(yellowCells.length).toBe(1); // mixed cell
   });
 
-  it('does not render text inside cells', () => {
-    const { container } = renderWithProviders(
+  it('renders status labels inside cells', () => {
+    renderWithProviders(
       <ComparisonComplianceHeatmap rows={complianceRows} participants={participants} />
     );
 
-    const cells = container.querySelectorAll('[data-testid="heatmap-cell"]');
-    cells.forEach((cell) => {
-      expect(cell.textContent?.trim()).toBe('');
-    });
+    expect(screen.getAllByText('Pass').length).toBeGreaterThan(0);
+    expect(screen.getByText('Fail')).toBeInTheDocument();
+    expect(screen.getByText('Mixed')).toBeInTheDocument();
   });
 
   it('renders muted background for missing assessments', () => {

@@ -93,10 +93,8 @@ describe('ComparisonStatCards', () => {
       <ComparisonStatCards winner={winner} participants={[winner, runner]} />
     );
 
-    // Each stat card should have markers for each participant
-    const markers = container.querySelectorAll('[data-testid="micro-bar-marker"]');
-    // 4 stat cards x 2 participants = 8 markers
-    expect(markers.length).toBe(8);
+    const bars = container.querySelectorAll('[data-testid="stat-progress-bar"]');
+    expect(bars.length).toBe(4);
   });
 
   it('handles pending enrichment values', () => {
@@ -139,5 +137,16 @@ describe('ComparisonStatCards', () => {
     );
 
     expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('applies unique stat themes per card', () => {
+    renderWithProviders(
+      <ComparisonStatCards winner={winner} participants={[winner, runner]} />
+    );
+
+    expect(screen.getByTestId('stat-card-cost').className).toContain('border-ctp-yellow/30');
+    expect(screen.getByTestId('stat-card-duration').className).toContain('border-ctp-blue/30');
+    expect(screen.getByTestId('stat-card-quality-score').className).toContain('border-ctp-green/30');
+    expect(screen.getByTestId('stat-card-files-changed').className).toContain('border-ctp-mauve/30');
   });
 });

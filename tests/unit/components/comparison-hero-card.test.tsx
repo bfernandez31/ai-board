@@ -80,6 +80,7 @@ describe('ComparisonHeroCard', () => {
 
     expect(screen.getByText('coverage')).toBeInTheDocument();
     expect(screen.getByText('performance')).toBeInTheDocument();
+    expect(screen.getByText('WINNER')).toBeInTheDocument();
   });
 
   it('displays metadata with source ticket key', () => {
@@ -178,5 +179,19 @@ describe('ComparisonHeroCard', () => {
     );
 
     expect(screen.getByRole('img', { name: 'Score: 92' })).toBeInTheDocument();
+  });
+
+  it('renders recommendation in a dedicated callout container', () => {
+    renderWithProviders(
+      <ComparisonHeroCard
+        winner={makeWinner()}
+        recommendation="Use AIB-101 for best results."
+        keyDifferentiators={[]}
+        generatedAt="2026-03-26T10:00:00Z"
+        sourceTicketKey="AIB-100"
+      />
+    );
+
+    expect(screen.getByTestId('comparison-recommendation')).toBeInTheDocument();
   });
 });

@@ -66,7 +66,7 @@ describe('ComparisonDecisionPoints (enhanced)', () => {
       <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
     );
 
-    const greenDots = container.querySelectorAll('.bg-ctp-green');
+    const greenDots = container.querySelectorAll('.shadow-\\[0_0_18px_hsl\\(var\\(--ctp-green\\)\\/0\\.45\\)\\]');
     expect(greenDots.length).toBe(1); // First decision point matches winner
   });
 
@@ -75,8 +75,8 @@ describe('ComparisonDecisionPoints (enhanced)', () => {
       <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
     );
 
-    const yellowDots = container.querySelectorAll('.bg-ctp-yellow');
-    expect(yellowDots.length).toBe(1); // Second decision point is non-null mismatch
+    const coloredCards = container.querySelectorAll('[data-testid="decision-point-card"]');
+    expect(Array.from(coloredCards).some((card) => card.className.includes('border-ctp-yellow/30'))).toBe(true);
   });
 
   it('renders neutral dot when verdict is null', () => {
@@ -86,6 +86,14 @@ describe('ComparisonDecisionPoints (enhanced)', () => {
 
     const neutralDots = container.querySelectorAll('[data-testid="verdict-dot-neutral"]');
     expect(neutralDots.length).toBe(1); // Third decision point has null verdict
+  });
+
+  it('renders verdict badges on each decision point', () => {
+    renderWithProviders(
+      <ComparisonDecisionPoints decisionPoints={decisionPoints} winnerTicketId={winnerTicketId} />
+    );
+
+    expect(screen.getAllByTestId('decision-verdict-badge')).toHaveLength(3);
   });
 
   it('wraps ticket keys in badges for participant approaches', () => {

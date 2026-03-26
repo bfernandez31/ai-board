@@ -65,8 +65,8 @@ describe('ComparisonParticipantGrid', () => {
 
   it('renders score rings with correct colors per threshold', () => {
     const participants = [
-      makeParticipant({ ticketId: 2, score: 90 }), // green
-      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', score: 45 }), // red
+      makeParticipant({ ticketId: 2, score: 90, rank: 2 }),
+      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', score: 45, rank: 3 }),
     ];
 
     const { container } = renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
@@ -74,13 +74,11 @@ describe('ComparisonParticipantGrid', () => {
     const svgs = container.querySelectorAll('svg');
     expect(svgs.length).toBe(2);
 
-    // First participant (90) should have green stroke
     const firstScoreCircle = svgs[0].querySelectorAll('circle')[1];
-    expect(firstScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-green))');
+    expect(firstScoreCircle.getAttribute('stroke')).toBe('url(#participant-gauge-2)');
 
-    // Second participant (45) should have red stroke
     const secondScoreCircle = svgs[1].querySelectorAll('circle')[1];
-    expect(secondScoreCircle.getAttribute('stroke')).toBe('hsl(var(--ctp-red))');
+    expect(secondScoreCircle.getAttribute('stroke')).toBe('url(#participant-gauge-3)');
   });
 
   it('renders workflow type and agent badges', () => {
@@ -108,5 +106,17 @@ describe('ComparisonParticipantGrid', () => {
     renderWithProviders(<ComparisonParticipantGrid participants={[]} />);
     // No cards rendered, no errors
     expect(screen.queryByText('AIB-')).not.toBeInTheDocument();
+  });
+
+  it('assigns each participant card a rank-based accent treatment', () => {
+    const participants = [
+      makeParticipant({ ticketId: 2, ticketKey: 'AIB-102', rank: 2 }),
+      makeParticipant({ ticketId: 3, ticketKey: 'AIB-103', rank: 3 }),
+    ];
+
+    renderWithProviders(<ComparisonParticipantGrid participants={participants} />);
+
+    expect(screen.getByTestId('participant-card-2').className).toContain('border-ctp-blue/30');
+    expect(screen.getByTestId('participant-card-3').className).toContain('border-ctp-mauve/30');
   });
 });
