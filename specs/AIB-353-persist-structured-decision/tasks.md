@@ -98,8 +98,8 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [US1] Integration test: Full persistence flow — submit a comparison payload with structured `decisionPoints` via API, verify each `DecisionPointEvaluation` record has distinct per-point `verdictTicketId`, `verdictSummary`, `rationale`, and `participantApproaches` in `tests/integration/comparison/`
-- [ ] T012 [US1] Integration test: Backward compatibility — submit a comparison payload without `decisionPoints` via API, verify `DecisionPointEvaluation` records are created using fallback `matchingRequirements` derivation in `tests/integration/comparison/`
+- [x] T011 [US1] Integration test: Full persistence flow — submit a comparison payload with structured `decisionPoints` via API, verify each `DecisionPointEvaluation` record has distinct per-point `verdictTicketId`, `verdictSummary`, `rationale`, and `participantApproaches` in `tests/integration/comparison/`
+- [x] T012 [US1] Integration test: Backward compatibility — submit a comparison payload without `decisionPoints` via API, verify `DecisionPointEvaluation` records are created using fallback `matchingRequirements` derivation in `tests/integration/comparison/`
 
 **Checkpoint**: End-to-end flow validated — structured decision points persist and display correctly
 
@@ -112,7 +112,7 @@
 - [x] T013 [P] Edge case: Verify `null` verdict handling — decision point with `verdictTicketKey: null` persists with `verdictTicketId: null` and displays gracefully in unit tests
 - [x] T014 [P] Edge case: Verify empty `decisionPoints` array triggers fallback path (not treated as structured data) in unit tests
 - [x] T015 [P] Edge case: Verify invalid `ticketKey` in approaches is skipped (not failed) when referenced key is not in `participantTicketKeys` in unit tests
-- [ ] T016 Run `bun run type-check` and `bun run lint` to validate all changes pass static analysis
+- [x] T016 Run `bun run type-check` and `bun run lint` to validate all changes pass static analysis
 
 ---
 

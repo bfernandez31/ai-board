@@ -157,6 +157,167 @@ describe('comparison persistence workflow route', () => {
     expect(records).toHaveLength(1);
   });
 
+  it('persists structured decisionPoints with per-point verdicts', async () => {
+    const prisma = getPrismaClient();
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source structured',
+      description: 'Source',
+      ticketNumber: 231,
+      ticketKey: 'TE2-231',
+      stage: 'BUILD',
+      branch: 'AIB-353-persist-structured-decision',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A structured',
+      description: 'A',
+      ticketNumber: 232,
+      ticketKey: 'TE2-232',
+      stage: 'VERIFY',
+    });
+    const candidateB = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate B structured',
+      description: 'B',
+      ticketNumber: 233,
+      ticketKey: 'TE2-233',
+      stage: 'PLAN',
+    });
+
+    const basePayload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-353-persist-structured-decision',
+      sourceTicket: { ticketKey: sourceTicket.ticketKey ?? 'TE2-231' },
+      participants: [
+        { ticketKey: candidateA.ticketKey ?? 'TE2-232' },
+        { ticketKey: candidateB.ticketKey ?? 'TE2-233' },
+      ],
+    });
+
+    // Add structured decisionPoints to the payload
+    const payload = {
+      ...basePayload,
+      report: {
+        ...basePayload.report,
+        decisionPoints: [
+          {
+            title: 'State management approach',
+            verdictTicketKey: candidateA.ticketKey ?? 'TE2-232',
+            verdictSummary: 'Candidate A uses React context properly',
+            rationale: 'Simpler and more maintainable state management',
+            approaches: [
+              { ticketKey: candidateA.ticketKey ?? 'TE2-232', summary: 'React context with useReducer' },
+              { ticketKey: candidateB.ticketKey ?? 'TE2-233', summary: 'Custom pub-sub event bus' },
+            ],
+          },
+          {
+            title: 'Error handling strategy',
+            verdictTicketKey: candidateB.ticketKey ?? 'TE2-233',
+            verdictSummary: 'Candidate B has better error boundaries',
+            rationale: 'Comprehensive middleware-based error handling',
+            approaches: [
+              { ticketKey: candidateA.ticketKey ?? 'TE2-232', summary: 'Basic try-catch blocks' },
+              { ticketKey: candidateB.ticketKey ?? 'TE2-233', summary: 'Middleware error handler with structured responses' },
+            ],
+          },
+        ],
+      },
+    };
+
+    const response = await postWorkflow<{
+      comparisonId: number;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.data.status).toBe('created');
+
+    const persisted = await prisma.comparisonRecord.findUnique({
+      where: { id: response.data.comparisonId },
+      include: { decisionPoints: { orderBy: { displayOrder: 'asc' } } },
+    });
+
+    expect(persisted?.decisionPoints).toHaveLength(2);
+
+    const dp0 = persisted!.decisionPoints[0];
+    expect(dp0.title).toBe('State management approach');
+    expect(dp0.verdictTicketId).toBe(candidateA.id);
+    expect(dp0.verdictSummary).toBe('Candidate A uses React context properly');
+    expect(dp0.rationale).toBe('Simpler and more maintainable state management');
+    expect(dp0.displayOrder).toBe(0);
+
+    const dp1 = persisted!.decisionPoints[1];
+    expect(dp1.title).toBe('Error handling strategy');
+    expect(dp1.verdictTicketId).toBe(candidateB.id);
+    expect(dp1.verdictSummary).toBe('Candidate B has better error boundaries');
+    expect(dp1.displayOrder).toBe(1);
+
+    // Verify per-point approaches are distinct
+    const approaches0 = dp0.participantApproaches as Array<{ ticketKey: string; summary: string }>;
+    const approaches1 = dp1.participantApproaches as Array<{ ticketKey: string; summary: string }>;
+    expect(approaches0[0].summary).toBe('React context with useReducer');
+    expect(approaches1[0].summary).toBe('Basic try-catch blocks');
+  });
+
+  it('uses fallback derivation when decisionPoints is absent', async () => {
+    const prisma = getPrismaClient();
+    const sourceTicket = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Source fallback',
+      description: 'Source',
+      ticketNumber: 241,
+      ticketKey: 'TE2-241',
+      stage: 'BUILD',
+      branch: 'AIB-353-persist-structured-decision',
+    });
+    const candidateA = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate A fallback',
+      description: 'A',
+      ticketNumber: 242,
+      ticketKey: 'TE2-242',
+      stage: 'VERIFY',
+    });
+    const candidateB = await createTestTicket(ctx.projectId, {
+      title: '[e2e] Candidate B fallback',
+      description: 'B',
+      ticketNumber: 243,
+      ticketKey: 'TE2-243',
+      stage: 'PLAN',
+    });
+
+    // Payload without decisionPoints — should use fallback
+    const payload = createWorkflowComparisonPayloadFixture({
+      projectId: ctx.projectId,
+      branch: 'AIB-353-persist-structured-decision',
+      sourceTicket: { ticketKey: sourceTicket.ticketKey ?? 'TE2-241' },
+      participants: [
+        { ticketKey: candidateA.ticketKey ?? 'TE2-242' },
+        { ticketKey: candidateB.ticketKey ?? 'TE2-243' },
+      ],
+    });
+
+    const response = await postWorkflow<{
+      comparisonId: number;
+      status: 'created' | 'duplicate';
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${sourceTicket.id}/comparisons`,
+      payload
+    );
+
+    expect(response.status).toBe(201);
+
+    const persisted = await prisma.comparisonRecord.findUnique({
+      where: { id: response.data.comparisonId },
+      include: { decisionPoints: true },
+    });
+
+    // Fallback creates decision points from matchingRequirements
+    expect(persisted?.decisionPoints.length).toBeGreaterThanOrEqual(1);
+    // Fallback uses global winner for all decision points (same verdictTicketId)
+    const verdictIds = new Set(persisted?.decisionPoints.map((dp) => dp.verdictTicketId));
+    expect(verdictIds.size).toBe(1);
+  });
+
   it('rejects malformed payloads and wrong-scope participants without writes', async () => {
     const prisma = getPrismaClient();
     const sourceTicket = await createTestTicket(ctx.projectId, {
