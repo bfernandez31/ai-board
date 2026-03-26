@@ -4,6 +4,7 @@ import {
   createComparisonPersistenceRequest,
   getComparisonDataArtifactPath,
   normalizeComparisonPersistenceRequest,
+  serializedComparisonReportSchema,
   serializeComparisonReport,
 } from '@/lib/comparison/comparison-payload';
 import { createComparisonReport } from '@/lib/comparison/comparison-generator';
@@ -140,5 +141,137 @@ describe('comparison-payload helpers', () => {
         'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md'
       )
     ).toBe('specs/AIB-330-persist-comparison-data/comparisons/comparison-data.json');
+  });
+});
+
+describe('decisionPoints Zod schema validation', () => {
+  const baseReport = {
+    metadata: {
+      generatedAt: '2026-03-20T10:00:00.000Z',
+      sourceTicket: 'AIB-1',
+      comparedTickets: ['AIB-2', 'AIB-3'],
+      filePath: 'specs/test/comparisons/test.md',
+    },
+    summary: 'Test summary',
+    alignment: {
+      overall: 80,
+      dimensions: { requirements: 80, scenarios: 80, entities: 80, keywords: 80 },
+      isAligned: true,
+      matchingRequirements: ['FR-001'],
+      matchingEntities: ['Ticket'],
+    },
+    implementation: {
+      'AIB-2': {
+        ticketKey: 'AIB-2',
+        linesAdded: 10,
+        linesRemoved: 2,
+        linesChanged: 12,
+        filesChanged: 2,
+        changedFiles: [],
+        testFilesChanged: 1,
+        hasData: true,
+      },
+    },
+    compliance: {
+      'AIB-2': {
+        overall: 90,
+        totalPrinciples: 1,
+        passedPrinciples: 1,
+        principles: [{ name: 'TypeScript-First', section: 'I', passed: true, notes: '' }],
+      },
+    },
+    recommendation: 'Ship AIB-2',
+    warnings: [],
+  };
+
+  it('validates a payload with valid decisionPoints', () => {
+    const result = serializedComparisonReportSchema.parse({
+      ...baseReport,
+      decisionPoints: [
+        {
+          title: 'State management',
+          verdictTicketKey: 'AIB-2',
+          verdictSummary: 'AIB-2 is better',
+          rationale: 'Uses React context properly',
+          approaches: [
+            { ticketKey: 'AIB-2', summary: 'React context with useReducer' },
+            { ticketKey: 'AIB-3', summary: 'Custom pub-sub system' },
+          ],
+        },
+      ],
+    });
+    expect(result.decisionPoints).toHaveLength(1);
+    expect(result.decisionPoints[0].title).toBe('State management');
+    expect(result.decisionPoints[0].verdictTicketKey).toBe('AIB-2');
+    expect(result.decisionPoints[0].approaches).toHaveLength(2);
+  });
+
+  it('accepts null verdictTicketKey for tied decisions', () => {
+    const result = serializedComparisonReportSchema.parse({
+      ...baseReport,
+      decisionPoints: [
+        {
+          title: 'Error handling',
+          verdictTicketKey: null,
+          verdictSummary: 'Both equally robust',
+          rationale: 'Both implement comprehensive error handling',
+          approaches: [],
+        },
+      ],
+    });
+    expect(result.decisionPoints[0].verdictTicketKey).toBeNull();
+  });
+
+  it('accepts empty approaches array', () => {
+    const result = serializedComparisonReportSchema.parse({
+      ...baseReport,
+      decisionPoints: [
+        {
+          title: 'Testing strategy',
+          verdictTicketKey: 'AIB-2',
+          verdictSummary: 'Better coverage',
+          rationale: 'More tests',
+          approaches: [],
+        },
+      ],
+    });
+    expect(result.decisionPoints[0].approaches).toEqual([]);
+  });
+
+  it('rejects decisionPoints with missing required fields', () => {
+    expect(() =>
+      serializedComparisonReportSchema.parse({
+        ...baseReport,
+        decisionPoints: [{ title: '' }],
+      })
+    ).toThrow();
+
+    expect(() =>
+      serializedComparisonReportSchema.parse({
+        ...baseReport,
+        decisionPoints: [
+          {
+            title: 'Valid title',
+            verdictTicketKey: 'AIB-2',
+            verdictSummary: '',
+            rationale: 'Some rationale',
+            approaches: [],
+          },
+        ],
+      })
+    ).toThrow();
+  });
+
+  it('defaults to empty array when decisionPoints is absent', () => {
+    const result = serializedComparisonReportSchema.parse(baseReport);
+    expect(result.decisionPoints).toEqual([]);
+  });
+
+  it('defaults to empty array when decisionPoints is undefined', () => {
+    const result = serializedComparisonReportSchema.parse({
+      ...baseReport,
+      decisionPoints: undefined,
+    });
+    expect(result.decisionPoints).toEqual([]);
   });
 });

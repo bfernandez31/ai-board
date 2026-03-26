@@ -42,8 +42,8 @@
 
 ### Tests for User Story 2
 
-- [ ] T002 [P] [US2] Unit test: Zod schema validates payloads with `decisionPoints` (valid, missing fields, null verdict, empty approaches, defaults to `[]` when absent) in `tests/unit/comparison-payload.test.ts`
-- [ ] T003 [P] [US2] Unit test: `buildDecisionPoints()` structured path maps `ReportDecisionPoint[]` to Prisma input with correct `verdictTicketId` resolution, approach filtering, and `displayOrder` in `tests/unit/comparison-record.test.ts`
+- [x] T002 [P] [US2] Unit test: Zod schema validates payloads with `decisionPoints` (valid, missing fields, null verdict, empty approaches, defaults to `[]` when absent) in `tests/unit/comparison-payload.test.ts`
+- [x] T003 [P] [US2] Unit test: `buildDecisionPoints()` structured path maps `ReportDecisionPoint[]` to Prisma input with correct `verdictTicketId` resolution, approach filtering, and `displayOrder` in `tests/unit/comparison-record.test.ts`
 
 ### Implementation for User Story 2
 
@@ -62,8 +62,8 @@
 
 ### Tests for User Story 3
 
-- [ ] T006 [P] [US3] Unit test: `buildDecisionPoints()` fallback path is triggered when `decisionPoints` is absent or empty, producing decision points from `matchingRequirements` with global winner in `tests/unit/comparison-record.test.ts`
-- [ ] T007 [P] [US3] Unit test: Zod schema accepts payloads without `decisionPoints` field and defaults to empty array in `tests/unit/comparison-payload.test.ts`
+- [x] T006 [P] [US3] Unit test: `buildDecisionPoints()` fallback path is triggered when `decisionPoints` is absent or empty, producing decision points from `matchingRequirements` with global winner in `tests/unit/comparison-record.test.ts`
+- [x] T007 [P] [US3] Unit test: Zod schema accepts payloads without `decisionPoints` field and defaults to empty array in `tests/unit/comparison-payload.test.ts`
 
 ### Implementation for User Story 3
 
@@ -109,9 +109,9 @@
 
 **Purpose**: Edge case handling and final validation
 
-- [ ] T013 [P] Edge case: Verify `null` verdict handling — decision point with `verdictTicketKey: null` persists with `verdictTicketId: null` and displays gracefully in unit tests
-- [ ] T014 [P] Edge case: Verify empty `decisionPoints` array triggers fallback path (not treated as structured data) in unit tests
-- [ ] T015 [P] Edge case: Verify invalid `ticketKey` in approaches is skipped (not failed) when referenced key is not in `participantTicketKeys` in unit tests
+- [x] T013 [P] Edge case: Verify `null` verdict handling — decision point with `verdictTicketKey: null` persists with `verdictTicketId: null` and displays gracefully in unit tests
+- [x] T014 [P] Edge case: Verify empty `decisionPoints` array triggers fallback path (not treated as structured data) in unit tests
+- [x] T015 [P] Edge case: Verify invalid `ticketKey` in approaches is skipped (not failed) when referenced key is not in `participantTicketKeys` in unit tests
 - [ ] T016 Run `bun run type-check` and `bun run lint` to validate all changes pass static analysis
 
 ---

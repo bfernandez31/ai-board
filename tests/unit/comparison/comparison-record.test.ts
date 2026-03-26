@@ -155,6 +155,190 @@ describe('comparison-record helpers', () => {
     });
   });
 
+  it('uses structured decisionPoints when present', () => {
+    const structuredReport: ComparisonReport = {
+      ...report,
+      decisionPoints: [
+        {
+          title: 'State management approach',
+          verdictTicketKey: 'AIB-2',
+          verdictSummary: 'AIB-2 uses React context properly',
+          rationale: 'Simpler and more maintainable state management',
+          approaches: [
+            { ticketKey: 'AIB-2', summary: 'React context with useReducer' },
+            { ticketKey: 'AIB-3', summary: 'Custom pub-sub event bus' },
+          ],
+        },
+        {
+          title: 'Error handling',
+          verdictTicketKey: 'AIB-3',
+          verdictSummary: 'AIB-3 has better error boundaries',
+          rationale: 'Comprehensive try-catch with structured responses',
+          approaches: [
+            { ticketKey: 'AIB-2', summary: 'Basic try-catch' },
+            { ticketKey: 'AIB-3', summary: 'Middleware error handler' },
+          ],
+        },
+      ],
+    };
+
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source',
+        stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+        { id: 3, ticketKey: 'AIB-3', title: 'Runner up', stage: 'PLAN', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_structured',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: structuredReport,
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+    expect(Array.isArray(decisionPoints)).toBe(true);
+    const dps = decisionPoints as Array<Record<string, unknown>>;
+    expect(dps).toHaveLength(2);
+    expect(dps[0]).toMatchObject({
+      title: 'State management approach',
+      verdictTicketId: 2,
+      verdictSummary: 'AIB-2 uses React context properly',
+      rationale: 'Simpler and more maintainable state management',
+      displayOrder: 0,
+    });
+    expect(dps[1]).toMatchObject({
+      title: 'Error handling',
+      verdictTicketId: 3,
+      verdictSummary: 'AIB-3 has better error boundaries',
+      displayOrder: 1,
+    });
+    // Each decision point has its own per-ticket approaches
+    const approaches0 = dps[0].participantApproaches as Array<Record<string, unknown>>;
+    expect(approaches0).toHaveLength(2);
+    expect(approaches0[0]).toMatchObject({ ticketKey: 'AIB-2', summary: 'React context with useReducer' });
+    expect(approaches0[1]).toMatchObject({ ticketKey: 'AIB-3', summary: 'Custom pub-sub event bus' });
+  });
+
+  it('falls back to matchingRequirements when decisionPoints is absent', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source',
+        stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+        { id: 3, ticketKey: 'AIB-3', title: 'Runner up', stage: 'PLAN', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_fallback',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report, // no decisionPoints
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+    expect(Array.isArray(decisionPoints)).toBe(true);
+    const dps = decisionPoints as Array<Record<string, unknown>>;
+    expect(dps).toHaveLength(1); // matchingRequirements has ['FR-001']
+    expect(dps[0].title).toBe('FR-001');
+    // Fallback uses global winner for all decision points
+    expect(dps[0].verdictTicketId).toBe(2); // AIB-2 has higher compliance
+  });
+
+  it('falls back when decisionPoints is empty array', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source',
+        stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+        { id: 3, ticketKey: 'AIB-3', title: 'Runner up', stage: 'PLAN', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_empty_dp',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: { ...report, decisionPoints: [] },
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+    expect(Array.isArray(decisionPoints)).toBe(true);
+    const dps = decisionPoints as Array<Record<string, unknown>>;
+    expect(dps[0].title).toBe('FR-001');
+  });
+
+  it('handles null verdictTicketKey in structured decision points', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source',
+        stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_null_verdict',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        metadata: { ...report.metadata, comparedTickets: ['AIB-2'] },
+        compliance: { 'AIB-2': report.compliance['AIB-2'] },
+        implementation: { 'AIB-2': report.implementation['AIB-2'] },
+        decisionPoints: [
+          {
+            title: 'Tied decision',
+            verdictTicketKey: null,
+            verdictSummary: 'Both equally good',
+            rationale: 'No clear winner',
+            approaches: [{ ticketKey: 'AIB-2', summary: 'Approach A' }],
+          },
+        ],
+      },
+    });
+
+    const dps = input.decisionPoints?.create as Array<Record<string, unknown>>;
+    expect(dps[0].verdictTicketId).toBeNull();
+  });
+
+  it('skips invalid ticketKey references in approaches', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source',
+        stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_invalid_key',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        metadata: { ...report.metadata, comparedTickets: ['AIB-2'] },
+        compliance: { 'AIB-2': report.compliance['AIB-2'] },
+        implementation: { 'AIB-2': report.implementation['AIB-2'] },
+        decisionPoints: [
+          {
+            title: 'Test',
+            verdictTicketKey: 'AIB-2',
+            verdictSummary: 'AIB-2 wins',
+            rationale: 'Better',
+            approaches: [
+              { ticketKey: 'AIB-2', summary: 'Valid approach' },
+              { ticketKey: 'AIB-999', summary: 'Invalid ticket key — should be skipped' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const dps = input.decisionPoints?.create as Array<Record<string, unknown>>;
+    const approaches = dps[0].participantApproaches as Array<Record<string, unknown>>;
+    expect(approaches).toHaveLength(1);
+    expect(approaches[0].ticketKey).toBe('AIB-2');
+  });
+
   it('reuses the existing record for a duplicate compare-run key', async () => {
     const existingRecord = {
       id: 42,
