@@ -57,6 +57,13 @@ const telemetrySchema = z.object({
   hasData: z.boolean().default(false),
 });
 
+const reportDecisionPointSchema = z.object({
+  title: z.string().min(1),
+  winner: z.string().min(1),
+  rationale: z.string().min(1),
+  approaches: z.record(z.string(), z.string()),
+});
+
 export const serializedComparisonReportSchema = z.object({
   metadata: reportMetadataSchema,
   summary: z.string(),
@@ -77,6 +84,7 @@ export const serializedComparisonReportSchema = z.object({
   telemetry: z.record(z.string(), telemetrySchema).default({}),
   recommendation: z.string().default(''),
   warnings: z.array(z.string()).default([]),
+  decisionPoints: z.array(reportDecisionPointSchema).optional(),
 });
 
 export const serializedComparisonPersistenceRequestSchema = z.object({

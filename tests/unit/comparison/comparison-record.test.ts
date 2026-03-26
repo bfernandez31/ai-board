@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ComparisonReport } from '@/lib/types/comparison';
+import type { ComparisonReport, ReportDecisionPoint } from '@/lib/types/comparison';
 import { prisma } from '@/lib/db/client';
 import {
   createAvailableEnrichment,
@@ -77,6 +77,27 @@ const report: ComparisonReport = {
   warnings: [],
 };
 
+const structuredDecisionPoints: ReportDecisionPoint[] = [
+  {
+    title: 'State Management Strategy',
+    winner: 'AIB-2',
+    rationale: 'AIB-2 uses TanStack Query with proper cache invalidation',
+    approaches: {
+      'AIB-2': 'Uses TanStack Query with queryClient.invalidateQueries on mutations',
+      'AIB-3': 'Uses useState with manual refetch, no cache invalidation',
+    },
+  },
+  {
+    title: 'Error Handling Pattern',
+    winner: 'AIB-3',
+    rationale: 'AIB-3 uses Zod validation at API boundaries',
+    approaches: {
+      'AIB-2': 'Basic try-catch with generic 500 responses',
+      'AIB-3': 'Zod schemas validate all inputs, typed error union returned',
+    },
+  },
+];
+
 describe('comparison-record helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -153,6 +174,79 @@ describe('comparison-record helpers', () => {
       jobCount: { state: 'available', value: 1 },
       primaryModel: { state: 'available', value: 'claude-sonnet-4-6' },
     });
+  });
+
+  it('uses fallback decision points when report has no structured decisionPoints', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source', stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+        { id: 3, ticketKey: 'AIB-3', title: 'Runner up', stage: 'PLAN', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_fallback',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report,
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+    expect(Array.isArray(decisionPoints)).toBe(true);
+    const points = decisionPoints as Array<Record<string, unknown>>;
+    // Fallback uses matchingRequirements as titles
+    expect(points[0]?.title).toBe('FR-001');
+    // Fallback copies the global recommendation as verdictSummary
+    expect(points[0]?.verdictSummary).toBe('Pick AIB-2.');
+    // Fallback uses generic "X files changed" summaries
+    const approaches = points[0]?.participantApproaches as Array<{ summary: string }>;
+    expect(approaches[0]?.summary).toBe('2 files changed');
+  });
+
+  it('uses structured decision points when report includes them', () => {
+    const reportWithDecisionPoints: ComparisonReport = {
+      ...report,
+      decisionPoints: structuredDecisionPoints,
+    };
+
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1, ticketKey: 'AIB-1', title: 'Source', stage: 'BUILD', workflowType: 'FULL', agent: null,
+      },
+      participants: [
+        { id: 2, ticketKey: 'AIB-2', title: 'Winner', stage: 'VERIFY', workflowType: 'FULL', agent: null },
+        { id: 3, ticketKey: 'AIB-3', title: 'Runner up', stage: 'PLAN', workflowType: 'FULL', agent: null },
+      ],
+      compareRunKey: 'cmp_structured',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: reportWithDecisionPoints,
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+    expect(Array.isArray(decisionPoints)).toBe(true);
+    const points = decisionPoints as Array<Record<string, unknown>>;
+    expect(points).toHaveLength(2);
+
+    // First point: State Management Strategy
+    expect(points[0]?.title).toBe('State Management Strategy');
+    expect(points[0]?.verdictTicketId).toBe(2); // AIB-2 -> id 2
+    expect(points[0]?.rationale).toBe('AIB-2 uses TanStack Query with proper cache invalidation');
+    expect(points[0]?.displayOrder).toBe(0);
+    const approaches0 = points[0]?.participantApproaches as Array<{ ticketKey: string; summary: string }>;
+    expect(approaches0).toHaveLength(2);
+    expect(approaches0.find((a) => a.ticketKey === 'AIB-2')?.summary).toBe(
+      'Uses TanStack Query with queryClient.invalidateQueries on mutations'
+    );
+    expect(approaches0.find((a) => a.ticketKey === 'AIB-3')?.summary).toBe(
+      'Uses useState with manual refetch, no cache invalidation'
+    );
+
+    // Second point: Error Handling Pattern (winner is AIB-3)
+    expect(points[1]?.title).toBe('Error Handling Pattern');
+    expect(points[1]?.verdictTicketId).toBe(3); // AIB-3 -> id 3
+    expect(points[1]?.rationale).toBe('AIB-3 uses Zod validation at API boundaries');
+    expect(points[1]?.displayOrder).toBe(1);
   });
 
   it('reuses the existing record for a duplicate compare-run key', async () => {

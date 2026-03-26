@@ -134,6 +134,79 @@ describe('comparison-payload helpers', () => {
     ).toThrow();
   });
 
+  it('accepts and preserves structured decisionPoints in the report', () => {
+    const serialized = serializeComparisonReport({
+      ...report,
+      metadata: {
+        ...report.metadata,
+        filePath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+      },
+      decisionPoints: [
+        {
+          title: 'State Management',
+          winner: 'AIB-325',
+          rationale: 'Uses TanStack Query',
+          approaches: {
+            'AIB-325': 'TanStack Query with cache',
+            'AIB-327': 'useState only',
+          },
+        },
+      ],
+    });
+
+    const payload = createComparisonPersistenceRequest({
+      compareRunKey: createCompareRunKey('AIB-330', ['AIB-325', 'AIB-327'], report.metadata.generatedAt),
+      projectId: 3,
+      sourceTicketKey: 'AIB-330',
+      participantTicketKeys: ['AIB-325', 'AIB-327'],
+      markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+      report: {
+        ...report,
+        metadata: {
+          ...report.metadata,
+          filePath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+        },
+        decisionPoints: [
+          {
+            title: 'State Management',
+            winner: 'AIB-325',
+            rationale: 'Uses TanStack Query',
+            approaches: {
+              'AIB-325': 'TanStack Query with cache',
+              'AIB-327': 'useState only',
+            },
+          },
+        ],
+      },
+    });
+
+    const normalized = normalizeComparisonPersistenceRequest(payload);
+    expect(normalized.report.decisionPoints).toHaveLength(1);
+    expect(normalized.report.decisionPoints![0].title).toBe('State Management');
+    expect(normalized.report.decisionPoints![0].winner).toBe('AIB-325');
+    expect(normalized.report.decisionPoints![0].approaches['AIB-325']).toBe('TanStack Query with cache');
+  });
+
+  it('accepts payloads without decisionPoints for backwards compatibility', () => {
+    const payload = createComparisonPersistenceRequest({
+      compareRunKey: createCompareRunKey('AIB-330', ['AIB-325', 'AIB-327'], report.metadata.generatedAt),
+      projectId: 3,
+      sourceTicketKey: 'AIB-330',
+      participantTicketKeys: ['AIB-325', 'AIB-327'],
+      markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+      report: {
+        ...report,
+        metadata: {
+          ...report.metadata,
+          filePath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+        },
+      },
+    });
+
+    const normalized = normalizeComparisonPersistenceRequest(payload);
+    expect(normalized.report.decisionPoints).toBeUndefined();
+  });
+
   it('builds the transient JSON artifact path beside markdown', () => {
     expect(
       getComparisonDataArtifactPath(

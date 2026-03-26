@@ -140,7 +140,7 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
   );
 }
 
-function buildDecisionPoints(
+function buildDecisionPointsFallback(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
@@ -166,6 +166,28 @@ function buildDecisionPoints(
       displayOrder: index,
     })
   );
+}
+
+function buildDecisionPoints(
+  report: ComparisonReport,
+  ticketKeyToId: Map<string, number>
+): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
+  if (!report.decisionPoints || report.decisionPoints.length === 0) {
+    return buildDecisionPointsFallback(report, ticketKeyToId);
+  }
+
+  return report.decisionPoints.map((point, index) => ({
+    title: point.title,
+    verdictTicketId: ticketKeyToId.get(point.winner) ?? null,
+    verdictSummary: `Best: ${point.winner}`,
+    rationale: point.rationale,
+    participantApproaches: Object.entries(point.approaches).map(([ticketKey, summary]) => ({
+      ticketId: ticketKeyToId.get(ticketKey),
+      ticketKey,
+      summary,
+    })),
+    displayOrder: index,
+  }));
 }
 
 function buildComplianceCreates(

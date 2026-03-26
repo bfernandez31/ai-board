@@ -391,7 +391,27 @@ After writing the markdown report, write a JSON data file for workflow persisten
       }
     },
     "recommendation": "Ship AIB-124",
-    "warnings": []
+    "warnings": [],
+    "decisionPoints": [
+      {
+        "title": "State Management Strategy",
+        "winner": "AIB-124",
+        "rationale": "Uses TanStack Query with proper cache invalidation, while AIB-123 relies on useState causing stale data",
+        "approaches": {
+          "AIB-123": "Uses useState with manual refetch, no cache invalidation on mutations",
+          "AIB-124": "Uses TanStack Query with queryClient.invalidateQueries on mutations"
+        }
+      },
+      {
+        "title": "Error Handling Pattern",
+        "winner": "AIB-123",
+        "rationale": "AIB-123 uses Zod validation at API boundaries with typed error responses",
+        "approaches": {
+          "AIB-123": "Zod schemas validate all inputs, typed error union returned to client",
+          "AIB-124": "Basic try-catch with generic 500 responses, no input validation"
+        }
+      }
+    ]
   }
 }
 ```
@@ -404,6 +424,7 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
 - **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
+- `decisionPoints`: **Required array** — one entry per decision point from Step 7. Each must have `title`, `winner` (ticket key), `rationale`, and `approaches` (record of ticketKey→description). These are persisted to the database and displayed individually in the comparison dialog
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.
 

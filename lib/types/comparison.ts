@@ -221,6 +221,26 @@ export interface ComparisonReportMetadata {
 }
 
 /**
+ * ReportDecisionPoint
+ *
+ * Structured decision point from AI comparison analysis.
+ * Captures per-decision-point verdict, rationale, and per-ticket approaches.
+ */
+export interface ReportDecisionPoint {
+  /** Decision point title (e.g., "State Management Strategy") */
+  title: string;
+
+  /** Ticket key of the winner for this decision point */
+  winner: string;
+
+  /** Why this ticket won for this decision point */
+  rationale: string;
+
+  /** Per-ticket approach descriptions, keyed by ticket key */
+  approaches: Record<string, string>;
+}
+
+/**
  * ComparisonReport
  *
  * Full comparison document structure.
@@ -249,6 +269,9 @@ export interface ComparisonReport {
 
   /** Warnings (e.g., low alignment, missing data) */
   warnings: string[];
+
+  /** Structured decision points from AI analysis (optional for backwards compatibility) */
+  decisionPoints?: ReportDecisionPoint[];
 }
 
 export interface SerializedComparisonReportMetadata {
