@@ -5,9 +5,9 @@ import {
   createAvailableEnrichment,
   createPendingEnrichment,
   createUnavailableEnrichment,
+  normalizeAggregatedTelemetry,
   normalizeDecisionPoints,
   normalizeParticipantDetail,
-  normalizeTelemetryEnrichment,
   toComparisonHistorySummary,
 } from './comparison-record';
 
@@ -168,21 +168,21 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [allCompletedJobs, latestVerifyJobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
         ticketId: {
           in: participantIds,
         },
+        status: 'COMPLETED',
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
+        model: true,
       },
     }),
     prisma.job.findMany({
@@ -197,6 +197,7 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,24 +222,35 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  const jobsByTicketId = new Map<number, typeof allCompletedJobs>();
+  for (const job of allCompletedJobs) {
+    const existing = jobsByTicketId.get(job.ticketId);
+    if (existing) {
+      existing.push(job);
+    } else {
+      jobsByTicketId.set(job.ticketId, [job]);
+    }
+  }
+
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
   const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
-  const participants = record.participants.map((participant) =>
-    normalizeParticipantDetail({
+  const participants = record.participants.map((participant) => {
+    const verifyJob = latestVerifyJobByTicketId.get(participant.ticketId) ?? null;
+    return normalizeParticipantDetail({
       participant,
       quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
+        verifyJob,
         verifyJobTicketIds.has(participant.ticketId)
       ),
-      telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
+      qualityScoreDetails: verifyJob?.qualityScoreDetails ?? null,
+      telemetry: normalizeAggregatedTelemetry(
+        jobsByTicketId.get(participant.ticketId) ?? []
       ),
-    })
-  );
+    });
+  });
 
   const groupedCompliance = new Map<
     string,

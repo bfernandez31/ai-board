@@ -21,6 +21,7 @@ import { ComparisonComplianceGrid } from './comparison-compliance-grid';
 import { ComparisonDecisionPoints } from './comparison-decision-points';
 import { ComparisonHistoryList } from './comparison-history-list';
 import { ComparisonMetricsGrid } from './comparison-metrics-grid';
+import { ComparisonOperationalGrid } from './comparison-operational-grid';
 import { ComparisonRanking } from './comparison-ranking';
 import type { ComparisonViewerProps } from './types';
 
@@ -183,6 +184,7 @@ export function ComparisonViewer({
                         keyDifferentiators={detail.keyDifferentiators}
                       />
                       <ComparisonMetricsGrid participants={detail.participants} />
+                      <ComparisonOperationalGrid participants={detail.participants} />
                       <ComparisonDecisionPoints decisionPoints={detail.decisionPoints} />
                       <ComparisonComplianceGrid
                         rows={detail.complianceRows}

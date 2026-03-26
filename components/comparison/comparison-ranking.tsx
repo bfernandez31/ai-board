@@ -2,7 +2,18 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getScoreThreshold, getScoreColor } from '@/lib/quality-score';
 import type { ComparisonRankingProps } from './types';
+
+function QualityBadge({ score }: { score: number }) {
+  const threshold = getScoreThreshold(score);
+  const colors = getScoreColor(score);
+  return (
+    <Badge variant="outline" className={`${colors.text} border-current`}>
+      {score} {threshold}
+    </Badge>
+  );
+}
 
 export function ComparisonRanking({
   participants,
@@ -45,9 +56,16 @@ export function ComparisonRanking({
                     {participant.title}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {participant.ticketId === winnerTicketId && <Badge>Winner</Badge>}
                   <Badge variant="outline">{participant.score}%</Badge>
+                  <Badge variant="secondary">{participant.workflowType}</Badge>
+                  {participant.agent && (
+                    <Badge variant="secondary">{participant.agent}</Badge>
+                  )}
+                  {participant.quality.state === 'available' && participant.quality.value != null && (
+                    <QualityBadge score={participant.quality.value} />
+                  )}
                 </div>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">

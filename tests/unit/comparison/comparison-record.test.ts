@@ -133,19 +133,19 @@ describe('comparison-record helpers', () => {
       state: 'unavailable',
       value: null,
     });
-    expect(
-      normalizeTelemetryEnrichment({
-        inputTokens: 10,
-        outputTokens: null,
-        durationMs: 30,
-        costUsd: null,
-      })
-    ).toEqual({
-      inputTokens: { state: 'available', value: 10 },
-      outputTokens: { state: 'pending', value: null },
-      durationMs: { state: 'available', value: 30 },
-      costUsd: { state: 'pending', value: null },
+    const telemetry = normalizeTelemetryEnrichment({
+      inputTokens: 10,
+      outputTokens: null,
+      durationMs: 30,
+      costUsd: null,
     });
+    expect(telemetry.inputTokens).toEqual({ state: 'available', value: 10 });
+    expect(telemetry.outputTokens).toEqual({ state: 'pending', value: null });
+    expect(telemetry.durationMs).toEqual({ state: 'available', value: 30 });
+    expect(telemetry.costUsd).toEqual({ state: 'pending', value: null });
+    expect(telemetry.totalTokens).toEqual({ state: 'available', value: 10 });
+    expect(telemetry.jobCount).toEqual({ state: 'available', value: 1 });
+    expect(telemetry.model).toEqual({ state: 'unavailable', value: null });
   });
 
   it('reuses the existing record for a duplicate compare-run key', async () => {

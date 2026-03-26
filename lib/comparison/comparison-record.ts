@@ -372,8 +372,11 @@ export function normalizeTelemetryEnrichment(job: {
     return {
       inputTokens: createUnavailableEnrichment<number>(),
       outputTokens: createUnavailableEnrichment<number>(),
+      totalTokens: createUnavailableEnrichment<number>(),
       durationMs: createUnavailableEnrichment<number>(),
       costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      model: createUnavailableEnrichment<string>(),
     };
   }
 
@@ -385,11 +388,88 @@ export function normalizeTelemetryEnrichment(job: {
     return createAvailableEnrichment(value);
   }
 
+  const inputVal = job.inputTokens ?? 0;
+  const outputVal = job.outputTokens ?? 0;
+  const totalTokens = inputVal + outputVal > 0
+    ? createAvailableEnrichment(inputVal + outputVal)
+    : createPendingEnrichment<number>();
+
   return {
     inputTokens: createValue(job.inputTokens),
     outputTokens: createValue(job.outputTokens),
+    totalTokens,
     durationMs: createValue(job.durationMs),
     costUsd: createValue(job.costUsd),
+    jobCount: createAvailableEnrichment(1),
+    model: createUnavailableEnrichment<string>(),
+  };
+}
+
+export function normalizeAggregatedTelemetry(jobs: Array<{
+  inputTokens: number | null;
+  outputTokens: number | null;
+  durationMs: number | null;
+  costUsd: number | null;
+  model: string | null;
+}>): ComparisonTelemetryEnrichment {
+  if (jobs.length === 0) {
+    return {
+      inputTokens: createUnavailableEnrichment<number>(),
+      outputTokens: createUnavailableEnrichment<number>(),
+      totalTokens: createUnavailableEnrichment<number>(),
+      durationMs: createUnavailableEnrichment<number>(),
+      costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      model: createUnavailableEnrichment<string>(),
+    };
+  }
+
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let durationMs = 0;
+  let costUsd = 0;
+  const modelCounts = new Map<string, number>();
+  let hasAnyData = false;
+
+  for (const job of jobs) {
+    if (job.inputTokens != null) { inputTokens += job.inputTokens; hasAnyData = true; }
+    if (job.outputTokens != null) { outputTokens += job.outputTokens; hasAnyData = true; }
+    if (job.durationMs != null) { durationMs += job.durationMs; hasAnyData = true; }
+    if (job.costUsd != null) { costUsd += job.costUsd; hasAnyData = true; }
+    if (job.model) {
+      modelCounts.set(job.model, (modelCounts.get(job.model) ?? 0) + 1);
+    }
+  }
+
+  let primaryModel: string | null = null;
+  let maxCount = 0;
+  for (const [model, count] of modelCounts) {
+    if (count > maxCount) {
+      maxCount = count;
+      primaryModel = model;
+    }
+  }
+
+  if (!hasAnyData) {
+    return {
+      inputTokens: createPendingEnrichment<number>(),
+      outputTokens: createPendingEnrichment<number>(),
+      totalTokens: createPendingEnrichment<number>(),
+      durationMs: createPendingEnrichment<number>(),
+      costUsd: createPendingEnrichment<number>(),
+      jobCount: createAvailableEnrichment(jobs.length),
+      model: primaryModel ? createAvailableEnrichment(primaryModel) : createPendingEnrichment<string>(),
+    };
+  }
+
+  return {
+    inputTokens: createAvailableEnrichment(inputTokens),
+    outputTokens: createAvailableEnrichment(outputTokens),
+    totalTokens: createAvailableEnrichment(inputTokens + outputTokens),
+    durationMs: createAvailableEnrichment(durationMs),
+    costUsd: createAvailableEnrichment(costUsd),
+    jobCount: createAvailableEnrichment(jobs.length),
+    model: primaryModel ? createAvailableEnrichment(primaryModel) : createUnavailableEnrichment<string>(),
   };
 }
 
@@ -417,6 +497,7 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
+  qualityScoreDetails?: string | null;
   telemetry: ComparisonTelemetryEnrichment;
 }): ComparisonParticipantDetail {
   return {
@@ -430,6 +511,7 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
+    qualityScoreDetails: input.qualityScoreDetails ?? null,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };

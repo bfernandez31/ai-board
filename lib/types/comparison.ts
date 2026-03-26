@@ -371,8 +371,11 @@ export interface ComparisonEnrichmentValue<T> {
 export interface ComparisonTelemetryEnrichment {
   inputTokens: ComparisonEnrichmentValue<number>;
   outputTokens: ComparisonEnrichmentValue<number>;
+  totalTokens: ComparisonEnrichmentValue<number>;
   durationMs: ComparisonEnrichmentValue<number>;
   costUsd: ComparisonEnrichmentValue<number>;
+  jobCount: ComparisonEnrichmentValue<number>;
+  model: ComparisonEnrichmentValue<string>;
 }
 
 export interface ComparisonMetricSnapshot {
@@ -396,6 +399,7 @@ export interface ComparisonParticipantDetail {
   score: number;
   rankRationale: string;
   quality: ComparisonEnrichmentValue<number>;
+  qualityScoreDetails: string | null;
   telemetry: ComparisonTelemetryEnrichment;
   metrics: ComparisonMetricSnapshot;
 }
