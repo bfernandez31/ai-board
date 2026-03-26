@@ -107,8 +107,11 @@ function buildRankings(report: ComparisonReport): Array<{
   }));
 }
 
-function buildBestValueFlags(metrics: ComparisonReport['implementation']): Record<string, Record<string, boolean>> {
+function buildBestValueFlags(
+  metrics: ComparisonReport['implementation']
+): Record<string, Record<string, boolean>> {
   const entries = Object.values(metrics).filter((item) => item.hasData);
+
   if (entries.length === 0) {
     return Object.fromEntries(
       Object.values(metrics).map((item) => [
@@ -135,7 +138,9 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
         linesChanged: item.hasData && item.linesChanged === minima.linesChanged,
         filesChanged: item.hasData && item.filesChanged === minima.filesChanged,
         testFilesChanged:
-          item.hasData && item.testFilesChanged === minima.testFilesChanged && minima.testFilesChanged > 0,
+          item.hasData &&
+          item.testFilesChanged === minima.testFilesChanged &&
+          minima.testFilesChanged > 0,
       },
     ])
   );
@@ -260,7 +265,10 @@ export function createComparisonRecordInput(
 
 export async function persistComparisonRecord(
   input: PersistComparisonInput
-) {
+): Promise<{
+  record: Prisma.ComparisonRecordGetPayload<{ include: typeof comparisonRecordInclude }>;
+  isDuplicate: boolean;
+}> {
   return prisma.$transaction(async (tx) => {
     if (input.compareRunKey) {
       const existingRecord = await tx.comparisonRecord.findFirst({

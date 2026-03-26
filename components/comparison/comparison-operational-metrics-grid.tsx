@@ -11,6 +11,13 @@ import type {
 } from '@/lib/types/comparison';
 
 type MetricValue = number | string;
+type MetricKey = (typeof metricRows)[number]['key'];
+type ComparisonOperationalMetricsGridProps = {
+  participants: ComparisonParticipantDetail[];
+};
+type QualityBreakdownPopoverProps = {
+  participant: ComparisonParticipantDetail;
+};
 
 const metricRows = [
   {
@@ -58,7 +65,7 @@ const metricRows = [
 ] as const;
 
 function formatMetricValue(
-  metricKey: (typeof metricRows)[number]['key'],
+  metricKey: MetricKey,
   value: MetricValue | null
 ): string {
   if (value == null) {
@@ -97,7 +104,7 @@ function renderEnrichmentValue<T>(
 
 function getBestValueTicketIds(
   participants: ComparisonParticipantDetail[],
-  metricKey: (typeof metricRows)[number]['key']
+  metricKey: MetricKey
 ): Set<number> {
   const values = participants.flatMap((participant) => {
     const enrichment =
@@ -124,20 +131,44 @@ function getBestValueTicketIds(
   );
 }
 
+function getParticipantMetricEnrichment(
+  participant: ComparisonParticipantDetail,
+  metricKey: MetricKey
+): ComparisonEnrichmentValue<number | string> {
+  if (metricKey === 'quality') {
+    return participant.quality;
+  }
+
+  return participant.telemetry[metricKey];
+}
+
+function getParticipantMetricDisplayValue(
+  participant: ComparisonParticipantDetail,
+  metricKey: MetricKey
+): string {
+  if (metricKey === 'quality') {
+    return formatMetricValue(metricKey, participant.quality.value);
+  }
+
+  return formatMetricValue(metricKey, participant.telemetry[metricKey].value);
+}
+
 function QualityBreakdownPopover({
   participant,
-}: {
-  participant: ComparisonParticipantDetail;
-}): React.JSX.Element {
+}: QualityBreakdownPopoverProps): React.JSX.Element {
   const qualityDetails = participant.qualityDetails.value;
   const qualityValue = participant.quality.value;
+  const qualityLabel = renderEnrichmentValue(
+    participant.quality,
+    formatMetricValue('quality', qualityValue)
+  );
 
   if (
     participant.qualityDetails.state !== 'available' ||
     !qualityDetails ||
     qualityValue == null
   ) {
-    return <span>{renderEnrichmentValue(participant.quality, formatMetricValue('quality', qualityValue))}</span>;
+    return <span>{qualityLabel}</span>;
   }
 
   return (
@@ -190,9 +221,7 @@ function QualityBreakdownPopover({
 
 export function ComparisonOperationalMetricsGrid({
   participants,
-}: {
-  participants: ComparisonParticipantDetail[];
-}) {
+}: ComparisonOperationalMetricsGridProps): React.JSX.Element {
   return (
     <Card>
       <CardHeader>
@@ -239,14 +268,8 @@ export function ComparisonOperationalMetricsGrid({
                     </div>
                   </td>
                   {participants.map((participant) => {
-                    const enrichment =
-                      row.key === 'quality'
-                        ? participant.quality
-                        : participant.telemetry[row.key];
-                    const displayValue =
-                      row.key === 'quality'
-                        ? formatMetricValue(row.key, participant.quality.value)
-                        : formatMetricValue(row.key, participant.telemetry[row.key].value);
+                    const enrichment = getParticipantMetricEnrichment(participant, row.key);
+                    const displayValue = getParticipantMetricDisplayValue(participant, row.key);
 
                     return (
                       <td key={participant.ticketId} className="px-3 py-3 align-top text-foreground">
