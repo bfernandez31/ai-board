@@ -52,15 +52,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] Write component test: all 7 metric rows render with correct labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T014 [P] [US1] Write component test: best value badges appear on correct cells (lowest for cost/tokens/duration/jobs, highest for quality) in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T015 [P] [US1] Write component test: N/A shown for unavailable state, Pending shown for pending state in `tests/unit/components/comparison-operational-metrics.test.tsx`
-- [ ] T016 [P] [US1] Write component test: formatting functions produce expected output (tokens with commas, duration as "Xm Ys", cost as "$X.XX") in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T013 [P] [US1] Write component test: all 7 metric rows render with correct labels in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T014 [P] [US1] Write component test: best value badges appear on correct cells (lowest for cost/tokens/duration/jobs, highest for quality) in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T015 [P] [US1] Write component test: N/A shown for unavailable state, Pending shown for pending state in `tests/unit/components/comparison-operational-metrics.test.tsx`
+- [x] T016 [P] [US1] Write component test: formatting functions produce expected output (tokens with commas, duration as "Xm Ys", cost as "$X.XX") in `tests/unit/components/comparison-operational-metrics.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Create `ComparisonOperationalMetrics` component with sticky first column table, 7 metric rows (Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score), column headers (ticketKey + workflowType + agent), best-value badges, Pending/N/A states, and value formatting in `components/comparison/comparison-operational-metrics.tsx`
-- [ ] T018 [US1] Insert `<ComparisonOperationalMetrics>` between `<ComparisonMetricsGrid>` and `<ComparisonDecisionPoints>` in `components/comparison/comparison-viewer.tsx`
+- [x] T017 [US1] Create `ComparisonOperationalMetrics` component with sticky first column table, 7 metric rows (Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score), column headers (ticketKey + workflowType + agent), best-value badges, Pending/N/A states, and value formatting in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T018 [US1] Insert `<ComparisonOperationalMetrics>` between `<ComparisonMetricsGrid>` and `<ComparisonDecisionPoints>` in `components/comparison/comparison-viewer.tsx`
 
 **Checkpoint**: Operational Metrics section visible in comparison dialog with correct data, horizontal scroll with sticky labels works for 2–6 tickets
 
@@ -74,13 +74,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Write component test: workflow type badges render for FULL/QUICK/CLEAN workflows in `tests/unit/components/comparison-ranking.test.tsx`
-- [ ] T020 [P] [US2] Write component test: agent badge hidden when agent is null, shown when present in `tests/unit/components/comparison-ranking.test.tsx`
-- [ ] T021 [P] [US2] Write component test: quality badge shows "score label" when available, hidden when unavailable in `tests/unit/components/comparison-ranking.test.tsx`
+- [x] T019 [P] [US2] Write component test: workflow type badges render for FULL/QUICK/CLEAN workflows in `tests/unit/components/comparison-ranking.test.tsx`
+- [x] T020 [P] [US2] Write component test: agent badge hidden when agent is null, shown when present in `tests/unit/components/comparison-ranking.test.tsx`
+- [x] T021 [P] [US2] Write component test: quality badge shows "score label" when available, hidden when unavailable in `tests/unit/components/comparison-ranking.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Add workflow type `<Badge variant="outline">` (always shown), agent `<Badge variant="outline">` (conditional on non-null), and quality `<Badge variant="secondary">` with threshold label (conditional on available state) to each participant card in `components/comparison/comparison-ranking.tsx`
+- [x] T022 [US2] Add workflow type `<Badge variant="outline">` (always shown), agent `<Badge variant="outline">` (conditional on non-null), and quality `<Badge variant="secondary">` with threshold label (conditional on available state) to each participant card in `components/comparison/comparison-ranking.tsx`
 
 **Checkpoint**: Ranking cards display workflow type, agent, and quality badges with correct conditional visibility
 
