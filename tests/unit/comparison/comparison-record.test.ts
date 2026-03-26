@@ -75,6 +75,24 @@ const report: ComparisonReport = {
   telemetry: {},
   recommendation: 'Pick AIB-2.',
   warnings: [],
+  decisionPoints: [
+    {
+      title: 'Telemetry Aggregation Strategy',
+      verdictTicketKey: 'AIB-2',
+      verdictSummary: 'AIB-2 keeps telemetry aggregation co-located with record normalization.',
+      rationale: 'The approach is easier to audit and keeps pending-state handling explicit.',
+      participantApproaches: [
+        {
+          ticketKey: 'AIB-2',
+          summary: 'Uses aggregateJobTelemetry() with a separate in-progress query.',
+        },
+        {
+          ticketKey: 'AIB-3',
+          summary: 'Delegates aggregation to a utility module with looser pending-state handling.',
+        },
+      ],
+    },
+  ],
 };
 
 describe('comparison-record helpers', () => {
@@ -124,6 +142,87 @@ describe('comparison-record helpers', () => {
       rank: 1,
       score: 92,
     });
+    expect(input.decisionPoints?.create).toEqual([
+      {
+        title: 'Telemetry Aggregation Strategy',
+        verdictTicketId: 2,
+        verdictSummary: 'AIB-2 keeps telemetry aggregation co-located with record normalization.',
+        rationale: 'The approach is easier to audit and keeps pending-state handling explicit.',
+        participantApproaches: [
+          {
+            ticketId: 2,
+            ticketKey: 'AIB-2',
+            summary: 'Uses aggregateJobTelemetry() with a separate in-progress query.',
+          },
+          {
+            ticketId: 3,
+            ticketKey: 'AIB-3',
+            summary: 'Delegates aggregation to a utility module with looser pending-state handling.',
+          },
+        ],
+        displayOrder: 0,
+      },
+    ]);
+  });
+
+  it('falls back to synthesized decision points when structured report data is missing', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1,
+        ticketKey: 'AIB-1',
+        title: 'Source',
+        stage: 'BUILD',
+        workflowType: 'FULL',
+        agent: null,
+      },
+      participants: [
+        {
+          id: 2,
+          ticketKey: 'AIB-2',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+        },
+        {
+          id: 3,
+          ticketKey: 'AIB-3',
+          title: 'Runner up',
+          stage: 'PLAN',
+          workflowType: 'FULL',
+          agent: null,
+        },
+      ],
+      compareRunKey: 'cmp_existing_run',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        decisionPoints: [],
+      },
+    });
+
+    expect(input.decisionPoints?.create).toEqual([
+      {
+        title: 'FR-001',
+        verdictTicketId: 2,
+        verdictSummary: 'Pick AIB-2.',
+        rationale: 'AIB-2 is the stronger implementation.',
+        participantApproaches: [
+          {
+            ticketId: 2,
+            ticketKey: 'AIB-2',
+            summary: '2 files changed',
+          },
+          {
+            ticketId: 3,
+            ticketKey: 'AIB-3',
+            summary: '5 files changed',
+          },
+        ],
+        displayOrder: 0,
+      },
+    ]);
   });
 
   it('builds available, pending, and unavailable enrichment states', () => {

@@ -249,6 +249,9 @@ export interface ComparisonReport {
 
   /** Warnings (e.g., low alignment, missing data) */
   warnings: string[];
+
+  /** Structured decision points extracted from the comparison analysis */
+  decisionPoints: ComparisonReportDecisionPoint[];
 }
 
 export interface SerializedComparisonReportMetadata {
@@ -403,6 +406,19 @@ export interface ComparisonParticipantDetail {
   qualityBreakdown: ComparisonEnrichmentValue<QualityScoreDetails>;
   telemetry: ComparisonTelemetryEnrichment;
   metrics: ComparisonMetricSnapshot;
+}
+
+export interface ComparisonReportDecisionPointApproach {
+  ticketKey: string;
+  summary: string;
+}
+
+export interface ComparisonReportDecisionPoint {
+  title: string;
+  verdictTicketKey: string | null;
+  verdictSummary: string;
+  rationale: string;
+  participantApproaches: ComparisonReportDecisionPointApproach[];
 }
 
 export interface ComparisonDecisionPointApproach {

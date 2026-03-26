@@ -90,7 +90,24 @@ describe('comparison persistence workflow route', () => {
     expect(persisted?.compareRunKey).toBe(payload.compareRunKey);
     expect(persisted?.markdownPath).toBe(payload.markdownPath);
     expect(persisted?.participants).toHaveLength(2);
-    expect(persisted?.decisionPoints).toHaveLength(1);
+    expect(persisted?.decisionPoints).toHaveLength(2);
+    expect(persisted?.decisionPoints[0]).toMatchObject({
+      title: 'Telemetry Aggregation Strategy',
+      verdictSummary: `${payload.report.metadata.comparedTickets[0]} keeps aggregation in the comparison record layer.`,
+      rationale: 'It preserves pending and unavailable telemetry states without spreading comparison-specific logic.',
+    });
+    expect(persisted?.decisionPoints[0]?.participantApproaches).toEqual([
+      {
+        ticketId: candidateA.id,
+        ticketKey: candidateA.ticketKey,
+        summary: 'Uses aggregateJobTelemetry() with a separate in-progress query.',
+      },
+      {
+        ticketId: candidateB.id,
+        ticketKey: candidateB.ticketKey,
+        summary: 'Moves telemetry logic into a dedicated extractor module.',
+      },
+    ]);
   });
 
   it('treats duplicate compare-run submissions as idempotent', async () => {

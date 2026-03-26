@@ -23,7 +23,12 @@ describe('Comparison detail route', () => {
           inputTokens: { state: string; value: number | null };
         };
       }>;
-      decisionPoints: Array<{ title: string }>;
+      decisionPoints: Array<{
+        title: string;
+        verdictSummary: string;
+        rationale: string;
+        participantApproaches: Array<{ ticketKey: string; summary: string }>;
+      }>;
       complianceRows: Array<{ principleKey: string }>;
     }>(
       `/api/projects/${ctx.projectId}/tickets/${fixture.otherTicket.id}/comparisons/${fixture.comparison.id}`
@@ -41,7 +46,21 @@ describe('Comparison detail route', () => {
       state: 'available',
       value: 0,
     });
-    expect(response.data.decisionPoints[0]?.title).toBe('State handling');
+    expect(response.data.decisionPoints[0]).toMatchObject({
+      title: 'State handling',
+      verdictSummary: 'TE2-102 handled pending states cleanly.',
+      rationale: 'The winner kept unavailable telemetry explicit.',
+      participantApproaches: [
+        {
+          ticketKey: fixture.winnerTicket.ticketKey ?? 'TE2-102',
+          summary: 'Used explicit pending/unavailable states.',
+        },
+        {
+          ticketKey: fixture.otherTicket.ticketKey ?? 'TE2-103',
+          summary: 'Collapsed missing data into empty strings.',
+        },
+      ],
+    });
     expect(response.data.complianceRows[0]?.principleKey).toBe(
       'typescript-first-development'
     );

@@ -77,6 +77,27 @@ describe('comparison-payload helpers', () => {
     {},
     'Ship AIB-325.'
   );
+  const reportWithDecisionPoints = {
+    ...report,
+    decisionPoints: [
+      {
+        title: 'Telemetry Aggregation Strategy',
+        verdictTicketKey: 'AIB-325',
+        verdictSummary: 'AIB-325 keeps aggregation inside the comparison record helpers.',
+        rationale: 'This avoids extra indirection while preserving explicit pending-state handling.',
+        participantApproaches: [
+          {
+            ticketKey: 'AIB-325',
+            summary: 'Uses aggregateJobTelemetry() with an in-progress jobs query.',
+          },
+          {
+            ticketKey: 'AIB-327',
+            summary: 'Moves aggregation into a separate telemetry module.',
+          },
+        ],
+      },
+    ],
+  };
 
   it('serializes and normalizes a comparison persistence payload', () => {
     const compareRunKey = createCompareRunKey(
@@ -92,9 +113,9 @@ describe('comparison-payload helpers', () => {
       participantTicketKeys: ['AIB-325', 'AIB-327'],
       markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
       report: {
-        ...report,
+        ...reportWithDecisionPoints,
         metadata: {
-          ...report.metadata,
+          ...reportWithDecisionPoints.metadata,
           filePath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
         },
       },
@@ -107,6 +128,38 @@ describe('comparison-payload helpers', () => {
     expect(normalized.compareRunKey).toBe(compareRunKey);
     expect(normalized.sourceTicketKey).toBe('AIB-330');
     expect(normalized.participantTicketKeys).toEqual(['AIB-325', 'AIB-327']);
+    expect(normalized.report.decisionPoints).toEqual([
+      {
+        title: 'Telemetry Aggregation Strategy',
+        verdictTicketKey: 'AIB-325',
+        verdictSummary: 'AIB-325 keeps aggregation inside the comparison record helpers.',
+        rationale: 'This avoids extra indirection while preserving explicit pending-state handling.',
+        participantApproaches: [
+          {
+            ticketKey: 'AIB-325',
+            summary: 'Uses aggregateJobTelemetry() with an in-progress jobs query.',
+          },
+          {
+            ticketKey: 'AIB-327',
+            summary: 'Moves aggregation into a separate telemetry module.',
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('defaults missing decision points to an empty list for backward compatibility', () => {
+    const serialized = serializeComparisonReport(report);
+    const normalized = normalizeComparisonPersistenceRequest({
+      compareRunKey: 'cmp_backcompat',
+      projectId: 3,
+      sourceTicketKey: 'AIB-330',
+      participantTicketKeys: ['AIB-325', 'AIB-327'],
+      markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+      report: serialized,
+    });
+
+    expect(normalized.report.decisionPoints).toEqual([]);
   });
 
   it('detects missing and malformed payload fields', () => {

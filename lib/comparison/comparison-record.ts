@@ -12,6 +12,7 @@ import type {
   ComparisonMetricSnapshot,
   ComparisonParticipantDetail,
   ComparisonReport,
+  ComparisonReportDecisionPoint,
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
 } from '@/lib/types/comparison';
@@ -141,6 +142,47 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
 }
 
 function buildDecisionPoints(
+  report: ComparisonReport,
+  ticketKeyToId: Map<string, number>
+): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
+  if (report.decisionPoints.length > 0) {
+    return report.decisionPoints.map((point, index) =>
+      createStructuredDecisionPoint(point, index, ticketKeyToId)
+    );
+  }
+
+  return buildFallbackDecisionPoints(report, ticketKeyToId);
+}
+
+function createStructuredDecisionPoint(
+  point: ComparisonReportDecisionPoint,
+  index: number,
+  ticketKeyToId: Map<string, number>
+): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput {
+  return {
+    title: point.title,
+    verdictTicketId: point.verdictTicketKey ? (ticketKeyToId.get(point.verdictTicketKey) ?? null) : null,
+    verdictSummary: point.verdictSummary || 'See saved summary',
+    rationale: point.rationale || 'Derived from the saved comparison report.',
+    participantApproaches: point.participantApproaches
+      .map((approach) => {
+        const ticketId = ticketKeyToId.get(approach.ticketKey);
+        if (!ticketId) {
+          return null;
+        }
+
+        return {
+          ticketId,
+          ticketKey: approach.ticketKey,
+          summary: approach.summary,
+        };
+      })
+      .filter((approach): approach is { ticketId: number; ticketKey: string; summary: string } => approach !== null),
+    displayOrder: index,
+  };
+}
+
+function buildFallbackDecisionPoints(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {

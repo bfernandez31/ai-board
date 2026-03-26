@@ -178,7 +178,7 @@ export async function createStructuredComparisonFixture(projectId: number) {
 }
 
 export function createWorkflowComparisonReportFixture(sourceTicketKey: string, comparedTickets: string[]) {
-  return createComparisonReport(
+  const report = createComparisonReport(
     sourceTicketKey,
     comparedTickets,
     {
@@ -229,6 +229,38 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
     {},
     `Choose ${comparedTickets[0]}.`
   );
+
+  return {
+    ...report,
+    decisionPoints: [
+      {
+        title: 'Telemetry Aggregation Strategy',
+        verdictTicketKey: comparedTickets[0] ?? sourceTicketKey,
+        verdictSummary: `${comparedTickets[0] ?? sourceTicketKey} keeps aggregation in the comparison record layer.`,
+        rationale: 'It preserves pending and unavailable telemetry states without spreading comparison-specific logic.',
+        participantApproaches: comparedTickets.map((ticketKey, index) => ({
+          ticketKey,
+          summary:
+            index === 0
+              ? 'Uses aggregateJobTelemetry() with a separate in-progress query.'
+              : 'Moves telemetry logic into a dedicated extractor module.',
+        })),
+      },
+      {
+        title: 'Quality Score Breakdown UI',
+        verdictTicketKey: comparedTickets[0] ?? sourceTicketKey,
+        verdictSummary: `${comparedTickets[0] ?? sourceTicketKey} keeps the breakdown attached to enrichment state.`,
+        rationale: 'The winning approach avoids rendering stale detail when verify data is still pending.',
+        participantApproaches: comparedTickets.map((ticketKey, index) => ({
+          ticketKey,
+          summary:
+            index === 0
+              ? 'Uses a popover driven by the enrichment state machine.'
+              : 'Renders a static breakdown block with less explicit pending behavior.',
+        })),
+      },
+    ],
+  };
 }
 
 export function createWorkflowComparisonPayloadFixture(input: {

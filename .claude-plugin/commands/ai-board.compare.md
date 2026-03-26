@@ -390,6 +390,28 @@ After writing the markdown report, write a JSON data file for workflow persisten
         ]
       }
     },
+    "decisionPoints": [
+      {
+        "title": "Telemetry Aggregation Strategy",
+        "verdictTicketKey": "AIB-124",
+        "verdictSummary": "AIB-124 keeps telemetry aggregation isolated while preserving explicit pending states",
+        "rationale": "Its approach is easier to audit and keeps comparison-specific telemetry logic cohesive",
+        "participantApproaches": [
+          {
+            "ticketKey": "AIB-123",
+            "summary": "Uses aggregateJobTelemetry() with a separate in-progress query"
+          },
+          {
+            "ticketKey": "AIB-124",
+            "summary": "Moves parsing into a telemetry-extractor module with explicit state handling"
+          },
+          {
+            "ticketKey": "AIB-125",
+            "summary": "Collapses missing telemetry into generic zero-value metrics"
+          }
+        ]
+      }
+    ],
     "recommendation": "Ship AIB-124",
     "warnings": []
   }
@@ -403,6 +425,11 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `comparedTickets` and `participantTicketKeys`: Must include source ticket, same order
 - `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
+- `decisionPoints`: Include 3-7 distinct feature-specific decision points whenever the markdown analysis identifies them
+- `decisionPoints[].title`: Must be the exact decision topic heading used in the markdown analysis
+- `decisionPoints[].verdictTicketKey`: Must be one of the compared ticket keys when there is a clear winner, otherwise `null`
+- `decisionPoints[].verdictSummary` and `decisionPoints[].rationale`: Must be specific to that decision point, not copied from the global summary/recommendation
+- `decisionPoints[].participantApproaches`: Include one entry per compared ticket, preserving the same ticket ordering as `comparedTickets`
 - **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.

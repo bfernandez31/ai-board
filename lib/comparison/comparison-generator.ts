@@ -398,6 +398,7 @@ export function createComparisonReport(
     telemetry,
     recommendation,
     warnings,
+    decisionPoints: [],
   };
 }
 
