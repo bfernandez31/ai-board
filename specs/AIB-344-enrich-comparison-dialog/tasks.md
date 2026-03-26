@@ -29,7 +29,7 @@
 
 - [x] T003 Modify getComparisonDetailForTicket() to fetch all COMPLETED jobs per ticket, aggregate with aggregateJobTelemetry(), include qualityScoreDetails from latest VERIFY job parsed via parseQualityScoreDetails(), and return aggregatedTelemetry + qualityDetails on each participant in lib/comparison/comparison-detail.ts
 - [x] T004 [P] Create buildOperationalMetricRows() with 7 metric definitions (Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count, Quality Score) and determineBestValues() with tie handling in lib/comparison/operational-metrics.ts
-- [ ] T005 [P] Integration test for aggregated telemetry query verifying sums across multiple completed jobs per ticket in tests/integration/comparison-detail-telemetry.test.ts
+- [x] T005 [P] Integration test for aggregated telemetry query verifying sums across multiple completed jobs per ticket in tests/integration/comparison-detail-telemetry.test.ts
 
 **Checkpoint**: Backend enrichment and utility functions ready — user story implementation can now begin
 
@@ -45,13 +45,13 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Unit tests for best-value calculation (lowest/highest direction, ties, null values) and metric formatting (tokens with locale separators, cost as $X.XXXX, duration via formatDurationMs) in tests/unit/operational-metrics.test.ts
-- [ ] T007 [P] [US1] Component tests for operational metrics grid: renders 7 rows with correct labels, shows formatted values for available data, shows "N/A" for missing telemetry, shows "Pending" for in-progress jobs, displays "Best value" badge on winning cells, renders column headers with ticket key + workflow type + agent in tests/unit/components/comparison-operational-metrics.test.tsx
+- [x] T006 [P] [US1] Unit tests for best-value calculation (lowest/highest direction, ties, null values) and metric formatting (tokens with locale separators, cost as $X.XXXX, duration via formatDurationMs) in tests/unit/operational-metrics.test.ts
+- [x] T007 [P] [US1] Component tests for operational metrics grid: renders 7 rows with correct labels, shows formatted values for available data, shows "N/A" for missing telemetry, shows "Pending" for in-progress jobs, displays "Best value" badge on winning cells, renders column headers with ticket key + workflow type + agent in tests/unit/components/comparison-operational-metrics.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create ComparisonOperationalMetricsGrid component with Card header, table layout, sticky label column (position: sticky; left: 0), overflow-x-auto container, 7 metric rows using buildOperationalMetricRows(), and Best badge rendering in components/comparison/comparison-operational-metrics.tsx
-- [ ] T009 [US1] Insert ComparisonOperationalMetricsGrid between ComparisonMetricsGrid and ComparisonDecisionPoints in components/comparison/comparison-viewer.tsx
+- [x] T008 [US1] Create ComparisonOperationalMetricsGrid component with Card header, table layout, sticky label column (position: sticky; left: 0), overflow-x-auto container, 7 metric rows using buildOperationalMetricRows(), and Best badge rendering in components/comparison/comparison-operational-metrics.tsx
+- [x] T009 [US1] Insert ComparisonOperationalMetricsGrid between ComparisonMetricsGrid and ComparisonDecisionPoints in components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: User Story 1 complete — operational metrics grid visible with best-value highlighting for 2+ tickets
 
@@ -67,11 +67,11 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US2] Component tests for ranking card badges: workflow type badge always visible, agent badge shown only when agent is non-null, quality score badge with threshold label shown only when quality.state is available, no badge for QUICK ticket without quality score in tests/unit/components/comparison-ranking-badges.test.tsx
+- [x] T010 [P] [US2] Component tests for ranking card badges: workflow type badge always visible, agent badge shown only when agent is non-null, quality score badge with threshold label shown only when quality.state is available, no badge for QUICK ticket without quality score in tests/unit/components/comparison-ranking-badges.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add workflow type Badge (always visible), agent Badge (conditional on agent non-null), and quality score Badge with getScoreThreshold() label (conditional on quality.state === 'available') to each participant card in components/comparison/comparison-ranking.tsx
+- [x] T011 [US2] Add workflow type Badge (always visible), agent Badge (conditional on agent non-null), and quality score Badge with getScoreThreshold() label (conditional on quality.state === 'available') to each participant card in components/comparison/comparison-ranking.tsx
 
 **Checkpoint**: User Story 2 complete — ranking cards show contextual badges
 
