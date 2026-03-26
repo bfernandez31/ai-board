@@ -391,6 +391,19 @@ After writing the markdown report, write a JSON data file for workflow persisten
       }
     },
     "recommendation": "Ship AIB-124",
+    "decisionPoints": [
+      {
+        "title": "Telemetry Aggregation Strategy",
+        "winnerTicketKey": "AIB-124",
+        "verdict": "AIB-124 keeps aggregation in aggregateJobTelemetry() with clearer pending-state handling.",
+        "rationale": "It avoids duplicating job-state logic while preserving a single place to normalize unavailable data.",
+        "participantApproaches": {
+          "AIB-123": "Extracts telemetry logic into a dedicated telemetry-extractor module.",
+          "AIB-124": "Uses aggregateJobTelemetry() plus a separate in-progress query.",
+          "AIB-125": "Inlines aggregation inside the route handler."
+        }
+      }
+    ],
     "warnings": []
   }
 }
@@ -403,6 +416,9 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `comparedTickets` and `participantTicketKeys`: Must include source ticket, same order
 - `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
+- `decisionPoints`: Must include 3-7 distinct feature-specific decision points when meaningful, not repeated global summary text
+- `winnerTicketKey` inside each decision point: Must be one of the compared ticket keys
+- `participantApproaches`: Must include one distinct summary per participating ticket, keyed by ticket key
 - **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.

@@ -72,7 +72,8 @@ describe('comparison-generator artifacts', () => {
         },
       },
       {},
-      'Ship AIB-325.'
+      'Ship AIB-325.',
+      []
     );
 
     const artifacts = await persistGeneratedComparisonArtifacts({

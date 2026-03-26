@@ -144,6 +144,21 @@ function buildDecisionPoints(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
+  if (report.decisionPoints.length > 0) {
+    return report.decisionPoints.map((point, index) => ({
+      title: point.title,
+      verdictTicketId: ticketKeyToId.get(point.winnerTicketKey) ?? null,
+      verdictSummary: point.verdict || report.recommendation || report.summary || 'See saved summary',
+      rationale: point.rationale || report.summary || 'Derived from the saved comparison report.',
+      participantApproaches: report.metadata.comparedTickets.map((ticketKey) => ({
+        ticketId: ticketKeyToId.get(ticketKey),
+        ticketKey,
+        summary: point.participantApproaches[ticketKey] ?? 'Approach not captured',
+      })),
+      displayOrder: index,
+    }));
+  }
+
   const winnerTicketKey = getWinnerTicketKey(report);
   const differentiators = Array.isArray(report.alignment.matchingRequirements)
     ? report.alignment.matchingRequirements

@@ -220,6 +220,23 @@ export interface ComparisonReportMetadata {
   filePath: string;
 }
 
+export interface StructuredComparisonDecisionPoint {
+  /** Distinct decision point title from the AI comparison analysis */
+  title: string;
+
+  /** Winning ticket for this decision point */
+  winnerTicketKey: string;
+
+  /** Short verdict/summary for this decision point */
+  verdict: string;
+
+  /** Why this verdict was chosen */
+  rationale: string;
+
+  /** Per-ticket implementation approach summary keyed by ticket key */
+  participantApproaches: Record<string, string>;
+}
+
 /**
  * ComparisonReport
  *
@@ -246,6 +263,9 @@ export interface ComparisonReport {
 
   /** AI-generated recommendation */
   recommendation: string;
+
+  /** Structured decision points extracted from AI output when available */
+  decisionPoints: StructuredComparisonDecisionPoint[];
 
   /** Warnings (e.g., low alignment, missing data) */
   warnings: string[];

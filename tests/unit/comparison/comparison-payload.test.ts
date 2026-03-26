@@ -75,7 +75,8 @@ describe('comparison-payload helpers', () => {
       },
     },
     {},
-    'Ship AIB-325.'
+    'Ship AIB-325.',
+    []
   );
 
   it('serializes and normalizes a comparison persistence payload', () => {
@@ -107,6 +108,48 @@ describe('comparison-payload helpers', () => {
     expect(normalized.compareRunKey).toBe(compareRunKey);
     expect(normalized.sourceTicketKey).toBe('AIB-330');
     expect(normalized.participantTicketKeys).toEqual(['AIB-325', 'AIB-327']);
+    expect(normalized.report.decisionPoints).toEqual([]);
+  });
+
+  it('preserves structured decision points in the persistence payload', () => {
+    const reportWithDecisionPoints = {
+      ...report,
+      decisionPoints: [
+        {
+          title: 'Telemetry Aggregation Strategy',
+          winnerTicketKey: 'AIB-325',
+          verdict: 'AIB-325 keeps aggregation in aggregateJobTelemetry().',
+          rationale: 'It centralizes job state handling and avoids duplicating pending-state logic.',
+          participantApproaches: {
+            'AIB-325': 'Uses aggregateJobTelemetry() plus a separate in-progress query.',
+            'AIB-327': 'Extracts aggregation into a standalone telemetry-extractor module.',
+          },
+        },
+      ],
+    };
+
+    const payload = createComparisonPersistenceRequest({
+      compareRunKey: createCompareRunKey(
+        'AIB-330',
+        ['AIB-325', 'AIB-327'],
+        report.metadata.generatedAt
+      ),
+      projectId: 3,
+      sourceTicketKey: 'AIB-330',
+      participantTicketKeys: ['AIB-325', 'AIB-327'],
+      markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+      report: {
+        ...reportWithDecisionPoints,
+        metadata: {
+          ...report.metadata,
+          filePath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+        },
+      },
+    });
+
+    const normalized = normalizeComparisonPersistenceRequest(payload);
+
+    expect(normalized.report.decisionPoints).toEqual(reportWithDecisionPoints.decisionPoints);
   });
 
   it('detects missing and malformed payload fields', () => {

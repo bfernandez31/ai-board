@@ -75,6 +75,7 @@ const report: ComparisonReport = {
   telemetry: {},
   recommendation: 'Pick AIB-2.',
   warnings: [],
+  decisionPoints: [],
 };
 
 describe('comparison-record helpers', () => {
@@ -123,6 +124,117 @@ describe('comparison-record helpers', () => {
     expect(Array.isArray(participants) && participants[0]).toMatchObject({
       rank: 1,
       score: 92,
+    });
+  });
+
+  it('persists structured decision points when present', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1,
+        ticketKey: 'AIB-1',
+        title: 'Source',
+        stage: 'BUILD',
+        workflowType: 'FULL',
+        agent: null,
+      },
+      participants: [
+        {
+          id: 2,
+          ticketKey: 'AIB-2',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+        },
+        {
+          id: 3,
+          ticketKey: 'AIB-3',
+          title: 'Runner up',
+          stage: 'PLAN',
+          workflowType: 'FULL',
+          agent: null,
+        },
+      ],
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        decisionPoints: [
+          {
+            title: 'Telemetry Aggregation Strategy',
+            winnerTicketKey: 'AIB-2',
+            verdict: 'AIB-2 centralizes aggregation in one helper.',
+            rationale: 'This keeps pending and unavailable states consistent.',
+            participantApproaches: {
+              'AIB-2': 'Uses aggregateJobTelemetry() with a separate in-progress query.',
+              'AIB-3': 'Moves telemetry logic into an extracted module.',
+            },
+          },
+        ],
+      },
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+
+    expect(Array.isArray(decisionPoints) && decisionPoints[0]).toMatchObject({
+      title: 'Telemetry Aggregation Strategy',
+      verdictTicketId: 2,
+      verdictSummary: 'AIB-2 centralizes aggregation in one helper.',
+      rationale: 'This keeps pending and unavailable states consistent.',
+      participantApproaches: [
+        {
+          ticketId: 2,
+          ticketKey: 'AIB-2',
+          summary: 'Uses aggregateJobTelemetry() with a separate in-progress query.',
+        },
+        {
+          ticketId: 3,
+          ticketKey: 'AIB-3',
+          summary: 'Moves telemetry logic into an extracted module.',
+        },
+      ],
+    });
+  });
+
+  it('falls back to synthesized decision points when structured data is absent', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1,
+        ticketKey: 'AIB-1',
+        title: 'Source',
+        stage: 'BUILD',
+        workflowType: 'FULL',
+        agent: null,
+      },
+      participants: [
+        {
+          id: 2,
+          ticketKey: 'AIB-2',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+        },
+        {
+          id: 3,
+          ticketKey: 'AIB-3',
+          title: 'Runner up',
+          stage: 'PLAN',
+          workflowType: 'FULL',
+          agent: null,
+        },
+      ],
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report,
+    });
+
+    const decisionPoints = input.decisionPoints?.create;
+
+    expect(Array.isArray(decisionPoints) && decisionPoints[0]).toMatchObject({
+      title: 'FR-001',
+      verdictSummary: 'Pick AIB-2.',
+      rationale: 'AIB-2 is the stronger implementation.',
     });
   });
 

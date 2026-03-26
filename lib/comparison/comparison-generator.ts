@@ -375,6 +375,7 @@ export function createComparisonReport(
   compliance: Record<string, ConstitutionComplianceScore>,
   telemetry: Record<string, TicketTelemetry>,
   recommendation: string = '',
+  decisionPoints: ComparisonReport['decisionPoints'] = [],
   warnings: string[] = []
 ): ComparisonReport {
   const generatedAt = new Date();
@@ -397,6 +398,7 @@ export function createComparisonReport(
     compliance,
     telemetry,
     recommendation,
+    decisionPoints,
     warnings,
   };
 }

@@ -227,7 +227,8 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
       ])
     ),
     {},
-    `Choose ${comparedTickets[0]}.`
+    `Choose ${comparedTickets[0]}.`,
+    []
   );
 }
 
