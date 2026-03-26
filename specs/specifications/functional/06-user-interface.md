@@ -450,13 +450,12 @@ The header maintains consistent layout across all pages within a project:
 
 **Element Positioning**:
 - Left: Logo and project information (project key, name)
-- Center: Context-specific navigation (search on board page, empty on other pages)
+- Center: Search trigger button with Cmd+K/Ctrl+K keyboard shortcut badge (visible on all project pages)
 - Right: Notification bell, user menu, and mobile hamburger menu
-- Spacer element pushes right-side elements to correct position on all pages
+- Spacer element pushes right-side elements to correct position on non-project pages
 
 **Layout Logic**:
-- Board page: Search input provides flex spacing, spacer hidden
-- Analytics/Settings pages: Spacer element provides flex spacing to position right-side elements
+- Project pages: Search trigger (command palette button) provides flex spacing, spacer hidden
 - Landing page (no project): Spacer element ensures right-side alignment
 
 ### User Menu
@@ -479,28 +478,6 @@ The user menu provides authenticated account navigation via an avatar button in 
 
 ---
 
-### Analytics Navigation
-
-The header provides quick access to project analytics:
-
-**Visual Presentation**:
-- Bar chart icon (BarChart3) positioned in application header
-- Visible on desktop (≥768px) alongside specifications link
-- Visible on mobile (<768px) via hamburger menu
-- Consistent gray color scheme with hover state transition
-
-**Desktop Behavior** (≥768px):
-- Analytics icon appears next to specifications icon in header
-- Clicking navigates to `/projects/{projectId}/analytics`
-- Tooltip provides context on hover
-- Visible only when viewing project board
-
-**Mobile Behavior** (<768px):
-- Analytics icon appears in hamburger menu next to specifications icon
-- Positioned below project name in mobile menu drawer
-- Clicking navigates to analytics page and closes menu
-- Part of project-specific navigation group
-
 ### Mobile Menu (Hamburger)
 
 The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `Sheet` panel visible only on <768px viewports.
@@ -512,7 +489,7 @@ The mobile hamburger menu (`components/layout/mobile-menu.tsx`) is a slide-in `S
 4. **Sign Out** button (red text, LogOut icon)
 
 **Project-specific section** (shown when `projectId` and `projectName` are provided):
-- Project name header with icon links: Specifications (GitHub), Analytics, Activity
+- Project name header with icon links: Board, Analytics, Activity
 
 All navigation items close the sheet on click.
 
@@ -566,6 +543,46 @@ The notification bell provides access to mention notifications:
 - Syncs across open tabs/windows
 
 ## Navigation
+
+### Icon Rail Sidebar
+
+On desktop viewports (≥1024px), a fixed 48px-wide vertical icon rail provides primary project navigation on the left side of all project pages. The icon rail is hidden on viewports narrower than 1024px.
+
+**Navigation Items**:
+- **Board** (LayoutDashboard icon) — navigates to `/projects/{projectId}/board`
+- **Activity** (Activity icon) — navigates to `/projects/{projectId}/activity`
+- **Analytics** (BarChart3 icon) — navigates to `/projects/{projectId}/analytics`
+- **Settings** (Settings icon, anchored to bottom) — navigates to `/projects/{projectId}/settings`
+
+Board, Activity, and Analytics are grouped at the top with a subtle divider separating them from Settings at the bottom.
+
+**Active State**: The currently active page's icon receives a distinct background highlight (`bg-accent`). Active icons also carry `aria-current="page"`.
+
+**Tooltips**: Hovering or keyboard-focusing any icon displays a tooltip with the page name. Tooltip behavior follows the global `TooltipProvider`.
+
+**Accessibility**: The rail renders as a `<nav>` landmark with `aria-label="Project navigation"`.
+
+**Scope**: The icon rail renders only within project-scoped pages. It is not shown on the projects list, billing, or auth pages.
+
+### Command Palette
+
+The command palette provides unified keyboard-driven navigation and search across all project pages.
+
+**Triggers**:
+- `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux) from any project page
+- Clicking the search trigger button in the header
+
+**Behavior**:
+- Opens a modal overlay with a focused search input
+- Navigation items (Board, Activity, Analytics, Settings) are filtered client-side with fuzzy matching under a "Navigation" group
+- Ticket results are fetched from the existing ticket search API under a "Tickets" group (matches by key or title)
+- Results are keyboard-navigable: arrow keys move selection, Enter navigates to the selected destination, Escape closes the palette
+- Displays an empty state ("No results found") when no items match the query
+- Resets search input to empty on each open
+- Does not open when another modal dialog is already active (prevents focus trap conflicts)
+- Navigating to the currently active page closes the palette without triggering a redundant navigation
+
+**Component**: `components/navigation/command-palette.tsx`, built on the shadcn/ui `Command` component (cmdk).
 
 ### Tab Navigation
 
@@ -788,10 +805,13 @@ Board-level keyboard shortcuts are active on desktop and tablet devices with a p
 | Key | Action |
 |-----|--------|
 | `N` | Open new ticket creation modal |
-| `S` / `/` | Focus search input |
+| `S` / `/` | Open command palette |
+| `Cmd+K` / `Ctrl+K` | Open command palette |
 | `1` – `6` | Jump to board column (INBOX → SHIP) |
 | `?` | Toggle keyboard shortcuts help overlay |
 | `Esc` | Close topmost modal or overlay |
+
+When the command palette is open, single-key shortcuts (`N`, `S`, `/`, `1`–`6`, `?`) are suppressed so the user can type freely in the search input.
 
 A floating keyboard icon button is visible at the bottom-right corner of the board on hover-capable devices. Clicking it or pressing `?` opens the shortcuts reference overlay. On first board visit, the overlay appears automatically; subsequent visits skip the auto-show (tracked via `shortcuts-hint-dismissed` localStorage key).
 
