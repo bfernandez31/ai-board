@@ -62,11 +62,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T007 [P] [US2] Write component test for ComparisonParticipantGrid verifying correct number of cards, rank/key/title visible, score ring colors per threshold, and responsive layout in `tests/unit/components/comparison-participant-grid.test.tsx`
+- [x] T007 [P] [US2] Write component test for ComparisonParticipantGrid verifying correct number of cards, rank/key/title visible, score ring colors per threshold, and responsive layout in `tests/unit/components/comparison-participant-grid.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Create ComparisonParticipantGrid component with flex-wrap card grid, each card showing rank, ticket key, title, workflowType/agent/quality badges, rationale text, and mini ScoreGauge (size ~40px) with color-coded score rings in `components/comparison/comparison-participant-grid.tsx`
+- [x] T008 [US2] Create ComparisonParticipantGrid component with flex-wrap card grid, each card showing rank, ticket key, title, workflowType/agent/quality badges, rationale text, and mini ScoreGauge (size ~40px) with color-coded score rings in `components/comparison/comparison-participant-grid.tsx`
 
 **Checkpoint**: Non-winner participants render in responsive grid with correct badges and score rings
 
@@ -80,11 +80,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T009 [P] [US3] Write component test for ComparisonStatCards verifying 4 stat cards render, winner values shown, micro-bar markers positioned proportionally, and pending/unavailable handling in `tests/unit/components/comparison-stat-cards.test.tsx`
+- [x] T009 [P] [US3] Write component test for ComparisonStatCards verifying 4 stat cards render, winner values shown, micro-bar markers positioned proportionally, and pending/unavailable handling in `tests/unit/components/comparison-stat-cards.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Create ComparisonStatCards component with four Card components in responsive grid (2x2 mobile, 4x1 desktop), winner's value displayed prominently, micro-bars with proportional markers (winner=`bg-primary`, others=`bg-muted-foreground/50`), and enrichment state handling in `components/comparison/comparison-stat-cards.tsx`
+- [x] T010 [US3] Create ComparisonStatCards component with four Card components in responsive grid (2x2 mobile, 4x1 desktop), winner's value displayed prominently, micro-bars with proportional markers (winner=`bg-primary`, others=`bg-muted-foreground/50`), and enrichment state handling in `components/comparison/comparison-stat-cards.tsx`
 
 **Checkpoint**: Four stat cards render with correct values and micro-bar visualizations
 
@@ -98,11 +98,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T011 [P] [US4] Write component test for ComparisonUnifiedMetrics verifying 9 metric rows, inline bar widths proportional, best value uses primary color, sticky column, quality popover clickable, and enrichment state handling in `tests/unit/components/comparison-unified-metrics.test.tsx`
+- [x] T011 [P] [US4] Write component test for ComparisonUnifiedMetrics verifying 9 metric rows, inline bar widths proportional, best value uses primary color, sticky column, quality popover clickable, and enrichment state handling in `tests/unit/components/comparison-unified-metrics.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] Create ComparisonUnifiedMetrics component with single table for all 9 metrics (Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count), proportional inline bars (width=value/max, best=`bg-primary`, others=`bg-muted`), sticky first column (`sticky left-0 z-10 bg-card`), Quality Score cell retaining ComparisonQualityPopover, and enrichment state handling in `components/comparison/comparison-unified-metrics.tsx`
+- [x] T012 [US4] Create ComparisonUnifiedMetrics component with single table for all 9 metrics (Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count), proportional inline bars (width=value/max, best=`bg-primary`, others=`bg-muted`), sticky first column (`sticky left-0 z-10 bg-card`), Quality Score cell retaining ComparisonQualityPopover, and enrichment state handling in `components/comparison/comparison-unified-metrics.tsx`
 
 **Checkpoint**: Unified metrics table renders all 9 rows with proportional bars and horizontal scrolling
 
@@ -116,11 +116,11 @@
 
 ### Tests for User Story 5
 
-- [ ] T013 [P] [US5] Write component test for ComparisonComplianceHeatmap verifying cell colors match status (green/yellow/red), no text in cells, tooltip shows notes on hover, missing=muted bg, and unavailable state handling in `tests/unit/components/comparison-compliance-heatmap.test.tsx`
+- [x] T013 [P] [US5] Write component test for ComparisonComplianceHeatmap verifying cell colors match status (green/yellow/red), no text in cells, tooltip shows notes on hover, missing=muted bg, and unavailable state handling in `tests/unit/components/comparison-compliance-heatmap.test.tsx`
 
 ### Implementation for User Story 5
 
-- [ ] T014 [US5] Create ComparisonComplianceHeatmap component with principle rows x participant columns grid, cell backgrounds by status (`bg-ctp-green/20` pass, `bg-ctp-yellow/20` mixed, `bg-ctp-red/20` fail, `bg-muted` missing), shadcn Tooltip on hover/tap showing assessment notes, sticky first column, and unavailable state handling in `components/comparison/comparison-compliance-heatmap.tsx`
+- [x] T014 [US5] Create ComparisonComplianceHeatmap component with principle rows x participant columns grid, cell backgrounds by status (`bg-ctp-green/20` pass, `bg-ctp-yellow/20` mixed, `bg-ctp-red/20` fail, `bg-muted` missing), shadcn Tooltip on hover/tap showing assessment notes, sticky first column, and unavailable state handling in `components/comparison/comparison-compliance-heatmap.tsx`
 
 **Checkpoint**: Compliance heatmap renders colored cells with tooltips
 
@@ -134,11 +134,11 @@
 
 ### Tests for User Story 6
 
-- [ ] T015 [P] [US6] Write component test for enhanced ComparisonDecisionPoints verifying verdict dot colors (green=winner match, yellow=other participant, neutral=null), first accordion open, summary visible without expanding, and ticket key badges in approaches in `tests/unit/components/comparison-decision-points.test.tsx`
+- [x] T015 [P] [US6] Write component test for enhanced ComparisonDecisionPoints verifying verdict dot colors (green=winner match, yellow=other participant, neutral=null), first accordion open, summary visible without expanding, and ticket key badges in approaches in `tests/unit/components/comparison-decision-points.test.tsx`
 
 ### Implementation for User Story 6
 
-- [ ] T016 [US6] Enhance ComparisonDecisionPoints by adding `winnerTicketId` prop, verdict dots (`h-2.5 w-2.5 rounded-full`) with color logic (verdictTicketId===winnerTicketId → `bg-ctp-green`, non-null mismatch → `bg-ctp-yellow`, null → `bg-muted-foreground/30`), and wrapping participant approach ticket keys in Badge components in `components/comparison/comparison-decision-points.tsx`
+- [x] T016 [US6] Enhance ComparisonDecisionPoints by adding `winnerTicketId` prop, verdict dots (`h-2.5 w-2.5 rounded-full`) with color logic (verdictTicketId===winnerTicketId → `bg-ctp-green`, non-null mismatch → `bg-ctp-yellow`, null → `bg-muted-foreground/30`), and wrapping participant approach ticket keys in Badge components in `components/comparison/comparison-decision-points.tsx`
 
 **Checkpoint**: Decision points show colored verdict dots and ticket key badges
 
