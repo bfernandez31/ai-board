@@ -365,7 +365,7 @@ The viewer is a modal dialog with two sections:
 - Hidden on small screens
 
 **Main Content** (right):
-- Scrollable area displaying four sections for the selected comparison:
+- Scrollable area displaying five sections for the selected comparison:
 
 **Ranking and Recommendation**:
 - Overall recommendation text and executive summary
@@ -374,6 +374,9 @@ The viewer is a modal dialog with two sections:
   - Rank number, ticket key, title
   - Score percentage badge
   - "Winner" badge on rank 1
+  - Workflow type at comparison time
+  - Agent when available
+  - Quality score and threshold label when a quality result exists
   - Rank rationale text
 
 **Implementation Metrics**:
@@ -381,6 +384,16 @@ The viewer is a modal dialog with two sections:
 - Metrics: lines changed, files changed, test files changed
 - "Best value" badge highlights the leading participant per metric
 - "Unavailable" shown when metrics are missing
+
+**Operational Metrics**:
+- Table comparing operational metrics across participants with a sticky metric-label column
+- Metrics: total tokens, input tokens, output tokens, duration, cost, jobs, quality
+- Participant column headers show ticket key, workflow type, agent when available, and the primary AI model when telemetry exists
+- "Best value" badges highlight the lowest total tokens, lowest input tokens, lowest output tokens, fastest duration, lowest cost, fewest jobs, and highest quality score
+- `Pending` appears when related work exists but telemetry or quality data is not finalized
+- `N/A` appears when a participant has no applicable job data or no eligible quality result
+- Eligible quality scores open an inline breakdown showing the overall score, threshold label, and the five weighted quality dimensions
+- Supports horizontal scrolling for comparisons of two to six tickets while keeping the metric label column visible on desktop and mobile
 
 **Decision Points**:
 - Collapsible sections for each architectural decision
@@ -395,8 +408,10 @@ The viewer is a modal dialog with two sections:
 ### Data Enrichment
 
 The comparison detail view enriches stored comparison data with live data:
-- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job)
-- **Telemetry**: Input/output tokens, duration, cost from the latest job per participant
+- **Operational metrics**: Aggregated across all related jobs per participant for total tokens, input tokens, output tokens, duration, cost, and job count
+- **Primary AI model**: Derived from the model with the largest share of total token consumption across the participant's jobs, using the most recently completed contributing model to break ties
+- **Quality scores**: Derived from verify jobs with `available`, `pending`, and `unavailable` states
+- **Quality breakdowns**: Available only for FULL workflow participants with a completed verify result and all five configured quality dimensions present
 
 ### Selection Logic
 

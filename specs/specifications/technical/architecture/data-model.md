@@ -759,6 +759,21 @@ Code change metrics snapshot captured at comparison time (1:1 with ComparisonPar
 - `changedFiles`: JSON array of changed file paths
 - `bestValueFlags`: JSON object indicating which metrics are best among participants
 
+### Comparison Detail Read Model
+
+The comparison detail endpoint combines persisted comparison tables with live `Job` data at read time. Operational metrics and quality breakdowns are not stored on `ComparisonRecord` or `ComparisonParticipant`.
+
+**Live enrichments per participant**:
+- Operational aggregates: total tokens, input tokens, output tokens, duration, cost, and job count across all related jobs
+- `primaryModel`: Summary model derived from the largest share of total token consumption across the participant's jobs, with most-recent completed job used as the tie-breaker
+- Quality summary: score state, threshold label, and best-value flag
+- Quality breakdown: overall score plus five weighted dimensions, present only when the participant is `FULL`, has a completed verify result, and all configured dimensions are available
+
+**State model**:
+- `available`: Aggregate or quality data is finalized
+- `pending`: Related work exists but the aggregate or quality result is still incomplete
+- `unavailable`: No relevant job or eligible quality result exists
+
 ### DecisionPointEvaluation
 
 Records a key architectural decision and how each ticket approached it.

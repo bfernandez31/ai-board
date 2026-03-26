@@ -1997,8 +1997,40 @@ Fetch full comparison detail with enriched data.
       "rankRationale": "Best constitution compliance, highest test ratio",
       "workflowType": "FULL",
       "agent": "CLAUDE",
-      "quality": { "state": "available", "value": 85 },
-      "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "operational": {
+        "totalTokens": { "state": "available", "value": 17000 },
+        "inputTokens": { "state": "available", "value": 12000 },
+        "outputTokens": { "state": "available", "value": 5000 },
+        "durationMs": { "state": "available", "value": 45000 },
+        "costUsd": { "state": "available", "value": 0.15 },
+        "jobCount": { "state": "available", "value": 3 },
+        "primaryModel": "gpt-5.4",
+        "bestValueFlags": {
+          "totalTokens": false,
+          "inputTokens": false,
+          "outputTokens": true,
+          "durationMs": false,
+          "costUsd": false,
+          "jobCount": true
+        }
+      },
+      "quality": {
+        "score": { "state": "available", "value": 85 },
+        "thresholdLabel": "Excellent",
+        "detailAvailable": true,
+        "breakdown": {
+          "overallScore": 85,
+          "thresholdLabel": "Excellent",
+          "dimensions": [
+            { "agentId": "compliance", "name": "Compliance", "score": 90, "weight": 0.4 },
+            { "agentId": "bug-detection", "name": "Bug Detection", "score": 84, "weight": 0.3 },
+            { "agentId": "code-comments", "name": "Code Comments", "score": 82, "weight": 0.2 },
+            { "agentId": "historical-context", "name": "Historical Context", "score": 80, "weight": 0.1 },
+            { "agentId": "spec-sync", "name": "Spec Sync", "score": 100, "weight": 0.0 }
+          ]
+        },
+        "isBestValue": true
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2036,9 +2068,14 @@ Fetch full comparison detail with enriched data.
 }
 ```
 
-**Enrichment States**: Quality and telemetry use a three-state pattern:
+**Detail Enrichment Rules**:
+- Operational metrics are aggregated across all jobs associated with each comparison participant rather than using only the latest job
+- `primaryModel` is derived from the model with the largest share of total token consumption, using the most recently completed contributing model to break ties
+- `quality.detailAvailable` is true only for FULL workflow participants with a completed verify result and all five configured quality dimensions present
+
+**Enrichment States**: Quality and each operational metric use a three-state pattern:
 - `available`: Data exists with a `value`
-- `pending`: Job exists but data not yet computed (e.g., verify job running)
+- `pending`: Related work exists but the aggregate cannot be finalized yet
 - `unavailable`: No relevant job exists
 
 **Errors**:
