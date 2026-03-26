@@ -77,6 +77,23 @@ function createPrincipleKey(principleName: string): string {
   return principleName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+function buildRankRationale(
+  report: ComparisonReport,
+  ticketKey: string
+): string {
+  const principleSummary = report.compliance[ticketKey]?.principles
+    ?.filter((principle) => principle.passed)
+    .slice(0, 2)
+    .map((principle) => principle.name)
+    .join(', ');
+
+  if (principleSummary) {
+    return principleSummary;
+  }
+
+  return report.summary || 'Saved from comparison report';
+}
+
 function buildRankings(report: ComparisonReport): Array<{
   ticketKey: string;
   rank: number;
@@ -88,16 +105,12 @@ function buildRankings(report: ComparisonReport): Array<{
       const compliance = report.compliance[ticketKey];
       const metrics = report.implementation[ticketKey];
       const score = compliance?.overall ?? (metrics?.hasData ? 50 : 0);
-      const rankRationale =
-        compliance?.principles
-          ?.filter((principle) => principle.passed)
-          .slice(0, 2)
-          .map((principle) => principle.name)
-          .join(', ') ||
-        report.summary ||
-        'Saved from comparison report';
 
-      return { ticketKey, score, rankRationale };
+      return {
+        ticketKey,
+        score,
+        rankRationale: buildRankRationale(report, ticketKey),
+      };
     })
     .sort((a, b) => b.score - a.score || a.ticketKey.localeCompare(b.ticketKey));
 
@@ -107,38 +120,58 @@ function buildRankings(report: ComparisonReport): Array<{
   }));
 }
 
-function buildBestValueFlags(metrics: ComparisonReport['implementation']): Record<string, Record<string, boolean>> {
-  const entries = Object.values(metrics).filter((item) => item.hasData);
-  if (entries.length === 0) {
+function createBestValueFlags(
+  linesChanged: boolean,
+  filesChanged: boolean,
+  testFilesChanged: boolean
+): Record<string, boolean> {
+  return {
+    linesChanged,
+    filesChanged,
+    testFilesChanged,
+  };
+}
+
+function buildBestValueFlags(
+  metrics: ComparisonReport['implementation']
+): Record<string, Record<string, boolean>> {
+  const metricEntries = Object.values(metrics);
+  const entriesWithData = metricEntries.filter((item) => item.hasData);
+  if (entriesWithData.length === 0) {
     return Object.fromEntries(
-      Object.values(metrics).map((item) => [
+      metricEntries.map((item) => [
         item.ticketKey,
-        {
-          linesChanged: false,
-          filesChanged: false,
-          testFilesChanged: false,
-        },
+        createBestValueFlags(false, false, false),
       ])
     );
   }
 
   const minima = {
-    linesChanged: Math.min(...entries.map((item) => item.linesChanged)),
-    filesChanged: Math.min(...entries.map((item) => item.filesChanged)),
-    testFilesChanged: Math.max(...entries.map((item) => item.testFilesChanged)),
+    linesChanged: Math.min(...entriesWithData.map((item) => item.linesChanged)),
+    filesChanged: Math.min(...entriesWithData.map((item) => item.filesChanged)),
+    testFilesChanged: Math.max(...entriesWithData.map((item) => item.testFilesChanged)),
   };
 
   return Object.fromEntries(
-    Object.values(metrics).map((item) => [
+    metricEntries.map((item) => [
       item.ticketKey,
-      {
-        linesChanged: item.hasData && item.linesChanged === minima.linesChanged,
-        filesChanged: item.hasData && item.filesChanged === minima.filesChanged,
-        testFilesChanged:
-          item.hasData && item.testFilesChanged === minima.testFilesChanged && minima.testFilesChanged > 0,
-      },
+      createBestValueFlags(
+        item.hasData && item.linesChanged === minima.linesChanged,
+        item.hasData && item.filesChanged === minima.filesChanged,
+        item.hasData &&
+          item.testFilesChanged === minima.testFilesChanged &&
+          minima.testFilesChanged > 0
+      ),
     ])
   );
+}
+
+function getFallbackDecisionPointTitles(report: ComparisonReport): string[] {
+  if (Array.isArray(report.alignment.matchingRequirements) && report.alignment.matchingRequirements.length > 0) {
+    return report.alignment.matchingRequirements;
+  }
+
+  return ['Overall recommendation'];
 }
 
 function buildDecisionPoints(
@@ -187,11 +220,9 @@ function buildFallbackDecisionPoints(
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
   const winnerTicketKey = getWinnerTicketKey(report);
-  const differentiators = Array.isArray(report.alignment.matchingRequirements)
-    ? report.alignment.matchingRequirements
-    : [];
+  const titles = getFallbackDecisionPointTitles(report);
 
-  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
+  return titles.map(
     (title, index) => ({
       title,
       verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,

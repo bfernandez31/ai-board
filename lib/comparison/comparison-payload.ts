@@ -102,18 +102,15 @@ export const serializedComparisonPersistenceRequestSchema = z.object({
   report: serializedComparisonReportSchema,
 });
 
-function copyImplementationMetrics(
+const recordKeyFields = ['implementation', 'telemetry'] as const;
+
+function cloneImplementationMetrics(
   implementation: SerializedComparisonReport['implementation']
 ): SerializedComparisonReport['implementation'] {
   return Object.fromEntries(
     Object.entries(implementation).map(([ticketKey, metrics]) => [
       ticketKey,
-      {
-        ...metrics,
-        ...(metrics.testCoverage !== undefined
-          ? { testCoverage: metrics.testCoverage }
-          : {}),
-      },
+      { ...metrics },
     ])
   );
 }
@@ -127,7 +124,7 @@ function deserializeComparisonReport(
       ...report.metadata,
       generatedAt: new Date(report.metadata.generatedAt),
     },
-    implementation: copyImplementationMetrics(report.implementation),
+    implementation: cloneImplementationMetrics(report.implementation),
   };
 }
 
@@ -140,7 +137,7 @@ export function serializeComparisonReport(
       ...report.metadata,
       generatedAt: report.metadata.generatedAt.toISOString(),
     },
-    implementation: copyImplementationMetrics(report.implementation),
+    implementation: cloneImplementationMetrics(report.implementation),
   };
 }
 
@@ -151,7 +148,7 @@ function injectRecordKeys(input: unknown): unknown {
   if (!report || typeof report !== 'object') return input;
 
   const rep = report as Record<string, unknown>;
-  for (const field of ['implementation', 'telemetry'] as const) {
+  for (const field of recordKeyFields) {
     const record = rep[field];
     if (record && typeof record === 'object' && !Array.isArray(record)) {
       for (const [key, value] of Object.entries(record as Record<string, unknown>)) {
