@@ -1,0 +1,455 @@
+openapi: 3.1.0
+info:
+  title: Comparison Decision Persistence API
+  version: 1.0.0
+  description: Contract updates for AIB-352 structured comparison decision-point persistence.
+servers:
+  - url: https://example.com
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons:
+    post:
+      summary: Persist a workflow-generated comparison with structured decision points
+      operationId: persistComparisonWithStructuredDecisionPoints
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComparisonPersistenceRequest'
+            example:
+              compareRunKey: cmp_20260326T120000Z_AIB-101_AIB-102-AIB-103
+              projectId: 1
+              sourceTicketKey: AIB-101
+              participantTicketKeys:
+                - AIB-102
+                - AIB-103
+              markdownPath: specs/AIB-352-persist-structured-decision/comparisons/example.md
+              report:
+                metadata:
+                  generatedAt: '2026-03-26T12:00:00.000Z'
+                  sourceTicket: AIB-101
+                  comparedTickets:
+                    - AIB-102
+                    - AIB-103
+                  filePath: comparisons/example.md
+                summary: AIB-102 is the stronger overall implementation.
+                alignment:
+                  overall: 84
+                  dimensions:
+                    requirements: 90
+                    scenarios: 80
+                    entities: 80
+                    keywords: 75
+                  isAligned: true
+                  matchingRequirements:
+                    - FR-001
+                    - FR-004
+                  matchingEntities:
+                    - Decision Point Evaluation
+                implementation:
+                  AIB-102:
+                    ticketKey: AIB-102
+                    linesAdded: 20
+                    linesRemoved: 5
+                    linesChanged: 25
+                    filesChanged: 3
+                    changedFiles:
+                      - lib/comparison/comparison-record.ts
+                    testFilesChanged: 1
+                    hasData: true
+                  AIB-103:
+                    ticketKey: AIB-103
+                    linesAdded: 40
+                    linesRemoved: 15
+                    linesChanged: 55
+                    filesChanged: 5
+                    changedFiles:
+                      - lib/comparison/comparison-payload.ts
+                    testFilesChanged: 0
+                    hasData: true
+                compliance: {}
+                telemetry: {}
+                recommendation: Prefer AIB-102 as the default baseline.
+                warnings: []
+                decisionPoints:
+                  - title: Persistence source of truth
+                    verdictTicketKey: AIB-102
+                    verdictSummary: AIB-102 persists decision-point data directly from structured output.
+                    rationale: It avoids cloning the global recommendation into every saved decision.
+                    participantApproaches:
+                      - ticketKey: AIB-102
+                        summary: Maps structured decision points into saved rows.
+                      - ticketKey: AIB-103
+                        summary: Continues deriving decision points from report-level summary fields.
+                  - title: Legacy fallback handling
+                    verdictTicketKey: null
+                    verdictSummary: Both approaches keep legacy records viewable.
+                    rationale: Historical comparisons should remain readable without backfill.
+                    participantApproaches:
+                      - ticketKey: AIB-102
+                        summary: Preserves saved fallback rows and only changes new persistence behavior.
+      responses:
+        '201':
+          description: Comparison persisted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonPersistenceResponse'
+        '200':
+          description: Duplicate compare-run key reused an existing saved comparison
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonPersistenceResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      summary: Fetch a saved comparison detail payload with decision-specific rows
+      operationId: getComparisonDetailWithStructuredDecisionPoints
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+        - $ref: '#/components/parameters/ComparisonId'
+      responses:
+        '200':
+          description: Comparison detail. New comparisons return decision-point-specific content; historical rows remain readable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetailResponse'
+              example:
+                id: 12
+                generatedAt: '2026-03-26T12:00:00.000Z'
+                sourceTicketId: 101
+                sourceTicketKey: AIB-101
+                markdownPath: specs/AIB-352-persist-structured-decision/comparisons/example.md
+                summary: AIB-102 is the stronger overall implementation.
+                overallRecommendation: Prefer AIB-102 as the default baseline.
+                keyDifferentiators:
+                  - FR-001
+                  - FR-004
+                winnerTicketId: 102
+                winnerTicketKey: AIB-102
+                participants: []
+                decisionPoints:
+                  - id: 1
+                    title: Persistence source of truth
+                    verdictTicketId: 102
+                    verdictSummary: AIB-102 persists decision-point data directly from structured output.
+                    rationale: It avoids cloning the global recommendation into every saved decision.
+                    displayOrder: 0
+                    participantApproaches:
+                      - ticketId: 102
+                        ticketKey: AIB-102
+                        summary: Maps structured decision points into saved rows.
+                      - ticketId: 103
+                        ticketKey: AIB-103
+                        summary: Continues deriving decision points from report-level summary fields.
+                complianceRows: []
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: integer
+    ComparisonId:
+      name: comparisonId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Workflow token or ticket access is invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Source ticket, participant ticket, or comparison record was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type:
+            - string
+            - 'null'
+
+    ComparisonPersistenceResponse:
+      type: object
+      required:
+        - comparisonId
+        - compareRunKey
+        - status
+      properties:
+        comparisonId:
+          type: integer
+        compareRunKey:
+          type: string
+        status:
+          type: string
+          enum:
+            - created
+            - duplicate
+
+    ComparisonPersistenceRequest:
+      type: object
+      required:
+        - compareRunKey
+        - projectId
+        - sourceTicketKey
+        - participantTicketKeys
+        - markdownPath
+        - report
+      properties:
+        compareRunKey:
+          type: string
+        projectId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        participantTicketKeys:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            type: string
+        markdownPath:
+          type: string
+        report:
+          $ref: '#/components/schemas/SerializedComparisonReport'
+
+    SerializedComparisonReport:
+      type: object
+      required:
+        - metadata
+        - summary
+        - alignment
+        - implementation
+        - compliance
+        - telemetry
+        - recommendation
+        - warnings
+        - decisionPoints
+      properties:
+        metadata:
+          type: object
+          required:
+            - generatedAt
+            - sourceTicket
+            - comparedTickets
+            - filePath
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            sourceTicket:
+              type: string
+            comparedTickets:
+              type: array
+              items:
+                type: string
+            filePath:
+              type: string
+        summary:
+          type: string
+        alignment:
+          type: object
+        implementation:
+          type: object
+          additionalProperties:
+            type: object
+        compliance:
+          type: object
+          additionalProperties:
+            type: object
+        telemetry:
+          type: object
+          additionalProperties:
+            type: object
+        recommendation:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/SerializedComparisonDecisionPoint'
+
+    SerializedComparisonDecisionPoint:
+      type: object
+      required:
+        - title
+        - verdictSummary
+        - rationale
+        - participantApproaches
+      properties:
+        title:
+          type: string
+        verdictTicketKey:
+          type:
+            - string
+            - 'null'
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        participantApproaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/SerializedComparisonDecisionPointApproach'
+
+    SerializedComparisonDecisionPointApproach:
+      type: object
+      required:
+        - ticketKey
+        - summary
+      properties:
+        ticketKey:
+          type: string
+        summary:
+          type: string
+
+    ComparisonDetailResponse:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketId
+        - sourceTicketKey
+        - markdownPath
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+        - winnerTicketId
+        - winnerTicketKey
+        - participants
+        - decisionPoints
+        - complianceRows
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        markdownPath:
+          type: string
+        summary:
+          type: string
+        overallRecommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
+          type: string
+        participants:
+          type: array
+          items:
+            type: object
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPoint'
+        complianceRows:
+          type: array
+          items:
+            type: object
+
+    ComparisonDecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictTicketId
+        - verdictSummary
+        - rationale
+        - displayOrder
+        - participantApproaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictTicketId:
+          type:
+            - integer
+            - 'null'
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        displayOrder:
+          type: integer
+        participantApproaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPointApproach'
+
+    ComparisonDecisionPointApproach:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - summary
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        summary:
+          type: string
