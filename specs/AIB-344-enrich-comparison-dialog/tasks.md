@@ -120,8 +120,8 @@
 
 **Purpose**: Final validation across all user stories
 
-- [ ] T017 Run bun run type-check and bun run lint, fix all errors across modified and new files
-- [ ] T018 Run quickstart.md validation steps (bun run type-check, bun run lint, bun run test:unit, bun run test)
+- [x] T017 Run bun run type-check and bun run lint, fix all errors across modified and new files
+- [x] T018 Run quickstart.md validation steps (bun run type-check, bun run lint, bun run test:unit, bun run test)
 
 ---
 
