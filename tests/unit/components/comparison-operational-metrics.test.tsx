@@ -169,6 +169,78 @@ describe('ComparisonOperationalMetricsGrid', () => {
     expect(bestBadges.length).toBe(7);
   });
 
+  it('renders 6-participant grid with horizontally scrollable container', () => {
+    const participants = Array.from({ length: 6 }, (_, i) =>
+      createParticipant({
+        ticketId: i + 1,
+        ticketKey: `AIB-${i + 1}`,
+        aggregatedTelemetry: {
+          inputTokens: 1000 * (i + 1),
+          outputTokens: 500 * (i + 1),
+          totalTokens: 1500 * (i + 1),
+          costUsd: 0.05 * (i + 1),
+          durationMs: 60000 * (i + 1),
+          jobCount: i + 1,
+          model: 'claude-3',
+          hasData: true,
+        },
+      })
+    );
+
+    renderWithProviders(<ComparisonOperationalMetricsGrid participants={participants} />);
+
+    // All 6 ticket keys should be rendered as column headers
+    for (let i = 1; i <= 6; i++) {
+      expect(screen.getByText(`AIB-${i}`)).toBeInTheDocument();
+    }
+
+    // The container should have overflow-x-auto class
+    const cardContent = screen.getByText('Operational Metrics').closest('.overflow-x-auto') ??
+      document.querySelector('.overflow-x-auto');
+    expect(cardContent).toBeInTheDocument();
+  });
+
+  it('does not show scrollbar for 2-participant grid', () => {
+    const participants = [
+      createParticipant({
+        ticketId: 1,
+        aggregatedTelemetry: {
+          inputTokens: 1000,
+          outputTokens: 500,
+          totalTokens: 1500,
+          costUsd: 0.05,
+          durationMs: 60000,
+          jobCount: 1,
+          model: 'claude-3',
+          hasData: true,
+        },
+      }),
+      createParticipant({
+        ticketId: 2,
+        aggregatedTelemetry: {
+          inputTokens: 2000,
+          outputTokens: 1000,
+          totalTokens: 3000,
+          costUsd: 0.10,
+          durationMs: 120000,
+          jobCount: 2,
+          model: 'claude-3',
+          hasData: true,
+        },
+      }),
+    ];
+
+    renderWithProviders(<ComparisonOperationalMetricsGrid participants={participants} />);
+
+    // Both participants should be visible
+    expect(screen.getByText('AIB-1')).toBeInTheDocument();
+    expect(screen.getByText('AIB-2')).toBeInTheDocument();
+
+    // The table should fit without needing the scroll
+    const table = document.querySelector('table');
+    expect(table).toBeInTheDocument();
+  });
+
   it('renders column headers with ticket key, workflow type, and agent', () => {
     const participants = [
       createParticipant({

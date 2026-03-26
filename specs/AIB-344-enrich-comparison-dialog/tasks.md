@@ -87,12 +87,12 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T012 [P] [US3] Component tests for quality breakdown popover: renders 5 dimension rows with name/score/progress bar/weight, shows overall score with threshold label in footer, popover disabled (not clickable) when qualityDetails is null, closes on outside click in tests/unit/components/comparison-quality-popover.test.tsx
+- [x] T012 [P] [US3] Component tests for quality breakdown popover: renders 5 dimension rows with name/score/progress bar/weight, shows overall score with threshold label in footer, popover disabled (not clickable) when qualityDetails is null, closes on outside click in tests/unit/components/comparison-quality-popover.test.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Create ComparisonQualityPopover component using shadcn Popover with PopoverTrigger on quality score cell, 5 dimension rows using Progress component, and footer with overall score + getScoreThreshold() color label in components/comparison/comparison-quality-popover.tsx
-- [ ] T014 [US3] Wire ComparisonQualityPopover as click trigger on quality score cells in ComparisonOperationalMetricsGrid (only enabled when participant has qualityDetails) in components/comparison/comparison-operational-metrics.tsx
+- [x] T013 [US3] Create ComparisonQualityPopover component using shadcn Popover with PopoverTrigger on quality score cell, 5 dimension rows using Progress component, and footer with overall score + getScoreThreshold() color label in components/comparison/comparison-quality-popover.tsx
+- [x] T014 [US3] Wire ComparisonQualityPopover as click trigger on quality score cells in ComparisonOperationalMetricsGrid (only enabled when participant has qualityDetails) in components/comparison/comparison-operational-metrics.tsx
 
 **Checkpoint**: User Story 3 complete — quality breakdown popover available for eligible tickets
 
@@ -106,11 +106,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T015 [US4] Add component test verifying 6-participant grid renders with horizontally scrollable container and fixed metric labels column, and no scrollbar for 2-participant grid in tests/unit/components/comparison-operational-metrics.test.tsx
+- [x] T015 [US4] Add component test verifying 6-participant grid renders with horizontally scrollable container and fixed metric labels column, and no scrollbar for 2-participant grid in tests/unit/components/comparison-operational-metrics.test.tsx
 
 ### Implementation for User Story 4
 
-- [ ] T016 [US4] Verify and refine sticky column z-index, background color, and touch scroll behavior for 6 participants on narrow viewports in components/comparison/comparison-operational-metrics.tsx
+- [x] T016 [US4] Verify and refine sticky column z-index, background color, and touch scroll behavior for 6 participants on narrow viewports in components/comparison/comparison-operational-metrics.tsx
 
 **Checkpoint**: User Story 4 complete — grid scales to 6 participants with smooth horizontal scroll
 

@@ -3,10 +3,20 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buildOperationalMetricRows } from '@/lib/comparison/operational-metrics';
+import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { ComparisonOperationalMetricsGridProps } from './types';
 import type { OperationalMetricCell } from './types';
+import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
 
-function CellContent({ cell }: { cell: OperationalMetricCell }) {
+function CellContent({
+  cell,
+  isQualityRow,
+  participant,
+}: {
+  cell: OperationalMetricCell;
+  isQualityRow?: boolean | undefined;
+  participant?: ComparisonParticipantDetail | undefined;
+}) {
   if (cell.state === 'pending') {
     return <span className="text-muted-foreground">Pending</span>;
   }
@@ -15,9 +25,18 @@ function CellContent({ cell }: { cell: OperationalMetricCell }) {
     return <span className="text-muted-foreground">N/A</span>;
   }
 
+  const showPopover = isQualityRow && participant?.qualityDetails != null;
+
   return (
     <div className="flex items-center gap-2">
-      <span>{cell.formattedValue}</span>
+      {showPopover ? (
+        <ComparisonQualityPopover
+          qualityDetails={participant!.qualityDetails}
+          qualityScore={cell.value}
+        />
+      ) : (
+        <span>{cell.formattedValue}</span>
+      )}
       {cell.isBest && <Badge variant="secondary">Best</Badge>}
     </div>
   );
@@ -63,12 +82,16 @@ export function ComparisonOperationalMetricsGrid({
                 <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
                   {row.definition.label}
                 </td>
-                {row.cells.map((cell) => (
+                {row.cells.map((cell, cellIndex) => (
                   <td
                     key={cell.ticketId}
                     className="px-3 py-2 text-foreground"
                   >
-                    <CellContent cell={cell} />
+                    <CellContent
+                      cell={cell}
+                      isQualityRow={row.definition.key === 'qualityScore'}
+                      participant={participants[cellIndex]}
+                    />
                   </td>
                 ))}
               </tr>
