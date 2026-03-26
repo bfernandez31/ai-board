@@ -2,15 +2,19 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { ScoreGauge } from './score-gauge';
 import type { ComparisonHeroCardProps } from './types';
 
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return `${minutes}m ${seconds}s`;
+function getEnrichmentDisplay(
+  enrichment: { state: string; value: number | null },
+  format: (v: number) => string
+): string {
+  if (enrichment.state === 'available' && enrichment.value != null) {
+    return format(enrichment.value);
+  }
+  if (enrichment.state === 'pending') return 'Pending';
+  return 'N/A';
 }
 
 function formatDate(dateString: string): string {
@@ -44,26 +48,9 @@ export function ComparisonHeroCard({
   generatedAt,
   sourceTicketKey,
 }: ComparisonHeroCardProps) {
-  const costValue =
-    winner.telemetry.costUsd.state === 'available'
-      ? `$${winner.telemetry.costUsd.value!.toFixed(2)}`
-      : winner.telemetry.costUsd.state === 'pending'
-        ? 'Pending'
-        : 'N/A';
-
-  const durationValue =
-    winner.telemetry.durationMs.state === 'available'
-      ? formatDuration(winner.telemetry.durationMs.value!)
-      : winner.telemetry.durationMs.state === 'pending'
-        ? 'Pending'
-        : 'N/A';
-
-  const qualityValue =
-    winner.quality.state === 'available'
-      ? String(winner.quality.value!)
-      : winner.quality.state === 'pending'
-        ? 'Pending'
-        : 'N/A';
+  const costValue = getEnrichmentDisplay(winner.telemetry.costUsd, (v) => `$${v.toFixed(2)}`);
+  const durationValue = getEnrichmentDisplay(winner.telemetry.durationMs, formatDurationMs);
+  const qualityValue = getEnrichmentDisplay(winner.quality, String);
 
   return (
     <Card>

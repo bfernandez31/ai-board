@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
+import { formatDurationMs } from '@/lib/comparison/format-duration';
 import { getScoreThreshold } from '@/lib/quality-score';
 import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { ComparisonUnifiedMetricsProps } from './types';
@@ -24,14 +25,6 @@ interface MetricRowConfig {
   format: (value: number) => string;
 }
 
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return `${minutes}m ${seconds}s`;
-}
-
 const metricRows: MetricRowConfig[] = [
   { key: 'linesChanged', label: 'Lines Changed', source: 'metrics', format: (v) => v.toLocaleString() },
   { key: 'filesChanged', label: 'Files Changed', source: 'metrics', format: (v) => v.toLocaleString() },
@@ -39,7 +32,7 @@ const metricRows: MetricRowConfig[] = [
   { key: 'totalTokens', label: 'Total Tokens', source: 'telemetry', format: (v) => v.toLocaleString() },
   { key: 'inputTokens', label: 'Input Tokens', source: 'telemetry', format: (v) => v.toLocaleString() },
   { key: 'outputTokens', label: 'Output Tokens', source: 'telemetry', format: (v) => v.toLocaleString() },
-  { key: 'durationMs', label: 'Duration', source: 'telemetry', format: formatDuration },
+  { key: 'durationMs', label: 'Duration', source: 'telemetry', format: formatDurationMs },
   { key: 'costUsd', label: 'Cost', source: 'telemetry', format: (v) => `$${v.toFixed(2)}` },
   { key: 'jobCount', label: 'Job Count', source: 'telemetry', format: (v) => v.toLocaleString() },
 ];

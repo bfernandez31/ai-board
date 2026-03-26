@@ -1,16 +1,9 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
+import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
+import { formatDurationMs } from '@/lib/comparison/format-duration';
 import type { ComparisonStatCardsProps } from './types';
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return `${minutes}m ${seconds}s`;
-}
 
 interface StatCardConfig {
   label: string;
@@ -27,7 +20,7 @@ const statCardConfigs: StatCardConfig[] = [
   {
     label: 'Duration',
     getValue: (p) => p.telemetry.durationMs,
-    format: formatDuration,
+    format: formatDurationMs,
   },
   {
     label: 'Quality Score',
@@ -96,7 +89,7 @@ export function ComparisonStatCards({ winner, participants }: ComparisonStatCard
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {statCardConfigs.map((config) => {
         const enrichment = config.getValue(winner);
-        const displayValue = getDisplayValue(enrichment as ComparisonEnrichmentValue<number>, config.format);
+        const displayValue = getDisplayValue(enrichment, config.format);
 
         return (
           <Card key={config.label}>

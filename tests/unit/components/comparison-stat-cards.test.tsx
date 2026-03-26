@@ -83,7 +83,7 @@ describe('ComparisonStatCards', () => {
     );
 
     expect(screen.getByText('$1.50')).toBeInTheDocument();
-    expect(screen.getByText('2m 0s')).toBeInTheDocument();
+    expect(screen.getByText('2m')).toBeInTheDocument();
     expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
   });
