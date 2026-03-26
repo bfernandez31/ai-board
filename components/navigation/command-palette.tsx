@@ -46,15 +46,16 @@ export function CommandPalette({ projectId, open, onOpenChange }: CommandPalette
     }
   }, [open]);
 
+  function hasOpenDialog(): boolean {
+    return document.querySelector('[role="dialog"][data-state="open"]') !== null;
+  }
+
   // Global Cmd+K / Ctrl+K listener
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        // Modal stacking prevention
-        const existingDialog = document.querySelector('[role="dialog"][data-state="open"]');
-        if (existingDialog) return;
-        onOpenChange(true);
+        if (!hasOpenDialog()) onOpenChange(true);
       }
     }
 
@@ -65,9 +66,7 @@ export function CommandPalette({ projectId, open, onOpenChange }: CommandPalette
   // Listen for custom event from board (S/slash shortcut)
   useEffect(() => {
     function handleCustomOpen() {
-      const existingDialog = document.querySelector('[role="dialog"][data-state="open"]');
-      if (existingDialog) return;
-      onOpenChange(true);
+      if (!hasOpenDialog()) onOpenChange(true);
     }
 
     window.addEventListener('open-command-palette', handleCustomOpen);
@@ -94,65 +93,65 @@ export function CommandPalette({ projectId, open, onOpenChange }: CommandPalette
           <DialogTitle>Command Palette</DialogTitle>
         </VisuallyHidden>
         <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-      <CommandInput
-        placeholder="Search tickets or navigate..."
-        value={search}
-        onValueChange={setSearch}
-      />
-      <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+          <CommandInput
+            placeholder="Search tickets or navigate..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
 
-        <CommandGroup heading="Navigation">
-          {NAVIGATION_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const href = `/projects/${projectId}${item.href}`;
-            return (
-              <CommandItem
-                key={item.id}
-                value={item.label}
-                onSelect={() => handleSelect(href)}
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </CommandItem>
-            );
-          })}
-        </CommandGroup>
-
-        {(debouncedSearch.length >= 2 || ticketLoading) && (
-          <>
-            <CommandSeparator />
-            <CommandGroup heading="Tickets">
-              {ticketLoading && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              )}
-              {ticketData?.results.map((ticket) => (
-                <CommandItem
-                  key={ticket.id}
-                  value={`${ticket.ticketKey} ${ticket.title}`}
-                  onSelect={() =>
-                    handleSelect(
-                      `/projects/${projectId}/board?ticket=${ticket.ticketKey}&modal=open`
-                    )
-                  }
-                >
-                  <span className="font-mono text-xs text-muted-foreground mr-2">
-                    {ticket.ticketKey}
-                  </span>
-                  {ticket.title}
-                </CommandItem>
-              ))}
-              {!ticketLoading && debouncedSearch.length >= 2 && ticketData?.results.length === 0 && (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  No tickets found.
-                </p>
-              )}
+            <CommandGroup heading="Navigation">
+              {NAVIGATION_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const href = `/projects/${projectId}${item.href}`;
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.label}
+                    onSelect={() => handleSelect(href)}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
-          </>
-        )}
-      </CommandList>
+
+            {(debouncedSearch.length >= 2 || ticketLoading) && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Tickets">
+                  {ticketLoading && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {ticketData?.results.map((ticket) => (
+                    <CommandItem
+                      key={ticket.id}
+                      value={`${ticket.ticketKey} ${ticket.title}`}
+                      onSelect={() =>
+                        handleSelect(
+                          `/projects/${projectId}/board?ticket=${ticket.ticketKey}&modal=open`
+                        )
+                      }
+                    >
+                      <span className="font-mono text-xs text-muted-foreground mr-2">
+                        {ticket.ticketKey}
+                      </span>
+                      {ticket.title}
+                    </CommandItem>
+                  ))}
+                  {!ticketLoading && debouncedSearch.length >= 2 && ticketData?.results.length === 0 && (
+                    <p className="py-4 text-center text-sm text-muted-foreground">
+                      No tickets found.
+                    </p>
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
         </Command>
       </DialogContent>
     </Dialog>

@@ -12,7 +12,6 @@ import {
 
 interface IconRailSidebarProps {
   projectId: number;
-  onOpenCommandPalette?: () => void;
 }
 
 export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
@@ -26,6 +25,32 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
     return pathname === fullHref || pathname?.startsWith(`${fullHref}/`) || false;
   }
 
+  function renderNavItem(item: (typeof NAVIGATION_ITEMS)[number]): React.ReactNode {
+    const Icon = item.icon;
+    const active = isActive(item.href);
+    return (
+      <Tooltip key={item.id}>
+        <TooltipTrigger asChild>
+          <Link
+            href={`/projects/${projectId}${item.href}`}
+            aria-label={item.label}
+            aria-current={active ? 'page' : undefined}
+            className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors ${
+              active
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`}
+          >
+            <Icon className="w-5 h-5" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
   return (
     <TooltipProvider delayDuration={300}>
       <nav
@@ -33,59 +58,11 @@ export function IconRailSidebar({ projectId }: IconRailSidebarProps) {
         className="hidden lg:flex flex-col justify-between h-[calc(100vh-64px)] w-12 border-r bg-background py-2"
       >
         <div className="flex flex-col items-center gap-1">
-          {viewItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Tooltip key={item.id}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={`/projects/${projectId}${item.href}`}
-                    aria-label={item.label}
-                    aria-current={active ? 'page' : undefined}
-                    className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors ${
-                      active
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {viewItems.map(renderNavItem)}
         </div>
 
         <div className="flex flex-col items-center gap-1 border-t pt-2">
-          {bottomItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Tooltip key={item.id}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={`/projects/${projectId}${item.href}`}
-                    aria-label={item.label}
-                    aria-current={active ? 'page' : undefined}
-                    className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors ${
-                      active
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {bottomItems.map(renderNavItem)}
         </div>
       </nav>
     </TooltipProvider>

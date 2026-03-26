@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, BarChart3, Activity, CreditCard, Key, Settings } from 'lucide-react';
+import { Menu, LogOut, CreditCard, Key } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,22 +13,21 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { NAVIGATION_ITEMS } from '@/components/navigation/nav-items';
 
 interface MobileMenuProps {
   projectId?: number | undefined;
   projectName?: string | undefined;
-  githubOwner?: string | undefined;
-  githubRepo?: string | undefined;
 }
 
 export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
-  const handleSignOut = () => {
+  function handleSignOut() {
     setOpen(false);
     signOut({ callbackUrl: '/auth/signin' });
-  };
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -55,38 +54,20 @@ export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
             <div className="border-t border-border my-2" />
             {projectId && (
               <div className="flex flex-col gap-1 px-2">
-                <Link
-                  href={`/projects/${projectId}/board`}
-                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
-                  onClick={() => setOpen(false)}
-                >
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Board
-                </Link>
-                <Link
-                  href={`/projects/${projectId}/activity`}
-                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
-                  onClick={() => setOpen(false)}
-                >
-                  <Activity className="mr-2 h-4 w-4" />
-                  Activity
-                </Link>
-                <Link
-                  href={`/projects/${projectId}/analytics`}
-                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
-                  onClick={() => setOpen(false)}
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Analytics
-                </Link>
-                <Link
-                  href={`/projects/${projectId}/settings`}
-                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
-                  onClick={() => setOpen(false)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Link>
+                {NAVIGATION_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/projects/${projectId}${item.href}`}
+                      className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                      onClick={() => setOpen(false)}
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
             )}
             <div className="border-t border-border my-2" />

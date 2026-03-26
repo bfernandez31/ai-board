@@ -187,8 +187,6 @@ export function Header() {
           <MobileMenu
             projectId={projectInfo?.id}
             projectName={projectInfo?.name}
-            githubOwner={projectInfo?.githubOwner}
-            githubRepo={projectInfo?.githubRepo}
           />
         </div>
       </div>
