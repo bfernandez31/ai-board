@@ -1997,8 +1997,36 @@ Fetch full comparison detail with enriched data.
       "rankRationale": "Best constitution compliance, highest test ratio",
       "workflowType": "FULL",
       "agent": "CLAUDE",
-      "quality": { "state": "available", "value": 85 },
-      "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "quality": {
+        "state": "available",
+        "value": 85,
+        "breakdown": {
+          "state": "available",
+          "value": {
+            "dimensions": [
+              { "name": "Compliance", "score": 90, "weight": 0.25 },
+              { "name": "Bug Detection", "score": 80, "weight": 0.25 },
+              { "name": "Code Comments", "score": 85, "weight": 0.2 },
+              { "name": "Historical Context", "score": 88, "weight": 0.15 },
+              { "name": "Spec Sync", "score": 82, "weight": 0.15 }
+            ],
+            "overallScore": 85,
+            "thresholdLabel": "Good"
+          }
+        }
+      },
+      "telemetry": {
+        "state": "available",
+        "value": {
+          "inputTokens": 12000,
+          "outputTokens": 5000,
+          "totalTokens": 17000,
+          "durationMs": 45000,
+          "costUsd": 0.15,
+          "jobCount": 3,
+          "primaryModel": "claude-sonnet-4-6"
+        }
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2036,10 +2064,14 @@ Fetch full comparison detail with enriched data.
 }
 ```
 
-**Enrichment States**: Quality and telemetry use a three-state pattern:
+**Enrichment States**: Quality, telemetry, and nested fields use a three-state pattern:
 - `available`: Data exists with a `value`
 - `pending`: Job exists but data not yet computed (e.g., verify job running)
 - `unavailable`: No relevant job exists
+
+**Telemetry aggregation**: Values are summed across all COMPLETED jobs per participant (`inputTokens`, `outputTokens`, `totalTokens`, `durationMs`, `costUsd`). `jobCount` is the count of completed jobs. `primaryModel` is the model from the job with the highest total token consumption. Failed and cancelled jobs are excluded.
+
+**Quality breakdown**: Present only for FULL workflow tickets that have completed VERIFY and have populated `qualityScoreDetails`. The `breakdown` field itself follows the three-state pattern.
 
 **Errors**:
 - `400`: Invalid project, ticket, or comparison ID

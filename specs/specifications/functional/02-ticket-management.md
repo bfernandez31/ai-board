@@ -365,7 +365,7 @@ The viewer is a modal dialog with two sections:
 - Hidden on small screens
 
 **Main Content** (right):
-- Scrollable area displaying four sections for the selected comparison:
+- Scrollable area displaying five sections for the selected comparison:
 
 **Ranking and Recommendation**:
 - Overall recommendation text and executive summary
@@ -375,12 +375,32 @@ The viewer is a modal dialog with two sections:
   - Score percentage badge
   - "Winner" badge on rank 1
   - Rank rationale text
+  - Workflow type badge (FULL / QUICK / CLEAN)
+  - Agent badge when agent information is available
+  - Quality score badge with threshold label (e.g., "87 Good") when a score exists
 
 **Implementation Metrics**:
 - Table comparing code metrics across participants
 - Metrics: lines changed, files changed, test files changed
 - "Best value" badge highlights the leading participant per metric
 - "Unavailable" shown when metrics are missing
+
+**Operational Metrics**:
+- Grid with metric labels as rows and participants as columns
+- Metrics: total tokens, input tokens, output tokens, duration, cost, job count, quality score
+- Values aggregated across all completed jobs per participant (sum for tokens/duration/cost, count for job count)
+- Primary AI model determined by the job with the highest total token consumption
+- "Best value" badge per row (lowest wins for tokens/duration/cost/job count; highest wins for quality)
+- Column headers show ticket key, workflow type, and agent
+- Metric label column stays fixed (sticky) during horizontal scroll; supports up to 6 compared tickets
+- Pending state shown when a job is in progress but telemetry is not yet available; "N/A" when no data will ever be available
+- Clicking a quality score opens a breakdown popover (available for FULL workflow tickets that have completed VERIFY with quality score details)
+
+**Quality Score Breakdown Popover**:
+- Triggered by clicking an eligible quality score cell in the Operational Metrics grid
+- Shows 5 evaluated dimensions: Compliance, Bug Detection, Code Comments, Historical Context, Spec Sync
+- Each dimension shows name, score, weight, and a visual progress bar
+- Overall score with threshold label shown at the bottom
 
 **Decision Points**:
 - Collapsible sections for each architectural decision
@@ -395,8 +415,8 @@ The viewer is a modal dialog with two sections:
 ### Data Enrichment
 
 The comparison detail view enriches stored comparison data with live data:
-- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job)
-- **Telemetry**: Input/output tokens, duration, cost from the latest job per participant
+- **Quality scores**: Derived from completed verify jobs (`available` if score exists, `pending` if job running, `unavailable` if no verify job). Breakdown details (5 dimensions with scores and weights) available for FULL workflow tickets that completed VERIFY.
+- **Telemetry**: Total/input/output tokens, duration, cost, job count, and primary model — aggregated across all COMPLETED jobs per participant. Excludes failed and cancelled jobs.
 
 ### Selection Logic
 
