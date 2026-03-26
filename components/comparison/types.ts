@@ -1,9 +1,3 @@
-/**
- * Comparison Component Types
- *
- * TypeScript interfaces specific to comparison UI components.
- */
-
 import type {
   ComparisonComplianceRow,
   ComparisonDecisionPoint,
@@ -11,11 +5,6 @@ import type {
   ComparisonSummary,
 } from '@/lib/types/comparison';
 
-/**
- * ComparisonViewerProps
- *
- * Props for the comparison viewer component.
- */
 export interface ComparisonViewerProps {
   /** Project ID for API calls */
   projectId: number;
@@ -57,5 +46,9 @@ export interface ComparisonDecisionPointsProps {
 
 export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
+  participants: ComparisonParticipantDetail[];
+}
+
+export interface OperationalMetricsProps {
   participants: ComparisonParticipantDetail[];
 }

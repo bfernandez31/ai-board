@@ -135,16 +135,23 @@ describe('comparison-record helpers', () => {
     });
     expect(
       normalizeTelemetryEnrichment({
+        ticketId: 1,
         inputTokens: 10,
-        outputTokens: null,
+        outputTokens: 20,
+        totalTokens: 30,
         durationMs: 30,
-        costUsd: null,
+        costUsd: 0.5,
+        jobCount: 1,
+        primaryModel: 'claude-sonnet-4-6',
       })
     ).toEqual({
       inputTokens: { state: 'available', value: 10 },
-      outputTokens: { state: 'pending', value: null },
+      outputTokens: { state: 'available', value: 20 },
+      totalTokens: { state: 'available', value: 30 },
       durationMs: { state: 'available', value: 30 },
-      costUsd: { state: 'pending', value: null },
+      costUsd: { state: 'available', value: 0.5 },
+      jobCount: { state: 'available', value: 1 },
+      primaryModel: { state: 'available', value: 'claude-sonnet-4-6' },
     });
   });
 

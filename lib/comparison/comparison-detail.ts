@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/db/client';
-import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import type { QualityScoreDetails } from '@/lib/quality-score';
+import type {
+  ComparisonDetail,
+  ComparisonEnrichmentValue,
+  ComparisonSummary,
+} from '@/lib/types/comparison';
 import {
+  aggregateJobTelemetry,
   buildComparisonDetail,
   createAvailableEnrichment,
   createPendingEnrichment,
@@ -104,7 +110,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 function deriveQualityState(
   latestVerifyJob: { qualityScore: number | null } | null,
   hasVerifyJob: boolean
-): ReturnType<typeof createAvailableEnrichment<number>> {
+): ComparisonEnrichmentValue<number> {
   if (latestVerifyJob?.qualityScore != null) {
     return createAvailableEnrichment(latestVerifyJob.qualityScore);
   }
@@ -114,6 +120,31 @@ function deriveQualityState(
   }
 
   return createUnavailableEnrichment<number>();
+}
+
+function deriveQualityBreakdown(
+  latestVerifyJob: {
+    qualityScore: number | null;
+    qualityScoreDetails: string | null;
+  } | null,
+  hasVerifyJob: boolean
+): ComparisonEnrichmentValue<QualityScoreDetails> {
+  if (latestVerifyJob?.qualityScoreDetails) {
+    try {
+      const parsed = JSON.parse(latestVerifyJob.qualityScoreDetails) as QualityScoreDetails;
+      if (parsed.dimensions && parsed.threshold) {
+        return createAvailableEnrichment(parsed);
+      }
+    } catch {
+      // Fall through to unavailable
+    }
+  }
+
+  if (hasVerifyJob && latestVerifyJob?.qualityScore != null) {
+    return createPendingEnrichment<QualityScoreDetails>();
+  }
+
+  return createUnavailableEnrichment<QualityScoreDetails>();
 }
 
 export async function getComparisonDetailForTicket(
@@ -168,28 +199,33 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [completedJobs, inProgressJobs, latestVerifyJobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
-        ticketId: {
-          in: participantIds,
-        },
+        ticketId: { in: participantIds },
+        status: 'COMPLETED',
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
+        model: true,
       },
     }),
     prisma.job.findMany({
       where: {
-        ticketId: {
-          in: participantIds,
-        },
+        ticketId: { in: participantIds },
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
+      select: {
+        ticketId: true,
+      },
+    }),
+    prisma.job.findMany({
+      where: {
+        ticketId: { in: participantIds },
         command: 'verify',
       },
       orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
@@ -197,6 +233,7 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,7 +258,8 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  const aggregatedTelemetry = aggregateJobTelemetry(completedJobs);
+  const inProgressTicketIds = new Set(inProgressJobs.map((job) => job.ticketId));
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
@@ -234,8 +272,13 @@ export async function getComparisonDetailForTicket(
         latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
         verifyJobTicketIds.has(participant.ticketId)
       ),
+      qualityBreakdown: deriveQualityBreakdown(
+        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
+        verifyJobTicketIds.has(participant.ticketId)
+      ),
       telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
+        aggregatedTelemetry.get(participant.ticketId) ?? null,
+        inProgressTicketIds.has(participant.ticketId)
       ),
     })
   );

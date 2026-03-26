@@ -15,11 +15,15 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityBreakdown: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 1 },
+      primaryModel: { state: 'available' as const, value: 'claude-sonnet-4-6' },
     },
     metrics: {
       linesAdded: 10,

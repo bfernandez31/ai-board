@@ -14,11 +14,15 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityBreakdown: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 1 },
+      primaryModel: { state: 'available' as const, value: 'claude-sonnet-4-6' },
     },
     metrics: {
       linesAdded: 10,
@@ -41,11 +45,15 @@ const participants = [
     score: 75,
     rankRationale: 'More churn',
     quality: { state: 'pending' as const, value: null },
+    qualityBreakdown: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'pending' as const, value: null },
       outputTokens: { state: 'pending' as const, value: null },
+      totalTokens: { state: 'pending' as const, value: null },
       durationMs: { state: 'pending' as const, value: null },
       costUsd: { state: 'pending' as const, value: null },
+      jobCount: { state: 'pending' as const, value: null },
+      primaryModel: { state: 'pending' as const, value: null },
     },
     metrics: {
       linesAdded: 30,
@@ -76,5 +84,74 @@ describe('ComparisonRanking', () => {
     expect(screen.getByText('#2 AIB-2')).toBeInTheDocument();
     expect(screen.getAllByText('Winner').length).toBeGreaterThan(0);
     expect(screen.getByText('coverage')).toBeInTheDocument();
+  });
+
+  it('renders workflow type badges for FULL/QUICK/CLEAN workflows', () => {
+    const withWorkflows = [
+      { ...participants[0], workflowType: 'FULL' as const },
+      { ...participants[1], workflowType: 'QUICK' as const },
+    ];
+
+    renderWithProviders(
+      <ComparisonRanking
+        participants={withWorkflows}
+        recommendation="Pick one."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    expect(screen.getByText('FULL')).toBeInTheDocument();
+    expect(screen.getByText('QUICK')).toBeInTheDocument();
+  });
+
+  it('shows agent badge when present, hides when null', () => {
+    const withAgent = [
+      { ...participants[0], agent: 'CLAUDE' as string | null },
+      { ...participants[1], agent: null },
+    ];
+
+    renderWithProviders(
+      <ComparisonRanking
+        participants={withAgent}
+        recommendation="Pick one."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    expect(screen.getByText('CLAUDE')).toBeInTheDocument();
+    // Only one agent badge should render
+    expect(screen.queryAllByText('CLAUDE')).toHaveLength(1);
+  });
+
+  it('shows quality badge with score and label when available, hidden when unavailable', () => {
+    const withQuality = [
+      {
+        ...participants[0],
+        quality: { state: 'available' as const, value: 92 },
+      },
+      {
+        ...participants[1],
+        quality: { state: 'unavailable' as const, value: null },
+      },
+    ];
+
+    renderWithProviders(
+      <ComparisonRanking
+        participants={withQuality}
+        recommendation="Pick one."
+        summary="Summary"
+        winnerTicketId={1}
+        keyDifferentiators={[]}
+      />
+    );
+
+    // 92 >= 90 = Excellent
+    expect(screen.getByText('92 Excellent')).toBeInTheDocument();
+    // No quality badge for the unavailable participant
+    expect(screen.queryByText(/75 /)).not.toBeInTheDocument();
   });
 });
