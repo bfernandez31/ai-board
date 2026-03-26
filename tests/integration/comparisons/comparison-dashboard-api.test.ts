@@ -18,8 +18,15 @@ describe('Comparison dashboard API', () => {
       overallRecommendation: string;
       participants: Array<{
         rank: number;
+        workflowType: string;
+        agent: string | null;
+        quality: { state: string; value: number | null };
         metrics: {
           bestValueFlags: Record<string, boolean>;
+        };
+        telemetry: {
+          totalTokens: { state: string; value: number | null };
+          jobCount: { state: string; value: number | null };
         };
       }>;
       decisionPoints: Array<{
@@ -36,6 +43,11 @@ describe('Comparison dashboard API', () => {
     expect(response.data.summary).toContain('best test coverage');
     expect(response.data.overallRecommendation).toContain('TE2-102');
     expect(response.data.participants.map((participant) => participant.rank)).toEqual([1, 2]);
+    expect(response.data.participants[0]?.workflowType).toBe('FULL');
+    expect(response.data.participants[0]?.agent).toBe('CODEX');
+    expect(response.data.participants[0]?.quality.value).toBe(91);
+    expect(response.data.participants[0]?.telemetry.totalTokens.value).toBe(2000);
+    expect(response.data.participants[0]?.telemetry.jobCount.value).toBe(2);
     expect(response.data.participants[0]?.metrics.bestValueFlags.linesChanged).toBe(true);
     expect(response.data.decisionPoints[0]?.participantApproaches).toHaveLength(2);
     expect(response.data.complianceRows[0]?.assessments.map((entry) => entry.status)).toEqual([

@@ -47,11 +47,21 @@ vi.mock('@/hooks/use-comparisons', () => ({
           score: 95,
           rankRationale: 'Best value',
           quality: { state: 'available', value: 95 },
+          qualityDetails: {
+            state: 'available',
+            value: {
+              threshold: 'Excellent',
+              dimensions: [],
+            },
+          },
           telemetry: {
+            totalTokens: { state: 'available', value: 15 },
             inputTokens: { state: 'available', value: 10 },
             outputTokens: { state: 'available', value: 5 },
             durationMs: { state: 'available', value: 100 },
             costUsd: { state: 'available', value: 0.01 },
+            jobCount: { state: 'available', value: 1 },
+            model: { state: 'available', value: 'gpt-5.4' },
           },
           metrics: {
             linesAdded: 10,
@@ -93,6 +103,7 @@ describe('ComparisonViewer', () => {
 
     expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
     expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Operational Metrics')).toBeInTheDocument();
     expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
     expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });

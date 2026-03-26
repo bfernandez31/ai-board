@@ -15,6 +15,7 @@ import type {
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
 } from '@/lib/types/comparison';
+import { parseQualityScoreDetails, type QualityScoreDetails } from '@/lib/quality-score';
 
 type PersistableTicket = {
   id: number;
@@ -367,13 +368,19 @@ export function normalizeTelemetryEnrichment(job: {
   outputTokens: number | null;
   durationMs: number | null;
   costUsd: number | null;
+  totalTokens: number | null;
+  jobCount: number | null;
+  model: string | null;
 } | null): ComparisonTelemetryEnrichment {
   if (!job) {
     return {
+      totalTokens: createUnavailableEnrichment<number>(),
       inputTokens: createUnavailableEnrichment<number>(),
       outputTokens: createUnavailableEnrichment<number>(),
       durationMs: createUnavailableEnrichment<number>(),
       costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      model: createUnavailableEnrichment<string>(),
     };
   }
 
@@ -385,12 +392,40 @@ export function normalizeTelemetryEnrichment(job: {
     return createAvailableEnrichment(value);
   }
 
+  function createStringValue(value: string | null): ComparisonEnrichmentValue<string> {
+    if (!value) {
+      return createPendingEnrichment<string>();
+    }
+
+    return createAvailableEnrichment(value);
+  }
+
   return {
+    totalTokens: createValue(job.totalTokens),
     inputTokens: createValue(job.inputTokens),
     outputTokens: createValue(job.outputTokens),
     durationMs: createValue(job.durationMs),
     costUsd: createValue(job.costUsd),
+    jobCount: createValue(job.jobCount),
+    model: createStringValue(job.model),
   };
+}
+
+export function normalizeQualityDetailsEnrichment(input: {
+  qualityScoreDetails: string | null;
+  workflowType: WorkflowType;
+  stage: Stage;
+}): ComparisonEnrichmentValue<QualityScoreDetails> {
+  if (input.workflowType !== 'FULL') {
+    return createUnavailableEnrichment<QualityScoreDetails>();
+  }
+
+  const parsedDetails = parseQualityScoreDetails(input.qualityScoreDetails);
+  if (parsedDetails && (input.stage === 'VERIFY' || input.stage === 'SHIP')) {
+    return createAvailableEnrichment(parsedDetails);
+  }
+
+  return createPendingEnrichment<QualityScoreDetails>();
 }
 
 export function normalizeParticipantDetail(input: {
@@ -417,6 +452,7 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
+  qualityDetails: ComparisonEnrichmentValue<QualityScoreDetails>;
   telemetry: ComparisonTelemetryEnrichment;
 }): ComparisonParticipantDetail {
   return {
@@ -430,6 +466,7 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
+    qualityDetails: input.qualityDetails,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };

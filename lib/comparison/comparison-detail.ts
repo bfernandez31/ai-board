@@ -5,6 +5,7 @@ import {
   createAvailableEnrichment,
   createPendingEnrichment,
   createUnavailableEnrichment,
+  normalizeQualityDetailsEnrichment,
   normalizeDecisionPoints,
   normalizeParticipantDetail,
   normalizeTelemetryEnrichment,
@@ -168,21 +169,21 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [allJobs, latestVerifyJobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
         ticketId: {
           in: participantIds,
         },
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
+        status: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
+        model: true,
       },
     }),
     prisma.job.findMany({
@@ -197,6 +198,7 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,23 +223,113 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  const jobsByTicketId = new Map<
+    number,
+    Array<{
+      ticketId: number;
+      status: string;
+      inputTokens: number | null;
+      outputTokens: number | null;
+      durationMs: number | null;
+      costUsd: number | null;
+      model: string | null;
+    }>
+  >();
+
+  for (const job of allJobs) {
+    const jobs = jobsByTicketId.get(job.ticketId) ?? [];
+    jobs.push(job);
+    jobsByTicketId.set(job.ticketId, jobs);
+  }
+
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
   const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
+  function sumField(
+    jobs: Array<{
+      inputTokens: number | null;
+      outputTokens: number | null;
+      durationMs: number | null;
+      costUsd: number | null;
+    }>,
+    field: 'inputTokens' | 'outputTokens' | 'durationMs' | 'costUsd'
+  ): number | null {
+    const withValues = jobs.filter((job) => job[field] != null);
+    if (withValues.length === 0) {
+      return null;
+    }
+
+    return withValues.reduce((sum, job) => sum + (job[field] ?? 0), 0);
+  }
+
+  function aggregateModel(
+    jobs: Array<{
+      model: string | null;
+    }>
+  ): string | null {
+    const modelCounts = new Map<string, number>();
+
+    for (const job of jobs) {
+      if (!job.model) {
+        continue;
+      }
+
+      modelCounts.set(job.model, (modelCounts.get(job.model) ?? 0) + 1);
+    }
+
+    let selectedModel: string | null = null;
+    let selectedCount = 0;
+    for (const [model, count] of modelCounts.entries()) {
+      if (count > selectedCount) {
+        selectedModel = model;
+        selectedCount = count;
+      }
+    }
+
+    return selectedModel;
+  }
+
   const participants = record.participants.map((participant) =>
-    normalizeParticipantDetail({
-      participant,
-      quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
-        verifyJobTicketIds.has(participant.ticketId)
-      ),
-      telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
-      ),
-    })
+    {
+      const jobs = jobsByTicketId.get(participant.ticketId) ?? [];
+      const inputTokens = sumField(jobs, 'inputTokens');
+      const outputTokens = sumField(jobs, 'outputTokens');
+      const durationMs = sumField(jobs, 'durationMs');
+      const costUsd = sumField(jobs, 'costUsd');
+      const totalTokens =
+        inputTokens != null || outputTokens != null
+          ? (inputTokens ?? 0) + (outputTokens ?? 0)
+          : null;
+
+      return normalizeParticipantDetail({
+        participant,
+        quality: deriveQualityState(
+          latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
+          verifyJobTicketIds.has(participant.ticketId)
+        ),
+        qualityDetails: normalizeQualityDetailsEnrichment({
+          qualityScoreDetails:
+            latestVerifyJobByTicketId.get(participant.ticketId)?.qualityScoreDetails ?? null,
+          workflowType: participant.workflowTypeAtComparison,
+          stage: participant.ticket.stage,
+        }),
+        telemetry: normalizeTelemetryEnrichment(
+          jobs.length > 0
+            ? {
+                inputTokens,
+                outputTokens,
+                durationMs,
+                costUsd,
+                totalTokens,
+                jobCount: jobs.length,
+                model: aggregateModel(jobs),
+              }
+            : null
+        ),
+      });
+    }
   );
 
   const groupedCompliance = new Map<

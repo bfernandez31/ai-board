@@ -18,9 +18,24 @@ describe('Comparison detail route', () => {
       winnerTicketKey: string;
       participants: Array<{
         ticketKey: string;
+        workflowType: string;
+        agent: string | null;
         quality: { state: string; value: number | null };
+        qualityDetails: {
+          state: string;
+          value: {
+            threshold: string;
+            dimensions: Array<{ name: string; score: number; weight: number }>;
+          } | null;
+        };
         telemetry: {
+          totalTokens: { state: string; value: number | null };
           inputTokens: { state: string; value: number | null };
+          outputTokens: { state: string; value: number | null };
+          durationMs: { state: string; value: number | null };
+          costUsd: { state: string; value: number | null };
+          jobCount: { state: string; value: number | null };
+          model: { state: string; value: string | null };
         };
       }>;
       decisionPoints: Array<{ title: string }>;
@@ -32,11 +47,28 @@ describe('Comparison detail route', () => {
     expect(response.status).toBe(200);
     expect(response.data.id).toBe(fixture.comparison.id);
     expect(response.data.winnerTicketKey).toBe(fixture.winnerTicket.ticketKey);
+    expect(response.data.participants[0]?.workflowType).toBe('FULL');
+    expect(response.data.participants[0]?.agent).toBe('CODEX');
     expect(response.data.participants[0]?.quality).toEqual({
       state: 'available',
       value: 91,
     });
+    expect(response.data.participants[0]?.qualityDetails.value?.threshold).toBe('Excellent');
+    expect(response.data.participants[0]?.qualityDetails.value?.dimensions).toHaveLength(5);
+    expect(response.data.participants[0]?.telemetry.totalTokens).toEqual({
+      state: 'available',
+      value: 2000,
+    });
+    expect(response.data.participants[0]?.telemetry.jobCount).toEqual({
+      state: 'available',
+      value: 2,
+    });
+    expect(response.data.participants[0]?.telemetry.model).toEqual({
+      state: 'available',
+      value: 'gpt-5.4',
+    });
     expect(response.data.participants[1]?.telemetry.inputTokens.state).toBe('pending');
+    expect(response.data.participants[1]?.telemetry.totalTokens.state).toBe('pending');
     expect(response.data.decisionPoints[0]?.title).toBe('State handling');
     expect(response.data.complianceRows[0]?.principleKey).toBe(
       'typescript-first-development'

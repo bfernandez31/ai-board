@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getScoreThreshold } from '@/lib/quality-score';
 import type { ComparisonRankingProps } from './types';
 
 export function ComparisonRanking({
@@ -36,13 +37,22 @@ export function ComparisonRanking({
               key={participant.ticketId}
               className="rounded-lg border border-border bg-background px-4 py-3"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
                   <div className="font-medium text-foreground">
                     #{participant.rank} {participant.ticketKey}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {participant.title}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{participant.workflowType}</Badge>
+                    {participant.agent && <Badge variant="outline">{participant.agent}</Badge>}
+                    {participant.quality.value != null && (
+                      <Badge variant="outline">
+                        {participant.quality.value} {getScoreThreshold(participant.quality.value)}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

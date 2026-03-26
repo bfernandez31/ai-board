@@ -14,11 +14,21 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityDetails: {
+      state: 'available' as const,
+      value: {
+        threshold: 'Excellent' as const,
+        dimensions: [],
+      },
+    },
     telemetry: {
+      totalTokens: { state: 'available' as const, value: 150 },
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 2 },
+      model: { state: 'available' as const, value: 'gpt-5.4' },
     },
     metrics: {
       linesAdded: 10,
@@ -36,16 +46,23 @@ const participants = [
     title: 'Runner up',
     stage: 'PLAN' as const,
     workflowType: 'FULL' as const,
-    agent: null,
+    agent: 'CLAUDE',
     rank: 2,
     score: 75,
     rankRationale: 'More churn',
     quality: { state: 'pending' as const, value: null },
+    qualityDetails: {
+      state: 'pending' as const,
+      value: null,
+    },
     telemetry: {
+      totalTokens: { state: 'pending' as const, value: null },
       inputTokens: { state: 'pending' as const, value: null },
       outputTokens: { state: 'pending' as const, value: null },
       durationMs: { state: 'pending' as const, value: null },
       costUsd: { state: 'pending' as const, value: null },
+      jobCount: { state: 'pending' as const, value: null },
+      model: { state: 'pending' as const, value: null },
     },
     metrics: {
       linesAdded: 30,
@@ -76,5 +93,8 @@ describe('ComparisonRanking', () => {
     expect(screen.getByText('#2 AIB-2')).toBeInTheDocument();
     expect(screen.getAllByText('Winner').length).toBeGreaterThan(0);
     expect(screen.getByText('coverage')).toBeInTheDocument();
+    expect(screen.getAllByText('FULL').length).toBeGreaterThan(0);
+    expect(screen.getByText('CLAUDE')).toBeInTheDocument();
+    expect(screen.getByText('92 Excellent')).toBeInTheDocument();
   });
 });

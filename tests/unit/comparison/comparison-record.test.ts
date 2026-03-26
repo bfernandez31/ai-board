@@ -135,16 +135,22 @@ describe('comparison-record helpers', () => {
     });
     expect(
       normalizeTelemetryEnrichment({
+        totalTokens: 10,
         inputTokens: 10,
         outputTokens: null,
         durationMs: 30,
         costUsd: null,
+        jobCount: 2,
+        model: 'gpt-5.4',
       })
     ).toEqual({
+      totalTokens: { state: 'available', value: 10 },
       inputTokens: { state: 'available', value: 10 },
       outputTokens: { state: 'pending', value: null },
       durationMs: { state: 'available', value: 30 },
       costUsd: { state: 'pending', value: null },
+      jobCount: { state: 'available', value: 2 },
+      model: { state: 'available', value: 'gpt-5.4' },
     });
   });
 
