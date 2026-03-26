@@ -34,11 +34,11 @@ export function TypewriterText({
   }, [delay, text]);
 
   useEffect(() => {
-    if (!started || done) return undefined;
+    if (!started || done) return;
 
     if (displayed.length >= text.length) {
       setDone(true);
-      return undefined;
+      return;
     }
 
     const timer = setTimeout(() => {

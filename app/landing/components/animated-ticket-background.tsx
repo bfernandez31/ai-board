@@ -34,13 +34,13 @@ function getTicketProps(index: number): TicketCardProps {
   const pseudoRandom = (multiplier: number) => ((seed * multiplier) % 97) / 97;
 
   // Distribute tickets across 3 layers: 6 back, 6 mid, 6 front
-  const layerIndex = index % 3;
-  const layer: ParallaxLayer = layerIndex === 0 ? 'back' : layerIndex === 1 ? 'mid' : 'front';
+  const LAYERS: ParallaxLayer[] = ['back', 'mid', 'front'];
+  const layer = LAYERS[index % 3]!;
   const config = LAYER_CONFIG[layer];
 
   return {
     index,
-    color: TICKET_COLORS[index % TICKET_COLORS.length] as TicketColor,
+    color: TICKET_COLORS[index % TICKET_COLORS.length]!,
     duration: (30 + pseudoRandom(13) * 20) * config.speed,
     delay: -(pseudoRandom(17) * 40), // Negative delays: start mid-animation
     verticalPosition: 5 + pseudoRandom(23) * 90, // 5-95% to avoid clipping
@@ -48,6 +48,17 @@ function getTicketProps(index: number): TicketCardProps {
     layer,
   };
 }
+
+// Explicit Tailwind classes required for JIT compiler
+const COLOR_CLASSES: Record<TicketColor, { border: string; bg: string; glow: string }> = {
+  mauve:    { border: 'border-ctp-mauve/40',    bg: 'bg-ctp-mauve/30',    glow: 'shadow-ctp-mauve/20' },
+  blue:     { border: 'border-ctp-blue/40',     bg: 'bg-ctp-blue/30',     glow: 'shadow-ctp-blue/20' },
+  sapphire: { border: 'border-ctp-sapphire/40', bg: 'bg-ctp-sapphire/30', glow: 'shadow-ctp-sapphire/20' },
+  green:    { border: 'border-ctp-green/40',    bg: 'bg-ctp-green/30',    glow: 'shadow-ctp-green/20' },
+  yellow:   { border: 'border-ctp-yellow/40',   bg: 'bg-ctp-yellow/30',   glow: 'shadow-ctp-yellow/20' },
+};
+
+const Z_INDEX: Record<ParallaxLayer, string> = { back: 'z-0', mid: 'z-[1]', front: 'z-[2]' };
 
 function TicketCard({ color, duration, delay, verticalPosition, rotation, layer }: TicketCardProps) {
   const config = LAYER_CONFIG[layer];
@@ -62,17 +73,7 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation, layer 
     filter: config.blur ? 'blur(2px)' : undefined,
   };
 
-  // Explicit Tailwind classes required for JIT compiler
-  const colorClasses: Record<TicketColor, { border: string; bg: string; glow: string }> = {
-    mauve:    { border: 'border-ctp-mauve/40',    bg: 'bg-ctp-mauve/30',    glow: 'shadow-ctp-mauve/20' },
-    blue:     { border: 'border-ctp-blue/40',     bg: 'bg-ctp-blue/30',     glow: 'shadow-ctp-blue/20' },
-    sapphire: { border: 'border-ctp-sapphire/40', bg: 'bg-ctp-sapphire/30', glow: 'shadow-ctp-sapphire/20' },
-    green:    { border: 'border-ctp-green/40',    bg: 'bg-ctp-green/30',    glow: 'shadow-ctp-green/20' },
-    yellow:   { border: 'border-ctp-yellow/40',   bg: 'bg-ctp-yellow/30',   glow: 'shadow-ctp-yellow/20' },
-  };
-
-  const classes = colorClasses[color];
-  const zIndex = layer === 'back' ? 'z-0' : layer === 'mid' ? 'z-[1]' : 'z-[2]';
+  const classes = COLOR_CLASSES[color];
 
   return (
     <div
@@ -81,7 +82,7 @@ function TicketCard({ color, duration, delay, verticalPosition, rotation, layer 
         ${classes.border} ${classes.glow}
         ${layer === 'front' ? 'shadow-lg' : 'shadow-md'}
         backdrop-blur-sm
-        pointer-events-none ${zIndex}
+        pointer-events-none ${Z_INDEX[layer]}
         motion-safe:animate-ticket-drift motion-reduce:animate-none
       `}
       style={style}

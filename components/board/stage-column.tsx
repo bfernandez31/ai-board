@@ -32,7 +32,6 @@ const STAGE_CONFIG: Record<
   Stage,
   {
     label: string;
-    color: string;
     bgColor: string;
     headerBgColor: string;
     headerBorderColor: string;
@@ -46,7 +45,6 @@ const STAGE_CONFIG: Record<
 > = {
   [Stage.INBOX]: {
     label: 'INBOX',
-    color: 'gray',
     bgColor: 'bg-ctp-overlay0/10',
     headerBgColor: 'bg-ctp-overlay0/30',
     headerBorderColor: 'border-ctp-overlay0/40',
@@ -59,7 +57,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.SPECIFY]: {
     label: 'SPECIFY',
-    color: 'mauve',
     bgColor: 'bg-ctp-lavender/10',
     headerBgColor: 'bg-ctp-lavender/30',
     headerBorderColor: 'border-ctp-lavender/40',
@@ -72,7 +69,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.PLAN]: {
     label: 'PLAN',
-    color: 'blue',
     bgColor: 'bg-ctp-blue/10',
     headerBgColor: 'bg-ctp-blue/30',
     headerBorderColor: 'border-ctp-blue/40',
@@ -85,7 +81,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.BUILD]: {
     label: 'BUILD',
-    color: 'peach',
     bgColor: 'bg-ctp-peach-light/10',
     headerBgColor: 'bg-ctp-peach-light/30',
     headerBorderColor: 'border-ctp-peach-light/40',
@@ -98,7 +93,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.VERIFY]: {
     label: 'VERIFY',
-    color: 'pink',
     bgColor: 'bg-ctp-flamingo/10',
     headerBgColor: 'bg-ctp-flamingo/30',
     headerBorderColor: 'border-ctp-flamingo/40',
@@ -111,7 +105,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.SHIP]: {
     label: 'SHIP',
-    color: 'green',
     bgColor: 'bg-ctp-green/10',
     headerBgColor: 'bg-ctp-green/30',
     headerBorderColor: 'border-ctp-green/40',
@@ -124,7 +117,6 @@ const STAGE_CONFIG: Record<
   },
   [Stage.CLOSED]: {
     label: 'CLOSED',
-    color: 'gray',
     bgColor: 'bg-accent/10',
     headerBgColor: 'bg-accent/30',
     headerBorderColor: 'border-accent/40',

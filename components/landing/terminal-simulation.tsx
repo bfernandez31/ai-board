@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useIntersectionObserver } from '@/lib/hooks/use-intersection-observer';
 
 interface LogLine {
@@ -51,22 +51,28 @@ const TYPE_SPEED = 25; // ms per character
 const LINE_PAUSE = 400; // ms between lines
 const SEQUENCE_PAUSE = 2000; // ms between sequences
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function typeColorClass(type: LogLine['type']): string {
+  switch (type) {
+    case 'command': return 'text-ctp-mauve';
+    case 'success': return 'text-ctp-green';
+    case 'dim': return 'text-muted-foreground/70';
+    case 'info':
+    default: return 'text-foreground/90';
+  }
+}
+
 export function TerminalSimulation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersectionObserver(containerRef, { threshold: 0.3 });
-  const [lines, setLines] = useState<{ text: string; type: LogLine['type'] }[]>([]);
-  const [currentText, setCurrentText] = useState('');
-  const [currentType, setCurrentType] = useState<LogLine['type']>('info');
-  const [isTyping, setIsTyping] = useState(false);
+  const [lines, setLines] = useState<LogLine[]>([]);
+  const [currentLine, setCurrentLine] = useState<{ text: string; type: LogLine['type'] } | null>(null);
   const hasStarted = useRef(false);
   const animationRef = useRef<{ cancel: boolean }>({ cancel: false });
-
-  const sleep = useCallback((ms: number) => {
-    return new Promise<void>((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }, []);
 
   useEffect(() => {
     if (!isVisible || hasStarted.current) return;
@@ -74,9 +80,7 @@ export function TerminalSimulation() {
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
-      // Show all lines immediately
-      const allLines = LOG_SEQUENCES.flat().map((l) => ({ text: l.text, type: l.type }));
-      setLines(allLines);
+      setLines(LOG_SEQUENCES.flat());
       return;
     }
 
@@ -84,64 +88,43 @@ export function TerminalSimulation() {
     ctrl.cancel = false;
 
     async function runAnimation() {
-      let seqIndex = 0;
-      // Loop through all sequences once
-      while (seqIndex < LOG_SEQUENCES.length && !ctrl.cancel) {
-        const sequence = LOG_SEQUENCES[seqIndex];
-        if (!sequence) break;
-
-        for (const line of sequence) {
+      for (let seqIndex = 0; seqIndex < LOG_SEQUENCES.length && !ctrl.cancel; seqIndex++) {
+        for (const line of LOG_SEQUENCES[seqIndex]!) {
           if (ctrl.cancel) return;
-
-          setCurrentType(line.type);
-          setIsTyping(true);
 
           // Type out character by character
           for (let i = 0; i <= line.text.length; i++) {
             if (ctrl.cancel) return;
-            setCurrentText(line.text.slice(0, i));
+            setCurrentLine({ text: line.text.slice(0, i), type: line.type });
             await sleep(TYPE_SPEED);
           }
 
-          setIsTyping(false);
           // Commit the finished line
-          setLines((prev) => [...prev, { text: line.text, type: line.type }]);
-          setCurrentText('');
+          setCurrentLine(null);
+          setLines((prev) => [...prev, line]);
           await sleep(LINE_PAUSE);
         }
 
-        seqIndex++;
-        if (seqIndex < LOG_SEQUENCES.length) {
-          // Add blank line between sequences
+        if (seqIndex < LOG_SEQUENCES.length - 1) {
           setLines((prev) => [...prev, { text: '', type: 'dim' }]);
           await sleep(SEQUENCE_PAUSE);
         }
       }
     }
 
-    runAnimation();
+    runAnimation().catch(() => {});
 
     return () => {
       ctrl.cancel = true;
     };
-  }, [isVisible, sleep]);
+  }, [isVisible]);
 
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lines, currentText]);
-
-  const typeColorClass = (type: LogLine['type']) => {
-    switch (type) {
-      case 'command': return 'text-ctp-mauve';
-      case 'success': return 'text-ctp-green';
-      case 'dim': return 'text-muted-foreground/70';
-      case 'info':
-      default: return 'text-foreground/90';
-    }
-  };
+  }, [lines, currentLine]);
 
   return (
     <div ref={containerRef} className="max-w-3xl mx-auto">
@@ -166,10 +149,9 @@ export function TerminalSimulation() {
               {line.text}
             </div>
           ))}
-          {/* Currently typing line */}
-          {isTyping && currentText && (
-            <div className={typeColorClass(currentType)}>
-              {currentText}
+          {currentLine && (
+            <div className={typeColorClass(currentLine.type)}>
+              {currentLine.text}
               <span className="inline-block w-[7px] h-[14px] bg-primary/80 align-middle ml-0.5 animate-blink" aria-hidden="true" />
             </div>
           )}
