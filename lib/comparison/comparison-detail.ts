@@ -4,7 +4,11 @@ import {
   getScoreThreshold,
   parseQualityScoreDetails,
 } from '@/lib/quality-score';
-import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import type {
+  ComparisonDetail,
+  ComparisonQualitySummary,
+  ComparisonSummary,
+} from '@/lib/types/comparison';
 import {
   buildComparisonDetail,
   createAvailableEnrichment,
@@ -33,7 +37,16 @@ type ComparisonJobRecord = {
 };
 
 type ParticipantOperationalAggregate = ReturnType<typeof aggregateParticipantOperationalMetrics>;
-type ParticipantQualityAggregate = ReturnType<typeof deriveComparisonQualitySummary>;
+type ParticipantQualityAggregate = ComparisonQualitySummary;
+
+const OPERATIONAL_METRIC_KEYS = [
+  'totalTokens',
+  'inputTokens',
+  'outputTokens',
+  'durationMs',
+  'costUsd',
+  'jobCount',
+] as const;
 
 const OPERATIONAL_METRIC_DIRECTIONS = {
   totalTokens: 'lowest',
@@ -139,6 +152,10 @@ function isTerminalJob(job: ComparisonJobRecord): boolean {
   return job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED';
 }
 
+function getJobTimestamp(job: ComparisonJobRecord): number {
+  return new Date(job.completedAt ?? job.startedAt).getTime();
+}
+
 function getLatestJob(jobs: ComparisonJobRecord[], command?: string): ComparisonJobRecord | null {
   let latestJob: ComparisonJobRecord | null = null;
 
@@ -149,8 +166,7 @@ function getLatestJob(jobs: ComparisonJobRecord[], command?: string): Comparison
 
     if (
       latestJob == null ||
-      new Date(job.completedAt ?? job.startedAt).getTime() >
-        new Date(latestJob.completedAt ?? latestJob.startedAt).getTime()
+      getJobTimestamp(job) > getJobTimestamp(latestJob)
     ) {
       latestJob = job;
     }
@@ -197,10 +213,7 @@ export function selectPrimaryModel(jobs: ComparisonJobRecord[]): string | null {
     };
 
     existing.totalTokens += totalTokens;
-    existing.latestCompletedAt = Math.max(
-      existing.latestCompletedAt,
-      new Date(job.completedAt ?? job.startedAt).getTime()
-    );
+    existing.latestCompletedAt = Math.max(existing.latestCompletedAt, getJobTimestamp(job));
 
     modelStats.set(job.model, existing);
   }
@@ -285,42 +298,49 @@ function normalizeQualityDimensions(details: string | null) {
 
   return {
     threshold: parsed.threshold,
-    dimensions: dimensions.filter((dimension): dimension is NonNullable<typeof dimension> => dimension != null),
+    dimensions: dimensions.filter(
+      (dimension): dimension is NonNullable<typeof dimension> => dimension != null
+    ),
+  };
+}
+
+function createUnavailableQualitySummary(): ParticipantQualityAggregate {
+  return {
+    score: createUnavailableEnrichment<number>(),
+    thresholdLabel: null,
+    detailAvailable: false,
+    breakdown: null,
+    isBestValue: false,
+  };
+}
+
+function createPendingQualitySummary(): ParticipantQualityAggregate {
+  return {
+    score: createPendingEnrichment<number>(),
+    thresholdLabel: null,
+    detailAvailable: false,
+    breakdown: null,
+    isBestValue: false,
   };
 }
 
 export function deriveComparisonQualitySummary(
   workflowType: string,
   jobs: ComparisonJobRecord[]
-) {
+): ComparisonQualitySummary {
   const verifyJobs = jobs.filter((job) => job.command === 'verify');
   const latestVerifyJob = getLatestJob(verifyJobs, 'verify');
 
   if (!latestVerifyJob) {
-    return {
-      score: createUnavailableEnrichment<number>(),
-      thresholdLabel: null,
-      detailAvailable: false,
-      breakdown: null,
-    };
+    return createUnavailableQualitySummary();
   }
 
   if (latestVerifyJob.status !== 'COMPLETED') {
-    return {
-      score: createPendingEnrichment<number>(),
-      thresholdLabel: null,
-      detailAvailable: false,
-      breakdown: null,
-    };
+    return createPendingQualitySummary();
   }
 
   if (latestVerifyJob.qualityScore == null) {
-    return {
-      score: createPendingEnrichment<number>(),
-      thresholdLabel: null,
-      detailAvailable: false,
-      breakdown: null,
-    };
+    return createPendingQualitySummary();
   }
 
   const score = createAvailableEnrichment(latestVerifyJob.qualityScore);
@@ -344,7 +364,22 @@ export function deriveComparisonQualitySummary(
     thresholdLabel,
     detailAvailable: breakdown != null,
     breakdown,
+    isBestValue: false,
   };
+}
+
+function collectBestValueCandidates(
+  operationalByTicketId: Map<number, ParticipantOperationalAggregate>,
+  key: typeof OPERATIONAL_METRIC_KEYS[number]
+): Array<{
+  ticketId: number;
+  value: number | null;
+  state: 'available' | 'pending' | 'unavailable';
+}> {
+  return [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
+    ticketId,
+    ...aggregate[key],
+  }));
 }
 
 export function selectBestValueTicketIds(
@@ -378,50 +413,15 @@ function applyBestValueFlags(
   operationalByTicketId: Map<number, ParticipantOperationalAggregate>,
   qualityByTicketId: Map<number, ParticipantQualityAggregate>
 ) {
-  const bestOperational = {
-    totalTokens: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.totalTokens,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.totalTokens
-    ),
-    inputTokens: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.inputTokens,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.inputTokens
-    ),
-    outputTokens: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.outputTokens,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.outputTokens
-    ),
-    durationMs: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.durationMs,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.durationMs
-    ),
-    costUsd: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.costUsd,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.costUsd
-    ),
-    jobCount: selectBestValueTicketIds(
-      [...operationalByTicketId.entries()].map(([ticketId, aggregate]) => ({
-        ticketId,
-        ...aggregate.jobCount,
-      })),
-      OPERATIONAL_METRIC_DIRECTIONS.jobCount
-    ),
-  };
+  const bestOperational = Object.fromEntries(
+    OPERATIONAL_METRIC_KEYS.map((key) => [
+      key,
+      selectBestValueTicketIds(
+        collectBestValueCandidates(operationalByTicketId, key),
+        OPERATIONAL_METRIC_DIRECTIONS[key]
+      ),
+    ])
+  ) as Record<typeof OPERATIONAL_METRIC_KEYS[number], number[]>;
 
   const bestQuality = new Set(
     selectBestValueTicketIds(

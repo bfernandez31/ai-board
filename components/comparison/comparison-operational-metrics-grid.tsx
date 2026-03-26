@@ -58,6 +58,18 @@ function formatQualityValue(participant: ComparisonOperationalMetricsGridProps['
   return `${participant.quality.score.value} / 100`;
 }
 
+function getQualityScoreColor(
+  participant: ComparisonOperationalMetricsGridProps['participants'][number]
+): string {
+  const scoreValue = participant.quality.score.value;
+
+  if (typeof scoreValue !== 'number') {
+    return 'text-foreground';
+  }
+
+  return getScoreColor(scoreValue).text;
+}
+
 function formatOperationalValue(
   participant: ComparisonOperationalMetricsGridProps['participants'][number],
   key: typeof operationalRows[number]['key']
@@ -79,6 +91,10 @@ export function ComparisonOperationalMetricsGrid({
   participants,
 }: ComparisonOperationalMetricsGridProps) {
   const [expandedTicketId, setExpandedTicketId] = useState<number | null>(null);
+
+  function toggleExpandedTicket(ticketId: number): void {
+    setExpandedTicketId((current) => (current === ticketId ? null : ticketId));
+  }
 
   return (
     <Card>
@@ -137,17 +153,14 @@ export function ComparisonOperationalMetricsGrid({
                   const isExpanded = expandedTicketId === participant.ticketId;
                   const hasBreakdown =
                     participant.quality.detailAvailable && participant.quality.breakdown != null;
-                  const scoreValue = participant.quality.score.value;
-                  const scoreColor =
-                    typeof scoreValue === 'number'
-                      ? getScoreColor(scoreValue).text
-                      : 'text-foreground';
 
                   return (
                     <td key={participant.ticketId} className="px-3 py-3 align-top text-foreground">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={scoreColor}>{formatQualityValue(participant)}</span>
+                          <span className={getQualityScoreColor(participant)}>
+                            {formatQualityValue(participant)}
+                          </span>
                           {participant.quality.thresholdLabel && (
                             <Badge variant="outline">{participant.quality.thresholdLabel}</Badge>
                           )}
@@ -162,11 +175,7 @@ export function ComparisonOperationalMetricsGrid({
                               variant="ghost"
                               size="sm"
                               className="h-auto px-0 text-xs text-muted-foreground"
-                              onClick={() =>
-                                setExpandedTicketId((current) =>
-                                  current === participant.ticketId ? null : participant.ticketId
-                                )
-                              }
+                              onClick={() => toggleExpandedTicket(participant.ticketId)}
                             >
                               {isExpanded ? (
                                 <ChevronDown className="mr-1 h-3.5 w-3.5" />

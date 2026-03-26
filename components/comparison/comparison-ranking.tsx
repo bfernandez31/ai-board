@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getScoreColor } from '@/lib/quality-score';
 import type { ComparisonRankingProps } from './types';
 
-function formatQualitySummary(participant: ComparisonRankingProps['participants'][number]) {
+function formatQualitySummary(
+  participant: ComparisonRankingProps['participants'][number]
+): {
+  label: string;
+  threshold: string | null;
+  className: string;
+} {
   if (participant.quality.score.state === 'available' && participant.quality.score.value != null) {
     return {
       label: `Quality ${participant.quality.score.value}`,
