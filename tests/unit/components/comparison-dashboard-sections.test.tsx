@@ -14,12 +14,29 @@ const participants = [
     rank: 1,
     score: 92,
     rankRationale: 'Best coverage',
-    quality: { state: 'available' as const, value: 92 },
-    telemetry: {
+    operational: {
+      totalTokens: { state: 'available' as const, value: 150 },
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 2 },
+      primaryModel: 'gpt-5.4',
+      bestValueFlags: {
+        totalTokens: true,
+        inputTokens: true,
+        outputTokens: true,
+        durationMs: true,
+        costUsd: true,
+        jobCount: true,
+      },
+    },
+    quality: {
+      score: { state: 'available' as const, value: 92 },
+      thresholdLabel: 'Excellent',
+      detailAvailable: false,
+      breakdown: null,
+      isBestValue: true,
     },
     metrics: {
       linesAdded: 10,

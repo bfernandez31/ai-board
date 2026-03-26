@@ -4,9 +4,10 @@ import { prisma } from '@/lib/db/client';
 import {
   createAvailableEnrichment,
   createComparisonRecordInput,
+  normalizeOperationalMetrics,
+  normalizeQualitySummary,
   createPendingEnrichment,
   createUnavailableEnrichment,
-  normalizeTelemetryEnrichment,
   persistComparisonRecord,
 } from '@/lib/comparison/comparison-record';
 
@@ -134,17 +135,55 @@ describe('comparison-record helpers', () => {
       value: null,
     });
     expect(
-      normalizeTelemetryEnrichment({
-        inputTokens: 10,
-        outputTokens: null,
-        durationMs: 30,
-        costUsd: null,
+      normalizeOperationalMetrics({
+        totalTokens: createPendingEnrichment<number>(),
+        inputTokens: createAvailableEnrichment(10),
+        outputTokens: createPendingEnrichment<number>(),
+        durationMs: createAvailableEnrichment(30),
+        costUsd: createPendingEnrichment<number>(),
+        jobCount: createAvailableEnrichment(1),
+        primaryModel: 'gpt-5.4',
       })
     ).toEqual({
+      totalTokens: { state: 'pending', value: null },
       inputTokens: { state: 'available', value: 10 },
       outputTokens: { state: 'pending', value: null },
       durationMs: { state: 'available', value: 30 },
       costUsd: { state: 'pending', value: null },
+      jobCount: { state: 'available', value: 1 },
+      primaryModel: 'gpt-5.4',
+      bestValueFlags: {
+        totalTokens: false,
+        inputTokens: false,
+        outputTokens: false,
+        durationMs: false,
+        costUsd: false,
+        jobCount: false,
+      },
+    });
+    expect(
+      normalizeQualitySummary({
+        score: createAvailableEnrichment(91),
+        thresholdLabel: 'Excellent',
+        detailAvailable: true,
+        breakdown: {
+          overallScore: 91,
+          thresholdLabel: 'Excellent',
+          dimensions: [
+            { agentId: 'compliance', name: 'Compliance', score: 95, weight: 0.4 },
+            { agentId: 'bug-detection', name: 'Bug Detection', score: 92, weight: 0.3 },
+            { agentId: 'code-comments', name: 'Code Comments', score: 85, weight: 0.2 },
+            { agentId: 'historical-context', name: 'Historical Context', score: 80, weight: 0.1 },
+            { agentId: 'spec-sync', name: 'Spec Sync', score: 100, weight: 0 },
+          ],
+        },
+        isBestValue: true,
+      })
+    ).toMatchObject({
+      score: { state: 'available', value: 91 },
+      thresholdLabel: 'Excellent',
+      detailAvailable: true,
+      isBestValue: true,
     });
   });
 

@@ -375,6 +375,46 @@ export interface ComparisonTelemetryEnrichment {
   costUsd: ComparisonEnrichmentValue<number>;
 }
 
+export type ComparisonOperationalMetricKey =
+  | 'totalTokens'
+  | 'inputTokens'
+  | 'outputTokens'
+  | 'durationMs'
+  | 'costUsd'
+  | 'jobCount';
+
+export interface ComparisonOperationalMetrics {
+  totalTokens: ComparisonEnrichmentValue<number>;
+  inputTokens: ComparisonEnrichmentValue<number>;
+  outputTokens: ComparisonEnrichmentValue<number>;
+  durationMs: ComparisonEnrichmentValue<number>;
+  costUsd: ComparisonEnrichmentValue<number>;
+  jobCount: ComparisonEnrichmentValue<number>;
+  primaryModel: string | null;
+  bestValueFlags: Record<ComparisonOperationalMetricKey, boolean>;
+}
+
+export interface ComparisonQualityDimension {
+  agentId: string;
+  name: string;
+  score: number;
+  weight: number;
+}
+
+export interface ComparisonQualityBreakdown {
+  overallScore: number;
+  thresholdLabel: string;
+  dimensions: ComparisonQualityDimension[];
+}
+
+export interface ComparisonQualitySummary {
+  score: ComparisonEnrichmentValue<number>;
+  thresholdLabel: string | null;
+  detailAvailable: boolean;
+  breakdown: ComparisonQualityBreakdown | null;
+  isBestValue: boolean;
+}
+
 export interface ComparisonMetricSnapshot {
   linesAdded: number | null;
   linesRemoved: number | null;
@@ -395,8 +435,8 @@ export interface ComparisonParticipantDetail {
   rank: number;
   score: number;
   rankRationale: string;
-  quality: ComparisonEnrichmentValue<number>;
-  telemetry: ComparisonTelemetryEnrichment;
+  operational: ComparisonOperationalMetrics;
+  quality: ComparisonQualitySummary;
   metrics: ComparisonMetricSnapshot;
 }
 

@@ -46,12 +46,29 @@ vi.mock('@/hooks/use-comparisons', () => ({
           rank: 1,
           score: 95,
           rankRationale: 'Best value',
-          quality: { state: 'available', value: 95 },
-          telemetry: {
+          operational: {
+            totalTokens: { state: 'available', value: 15 },
             inputTokens: { state: 'available', value: 10 },
             outputTokens: { state: 'available', value: 5 },
             durationMs: { state: 'available', value: 100 },
             costUsd: { state: 'available', value: 0.01 },
+            jobCount: { state: 'available', value: 1 },
+            primaryModel: 'gpt-5.4',
+            bestValueFlags: {
+              totalTokens: true,
+              inputTokens: true,
+              outputTokens: true,
+              durationMs: true,
+              costUsd: true,
+              jobCount: true,
+            },
+          },
+          quality: {
+            score: { state: 'available', value: 95 },
+            thresholdLabel: 'Excellent',
+            detailAvailable: false,
+            breakdown: null,
+            isBestValue: true,
           },
           metrics: {
             linesAdded: 10,

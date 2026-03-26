@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getTestContext, type TestContext } from '@/tests/fixtures/vitest/setup';
-import { createStructuredComparisonFixture } from '@/tests/helpers/comparison-fixtures';
+import {
+  createStructuredComparisonFixture,
+  createWideComparisonFixture,
+} from '@/tests/helpers/comparison-fixtures';
 
 describe('Comparison dashboard API', () => {
   let ctx: TestContext;
@@ -42,5 +45,37 @@ describe('Comparison dashboard API', () => {
       'pass',
       'mixed',
     ]);
+  });
+
+  it('returns 2-6 participant headers with scroll-ready operational payloads', async () => {
+    const fixture = await createWideComparisonFixture(ctx.projectId, 6);
+
+    const response = await ctx.api.get<{
+      participants: Array<{
+        ticketKey: string;
+        workflowType: string;
+        agent: string | null;
+        operational: {
+          primaryModel: string | null;
+          totalTokens: { state: string; value: number | null };
+          bestValueFlags: Record<string, boolean>;
+        };
+      }>;
+    }>(
+      `/api/projects/${ctx.projectId}/tickets/${fixture.participants[0]!.id}/comparisons/${fixture.comparison.id}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.data.participants).toHaveLength(6);
+    expect(response.data.participants.map((participant) => participant.ticketKey)).toEqual(
+      fixture.participants.map((ticket) => ticket.ticketKey)
+    );
+    expect(response.data.participants.every((participant) => participant.workflowType === 'FULL')).toBe(
+      true
+    );
+    expect(response.data.participants[0]?.operational.primaryModel).toBeTruthy();
+    expect(response.data.participants[0]?.operational.totalTokens.state).toBe('available');
+    expect(response.data.participants[0]?.operational.bestValueFlags.totalTokens).toBe(true);
+    expect(response.data.participants[5]?.agent).toBe('CODEX');
   });
 });

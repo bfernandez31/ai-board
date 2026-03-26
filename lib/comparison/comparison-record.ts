@@ -5,15 +5,22 @@ import type {
   WorkflowType,
 } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import {
+  DIMENSION_CONFIG,
+  getScoreThreshold,
+} from '@/lib/quality-score';
 import type {
   ComparisonDecisionPoint,
   ComparisonDetail,
   ComparisonEnrichmentValue,
   ComparisonMetricSnapshot,
+  ComparisonOperationalMetricKey,
+  ComparisonOperationalMetrics,
   ComparisonParticipantDetail,
+  ComparisonQualityBreakdown,
+  ComparisonQualitySummary,
   ComparisonReport,
   ComparisonSummary,
-  ComparisonTelemetryEnrichment,
 } from '@/lib/types/comparison';
 
 type PersistableTicket = {
@@ -362,34 +369,82 @@ export function normalizeMetricSnapshot(
   };
 }
 
-export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
-} | null): ComparisonTelemetryEnrichment {
-  if (!job) {
-    return {
-      inputTokens: createUnavailableEnrichment<number>(),
-      outputTokens: createUnavailableEnrichment<number>(),
-      durationMs: createUnavailableEnrichment<number>(),
-      costUsd: createUnavailableEnrichment<number>(),
-    };
+function createOperationalBestValueFlags(
+  bestValueFlags?: Partial<Record<ComparisonOperationalMetricKey, boolean>>
+): Record<ComparisonOperationalMetricKey, boolean> {
+  return {
+    totalTokens: bestValueFlags?.totalTokens === true,
+    inputTokens: bestValueFlags?.inputTokens === true,
+    outputTokens: bestValueFlags?.outputTokens === true,
+    durationMs: bestValueFlags?.durationMs === true,
+    costUsd: bestValueFlags?.costUsd === true,
+    jobCount: bestValueFlags?.jobCount === true,
+  };
+}
+
+export function normalizeOperationalMetrics(input?: {
+  totalTokens: ComparisonEnrichmentValue<number>;
+  inputTokens: ComparisonEnrichmentValue<number>;
+  outputTokens: ComparisonEnrichmentValue<number>;
+  durationMs: ComparisonEnrichmentValue<number>;
+  costUsd: ComparisonEnrichmentValue<number>;
+  jobCount: ComparisonEnrichmentValue<number>;
+  primaryModel: string | null;
+  bestValueFlags?: Partial<Record<ComparisonOperationalMetricKey, boolean>>;
+} | null): ComparisonOperationalMetrics {
+  return {
+    totalTokens: input?.totalTokens ?? createUnavailableEnrichment<number>(),
+    inputTokens: input?.inputTokens ?? createUnavailableEnrichment<number>(),
+    outputTokens: input?.outputTokens ?? createUnavailableEnrichment<number>(),
+    durationMs: input?.durationMs ?? createUnavailableEnrichment<number>(),
+    costUsd: input?.costUsd ?? createUnavailableEnrichment<number>(),
+    jobCount: input?.jobCount ?? createUnavailableEnrichment<number>(),
+    primaryModel: input?.primaryModel ?? null,
+    bestValueFlags: createOperationalBestValueFlags(input?.bestValueFlags),
+  };
+}
+
+function normalizeQualityBreakdown(
+  breakdown: ComparisonQualityBreakdown | null | undefined
+): ComparisonQualityBreakdown | null {
+  if (!breakdown) {
+    return null;
   }
 
-  function createValue(value: number | null): ComparisonEnrichmentValue<number> {
-    if (value == null) {
-      return createPendingEnrichment<number>();
-    }
-
-    return createAvailableEnrichment(value);
-  }
+  const dimensionById = new Map(
+    breakdown.dimensions.map((dimension) => [dimension.agentId, dimension] as const)
+  );
 
   return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
+    overallScore: breakdown.overallScore,
+    thresholdLabel: breakdown.thresholdLabel,
+    dimensions: DIMENSION_CONFIG.map((config) => dimensionById.get(config.agentId))
+      .filter((dimension): dimension is NonNullable<typeof dimension> => dimension != null)
+      .map((dimension) => ({
+        agentId: dimension.agentId,
+        name: dimension.name,
+        score: dimension.score,
+        weight: dimension.weight,
+      })),
+  };
+}
+
+export function normalizeQualitySummary(input?: {
+  score: ComparisonEnrichmentValue<number>;
+  thresholdLabel?: string | null;
+  detailAvailable?: boolean;
+  breakdown?: ComparisonQualityBreakdown | null;
+  isBestValue?: boolean;
+} | null): ComparisonQualitySummary {
+  const score = input?.score ?? createUnavailableEnrichment<number>();
+  const normalizedBreakdown = normalizeQualityBreakdown(input?.breakdown);
+
+  return {
+    score,
+    thresholdLabel: input?.thresholdLabel ?? (score.value != null ? getScoreThreshold(score.value) : null),
+    detailAvailable: input?.detailAvailable === true && normalizedBreakdown != null,
+    breakdown: normalizedBreakdown,
+    isBestValue: input?.isBestValue === true,
   };
 }
 
@@ -417,7 +472,8 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
-  telemetry: ComparisonTelemetryEnrichment;
+  operational?: ComparisonOperationalMetrics | null;
+  qualitySummary?: ComparisonQualitySummary | null;
 }): ComparisonParticipantDetail {
   return {
     ticketId: input.participant.ticketId,
@@ -429,8 +485,8 @@ export function normalizeParticipantDetail(input: {
     rank: input.participant.rank,
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
-    quality: input.quality,
-    telemetry: input.telemetry,
+    operational: normalizeOperationalMetrics(input.operational),
+    quality: input.qualitySummary ?? normalizeQualitySummary({ score: input.quality }),
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };
 }

@@ -21,6 +21,7 @@ import { ComparisonComplianceGrid } from './comparison-compliance-grid';
 import { ComparisonDecisionPoints } from './comparison-decision-points';
 import { ComparisonHistoryList } from './comparison-history-list';
 import { ComparisonMetricsGrid } from './comparison-metrics-grid';
+import { ComparisonOperationalMetricsGrid } from './comparison-operational-metrics-grid';
 import { ComparisonRanking } from './comparison-ranking';
 import type { ComparisonViewerProps } from './types';
 
@@ -99,7 +100,7 @@ export function ComparisonViewer({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-5xl bg-card text-card-foreground sm:max-w-[90vw]">
+      <DialogContent className="max-h-[90vh] max-w-6xl bg-card text-card-foreground sm:max-w-[95vw]">
         <DialogHeader className="pr-12">
           <DialogDescription className="sr-only">
             Review saved comparison history and structured dashboard details for this ticket.
@@ -149,7 +150,7 @@ export function ComparisonViewer({
           )}
 
           {!hasNoComparisons && !isLoading && (
-            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
               <div className={showHistory ? 'block' : 'hidden lg:block'}>
                 <ComparisonHistoryList
                   comparisons={historyData?.comparisons ?? []}
@@ -165,7 +166,7 @@ export function ComparisonViewer({
               <div>
                 {detail ? (
                   <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       <div className="rounded-lg border border-border bg-background px-4 py-3">
                         <div className="text-sm text-muted-foreground">
                           Generated {formatDate(detail.generatedAt)}
@@ -183,6 +184,7 @@ export function ComparisonViewer({
                         keyDifferentiators={detail.keyDifferentiators}
                       />
                       <ComparisonMetricsGrid participants={detail.participants} />
+                      <ComparisonOperationalMetricsGrid participants={detail.participants} />
                       <ComparisonDecisionPoints decisionPoints={detail.decisionPoints} />
                       <ComparisonComplianceGrid
                         rows={detail.complianceRows}
