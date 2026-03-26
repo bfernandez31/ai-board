@@ -43,12 +43,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Write component test for ScoreGauge verifying SVG renders with correct dashoffset, color matches threshold, and reduced-motion skips animation in `tests/unit/components/score-gauge.test.tsx`
-- [ ] T005 [P] [US1] Write component test for ComparisonHeroCard verifying winner key visible, recommendation text, stat pills show values, metadata text present, and enrichment state handling in `tests/unit/components/comparison-hero-card.test.tsx`
+- [x] T004 [P] [US1] Write component test for ScoreGauge verifying SVG renders with correct dashoffset, color matches threshold, and reduced-motion skips animation in `tests/unit/components/score-gauge.test.tsx`
+- [x] T005 [P] [US1] Write component test for ComparisonHeroCard verifying winner key visible, recommendation text, stat pills show values, metadata text present, and enrichment state handling in `tests/unit/components/comparison-hero-card.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Create ComparisonHeroCard component with winner ticket key, ScoreGauge (size ~120px), recommendation summary, key differentiator Badge components, metadata line (generatedAt, sourceTicketKey), and three stat pills (Cost, Duration, Quality Score) with enrichment state handling in `components/comparison/comparison-hero-card.tsx`
+- [x] T006 [US1] Create ComparisonHeroCard component with winner ticket key, ScoreGauge (size ~120px), recommendation summary, key differentiator Badge components, metadata line (generatedAt, sourceTicketKey), and three stat pills (Cost, Duration, Quality Score) with enrichment state handling in `components/comparison/comparison-hero-card.tsx`
 
 **Checkpoint**: Hero card renders with winner data, score gauge, and stat pills
 
