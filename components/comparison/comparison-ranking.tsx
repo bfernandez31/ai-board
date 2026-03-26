@@ -2,15 +2,8 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getQualityLabel } from '@/lib/comparison/comparison-detail';
 import type { ComparisonRankingProps } from './types';
-
-function getQualityLabel(score: number): string {
-  if (score >= 90) return 'Excellent';
-  if (score >= 75) return 'Good';
-  if (score >= 60) return 'Acceptable';
-  if (score >= 40) return 'Needs Improvement';
-  return 'Poor';
-}
 
 export function ComparisonRanking({
   participants,

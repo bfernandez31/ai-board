@@ -121,7 +121,7 @@ function deriveQualityState(
   return createUnavailableEnrichment<number>();
 }
 
-function getQualityLabel(score: number): string {
+export function getQualityLabel(score: number): string {
   if (score >= 90) return 'Excellent';
   if (score >= 75) return 'Good';
   if (score >= 60) return 'Acceptable';

@@ -28,20 +28,18 @@ export function QualityScorePopover({
     );
   }
 
-  const hasDetails =
+  const breakdown =
     qualityDetails.state === 'available' &&
     qualityDetails.value != null &&
-    qualityDetails.value.dimensions.length > 0;
+    qualityDetails.value.dimensions.length > 0
+      ? qualityDetails.value
+      : null;
 
-  const scoreDisplay = (
-    <span className="text-sm font-medium text-foreground">{quality.value}</span>
-  );
-
-  if (!hasDetails) {
-    return scoreDisplay;
+  if (!breakdown) {
+    return (
+      <span className="text-sm font-medium text-foreground">{quality.value}</span>
+    );
   }
-
-  const breakdown = qualityDetails.value!;
 
   return (
     <Popover>

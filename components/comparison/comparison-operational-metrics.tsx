@@ -91,28 +91,6 @@ function findBestIndex(
   return availableCount >= 2 ? bestIdx : -1;
 }
 
-function findBestQualityIndex(
-  participants: ComparisonParticipantDetail[]
-): number {
-  let bestIdx = -1;
-  let bestVal: number | null = null;
-  let availableCount = 0;
-
-  for (let i = 0; i < participants.length; i++) {
-    const participant = participants[i];
-    if (!participant) continue;
-    const q = participant.quality;
-    if (q.state !== 'available' || q.value == null) continue;
-    availableCount++;
-    if (bestVal == null || q.value > bestVal) {
-      bestVal = q.value;
-      bestIdx = i;
-    }
-  }
-
-  return availableCount >= 2 ? bestIdx : -1;
-}
-
 function renderEnrichmentCell(
   enrichment: ComparisonEnrichmentValue<number>,
   format: (v: number) => string,
@@ -135,7 +113,11 @@ function renderEnrichmentCell(
 export function ComparisonOperationalMetrics({
   participants,
 }: ComparisonSectionProps) {
-  const bestQualityIdx = findBestQualityIndex(participants);
+  const bestQualityIdx = findBestIndex(
+    participants,
+    (p) => p.quality,
+    'highest'
+  );
 
   return (
     <Card>
