@@ -1,36 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import { ComparisonOperationalMetrics } from '@/components/comparison/comparison-operational-metrics';
-import { renderWithProviders, screen, within } from '@/tests/utils/component-test-utils';
-import type { ComparisonParticipantDetail } from '@/lib/types/comparison';
+import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import type {
+  ComparisonDashboardMetricRow,
+  ComparisonParticipantDetail,
+} from '@/lib/types/comparison';
 
 function makeParticipant(
-  overrides: Partial<ComparisonParticipantDetail> & { ticketId: number; ticketKey: string }
+  overrides: Partial<ComparisonParticipantDetail> & { ticketId: number; ticketKey: string; rank: number }
 ): ComparisonParticipantDetail {
   return {
+    ticketId: overrides.ticketId,
+    ticketKey: overrides.ticketKey,
     title: 'Test ticket',
     stage: 'VERIFY',
     workflowType: 'FULL',
     agent: null,
-    rank: 1,
+    rank: overrides.rank,
     score: 90,
+    scoreBand: overrides.rank === 1 ? 'strong' : 'moderate',
+    isWinner: overrides.rank === 1,
     rankRationale: 'Good',
-    quality: { state: 'available', value: 87 },
+    quality: { state: 'available', value: overrides.rank === 1 ? 87 : 92 },
     qualityBreakdown: { state: 'unavailable', value: null },
     telemetry: {
-      inputTokens: { state: 'available', value: 10000 },
-      outputTokens: { state: 'available', value: 3000 },
-      totalTokens: { state: 'available', value: 13000 },
-      durationMs: { state: 'available', value: 154000 },
-      costUsd: { state: 'available', value: 1.23 },
-      jobCount: { state: 'available', value: 2 },
+      inputTokens: { state: 'available', value: overrides.rank === 1 ? 10000 : 8000 },
+      outputTokens: { state: 'available', value: overrides.rank === 1 ? 3000 : 2000 },
+      totalTokens: { state: 'available', value: overrides.rank === 1 ? 13000 : 10000 },
+      durationMs: { state: 'available', value: overrides.rank === 1 ? 154000 : 120000 },
+      costUsd: { state: 'available', value: overrides.rank === 1 ? 1.23 : 1.0 },
+      jobCount: { state: 'available', value: overrides.rank === 1 ? 2 : 1 },
       primaryModel: { state: 'available', value: 'claude-sonnet-4-6' },
     },
     metrics: {
       linesAdded: 10,
       linesRemoved: 2,
-      linesChanged: 12,
-      filesChanged: 2,
-      testFilesChanged: 1,
+      linesChanged: overrides.rank === 1 ? 12 : 16,
+      filesChanged: overrides.rank === 1 ? 2 : 3,
+      testFilesChanged: overrides.rank === 1 ? 1 : 0,
       changedFiles: [],
       bestValueFlags: {},
     },
@@ -38,115 +45,80 @@ function makeParticipant(
   };
 }
 
+function makeMetricRows(participants: ComparisonParticipantDetail[]): ComparisonDashboardMetricRow[] {
+  return [
+    {
+      key: 'totalTokens',
+      label: 'Total Tokens',
+      category: 'detail',
+      bestDirection: 'lowest',
+      cells: participants.map((participant) => ({
+        ticketId: participant.ticketId,
+        ticketKey: participant.ticketKey,
+        state: participant.telemetry.totalTokens.state,
+        value: participant.telemetry.totalTokens.value,
+        displayValue: participant.telemetry.totalTokens.value!.toLocaleString(),
+        isBest: participant.rank === 2,
+        isWinner: participant.isWinner,
+        supportsPopover: false,
+      })),
+    },
+    {
+      key: 'qualityScore',
+      label: 'Quality Score',
+      category: 'detail',
+      bestDirection: 'highest',
+      cells: participants.map((participant) => ({
+        ticketId: participant.ticketId,
+        ticketKey: participant.ticketKey,
+        state: participant.quality.state,
+        value: participant.quality.value,
+        displayValue: `${participant.quality.value}`,
+        isBest: participant.rank === 2,
+        isWinner: participant.isWinner,
+        supportsPopover: true,
+      })),
+    },
+  ];
+}
+
 describe('ComparisonOperationalMetrics', () => {
-  it('renders all 7 metric rows with correct labels', () => {
-    const participants = [makeParticipant({ ticketId: 1, ticketKey: 'AIB-1' })];
-    renderWithProviders(<ComparisonOperationalMetrics participants={participants} />);
+  it('renders a unified relative matrix with sticky metric labels', () => {
+    const participants = [
+      makeParticipant({ ticketId: 1, ticketKey: 'AIB-1', rank: 1 }),
+      makeParticipant({ ticketId: 2, ticketKey: 'AIB-2', rank: 2 }),
+    ];
 
+    renderWithProviders(
+      <ComparisonOperationalMetrics
+        participants={participants}
+        metricRows={makeMetricRows(participants)}
+      />
+    );
+
+    expect(screen.getByText('Relative Metrics Matrix')).toBeInTheDocument();
     expect(screen.getByText('Total Tokens')).toBeInTheDocument();
-    expect(screen.getByText('Input Tokens')).toBeInTheDocument();
-    expect(screen.getByText('Output Tokens')).toBeInTheDocument();
-    expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Job Count')).toBeInTheDocument();
     expect(screen.getByText('Quality Score')).toBeInTheDocument();
+    expect(screen.getByText('13,000')).toBeInTheDocument();
+    expect(screen.getByText('10,000')).toBeInTheDocument();
   });
 
-  it('highlights best values on correct cells (lowest for cost/tokens/duration/jobs, highest for quality)', () => {
+  it('shows winner and best-value badges without hiding non-winner participants', () => {
     const participants = [
-      makeParticipant({
-        ticketId: 1,
-        ticketKey: 'AIB-1',
-        quality: { state: 'available', value: 87 },
-        telemetry: {
-          inputTokens: { state: 'available', value: 10000 },
-          outputTokens: { state: 'available', value: 3000 },
-          totalTokens: { state: 'available', value: 13000 },
-          durationMs: { state: 'available', value: 100000 },
-          costUsd: { state: 'available', value: 2.0 },
-          jobCount: { state: 'available', value: 3 },
-          primaryModel: { state: 'available', value: 'claude-sonnet-4-6' },
-        },
-      }),
-      makeParticipant({
-        ticketId: 2,
-        ticketKey: 'AIB-2',
-        rank: 2,
-        score: 80,
-        quality: { state: 'available', value: 92 },
-        telemetry: {
-          inputTokens: { state: 'available', value: 8000 },
-          outputTokens: { state: 'available', value: 2000 },
-          totalTokens: { state: 'available', value: 10000 },
-          durationMs: { state: 'available', value: 60000 },
-          costUsd: { state: 'available', value: 1.0 },
-          jobCount: { state: 'available', value: 1 },
-          primaryModel: { state: 'available', value: 'claude-opus-4-6' },
-        },
-      }),
+      makeParticipant({ ticketId: 1, ticketKey: 'AIB-1', rank: 1 }),
+      makeParticipant({ ticketId: 2, ticketKey: 'AIB-2', rank: 2 }),
     ];
 
-    renderWithProviders(<ComparisonOperationalMetrics participants={participants} />);
+    renderWithProviders(
+      <ComparisonOperationalMetrics
+        participants={participants}
+        metricRows={makeMetricRows(participants)}
+      />
+    );
 
-    // AIB-2 should have "Best" badges for all cost/tokens/duration metrics (lower values)
-    // AIB-2 should have "Best" badge for quality (higher value: 92 > 87)
-    const bestBadges = screen.getAllByText('Best');
-    // 7 metric rows, AIB-2 wins all of them (lower tokens, lower cost, lower duration, higher quality)
-    expect(bestBadges.length).toBe(7);
-  });
-
-  it('shows N/A for unavailable state and Pending for pending state', () => {
-    const participants = [
-      makeParticipant({
-        ticketId: 1,
-        ticketKey: 'AIB-1',
-        quality: { state: 'unavailable', value: null },
-        telemetry: {
-          inputTokens: { state: 'pending', value: null },
-          outputTokens: { state: 'pending', value: null },
-          totalTokens: { state: 'pending', value: null },
-          durationMs: { state: 'pending', value: null },
-          costUsd: { state: 'pending', value: null },
-          jobCount: { state: 'pending', value: null },
-          primaryModel: { state: 'pending', value: null },
-        },
-      }),
-    ];
-
-    renderWithProviders(<ComparisonOperationalMetrics participants={participants} />);
-
-    // 6 telemetry metrics are pending
-    expect(screen.getAllByText('Pending')).toHaveLength(6);
-    // Quality is unavailable
-    expect(screen.getAllByText('N/A')).toHaveLength(1);
-  });
-
-  it('formats values correctly: tokens with commas, duration as Xm Ys, cost as $X.XX', () => {
-    const participants = [
-      makeParticipant({
-        ticketId: 1,
-        ticketKey: 'AIB-1',
-        quality: { state: 'available', value: 87 },
-        telemetry: {
-          inputTokens: { state: 'available', value: 12345 },
-          outputTokens: { state: 'available', value: 6789 },
-          totalTokens: { state: 'available', value: 19134 },
-          durationMs: { state: 'available', value: 154000 }, // 2m 34s
-          costUsd: { state: 'available', value: 1.23 },
-          jobCount: { state: 'available', value: 3 },
-          primaryModel: { state: 'available', value: 'claude-sonnet-4-6' },
-        },
-      }),
-    ];
-
-    renderWithProviders(<ComparisonOperationalMetrics participants={participants} />);
-
-    expect(screen.getByText('12,345')).toBeInTheDocument();
-    expect(screen.getByText('6,789')).toBeInTheDocument();
-    expect(screen.getByText('19,134')).toBeInTheDocument();
-    expect(screen.getByText('2m 34s')).toBeInTheDocument();
-    expect(screen.getByText('$1.23')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('87 Good')).toBeInTheDocument();
+    expect(screen.getAllByText('Winner')).toHaveLength(2);
+    expect(screen.getAllByText('Best')).toHaveLength(2);
+    expect(screen.getByText('AIB-1')).toBeInTheDocument();
+    expect(screen.getByText('AIB-2')).toBeInTheDocument();
   });
 });

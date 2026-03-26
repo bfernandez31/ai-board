@@ -110,6 +110,7 @@ export function useComparisonDetail(
     enabled: enabled && projectId > 0 && ticketId > 0 && comparisonId != null,
     staleTime: DETAIL_STALE_TIME_MS,
     gcTime: DETAIL_GC_TIME_MS,
+    placeholderData: (previousData) => previousData,
     ...DEFAULT_QUERY_OPTIONS,
   });
 }

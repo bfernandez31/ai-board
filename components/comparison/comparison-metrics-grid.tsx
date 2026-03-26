@@ -4,12 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonSectionProps } from './types';
 
-const metricRows = [
-  { key: 'linesChanged', label: 'Lines changed' },
-  { key: 'filesChanged', label: 'Files changed' },
-  { key: 'testFilesChanged', label: 'Test files changed' },
-] as const;
-
 function formatMetric(value: number | null) {
   return value == null ? 'Unavailable' : value.toLocaleString();
 }
@@ -18,7 +12,7 @@ export function ComparisonMetricsGrid({ participants }: ComparisonSectionProps) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Implementation Metrics</CardTitle>
+        <CardTitle>Headline Metric Comparison</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -36,24 +30,66 @@ export function ComparisonMetricsGrid({ participants }: ComparisonSectionProps) 
             </tr>
           </thead>
           <tbody>
-            {metricRows.map((row) => (
-              <tr key={row.key} className="border-b border-border last:border-0">
-                <td className="px-3 py-2 font-medium text-foreground">{row.label}</td>
-                {participants.map((participant) => {
-                  const value = participant.metrics[row.key];
-                  const isBest = participant.metrics.bestValueFlags[row.key] === true;
-
-                  return (
-                    <td key={participant.ticketId} className="px-3 py-2 text-foreground">
-                      <div className="flex items-center gap-2">
-                        <span>{formatMetric(value)}</span>
-                        {isBest && <Badge variant="secondary">Best value</Badge>}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            <tr className="border-b border-border">
+              <td className="px-3 py-2 font-medium text-foreground">Files Changed</td>
+              {participants.map((participant) => (
+                <td key={participant.ticketId} className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span>{formatMetric(participant.metrics.filesChanged)}</span>
+                    {participant.metrics.bestValueFlags.filesChanged ? (
+                      <Badge variant="secondary">Best</Badge>
+                    ) : null}
+                  </div>
+                </td>
+              ))}
+            </tr>
+            <tr className="border-b border-border">
+              <td className="px-3 py-2 font-medium text-foreground">Cost</td>
+              {participants.map((participant) => (
+                <td key={participant.ticketId} className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      {participant.telemetry.costUsd.state === 'available' &&
+                      participant.telemetry.costUsd.value != null
+                        ? `$${participant.telemetry.costUsd.value.toFixed(2)}`
+                        : participant.telemetry.costUsd.state === 'pending'
+                          ? 'Pending'
+                          : 'Unavailable'}
+                    </span>
+                    {participant.isWinner ? <Badge variant="outline">Winner</Badge> : null}
+                  </div>
+                </td>
+              ))}
+            </tr>
+            <tr className="border-b border-border">
+              <td className="px-3 py-2 font-medium text-foreground">Duration</td>
+              {participants.map((participant) => (
+                <td key={participant.ticketId} className="px-3 py-2">
+                  <span>
+                    {participant.telemetry.durationMs.state === 'available' &&
+                    participant.telemetry.durationMs.value != null
+                      ? `${Math.floor(participant.telemetry.durationMs.value / 60000)}m ${Math.round((participant.telemetry.durationMs.value % 60000) / 1000)}s`
+                      : participant.telemetry.durationMs.state === 'pending'
+                        ? 'Pending'
+                        : 'Unavailable'}
+                  </span>
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td className="px-3 py-2 font-medium text-foreground">Quality Score</td>
+              {participants.map((participant) => (
+                <td key={participant.ticketId} className="px-3 py-2">
+                  <span>
+                    {participant.quality.state === 'available' && participant.quality.value != null
+                      ? participant.quality.value
+                      : participant.quality.state === 'pending'
+                        ? 'Pending'
+                        : 'Unavailable'}
+                  </span>
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </CardContent>

@@ -2,12 +2,27 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ComparisonComplianceGridProps } from './types';
 
-function getStatusVariant(status: 'pass' | 'mixed' | 'fail') {
-  if (status === 'pass') return 'default';
-  if (status === 'fail') return 'destructive';
-  return 'outline';
+function getStatusLabel(status: 'pass' | 'mixed' | 'fail' | 'missing') {
+  if (status === 'pass') return 'Pass';
+  if (status === 'mixed') return 'Mixed';
+  if (status === 'fail') return 'Fail';
+  return 'Missing';
+}
+
+function getStatusClasses(status: 'pass' | 'mixed' | 'fail' | 'missing') {
+  if (status === 'pass') {
+    return 'border-primary/30 bg-primary/10 text-foreground';
+  }
+  if (status === 'fail') {
+    return 'border-destructive/30 bg-destructive/10 text-foreground';
+  }
+  if (status === 'mixed') {
+    return 'border-accent bg-accent/60 text-foreground';
+  }
+  return 'border-border bg-muted text-muted-foreground';
 }
 
 export function ComparisonComplianceGrid({
@@ -51,8 +66,11 @@ export function ComparisonComplianceGrid({
                     <td key={participant.ticketId} className="px-3 py-2 align-top">
                       {assessment ? (
                         <div className="space-y-2">
-                          <Badge variant={getStatusVariant(assessment.status)}>
-                            {assessment.status}
+                          <Badge
+                            variant="outline"
+                            className={cn(getStatusClasses(assessment.status))}
+                          >
+                            {getStatusLabel(assessment.status)}
                           </Badge>
                           <div className="text-sm text-muted-foreground">
                             {assessment.notes}

@@ -542,6 +542,8 @@ export function normalizeParticipantDetail(input: {
     agent: input.participant.agentAtComparison,
     rank: input.participant.rank,
     score: input.participant.score,
+    scoreBand: 'neutral',
+    isWinner: false,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
     qualityBreakdown: input.qualityBreakdown,
@@ -565,7 +567,9 @@ export function normalizeDecisionPoints(
     id: point.id,
     title: point.title,
     verdictTicketId: point.verdictTicketId,
+    verdictLabel: point.verdictTicketId == null ? 'No verdict' : 'Verdict',
     verdictSummary: point.verdictSummary,
+    verdictAlignment: 'neutral',
     rationale: point.rationale,
     displayOrder: point.displayOrder,
     participantApproaches: normalizeDecisionPointApproaches(
@@ -605,6 +609,8 @@ export function buildComparisonDetail(input: {
     winnerTicketId: input.record.winnerTicketId,
     winnerTicketKey: input.record.winnerTicket.ticketKey,
     participants: input.participants,
+    headlineMetrics: [],
+    metricMatrix: [],
     decisionPoints: input.decisionPoints,
     complianceRows: input.complianceRows,
   };

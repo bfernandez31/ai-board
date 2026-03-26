@@ -417,6 +417,45 @@ export interface ComparisonMetricSnapshot {
   bestValueFlags: Record<string, boolean>;
 }
 
+export type ComparisonDashboardScoreBand =
+  | 'strong'
+  | 'moderate'
+  | 'weak'
+  | 'neutral';
+
+export type ComparisonDashboardMetricKey =
+  | 'costUsd'
+  | 'durationMs'
+  | 'qualityScore'
+  | 'filesChanged'
+  | 'linesChanged'
+  | 'testFilesChanged'
+  | 'totalTokens'
+  | 'inputTokens'
+  | 'outputTokens'
+  | 'jobCount';
+
+export type ComparisonDashboardMetricDirection = 'highest' | 'lowest' | 'none';
+
+export interface ComparisonDashboardMetricCell {
+  ticketId: number;
+  ticketKey: string;
+  state: ComparisonEnrichmentState;
+  value: number | null;
+  displayValue: string;
+  isBest: boolean;
+  isWinner: boolean;
+  supportsPopover: boolean;
+}
+
+export interface ComparisonDashboardMetricRow {
+  key: ComparisonDashboardMetricKey;
+  label: string;
+  category: 'headline' | 'detail';
+  bestDirection: ComparisonDashboardMetricDirection;
+  cells: ComparisonDashboardMetricCell[];
+}
+
 export interface ComparisonParticipantDetail {
   ticketId: number;
   ticketKey: string;
@@ -426,6 +465,8 @@ export interface ComparisonParticipantDetail {
   agent: string | null;
   rank: number;
   score: number;
+  scoreBand: ComparisonDashboardScoreBand;
+  isWinner: boolean;
   rankRationale: string;
   quality: ComparisonEnrichmentValue<number>;
   qualityBreakdown: ComparisonEnrichmentValue<QualityScoreDetails>;
@@ -443,7 +484,9 @@ export interface ComparisonDecisionPoint {
   id: number;
   title: string;
   verdictTicketId: number | null;
+  verdictLabel: string;
   verdictSummary: string;
+  verdictAlignment: 'supports-winner' | 'diverges-from-winner' | 'neutral';
   rationale: string;
   displayOrder: number;
   participantApproaches: ComparisonDecisionPointApproach[];
@@ -452,7 +495,7 @@ export interface ComparisonDecisionPoint {
 export interface ComparisonComplianceCell {
   participantTicketId: number;
   participantTicketKey: string;
-  status: 'pass' | 'mixed' | 'fail';
+  status: 'pass' | 'mixed' | 'fail' | 'missing';
   notes: string;
 }
 
@@ -475,6 +518,8 @@ export interface ComparisonDetail {
   winnerTicketId: number;
   winnerTicketKey: string;
   participants: ComparisonParticipantDetail[];
+  headlineMetrics: ComparisonDashboardMetricRow[];
+  metricMatrix: ComparisonDashboardMetricRow[];
   decisionPoints: ComparisonDecisionPoint[];
   complianceRows: ComparisonComplianceRow[];
 }

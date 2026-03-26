@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import type { QualityScoreDetails } from '@/lib/quality-score';
-import { getScoreColor, getScoreThreshold } from '@/lib/quality-score';
+import { getScoreThreshold } from '@/lib/quality-score';
 import type { ComparisonEnrichmentValue } from '@/lib/types/comparison';
 
 interface ComparisonQualityPopoverProps {
@@ -43,7 +43,6 @@ export function ComparisonQualityPopover({
           <h4 className="text-sm font-medium text-foreground">Quality Score Breakdown</h4>
           <div className="space-y-2">
             {details.dimensions.map((dimension) => {
-              const colors = getScoreColor(dimension.score);
               return (
                 <div key={dimension.agentId} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
@@ -57,7 +56,7 @@ export function ComparisonQualityPopover({
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted">
                     <div
-                      className={`h-1.5 rounded-full ${colors.fill}`}
+                      className={getScoreBarClass(dimension.score)}
                       style={{ width: `${dimension.score}%` }}
                     />
                   </div>
@@ -79,4 +78,17 @@ export function ComparisonQualityPopover({
       </PopoverContent>
     </Popover>
   );
+}
+
+function getScoreBarClass(score: number): string {
+  if (score >= 90) {
+    return 'h-1.5 rounded-full bg-primary';
+  }
+  if (score >= 70) {
+    return 'h-1.5 rounded-full bg-foreground';
+  }
+  if (score >= 50) {
+    return 'h-1.5 rounded-full bg-accent-foreground';
+  }
+  return 'h-1.5 rounded-full bg-destructive';
 }

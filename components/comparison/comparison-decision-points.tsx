@@ -1,13 +1,25 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ComparisonDecisionPointsProps } from './types';
+
+function getVerdictClasses(alignment: 'supports-winner' | 'diverges-from-winner' | 'neutral') {
+  if (alignment === 'supports-winner') {
+    return 'border-primary/30 bg-primary/10 text-foreground';
+  }
+  if (alignment === 'diverges-from-winner') {
+    return 'border-accent bg-accent/60 text-foreground';
+  }
+  return 'border-border bg-muted text-muted-foreground';
+}
 
 export function ComparisonDecisionPoints({
   decisionPoints,
@@ -27,7 +39,13 @@ export function ComparisonDecisionPoints({
           <Collapsible key={point.id} defaultOpen={point.displayOrder === 0}>
             <div className="rounded-lg border border-border">
               <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
-                <div>
+                <div className="space-y-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(getVerdictClasses(point.verdictAlignment))}
+                  >
+                    {point.verdictLabel}
+                  </Badge>
                   <div className="font-medium text-foreground">{point.title}</div>
                   <div className="text-sm text-muted-foreground">
                     {point.verdictSummary}
@@ -40,7 +58,10 @@ export function ComparisonDecisionPoints({
                 {point.participantApproaches.length > 0 ? (
                   <div className="mt-3 space-y-2">
                     {point.participantApproaches.map((approach) => (
-                      <div key={approach.ticketId}>
+                      <div
+                        key={approach.ticketId}
+                        className="rounded-md border border-border bg-background px-3 py-2"
+                      >
                         <div className="text-sm font-medium text-foreground">
                           {approach.ticketKey}
                         </div>

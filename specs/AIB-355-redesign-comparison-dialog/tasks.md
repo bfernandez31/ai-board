@@ -16,9 +16,9 @@
 
 **Purpose**: Prepare shared fixtures, view-model contracts, and API regression targets for the redesign without changing runtime behavior yet.
 
-- [ ] T001 Extend dashboard comparison fixtures for 2/4/6 participant, pending, and missing-data scenarios in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts
-- [ ] T002 [P] Add mission-control dashboard prop helpers and normalized metric row descriptors in /home/runner/work/ai-board/ai-board/target/components/comparison/types.ts
-- [ ] T003 [P] Snapshot the dashboard-required read contract fields in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
+- [X] T001 Extend dashboard comparison fixtures for 2/4/6 participant, pending, and missing-data scenarios in /home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts
+- [X] T002 [P] Add mission-control dashboard prop helpers and normalized metric row descriptors in /home/runner/work/ai-board/ai-board/target/components/comparison/types.ts
+- [X] T003 [P] Snapshot the dashboard-required read contract fields in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
 
 ---
 
@@ -28,10 +28,10 @@
 
 **⚠️ CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Normalize winner, score-band, headline-metric, and neutral-state dashboard data in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts
-- [ ] T005 [P] Preserve shared comparison payload typings needed by the dashboard sections in /home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts
-- [ ] T006 [P] Update comparison selection and detail-loading hooks for the dashboard data flow in /home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts
-- [ ] T007 Create the shared mission-control section order and scroll-container skeleton in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
+- [X] T004 Normalize winner, score-band, headline-metric, and neutral-state dashboard data in /home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts
+- [X] T005 [P] Preserve shared comparison payload typings needed by the dashboard sections in /home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts
+- [X] T006 [P] Update comparison selection and detail-loading hooks for the dashboard data flow in /home/runner/work/ai-board/ai-board/target/hooks/use-comparisons.ts
+- [X] T007 Create the shared mission-control section order and scroll-container skeleton in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: Shared dashboard data and shell are ready; story work can proceed in priority order.
 
@@ -45,14 +45,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add winner-hero component coverage for recommendation copy, absorbed metadata, and headline metrics in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-ranking.test.tsx
-- [ ] T009 [P] [US1] Extend detail-route assertions for winner metadata and headline metric fields in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts
+- [X] T008 [P] [US1] Add winner-hero component coverage for recommendation copy, absorbed metadata, and headline metrics in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-ranking.test.tsx
+- [X] T009 [P] [US1] Extend detail-route assertions for winner metadata and headline metric fields in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Finalize hero-specific ranking props and metadata contracts in /home/runner/work/ai-board/ai-board/target/components/comparison/types.ts
-- [ ] T011 [US1] Implement the dominant winner hero with embedded generation/source metadata and headline summary values in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx
-- [ ] T012 [US1] Remove the standalone metadata block and mount the winner hero first in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
+- [X] T010 [US1] Finalize hero-specific ranking props and metadata contracts in /home/runner/work/ai-board/ai-board/target/components/comparison/types.ts
+- [X] T011 [US1] Implement the dominant winner hero with embedded generation/source metadata and headline summary values in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx
+- [X] T012 [US1] Remove the standalone metadata block and mount the winner hero first in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: User Story 1 is independently functional when the winner can be identified instantly from the initial dialog viewport.
 
@@ -66,13 +66,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add ranked-card coverage for 2/4/6 participant comparisons and score-band treatments in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-ranking.test.tsx
-- [ ] T014 [P] [US2] Add six-participant layout and overflow regression coverage for the dashboard shell in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx
+- [X] T013 [P] [US2] Add ranked-card coverage for 2/4/6 participant comparisons and score-band treatments in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-ranking.test.tsx
+- [X] T014 [P] [US2] Add six-participant layout and overflow regression coverage for the dashboard shell in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Implement ranked non-winner participant cards with rationale, ticket identity, and score-band styling in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx
-- [ ] T016 [US2] Harden the participant summary layout for up to six visible participants without hidden overflow in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
+- [X] T015 [US2] Implement ranked non-winner participant cards with rationale, ticket identity, and score-band styling in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx
+- [X] T016 [US2] Harden the participant summary layout for up to six visible participants without hidden overflow in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: User Story 2 is independently functional when all participants remain visible and visually differentiated in one session.
 
@@ -86,16 +86,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] Add unified metric-matrix and sticky-row-label coverage in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-operational-metrics.test.tsx
-- [ ] T018 [P] [US3] Add quality-score interaction regression coverage for the merged dashboard layout in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-quality-popover.test.tsx
-- [ ] T019 [P] [US3] Extend detail-route assertions for headline and detailed metric payload fidelity in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts
+- [X] T017 [P] [US3] Add unified metric-matrix and sticky-row-label coverage in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-operational-metrics.test.tsx
+- [X] T018 [P] [US3] Add quality-score interaction regression coverage for the merged dashboard layout in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-quality-popover.test.tsx
+- [X] T019 [P] [US3] Extend detail-route assertions for headline and detailed metric payload fidelity in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Implement headline metric summaries and the unified relative comparison matrix in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-metrics-grid.tsx
-- [ ] T021 [US3] Replace the legacy split operational-metrics layout with the unified matrix wrapper in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-operational-metrics.tsx
-- [ ] T022 [US3] Preserve quality-score breakdown access inside the merged matrix in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-quality-popover.tsx
-- [ ] T023 [US3] Wire the merged headline-and-detail metrics section into the dashboard flow in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
+- [X] T020 [US3] Implement headline metric summaries and the unified relative comparison matrix in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-metrics-grid.tsx
+- [X] T021 [US3] Replace the legacy split operational-metrics layout with the unified matrix wrapper in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-operational-metrics.tsx
+- [X] T022 [US3] Preserve quality-score breakdown access inside the merged matrix in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-quality-popover.tsx
+- [X] T023 [US3] Wire the merged headline-and-detail metrics section into the dashboard flow in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: User Story 3 is independently functional when metric winners and laggards are obvious row by row and quality details remain accessible.
 
@@ -109,14 +109,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T024 [P] [US4] Add compliance-grid and decision-verdict coverage for pass, mixed, fail, and missing states in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx
-- [ ] T025 [P] [US4] Extend dashboard API regression coverage for ordered decision points and sparse compliance assessments in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
+- [X] T024 [P] [US4] Add compliance-grid and decision-verdict coverage for pass, mixed, fail, and missing states in /home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx
+- [X] T025 [P] [US4] Extend dashboard API regression coverage for ordered decision points and sparse compliance assessments in /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-dashboard-api.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Implement pattern-focused compliance cells with non-hover note access and neutral missing-state treatment in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-compliance-grid.tsx
-- [ ] T027 [US4] Implement verdict-first decision triggers and default-open the first decision point in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx
-- [ ] T028 [US4] Place compliance and decision sections into the final scan order in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
+- [X] T026 [US4] Implement pattern-focused compliance cells with non-hover note access and neutral missing-state treatment in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-compliance-grid.tsx
+- [X] T027 [US4] Implement verdict-first decision triggers and default-open the first decision point in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx
+- [X] T028 [US4] Place compliance and decision sections into the final scan order in /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-viewer.tsx
 
 **Checkpoint**: User Story 4 is independently functional when compliance and decision outcomes can be understood before expanding dense detail.
 
@@ -126,8 +126,8 @@
 
 **Purpose**: Finish cross-story consistency, validation, and cleanup.
 
-- [ ] T029 [P] Audit semantic-token-only status styling and neutral copy across /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx, /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-metrics-grid.tsx, /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-compliance-grid.tsx, and /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx
-- [ ] T030 Run the validation checklist from /home/runner/work/ai-board/ai-board/target/specs/AIB-355-redesign-comparison-dialog/quickstart.md and stabilize any remaining failures in /home/runner/work/ai-board/ai-board/target/tests/unit/components/ and /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/
+- [X] T029 [P] Audit semantic-token-only status styling and neutral copy across /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-ranking.tsx, /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-metrics-grid.tsx, /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-compliance-grid.tsx, and /home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx
+- [X] T030 Run the validation checklist from /home/runner/work/ai-board/ai-board/target/specs/AIB-355-redesign-comparison-dialog/quickstart.md and stabilize any remaining failures in /home/runner/work/ai-board/ai-board/target/tests/unit/components/ and /home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/
 
 ---
 

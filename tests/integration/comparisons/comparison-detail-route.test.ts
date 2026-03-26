@@ -42,10 +42,10 @@ describe('Comparison detail route', () => {
       state: 'available',
       value: 91,
     });
-    // otherTicket has a COMPLETED job with null tokens — aggregated to 0 (available)
+    // otherTicket has completed verify telemetry in the default fixture
     expect(response.data.participants[1]?.telemetry.inputTokens).toEqual({
       state: 'available',
-      value: 0,
+      value: 1550,
     });
     expect(response.data.decisionPoints[0]?.title).toBe('State handling');
     expect(response.data.decisionPoints.map((point) => point.title)).toEqual([
@@ -62,7 +62,7 @@ describe('Comparison detail route', () => {
       {
         ticketId: fixture.winnerTicket.id,
         ticketKey: fixture.winnerTicket.ticketKey!,
-        summary: 'Focused on structured writes for new comparisons.',
+        summary: 'Participant 1 prioritized a different fallback shape.',
       },
       {
         ticketId: fixture.otherTicket.id,

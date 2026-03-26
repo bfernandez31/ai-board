@@ -2,128 +2,66 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
-import { getScoreThreshold } from '@/lib/quality-score';
+import type { ComparisonDashboardMetricRow } from '@/lib/types/comparison';
 import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { OperationalMetricsProps } from './types';
 
-type MetricKey =
-  | 'totalTokens'
-  | 'inputTokens'
-  | 'outputTokens'
-  | 'durationMs'
-  | 'costUsd'
-  | 'jobCount'
-  | 'qualityScore';
-
-interface MetricRowConfig {
-  key: MetricKey;
-  label: string;
-  format: (value: number) => string;
-  bestIs: 'lowest' | 'highest';
-}
-
-const metricRows: MetricRowConfig[] = [
-  {
-    key: 'totalTokens',
-    label: 'Total Tokens',
-    format: (v) => v.toLocaleString(),
-    bestIs: 'lowest',
-  },
-  {
-    key: 'inputTokens',
-    label: 'Input Tokens',
-    format: (v) => v.toLocaleString(),
-    bestIs: 'lowest',
-  },
-  {
-    key: 'outputTokens',
-    label: 'Output Tokens',
-    format: (v) => v.toLocaleString(),
-    bestIs: 'lowest',
-  },
-  {
-    key: 'durationMs',
-    label: 'Duration',
-    format: formatDuration,
-    bestIs: 'lowest',
-  },
-  {
-    key: 'costUsd',
-    label: 'Cost',
-    format: (v) => `$${v.toFixed(2)}`,
-    bestIs: 'lowest',
-  },
-  {
-    key: 'jobCount',
-    label: 'Job Count',
-    format: (v) => v.toLocaleString(),
-    bestIs: 'lowest',
-  },
-  {
-    key: 'qualityScore',
-    label: 'Quality Score',
-    format: formatQualityScore,
-    bestIs: 'highest',
-  },
-];
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return `${minutes}m ${seconds}s`;
-}
-
-function formatQualityScore(score: number): string {
-  return `${score} ${getScoreThreshold(score)}`;
-}
-
-function getEnrichmentValue(
-  participant: ComparisonParticipantDetail,
-  key: MetricKey
-): ComparisonEnrichmentValue<number> {
-  if (key === 'qualityScore') {
-    return participant.quality;
+function getQualityLabel(score: number | null): string {
+  if (score == null) {
+    return 'Unavailable';
   }
-  return participant.telemetry[key as keyof typeof participant.telemetry] as ComparisonEnrichmentValue<number>;
-}
 
-function computeBestValues(
-  participants: ComparisonParticipantDetail[],
-  key: MetricKey,
-  bestIs: 'lowest' | 'highest'
-): Set<number> {
-  const available = participants
-    .map((p) => ({ ticketId: p.ticketId, enrichment: getEnrichmentValue(p, key) }))
-    .filter((entry) => entry.enrichment.state === 'available' && entry.enrichment.value != null);
-
-  if (available.length === 0) return new Set();
-
-  const values = available.map((entry) => entry.enrichment.value!);
-  const bestValue = bestIs === 'lowest' ? Math.min(...values) : Math.max(...values);
-
-  return new Set(
-    available
-      .filter((entry) => entry.enrichment.value === bestValue)
-      .map((entry) => entry.ticketId)
-  );
-}
-
-function getColumnHeader(participant: ComparisonParticipantDetail): string {
-  const parts = [participant.ticketKey, participant.workflowType];
-  if (participant.agent) {
-    parts.push(participant.agent);
+  if (score >= 90) {
+    return `${score} Excellent`;
   }
-  return parts.join(' · ');
+  if (score >= 70) {
+    return `${score} Good`;
+  }
+  if (score >= 50) {
+    return `${score} Fair`;
+  }
+  return `${score} Poor`;
 }
 
-export function ComparisonOperationalMetrics({ participants }: OperationalMetricsProps) {
+function getFallbackRows({
+  participants,
+}: OperationalMetricsProps): ComparisonDashboardMetricRow[] {
+  return [
+    {
+      key: 'totalTokens',
+      label: 'Total Tokens',
+      category: 'detail',
+      bestDirection: 'lowest',
+      cells: participants.map((participant) => ({
+        ticketId: participant.ticketId,
+        ticketKey: participant.ticketKey,
+        state: participant.telemetry.totalTokens.state,
+        value: participant.telemetry.totalTokens.value,
+        displayValue:
+          participant.telemetry.totalTokens.state === 'available' &&
+          participant.telemetry.totalTokens.value != null
+            ? participant.telemetry.totalTokens.value.toLocaleString()
+            : participant.telemetry.totalTokens.state === 'pending'
+              ? 'Pending'
+              : 'Unavailable',
+        isBest: false,
+        isWinner: participant.isWinner,
+        supportsPopover: false,
+      })),
+    },
+  ];
+}
+
+export function ComparisonOperationalMetrics({
+  participants,
+  metricRows,
+}: OperationalMetricsProps) {
+  const rows = metricRows && metricRows.length > 0 ? metricRows : getFallbackRows({ participants });
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Operational Metrics</CardTitle>
+        <CardTitle>Relative Metrics Matrix</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -137,77 +75,50 @@ export function ComparisonOperationalMetrics({ participants }: OperationalMetric
                   key={participant.ticketId}
                   className="px-3 py-2 text-left font-medium text-muted-foreground"
                 >
-                  {getColumnHeader(participant)}
+                  {participant.ticketKey}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {metricRows.map((row) => {
-              const bestTicketIds = computeBestValues(participants, row.key, row.bestIs);
+            {rows.map((row) => (
+              <tr key={`${row.category}-${row.key}`} className="border-b border-border last:border-0">
+                <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
+                  {row.label}
+                </td>
+                {row.cells.map((cell) => {
+                  const participant = participants.find(
+                    (entry) => entry.ticketId === cell.ticketId
+                  );
 
-              return (
-                <tr key={row.key} className="border-b border-border last:border-0">
-                  <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
-                    {row.label}
-                  </td>
-                  {participants.map((participant) => {
-                    const enrichment = getEnrichmentValue(participant, row.key);
-                    const isBest = bestTicketIds.has(participant.ticketId);
-
-                    return (
-                      <td key={participant.ticketId} className="px-3 py-2 text-foreground">
-                        <div className="flex items-center gap-2">
-                          <CellValue
-                            enrichment={enrichment}
-                            format={row.format}
-                            metricKey={row.key}
-                            participant={participant}
+                  return (
+                    <td key={cell.ticketId} className="px-3 py-2 align-top text-foreground">
+                      <div className="flex min-w-[140px] flex-col gap-2">
+                        {cell.supportsPopover && participant ? (
+                          <ComparisonQualityPopover
+                            qualityBreakdown={participant.qualityBreakdown}
+                            qualityScore={participant.quality}
+                            formattedScore={getQualityLabel(cell.value)}
                           />
-                          {isBest && <Badge variant="secondary">Best</Badge>}
+                        ) : (
+                          <span>{cell.displayValue}</span>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {cell.isWinner ? <Badge variant="outline">Winner</Badge> : null}
+                          {cell.isBest ? <Badge variant="secondary">Best</Badge> : null}
+                          {cell.state !== 'available' ? (
+                            <Badge variant="outline">{cell.state}</Badge>
+                          ) : null}
                         </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </CardContent>
     </Card>
   );
-}
-
-function CellValue({
-  enrichment,
-  format,
-  metricKey,
-  participant,
-}: {
-  enrichment: ComparisonEnrichmentValue<number>;
-  format: (value: number) => string;
-  metricKey: MetricKey;
-  participant: ComparisonParticipantDetail;
-}) {
-  if (enrichment.state === 'unavailable') {
-    return <span className="text-muted-foreground">N/A</span>;
-  }
-  if (enrichment.state === 'pending') {
-    return <span className="text-muted-foreground">Pending</span>;
-  }
-
-  const formatted = format(enrichment.value!);
-
-  if (metricKey === 'qualityScore') {
-    return (
-      <ComparisonQualityPopover
-        qualityBreakdown={participant.qualityBreakdown}
-        qualityScore={participant.quality}
-        formattedScore={formatted}
-      />
-    );
-  }
-
-  return <span>{formatted}</span>;
 }

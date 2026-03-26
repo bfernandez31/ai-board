@@ -23,17 +23,7 @@ import { ComparisonHistoryList } from './comparison-history-list';
 import { ComparisonMetricsGrid } from './comparison-metrics-grid';
 import { ComparisonOperationalMetrics } from './comparison-operational-metrics';
 import { ComparisonRanking } from './comparison-ranking';
-import type { ComparisonViewerProps } from './types';
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { MISSION_CONTROL_SECTION_ORDER, type ComparisonViewerProps } from './types';
 
 export function ComparisonViewer({
   projectId,
@@ -162,26 +152,24 @@ export function ComparisonViewer({
 
               <div>
                 {detail ? (
-                  <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-4">
-                      <div className="rounded-lg border border-border bg-background px-4 py-3">
-                        <div className="text-sm text-muted-foreground">
-                          Generated {formatDate(detail.generatedAt)}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          Source: {detail.sourceTicketKey} · Winner: {detail.winnerTicketKey}
-                        </div>
-                      </div>
-
+                  <ScrollArea className="h-[72vh] pr-4">
+                    <div className="space-y-4 pb-2" data-section-order={MISSION_CONTROL_SECTION_ORDER.join(',')}>
                       <ComparisonRanking
                         participants={detail.participants}
                         recommendation={detail.overallRecommendation}
                         summary={detail.summary}
                         winnerTicketId={detail.winnerTicketId}
                         keyDifferentiators={detail.keyDifferentiators}
+                        generatedAt={detail.generatedAt}
+                        sourceTicketKey={detail.sourceTicketKey}
+                        winnerTicketKey={detail.winnerTicketKey}
+                        headlineMetrics={detail.headlineMetrics}
                       />
                       <ComparisonMetricsGrid participants={detail.participants} />
-                      <ComparisonOperationalMetrics participants={detail.participants} />
+                      <ComparisonOperationalMetrics
+                        participants={detail.participants}
+                        metricRows={detail.metricMatrix}
+                      />
                       <ComparisonDecisionPoints decisionPoints={detail.decisionPoints} />
                       <ComparisonComplianceGrid
                         rows={detail.complianceRows}
