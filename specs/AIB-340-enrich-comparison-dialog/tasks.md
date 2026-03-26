@@ -94,15 +94,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Write component test: popover opens on click and shows all 5 dimension rows with name, score, weight, and progress bar in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T024 [P] [US3] Write component test: overall score with threshold label displayed at bottom in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T025 [P] [US3] Write component test: quality cell is not clickable when breakdown is unavailable (QUICK workflow) in `tests/unit/components/comparison-quality-popover.test.tsx`
-- [ ] T026 [P] [US3] Write component test: popover closes on outside click in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T023 [P] [US3] Write component test: popover opens on click and shows all 5 dimension rows with name, score, weight, and progress bar in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T024 [P] [US3] Write component test: overall score with threshold label displayed at bottom in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T025 [P] [US3] Write component test: quality cell is not clickable when breakdown is unavailable (QUICK workflow) in `tests/unit/components/comparison-quality-popover.test.tsx`
+- [x] T026 [P] [US3] Write component test: popover closes on outside click in `tests/unit/components/comparison-quality-popover.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Create `ComparisonQualityPopover` component using shadcn/ui `Popover` + `PopoverTrigger` + `PopoverContent` with 5 dimension rows (name, score, weight, progress bar proportional to score/100), overall score with threshold label, and conditional clickability based on `qualityBreakdown.state` in `components/comparison/comparison-quality-popover.tsx`
-- [ ] T028 [US3] Integrate `ComparisonQualityPopover` as the quality score cell renderer in `ComparisonOperationalMetrics` grid in `components/comparison/comparison-operational-metrics.tsx`
+- [x] T027 [US3] Create `ComparisonQualityPopover` component using shadcn/ui `Popover` + `PopoverTrigger` + `PopoverContent` with 5 dimension rows (name, score, weight, progress bar proportional to score/100), overall score with threshold label, and conditional clickability based on `qualityBreakdown.state` in `components/comparison/comparison-quality-popover.tsx`
+- [x] T028 [US3] Integrate `ComparisonQualityPopover` as the quality score cell renderer in `ComparisonOperationalMetrics` grid in `components/comparison/comparison-operational-metrics.tsx`
 
 **Checkpoint**: Quality score cells are clickable for eligible tickets, popover displays full breakdown with visual progress bars
 

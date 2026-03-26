@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonEnrichmentValue, ComparisonParticipantDetail } from '@/lib/types/comparison';
 import { getScoreThreshold } from '@/lib/quality-score';
+import { ComparisonQualityPopover } from './comparison-quality-popover';
 import type { OperationalMetricsProps } from './types';
 
 type MetricKey =
@@ -181,8 +182,8 @@ export function ComparisonOperationalMetrics({ participants }: OperationalMetric
 function CellValue({
   enrichment,
   format,
-  metricKey: _metricKey,
-  participant: _participant,
+  metricKey,
+  participant,
 }: {
   enrichment: ComparisonEnrichmentValue<number>;
   format: (value: number) => string;
@@ -195,5 +196,18 @@ function CellValue({
   if (enrichment.state === 'pending') {
     return <span className="text-muted-foreground">Pending</span>;
   }
-  return <span>{format(enrichment.value!)}</span>;
+
+  const formatted = format(enrichment.value!);
+
+  if (metricKey === 'qualityScore') {
+    return (
+      <ComparisonQualityPopover
+        qualityBreakdown={participant.qualityBreakdown}
+        qualityScore={participant.quality}
+        formattedScore={formatted}
+      />
+    );
+  }
+
+  return <span>{formatted}</span>;
 }
