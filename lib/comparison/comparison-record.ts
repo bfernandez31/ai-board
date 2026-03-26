@@ -362,34 +362,100 @@ export function normalizeMetricSnapshot(
   };
 }
 
-export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
-} | null): ComparisonTelemetryEnrichment {
-  if (!job) {
+export interface AggregatedJobTelemetry {
+  ticketId: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  durationMs: number;
+  costUsd: number;
+  jobCount: number;
+  primaryModel: string | null;
+}
+
+export function aggregateJobTelemetry(
+  jobs: Array<{
+    ticketId: number;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    durationMs: number | null;
+    costUsd: number | null;
+    model: string | null;
+  }>
+): Map<number, AggregatedJobTelemetry> {
+  const groups = new Map<number, AggregatedJobTelemetry>();
+  const maxTokensPerTicket = new Map<number, number>();
+
+  for (const job of jobs) {
+    const existing = groups.get(job.ticketId);
+    const input = job.inputTokens ?? 0;
+    const output = job.outputTokens ?? 0;
+    const jobTokens = input + output;
+
+    if (!existing) {
+      groups.set(job.ticketId, {
+        ticketId: job.ticketId,
+        inputTokens: input,
+        outputTokens: output,
+        totalTokens: jobTokens,
+        durationMs: job.durationMs ?? 0,
+        costUsd: job.costUsd ?? 0,
+        jobCount: 1,
+        primaryModel: job.model,
+      });
+      maxTokensPerTicket.set(job.ticketId, jobTokens);
+    } else {
+      existing.inputTokens += input;
+      existing.outputTokens += output;
+      existing.totalTokens += jobTokens;
+      existing.durationMs += job.durationMs ?? 0;
+      existing.costUsd += job.costUsd ?? 0;
+      existing.jobCount += 1;
+
+      const currentMax = maxTokensPerTicket.get(job.ticketId) ?? 0;
+      if (jobTokens > currentMax) {
+        existing.primaryModel = job.model;
+        maxTokensPerTicket.set(job.ticketId, jobTokens);
+      }
+    }
+  }
+
+  return groups;
+}
+
+export function normalizeTelemetryEnrichment(
+  aggregated: AggregatedJobTelemetry | null,
+  hasInProgressJobs?: boolean
+): ComparisonTelemetryEnrichment {
+  if (!aggregated || aggregated.jobCount === 0) {
+    const state = hasInProgressJobs
+      ? () => createPendingEnrichment<number>()
+      : () => createUnavailableEnrichment<number>();
     return {
-      inputTokens: createUnavailableEnrichment<number>(),
-      outputTokens: createUnavailableEnrichment<number>(),
-      durationMs: createUnavailableEnrichment<number>(),
-      costUsd: createUnavailableEnrichment<number>(),
+      inputTokens: state(),
+      outputTokens: state(),
+      totalTokens: state(),
+      durationMs: state(),
+      costUsd: state(),
+      jobCount: hasInProgressJobs
+        ? createPendingEnrichment<number>()
+        : createUnavailableEnrichment<number>(),
+      primaryModel: hasInProgressJobs
+        ? createPendingEnrichment<string>()
+        : createUnavailableEnrichment<string>(),
     };
   }
 
-  function createValue(value: number | null): ComparisonEnrichmentValue<number> {
-    if (value == null) {
-      return createPendingEnrichment<number>();
-    }
-
-    return createAvailableEnrichment(value);
-  }
-
   return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
+    inputTokens: createAvailableEnrichment(aggregated.inputTokens),
+    outputTokens: createAvailableEnrichment(aggregated.outputTokens),
+    totalTokens: createAvailableEnrichment(aggregated.totalTokens),
+    durationMs: createAvailableEnrichment(aggregated.durationMs),
+    costUsd: createAvailableEnrichment(aggregated.costUsd),
+    jobCount: createAvailableEnrichment(aggregated.jobCount),
+    primaryModel: aggregated.primaryModel
+      ? createAvailableEnrichment(aggregated.primaryModel)
+      : createUnavailableEnrichment<string>(),
   };
 }
 
@@ -417,6 +483,7 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
+  qualityBreakdown: ComparisonEnrichmentValue<import('@/lib/quality-score').QualityScoreDetails>;
   telemetry: ComparisonTelemetryEnrichment;
 }): ComparisonParticipantDetail {
   return {
@@ -430,6 +497,7 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
+    qualityBreakdown: input.qualityBreakdown,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };

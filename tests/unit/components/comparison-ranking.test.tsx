@@ -14,11 +14,15 @@ const participants = [
     score: 92,
     rankRationale: 'Best coverage',
     quality: { state: 'available' as const, value: 92 },
+    qualityBreakdown: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'available' as const, value: 100 },
       outputTokens: { state: 'available' as const, value: 50 },
+      totalTokens: { state: 'available' as const, value: 150 },
       durationMs: { state: 'available' as const, value: 1000 },
       costUsd: { state: 'available' as const, value: 0.01 },
+      jobCount: { state: 'available' as const, value: 1 },
+      primaryModel: { state: 'available' as const, value: 'claude-sonnet-4-6' },
     },
     metrics: {
       linesAdded: 10,
@@ -41,11 +45,15 @@ const participants = [
     score: 75,
     rankRationale: 'More churn',
     quality: { state: 'pending' as const, value: null },
+    qualityBreakdown: { state: 'unavailable' as const, value: null },
     telemetry: {
       inputTokens: { state: 'pending' as const, value: null },
       outputTokens: { state: 'pending' as const, value: null },
+      totalTokens: { state: 'pending' as const, value: null },
       durationMs: { state: 'pending' as const, value: null },
       costUsd: { state: 'pending' as const, value: null },
+      jobCount: { state: 'pending' as const, value: null },
+      primaryModel: { state: 'pending' as const, value: null },
     },
     metrics: {
       linesAdded: 30,

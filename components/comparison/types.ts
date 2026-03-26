@@ -59,3 +59,7 @@ export interface ComparisonComplianceGridProps {
   rows: ComparisonComplianceRow[];
   participants: ComparisonParticipantDetail[];
 }
+
+export interface OperationalMetricsProps {
+  participants: ComparisonParticipantDetail[];
+}

@@ -6,6 +6,7 @@
  */
 
 import type { Stage, WorkflowType } from '@prisma/client';
+import type { QualityScoreDetails } from '@/lib/quality-score';
 
 /**
  * TicketReference
@@ -371,8 +372,11 @@ export interface ComparisonEnrichmentValue<T> {
 export interface ComparisonTelemetryEnrichment {
   inputTokens: ComparisonEnrichmentValue<number>;
   outputTokens: ComparisonEnrichmentValue<number>;
+  totalTokens: ComparisonEnrichmentValue<number>;
   durationMs: ComparisonEnrichmentValue<number>;
   costUsd: ComparisonEnrichmentValue<number>;
+  jobCount: ComparisonEnrichmentValue<number>;
+  primaryModel: ComparisonEnrichmentValue<string>;
 }
 
 export interface ComparisonMetricSnapshot {
@@ -396,6 +400,7 @@ export interface ComparisonParticipantDetail {
   score: number;
   rankRationale: string;
   quality: ComparisonEnrichmentValue<number>;
+  qualityBreakdown: ComparisonEnrichmentValue<QualityScoreDetails>;
   telemetry: ComparisonTelemetryEnrichment;
   metrics: ComparisonMetricSnapshot;
 }

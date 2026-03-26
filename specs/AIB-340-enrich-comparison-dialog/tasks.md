@@ -18,9 +18,9 @@
 
 **Purpose**: Extend existing TypeScript interfaces with new fields needed by all user stories
 
-- [ ] T001 Extend `ComparisonTelemetryEnrichment` with `totalTokens`, `jobCount`, `primaryModel` fields in `lib/types/comparison.ts`
-- [ ] T002 Add `qualityBreakdown: ComparisonEnrichmentValue<QualityScoreDetails>` to `ComparisonParticipantDetail` in `lib/types/comparison.ts`
-- [ ] T003 Add `OperationalMetricsProps` interface and related prop types in `components/comparison/types.ts`
+- [x] T001 Extend `ComparisonTelemetryEnrichment` with `totalTokens`, `jobCount`, `primaryModel` fields in `lib/types/comparison.ts`
+- [x] T002 Add `qualityBreakdown: ComparisonEnrichmentValue<QualityScoreDetails>` to `ComparisonParticipantDetail` in `lib/types/comparison.ts`
+- [x] T003 Add `OperationalMetricsProps` interface and related prop types in `components/comparison/types.ts`
 
 ---
 
@@ -30,10 +30,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add `aggregateJobTelemetry()` helper function that groups jobs by ticketId, sums tokens/cost/duration, counts jobs, and identifies primary model in `lib/comparison/comparison-detail.ts`
-- [ ] T005 Replace `distinct: ['ticketId']` latest-job query with `findMany` of all COMPLETED jobs per participant in `lib/comparison/comparison-detail.ts`
-- [ ] T006 Update `normalizeTelemetryEnrichment()` to accept aggregated data and produce `totalTokens`, `jobCount`, `primaryModel` enrichment values in `lib/comparison/comparison-detail.ts`
-- [ ] T007 Add quality breakdown enrichment: fetch latest verify job's `qualityScoreDetails` JSON, parse as `QualityScoreDetails`, wrap in `ComparisonEnrichmentValue` in `lib/comparison/comparison-detail.ts`
+- [x] T004 Add `aggregateJobTelemetry()` helper function that groups jobs by ticketId, sums tokens/cost/duration, counts jobs, and identifies primary model in `lib/comparison/comparison-detail.ts`
+- [x] T005 Replace `distinct: ['ticketId']` latest-job query with `findMany` of all COMPLETED jobs per participant in `lib/comparison/comparison-detail.ts`
+- [x] T006 Update `normalizeTelemetryEnrichment()` to accept aggregated data and produce `totalTokens`, `jobCount`, `primaryModel` enrichment values in `lib/comparison/comparison-detail.ts`
+- [x] T007 Add quality breakdown enrichment: fetch latest verify job's `qualityScoreDetails` JSON, parse as `QualityScoreDetails`, wrap in `ComparisonEnrichmentValue` in `lib/comparison/comparison-detail.ts`
 - [ ] T008 Write integration test: aggregation sums across multiple completed jobs correctly in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
 - [ ] T009 Write integration test: primary model is from highest-token job in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
 - [ ] T010 Write integration test: ticket with no completed jobs returns unavailable enrichments in `tests/integration/comparisons/comparison-detail-aggregation.test.ts`
