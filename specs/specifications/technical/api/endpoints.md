@@ -1999,20 +1999,20 @@ Fetch full comparison detail with enriched data.
       "agent": "CLAUDE",
       "quality": {
         "state": "available",
-        "value": 85,
-        "breakdown": {
-          "state": "available",
-          "value": {
-            "dimensions": [
-              { "name": "Compliance", "score": 90, "weight": 0.25 },
-              { "name": "Bug Detection", "score": 80, "weight": 0.25 },
-              { "name": "Code Comments", "score": 85, "weight": 0.2 },
-              { "name": "Historical Context", "score": 88, "weight": 0.15 },
-              { "name": "Spec Sync", "score": 82, "weight": 0.15 }
-            ],
-            "overallScore": 85,
-            "thresholdLabel": "Good"
-          }
+        "value": 85
+      },
+      "qualityBreakdown": {
+        "state": "available",
+        "value": {
+          "dimensions": [
+            { "name": "Compliance", "agentId": "compliance", "score": 90, "weight": 0.40, "weightedScore": 36 },
+            { "name": "Bug Detection", "agentId": "bug-detection", "score": 80, "weight": 0.30, "weightedScore": 24 },
+            { "name": "Code Comments", "agentId": "code-comments", "score": 85, "weight": 0.20, "weightedScore": 17 },
+            { "name": "Historical Context", "agentId": "historical-context", "score": 88, "weight": 0.10, "weightedScore": 8.8 },
+            { "name": "Spec Sync", "agentId": "spec-sync", "score": 82, "weight": 0.00, "weightedScore": 0 }
+          ],
+          "threshold": "Good",
+          "computedAt": "2025-01-15T10:30:00.000Z"
         }
       },
       "telemetry": {
