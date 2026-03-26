@@ -1998,7 +1998,16 @@ Fetch full comparison detail with enriched data.
       "workflowType": "FULL",
       "agent": "CLAUDE",
       "quality": { "state": "available", "value": 85 },
-      "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "qualityScoreDetails": "{\"dimensions\":[{\"agentId\":\"compliance\",\"score\":80,\"weight\":0.40}]}",
+      "telemetry": {
+        "inputTokens": { "state": "available", "value": 12000 },
+        "outputTokens": { "state": "available", "value": 5000 },
+        "totalTokens": { "state": "available", "value": 17000 },
+        "durationMs": { "state": "available", "value": 45000 },
+        "costUsd": { "state": "available", "value": 0.15 },
+        "jobCount": { "state": "available", "value": 3 },
+        "model": { "state": "available", "value": "claude-sonnet-4-6" }
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2036,10 +2045,12 @@ Fetch full comparison detail with enriched data.
 }
 ```
 
-**Enrichment States**: Quality and telemetry use a three-state pattern:
-- `available`: Data exists with a `value`
-- `pending`: Job exists but data not yet computed (e.g., verify job running)
-- `unavailable`: No relevant job exists
+**Enrichment States**: `quality` and each field within `telemetry` use a three-state pattern:
+- `available`: Data exists with a non-null `value`
+- `pending`: Job exists but data not yet computed (e.g., verify job still running)
+- `unavailable`: No relevant job exists for this ticket
+
+`telemetry` values are aggregated server-side from all completed jobs for each participant. `quality` is derived from the most recent verify job's `qualityScore`. `qualityScoreDetails` is a JSON string with per-dimension sub-scores (null if unavailable).
 
 **Errors**:
 - `400`: Invalid project, ticket, or comparison ID

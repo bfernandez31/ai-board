@@ -505,10 +505,16 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 
 **Comparison Viewer**:
 - Opens in modal dialog when Compare button clicked
-- Lists all comparison reports sorted by date (newest first)
-- Shows compared tickets and generation timestamp
-- Click report to view full markdown content
-- Uses existing DocumentationViewer component pattern
+- Two-column layout: history sidebar (280px) and structured dashboard panel
+- Header shows source ticket key, winner ticket key, and generation timestamp
+- History toggle button appears when more than one comparison exists
+
+**Dashboard Sections** (displayed in order):
+1. **Ranking and Recommendation**: Ordered list of all participants with rank, score percentage, workflow type, agent, and quality badge (score + threshold label with color coding). Includes overall recommendation text, summary, and key differentiator badges.
+2. **Code Change Metrics**: Per-ticket table of lines added/removed/changed, files changed, and test files changed, with best-value highlights.
+3. **Operational Metrics**: Per-ticket table of aggregated job telemetry — total tokens, input tokens, output tokens, duration, cost (USD), job count, quality score (clickable for dimension breakdown popover), and primary model. Best-value cell is highlighted per row.
+4. **Decision Points**: Structured evaluation criteria with per-ticket approaches and verdict.
+5. **Compliance Grid**: Constitution principle assessments (pass/mixed/fail) per participant.
 
 **History Access**:
 - All past comparisons preserved and accessible
