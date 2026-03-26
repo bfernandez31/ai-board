@@ -43,6 +43,11 @@ const DEFAULT_PRINCIPLES = [
   'AI-First Development Model',
 ] as const;
 
+const DEFAULT_DECISION_POINT_SUMMARY = 'See saved summary';
+const DEFAULT_DECISION_POINT_RATIONALE = 'Derived from the saved comparison report.';
+const DEFAULT_APPROACH_SUMMARY = 'Approach not captured';
+const DEFAULT_UNAVAILABLE_METRICS_SUMMARY = 'Metrics unavailable';
+
 const comparisonRecordInclude = {
   participants: {
     include: {
@@ -140,47 +145,82 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
   );
 }
 
-function buildDecisionPoints(
+function buildDecisionPointParticipantApproaches(input: {
+  report: ComparisonReport;
+  ticketKeyToId: Map<string, number>;
+  summariesByTicketKey: Record<string, string>;
+}): Prisma.InputJsonValue[] {
+  return input.report.metadata.comparedTickets.map((ticketKey) => ({
+    ticketId: input.ticketKeyToId.get(ticketKey),
+    ticketKey,
+    summary: input.summariesByTicketKey[ticketKey] ?? DEFAULT_APPROACH_SUMMARY,
+  }));
+}
+
+function buildStructuredDecisionPoints(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
-  if (report.decisionPoints.length > 0) {
-    return report.decisionPoints.map((point, index) => ({
-      title: point.title,
-      verdictTicketId: ticketKeyToId.get(point.winnerTicketKey) ?? null,
-      verdictSummary: point.verdict || report.recommendation || report.summary || 'See saved summary',
-      rationale: point.rationale || report.summary || 'Derived from the saved comparison report.',
-      participantApproaches: report.metadata.comparedTickets.map((ticketKey) => ({
-        ticketId: ticketKeyToId.get(ticketKey),
-        ticketKey,
-        summary: point.participantApproaches[ticketKey] ?? 'Approach not captured',
-      })),
-      displayOrder: index,
-    }));
-  }
+  return report.decisionPoints.map((point, index) => ({
+    title: point.title,
+    verdictTicketId: ticketKeyToId.get(point.winnerTicketKey) ?? null,
+    verdictSummary:
+      point.verdict || report.recommendation || report.summary || DEFAULT_DECISION_POINT_SUMMARY,
+    rationale: point.rationale || report.summary || DEFAULT_DECISION_POINT_RATIONALE,
+    participantApproaches: buildDecisionPointParticipantApproaches({
+      report,
+      ticketKeyToId,
+      summariesByTicketKey: point.participantApproaches,
+    }),
+    displayOrder: index,
+  }));
+}
 
+function buildSynthesizedDecisionPoints(
+  report: ComparisonReport,
+  ticketKeyToId: Map<string, number>
+): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
   const winnerTicketKey = getWinnerTicketKey(report);
   const differentiators = Array.isArray(report.alignment.matchingRequirements)
     ? report.alignment.matchingRequirements
     : [];
 
+  const participantApproachSummaries = Object.fromEntries(
+    report.metadata.comparedTickets.map((ticketKey) => {
+      const metrics = report.implementation[ticketKey];
+      const summary = metrics?.hasData
+        ? `${metrics.filesChanged} files changed`
+        : DEFAULT_UNAVAILABLE_METRICS_SUMMARY;
+
+      return [ticketKey, summary];
+    })
+  );
+
   return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
     (title, index) => ({
       title,
       verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
-      verdictSummary: report.recommendation || report.summary || 'See saved summary',
-      rationale: report.summary || 'Derived from the saved comparison report.',
-      participantApproaches: report.metadata.comparedTickets.map((ticketKey) => ({
-        ticketId: ticketKeyToId.get(ticketKey),
-        ticketKey,
-        summary:
-          report.implementation[ticketKey]?.hasData
-            ? `${report.implementation[ticketKey]?.filesChanged ?? 0} files changed`
-            : 'Metrics unavailable',
-      })),
+      verdictSummary: report.recommendation || report.summary || DEFAULT_DECISION_POINT_SUMMARY,
+      rationale: report.summary || DEFAULT_DECISION_POINT_RATIONALE,
+      participantApproaches: buildDecisionPointParticipantApproaches({
+        report,
+        ticketKeyToId,
+        summariesByTicketKey: participantApproachSummaries,
+      }),
       displayOrder: index,
     })
   );
+}
+
+function buildDecisionPoints(
+  report: ComparisonReport,
+  ticketKeyToId: Map<string, number>
+): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
+  if (report.decisionPoints.length > 0) {
+    return buildStructuredDecisionPoints(report, ticketKeyToId);
+  }
+
+  return buildSynthesizedDecisionPoints(report, ticketKeyToId);
 }
 
 function buildComplianceCreates(
