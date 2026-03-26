@@ -1,0 +1,461 @@
+openapi: 3.1.0
+info:
+  title: Comparison Dashboard Read API
+  version: 1.0.0
+  description: >
+    Existing comparison read endpoints consumed by the redesigned comparison dialog.
+    This planning contract documents the payload shape the new dashboard depends on.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/check:
+    get:
+      summary: Check whether a ticket has saved comparisons
+      operationId: getComparisonCheck
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '200':
+          description: Comparison presence summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonCheckResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/TicketNotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons:
+    get:
+      summary: List saved comparisons for a ticket
+      operationId: listTicketComparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Comparison history list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/TicketNotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/projects/{projectId}/tickets/{ticketId}/comparisons/{comparisonId}:
+    get:
+      summary: Fetch the full dashboard detail for one saved comparison
+      operationId: getComparisonDetail
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TicketId'
+        - $ref: '#/components/parameters/ComparisonId'
+      responses:
+        '200':
+          description: Comparison dashboard detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Ticket or comparison not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ComparisonId:
+      name: comparisonId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    ValidationError:
+      description: Invalid route or query parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Route project does not match ticket access scope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TicketNotFoundError:
+      description: Ticket not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+    ComparisonCheckResult:
+      type: object
+      required: [hasComparisons, count, latestComparisonId]
+      properties:
+        hasComparisons:
+          type: boolean
+        count:
+          type: integer
+        latestComparisonId:
+          type:
+            - integer
+            - 'null'
+    ComparisonSummary:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketKey
+        - participantTicketKeys
+        - winnerTicketKey
+        - summary
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketKey:
+          type: string
+        participantTicketKeys:
+          type: array
+          items:
+            type: string
+        winnerTicketKey:
+          type: string
+        summary:
+          type: string
+        recommendation:
+          type: string
+    ComparisonHistoryResponse:
+      type: object
+      required: [comparisons, total, limit]
+      properties:
+        comparisons:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+    ComparisonEnrichmentState:
+      type: string
+      enum: [available, pending, unavailable]
+    ComparisonEnrichmentValueNumber:
+      type: object
+      required: [state, value]
+      properties:
+        state:
+          $ref: '#/components/schemas/ComparisonEnrichmentState'
+        value:
+          type:
+            - number
+            - 'null'
+    ComparisonEnrichmentValueString:
+      type: object
+      required: [state, value]
+      properties:
+        state:
+          $ref: '#/components/schemas/ComparisonEnrichmentState'
+        value:
+          type:
+            - string
+            - 'null'
+    QualityScoreDetails:
+      type: object
+      additionalProperties: true
+      description: Existing quality score breakdown payload surfaced through the popover.
+    ComparisonEnrichmentValueQualityDetails:
+      type: object
+      required: [state, value]
+      properties:
+        state:
+          $ref: '#/components/schemas/ComparisonEnrichmentState'
+        value:
+          oneOf:
+            - $ref: '#/components/schemas/QualityScoreDetails'
+            - type: 'null'
+    ComparisonTelemetryEnrichment:
+      type: object
+      required:
+        - inputTokens
+        - outputTokens
+        - totalTokens
+        - durationMs
+        - costUsd
+        - jobCount
+        - primaryModel
+      properties:
+        inputTokens:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        outputTokens:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        totalTokens:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        durationMs:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        costUsd:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        jobCount:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        primaryModel:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueString'
+    ComparisonMetricSnapshot:
+      type: object
+      required:
+        - linesAdded
+        - linesRemoved
+        - linesChanged
+        - filesChanged
+        - testFilesChanged
+        - changedFiles
+        - bestValueFlags
+      properties:
+        linesAdded:
+          type:
+            - integer
+            - 'null'
+        linesRemoved:
+          type:
+            - integer
+            - 'null'
+        linesChanged:
+          type:
+            - integer
+            - 'null'
+        filesChanged:
+          type:
+            - integer
+            - 'null'
+        testFilesChanged:
+          type:
+            - integer
+            - 'null'
+        changedFiles:
+          type: array
+          items:
+            type: string
+        bestValueFlags:
+          type: object
+          additionalProperties:
+            type: boolean
+    ComparisonParticipantDetail:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - workflowType
+        - agent
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - qualityBreakdown
+        - telemetry
+        - metrics
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        workflowType:
+          type: string
+        agent:
+          type:
+            - string
+            - 'null'
+        rank:
+          type: integer
+        score:
+          type: number
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueNumber'
+        qualityBreakdown:
+          $ref: '#/components/schemas/ComparisonEnrichmentValueQualityDetails'
+        telemetry:
+          $ref: '#/components/schemas/ComparisonTelemetryEnrichment'
+        metrics:
+          $ref: '#/components/schemas/ComparisonMetricSnapshot'
+    ComparisonDecisionPointApproach:
+      type: object
+      required: [ticketId, ticketKey, summary]
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        summary:
+          type: string
+    ComparisonDecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictTicketId
+        - verdictSummary
+        - rationale
+        - displayOrder
+        - participantApproaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictTicketId:
+          type:
+            - integer
+            - 'null'
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        displayOrder:
+          type: integer
+        participantApproaches:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPointApproach'
+    ComparisonComplianceCell:
+      type: object
+      required: [participantTicketId, participantTicketKey, status, notes]
+      properties:
+        participantTicketId:
+          type: integer
+        participantTicketKey:
+          type: string
+        status:
+          type: string
+          enum: [pass, mixed, fail]
+        notes:
+          type: string
+    ComparisonComplianceRow:
+      type: object
+      required: [principleKey, principleName, displayOrder, assessments]
+      properties:
+        principleKey:
+          type: string
+        principleName:
+          type: string
+        displayOrder:
+          type: integer
+        assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonComplianceCell'
+    ComparisonDetail:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketId
+        - sourceTicketKey
+        - markdownPath
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+        - winnerTicketId
+        - winnerTicketKey
+        - participants
+        - decisionPoints
+        - complianceRows
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        markdownPath:
+          type: string
+        summary:
+          type: string
+        overallRecommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
+          type: string
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonParticipantDetail'
+        decisionPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonDecisionPoint'
+        complianceRows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonComplianceRow'
