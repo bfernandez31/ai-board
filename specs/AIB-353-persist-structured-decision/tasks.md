@@ -47,8 +47,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] Add `reportDecisionPointApproachSchema` and `reportDecisionPointSchema` Zod schemas, and add optional `decisionPoints` field (`.optional().default([])`) to `serializedComparisonReportSchema` in `lib/comparison/comparison-payload.ts`
-- [ ] T005 [US2] Update `buildDecisionPoints()` to use structured `report.decisionPoints` when present and non-empty: map each entry to Prisma input resolving `verdictTicketKey` to `verdictTicketId` via `ticketKeyToId`, filter invalid approach `ticketKey` references, and set `displayOrder` from array index in `lib/comparison/comparison-record.ts`
+- [x] T004 [US2] Add `reportDecisionPointApproachSchema` and `reportDecisionPointSchema` Zod schemas, and add optional `decisionPoints` field (`.optional().default([])`) to `serializedComparisonReportSchema` in `lib/comparison/comparison-payload.ts`
+- [x] T005 [US2] Update `buildDecisionPoints()` to use structured `report.decisionPoints` when present and non-empty: map each entry to Prisma input resolving `verdictTicketKey` to `verdictTicketId` via `ticketKeyToId`, filter invalid approach `ticketKey` references, and set `displayOrder` from array index in `lib/comparison/comparison-record.ts`
 
 **Checkpoint**: Structured decision points are validated and persisted — verify unit tests pass
 
