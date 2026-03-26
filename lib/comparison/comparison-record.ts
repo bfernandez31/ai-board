@@ -14,6 +14,7 @@ import type {
   ComparisonReport,
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
+  QualityScoreBreakdown,
 } from '@/lib/types/comparison';
 
 type PersistableTicket = {
@@ -362,34 +363,37 @@ export function normalizeMetricSnapshot(
   };
 }
 
-export function normalizeTelemetryEnrichment(job: {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  durationMs: number | null;
-  costUsd: number | null;
+export function normalizeTelemetryEnrichment(aggregated: {
+  inputTokens: number;
+  outputTokens: number;
+  durationMs: number;
+  costUsd: number;
+  jobCount: number;
+  model: string | null;
+  hasData: boolean;
 } | null): ComparisonTelemetryEnrichment {
-  if (!job) {
+  if (!aggregated || !aggregated.hasData) {
     return {
       inputTokens: createUnavailableEnrichment<number>(),
       outputTokens: createUnavailableEnrichment<number>(),
+      totalTokens: createUnavailableEnrichment<number>(),
       durationMs: createUnavailableEnrichment<number>(),
       costUsd: createUnavailableEnrichment<number>(),
+      jobCount: createUnavailableEnrichment<number>(),
+      model: createUnavailableEnrichment<string>(),
     };
   }
 
-  function createValue(value: number | null): ComparisonEnrichmentValue<number> {
-    if (value == null) {
-      return createPendingEnrichment<number>();
-    }
-
-    return createAvailableEnrichment(value);
-  }
-
   return {
-    inputTokens: createValue(job.inputTokens),
-    outputTokens: createValue(job.outputTokens),
-    durationMs: createValue(job.durationMs),
-    costUsd: createValue(job.costUsd),
+    inputTokens: createAvailableEnrichment(aggregated.inputTokens),
+    outputTokens: createAvailableEnrichment(aggregated.outputTokens),
+    totalTokens: createAvailableEnrichment(aggregated.inputTokens + aggregated.outputTokens),
+    durationMs: createAvailableEnrichment(aggregated.durationMs),
+    costUsd: createAvailableEnrichment(aggregated.costUsd),
+    jobCount: createAvailableEnrichment(aggregated.jobCount),
+    model: aggregated.model
+      ? createAvailableEnrichment(aggregated.model)
+      : createUnavailableEnrichment<string>(),
   };
 }
 
@@ -417,6 +421,7 @@ export function normalizeParticipantDetail(input: {
     };
   };
   quality: ComparisonEnrichmentValue<number>;
+  qualityDetails: ComparisonEnrichmentValue<QualityScoreBreakdown>;
   telemetry: ComparisonTelemetryEnrichment;
 }): ComparisonParticipantDetail {
   return {
@@ -430,6 +435,7 @@ export function normalizeParticipantDetail(input: {
     score: input.participant.score,
     rankRationale: input.participant.rankRationale,
     quality: input.quality,
+    qualityDetails: input.qualityDetails,
     telemetry: input.telemetry,
     metrics: normalizeMetricSnapshot(input.participant.metricSnapshot),
   };

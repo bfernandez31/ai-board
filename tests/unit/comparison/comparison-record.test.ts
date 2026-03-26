@@ -136,15 +136,30 @@ describe('comparison-record helpers', () => {
     expect(
       normalizeTelemetryEnrichment({
         inputTokens: 10,
-        outputTokens: null,
+        outputTokens: 20,
         durationMs: 30,
-        costUsd: null,
+        costUsd: 0.05,
+        jobCount: 2,
+        model: 'claude-sonnet-4-20250514',
+        hasData: true,
       })
     ).toEqual({
       inputTokens: { state: 'available', value: 10 },
-      outputTokens: { state: 'pending', value: null },
+      outputTokens: { state: 'available', value: 20 },
+      totalTokens: { state: 'available', value: 30 },
       durationMs: { state: 'available', value: 30 },
-      costUsd: { state: 'pending', value: null },
+      costUsd: { state: 'available', value: 0.05 },
+      jobCount: { state: 'available', value: 2 },
+      model: { state: 'available', value: 'claude-sonnet-4-20250514' },
+    });
+    expect(normalizeTelemetryEnrichment(null)).toEqual({
+      inputTokens: { state: 'unavailable', value: null },
+      outputTokens: { state: 'unavailable', value: null },
+      totalTokens: { state: 'unavailable', value: null },
+      durationMs: { state: 'unavailable', value: null },
+      costUsd: { state: 'unavailable', value: null },
+      jobCount: { state: 'unavailable', value: null },
+      model: { state: 'unavailable', value: null },
     });
   });
 

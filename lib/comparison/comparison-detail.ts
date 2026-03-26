@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/db/client';
-import type { ComparisonDetail, ComparisonSummary } from '@/lib/types/comparison';
+import type {
+  ComparisonDetail,
+  ComparisonSummary,
+  QualityScoreBreakdown,
+  QualityScoreDimension,
+} from '@/lib/types/comparison';
 import {
   buildComparisonDetail,
   createAvailableEnrichment,
@@ -102,7 +107,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 }
 
 function deriveQualityState(
-  latestVerifyJob: { qualityScore: number | null } | null,
+  latestVerifyJob: { qualityScore: number | null; qualityScoreDetails: string | null } | null,
   hasVerifyJob: boolean
 ): ReturnType<typeof createAvailableEnrichment<number>> {
   if (latestVerifyJob?.qualityScore != null) {
@@ -114,6 +119,108 @@ function deriveQualityState(
   }
 
   return createUnavailableEnrichment<number>();
+}
+
+function getQualityLabel(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Good';
+  if (score >= 60) return 'Acceptable';
+  if (score >= 40) return 'Needs Improvement';
+  return 'Poor';
+}
+
+function parseQualityScoreDetails(
+  latestVerifyJob: { qualityScore: number | null; qualityScoreDetails: string | null } | null,
+  hasVerifyJob: boolean
+): ReturnType<typeof createAvailableEnrichment<QualityScoreBreakdown>> {
+  if (!latestVerifyJob?.qualityScore || !latestVerifyJob.qualityScoreDetails) {
+    return hasVerifyJob
+      ? createPendingEnrichment<QualityScoreBreakdown>()
+      : createUnavailableEnrichment<QualityScoreBreakdown>();
+  }
+
+  try {
+    const parsed = JSON.parse(latestVerifyJob.qualityScoreDetails) as {
+      dimensions?: Array<{ name?: string; score?: number; weight?: number }>;
+      label?: string;
+    };
+    const dimensions: QualityScoreDimension[] = (parsed.dimensions ?? [])
+      .filter(
+        (d): d is { name: string; score: number; weight: number } =>
+          typeof d.name === 'string' &&
+          typeof d.score === 'number' &&
+          typeof d.weight === 'number'
+      )
+      .map((d) => ({ name: d.name, score: d.score, weight: d.weight }));
+
+    const breakdown: QualityScoreBreakdown = {
+      overall: latestVerifyJob.qualityScore,
+      label: typeof parsed.label === 'string' ? parsed.label : getQualityLabel(latestVerifyJob.qualityScore),
+      dimensions,
+    };
+
+    return createAvailableEnrichment(breakdown);
+  } catch {
+    return createAvailableEnrichment<QualityScoreBreakdown>({
+      overall: latestVerifyJob.qualityScore,
+      label: getQualityLabel(latestVerifyJob.qualityScore),
+      dimensions: [],
+    });
+  }
+}
+
+interface AggregatedJobTelemetry {
+  inputTokens: number;
+  outputTokens: number;
+  durationMs: number;
+  costUsd: number;
+  jobCount: number;
+  model: string | null;
+  hasData: boolean;
+}
+
+function aggregateJobsForTicket(
+  jobs: Array<{
+    ticketId: number;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    durationMs: number | null;
+    costUsd: number | null;
+    model: string | null;
+  }>
+): AggregatedJobTelemetry {
+  if (jobs.length === 0) {
+    return { inputTokens: 0, outputTokens: 0, durationMs: 0, costUsd: 0, jobCount: 0, model: null, hasData: false };
+  }
+
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let durationMs = 0;
+  let costUsd = 0;
+  const modelCounts = new Map<string, number>();
+
+  for (const job of jobs) {
+    inputTokens += job.inputTokens ?? 0;
+    outputTokens += job.outputTokens ?? 0;
+    durationMs += job.durationMs ?? 0;
+    costUsd += job.costUsd ?? 0;
+    if (job.model) {
+      modelCounts.set(job.model, (modelCounts.get(job.model) ?? 0) + 1);
+    }
+  }
+
+  let primaryModel: string | null = null;
+  let maxCount = 0;
+  for (const [model, count] of modelCounts) {
+    if (count > maxCount) {
+      maxCount = count;
+      primaryModel = model;
+    }
+  }
+
+  const hasData = inputTokens > 0 || outputTokens > 0 || costUsd > 0 || durationMs > 0;
+
+  return { inputTokens, outputTokens, durationMs, costUsd, jobCount: jobs.length, model: primaryModel, hasData };
 }
 
 export async function getComparisonDetailForTicket(
@@ -168,21 +275,21 @@ export async function getComparisonDetailForTicket(
   }
 
   const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [latestJobs, latestVerifyJobs, complianceRows] = await Promise.all([
+  const [allJobs, latestVerifyJobs, complianceRows] = await Promise.all([
     prisma.job.findMany({
       where: {
         ticketId: {
           in: participantIds,
         },
+        status: 'COMPLETED',
       },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
       select: {
         ticketId: true,
         inputTokens: true,
         outputTokens: true,
         durationMs: true,
         costUsd: true,
+        model: true,
       },
     }),
     prisma.job.findMany({
@@ -197,6 +304,7 @@ export async function getComparisonDetailForTicket(
       select: {
         ticketId: true,
         qualityScore: true,
+        qualityScoreDetails: true,
       },
     }),
     prisma.complianceAssessment.findMany({
@@ -221,24 +329,40 @@ export async function getComparisonDetailForTicket(
     }),
   ]);
 
-  const latestJobByTicketId = new Map(latestJobs.map((job) => [job.ticketId, job]));
+  const jobsByTicketId = new Map<number, typeof allJobs>();
+  for (const job of allJobs) {
+    const existing = jobsByTicketId.get(job.ticketId);
+    if (existing) {
+      existing.push(job);
+    } else {
+      jobsByTicketId.set(job.ticketId, [job]);
+    }
+  }
+
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
   const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
-  const participants = record.participants.map((participant) =>
-    normalizeParticipantDetail({
+  const participants = record.participants.map((participant) => {
+    const ticketJobs = jobsByTicketId.get(participant.ticketId) ?? [];
+    const verifyJob = latestVerifyJobByTicketId.get(participant.ticketId) ?? null;
+
+    return normalizeParticipantDetail({
       participant,
       quality: deriveQualityState(
-        latestVerifyJobByTicketId.get(participant.ticketId) ?? null,
+        verifyJob,
+        verifyJobTicketIds.has(participant.ticketId)
+      ),
+      qualityDetails: parseQualityScoreDetails(
+        verifyJob,
         verifyJobTicketIds.has(participant.ticketId)
       ),
       telemetry: normalizeTelemetryEnrichment(
-        latestJobByTicketId.get(participant.ticketId) ?? null
+        aggregateJobsForTicket(ticketJobs)
       ),
-    })
-  );
+    });
+  });
 
   const groupedCompliance = new Map<
     string,

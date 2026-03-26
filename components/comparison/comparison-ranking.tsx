@@ -4,6 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComparisonRankingProps } from './types';
 
+function getQualityLabel(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Good';
+  if (score >= 60) return 'Acceptable';
+  if (score >= 40) return 'Needs Improvement';
+  return 'Poor';
+}
+
 export function ComparisonRanking({
   participants,
   recommendation,
@@ -45,9 +53,19 @@ export function ComparisonRanking({
                     {participant.title}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {participant.ticketId === winnerTicketId && <Badge>Winner</Badge>}
                   <Badge variant="outline">{participant.score}%</Badge>
+                  <Badge variant="secondary">{participant.workflowType}</Badge>
+                  {participant.agent && (
+                    <Badge variant="secondary">{participant.agent}</Badge>
+                  )}
+                  {participant.quality.state === 'available' &&
+                    participant.quality.value != null && (
+                      <Badge variant="outline">
+                        {participant.quality.value} {getQualityLabel(participant.quality.value)}
+                      </Badge>
+                    )}
                 </div>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">

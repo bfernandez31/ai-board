@@ -36,7 +36,7 @@ describe('Comparison detail route', () => {
       state: 'available',
       value: 91,
     });
-    expect(response.data.participants[1]?.telemetry.inputTokens.state).toBe('pending');
+    expect(response.data.participants[1]?.telemetry.inputTokens.state).toBe('unavailable');
     expect(response.data.decisionPoints[0]?.title).toBe('State handling');
     expect(response.data.complianceRows[0]?.principleKey).toBe(
       'typescript-first-development'
