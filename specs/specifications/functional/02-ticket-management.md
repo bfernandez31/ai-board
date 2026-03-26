@@ -374,6 +374,9 @@ The viewer is a modal dialog with two sections:
   - Rank number, ticket key, title
   - Score percentage badge
   - "Winner" badge on rank 1
+  - Workflow type badge (FULL/QUICK)
+  - Agent badge
+  - Quality score badge (clickable — opens dimension breakdown popover)
   - Rank rationale text
 
 **Implementation Metrics**:
@@ -381,6 +384,13 @@ The viewer is a modal dialog with two sections:
 - Metrics: lines changed, files changed, test files changed
 - "Best value" badge highlights the leading participant per metric
 - "Unavailable" shown when metrics are missing
+
+**Operational Metrics**:
+- Table comparing aggregated job telemetry across participants
+- Metrics: total tokens, input tokens, output tokens, duration, cost, job count, quality score
+- Sticky metric labels column supports horizontal scrolling with many participants
+- "Best value" badge highlights the leading participant per metric
+- Quality score cell is clickable and opens a popover showing 5 dimension scores with progress bars, weights, and a threshold label
 
 **Decision Points**:
 - Collapsible sections for each architectural decision
@@ -395,8 +405,8 @@ The viewer is a modal dialog with two sections:
 ### Data Enrichment
 
 The comparison detail view enriches stored comparison data with live data:
-- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job)
-- **Telemetry**: Input/output tokens, duration, cost from the latest job per participant
+- **Quality scores**: Derived from the latest verify job (`available` if score exists, `pending` if job running, `unavailable` if no verify job). Includes a dimension breakdown (5 scores with weights) when available, shown via a popover.
+- **Telemetry**: Aggregated across ALL completed jobs per participant — total tokens (input + output), duration, cost, job count, and primary model.
 
 ### Selection Logic
 

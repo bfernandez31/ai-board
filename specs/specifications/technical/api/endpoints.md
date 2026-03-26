@@ -1998,7 +1998,29 @@ Fetch full comparison detail with enriched data.
       "workflowType": "FULL",
       "agent": "CLAUDE",
       "quality": { "state": "available", "value": 85 },
-      "telemetry": { "state": "available", "value": { "inputTokens": 12000, "outputTokens": 5000, "durationMs": 45000, "costUsd": 0.15 } },
+      "qualityDetails": {
+        "state": "available",
+        "value": {
+          "overall": 85,
+          "label": "Good",
+          "dimensions": [
+            { "name": "Test Coverage", "score": 90, "weight": 0.3 },
+            { "name": "Type Safety", "score": 85, "weight": 0.2 },
+            { "name": "Code Quality", "score": 80, "weight": 0.2 },
+            { "name": "Constitution Compliance", "score": 88, "weight": 0.2 },
+            { "name": "Documentation", "score": 75, "weight": 0.1 }
+          ]
+        }
+      },
+      "telemetry": {
+        "inputTokens": { "state": "available", "value": 12000 },
+        "outputTokens": { "state": "available", "value": 5000 },
+        "totalTokens": { "state": "available", "value": 17000 },
+        "durationMs": { "state": "available", "value": 45000 },
+        "costUsd": { "state": "available", "value": 0.15 },
+        "jobCount": { "state": "available", "value": 3 },
+        "model": { "state": "available", "value": "claude-sonnet-4-6" }
+      },
       "metrics": {
         "linesAdded": 150,
         "linesRemoved": 20,
@@ -2040,6 +2062,10 @@ Fetch full comparison detail with enriched data.
 - `available`: Data exists with a `value`
 - `pending`: Job exists but data not yet computed (e.g., verify job running)
 - `unavailable`: No relevant job exists
+
+**Telemetry aggregation**: Each field in `telemetry` is independently enriched. Values are summed across ALL completed jobs for a participant (not just the latest). `model` is the most-frequently-used model across those jobs. `jobCount` is the total number of completed jobs.
+
+**Quality details**: `qualityDetails` contains a `QualityScoreBreakdown` with `overall`, `label` (threshold bucket: Excellent/Good/Acceptable/Needs Improvement/Poor), and up to 5 `dimensions` each with `name`, `score`, and `weight`. Sourced from `qualityScoreDetails` JSON on the latest verify job.
 
 **Errors**:
 - `400`: Invalid project, ticket, or comparison ID
