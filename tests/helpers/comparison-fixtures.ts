@@ -1,6 +1,9 @@
 import { getPrismaClient } from './db-cleanup';
 import { createTestTicket } from './db-setup';
-import { createComparisonReport, generateReportPath } from '@/lib/comparison/comparison-generator';
+import {
+  createComparisonReport,
+  generateReportPath,
+} from '@/lib/comparison/comparison-generator';
 import {
   createCompareRunKey,
   createComparisonPersistenceRequest,
@@ -21,7 +24,78 @@ const DEFAULT_OPTIONS: Required<StructuredFixtureOptions> = {
 };
 
 function buildParticipantKeys(participantCount: number): string[] {
-  return Array.from({ length: participantCount }, (_, index) => `TE2-${102 + index}`);
+  return Array.from(
+    { length: participantCount },
+    (_, index) => `TE2-${102 + index}`
+  );
+}
+
+function getWorkflowTypeAtComparison(
+  index: number
+): 'FULL' | 'QUICK' | 'CLEAN' {
+  const remainder = index % 3;
+
+  if (remainder === 0) {
+    return 'FULL';
+  }
+
+  if (remainder === 1) {
+    return 'QUICK';
+  }
+
+  return 'CLEAN';
+}
+
+function getRankRationale(index: number): string {
+  if (index === 0) {
+    return 'Strong verify results and concise implementation.';
+  }
+
+  if (index === 1) {
+    return 'Good direction but less complete test coverage.';
+  }
+
+  return `Participant ${index + 1} required more trade-offs to finish.`;
+}
+
+function getComplianceStatus(index: number): 'pass' | 'mixed' | 'fail' {
+  if (index === 0) {
+    return 'pass';
+  }
+
+  if (index === 1) {
+    return 'mixed';
+  }
+
+  return 'fail';
+}
+
+function getComplianceNotes(index: number): string {
+  if (index === 0) {
+    return 'Strict types retained.';
+  }
+
+  if (index === 1) {
+    return 'Some typing gaps remain.';
+  }
+
+  return 'Missing strict types in key workflow paths.';
+}
+
+function getStateHandlingSummary(index: number): string {
+  if (index === 0) {
+    return 'Used explicit pending and unavailable states.';
+  }
+
+  return `Participant ${index + 1} used a less explicit fallback strategy.`;
+}
+
+function getFallbackBehaviorSummary(index: number): string {
+  if (index === 1) {
+    return 'Handled partial saved rows without crashing the detail view.';
+  }
+
+  return `Participant ${index + 1} prioritized a different fallback shape.`;
 }
 
 export async function createStructuredComparisonFixture(
@@ -42,7 +116,14 @@ export async function createStructuredComparisonFixture(
   });
 
   const participantKeys = buildParticipantKeys(resolved.participantCount);
-  const stageCycle = ['VERIFY', 'PLAN', 'BUILD', 'SPECIFY', 'VERIFY', 'PLAN'] as const;
+  const stageCycle = [
+    'VERIFY',
+    'PLAN',
+    'BUILD',
+    'SPECIFY',
+    'VERIFY',
+    'PLAN',
+  ] as const;
   const participantTickets = await Promise.all(
     participantKeys.map((ticketKey, index) =>
       createTestTicket(projectId, {
@@ -113,25 +194,42 @@ export async function createStructuredComparisonFixture(
           ticketId: ticket.id,
           rank: index + 1,
           score: Math.max(58, 91 - index * 8),
-          workflowTypeAtComparison: index % 3 === 0 ? 'FULL' : index % 3 === 1 ? 'QUICK' : 'CLEAN',
-          rankRationale:
-            index === 0
-              ? 'Strong verify results and concise implementation.'
-              : index === 1
-                ? 'Good direction but less complete test coverage.'
-                : `Participant ${index + 1} required more trade-offs to finish.`,
+          workflowTypeAtComparison: getWorkflowTypeAtComparison(index),
+          rankRationale: getRankRationale(index),
           metricSnapshot: {
             create: {
-              linesAdded: resolved.unavailableMetricTicketIndexes.includes(index) ? null : 20 + index * 18,
-              linesRemoved: resolved.unavailableMetricTicketIndexes.includes(index) ? null : 5 + index * 6,
-              linesChanged: resolved.unavailableMetricTicketIndexes.includes(index) ? null : 25 + index * 24,
-              filesChanged: resolved.unavailableMetricTicketIndexes.includes(index) ? null : 3 + index,
-              testFilesChanged: resolved.unavailableMetricTicketIndexes.includes(index)
+              linesAdded: resolved.unavailableMetricTicketIndexes.includes(
+                index
+              )
                 ? null
-                : Math.max(0, 2 - Math.floor(index / 2)),
-              changedFiles: resolved.unavailableMetricTicketIndexes.includes(index)
+                : 20 + index * 18,
+              linesRemoved: resolved.unavailableMetricTicketIndexes.includes(
+                index
+              )
+                ? null
+                : 5 + index * 6,
+              linesChanged: resolved.unavailableMetricTicketIndexes.includes(
+                index
+              )
+                ? null
+                : 25 + index * 24,
+              filesChanged: resolved.unavailableMetricTicketIndexes.includes(
+                index
+              )
+                ? null
+                : 3 + index,
+              testFilesChanged:
+                resolved.unavailableMetricTicketIndexes.includes(index)
+                  ? null
+                  : Math.max(0, 2 - Math.floor(index / 2)),
+              changedFiles: resolved.unavailableMetricTicketIndexes.includes(
+                index
+              )
                 ? []
-                : [`app/${ticket.ticketKey.toLowerCase()}.ts`, `tests/${ticket.ticketKey.toLowerCase()}.test.ts`],
+                : [
+                    `app/${ticket.ticketKey.toLowerCase()}.ts`,
+                    `tests/${ticket.ticketKey.toLowerCase()}.test.ts`,
+                  ],
               bestValueFlags: {
                 linesChanged: index === 0,
                 filesChanged: index === 0,
@@ -139,24 +237,20 @@ export async function createStructuredComparisonFixture(
               },
             },
           },
-          complianceAssessments: resolved.missingComplianceTicketIndexes.includes(index)
-            ? undefined
-            : {
-                create: [
-                  {
-                    principleKey: 'typescript-first-development',
-                    principleName: 'TypeScript-First Development',
-                    status: index === 0 ? 'pass' : index === 1 ? 'mixed' : 'fail',
-                    notes:
-                      index === 0
-                        ? 'Strict types retained.'
-                        : index === 1
-                          ? 'Some typing gaps remain.'
-                          : 'Missing strict types in key workflow paths.',
-                    displayOrder: 0,
-                  },
-                ],
-              },
+          complianceAssessments:
+            resolved.missingComplianceTicketIndexes.includes(index)
+              ? undefined
+              : {
+                  create: [
+                    {
+                      principleKey: 'typescript-first-development',
+                      principleName: 'TypeScript-First Development',
+                      status: getComplianceStatus(index),
+                      notes: getComplianceNotes(index),
+                      displayOrder: 0,
+                    },
+                  ],
+                },
         })),
       },
       decisionPoints: {
@@ -169,10 +263,7 @@ export async function createStructuredComparisonFixture(
             participantApproaches: participantTickets.map((ticket, index) => ({
               ticketId: ticket.id,
               ticketKey: ticket.ticketKey,
-              summary:
-                index === 0
-                  ? 'Used explicit pending and unavailable states.'
-                  : `Participant ${index + 1} used a less explicit fallback strategy.`,
+              summary: getStateHandlingSummary(index),
             })),
             displayOrder: 0,
           },
@@ -180,14 +271,12 @@ export async function createStructuredComparisonFixture(
             title: 'Fallback behavior',
             verdictTicketId: otherTicket.id,
             verdictSummary: `${otherTicket.ticketKey} kept legacy rows readable without extra synthesis.`,
-            rationale: 'The follow-up implementation guarded sparse historical payloads.',
+            rationale:
+              'The follow-up implementation guarded sparse historical payloads.',
             participantApproaches: participantTickets.map((ticket, index) => ({
               ticketId: ticket.id,
               ticketKey: ticket.ticketKey,
-              summary:
-                index === 1
-                  ? 'Handled partial saved rows without crashing the detail view.'
-                  : `Participant ${index + 1} prioritized a different fallback shape.`,
+              summary: getFallbackBehaviorSummary(index),
             })),
             displayOrder: 1,
           },
@@ -205,7 +294,10 @@ export async function createStructuredComparisonFixture(
   };
 }
 
-export function createWorkflowComparisonReportFixture(sourceTicketKey: string, comparedTickets: string[]) {
+export function createWorkflowComparisonReportFixture(
+  sourceTicketKey: string,
+  comparedTickets: string[]
+) {
   return createComparisonReport(
     sourceTicketKey,
     comparedTickets,
@@ -261,7 +353,8 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
         title: 'Persistence source of truth',
         verdictTicketKey: comparedTickets[0] ?? null,
         verdictSummary: `${comparedTickets[0]} persists structured decision points directly.`,
-        rationale: 'It keeps saved decision points aligned with the generated comparison output.',
+        rationale:
+          'It keeps saved decision points aligned with the generated comparison output.',
         participantApproaches: comparedTickets.map((ticketKey, index) => ({
           ticketKey,
           summary:
@@ -273,11 +366,14 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
       {
         title: 'Historical comparison compatibility',
         verdictTicketKey: null,
-        verdictSummary: 'Historical rows stay readable even when structured data is sparse.',
-        rationale: 'The route should preserve saved comparisons with partial structured fields.',
+        verdictSummary:
+          'Historical rows stay readable even when structured data is sparse.',
+        rationale:
+          'The route should preserve saved comparisons with partial structured fields.',
         participantApproaches: comparedTickets.map((ticketKey) => ({
           ticketKey,
-          summary: 'Keeps fallback rendering stable for older saved comparisons.',
+          summary:
+            'Keeps fallback rendering stable for older saved comparisons.',
         })),
       },
     ],
@@ -291,9 +387,16 @@ export function createComparisonPersistenceFixture(
   comparedTickets: string[],
   branch: string = sourceTicketKey
 ) {
-  const report = createWorkflowComparisonReportFixture(sourceTicketKey, comparedTickets);
+  const report = createWorkflowComparisonReportFixture(
+    sourceTicketKey,
+    comparedTickets
+  );
   const generatedAt = report.metadata.generatedAt;
-  const compareRunKey = createCompareRunKey(sourceTicketKey, comparedTickets, generatedAt);
+  const compareRunKey = createCompareRunKey(
+    sourceTicketKey,
+    comparedTickets,
+    generatedAt
+  );
   const markdownPath = generateReportPath(
     branch,
     `${generatedAt.toISOString().replace(/[:.]/g, '-')}-vs-${comparedTickets.join('-')}.md`
@@ -335,8 +438,7 @@ export function createWorkflowComparisonPayloadFixture(
   return createComparisonPersistenceFixture(
     input.projectId,
     input.sourceTicket.ticketKey,
-    input.participants.map((participant) => participant.ticketKey)
-    ,
+    input.participants.map((participant) => participant.ticketKey),
     input.branch
   );
 }

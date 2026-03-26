@@ -72,6 +72,15 @@ const METRIC_DIRECTIONS: Record<
   jobCount: 'lowest',
 };
 
+function getComparisonRecordWhere(ticketId: number) {
+  return {
+    OR: [
+      { participants: { some: { ticketId } } },
+      { sourceTicketId: ticketId },
+    ],
+  };
+}
+
 function getScoreBand(score: number): ComparisonParticipantDetail['scoreBand'] {
   if (score >= 85) {
     return 'strong';
@@ -173,7 +182,9 @@ function buildMetricRow(
   let bestValues = new Set<number>();
 
   if (availableValues.length > 0 && bestDirection !== 'none') {
-    const numericValues = availableValues.map((entry) => entry.enrichment.value!);
+    const numericValues = availableValues.map(
+      (entry) => entry.enrichment.value!
+    );
     const bestValue =
       bestDirection === 'highest'
         ? Math.max(...numericValues)
@@ -186,23 +197,25 @@ function buildMetricRow(
     );
   }
 
-  const cells: ComparisonDashboardMetricCell[] = participants.map((participant) => {
-    const enrichment = getMetricEnrichment(participant, key);
+  const cells: ComparisonDashboardMetricCell[] = participants.map(
+    (participant) => {
+      const enrichment = getMetricEnrichment(participant, key);
 
-    return {
-      ticketId: participant.ticketId,
-      ticketKey: participant.ticketKey,
-      state: enrichment.state,
-      value: enrichment.value,
-      displayValue: formatMetricValue(key, enrichment),
-      isBest:
-        enrichment.state === 'available' &&
-        enrichment.value != null &&
-        bestValues.has(participant.ticketId),
-      isWinner: participant.ticketId === winnerTicketId,
-      supportsPopover: key === 'qualityScore',
-    };
-  });
+      return {
+        ticketId: participant.ticketId,
+        ticketKey: participant.ticketKey,
+        state: enrichment.state,
+        value: enrichment.value,
+        displayValue: formatMetricValue(key, enrichment),
+        isBest:
+          enrichment.state === 'available' &&
+          enrichment.value != null &&
+          bestValues.has(participant.ticketId),
+        isWinner: participant.ticketId === winnerTicketId,
+        supportsPopover: key === 'qualityScore',
+      };
+    }
+  );
 
   return {
     key,
@@ -258,6 +271,37 @@ function normalizeComplianceRows(
   });
 }
 
+function getDecisionVerdictLabel(
+  verdictTicketId: number | null,
+  winnerTicketId: number,
+  winnerTicketKey: string
+): string {
+  if (verdictTicketId == null) {
+    return 'No verdict';
+  }
+
+  if (verdictTicketId === winnerTicketId) {
+    return `Supports ${winnerTicketKey}`;
+  }
+
+  return 'Diverges from winner';
+}
+
+function getDecisionVerdictAlignment(
+  verdictTicketId: number | null,
+  winnerTicketId: number
+): ComparisonDetail['decisionPoints'][number]['verdictAlignment'] {
+  if (verdictTicketId == null) {
+    return 'neutral';
+  }
+
+  if (verdictTicketId === winnerTicketId) {
+    return 'supports-winner';
+  }
+
+  return 'diverges-from-winner';
+}
+
 function normalizeDecisionVerdicts(
   decisionPoints: ComparisonDetail['decisionPoints'],
   winnerTicketId: number,
@@ -265,18 +309,15 @@ function normalizeDecisionVerdicts(
 ): ComparisonDetail['decisionPoints'] {
   return decisionPoints.map((point) => ({
     ...point,
-    verdictLabel:
-      point.verdictTicketId == null
-        ? 'No verdict'
-        : point.verdictTicketId === winnerTicketId
-          ? `Supports ${winnerTicketKey}`
-          : 'Diverges from winner',
-    verdictAlignment:
-      point.verdictTicketId == null
-        ? 'neutral'
-        : point.verdictTicketId === winnerTicketId
-          ? 'supports-winner'
-          : 'diverges-from-winner',
+    verdictLabel: getDecisionVerdictLabel(
+      point.verdictTicketId,
+      winnerTicketId,
+      winnerTicketKey
+    ),
+    verdictAlignment: getDecisionVerdictAlignment(
+      point.verdictTicketId,
+      winnerTicketId
+    ),
   }));
 }
 
@@ -291,12 +332,18 @@ function normalizeDashboardDetail(detail: ComparisonDetail): ComparisonDetail {
     detail.winnerTicketId,
     detail.winnerTicketKey
   );
-  const complianceRows = normalizeComplianceRows(detail.complianceRows, participants);
+  const complianceRows = normalizeComplianceRows(
+    detail.complianceRows,
+    participants
+  );
 
   return {
     ...detail,
     participants,
-    headlineMetrics: normalizeHeadlineMetrics(participants, detail.winnerTicketId),
+    headlineMetrics: normalizeHeadlineMetrics(
+      participants,
+      detail.winnerTicketId
+    ),
     metricMatrix: normalizeMetricMatrix(participants, detail.winnerTicketId),
     decisionPoints,
     complianceRows,
@@ -313,12 +360,7 @@ export async function listTicketComparisons(
 }> {
   const [records, total] = await prisma.$transaction([
     prisma.comparisonRecord.findMany({
-      where: {
-        OR: [
-          { participants: { some: { ticketId } } },
-          { sourceTicketId: ticketId },
-        ],
-      },
+      where: getComparisonRecordWhere(ticketId),
       orderBy: {
         generatedAt: 'desc',
       },
@@ -349,12 +391,7 @@ export async function listTicketComparisons(
       },
     }),
     prisma.comparisonRecord.count({
-      where: {
-        OR: [
-          { participants: { some: { ticketId } } },
-          { sourceTicketId: ticketId },
-        ],
-      },
+      where: getComparisonRecordWhere(ticketId),
     }),
   ]);
 
@@ -371,12 +408,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
   latestComparisonId: number | null;
 }> {
   const records = await prisma.comparisonRecord.findMany({
-    where: {
-      OR: [
-        { participants: { some: { ticketId } } },
-        { sourceTicketId: ticketId },
-      ],
-    },
+    where: getComparisonRecordWhere(ticketId),
     select: {
       id: true,
       generatedAt: true,
@@ -417,7 +449,9 @@ function deriveQualityBreakdown(
 ): ComparisonEnrichmentValue<QualityScoreDetails> {
   if (latestVerifyJob?.qualityScoreDetails) {
     try {
-      const parsed = JSON.parse(latestVerifyJob.qualityScoreDetails) as QualityScoreDetails;
+      const parsed = JSON.parse(
+        latestVerifyJob.qualityScoreDetails
+      ) as QualityScoreDetails;
       if (parsed.dimensions && parsed.threshold) {
         return createAvailableEnrichment(parsed);
       }
@@ -440,10 +474,7 @@ export async function getComparisonDetailForTicket(
   const record = await prisma.comparisonRecord.findFirst({
     where: {
       id: comparisonId,
-      OR: [
-        { participants: { some: { ticketId } } },
-        { sourceTicketId: ticketId },
-      ],
+      ...getComparisonRecordWhere(ticketId),
     },
     include: {
       sourceTicket: {
@@ -484,72 +515,79 @@ export async function getComparisonDetailForTicket(
     return null;
   }
 
-  const participantIds = record.participants.map((participant) => participant.ticketId);
-  const [completedJobs, inProgressJobs, latestVerifyJobs, complianceRows] = await Promise.all([
-    prisma.job.findMany({
-      where: {
-        ticketId: { in: participantIds },
-        status: 'COMPLETED',
-      },
-      select: {
-        ticketId: true,
-        inputTokens: true,
-        outputTokens: true,
-        durationMs: true,
-        costUsd: true,
-        model: true,
-      },
-    }),
-    prisma.job.findMany({
-      where: {
-        ticketId: { in: participantIds },
-        status: { in: ['PENDING', 'RUNNING'] },
-      },
-      select: {
-        ticketId: true,
-      },
-    }),
-    prisma.job.findMany({
-      where: {
-        ticketId: { in: participantIds },
-        command: 'verify',
-      },
-      orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
-      distinct: ['ticketId'],
-      select: {
-        ticketId: true,
-        qualityScore: true,
-        qualityScoreDetails: true,
-      },
-    }),
-    prisma.complianceAssessment.findMany({
-      where: {
-        comparisonParticipant: {
-          comparisonRecordId: comparisonId,
+  const participantIds = record.participants.map(
+    (participant) => participant.ticketId
+  );
+  const [completedJobs, inProgressJobs, latestVerifyJobs, complianceRows] =
+    await Promise.all([
+      prisma.job.findMany({
+        where: {
+          ticketId: { in: participantIds },
+          status: 'COMPLETED',
         },
-      },
-      orderBy: [{ displayOrder: 'asc' }, { principleName: 'asc' }],
-      include: {
-        comparisonParticipant: {
-          select: {
-            ticketId: true,
-            ticket: {
-              select: {
-                ticketKey: true,
+        select: {
+          ticketId: true,
+          inputTokens: true,
+          outputTokens: true,
+          durationMs: true,
+          costUsd: true,
+          model: true,
+        },
+      }),
+      prisma.job.findMany({
+        where: {
+          ticketId: { in: participantIds },
+          status: { in: ['PENDING', 'RUNNING'] },
+        },
+        select: {
+          ticketId: true,
+        },
+      }),
+      prisma.job.findMany({
+        where: {
+          ticketId: { in: participantIds },
+          command: 'verify',
+        },
+        orderBy: [{ completedAt: 'desc' }, { startedAt: 'desc' }],
+        distinct: ['ticketId'],
+        select: {
+          ticketId: true,
+          qualityScore: true,
+          qualityScoreDetails: true,
+        },
+      }),
+      prisma.complianceAssessment.findMany({
+        where: {
+          comparisonParticipant: {
+            comparisonRecordId: comparisonId,
+          },
+        },
+        orderBy: [{ displayOrder: 'asc' }, { principleName: 'asc' }],
+        include: {
+          comparisonParticipant: {
+            select: {
+              ticketId: true,
+              ticket: {
+                select: {
+                  ticketKey: true,
+                },
               },
             },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
   const aggregatedTelemetry = aggregateJobTelemetry(completedJobs);
-  const inProgressTicketIds = new Set(inProgressJobs.map((job) => job.ticketId));
+  const inProgressTicketIds = new Set(
+    inProgressJobs.map((job) => job.ticketId)
+  );
   const latestVerifyJobByTicketId = new Map(
     latestVerifyJobs.map((job) => [job.ticketId, job])
   );
-  const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
+  const verifyJobTicketIds = new Set(
+    latestVerifyJobs.map((job) => job.ticketId)
+  );
 
   const participants = record.participants.map((participant) =>
     normalizeParticipantDetail({
@@ -603,14 +641,14 @@ export async function getComparisonDetailForTicket(
 
   return normalizeDashboardDetail(
     buildComparisonDetail({
-    record,
-    participants,
-    decisionPoints: normalizeDecisionPoints(record.decisionPoints).sort(
-      (a, b) => a.displayOrder - b.displayOrder
-    ),
-    complianceRows: [...groupedCompliance.values()].sort(
-      (a, b) => a.displayOrder - b.displayOrder
-    ),
+      record,
+      participants,
+      decisionPoints: normalizeDecisionPoints(record.decisionPoints).sort(
+        (a, b) => a.displayOrder - b.displayOrder
+      ),
+      complianceRows: [...groupedCompliance.values()].sort(
+        (a, b) => a.displayOrder - b.displayOrder
+      ),
     })
   );
 }

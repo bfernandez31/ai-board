@@ -23,6 +23,21 @@ function getQualityLabel(score: number | null): string {
   return `${score} Poor`;
 }
 
+function formatFallbackMetricValue(
+  state: ComparisonDashboardMetricRow['cells'][number]['state'],
+  value: number | null
+): string {
+  if (state === 'available' && value != null) {
+    return value.toLocaleString();
+  }
+
+  if (state === 'pending') {
+    return 'Pending';
+  }
+
+  return 'Unavailable';
+}
+
 function getFallbackRows({
   participants,
 }: OperationalMetricsProps): ComparisonDashboardMetricRow[] {
@@ -37,13 +52,10 @@ function getFallbackRows({
         ticketKey: participant.ticketKey,
         state: participant.telemetry.totalTokens.state,
         value: participant.telemetry.totalTokens.value,
-        displayValue:
-          participant.telemetry.totalTokens.state === 'available' &&
-          participant.telemetry.totalTokens.value != null
-            ? participant.telemetry.totalTokens.value.toLocaleString()
-            : participant.telemetry.totalTokens.state === 'pending'
-              ? 'Pending'
-              : 'Unavailable',
+        displayValue: formatFallbackMetricValue(
+          participant.telemetry.totalTokens.state,
+          participant.telemetry.totalTokens.value
+        ),
         isBest: false,
         isWinner: participant.isWinner,
         supportsPopover: false,
@@ -56,7 +68,13 @@ export function ComparisonOperationalMetrics({
   participants,
   metricRows,
 }: OperationalMetricsProps) {
-  const rows = metricRows && metricRows.length > 0 ? metricRows : getFallbackRows({ participants });
+  const rows =
+    metricRows && metricRows.length > 0
+      ? metricRows
+      : getFallbackRows({ participants });
+  const participantsByTicketId = new Map(
+    participants.map((participant) => [participant.ticketId, participant])
+  );
 
   return (
     <Card>
@@ -82,17 +100,21 @@ export function ComparisonOperationalMetrics({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={`${row.category}-${row.key}`} className="border-b border-border last:border-0">
+              <tr
+                key={`${row.category}-${row.key}`}
+                className="border-b border-border last:border-0"
+              >
                 <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-foreground">
                   {row.label}
                 </td>
                 {row.cells.map((cell) => {
-                  const participant = participants.find(
-                    (entry) => entry.ticketId === cell.ticketId
-                  );
+                  const participant = participantsByTicketId.get(cell.ticketId);
 
                   return (
-                    <td key={cell.ticketId} className="px-3 py-2 align-top text-foreground">
+                    <td
+                      key={cell.ticketId}
+                      className="px-3 py-2 align-top text-foreground"
+                    >
                       <div className="flex min-w-[140px] flex-col gap-2">
                         {cell.supportsPopover && participant ? (
                           <ComparisonQualityPopover
@@ -104,8 +126,12 @@ export function ComparisonOperationalMetrics({
                           <span>{cell.displayValue}</span>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          {cell.isWinner ? <Badge variant="outline">Winner</Badge> : null}
-                          {cell.isBest ? <Badge variant="secondary">Best</Badge> : null}
+                          {cell.isWinner ? (
+                            <Badge variant="outline">Winner</Badge>
+                          ) : null}
+                          {cell.isBest ? (
+                            <Badge variant="secondary">Best</Badge>
+                          ) : null}
                           {cell.state !== 'available' ? (
                             <Badge variant="outline">{cell.state}</Badge>
                           ) : null}
