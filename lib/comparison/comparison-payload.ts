@@ -108,12 +108,7 @@ function copyImplementationMetrics(
   return Object.fromEntries(
     Object.entries(implementation).map(([ticketKey, metrics]) => [
       ticketKey,
-      {
-        ...metrics,
-        ...(metrics.testCoverage !== undefined
-          ? { testCoverage: metrics.testCoverage }
-          : {}),
-      },
+      { ...metrics },
     ])
   );
 }
