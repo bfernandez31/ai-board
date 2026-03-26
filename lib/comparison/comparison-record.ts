@@ -149,7 +149,7 @@ function buildDecisionPoints(
     ? report.alignment.matchingRequirements
     : [];
 
-  const points = (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
+  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
     (title, index) => ({
       title,
       verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
@@ -166,8 +166,6 @@ function buildDecisionPoints(
       displayOrder: index,
     })
   );
-
-  return points;
 }
 
 function buildComplianceCreates(
@@ -175,7 +173,7 @@ function buildComplianceCreates(
   participantTicketKey: string
 ): Prisma.ComplianceAssessmentUncheckedCreateWithoutComparisonParticipantInput[] {
   const compliance = report.compliance[participantTicketKey];
-  const principles =
+  return (
     compliance?.principles.map((principle, index) => ({
       principleKey: createPrincipleKey(principle.name),
       principleName: principle.name,
@@ -189,9 +187,8 @@ function buildComplianceCreates(
       status: 'mixed',
       notes: 'No saved assessment for this principle.',
       displayOrder: index,
-    }));
-
-  return principles;
+    }))
+  );
 }
 
 export function createComparisonRecordInput(
@@ -428,18 +425,14 @@ export function normalizeTelemetryEnrichment(
   hasInProgressJobs?: boolean
 ): ComparisonTelemetryEnrichment {
   if (!aggregated || aggregated.jobCount === 0) {
-    const state = hasInProgressJobs
-      ? () => createPendingEnrichment<number>()
-      : () => createUnavailableEnrichment<number>();
+    const createNumeric = hasInProgressJobs ? createPendingEnrichment<number> : createUnavailableEnrichment<number>;
     return {
-      inputTokens: state(),
-      outputTokens: state(),
-      totalTokens: state(),
-      durationMs: state(),
-      costUsd: state(),
-      jobCount: hasInProgressJobs
-        ? createPendingEnrichment<number>()
-        : createUnavailableEnrichment<number>(),
+      inputTokens: createNumeric(),
+      outputTokens: createNumeric(),
+      totalTokens: createNumeric(),
+      durationMs: createNumeric(),
+      costUsd: createNumeric(),
+      jobCount: createNumeric(),
       primaryModel: hasInProgressJobs
         ? createPendingEnrichment<string>()
         : createUnavailableEnrichment<string>(),
