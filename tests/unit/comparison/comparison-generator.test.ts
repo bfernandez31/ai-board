@@ -72,7 +72,25 @@ describe('comparison-generator artifacts', () => {
         },
       },
       {},
-      'Ship AIB-325.'
+      'Ship AIB-325.',
+      [
+        {
+          title: 'Persistence source of truth',
+          verdictTicketKey: 'AIB-325',
+          verdictSummary: 'AIB-325 persists the generated decision-point structure.',
+          rationale: 'Markdown and JSON should describe the same ordered decisions.',
+          participantApproaches: [
+            {
+              ticketKey: 'AIB-325',
+              summary: 'Maps structured decision points directly into saved rows.',
+            },
+            {
+              ticketKey: 'AIB-327',
+              summary: 'Keeps the decision more implicit in recommendation text.',
+            },
+          ],
+        },
+      ]
     );
 
     const artifacts = await persistGeneratedComparisonArtifacts({
@@ -115,7 +133,10 @@ describe('comparison-generator artifacts', () => {
     );
     expect(artifacts.compareRunKey).toContain('cmp_');
     expect(artifacts.markdown).toContain('# Comparison Report');
+    expect(artifacts.markdown).toContain('## Decision Points');
+    expect(artifacts.markdown).toContain('Persistence source of truth');
     expect(artifacts.requestPayload.markdownPath).toBe(artifacts.markdownPath);
     expect(artifacts.requestPayload.report.metadata.filePath).toBe(artifacts.markdownPath);
+    expect(artifacts.requestPayload.report.decisionPoints).toEqual(report.decisionPoints);
   });
 });

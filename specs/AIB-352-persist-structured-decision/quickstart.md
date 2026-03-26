@@ -29,6 +29,7 @@ Save decision-point-specific comparison content for new comparisons while keepin
 5. Update `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts`
    - Keep route validation aligned with the expanded payload contract.
    - Preserve existing authorization and idempotency behavior.
+   - Reject decision-point ticket references that fall outside the compared participant set.
 
 6. Extend tests
    - `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts`
@@ -39,8 +40,8 @@ Save decision-point-specific comparison content for new comparisons while keepin
 
 ## Validation Flow
 
-1. Run `bun run test:unit -- comparison-payload comparison-record`
-2. Run `bun run test:integration -- comparisons`
+1. Run `bun run test:unit -- comparison-payload comparison-record comparison-generator comparison-dashboard-sections markdown-table-rendering`
+2. Run `bun run test:integration -- comparison-persistence comparison-detail-route comparison-history-persistence comparison-dashboard-api`
 3. Run `bun run type-check`
 4. Run `bun run lint`
 

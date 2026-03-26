@@ -74,6 +74,36 @@ const report: ComparisonReport = {
   },
   telemetry: {},
   recommendation: 'Pick AIB-2.',
+  decisionPoints: [
+    {
+      title: 'Persistence source of truth',
+      verdictTicketKey: 'AIB-2',
+      verdictSummary: 'AIB-2 persists the generated decision-point structure.',
+      rationale: 'It saves verdicts and rationale directly from the comparison report.',
+      participantApproaches: [
+        {
+          ticketKey: 'AIB-2',
+          summary: 'Maps the structured report directly to saved rows.',
+        },
+        {
+          ticketKey: 'AIB-3',
+          summary: 'Relies on coarser report-level summaries.',
+        },
+      ],
+    },
+    {
+      title: 'Historical compatibility',
+      verdictTicketKey: null,
+      verdictSummary: 'Both paths preserve readability for older comparisons.',
+      rationale: 'The read path remains tolerant of sparse saved rows.',
+      participantApproaches: [
+        {
+          ticketKey: 'AIB-2',
+          summary: 'Keeps new writes structured and old reads untouched.',
+        },
+      ],
+    },
+  ],
   warnings: [],
 };
 
@@ -124,6 +154,88 @@ describe('comparison-record helpers', () => {
       rank: 1,
       score: 92,
     });
+    expect(input.decisionPoints?.create).toEqual([
+      {
+        title: 'Persistence source of truth',
+        verdictTicketId: 2,
+        verdictSummary: 'AIB-2 persists the generated decision-point structure.',
+        rationale: 'It saves verdicts and rationale directly from the comparison report.',
+        participantApproaches: [
+          { ticketId: 2, ticketKey: 'AIB-2', summary: 'Maps the structured report directly to saved rows.' },
+          { ticketId: 3, ticketKey: 'AIB-3', summary: 'Relies on coarser report-level summaries.' },
+        ],
+        displayOrder: 0,
+      },
+      {
+        title: 'Historical compatibility',
+        verdictTicketId: null,
+        verdictSummary: 'Both paths preserve readability for older comparisons.',
+        rationale: 'The read path remains tolerant of sparse saved rows.',
+        participantApproaches: [
+          { ticketId: 2, ticketKey: 'AIB-2', summary: 'Keeps new writes structured and old reads untouched.' },
+        ],
+        displayOrder: 1,
+      },
+    ]);
+  });
+
+  it('preserves sparse participant approaches instead of fabricating them', () => {
+    const input = createComparisonRecordInput({
+      projectId: 1,
+      sourceTicket: {
+        id: 1,
+        ticketKey: 'AIB-1',
+        title: 'Source',
+        stage: 'BUILD',
+        workflowType: 'FULL',
+        agent: null,
+      },
+      participants: [
+        {
+          id: 2,
+          ticketKey: 'AIB-2',
+          title: 'Winner',
+          stage: 'VERIFY',
+          workflowType: 'FULL',
+          agent: null,
+        },
+        {
+          id: 3,
+          ticketKey: 'AIB-3',
+          title: 'Runner up',
+          stage: 'PLAN',
+          workflowType: 'FULL',
+          agent: null,
+        },
+      ],
+      compareRunKey: 'cmp_existing_run',
+      markdownPath: 'specs/feature/comparisons/test.md',
+      report: {
+        ...report,
+        decisionPoints: [
+          {
+            title: 'Sparse approaches',
+            verdictTicketKey: 'AIB-2',
+            verdictSummary: 'Only one approach was generated.',
+            rationale: 'The generator did not fabricate a second participant summary.',
+            participantApproaches: [{ ticketKey: 'AIB-3', summary: 'Only runner-up detail exists.' }],
+          },
+        ],
+      },
+    });
+
+    expect(input.decisionPoints?.create).toEqual([
+      {
+        title: 'Sparse approaches',
+        verdictTicketId: 2,
+        verdictSummary: 'Only one approach was generated.',
+        rationale: 'The generator did not fabricate a second participant summary.',
+        participantApproaches: [
+          { ticketId: 3, ticketKey: 'AIB-3', summary: 'Only runner-up detail exists.' },
+        ],
+        displayOrder: 0,
+      },
+    ]);
   });
 
   it('builds available, pending, and unavailable enrichment states', () => {
@@ -207,6 +319,7 @@ describe('comparison-record helpers', () => {
         implementation: {
           'AIB-2': report.implementation['AIB-2'],
         },
+        decisionPoints: [],
       },
     });
 

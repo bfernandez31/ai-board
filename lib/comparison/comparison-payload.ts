@@ -57,6 +57,35 @@ const telemetrySchema = z.object({
   hasData: z.boolean().default(false),
 });
 
+const decisionPointApproachSchema = z.object({
+  ticketKey: z.string().min(1),
+  summary: z.string(),
+});
+
+const decisionPointSchema = z
+  .object({
+    title: z.string().min(1),
+    verdictTicketKey: z.string().min(1).nullable().default(null),
+    verdictSummary: z.string(),
+    rationale: z.string(),
+    participantApproaches: z.array(decisionPointApproachSchema).default([]),
+  })
+  .superRefine((point, ctx) => {
+    const participantKeys = new Set<string>();
+
+    for (const [index, approach] of point.participantApproaches.entries()) {
+      if (participantKeys.has(approach.ticketKey)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['participantApproaches', index, 'ticketKey'],
+          message: 'Duplicate participant ticket keys are not allowed within a decision point',
+        });
+      }
+
+      participantKeys.add(approach.ticketKey);
+    }
+  });
+
 export const serializedComparisonReportSchema = z.object({
   metadata: reportMetadataSchema,
   summary: z.string(),
@@ -76,7 +105,30 @@ export const serializedComparisonReportSchema = z.object({
   compliance: z.record(z.string(), complianceScoreSchema),
   telemetry: z.record(z.string(), telemetrySchema).default({}),
   recommendation: z.string().default(''),
+  decisionPoints: z.array(decisionPointSchema).default([]),
   warnings: z.array(z.string()).default([]),
+}).superRefine((report, ctx) => {
+  const comparedTickets = new Set(report.metadata.comparedTickets);
+
+  for (const [index, point] of report.decisionPoints.entries()) {
+    if (point.verdictTicketKey && !comparedTickets.has(point.verdictTicketKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionPoints', index, 'verdictTicketKey'],
+        message: 'Verdict ticket key must match a compared ticket',
+      });
+    }
+
+    for (const [approachIndex, approach] of point.participantApproaches.entries()) {
+      if (!comparedTickets.has(approach.ticketKey)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['decisionPoints', index, 'participantApproaches', approachIndex, 'ticketKey'],
+          message: 'Participant approach ticket key must match a compared ticket',
+        });
+      }
+    }
+  }
 });
 
 export const serializedComparisonPersistenceRequestSchema = z.object({

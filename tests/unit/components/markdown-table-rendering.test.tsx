@@ -68,7 +68,23 @@ vi.mock('@/hooks/use-comparisons', () => ({
           },
         },
       ],
-      decisionPoints: [],
+      decisionPoints: [
+        {
+          id: 1,
+          title: 'Persistence source of truth',
+          verdictTicketId: 1,
+          verdictSummary: 'ABC-123 persists decision-point details directly.',
+          rationale: 'The viewer should show saved decision-specific content.',
+          displayOrder: 0,
+          participantApproaches: [
+            {
+              ticketId: 1,
+              ticketKey: 'ABC-123',
+              summary: 'Maps structured output directly into saved rows.',
+            },
+          ],
+        },
+      ],
       complianceRows: [],
     },
     isLoading: false,
@@ -98,6 +114,8 @@ describe('ComparisonViewer', () => {
     expect(await screen.findByText('Ranking and Recommendation')).toBeInTheDocument();
     expect(screen.getByText('Implementation Metrics')).toBeInTheDocument();
     expect(screen.getByText('Use ABC-123.')).toBeInTheDocument();
+    expect(screen.getByText('Persistence source of truth')).toBeInTheDocument();
+    expect(screen.getByText('ABC-123 persists decision-point details directly.')).toBeInTheDocument();
     expect(screen.getAllByText('Best value').length).toBeGreaterThan(0);
   });
 });

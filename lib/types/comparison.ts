@@ -220,6 +220,31 @@ export interface ComparisonReportMetadata {
   filePath: string;
 }
 
+export interface ComparisonReportDecisionPointApproach {
+  /** Ticket key for this approach */
+  ticketKey: string;
+
+  /** Decision-specific summary for the ticket */
+  summary: string;
+}
+
+export interface ComparisonReportDecisionPoint {
+  /** Human-readable decision point title */
+  title: string;
+
+  /** Preferred ticket for this decision point */
+  verdictTicketKey: string | null;
+
+  /** Decision-specific verdict summary */
+  verdictSummary: string;
+
+  /** Decision-specific rationale */
+  rationale: string;
+
+  /** Ordered per-ticket approaches */
+  participantApproaches: ComparisonReportDecisionPointApproach[];
+}
+
 /**
  * ComparisonReport
  *
@@ -246,6 +271,9 @@ export interface ComparisonReport {
 
   /** AI-generated recommendation */
   recommendation: string;
+
+  /** Ordered structured decision points */
+  decisionPoints: ComparisonReportDecisionPoint[];
 
   /** Warnings (e.g., low alignment, missing data) */
   warnings: string[];

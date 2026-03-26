@@ -1,5 +1,6 @@
 import type {
   ComparisonReport,
+  ComparisonReportDecisionPoint,
   ComparisonReportMetadata,
   FeatureAlignmentScore,
   ImplementationMetrics,
@@ -315,8 +316,46 @@ function generateRecommendationSection(recommendation: string): string {
   return `## Recommendation\n\n${recommendation}\n\n`;
 }
 
+function generateDecisionPointsSection(
+  decisionPoints: ComparisonReportDecisionPoint[]
+): string {
+  if (decisionPoints.length === 0) {
+    return `## Decision Points\n\nNo structured decision points were generated.\n`;
+  }
+
+  let section = `## Decision Points\n\n`;
+
+  for (const [index, point] of decisionPoints.entries()) {
+    section += `### ${index + 1}. ${point.title}\n\n`;
+    section += `**Verdict**: ${point.verdictSummary}\n\n`;
+    section += `${point.rationale}\n\n`;
+
+    if (point.participantApproaches.length > 0) {
+      section += `| Ticket | Approach |\n`;
+      section += `|--------|----------|\n`;
+
+      for (const approach of point.participantApproaches) {
+        section += `| ${approach.ticketKey} | ${approach.summary} |\n`;
+      }
+
+      section += '\n';
+    }
+  }
+
+  return section;
+}
+
 export function generateReportMarkdown(report: ComparisonReport): string {
-  const { metadata, alignment, implementation, compliance, telemetry, recommendation, warnings } = report;
+  const {
+    metadata,
+    alignment,
+    implementation,
+    compliance,
+    telemetry,
+    recommendation,
+    decisionPoints,
+    warnings,
+  } = report;
 
   let markdown = '';
 
@@ -349,6 +388,9 @@ export function generateReportMarkdown(report: ComparisonReport): string {
   markdown += generateComplianceSection(compliance);
   markdown += '\n---\n\n';
 
+  markdown += generateDecisionPointsSection(decisionPoints);
+  markdown += '\n---\n\n';
+
   markdown += generateTelemetrySection(telemetry);
 
   if (warnings.length > 0) {
@@ -375,6 +417,7 @@ export function createComparisonReport(
   compliance: Record<string, ConstitutionComplianceScore>,
   telemetry: Record<string, TicketTelemetry>,
   recommendation: string = '',
+  decisionPoints: ComparisonReportDecisionPoint[] = [],
   warnings: string[] = []
 ): ComparisonReport {
   const generatedAt = new Date();
@@ -397,6 +440,7 @@ export function createComparisonReport(
     compliance,
     telemetry,
     recommendation,
+    decisionPoints,
     warnings,
   };
 }

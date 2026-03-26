@@ -11,6 +11,7 @@ import type {
   ComparisonEnrichmentValue,
   ComparisonMetricSnapshot,
   ComparisonParticipantDetail,
+  ComparisonReportDecisionPointApproach,
   ComparisonReport,
   ComparisonSummary,
   ComparisonTelemetryEnrichment,
@@ -140,32 +141,44 @@ function buildBestValueFlags(metrics: ComparisonReport['implementation']): Recor
   );
 }
 
+function buildDecisionPointApproaches(
+  participantApproaches: ComparisonReportDecisionPointApproach[],
+  ticketKeyToId: Map<string, number>
+) {
+  return participantApproaches.flatMap((approach) => {
+    const ticketId = ticketKeyToId.get(approach.ticketKey);
+    if (!ticketId) {
+      return [];
+    }
+
+    return [
+      {
+        ticketId,
+        ticketKey: approach.ticketKey,
+        summary: approach.summary,
+      },
+    ];
+  });
+}
+
 function buildDecisionPoints(
   report: ComparisonReport,
   ticketKeyToId: Map<string, number>
 ): Prisma.DecisionPointEvaluationUncheckedCreateWithoutComparisonRecordInput[] {
-  const winnerTicketKey = getWinnerTicketKey(report);
-  const differentiators = Array.isArray(report.alignment.matchingRequirements)
-    ? report.alignment.matchingRequirements
-    : [];
-
-  return (differentiators.length > 0 ? differentiators : ['Overall recommendation']).map(
-    (title, index) => ({
-      title,
-      verdictTicketId: ticketKeyToId.get(winnerTicketKey) ?? null,
-      verdictSummary: report.recommendation || report.summary || 'See saved summary',
-      rationale: report.summary || 'Derived from the saved comparison report.',
-      participantApproaches: report.metadata.comparedTickets.map((ticketKey) => ({
-        ticketId: ticketKeyToId.get(ticketKey),
-        ticketKey,
-        summary:
-          report.implementation[ticketKey]?.hasData
-            ? `${report.implementation[ticketKey]?.filesChanged ?? 0} files changed`
-            : 'Metrics unavailable',
-      })),
-      displayOrder: index,
-    })
-  );
+  return report.decisionPoints.map((point, index) => ({
+    title: point.title,
+    verdictTicketId:
+      point.verdictTicketKey != null
+        ? ticketKeyToId.get(point.verdictTicketKey) ?? null
+        : null,
+    verdictSummary: point.verdictSummary,
+    rationale: point.rationale,
+    participantApproaches: buildDecisionPointApproaches(
+      point.participantApproaches,
+      ticketKeyToId
+    ),
+    displayOrder: index,
+  }));
 }
 
 function buildComplianceCreates(

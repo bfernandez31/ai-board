@@ -16,7 +16,7 @@
 
 **Purpose**: Prepare reusable comparison fixtures so all phases can exercise enriched and legacy decision-point payloads without duplicating setup.
 
-- [ ] T001 Extend shared structured and legacy comparison payload builders in `/home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts`
+- [X] T001 Extend shared structured and legacy comparison payload builders in `/home/runner/work/ai-board/ai-board/target/tests/helpers/comparison-fixtures.ts`
 
 ---
 
@@ -26,9 +26,9 @@
 
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
-- [ ] T002 Extend comparison report types with structured decision-point interfaces in `/home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts`
-- [ ] T003 [P] Add Zod schemas and normalization for `report.decisionPoints` in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-payload.ts`
-- [ ] T004 Align workflow POST validation with the expanded report contract in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts`
+- [X] T002 Extend comparison report types with structured decision-point interfaces in `/home/runner/work/ai-board/ai-board/target/lib/types/comparison.ts`
+- [X] T003 [P] Add Zod schemas and normalization for `report.decisionPoints` in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-payload.ts`
+- [X] T004 Align workflow POST validation with the expanded report contract in `/home/runner/work/ai-board/ai-board/target/app/api/projects/[projectId]/tickets/[id]/comparisons/route.ts`
 
 **Checkpoint**: Shared contracts, fixtures, and route validation are ready. User story work can now proceed in priority order or in parallel where file ownership stays separate.
 
@@ -42,16 +42,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Extend structured persistence regression coverage for multi-decision comparisons in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts`
-- [ ] T006 [P] [US1] Extend comparison detail API assertions for ordered decision-specific content in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T007 [P] [US1] Extend decision-point accordion rendering assertions for unique saved content in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx`
-- [ ] T008 [P] [US1] Extend structured decision-point persistence mapping coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts`
+- [X] T005 [P] [US1] Extend structured persistence regression coverage for multi-decision comparisons in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts`
+- [X] T006 [P] [US1] Extend comparison detail API assertions for ordered decision-specific content in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts`
+- [X] T007 [P] [US1] Extend decision-point accordion rendering assertions for unique saved content in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx`
+- [X] T008 [P] [US1] Extend structured decision-point persistence mapping coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-record.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Replace new-comparison decision-point fallback synthesis with direct structured persistence mapping in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts`
-- [ ] T010 [US1] Preserve saved decision-point ordering and participant approach hydration in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts`
-- [ ] T011 [US1] Render distinct saved decision-point verdicts, rationales, and participant approaches in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx`
+- [X] T009 [US1] Replace new-comparison decision-point fallback synthesis with direct structured persistence mapping in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts`
+- [X] T010 [US1] Preserve saved decision-point ordering and participant approach hydration in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-detail.ts`
+- [X] T011 [US1] Render distinct saved decision-point verdicts, rationales, and participant approaches in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx`
 
 **Checkpoint**: User Story 1 is complete when newly saved comparisons show distinct decision-point content throughout persistence, detail retrieval, and dialog rendering.
 
@@ -65,13 +65,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Add legacy comparison detail-route regression coverage for fallback decision points in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts`
-- [ ] T013 [P] [US2] Add empty and partial legacy decision-point rendering coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx`
+- [X] T012 [P] [US2] Add legacy comparison detail-route regression coverage for fallback decision points in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-detail-route.test.ts`
+- [X] T013 [P] [US2] Add empty and partial legacy decision-point rendering coverage in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/comparison-dashboard-sections.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Keep legacy decision-point normalization tolerant of sparse saved rows in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts`
-- [ ] T015 [US2] Preserve fallback and empty-state rendering for historical comparisons in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx`
+- [X] T014 [US2] Keep legacy decision-point normalization tolerant of sparse saved rows in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-record.ts`
+- [X] T015 [US2] Preserve fallback and empty-state rendering for historical comparisons in `/home/runner/work/ai-board/ai-board/target/components/comparison/comparison-decision-points.tsx`
 
 **Checkpoint**: User Story 2 is complete when pre-feature comparison records remain viewable and keep their existing fallback semantics unchanged.
 
@@ -85,14 +85,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T016 [P] [US3] Extend payload normalization coverage for structured decision-point contracts in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts`
-- [ ] T017 [P] [US3] Extend markdown/report generation coverage for ordered decision points in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-generator.test.ts`
-- [ ] T018 [P] [US3] Extend persistence integration coverage for saved decision-point count and order in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts`
+- [X] T016 [P] [US3] Extend payload normalization coverage for structured decision-point contracts in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-payload.test.ts`
+- [X] T017 [P] [US3] Extend markdown/report generation coverage for ordered decision points in `/home/runner/work/ai-board/ai-board/target/tests/unit/comparison/comparison-generator.test.ts`
+- [X] T018 [P] [US3] Extend persistence integration coverage for saved decision-point count and order in `/home/runner/work/ai-board/ai-board/target/tests/integration/comparisons/comparison-persistence.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Generate markdown and serialized report output from shared structured decision points in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts`
-- [ ] T020 [US3] Require structured decision-point JSON output in `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.compare.md`
+- [X] T019 [US3] Generate markdown and serialized report output from shared structured decision points in `/home/runner/work/ai-board/ai-board/target/lib/comparison/comparison-generator.ts`
+- [X] T020 [US3] Require structured decision-point JSON output in `/home/runner/work/ai-board/ai-board/target/.claude-plugin/commands/ai-board.compare.md`
 
 **Checkpoint**: User Story 3 is complete when new comparison runs produce decision-point structure once, render it in markdown, and persist the same ordered content without inventing missing details.
 
@@ -102,8 +102,8 @@
 
 **Purpose**: Close remaining viewer-level regression gaps and keep the feature documentation aligned with the final validation flow.
 
-- [ ] T021 [P] Add viewer-level saved comparison regression coverage for structured decision points in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/markdown-table-rendering.test.tsx`
-- [ ] T022 Update final validation steps and command expectations in `/home/runner/work/ai-board/ai-board/target/specs/AIB-352-persist-structured-decision/quickstart.md`
+- [X] T021 [P] Add viewer-level saved comparison regression coverage for structured decision points in `/home/runner/work/ai-board/ai-board/target/tests/unit/components/markdown-table-rendering.test.tsx`
+- [X] T022 Update final validation steps and command expectations in `/home/runner/work/ai-board/ai-board/target/specs/AIB-352-persist-structured-decision/quickstart.md`
 
 ---
 

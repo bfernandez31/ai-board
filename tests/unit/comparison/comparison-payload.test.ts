@@ -75,7 +75,25 @@ describe('comparison-payload helpers', () => {
       },
     },
     {},
-    'Ship AIB-325.'
+    'Ship AIB-325.',
+    [
+      {
+        title: 'Persistence source of truth',
+        verdictTicketKey: 'AIB-325',
+        verdictSummary: 'AIB-325 persists structured decision-point content.',
+        rationale: 'The saved rows come from report.decisionPoints instead of global fallback fields.',
+        participantApproaches: [
+          {
+            ticketKey: 'AIB-325',
+            summary: 'Maps structured output directly into saved rows.',
+          },
+          {
+            ticketKey: 'AIB-327',
+            summary: 'Keeps more logic in report-level summaries.',
+          },
+        ],
+      },
+    ]
   );
 
   it('serializes and normalizes a comparison persistence payload', () => {
@@ -107,6 +125,7 @@ describe('comparison-payload helpers', () => {
     expect(normalized.compareRunKey).toBe(compareRunKey);
     expect(normalized.sourceTicketKey).toBe('AIB-330');
     expect(normalized.participantTicketKeys).toEqual(['AIB-325', 'AIB-327']);
+    expect(normalized.report.decisionPoints).toEqual(report.decisionPoints);
   });
 
   it('detects missing and malformed payload fields', () => {
@@ -132,6 +151,51 @@ describe('comparison-payload helpers', () => {
         },
       })
     ).toThrow();
+  });
+
+  it('rejects invalid decision-point references and duplicates', () => {
+    const serialized = serializeComparisonReport(report);
+
+    expect(() =>
+      normalizeComparisonPersistenceRequest({
+        compareRunKey: 'cmp_bad',
+        projectId: 3,
+        sourceTicketKey: 'AIB-330',
+        participantTicketKeys: ['AIB-325', 'AIB-327'],
+        markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+        report: {
+          ...serialized,
+          decisionPoints: [
+            {
+              ...serialized.decisionPoints[0]!,
+              verdictTicketKey: 'AIB-999',
+            },
+          ],
+        },
+      })
+    ).toThrow(/Verdict ticket key/);
+
+    expect(() =>
+      normalizeComparisonPersistenceRequest({
+        compareRunKey: 'cmp_bad',
+        projectId: 3,
+        sourceTicketKey: 'AIB-330',
+        participantTicketKeys: ['AIB-325', 'AIB-327'],
+        markdownPath: 'specs/AIB-330-persist-comparison-data/comparisons/20260321-133600-vs-AIB-325-AIB-327.md',
+        report: {
+          ...serialized,
+          decisionPoints: [
+            {
+              ...serialized.decisionPoints[0]!,
+              participantApproaches: [
+                { ticketKey: 'AIB-325', summary: 'One' },
+                { ticketKey: 'AIB-325', summary: 'Two' },
+              ],
+            },
+          ],
+        },
+      })
+    ).toThrow(/Duplicate participant ticket keys/);
   });
 
   it('builds the transient JSON artifact path beside markdown', () => {

@@ -164,6 +164,25 @@ export async function createStructuredComparisonFixture(projectId: number) {
             ],
             displayOrder: 0,
           },
+          {
+            title: 'Fallback behavior',
+            verdictTicketId: otherTicket.id,
+            verdictSummary: 'TE2-103 kept legacy rows readable without extra synthesis.',
+            rationale: 'The follow-up implementation guarded sparse historical payloads.',
+            participantApproaches: [
+              {
+                ticketId: winnerTicket.id,
+                ticketKey: winnerTicket.ticketKey,
+                summary: 'Focused on structured writes for new comparisons.',
+              },
+              {
+                ticketId: otherTicket.id,
+                ticketKey: otherTicket.ticketKey,
+                summary: 'Handled partial saved rows without crashing the detail view.',
+              },
+            ],
+            displayOrder: 1,
+          },
         ],
       },
     },
@@ -227,7 +246,35 @@ export function createWorkflowComparisonReportFixture(sourceTicketKey: string, c
       ])
     ),
     {},
-    `Choose ${comparedTickets[0]}.`
+    `Choose ${comparedTickets[0]}.`,
+    [
+      {
+        title: 'Persistence source of truth',
+        verdictTicketKey: comparedTickets[0] ?? null,
+        verdictSummary: `${comparedTickets[0]} persists structured decision points directly.`,
+        rationale: 'It keeps saved decision points aligned with the generated comparison output.',
+        participantApproaches: comparedTickets.map((ticketKey, index) => ({
+          ticketKey,
+          summary:
+            index === 0
+              ? 'Maps structured decision points directly into saved rows.'
+              : 'Relies more on report-level summary fields.',
+        })),
+      },
+      {
+        title: 'Historical comparison compatibility',
+        verdictTicketKey: null,
+        verdictSummary: 'Legacy comparisons remain readable without regeneration.',
+        rationale: 'Historical rows can stay sparse as long as the read path remains tolerant.',
+        participantApproaches: comparedTickets.map((ticketKey, index) => ({
+          ticketKey,
+          summary:
+            index === 0
+              ? 'Keeps new persistence strict while preserving legacy reads.'
+              : 'Uses broad fallback handling for historical rows.',
+        })),
+      },
+    ]
   );
 }
 

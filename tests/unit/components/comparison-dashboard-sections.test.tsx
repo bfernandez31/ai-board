@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ComparisonComplianceGrid } from '@/components/comparison/comparison-compliance-grid';
 import { ComparisonDecisionPoints } from '@/components/comparison/comparison-decision-points';
-import { renderWithProviders, screen } from '@/tests/utils/component-test-utils';
+import { renderWithProviders, screen, userEvent } from '@/tests/utils/component-test-utils';
 
 const participants = [
   {
@@ -38,7 +38,9 @@ const participants = [
 ];
 
 describe('Comparison dashboard sections', () => {
-  it('renders decision points and compliance grid content', () => {
+  it('renders decision points and compliance grid content', async () => {
+    const user = userEvent.setup();
+
     renderWithProviders(
       <>
         <ComparisonDecisionPoints
@@ -52,7 +54,17 @@ describe('Comparison dashboard sections', () => {
               displayOrder: 0,
               participantApproaches: [
                 { ticketId: 1, ticketKey: 'AIB-1', summary: 'Explicit pending state' },
+                { ticketId: 2, ticketKey: 'AIB-2', summary: 'Collapsed telemetry into blanks' },
               ],
+            },
+            {
+              id: 2,
+              title: 'Legacy sparse row',
+              verdictTicketId: null,
+              verdictSummary: 'No per-ticket summaries were saved.',
+              rationale: 'Historical comparisons should keep their empty-state behavior.',
+              displayOrder: 1,
+              participantApproaches: [],
             },
           ]}
         />
@@ -79,6 +91,11 @@ describe('Comparison dashboard sections', () => {
 
     expect(screen.getByText('State handling')).toBeInTheDocument();
     expect(screen.getByText('AIB-1 handled pending state better.')).toBeInTheDocument();
+    expect(screen.getByText('Collapsed telemetry into blanks')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /legacy sparse row/i }));
+    expect(
+      screen.getByText('No saved participant approaches for this decision point.')
+    ).toBeInTheDocument();
     expect(screen.getByText('TypeScript-First Development')).toBeInTheDocument();
     expect(screen.getByText('Strict types kept.')).toBeInTheDocument();
   });
