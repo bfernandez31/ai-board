@@ -5,7 +5,7 @@ interface WorkflowStepProps {
   isLast?: boolean;
 }
 
-const stageBgClasses: Record<string, string> = {
+const STAGE_BG: Record<WorkflowStepProps['stage'], string> = {
   INBOX: 'bg-ctp-overlay0',
   SPECIFY: 'bg-ctp-lavender',
   PLAN: 'bg-ctp-blue',
@@ -14,10 +14,10 @@ const stageBgClasses: Record<string, string> = {
 };
 
 export function WorkflowStep({ stage, title, description, isLast = false }: WorkflowStepProps) {
-  const bgClass = stageBgClasses[stage] || 'bg-ctp-overlay0';
+  const bgClass = STAGE_BG[stage];
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-4" data-testid="workflow-step" aria-label={`${stage} stage: ${title}`}>
+    <div className="stagger-item flex flex-col md:flex-row items-start md:items-center gap-4" data-testid="workflow-step" aria-label={`${stage} stage: ${title}`}>
       {/* Stage badge */}
       <div className="flex-shrink-0">
         <div

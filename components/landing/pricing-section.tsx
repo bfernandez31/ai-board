@@ -13,7 +13,7 @@ export function PricingSection() {
     <section id="pricing" className="py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-4">
+          <h2 className="font-display text-4xl md:text-5xl text-center text-foreground mb-4">
             Simple, transparent pricing
           </h2>
           <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
