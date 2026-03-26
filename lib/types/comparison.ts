@@ -220,6 +220,19 @@ export interface ComparisonReportMetadata {
   filePath: string;
 }
 
+export interface ReportDecisionPointApproach {
+  ticketKey: string;
+  summary: string;
+}
+
+export interface ReportDecisionPoint {
+  title: string;
+  verdictTicketKey: string | null;
+  verdictSummary: string;
+  rationale: string;
+  approaches: ReportDecisionPointApproach[];
+}
+
 /**
  * ComparisonReport
  *
@@ -249,6 +262,9 @@ export interface ComparisonReport {
 
   /** Warnings (e.g., low alignment, missing data) */
   warnings: string[];
+
+  /** Structured decision points from AI analysis */
+  decisionPoints?: ReportDecisionPoint[];
 }
 
 export interface SerializedComparisonReportMetadata {

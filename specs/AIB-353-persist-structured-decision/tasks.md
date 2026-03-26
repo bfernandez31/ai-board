@@ -28,7 +28,7 @@
 
 **CRITICAL**: Must complete before any user story work begins
 
-- [ ] T001 Add `ReportDecisionPointApproach` and `ReportDecisionPoint` interfaces and optional `decisionPoints` field to `ComparisonReport` in `lib/types/comparison.ts`
+- [x] T001 Add `ReportDecisionPointApproach` and `ReportDecisionPoint` interfaces and optional `decisionPoints` field to `ComparisonReport` in `lib/types/comparison.ts`
 
 **Checkpoint**: Foundation ready — type definitions available for validation and persistence tasks
 
