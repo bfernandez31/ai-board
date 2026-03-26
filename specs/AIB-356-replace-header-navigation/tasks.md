@@ -18,10 +18,10 @@
 
 **Purpose**: Install dependencies and generate shared UI primitives
 
-- [ ] T001 Install cmdk dependency via `bun add cmdk`
-- [ ] T002 Add shadcn/ui Command component via `bunx shadcn@latest add command` generating components/ui/command.tsx
-- [ ] T003 [P] Create components/navigation/ directory and define shared NavigationItem type and NAVIGATION_ITEMS constant in components/navigation/nav-items.ts
-- [ ] T004 [P] Define CommandPaletteResult union types (CommandPaletteNavigationResult, CommandPaletteTicketResult) in components/navigation/types.ts
+- [x] T001 Install cmdk dependency via `bun add cmdk`
+- [x] T002 Add shadcn/ui Command component via `bunx shadcn@latest add command` generating components/ui/command.tsx
+- [x] T003 [P] Create components/navigation/ directory and define shared NavigationItem type and NAVIGATION_ITEMS constant in components/navigation/nav-items.ts
+- [x] T004 [P] Define CommandPaletteResult union types (CommandPaletteNavigationResult, CommandPaletteTicketResult) in components/navigation/types.ts
 
 ---
 
@@ -31,8 +31,8 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create project layout with CSS Grid at app/projects/[projectId]/layout.tsx rendering sidebar slot and children with `lg:grid lg:grid-cols-[48px_1fr]` responsive breakpoint
-- [ ] T006 Add command palette open state management in project layout, passing open/onOpenChange to child components via context or props
+- [x] T005 Create project layout with CSS Grid at app/projects/[projectId]/layout.tsx rendering sidebar slot and children with `lg:grid lg:grid-cols-[48px_1fr]` responsive breakpoint
+- [x] T006 Add command palette open state management in project layout, passing open/onOpenChange to child components via context or props
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -46,15 +46,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Write component test for icon rail rendering 4 navigation icons with correct labels in tests/unit/components/icon-rail-sidebar.test.tsx
-- [ ] T008 [P] [US1] Write component test for active icon highlighting based on pathname in tests/unit/components/icon-rail-sidebar.test.tsx
-- [ ] T009 [P] [US1] Write component test for tooltip display on hover and settings icon anchored at bottom in tests/unit/components/icon-rail-sidebar.test.tsx
+- [x] T007 [P] [US1] Write component test for icon rail rendering 4 navigation icons with correct labels in tests/unit/components/icon-rail-sidebar.test.tsx
+- [x] T008 [P] [US1] Write component test for active icon highlighting based on pathname in tests/unit/components/icon-rail-sidebar.test.tsx
+- [x] T009 [P] [US1] Write component test for tooltip display on hover and settings icon anchored at bottom in tests/unit/components/icon-rail-sidebar.test.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create IconRailSidebar component with nav landmark, 4 navigation icons, active state via usePathname(), tooltips via shadcn Tooltip, and views/bottom group layout in components/navigation/icon-rail-sidebar.tsx
-- [ ] T011 [US1] Wire IconRailSidebar into project layout at app/projects/[projectId]/layout.tsx with `hidden lg:flex` responsive visibility
-- [ ] T012 [US1] Verify tests pass for icon rail component
+- [x] T010 [US1] Create IconRailSidebar component with nav landmark, 4 navigation icons, active state via usePathname(), tooltips via shadcn Tooltip, and views/bottom group layout in components/navigation/icon-rail-sidebar.tsx
+- [x] T011 [US1] Wire IconRailSidebar into project layout at app/projects/[projectId]/layout.tsx with `hidden lg:flex` responsive visibility
+- [x] T012 [US1] Verify tests pass for icon rail component
 
 **Checkpoint**: Icon rail sidebar is fully functional and testable on desktop viewports
 
@@ -68,18 +68,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Write component test for command palette open/close via Cmd+K and Escape, empty state, and input clearing on open in tests/unit/components/command-palette.test.tsx
-- [ ] T014 [P] [US2] Write component test for navigation fuzzy filtering and ticket result grouping under "Navigation" and "Tickets" headings in tests/unit/components/command-palette.test.tsx
-- [ ] T015 [P] [US2] Write component test for keyboard navigation (ArrowDown/ArrowUp/Enter) and modal stacking prevention in tests/unit/components/command-palette.test.tsx
-- [ ] T016 [P] [US2] Write component test for search trigger rendering with search icon, placeholder, and platform-specific shortcut badge in tests/unit/components/search-trigger.test.tsx
+- [x] T013 [P] [US2] Write component test for command palette open/close via Cmd+K and Escape, empty state, and input clearing on open in tests/unit/components/command-palette.test.tsx
+- [x] T014 [P] [US2] Write component test for navigation fuzzy filtering and ticket result grouping under "Navigation" and "Tickets" headings in tests/unit/components/command-palette.test.tsx
+- [x] T015 [P] [US2] Write component test for keyboard navigation (ArrowDown/ArrowUp/Enter) and modal stacking prevention in tests/unit/components/command-palette.test.tsx
+- [x] T016 [P] [US2] Write component test for search trigger rendering with search icon, placeholder, and platform-specific shortcut badge in tests/unit/components/search-trigger.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Create CommandPalette component with CommandDialog, global Cmd+K/Ctrl+K listener, "Navigation" group (static items with cmdk filtering), "Tickets" group (async via useTicketSearch), keyboard navigation, modal stacking check, and state reset on open in components/navigation/command-palette.tsx
-- [ ] T018 [US2] Create SearchTrigger component as styled button with search icon, "Search..." placeholder, and platform-detected shortcut badge (Cmd+K / Ctrl+K) in components/navigation/search-trigger.tsx
-- [ ] T019 [US2] Wire CommandPalette into project layout at app/projects/[projectId]/layout.tsx with projectId from route params
-- [ ] T020 [US2] Add custom event listener for 'open-command-palette' in CommandPalette component to support board integration
-- [ ] T021 [US2] Verify tests pass for command palette and search trigger components
+- [x] T017 [US2] Create CommandPalette component with CommandDialog, global Cmd+K/Ctrl+K listener, "Navigation" group (static items with cmdk filtering), "Tickets" group (async via useTicketSearch), keyboard navigation, modal stacking check, and state reset on open in components/navigation/command-palette.tsx
+- [x] T018 [US2] Create SearchTrigger component as styled button with search icon, "Search..." placeholder, and platform-detected shortcut badge (Cmd+K / Ctrl+K) in components/navigation/search-trigger.tsx
+- [x] T019 [US2] Wire CommandPalette into project layout at app/projects/[projectId]/layout.tsx with projectId from route params
+- [x] T020 [US2] Add custom event listener for 'open-command-palette' in CommandPalette component to support board integration
+- [x] T021 [US2] Verify tests pass for command palette and search trigger components
 
 **Checkpoint**: Command palette is fully functional with search, navigation, and keyboard support
 
@@ -93,10 +93,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Remove FileText (Specs), BarChart3 (Analytics), and Activity icon links from desktop header in components/layout/header.tsx
-- [ ] T023 [US3] Replace TicketSearch component with SearchTrigger in header, connecting onClick to open command palette in components/layout/header.tsx
-- [ ] T024 [US3] Remove isBoardPage check for search visibility so SearchTrigger shows on all project pages in components/layout/header.tsx
-- [ ] T025 [US3] Pass command palette open handler from project layout to header via SearchTrigger onClick prop
+- [x] T022 [US3] Remove FileText (Specs), BarChart3 (Analytics), and Activity icon links from desktop header in components/layout/header.tsx
+- [x] T023 [US3] Replace TicketSearch component with SearchTrigger in header, connecting onClick to open command palette in components/layout/header.tsx
+- [x] T024 [US3] Remove isBoardPage check for search visibility so SearchTrigger shows on all project pages in components/layout/header.tsx
+- [x] T025 [US3] Pass command palette open handler from project layout to header via SearchTrigger onClick prop
 
 **Checkpoint**: Header is simplified with search trigger replacing inline search and navigation icons
 
@@ -110,9 +110,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Remove Specs (FileText) external link from mobile hamburger menu in components/layout/mobile-menu.tsx
-- [ ] T027 [US4] Add Board navigation link with LayoutDashboard icon to mobile menu in components/layout/mobile-menu.tsx
-- [ ] T028 [US4] Verify icon rail has `hidden lg:flex` class ensuring it does not render below 1024px
+- [x] T026 [US4] Remove Specs (FileText) external link from mobile hamburger menu in components/layout/mobile-menu.tsx
+- [x] T027 [US4] Add Board navigation link with LayoutDashboard icon to mobile menu in components/layout/mobile-menu.tsx
+- [x] T028 [US4] Verify icon rail has `hidden lg:flex` class ensuring it does not render below 1024px
 
 **Checkpoint**: Mobile navigation is unchanged with all items accessible via hamburger menu
 
@@ -126,15 +126,15 @@
 
 ### Tests for User Story 5
 
-- [ ] T029 [P] [US5] Write integration test for S/slash shortcut opening command palette instead of old search in tests/integration/navigation/keyboard-shortcuts.test.ts
-- [ ] T030 [P] [US5] Write integration test for Cmd+K opening palette and single-key shortcuts suppressed while open in tests/integration/navigation/keyboard-shortcuts.test.ts
-- [ ] T031 [P] [US5] Write integration test for N, 1-6, ? shortcuts still working when palette is closed in tests/integration/navigation/keyboard-shortcuts.test.ts
+- [x] T029 [P] [US5] Write integration test for S/slash shortcut opening command palette instead of old search in tests/unit/components/keyboard-shortcuts-integration.test.ts
+- [x] T030 [P] [US5] Write integration test for Cmd+K opening palette and single-key shortcuts suppressed while open in tests/unit/components/keyboard-shortcuts-integration.test.ts
+- [x] T031 [P] [US5] Write integration test for N, 1-6, ? shortcuts still working when palette is closed in tests/unit/components/keyboard-shortcuts-integration.test.ts
 
 ### Implementation for User Story 5
 
-- [ ] T032 [US5] Update onFocusSearch callback in components/board/board.tsx to dispatch 'open-command-palette' custom event instead of focusing old search input
-- [ ] T033 [US5] Verify existing useKeyboardShortcuts hook already guards against meta keys and input focus — no modification needed per research.md
-- [ ] T034 [US5] Verify integration tests pass for keyboard shortcut coexistence
+- [x] T032 [US5] Update onFocusSearch callback in components/board/board.tsx to dispatch 'open-command-palette' custom event instead of focusing old search input
+- [x] T033 [US5] Verify existing useKeyboardShortcuts hook already guards against meta keys and input focus — no modification needed per research.md
+- [x] T034 [US5] Verify integration tests pass for keyboard shortcut coexistence
 
 **Checkpoint**: All keyboard shortcuts work correctly with and without command palette open
 
@@ -148,8 +148,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T035 [US6] Verify CSS Grid layout at 1280px leaves 1232px for board content (48px sidebar + 1232px content area) in app/projects/[projectId]/layout.tsx
-- [ ] T036 [US6] Verify board component does not introduce horizontal overflow with 1232px available width in components/board/board.tsx
+- [x] T035 [US6] Verify CSS Grid layout at 1280px leaves 1232px for board content (48px sidebar + 1232px content area) in app/projects/[projectId]/layout.tsx
+- [x] T036 [US6] Verify board component does not introduce horizontal overflow with 1232px available width in components/board/board.tsx
 
 **Checkpoint**: Board is fully usable with 6 columns at 1280px with sidebar present
 
@@ -159,10 +159,10 @@
 
 **Purpose**: Final validation and cleanup across all stories
 
-- [ ] T037 Run `bun run type-check` and fix any TypeScript errors across all new and modified files
-- [ ] T038 Run `bun run lint` and fix any ESLint issues across all new and modified files
-- [ ] T039 Run full test suite `bun run test:unit` and verify all new tests pass
-- [ ] T040 Run quickstart.md validation steps (type-check, lint, unit tests, visual verification at 1280px and 768px)
+- [x] T037 Run `bun run type-check` and fix any TypeScript errors across all new and modified files
+- [x] T038 Run `bun run lint` and fix any ESLint issues across all new and modified files
+- [x] T039 Run full test suite `bun run test:unit` and verify all new tests pass
+- [x] T040 Run quickstart.md validation steps (type-check, lint, unit tests, visual verification at 1280px and 768px)
 
 ---
 

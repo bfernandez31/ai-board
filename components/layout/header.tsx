@@ -4,12 +4,11 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { FileText, BarChart3, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { UserMenu } from '@/components/auth/user-menu';
 import { NotificationBell } from '@/app/components/notifications/notification-bell';
-import { TicketSearch } from '@/components/search/ticket-search';
+import { SearchTrigger } from '@/components/navigation/search-trigger';
 
 interface ProjectInfo {
   id: number;
@@ -32,8 +31,7 @@ export function Header() {
   const isLandingPage = pathname === '/';
   const isSignInPage = pathname === '/auth/signin';
   const isMarketingVariant = isLandingPage && status !== 'authenticated';
-  // Search should only be visible on the board page
-  const isBoardPage = pathname?.match(/^\/projects\/\d+\/board$/) !== null;
+  const isProjectPage = pathname?.match(/^\/projects\/\d+/) !== null;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -121,33 +119,10 @@ export function Header() {
         {/* Center: Project Info (if available) */}
         {projectInfo && (
           <>
-            {/* Desktop: Full layout with separator and icon */}
+            {/* Desktop: Full layout with separator */}
             <div className="hidden md:flex items-center gap-3 ml-8">
               <span className="text-muted-foreground">|</span>
               <span className="text-lg font-semibold text-zinc-50">{projectInfo.name}</span>
-              <a
-                href={`https://github.com/${projectInfo.githubOwner}/${projectInfo.githubRepo}/tree/main/specs/specifications`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="View project specifications on GitHub"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <FileText className="w-5 h-5" />
-              </a>
-              <Link
-                href={`/projects/${projectInfo.id}/analytics`}
-                aria-label="View project analytics"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <BarChart3 className="w-5 h-5" />
-              </Link>
-              <Link
-                href={`/projects/${projectInfo.id}/activity`}
-                aria-label="View project activity"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Activity className="w-5 h-5" />
-              </Link>
             </div>
 
             {/* Mobile: Compact with ellipsis */}
@@ -160,16 +135,15 @@ export function Header() {
           </>
         )}
 
-        {/* Center: Search (only on board page) - hidden on mobile */}
-        {projectInfo && isBoardPage && (
+        {/* Center: Search trigger - opens command palette */}
+        {projectInfo && isProjectPage && (
           <div className="hidden md:flex flex-1 justify-center">
-            <TicketSearch projectId={projectInfo.id} />
+            <SearchTrigger onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))} />
           </div>
         )}
 
         {/* Spacer to push buttons to the right */}
-        {/* Show spacer when: no project info, OR on non-board pages (analytics, settings, etc.) */}
-        <div className={!projectInfo || !isBoardPage ? "flex-1" : "hidden"} />
+        <div className={!projectInfo || !isProjectPage ? "flex-1" : "hidden"} />
 
         {/* Right: User Menu + Mobile Menu */}
         <div className="flex items-center gap-3">

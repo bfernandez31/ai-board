@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, LogOut, FileText, BarChart3, Activity, CreditCard, Key } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, BarChart3, Activity, CreditCard, Key, Settings } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ interface MobileMenuProps {
   githubRepo?: string | undefined;
 }
 
-export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: MobileMenuProps) {
+export function MobileMenu({ projectId, projectName }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -46,48 +46,49 @@ export function MobileMenu({ projectId, projectName, githubOwner, githubRepo }: 
           <SheetTitle>Navigation Menu</SheetTitle>
         </VisuallyHidden>
 
-        {/* Project Name & Links */}
+        {/* Project Name & Navigation Links */}
         {projectName && (
           <>
             <div className="mt-6 px-2">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
-                <div className="flex items-center gap-2">
-                  {githubOwner && githubRepo && (
-                    <a
-                      href={`https://github.com/${githubOwner}/${githubRepo}/tree/main/specs/specifications`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="View project specifications on GitHub"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setOpen(false)}
-                    >
-                      <FileText className="w-5 h-5" />
-                    </a>
-                  )}
-                  {projectId && (
-                    <Link
-                      href={`/projects/${projectId}/analytics`}
-                      aria-label="View project analytics"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setOpen(false)}
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                    </Link>
-                  )}
-                  {projectId && (
-                    <Link
-                      href={`/projects/${projectId}/activity`}
-                      aria-label="View project activity"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setOpen(false)}
-                    >
-                      <Activity className="w-5 h-5" />
-                    </Link>
-                  )}
-                </div>
-              </div>
+              <p className="text-lg font-semibold text-zinc-50">{projectName}</p>
             </div>
+            <div className="border-t border-border my-2" />
+            {projectId && (
+              <div className="flex flex-col gap-1 px-2">
+                <Link
+                  href={`/projects/${projectId}/board`}
+                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Board
+                </Link>
+                <Link
+                  href={`/projects/${projectId}/activity`}
+                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Activity
+                </Link>
+                <Link
+                  href={`/projects/${projectId}/analytics`}
+                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Link>
+                <Link
+                  href={`/projects/${projectId}/settings`}
+                  className="flex items-center px-2 py-2 text-sm rounded-md hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </div>
+            )}
             <div className="border-t border-border my-2" />
           </>
         )}
