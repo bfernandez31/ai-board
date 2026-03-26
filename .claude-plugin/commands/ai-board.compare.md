@@ -391,7 +391,25 @@ After writing the markdown report, write a JSON data file for workflow persisten
       }
     },
     "recommendation": "Ship AIB-124",
-    "warnings": []
+    "warnings": [],
+    "decisionPoints": [
+      {
+        "title": "Decision area title from Step 7 analysis",
+        "verdictTicketKey": "AIB-124",
+        "verdictSummary": "One sentence explaining why this ticket won this specific decision point",
+        "rationale": "Detailed reasoning for this decision point's verdict",
+        "approaches": [
+          {
+            "ticketKey": "AIB-123",
+            "summary": "How this ticket addressed the decision area"
+          },
+          {
+            "ticketKey": "AIB-124",
+            "summary": "How this ticket addressed the decision area"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -404,6 +422,7 @@ After writing the markdown report, write a JSON data file for workflow persisten
 - `ticketKey` inside each `implementation` entry: Must match the record key
 - `passed` in principles: Must be a boolean (`true`/`false`), NOT a string
 - **Do NOT include `telemetry`** in the JSON — telemetry data is already in the database and is enriched server-side at read time
+- `decisionPoints`: Populate from the decision point analysis in Step 7. Each entry must have a unique `title` matching the decision points in the markdown report. The `verdictTicketKey` can differ per decision point — use the actual winner for each specific decision (or `null` if tied)
 
 **Note**: The API resolves ticket database IDs from keys automatically. No database IDs are needed in this payload.
 

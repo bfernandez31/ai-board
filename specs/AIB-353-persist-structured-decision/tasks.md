@@ -67,7 +67,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Verify fallback path in `buildDecisionPoints()` preserves existing `matchingRequirements`-based derivation logic unchanged when `report.decisionPoints` is absent or empty in `lib/comparison/comparison-record.ts`
+- [x] T008 [US3] Verify fallback path in `buildDecisionPoints()` preserves existing `matchingRequirements`-based derivation logic unchanged when `report.decisionPoints` is absent or empty in `lib/comparison/comparison-record.ts`
 
 **Checkpoint**: Backward compatibility confirmed — both old and new payload formats handled correctly
 
@@ -81,8 +81,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T009 [US4] Add `decisionPoints` array schema specification to Step 10.5 JSON payload in `.claude-plugin/commands/ai-board.compare.md` with fields: `title`, `verdictTicketKey`, `verdictSummary`, `rationale`, and `approaches[]` (`ticketKey`, `summary`)
-- [ ] T010 [US4] Add instruction in Step 10.5 directing AI to populate `decisionPoints` from Step 7 analysis with unique titles matching markdown report and per-point `verdictTicketKey` in `.claude-plugin/commands/ai-board.compare.md`
+- [x] T009 [US4] Add `decisionPoints` array schema specification to Step 10.5 JSON payload in `.claude-plugin/commands/ai-board.compare.md` with fields: `title`, `verdictTicketKey`, `verdictSummary`, `rationale`, and `approaches[]` (`ticketKey`, `summary`)
+- [x] T010 [US4] Add instruction in Step 10.5 directing AI to populate `decisionPoints` from Step 7 analysis with unique titles matching markdown report and per-point `verdictTicketKey` in `.claude-plugin/commands/ai-board.compare.md`
 
 **Checkpoint**: Command template updated — AI will produce structured decision points in future comparisons
 
