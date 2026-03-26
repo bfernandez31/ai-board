@@ -505,10 +505,25 @@ When comparison runs, AI analyzes **ALL tickets** (source AND compared) across m
 
 **Comparison Viewer**:
 - Opens in modal dialog when Compare button clicked
-- Lists all comparison reports sorted by date (newest first)
-- Shows compared tickets and generation timestamp
-- Click report to view full markdown content
-- Uses existing DocumentationViewer component pattern
+- Left sidebar lists all comparison reports sorted by date (newest first); clicking a report loads its detail view
+- Detail view renders a Mission Control Dashboard with structured sections (no raw markdown)
+
+**Dashboard Sections** (rendered in order):
+
+1. **Hero Card** — winner ticket key (large), recommendation summary, key differentiator badges, animated circular score gauge, generation date, source ticket key, and three stat pills (Cost, Duration, Quality Score)
+2. **Participant Grid** — non-winner participants as horizontal cards showing rank, ticket key, title, workflow/agent/quality badges, rationale, and a mini score ring
+3. **Stat Cards** — four cards (Cost, Duration, Quality Score, Files Changed) with the winner's value and a micro-bar showing all participants' relative positions
+4. **Unified Metrics Table** — single table with 9 rows (Lines Changed, Files Changed, Test Files Changed, Total Tokens, Input Tokens, Output Tokens, Duration, Cost, Job Count); each cell has a proportional inline bar; first column sticky for horizontal scroll
+5. **Compliance Heatmap** — colored grid with principles as rows and participants as columns; cells colored green (pass), yellow (mixed), red (fail); hover/tap reveals assessment notes tooltip
+6. **Decision Points** — accordions with colored verdict dots (green = winner, yellow = other participant, neutral = no verdict); first accordion open by default; verdict summary visible without expanding
+
+**Score Color Thresholds** (applied to score gauges and rings throughout the dashboard):
+- Green: ≥ 85
+- Blue: 70–84
+- Yellow: 50–69
+- Red: < 50
+
+**Enrichment States**: All sections handle three states — available (show data), pending (show indicator), unavailable (show "N/A" / hide bars).
 
 **History Access**:
 - All past comparisons preserved and accessible
