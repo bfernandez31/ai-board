@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '@/app/lib/query-keys';
 import type { CommandPaletteResponse } from '@/lib/types';
 
@@ -19,7 +20,11 @@ async function fetchCommandPalette(
   return response.json();
 }
 
-export function useCommandPalette(projectId: number, query: string, enabled = true) {
+export function useCommandPalette(
+  projectId: number,
+  query: string,
+  enabled = true
+): UseQueryResult<CommandPaletteResponse, Error> {
   return useQuery({
     queryKey: queryKeys.projects.commandPalette(projectId, query),
     queryFn: () => fetchCommandPalette(projectId, query),

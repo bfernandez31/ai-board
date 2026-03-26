@@ -13,7 +13,6 @@ import type {
 interface DestinationDefinition
   extends Omit<ProjectNavigationDestination, 'href' | 'isActive'> {
   icon: LucideIcon;
-  matchers: string[];
 }
 
 const DESTINATION_DEFINITIONS: readonly DestinationDefinition[] = [
@@ -25,7 +24,6 @@ const DESTINATION_DEFINITIONS: readonly DestinationDefinition[] = [
     icon: KanbanSquare,
     group: 'primary',
     keywords: ['board', 'kanban', 'tickets', 'work'],
-    matchers: ['board'],
   },
   {
     id: 'activity',
@@ -35,7 +33,6 @@ const DESTINATION_DEFINITIONS: readonly DestinationDefinition[] = [
     icon: Activity,
     group: 'primary',
     keywords: ['activity', 'events', 'timeline', 'history'],
-    matchers: ['activity'],
   },
   {
     id: 'analytics',
@@ -45,7 +42,6 @@ const DESTINATION_DEFINITIONS: readonly DestinationDefinition[] = [
     icon: BarChart3,
     group: 'primary',
     keywords: ['analytics', 'metrics', 'reporting', 'insights'],
-    matchers: ['analytics'],
   },
   {
     id: 'settings',
@@ -55,7 +51,6 @@ const DESTINATION_DEFINITIONS: readonly DestinationDefinition[] = [
     icon: Settings,
     group: 'footer',
     keywords: ['settings', 'preferences', 'configuration'],
-    matchers: ['settings'],
   },
 ] as const;
 
@@ -68,15 +63,6 @@ export function buildProjectDestinationHref(
   destinationId: ProjectNavigationDestinationId
 ): string {
   return `/projects/${projectId}/${destinationId}`;
-}
-
-export function getProjectDestinationById(
-  destinationId: ProjectNavigationDestinationId
-): DestinationDefinition {
-  return (
-    DESTINATION_DEFINITIONS.find((definition) => definition.id === destinationId) ??
-    DESTINATION_DEFINITIONS[0]!
-  );
 }
 
 export function getProjectDestinationIdForPathname(
@@ -101,7 +87,7 @@ export function getProjectDestinations(
   projectId: number,
   pathname?: string | null
 ): ProjectNavigationDestination[] {
-  return DESTINATION_DEFINITIONS.map(({ icon, matchers, ...definition }) => ({
+  return DESTINATION_DEFINITIONS.map(({ icon, ...definition }) => ({
     ...definition,
     href: buildProjectDestinationHref(projectId, definition.id),
     isActive: isProjectDestinationActive(pathname, definition.id),

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import {
@@ -12,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useCommandPalette } from '@/lib/hooks/queries/use-command-palette';
 import { CommandPaletteResults } from '@/components/search/command-palette-results';
-import type { CommandPaletteResult } from '@/lib/types';
+import type { CommandPaletteResponse, CommandPaletteResult } from '@/lib/types';
 
 interface CommandPaletteProps {
   projectId: number;
@@ -34,11 +35,21 @@ function isEditableElement(target: EventTarget | null): boolean {
   );
 }
 
+function getCommandPaletteResults(
+  data: CommandPaletteResponse | undefined
+): CommandPaletteResult[] {
+  if (!data) {
+    return [];
+  }
+
+  return [...data.groups.destinations, ...data.groups.tickets];
+}
+
 export function CommandPalette({
   projectId,
   open,
   onOpenChange,
-}: CommandPaletteProps) {
+}: CommandPaletteProps): ReactElement {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -57,10 +68,7 @@ export function CommandPalette({
   );
 
   const groups = data?.groups ?? { destinations: [], tickets: [] };
-  const results = useMemo(
-    () => [...groups.destinations, ...groups.tickets],
-    [groups.destinations, groups.tickets]
-  );
+  const results = getCommandPaletteResults(data);
 
   useEffect(() => {
     if (!open) {
@@ -105,46 +113,43 @@ export function CommandPalette({
     };
   }, [onOpenChange]);
 
-  const handleSelect = useCallback(
-    (result: CommandPaletteResult) => {
-      router.push(result.href);
+  function handleSelect(result: CommandPaletteResult): void {
+    router.push(result.href);
+    onOpenChange(false);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
       onOpenChange(false);
-    },
-    [onOpenChange, router]
-  );
+      return;
+    }
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onOpenChange(false);
-        return;
-      }
+    if (results.length === 0) {
+      return;
+    }
 
-      if (results.length === 0) {
-        return;
-      }
-
-      if (event.key === 'ArrowDown') {
+    switch (event.key) {
+      case 'ArrowDown':
         event.preventDefault();
         setSelectedIndex((current) => Math.min(current + 1, results.length - 1));
-      }
-
-      if (event.key === 'ArrowUp') {
+        return;
+      case 'ArrowUp':
         event.preventDefault();
         setSelectedIndex((current) => Math.max(current - 1, 0));
-      }
-
-      if (event.key === 'Enter') {
+        return;
+      case 'Enter': {
         event.preventDefault();
         const selectedResult = results[selectedIndex];
         if (selectedResult) {
           handleSelect(selectedResult);
         }
+        return;
       }
-    },
-    [handleSelect, onOpenChange, results, selectedIndex]
-  );
+      default:
+        return;
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
