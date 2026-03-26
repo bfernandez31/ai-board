@@ -96,22 +96,6 @@ export const serializedComparisonPersistenceRequestSchema = z.object({
   report: serializedComparisonReportSchema,
 });
 
-function copyImplementationMetrics(
-  implementation: SerializedComparisonReport['implementation']
-): SerializedComparisonReport['implementation'] {
-  return Object.fromEntries(
-    Object.entries(implementation).map(([ticketKey, metrics]) => [
-      ticketKey,
-      {
-        ...metrics,
-        ...(metrics.testCoverage !== undefined
-          ? { testCoverage: metrics.testCoverage }
-          : {}),
-      },
-    ])
-  );
-}
-
 function deserializeComparisonReport(
   report: SerializedComparisonReport
 ): ComparisonReport {
@@ -121,7 +105,6 @@ function deserializeComparisonReport(
       ...report.metadata,
       generatedAt: new Date(report.metadata.generatedAt),
     },
-    implementation: copyImplementationMetrics(report.implementation),
   };
 }
 
@@ -134,7 +117,6 @@ export function serializeComparisonReport(
       ...report.metadata,
       generatedAt: report.metadata.generatedAt.toISOString(),
     },
-    implementation: copyImplementationMetrics(report.implementation),
   };
 }
 
