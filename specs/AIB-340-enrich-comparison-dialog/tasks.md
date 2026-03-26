@@ -112,9 +112,9 @@
 
 **Purpose**: Final validation and cross-cutting improvements
 
-- [ ] T029 Run `bun run type-check` and fix any TypeScript errors across all modified files
-- [ ] T030 Run `bun run lint` and fix any lint errors across all modified files
-- [ ] T031 Run quickstart.md validation: `bun run test:unit` and `bun run test:integration` to verify all tests pass
+- [x] T029 Run `bun run type-check` and fix any TypeScript errors across all modified files
+- [x] T030 Run `bun run lint` and fix any lint errors across all modified files
+- [x] T031 Run quickstart.md validation: `bun run test:unit` and `bun run test:integration` to verify all tests pass
 
 ---
 
