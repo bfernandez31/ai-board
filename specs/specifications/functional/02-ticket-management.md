@@ -264,7 +264,7 @@ The detail modal:
 
 **Focus Management**:
 - Modal maintains proper focus for keyboard accessibility
-- Action buttons (Edit Policy, Duplicate) do not receive automatic focus on modal open
+- Actions overflow menu (···) does not receive automatic focus on modal open
 - Focus management follows accessibility best practices
 - Prevents unintended actions from keyboard input immediately after modal opens
 - Users can navigate to interactive elements using Tab key
@@ -439,8 +439,8 @@ Three TanStack Query hooks manage data:
 Users can create a copy of existing tickets using two duplication modes:
 
 **Button Location**:
-- Appears in the ticket detail modal header row as a dropdown menu
-- Located next to other metadata actions (Edit Policy button)
+- Appears in the ticket detail modal header overflow menu (··· button)
+- Located alongside Edit Policy and Edit Agent actions
 - Visible for tickets in all stages (INBOX through SHIP)
 
 **Duplication Modes**:

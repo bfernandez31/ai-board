@@ -580,8 +580,8 @@ describe('Duplicate functionality', () => {
     queryClient.setQueryData(queryKey, [ticket]);
 
     // Click the duplicate button
-    const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-    await user.click(duplicateButton);
+    const actionsMenu = screen.getByTestId('ticket-actions-menu');
+    await user.click(actionsMenu);
 
     // Verify API call was made
     await waitFor(() => {
@@ -639,8 +639,8 @@ describe('Duplicate functionality', () => {
     const originalData = queryClient.getQueryData(queryKey);
 
     // Click the duplicate button
-    const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-    await user.click(duplicateButton);
+    const actionsMenu = screen.getByTestId('ticket-actions-menu');
+    await user.click(actionsMenu);
 
     // Verify error toast
     await waitFor(() => {

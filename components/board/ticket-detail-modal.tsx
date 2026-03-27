@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown, X } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, X, MoreHorizontal } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -712,14 +712,11 @@ export function TicketDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         onOpenAutoFocus={(event) => {
-          // Prevent auto-focus on the first interactive element (duplicate button)
-          // and redirect focus to the close button for better UX
           event.preventDefault();
-          // Find and focus the close button (rendered by DialogContent)
-          const closeButton = (event.target as HTMLElement)?.querySelector('button[aria-label="Close"], button:has(.sr-only)');
-          if (closeButton instanceof HTMLElement) {
-            closeButton.focus();
-          }
+          // Focus the close button for better accessibility
+          const dialog = (event.target as HTMLElement)?.closest('[role="dialog"]') ?? event.target as HTMLElement;
+          const closeButton = dialog?.querySelector<HTMLElement>('button[aria-label="Close"]');
+          closeButton?.focus();
         }}
         onEscapeKeyDown={(event) => {
           // Prevent modal from closing if autocomplete is open
@@ -753,10 +750,11 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Row 1: Identity (left) + Actions + Close (right) */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
+          {/* Integrated status strip: identity + metadata + actions */}
+          <div className="flex items-center gap-2 mb-2">
+            {/* Left: ticket key + stage pip + metadata badges */}
+            <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+              <span className="text-sm font-mono font-bold text-foreground/90 tracking-tight" data-testid="ticket-key">
                 {localTicket?.ticketKey || ticket.ticketKey}
               </span>
               <Badge
@@ -770,118 +768,120 @@ export function TicketDetailModal({
                   Read-only
                 </Badge>
               )}
-            </div>
-            <div className="flex items-center gap-1">
-              {localTicket?.project && isInboxStage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPolicyEditOpen(true)}
-                  className="h-6 px-2 text-xs text-muted-foreground"
-                  data-testid="edit-policy-button"
-                  title="Edit clarification policy"
-                >
-                  <Settings2 className="w-3 h-3 mr-1" />
-                  Edit Policy
-                </Button>
+              <span className="text-muted-foreground/30 select-none hidden sm:inline">·</span>
+              {localTicket?.project && (
+                <PolicyBadge
+                  policy={
+                    localTicket.clarificationPolicy ??
+                    localTicket.project.clarificationPolicy
+                  }
+                  isOverride={localTicket.clarificationPolicy !== null}
+                  variant="secondary"
+                  className="text-xs py-0.5 px-2 font-normal"
+                />
               )}
-              {localTicket?.project?.defaultAgent && isInboxStage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAgentEditOpen(true)}
-                  className="h-6 px-2 text-xs text-muted-foreground"
-                  data-testid="edit-agent-button"
-                  title="Edit AI agent"
+              {effectiveAgent && (
+                <Badge
+                  variant={isAgentOverride ? 'default' : 'secondary'}
+                  className="gap-1 text-xs py-0.5 px-2 font-normal"
+                  data-testid="agent-badge"
+                  title={`Agent${isAgentOverride ? ' (override)' : ''}`}
                 >
-                  <Settings2 className="w-3 h-3 mr-1" />
-                  Edit Agent
-                </Button>
+                  <AgentIcon agent={effectiveAgent} size={14} />
+                  <span>{getAgentLabel(effectiveAgent)}</span>
+                  {!isAgentOverride && <span className="text-muted-foreground">(default)</span>}
+                </Badge>
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={isDuplicating}
-                    className="h-6 px-2 text-xs text-muted-foreground"
-                    data-testid="duplicate-ticket-button"
-                  >
-                    {isDuplicating ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <ChevronDown className="w-3 h-3 mr-1" />
-                    )}
-                    {isDuplicating ? 'Duplicating...' : 'Duplicate'}
-                  </Button>
-                </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDuplicate('simple')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Simple copy
-                </DropdownMenuItem>
-                {showFullClone && (
-                  <DropdownMenuItem onClick={() => handleDuplicate('full')}>
-                    <GitBranch className="mr-2 h-4 w-4" />
-                    Full clone
-                  </DropdownMenuItem>
+              {localTicket?.branch &&
+                localTicket.branch.length > 0 &&
+                localTicket.stage !== 'SHIP' &&
+                localTicket.project?.githubOwner &&
+                localTicket.project?.githubRepo && (
+                  <>
+                    <span className="text-muted-foreground/30 select-none hidden sm:inline">·</span>
+                    <a
+                      href={buildGitHubBranchUrl(
+                        localTicket.project.githubOwner,
+                        localTicket.project.githubRepo,
+                        localTicket.branch
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-ctp-green hover:text-ctp-teal rounded-full border border-ctp-green/15 aurora-bg-muted transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-ctp-green/30"
+                      data-testid="github-branch-link"
+                      aria-label={`View branch ${localTicket.branch} in GitHub`}
+                      title={`Branch: ${localTicket.branch}`}
+                    >
+                      <GitBranch className="w-3 h-3" aria-hidden="true" />
+                      <span className="max-w-[150px] truncate">{localTicket.branch}</span>
+                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    </a>
+                  </>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-              <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ml-1">
+            </div>
+
+            {/* Right: overflow menu + close */}
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                      data-testid="ticket-actions-menu"
+                      disabled={isDuplicating}
+                    >
+                      {isDuplicating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      )}
+                      <span className="sr-only">Ticket actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {localTicket?.project && isInboxStage && (
+                      <DropdownMenuItem
+                        onClick={() => setPolicyEditOpen(true)}
+                        data-testid="edit-policy-button"
+                      >
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Edit Policy
+                      </DropdownMenuItem>
+                    )}
+                    {localTicket?.project?.defaultAgent && isInboxStage && (
+                      <DropdownMenuItem
+                        onClick={() => setAgentEditOpen(true)}
+                        data-testid="edit-agent-button"
+                      >
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Edit Agent
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => handleDuplicate('simple')}
+                      disabled={isDuplicating}
+                      data-testid="duplicate-ticket-button"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Simple copy
+                    </DropdownMenuItem>
+                    {showFullClone && (
+                      <DropdownMenuItem
+                        onClick={() => handleDuplicate('full')}
+                        disabled={isDuplicating}
+                      >
+                        <GitBranch className="mr-2 h-4 w-4" />
+                        Full clone
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              <DialogClose aria-label="Close" className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ml-0.5">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </DialogClose>
             </div>
-          </div>
-
-          {/* Row 2: Metadata (workflow, agent, branch) — small, secondary */}
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            {localTicket?.project && (
-              <PolicyBadge
-                policy={
-                  localTicket.clarificationPolicy ??
-                  localTicket.project.clarificationPolicy
-                }
-                isOverride={localTicket.clarificationPolicy !== null}
-                variant="secondary"
-                className="text-[10px] py-0 px-1.5 font-normal"
-              />
-            )}
-            {effectiveAgent && (
-              <Badge
-                variant={isAgentOverride ? 'default' : 'secondary'}
-                className="gap-1 text-[10px] py-0 px-1.5 font-normal"
-                data-testid="agent-badge"
-              >
-                <AgentIcon agent={effectiveAgent} size={12} />
-                <span>{getAgentLabel(effectiveAgent)}</span>
-                {!isAgentOverride && <span className="text-muted-foreground">(default)</span>}
-              </Badge>
-            )}
-            {localTicket?.branch &&
-              localTicket.branch.length > 0 &&
-              localTicket.stage !== 'SHIP' &&
-              localTicket.project?.githubOwner &&
-              localTicket.project?.githubRepo && (
-                <a
-                  href={buildGitHubBranchUrl(
-                    localTicket.project.githubOwner,
-                    localTicket.project.githubRepo,
-                    localTicket.branch
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-ctp-green hover:text-ctp-teal rounded-full border border-ctp-green/15 aurora-bg-muted transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-ctp-green/30"
-                  data-testid="github-branch-link"
-                  aria-label={`View branch ${localTicket.branch} in GitHub`}
-                  title={`Branch: ${localTicket.branch}`}
-                >
-                  <GitBranch className="w-3 h-3" aria-hidden="true" />
-                  <span className="max-w-[150px] truncate">{localTicket.branch}</span>
-                  <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                </a>
-              )}
           </div>
 
           <div className="group">

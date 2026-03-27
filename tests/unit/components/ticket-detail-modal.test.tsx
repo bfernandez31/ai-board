@@ -453,8 +453,8 @@ describe('TicketDetailModal', () => {
       queryClient.setQueryData(queryKey, initialTickets);
 
       // Open the duplicate dropdown then click "Simple copy"
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
       const simpleCopyOption = await screen.findByText('Simple copy');
       await user.click(simpleCopyOption);
 
@@ -542,8 +542,8 @@ describe('TicketDetailModal', () => {
       queryClient.setQueryData(queryKey, initialTickets);
 
       // Open the duplicate dropdown then click "Simple copy"
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
       const simpleCopyOption = await screen.findByText('Simple copy');
       await user.click(simpleCopyOption);
 
@@ -628,8 +628,8 @@ describe('TicketDetailModal', () => {
       expect(cacheBeforeClick).toHaveLength(1);
 
       // Open the duplicate dropdown then click "Simple copy"
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
       const simpleCopyOption = await screen.findByText('Simple copy');
       await user.click(simpleCopyOption);
 
@@ -673,8 +673,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify Simple copy is visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
@@ -700,8 +700,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify Simple copy is visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
@@ -727,8 +727,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify both options are visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
@@ -752,8 +752,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify both options are visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
@@ -777,8 +777,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify both options are visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();
@@ -802,8 +802,8 @@ describe('TicketDetailModal', () => {
       );
 
       // Click the duplicate dropdown button
-      const duplicateButton = screen.getByTestId('duplicate-ticket-button');
-      await user.click(duplicateButton);
+      const actionsMenu = screen.getByTestId('ticket-actions-menu');
+      await user.click(actionsMenu);
 
       // Verify both options are visible
       expect(screen.getByText('Simple copy')).toBeInTheDocument();

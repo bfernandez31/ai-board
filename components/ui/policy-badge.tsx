@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { ClarificationPolicy } from '@prisma/client';
-import { getPolicyIcon, getPolicyLabel } from '@/app/lib/utils/policy-icons';
+import { getPolicyIcon, getPolicyLabel, getPolicyDescription } from '@/app/lib/utils/policy-icons';
 
 interface PolicyBadgeProps {
   policy: ClarificationPolicy;
@@ -28,12 +28,14 @@ export function PolicyBadge({
 }: PolicyBadgeProps) {
   const icon = getPolicyIcon(policy);
   const label = getPolicyLabel(policy);
+  const description = getPolicyDescription(policy);
 
   return (
     <Badge
       variant={variant}
       className={`gap-1 ${className}`}
       data-testid="policy-badge"
+      title={`Policy: ${description}`}
     >
       <span>{icon}</span>
       <span className="text-xs" data-testid="policy-label">
