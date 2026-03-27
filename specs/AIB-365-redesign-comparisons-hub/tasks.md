@@ -130,9 +130,9 @@
 
 **Purpose**: Final validation, edge cases, and code quality.
 
-- [ ] T018 Run `bun run type-check` and `bun run lint` and fix all errors
-- [ ] T019 [P] Validate all quickstart.md scenarios end-to-end (7 steps)
-- [ ] T020 [P] Verify edge cases: rapid card clicking (only last-clicked expanded), detail load failure (error in card section), mobile 320px layout (no horizontal scroll), duplicate Load More prevention
+- [x] T018 Run `bun run type-check` and `bun run lint` and fix all errors
+- [x] T019 [P] Validate all quickstart.md scenarios end-to-end (7 steps)
+- [x] T020 [P] Verify edge cases: rapid card clicking (only last-clicked expanded), detail load failure (error in card section), mobile 320px layout (no horizontal scroll), duplicate Load More prevention
 
 ---
 
