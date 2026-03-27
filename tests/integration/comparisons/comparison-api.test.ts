@@ -110,6 +110,23 @@ describe('Comparisons API', () => {
         })
       ).toBe(0);
     });
+
+    it('keeps the ticket-scoped history route working after project hub pagination queries', async () => {
+      const fixture = await createStructuredComparisonFixture(ctx.projectId);
+
+      const hubResponse = await ctx.api.get<{ total: number }>(
+        `/api/projects/${ctx.projectId}/comparisons?page=1&pageSize=10`
+      );
+      const ticketResponse = await ctx.api.get<{
+        comparisons: Array<{ id: number }>;
+        total: number;
+      }>(`/api/projects/${ctx.projectId}/tickets/${fixture.winnerTicket.id}/comparisons`);
+
+      expect(hubResponse.status).toBe(200);
+      expect(hubResponse.data.total).toBeGreaterThanOrEqual(1);
+      expect(ticketResponse.status).toBe(200);
+      expect(ticketResponse.data.comparisons[0]?.id).toBe(fixture.comparison.id);
+    });
   });
 
   describe('GET /api/projects/:projectId/tickets/:id/comparisons/check', () => {

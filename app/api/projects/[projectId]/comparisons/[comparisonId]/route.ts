@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyProjectAccess } from '@/lib/db/auth-helpers';
-import { listProjectComparisons } from '@/lib/comparison/project-comparison-summary';
+import { getComparisonDetailForProject } from '@/lib/comparison/comparison-detail';
 
 const paramsSchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  comparisonId: z.coerce.number().int().positive(),
 });
 
-const querySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(50).default(10),
-});
-
-type RouteParams = { projectId: string };
+type RouteParams = { projectId: string; comparisonId: string };
 
 function jsonError(status: number, error: string, code: string): NextResponse {
   return NextResponse.json({ error, code }, { status });
 }
 
-async function parseProjectParams(
+async function parseRouteParams(
   context: { params: Promise<RouteParams> }
-): Promise<{ projectId: number } | null> {
+): Promise<{ projectId: number; comparisonId: number } | null> {
   const paramsResult = paramsSchema.safeParse(await context.params);
   if (!paramsResult.success) {
     return null;
   }
 
-  return { projectId: paramsResult.data.projectId };
+  return {
+    projectId: paramsResult.data.projectId,
+    comparisonId: paramsResult.data.comparisonId,
+  };
 }
 
 export async function GET(
@@ -34,24 +33,20 @@ export async function GET(
   context: { params: Promise<RouteParams> }
 ): Promise<NextResponse> {
   try {
-    const params = await parseProjectParams(context);
+    const params = await parseRouteParams(context);
     if (!params) {
-      return jsonError(400, 'Invalid project ID', 'VALIDATION_ERROR');
+      return jsonError(400, 'Invalid project or comparison ID', 'VALIDATION_ERROR');
     }
 
-    const queryResult = querySchema.safeParse({
-      page: request.nextUrl.searchParams.get('page') ?? undefined,
-      pageSize: request.nextUrl.searchParams.get('pageSize') ?? undefined,
-    });
+    const { projectId, comparisonId } = params;
+    await verifyProjectAccess(projectId, request);
 
-    if (!queryResult.success) {
-      return jsonError(400, 'Invalid pagination parameters', 'VALIDATION_ERROR');
+    const detail = await getComparisonDetailForProject(projectId, comparisonId);
+    if (!detail) {
+      return jsonError(404, 'Comparison not found', 'COMPARISON_NOT_FOUND');
     }
 
-    await verifyProjectAccess(params.projectId, request);
-    const result = await listProjectComparisons(params.projectId, queryResult.data);
-
-    return NextResponse.json(result);
+    return NextResponse.json(detail);
   } catch (error) {
     if (error instanceof Error && error.message === 'Project not found') {
       return jsonError(404, 'Project not found', 'PROJECT_NOT_FOUND');

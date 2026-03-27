@@ -28,10 +28,7 @@ export async function listTicketComparisons(
   const [records, total] = await prisma.$transaction([
     prisma.comparisonRecord.findMany({
       where: {
-        OR: [
-          { participants: { some: { ticketId } } },
-          { sourceTicketId: ticketId },
-        ],
+        OR: [{ participants: { some: { ticketId } } }, { sourceTicketId: ticketId }],
       },
       orderBy: {
         generatedAt: 'desc',
@@ -64,10 +61,7 @@ export async function listTicketComparisons(
     }),
     prisma.comparisonRecord.count({
       where: {
-        OR: [
-          { participants: { some: { ticketId } } },
-          { sourceTicketId: ticketId },
-        ],
+        OR: [{ participants: { some: { ticketId } } }, { sourceTicketId: ticketId }],
       },
     }),
   ]);
@@ -86,10 +80,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
 }> {
   const records = await prisma.comparisonRecord.findMany({
     where: {
-      OR: [
-        { participants: { some: { ticketId } } },
-        { sourceTicketId: ticketId },
-      ],
+      OR: [{ participants: { some: { ticketId } } }, { sourceTicketId: ticketId }],
     },
     select: {
       id: true,
@@ -107,7 +98,7 @@ export async function getTicketComparisonCheck(ticketId: number): Promise<{
   };
 }
 
-function deriveQualityState(
+export function deriveQualityState(
   latestVerifyJob: { qualityScore: number | null } | null,
   hasVerifyJob: boolean
 ): ComparisonEnrichmentValue<number> {
@@ -122,7 +113,7 @@ function deriveQualityState(
   return createUnavailableEnrichment<number>();
 }
 
-function deriveQualityBreakdown(
+export function deriveQualityBreakdown(
   latestVerifyJob: {
     qualityScore: number | null;
     qualityScoreDetails: string | null;
@@ -136,7 +127,7 @@ function deriveQualityBreakdown(
         return createAvailableEnrichment(parsed);
       }
     } catch {
-      // Fall through to unavailable
+      // Ignore malformed historical quality details.
     }
   }
 
@@ -147,18 +138,13 @@ function deriveQualityBreakdown(
   return createUnavailableEnrichment<QualityScoreDetails>();
 }
 
-export async function getComparisonDetailForTicket(
-  ticketId: number,
-  comparisonId: number
-): Promise<ComparisonDetail | null> {
+async function getComparisonDetailByWhere(where: {
+  id: number;
+  projectId?: number;
+  OR?: Array<{ participants: { some: { ticketId: number } } } | { sourceTicketId: number }>;
+}): Promise<ComparisonDetail | null> {
   const record = await prisma.comparisonRecord.findFirst({
-    where: {
-      id: comparisonId,
-      OR: [
-        { participants: { some: { ticketId } } },
-        { sourceTicketId: ticketId },
-      ],
-    },
+    where,
     include: {
       sourceTicket: {
         select: {
@@ -239,7 +225,7 @@ export async function getComparisonDetailForTicket(
     prisma.complianceAssessment.findMany({
       where: {
         comparisonParticipant: {
-          comparisonRecordId: comparisonId,
+          comparisonRecordId: record.id,
         },
       },
       orderBy: [{ displayOrder: 'asc' }, { principleName: 'asc' }],
@@ -261,7 +247,7 @@ export async function getComparisonDetailForTicket(
   const aggregatedTelemetry = aggregateJobTelemetry(completedJobs);
   const inProgressTicketIds = new Set(inProgressJobs.map((job) => job.ticketId));
   const latestVerifyJobByTicketId = new Map(
-    latestVerifyJobs.map((job) => [job.ticketId, job])
+    latestVerifyJobs.map((job) => [job.ticketId, job] as const)
   );
   const verifyJobTicketIds = new Set(latestVerifyJobs.map((job) => job.ticketId));
 
@@ -324,5 +310,25 @@ export async function getComparisonDetailForTicket(
     complianceRows: [...groupedCompliance.values()].sort(
       (a, b) => a.displayOrder - b.displayOrder
     ),
+  });
+}
+
+export async function getComparisonDetailForTicket(
+  ticketId: number,
+  comparisonId: number
+): Promise<ComparisonDetail | null> {
+  return getComparisonDetailByWhere({
+    id: comparisonId,
+    OR: [{ participants: { some: { ticketId } } }, { sourceTicketId: ticketId }],
+  });
+}
+
+export async function getComparisonDetailForProject(
+  projectId: number,
+  comparisonId: number
+): Promise<ComparisonDetail | null> {
+  return getComparisonDetailByWhere({
+    id: comparisonId,
+    projectId,
   });
 }

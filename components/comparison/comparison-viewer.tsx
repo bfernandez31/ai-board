@@ -24,7 +24,72 @@ import { ComparisonHistoryList } from './comparison-history-list';
 import { ComparisonParticipantGrid } from './comparison-participant-grid';
 import { ComparisonStatCards } from './comparison-stat-cards';
 import { ComparisonUnifiedMetrics } from './comparison-unified-metrics';
-import type { ComparisonViewerProps } from './types';
+import type { ComparisonDashboardProps, ComparisonViewerProps } from './types';
+
+const sectionClass = 'rounded-xl border border-border bg-card p-6';
+
+export function ComparisonDashboard({ detail }: ComparisonDashboardProps) {
+  const winner = detail.participants.find((p) => p.ticketId === detail.winnerTicketId);
+  const nonWinners =
+    detail.participants.filter((p) => p.ticketId !== detail.winnerTicketId) ?? [];
+
+  if (!winner) {
+    return (
+      <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+        Select a saved comparison to view the dashboard.
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[68vh] pr-4">
+      <div className="space-y-6">
+        <section className={sectionClass}>
+          <ComparisonHeroCard
+            winner={winner}
+            recommendation={detail.overallRecommendation}
+            keyDifferentiators={detail.keyDifferentiators}
+            generatedAt={detail.generatedAt}
+            sourceTicketKey={detail.sourceTicketKey}
+          />
+        </section>
+
+        <section className={sectionClass}>
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Participants
+          </h3>
+          <ComparisonParticipantGrid participants={nonWinners} />
+        </section>
+
+        <section className={sectionClass}>
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Overview
+          </h3>
+          <ComparisonStatCards winner={winner} participants={detail.participants} />
+        </section>
+
+        <section className={sectionClass}>
+          <ComparisonUnifiedMetrics participants={detail.participants} />
+        </section>
+
+        <section className={sectionClass}>
+          <ComparisonDecisionPoints
+            decisionPoints={detail.decisionPoints}
+            winnerTicketId={detail.winnerTicketId}
+            participants={detail.participants}
+          />
+        </section>
+
+        <section className={sectionClass}>
+          <ComparisonComplianceHeatmap
+            rows={detail.complianceRows}
+            participants={detail.participants}
+          />
+        </section>
+      </div>
+    </ScrollArea>
+  );
+}
 
 export function ComparisonViewer({
   projectId,
@@ -85,11 +150,6 @@ export function ComparisonViewer({
   const isLoading = checkLoading || detailLoading;
   const hasNoComparisons = checkData && !checkData.hasComparisons;
   const loadErrorMessage = checkError?.message || detailError?.message;
-
-  const winner = detail?.participants.find((p) => p.ticketId === detail.winnerTicketId);
-  const nonWinners = detail?.participants.filter((p) => p.ticketId !== detail.winnerTicketId) ?? [];
-
-  const sectionClass = 'rounded-xl border border-ctp-overlay0/10 bg-ctp-surface0/[0.04] p-6';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -157,52 +217,8 @@ export function ComparisonViewer({
               </div>
 
               <div>
-                {detail && winner ? (
-                  <ScrollArea className="h-[68vh] pr-4">
-                    <div className="space-y-6">
-                      <section className={sectionClass}>
-                        <ComparisonHeroCard
-                          winner={winner}
-                          recommendation={detail.overallRecommendation}
-                          keyDifferentiators={detail.keyDifferentiators}
-                          generatedAt={detail.generatedAt}
-                          sourceTicketKey={detail.sourceTicketKey}
-                        />
-                      </section>
-
-                      <section className={sectionClass}>
-                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Participants</h3>
-                        <ComparisonParticipantGrid participants={nonWinners} />
-                      </section>
-
-                      <section className={sectionClass}>
-                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Overview</h3>
-                        <ComparisonStatCards
-                          winner={winner}
-                          participants={detail.participants}
-                        />
-                      </section>
-
-                      <section className={sectionClass}>
-                        <ComparisonUnifiedMetrics participants={detail.participants} />
-                      </section>
-
-                      <section className={sectionClass}>
-                        <ComparisonDecisionPoints
-                          decisionPoints={detail.decisionPoints}
-                          winnerTicketId={detail.winnerTicketId}
-                          participants={detail.participants}
-                        />
-                      </section>
-
-                      <section className={sectionClass}>
-                        <ComparisonComplianceHeatmap
-                          rows={detail.complianceRows}
-                          participants={detail.participants}
-                        />
-                      </section>
-                    </div>
-                  </ScrollArea>
+                {detail ? (
+                  <ComparisonDashboard detail={detail} />
                 ) : (
                   <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                     Select a saved comparison to view the dashboard.

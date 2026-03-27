@@ -1,0 +1,459 @@
+openapi: 3.1.0
+info:
+  title: Project Comparisons Hub API
+  version: 1.0.0
+  description: Project-scoped comparison browsing and launch contracts for AIB-362.
+servers:
+  - url: https://example.com
+paths:
+  /api/projects/{projectId}/comparisons:
+    get:
+      summary: List saved comparisons for a project
+      operationId: listProjectComparisons
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Paginated project comparison history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectComparisonListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/comparisons/{comparisonId}:
+    get:
+      summary: Get one saved comparison detail by project
+      operationId: getProjectComparisonDetail
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Structured comparison detail for inline dashboard rendering
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectComparisonDetail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/comparisons/candidates:
+    get:
+      summary: List eligible VERIFY-stage tickets for launching a comparison
+      operationId: listComparisonCandidates
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Eligible comparison candidates for the requested project
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - candidates
+                properties:
+                  candidates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VerifyComparisonCandidate'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{projectId}/comparisons/launch:
+    post:
+      summary: Launch a new comparison from selected VERIFY-stage tickets
+      operationId: launchProjectComparison
+      tags:
+        - Comparisons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchComparisonRequest'
+            example:
+              ticketIds:
+                - 101
+                - 102
+                - 103
+      responses:
+        '202':
+          description: Comparison workflow accepted and pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchComparisonResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: One of the selected tickets already has an active AI-BOARD job or the ticket set is otherwise not launchable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: User lacks access to the requested project
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Requested project, ticket, or comparison was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        code:
+          type:
+            - string
+            - 'null'
+
+    ProjectComparisonListResponse:
+      type: object
+      required:
+        - comparisons
+        - page
+        - pageSize
+        - total
+        - totalPages
+      properties:
+        comparisons:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectComparisonSummary'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    ProjectComparisonSummary:
+      type: object
+      required:
+        - id
+        - generatedAt
+        - sourceTicketId
+        - sourceTicketKey
+        - winnerTicketId
+        - winnerTicketKey
+        - winnerTicketTitle
+        - participantTicketIds
+        - participantTicketKeys
+        - summary
+        - overallRecommendation
+        - keyDifferentiators
+      properties:
+        id:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        winnerTicketId:
+          type: integer
+        winnerTicketKey:
+          type: string
+        winnerTicketTitle:
+          type: string
+        participantTicketIds:
+          type: array
+          items:
+            type: integer
+        participantTicketKeys:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        overallRecommendation:
+          type: string
+        keyDifferentiators:
+          type: array
+          items:
+            type: string
+        markdownPath:
+          type:
+            - string
+            - 'null'
+
+    ProjectComparisonDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProjectComparisonSummary'
+        - type: object
+          required:
+            - participants
+            - decisionPoints
+            - complianceRows
+          properties:
+            participants:
+              type: array
+              items:
+                $ref: '#/components/schemas/ComparisonParticipantDetail'
+            decisionPoints:
+              type: array
+              items:
+                $ref: '#/components/schemas/ComparisonDecisionPoint'
+            complianceRows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ComparisonComplianceRow'
+
+    ComparisonParticipantDetail:
+      type: object
+      required:
+        - ticketId
+        - ticketKey
+        - title
+        - stage
+        - rank
+        - score
+        - rankRationale
+        - quality
+        - telemetry
+        - metrics
+      properties:
+        ticketId:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+        rank:
+          type: integer
+        score:
+          type: integer
+        rankRationale:
+          type: string
+        quality:
+          $ref: '#/components/schemas/EnrichmentNumber'
+        telemetry:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/EnrichmentNumber'
+        metrics:
+          type: object
+          additionalProperties: true
+
+    ComparisonDecisionPoint:
+      type: object
+      required:
+        - id
+        - title
+        - verdictSummary
+        - rationale
+        - displayOrder
+        - participantApproaches
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        verdictTicketId:
+          type:
+            - integer
+            - 'null'
+        verdictSummary:
+          type: string
+        rationale:
+          type: string
+        displayOrder:
+          type: integer
+        participantApproaches:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    ComparisonComplianceRow:
+      type: object
+      required:
+        - principleKey
+        - principleName
+        - displayOrder
+        - assessments
+      properties:
+        principleKey:
+          type: string
+        principleName:
+          type: string
+        displayOrder:
+          type: integer
+        assessments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    VerifyComparisonCandidate:
+      type: object
+      required:
+        - id
+        - ticketKey
+        - title
+        - stage
+        - updatedAt
+        - qualityScore
+      properties:
+        id:
+          type: integer
+        ticketKey:
+          type: string
+        title:
+          type: string
+        stage:
+          type: string
+          enum:
+            - VERIFY
+        updatedAt:
+          type: string
+          format: date-time
+        branch:
+          type:
+            - string
+            - 'null'
+        qualityScore:
+          $ref: '#/components/schemas/EnrichmentNumber'
+
+    EnrichmentNumber:
+      type: object
+      required:
+        - state
+        - value
+      properties:
+        state:
+          type: string
+          enum:
+            - available
+            - pending
+            - unavailable
+        value:
+          type:
+            - number
+            - 'null'
+
+    LaunchComparisonRequest:
+      type: object
+      required:
+        - ticketIds
+      properties:
+        ticketIds:
+          type: array
+          minItems: 2
+          maxItems: 5
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+
+    LaunchComparisonResponse:
+      type: object
+      required:
+        - jobId
+        - commentId
+        - sourceTicketId
+        - sourceTicketKey
+        - selectedTicketIds
+        - selectedTicketKeys
+        - status
+        - commentContent
+      properties:
+        jobId:
+          type: integer
+        commentId:
+          type: integer
+        sourceTicketId:
+          type: integer
+        sourceTicketKey:
+          type: string
+        selectedTicketIds:
+          type: array
+          items:
+            type: integer
+        selectedTicketKeys:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+        commentContent:
+          type: string
