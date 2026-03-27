@@ -95,9 +95,7 @@ export function useProjectComparisonDetail(
   comparisonId: number | null
 ) {
   return useQuery({
-    queryKey: comparisonId != null
-      ? projectComparisonKeys.detail(projectId, comparisonId)
-      : ['comparisons', 'project', projectId, 'no-detail'],
+    queryKey: projectComparisonKeys.detail(projectId, comparisonId ?? 0),
     queryFn: () =>
       fetchJson<ComparisonDetail>(
         `/api/projects/${projectId}/comparisons/${comparisonId}`,

@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GitCompare } from 'lucide-react';
-import { useProjectComparisons, useProjectComparisonDetail } from '@/hooks/use-project-comparisons';
+import {
+  useProjectComparisons,
+  useProjectComparisonDetail,
+  type ProjectComparisonSummary,
+} from '@/hooks/use-project-comparisons';
 import { ComparisonListItem } from './comparison-list-item';
 import { ComparisonInlineDetail } from './comparison-inline-detail';
 import { NewComparisonLauncher } from './new-comparison-launcher';
@@ -15,22 +19,9 @@ interface ComparisonsPageProps {
 
 export function ComparisonsPage({ projectId }: ComparisonsPageProps) {
   const [offset, setOffset] = useState(0);
-  const [allComparisons, setAllComparisons] = useState<
-    Array<{
-      id: number;
-      generatedAt: string;
-      sourceTicketKey: string;
-      sourceTicketTitle: string;
-      winnerTicketKey: string;
-      winnerTicketTitle: string;
-      winnerScore: number;
-      participantCount: number;
-      participantTicketKeys: string[];
-      summary: string;
-      keyDifferentiators: string[];
-    }>
-  >([]);
+  const [allComparisons, setAllComparisons] = useState<ProjectComparisonSummary[]>([]);
   const [selectedComparisonId, setSelectedComparisonId] = useState<number | null>(null);
+  const seenIds = useRef(new Set<number>());
 
   const limit = 20;
   const { data, isLoading, error } = useProjectComparisons(projectId, limit, offset);
@@ -40,21 +31,16 @@ export function ComparisonsPage({ projectId }: ComparisonsPageProps) {
     selectedComparisonId
   );
 
-  // Merge newly loaded comparisons into accumulated list
-  const displayComparisons = (() => {
-    if (!data) return allComparisons;
-    const existingIds = new Set(allComparisons.map((c) => c.id));
-    const newItems = data.comparisons.filter((c) => !existingIds.has(c.id));
+  useEffect(() => {
+    if (!data) return;
+    const newItems = data.comparisons.filter((c) => !seenIds.current.has(c.id));
     if (newItems.length > 0) {
-      const merged = [...allComparisons, ...newItems];
-      // Update state outside render via effect-like pattern
-      if (merged.length !== allComparisons.length) {
-        setAllComparisons(merged);
-      }
-      return merged;
+      for (const item of newItems) seenIds.current.add(item.id);
+      setAllComparisons((prev) => [...prev, ...newItems]);
     }
-    return allComparisons.length > 0 ? allComparisons : data.comparisons;
-  })();
+  }, [data]);
+
+  const displayComparisons = allComparisons.length > 0 ? allComparisons : (data?.comparisons ?? []);
 
   const hasMore = data ? offset + limit < data.total : false;
 
