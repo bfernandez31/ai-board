@@ -740,16 +740,16 @@ export function TicketDetailModal({
           }
         }}
         className="
-          flex flex-col h-screen w-screen p-4
+          flex flex-col h-screen w-screen p-4 gap-2
           !top-0 !translate-y-0
-          sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-6
+          sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:px-6 sm:pt-4 sm:pb-6
           sm:!top-[50%] sm:!-translate-y-1/2
           border-ctp-mauve/15 text-foreground aurora-bg-dialog
           [&>button[class*=absolute]]:hidden
         "
       >
         {/* Header with editable title */}
-        <DialogHeader className="flex-shrink-0 pb-2 sm:pb-4 space-y-1 sm:space-y-1.5 text-left">
+        <DialogHeader className="flex-shrink-0 pb-1 sm:pb-2 space-y-0.5 text-left">
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
