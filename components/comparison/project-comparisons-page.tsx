@@ -265,7 +265,7 @@ export function ProjectComparisonsPage({
         </div>
       </section>
 
-      {activePendingLaunches.length > 0 ? (
+      {activePendingLaunches.length > 0 && (
         <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-medium text-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -279,15 +279,19 @@ export function ProjectComparisonsPage({
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
-      {infiniteQuery.isLoading ? (
+      {infiniteQuery.isLoading && (
         <div className="py-8 text-center text-sm text-muted-foreground">Loading project comparisons...</div>
-      ) : allComparisons.length === 0 ? (
+      )}
+
+      {!infiniteQuery.isLoading && allComparisons.length === 0 && (
         <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
           No saved comparisons yet. Launch one from VERIFY tickets to populate the hub.
         </div>
-      ) : (
+      )}
+
+      {!infiniteQuery.isLoading && allComparisons.length > 0 && (
         <div className="space-y-3">
           {allComparisons.map((comparison) => {
             const isExpanded = comparison.id === expandedId;
@@ -301,16 +305,16 @@ export function ProjectComparisonsPage({
                   isExpanded={isExpanded}
                   onToggle={() => handleToggle(comparison.id)}
                 />
-                {isExpanded ? (
+                {isExpanded && (
                   <div className="mt-3 rounded-2xl border border-border bg-card p-6">
                     <ExpandedDetail projectId={projectId} comparisonId={comparison.id} />
                   </div>
-                ) : null}
+                )}
               </div>
             );
           })}
 
-          {infiniteQuery.hasNextPage ? (
+          {infiniteQuery.hasNextPage && (
             <div className="flex justify-center pt-2">
               <Button
                 type="button"
@@ -328,11 +332,13 @@ export function ProjectComparisonsPage({
                 )}
               </Button>
             </div>
-          ) : total > PAGE_SIZE ? (
+          )}
+
+          {!infiniteQuery.hasNextPage && total > PAGE_SIZE && (
             <p className="pt-2 text-center text-sm text-muted-foreground">
               All {total} comparisons loaded
             </p>
-          ) : null}
+          )}
         </div>
       )}
 
