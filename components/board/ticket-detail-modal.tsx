@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown } from 'lucide-react';
+import { Pencil, FileText, Settings2, GitBranch, ExternalLink, CheckSquare, BarChart3, FileOutput, Copy, Loader2, GitCompare, ChevronDown, X } from 'lucide-react';
 import { ImageGallery } from '@/components/ticket/image-gallery';
 import { isTicketAttachmentArray } from '@/app/lib/types/ticket';
 import type { TicketAttachment } from '@/app/lib/types/ticket';
@@ -10,6 +10,7 @@ import type { TicketJobWithTelemetry } from '@/lib/types/job-types';
 import { TicketStats } from '@/components/ticket/ticket-stats';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -744,6 +745,7 @@ export function TicketDetailModal({
           sm:grid sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-lg sm:p-6
           sm:!top-[50%] sm:!-translate-y-1/2
           border-ctp-mauve/15 text-foreground aurora-bg-dialog
+          [&>button[class*=absolute]]:hidden
         "
       >
         {/* Header with editable title */}
@@ -751,8 +753,8 @@ export function TicketDetailModal({
           <DialogDescription className="sr-only">
             View and edit ticket details, including title, description, stage, clarification policy, and documentation.
           </DialogDescription>
-          {/* Row 1: Identity (left) + Actions (right) — pr-10 clears the close button */}
-          <div className="flex items-center justify-between mb-2 pr-10">
+          {/* Row 1: Identity (left) + Actions + Close (right) */}
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-mono font-bold text-muted-foreground" data-testid="ticket-key">
                 {localTicket?.ticketKey || ticket.ticketKey}
@@ -826,6 +828,10 @@ export function TicketDetailModal({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+              <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ml-1">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </div>
           </div>
 
