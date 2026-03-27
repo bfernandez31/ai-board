@@ -45,11 +45,11 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Write component test for ComparisonCard compact rendering (winner key, title, summary, score badge, date) in `tests/unit/components/comparison-card.test.tsx`
+- [x] T006 [P] [US1] Write component test for ComparisonCard compact rendering (winner key, title, summary, score badge, date) in `tests/unit/components/comparison-card.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create `ComparisonCard` component with compact header layout (winner ticket key, title, summary snippet, score badge, formatted date) using Radix `Collapsible` in `components/comparison/comparison-card.tsx`
+- [x] T007 [US1] Create `ComparisonCard` component with compact header layout (winner ticket key, title, summary snippet, score badge, formatted date) using Radix `Collapsible` in `components/comparison/comparison-card.tsx`
 - [ ] T008 [US1] Rewrite `ProjectComparisonsPage` to replace 2-column grid with single-column vertical list of `ComparisonCard` components, using `useProjectComparisonListInfinite` for data, in `components/comparison/project-comparisons-page.tsx`
 
 **Checkpoint**: Comparisons display as scannable compact cards in a single-column layout with native page scroll.
