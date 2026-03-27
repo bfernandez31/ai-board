@@ -116,6 +116,21 @@ export async function ensureTestFixtures(): Promise<string> {
       });
     }
 
+    // Ensure test user has PRO subscription to avoid FREE plan ticket limits
+    await client.subscription.upsert({
+      where: { userId: testUser.id },
+      update: { plan: 'PRO', status: 'ACTIVE' },
+      create: {
+        userId: testUser.id,
+        stripeSubscriptionId: `sub_test_fixtures_${testUser.id}`,
+        stripePriceId: 'price_test_pro',
+        plan: 'PRO',
+        status: 'ACTIVE',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      },
+    });
+
     console.error(`✓ Test fixtures ensured (user + ${workerProjects.length} worker projects)`);
     return testUser.id;
   } catch (error) {

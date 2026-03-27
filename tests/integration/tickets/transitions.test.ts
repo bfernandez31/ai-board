@@ -1,8 +1,9 @@
 /**
  * Integration Tests: Ticket Transitions
  *
- * Migrated from: tests/api/ticket-transition.spec.ts, tests/api/ticket-stage-restrictions.spec.ts
- * Tests for ticket stage transition API endpoints.
+ * Migrated from: tests/api/ticket-transition.spec.ts, tests/api/ticket-stage-restrictions.spec.ts,
+ *   tests/api/rollback-transition.spec.ts, tests/api/ticket-policy.spec.ts
+ * Tests for ticket stage transitions, workflow types, and ticket policies.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -107,7 +108,7 @@ describe('Ticket Transitions', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should allow INBOX to BUILD transition (quick-impl)', async () => {
+    it('should allow INBOX to BUILD transition (quick-impl) and create correct job', async () => {
       const createResponse = await ctx.api.post<{ id: number }>(
         `/api/projects/${ctx.projectId}/tickets`,
         {
@@ -120,12 +121,22 @@ describe('Ticket Transitions', () => {
       // INBOX → BUILD is valid (quick-impl path)
       const response = await ctx.api.post<{ id: number; stage: string; workflowType: string }>(
         `/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`,
-        { targetStage: 'BUILD' }
+        { targetStage: 'BUILD', quickImpl: true }
       );
 
       expect(response.status).toBe(200);
       expect(response.data.stage).toBe('BUILD');
       expect(response.data.workflowType).toBe('QUICK');
+
+      // Verify job was created with quick-impl command
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: { jobs: true },
+      });
+
+      expect(ticket?.workflowType).toBe('QUICK');
+      expect(ticket?.jobs).toHaveLength(1);
+      expect(ticket?.jobs[0]?.command).toBe('quick-impl');
     });
 
     it('should not allow transitioning backwards (SPECIFY to INBOX)', async () => {
@@ -216,6 +227,84 @@ describe('Ticket Transitions', () => {
 
       expect(response.status).toBe(400);
       expect(response.data).toHaveProperty('error');
+    });
+  });
+
+  describe('Workflow types', () => {
+    it('should set workflowType to FULL for normal transitions', async () => {
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Full workflow type test',
+          description: 'Test workflowType is set to FULL',
+        }
+      );
+      const ticketId = createResponse.data.id;
+
+      await ctx.api.post(`/api/projects/${ctx.projectId}/tickets/${ticketId}/transition`, {
+        targetStage: 'SPECIFY',
+      });
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+      expect(ticket?.workflowType).toBe('FULL');
+    });
+  });
+
+  describe('Ticket policy', () => {
+    it('should allow override of clarificationPolicy on ticket creation', async () => {
+      const createResponse = await ctx.api.post<{ id: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Policy override test',
+          description: 'Test policy override on creation',
+          clarificationPolicy: 'INTERACTIVE',
+        }
+      );
+      const ticketId = createResponse.data.id;
+
+      expect(createResponse.status).toBe(201);
+
+      const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+      expect(ticket?.clarificationPolicy).toBe('INTERACTIVE');
+    });
+
+    it('should update ticket clarificationPolicy via PATCH', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Policy update test',
+          description: 'Test policy update via PATCH',
+        }
+      );
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ clarificationPolicy: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { clarificationPolicy: 'PRAGMATIC', version }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data.clarificationPolicy).toBe('PRAGMATIC');
+    });
+
+    it('should return 400 for invalid clarificationPolicy', async () => {
+      const createResponse = await ctx.api.post<{ id: number; version: number }>(
+        `/api/projects/${ctx.projectId}/tickets`,
+        {
+          title: '[e2e] Invalid policy test',
+          description: 'Test invalid policy value',
+        }
+      );
+      const ticketId = createResponse.data.id;
+      const version = createResponse.data.version;
+
+      const response = await ctx.api.patch<{ error: string }>(
+        `/api/projects/${ctx.projectId}/tickets/${ticketId}`,
+        { clarificationPolicy: 'INVALID_POLICY', version }
+      );
+
+      expect(response.status).toBe(400);
     });
   });
 });

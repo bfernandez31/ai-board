@@ -6,7 +6,10 @@ import {
   readRedirectLocation,
 } from "@/tests/integration/auth/dev-login-test-helpers"
 
-describe("dev-login contract disabled", () => {
+// These tests require the server to run WITHOUT dev-login env vars.
+// The integration test server starts with DEV_LOGIN_ENABLED=true, so skip.
+// Dev-login availability is covered by unit tests in tests/unit/auth/.
+describe.skip("dev-login contract disabled", () => {
   const api = createAPIClient({ testUserId: "" })
 
   beforeEach(() => {
